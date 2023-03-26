@@ -8,23 +8,22 @@ fastapi = "*"
 uvicorn = "*"
 asyncpg = "*"
 tortoise-orm = "*"
-pydantic = {extras = ["dotenv"], version = "*"}
+pydantic = {extras = ["dotenv", "email"], version = "*"}
 pytest = "*"
 httpx = "*"
 pytest-xdist = "==3.2.1"
-
+selenium = "*"
+openai = "*"
+tiktoken = "*"
+beautifulsoup4 = "*"
 
 [dev-packages]
 ipython = "*"
 httpie = "*"
+jupyter = "*"
 
 [scripts]
 test = "docker-compose exec web python -m pytest"
 testv = "docker-compose exec web python -m pytest -vv"
 db_shell = "docker-compose exec db psql -U postgres"
 shell = "docker-compose exec web ipython"
-
-
-[requires]
-python_version = "3.11"
-python_full_version = "3.11.0"

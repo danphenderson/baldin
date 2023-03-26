@@ -3,7 +3,7 @@
 
 import asyncio
 
-from app.models.tortoise import TextLead
+from app.models.tortoise import Lead
 
 
 async def generate_lead(lead_id: int, url: str) -> None:
@@ -11,5 +11,4 @@ async def generate_lead(lead_id: int, url: str) -> None:
 
     await asyncio.sleep(10)
 
-    await TextLead.filter(id=lead_id
-   ).update(lead=lead)
+    await Lead.filter(id=lead_id).update(lead=lead)

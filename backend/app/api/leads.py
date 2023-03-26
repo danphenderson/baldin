@@ -1,7 +1,7 @@
 # project/app/api/summaries.py
 
 from fastapi import APIRouter, HTTPException, Path, BackgroundTasks
-from app.summarizer import generate_lead
+from app.linkedin import generate_lead
 from app.api import crud
 from app.models.pydantic import LeadPayloadSchema, LeadResponseSchema, LeadUpdatePayloadSchema
 from app.models.tortoise import LeadSchema

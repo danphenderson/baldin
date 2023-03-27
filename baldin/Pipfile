@@ -1,0 +1,37 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+fastapi = "*"
+uvicorn = "*"
+asyncpg = "*"
+tortoise-orm = "*"
+pydantic = {extras = ["dotenv", "email"], version = "*"}
+pytest = "*"
+httpx = "*"
+pytest-xdist = "==3.2.1"
+selenium = "*"
+openai = "*"
+tiktoken = "*"
+beautifulsoup4 = "*"
+webdriver-manager = "*"
+python-multipart = "*"
+jinja2 = "*"
+aiofiles = "*"
+markdown = "*"
+boto3 = "*"
+
+[dev-packages]
+ipython = "*"
+httpie = "*"
+jupyter = "*"
+mypy = "*"
+types-beautifulsoup4 = "*"
+
+[scripts]
+test = "docker-compose exec web python -m pytest"
+testv = "docker-compose exec web python -m pytest -vv"
+db_shell = "docker-compose exec web-db psql -U postgres"
+shell = "docker-compose exec web ipython"

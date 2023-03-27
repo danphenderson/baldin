@@ -36,6 +36,8 @@ def test_app_with_db():
         generate_schemas=True,
         add_exception_handlers=True,
     )
+    with TestClient(app) as test_client:
+        yield test_client
 
 
     # tear down

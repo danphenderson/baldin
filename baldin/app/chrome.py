@@ -3,10 +3,10 @@ from selenium import webdriver
 from bs4 import BeautifulSoup
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager # type: ignore
 from typing import Any, Awaitable
 from app.conf import get_chrome_settings
-from webdriver_manager.chrome import ChromeDriverManager # type: ignore
-
 
 class Driver:
     
@@ -17,7 +17,7 @@ class Driver:
     
     def __init__(self):
         self.settings = get_chrome_settings()
-        self.browser = webdriver.Chrome(ChromeDriverManager().install(), options=self.settings.options)
+        self.browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
         self._tasks = []
 
     def __aenter__(self):

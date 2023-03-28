@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.requests import Request
 
 from app.api import leads, searches
-from app.db import init_db
+from app.db import init_db, generate_schema
 from app.utils import openfile
 
 templates = Jinja2Templates(directory="templates")
@@ -41,6 +41,7 @@ app = create_application()
 async def startup_event():
     log.info("Starting up...")
     init_db(app)
+
 
 @app.on_event("shutdown")
 async def shutdown_event():

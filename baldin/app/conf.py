@@ -32,25 +32,22 @@ class Chrome(_BaseSettings, env_prefix="CHROME_"):
     
     See https://pypi.org/project/selenium/, `ChromeOptions` for more information.
     """
-    driver_path: str = "/opt/homebrew/bin/chromedriver"
-    headless_option: bool = False
+    driver_path: str
     incognito_option: bool = True
-    dump_dom_option: bool = False
-    disable_gpu_option: bool = False
+    headless_option: bool = False
 
     @property
     def options(self) -> ChromeOptions:
         options = ChromeOptions()
         options.add_argument('--no-sandbox')
+        #options.add_argument('--window-size=1420,1080')
         options.add_argument('--ignore-certificate-errors')
         options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
         if self.incognito_option:
             options.add_argument("--incognito")
         if self.headless_option:
             options.add_argument("--headless")
-        if self.disable_gpu_option:
-            options.add_argument("--disable-gpu") # set to true for Windows OS
-        if self.dump_dom_option:
             options.add_argument("--dump-dom")
         return options
 

@@ -5,7 +5,8 @@ import asyncio
 
 
 from app.models.tortoise import Lead, Search
-
+from app.conf import get_linkedin_settings
+from app.chrome import get_driver, Driver
 
 async def generate_search(search_id, keywords) -> None:
     """
@@ -18,9 +19,23 @@ async def generate_search(search_id, keywords) -> None:
 
 
 async def generate_lead(lead_id: int, url: str) -> None:
-    title = "A dummy lead"
-    company = "A dummy company"
-    description = "A dummy description"
-    await asyncio.sleep(10)
+    lead_generator = LeadGenerator(url) # type: ignore
+    title = await lead_generator.get_title()
+    company = await lead_generator.get_company()
+    description = await lead_generator.get_description()
     await Lead.filter(id=lead_id).update(title=title, company=company, description=description)
 
+
+class LeadGenerator:
+
+    def __init__(self, url) -> None:
+        self.url = url
+    
+    async def get_title(self) -> str:
+        return "title"
+
+    async def get_company(self) -> str:
+        return "company"
+
+    async def get_description(self) -> str:
+        return "description"

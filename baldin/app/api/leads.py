@@ -32,7 +32,9 @@ router = APIRouter()
 
 @router.post("/", response_model=LeadResponseSchema, status_code=201)
 async def create_lead(payload: LeadPayloadSchema, background_tasks: BackgroundTasks):
+    log.info(f"Creating lead with url: {payload.url} and search_id: {payload.search_id}")
     lead_id, search_id, created_at, updated_at = await LeadCRUD.post(payload) 
+    log.info(f"Created lead with id: {lead_id} at {created_at}.")
     background_tasks.add_task(generate_lead, lead_id, payload.url) 
     return {"id": lead_id, "url": payload.url, "search_id": search_id, "created_at": created_at, "updated_at": updated_at}
 

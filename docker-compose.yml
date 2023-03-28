@@ -1,6 +1,34 @@
 version: '3.8'
 
+# FIXME: This is a temporary workaround for not being able to use chrome in the web container
+# Procceding with local API development, hooked up to the web-db container.
 services:
+
+  web-db:
+    build:
+      context: ./baldin/db
+      dockerfile: Dockerfile
+    restart: always
+    expose:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+
+
+  # pgadmin:
+  #   container_name: pgadmin4_container
+  #   image: dpage/pgadmin4
+  #   restart: always
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: admin@admin.com
+  #     PGADMIN_DEFAULT_PASSWORD: root
+  #   ports:
+  #     - "5050:80"
+
+
+  # Option 1: Run chrome in the container
   web:
     build: ./baldin
     command: uvicorn app.main:app --reload --workers 2 --host 0.0.0.0 --port 8000
@@ -13,23 +41,46 @@ services:
       - DATABASE_TEST_URL=postgres://postgres:postgres@web-db:5432/web_test
     depends_on:
       - web-db
-  web-db:
-    build:
-      context: ./baldin/db
-      dockerfile: Dockerfile
-    restart: always
-    expose:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
-  # pgadmin:
-  #   container_name: pgadmin4_container
-  #   image: dpage/pgadmin4
-  #   restart: always
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: admin@admin.com
-  #     PGADMIN_DEFAULT_PASSWORD: root
+
+
+  
+  ## Option 2: Use the Selenium Standalone container
+  # chrome:
+  #   image: selenium/standalone-chrome:latest
+  #   hostname: chrome
+  #   privileged: true
+  #   shm_size: 2g
+  
+
+  ## Option 3: Use Selenium Grid
+  # jaegar:
+  #   image: jaegertracing/all-in-one:1.17
   #   ports:
-  #     - "5050:80"     
+  #     - "16686:16686"
+  #     - "14250:14250"
+  
+  # selenium-hub:
+  #   image: selenium/hub:4.8.3
+  #   container_name: selenium-hub
+  #   ports:
+  #     - "4442:4442"
+  #     - "4443:4443"
+  #     - "4444:4444"
+  #   depends_on:
+  #     - jaegar
+  #   environment:
+  #     - SE_ENABLE_TRACING=true
+  #     - JAVA_OPTS=-Dotel.traces.exporter=jaeger -Dotel.exporter.jaeger.endpoint=http://jaegar:14250 -Dotel.resource.attributes=service.name=selenium-hub
+
+  # chrome:
+  #   image: seleniarm/node-chromium:111.0
+  #   shm_size: 2gb
+  #   depends_on:
+  #     - selenium-hub
+  #   environment:
+  #     - SE_EVENT_BUS_HOST=selenium-hub
+  #     - SE_EVENT_BUS_PUBLISH_PORT=4442
+  #     - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+  #     - SE_ENABLE_TRACING=true
+  #     - JAVA_OPTS=-Dotel.traces.exporter=jaeger -Dotel.exporter.jaeger.endpoint=http://jaegar:14250 -Dotel.resource.attributes=service.name=selenium-node-chrome
+

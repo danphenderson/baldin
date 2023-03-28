@@ -26,10 +26,6 @@ def extract_soup_hrefs(soup: BeautifulSoup) -> List[str]:
     """
     return [link.get("href") for link in soup.find_all("a") if link.get("href")]
 
-
-
-
-
 def openfile(filename):
     filepath = os.path.join("app/pages/", filename)
     with open(filepath, "r", encoding="utf-8") as input_file:

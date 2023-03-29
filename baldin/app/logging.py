@@ -3,7 +3,7 @@ import json
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
-from app import conf
+from app.core import conf
 
 class AsyncJSONFileLogger:
     def __init__(

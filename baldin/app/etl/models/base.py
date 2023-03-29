@@ -5,7 +5,7 @@ from pydantic import AnyHttpUrl, Field
 from asyncio import get_event_loop, ensure_future, Future, sleep
 from pathlib import Path
 from aiofiles import open as aopen
-from app.conf import settings
+from app.core.conf import settings
 
 from typing import Dict
 

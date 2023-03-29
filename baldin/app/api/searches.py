@@ -1,12 +1,6 @@
 # app/api/searches.py
 
 from fastapi import APIRouter, HTTPException, Path, BackgroundTasks
-
-
-from app.linkedin import generate_search as generate_search_linkedin
-from app.glassdoor import generate_search as generate_search_glassdoor
-from app.indeed import generate_search as generate_search_indeed
-
 from app.api.crud import SearchCRUD
 from app.models.pydantic import SearchPayloadSchema, SearchResponseSchema
 from app.logging import console_log, get_async_logger
@@ -15,24 +9,11 @@ log = get_async_logger(__name__)
 
 router = APIRouter()
 
-async def generate_search(id: int, keywords: str, platform: str):
-    if platform == "linkedin":
-        await generate_search_linkedin(id, keywords)
-    elif platform == "glassdoor":
-        await generate_search_glassdoor(id, keywords)
-    elif platform == "indeed":
-        await generate_search_indeed(id, keywords)
-    else:
-        raise HTTPException(status_code=400, detail="Platform not supported")
-
-
-@router.post("/", response_model=SearchResponseSchema, status_code=201)
-async def create_search(payload: SearchPayloadSchema, background_tasks: BackgroundTasks):
+@router.post("/", status_code=201)
+async def create_search(payload: SearchPayloadSchema, background_tasks: BackgroundTasks) -> dict[str, int]:
     await log.info(f"Creating search with keywords: {payload.keywords} and platform: {payload.platform}")
-    search_id, created_at, updated_at = await SearchCRUD.post(payload)
-    await log.debug(f"Created search with id: {search_id} and created_at: {created_at} (updated_at: {updated_at}))")
-    background_tasks.add_task(generate_search, search_id, payload.keywords, payload.platform)
-    return {"id": search_id, "keywords": payload.keywords, "platform": payload.platform, "created_at": str(created_at), "updated_at": str(updated_at)}
+    search_id = await SearchCRUD.post(payload)
+    return {"id": search_id}
 
 
 @router.get("/{id}/", response_model=SearchResponseSchema)

@@ -4,8 +4,7 @@ import pytest
 from starlette.testclient import TestClient
 from tortoise.contrib.fastapi import register_tortoise
 from app.main import create_application
-from app.conf import settings
-
+from app.core.conf import settings
 
 @pytest.fixture(scope="module")
 def test_client():
@@ -20,3 +19,6 @@ def test_client():
     )
     with TestClient(app) as test_client:
         yield test_client
+
+
+        

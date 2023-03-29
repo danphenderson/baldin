@@ -41,4 +41,4 @@ class Lead(BaseModel):
 
 class Loader(BaseModel):
     """A loader model, ..."""
-    complete = fields.BooleanField(default=False, index=True)
+    completed = fields.BooleanField(default=False, index=True)

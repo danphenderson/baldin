@@ -1,4 +1,4 @@
-from .base import BaseModel
+from app.etl.models.base import BaseModel
 
 
 class Resume(BaseModel):

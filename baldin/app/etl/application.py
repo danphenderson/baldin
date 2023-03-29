@@ -1,9 +1,8 @@
-from typing import Awaitable
-from app.chrome import Driver
+from app.core.chrome import Driver
 from app.etl.models.job import Job
 from app.etl.models.coverletter import CoverLetter
 from app.etl.models.resume import Resume
-from app import conf
+from app.core import conf
 
 class Application:
     

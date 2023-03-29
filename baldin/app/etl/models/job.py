@@ -1,4 +1,4 @@
-from .base import HRefBaseModel
+from app.etl.models.base import HRefBaseModel
 
 
 class Job(HRefBaseModel):

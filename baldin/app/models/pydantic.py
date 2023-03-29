@@ -2,22 +2,23 @@
 # app/models/pydantic.py
 
 
-from pydantic import BaseModel, AnyHttpUrl, validator
-
+from pydantic import BaseModel, AnyHttpUrl
+from datetime import datetime
 
 class BaseResponseSchema(BaseModel):
-    id: int
-    created_at: str
-    updated_at: str
+    id: int | str
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         extra = "allow"
         abstract = True
 
-    @validator("created_at", "updated_at", pre=True)
-    def convert_datetime(cls, v):
-        return str(v)
 
+class LoaderResponseSchema(BaseResponseSchema):
+    pass
+
+ 
 
 class LeadPayloadSchema(BaseModel):
     url: AnyHttpUrl
@@ -43,9 +44,3 @@ class SearchPayloadSchema(BaseModel):
 
 class SearchResponseSchema(SearchPayloadSchema, BaseResponseSchema):
     pass
-
-
-class LoaderResponseSchema(BaseResponseSchema):
-    pass
-
- 

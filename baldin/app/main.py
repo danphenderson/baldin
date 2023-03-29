@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.requests import Request
 
 from app.api import leads, searches, loader
-from app.db import init_db
+from app.core.db import init_db
 from app.utils import read_page
 from app.logging import console_log as log
 

@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 from bs4 import BeautifulSoup
 
-from app.chrome import Driver
+from app.core.chrome import Driver
 
 @pytest.fixture
 def driver():

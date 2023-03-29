@@ -6,8 +6,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager # type: ignore
 from typing import Any, Awaitable
-from app import conf
-
+from app.core import conf
+import openai
 
 from app.logging import console_log, get_async_logger
 
@@ -84,7 +84,7 @@ class Driver:
     async def chat_completion(self, messages: list, max_tokens: int = 3000) -> Awaitable[str]:
         resp = await self.run_async(
             lambda: openai.ChatCompletion.create(
-                model=openai.model,
+                model=conf.openai.model,
                 messages=messages,
                 max_tokens=max_tokens,
             )

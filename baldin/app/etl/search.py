@@ -1,9 +1,9 @@
 from pathlib import Path
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
-from app.chrome import Driver
+from app.core.chrome import Driver
 from bs4 import BeautifulSoup
 from selenium.webdriver.remote.webelement import WebElement
-from app.conf import linkedin, settings
+from app.core.conf import linkedin, settings
 from app.etl.models.job import Job
 
 

@@ -1,6 +1,5 @@
 # app/api/crud.py
 
-from typing import Tuple
 
 from app.models.pydantic import (
     LeadPayloadSchema,
@@ -27,7 +26,8 @@ class LeadCRUD:
             seniority_level=payload.seniority_level,
         ) # empty fields will be filled in by the background task
         await lead.save()
-        return lead # type: ignore
+        return lead.id # type: ignore
+
 
     @staticmethod
     async def get(id: int) -> Union[dict, None]:
@@ -36,35 +36,30 @@ class LeadCRUD:
             return lead
         return None
 
+
     @staticmethod
     async def get_all() -> list:
         summaries = await Lead.all().values()
         return summaries
 
+
     @staticmethod
     async def delete(id: int) -> int:
         lead = await Lead.filter(id=id).delete()
         return lead
-    
-    @staticmethod
-    async def get_latest() -> Union[dict, None]:
-        lead = await Lead.all().order_by("-id").first().values()
-        if lead:
-            return lead
-        return None
+
 
 
 class SearchCRUD:
 
     @staticmethod
-    async def post(payload: SearchPayloadSchema) -> Tuple:
+    async def post(payload: SearchPayloadSchema) -> int:
         search = Search(
             keywords=payload.keywords,
             platform=payload.platform,
         )
         await search.save()
-        return search.id, search.created_at, search.updated_at 
-        
+        return search.id
 
     @staticmethod
     async def get(id: int) -> Union[dict, None]:
@@ -84,14 +79,13 @@ class SearchCRUD:
         return search
 
 
-
 class LoaderCRUD:
 
     @staticmethod
-    async def post() -> dict:
+    async def post() -> int:
         loader = Loader(completed=False)
         await loader.save()
-        return loader.__dict__
+        return loader.id # type: ignore
 
     @staticmethod
     async def get(id: int) -> Union[dict, None]:
@@ -104,18 +98,3 @@ class LoaderCRUD:
     async def get_all() -> list:
         loaders = await Loader.all().values()
         return loaders
-
-    @staticmethod
-    async def get_latest() -> Union[dict, None]:
-        loader = await Loader.all().order_by("-id").first().values()
-        if loader:
-            return loader
-        return None
-
-    @staticmethod
-    async def get_complete(id: int) -> Union[dict, None]:
-        loader = await Loader.filter(id=id).first().values()
-        if loader:
-            return loader
-        return None
-

@@ -6,8 +6,6 @@ import asyncio
 
 from app.models.tortoise import Lead, Search
 
-from app import conf
-
 
 async def generate_search(search_id, keywords) -> None:
     """

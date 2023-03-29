@@ -1,43 +1,23 @@
 # app/api/leads.py
 
-from fastapi import APIRouter, HTTPException, Path, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Path
 
 
-from app.linkedin import generate_lead as generate_lead_linkedin
-from app.glassdoor import generate_lead as generate_lead_glassdoor
-from app.indeed import generate_lead as generate_lead_indeed
 from app.logging import console_log, get_async_logger
 from app.api.crud import LeadCRUD
-from app.models.pydantic import LeadPayloadSchema, LeadResponseSchema, LeadUpdatePayloadSchema
+from app.models.pydantic import LeadPayloadSchema, LeadResponseSchema
 from app.models.tortoise import LeadSchema
 
 log = get_async_logger(__name__)
 
-async def generate_lead(id: int, url: str):
-    if "linkedin" in url:
-        await generate_lead_linkedin(id, url)
-    elif "glassdoor" in url:
-        await generate_lead_glassdoor(id, url)
-    elif "indeed" in url:
-        await generate_lead_indeed(id, url)
-    else:
-        raise HTTPException(status_code=400, detail="Platform not supported")
-        # TODO: This execption is not handled properly, it is being caught by the background task and not by the API.
-        # Resulting in the completion of a lead that is not from a valid platform.
 
 router = APIRouter()
 
 
-@router.post("/", response_model=LeadResponseSchema, status_code=201)
-async def create_lead(payload: LeadPayloadSchema, background_tasks: BackgroundTasks):
-    await log.info(f"Creating lead with url: {payload.url} and search_id: {payload.search_id}")
-    lead_id, search_id, created_at, updated_at = await LeadCRUD.post(payload) 
-    await log.debug(f"Created lead: {lead_id} at {created_at}. Starting background task to generate lead...")
-    background_tasks.add_task(generate_lead, lead_id, payload.url)
-    resp_obj =  {"id": lead_id, "url": payload.url, "search_id": search_id, "created_at": created_at, "updated_at": updated_at}
-    await log.debug(f"Returning response object: {resp_obj}, with status code 201.") 
-    return resp_obj
-
+@router.post("/", status_code=201)
+async def create_lead(payload: LeadPayloadSchema):
+    await log.info(f"Creating lead with payload: {payload}.")
+    return await LeadCRUD.post(payload)
 
 @router.get("/{id}/", response_model=LeadResponseSchema)
 async def read_lead(id: int = Path(..., gt=0)):
@@ -66,11 +46,3 @@ async def delete_lead(id: int = Path(..., gt=0)):
     return lead
 
 
-@router.put("/{id}/", response_model=LeadResponseSchema)
-async def update_lead(payload: LeadUpdatePayloadSchema, id: int = Path(..., gt=0)):
-    await log.info(f"Updating lead with id: {id} and payload: {payload}.")
-    lead = await LeadCRUD.put(id, payload)
-    if not lead:
-        console_log.error(f"Lead with id: {id} not found.")
-        raise HTTPException(status_code=404, detail="Lead not found")
-    return lead

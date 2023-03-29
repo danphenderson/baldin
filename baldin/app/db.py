@@ -1,22 +1,11 @@
 # app/db.py
 
-import logging
-import os
 from app.conf import settings
 from app.logging import console_log as log
 from fastapi import FastAPI
 from tortoise import Tortoise, run_async
 from tortoise.contrib.fastapi import register_tortoise
 
-TORTOISE_ORM : dict = {
-    "connections": {"default": os.environ.get("DATABASE_URL")},
-    "apps": {
-        "models": {
-            "models": ["app.models.tortoise", "aerich.models"],
-            "default_connection": "default",
-        },
-    },
-}
 
 def init_db(app: FastAPI) -> None:
     log.critical(f"Initializing Tortoise ORM... for {app.title}")
@@ -24,14 +13,13 @@ def init_db(app: FastAPI) -> None:
         app,
         db_url=settings.database_url,
         modules={"models": ["app.models.tortoise"]},
-        generate_schemas=False,
+        generate_schemas=True,
         add_exception_handlers=True,
     )
     
 
 async def generate_schema() -> None:
     log.info("Initializing Tortoise...")
-
     await Tortoise.init(
         db_url=settings.database_url,
         modules={"models": ["app.models.tortoise"]},

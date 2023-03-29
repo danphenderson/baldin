@@ -4,26 +4,25 @@ from typing import Tuple
 
 from app.models.pydantic import (
     LeadPayloadSchema,
-    LeadUpdatePayloadSchema,
+    LoaderPayloadSchema,
     SearchPayloadSchema,
 )
-from app.models.tortoise import Lead, Search
+from app.models.tortoise import Lead, Search, Loader
 from typing import Union
 
 
 class LeadCRUD:
 
     @staticmethod
-    async def post(payload: LeadPayloadSchema) -> Tuple:
+    async def post(payload: LeadPayloadSchema) -> int:
         lead = Lead(
-            url=payload.url,
-            search_id=payload.search_id,
-            title="",
-            company="",
-            description=""
+            url=str(payload.url),
+            title=payload.title,
+            company=payload.company,
+            description=payload.description,
         ) # empty fields will be filled in by the background task
         await lead.save()
-        return lead.id, payload.search_id, lead.created_at, lead.updated_at # type: ignore
+        return lead.id # type: ignore
 
     @staticmethod
     async def get(id: int) -> Union[dict, None]:
@@ -41,14 +40,18 @@ class LeadCRUD:
     async def delete(id: int) -> int:
         lead = await Lead.filter(id=id).delete()
         return lead
+    
+    @staticmethod
+    async def get_latest() -> Union[dict, None]:
+        lead = await Lead.all().order_by("-id").first().values()
+        if lead:
+            return lead
+        return None
 
     @staticmethod
-    async def put(id: int, payload: LeadUpdatePayloadSchema) -> Union[dict, None]:
-        lead = await Lead.filter(id=id).update(url=payload.url, title=payload.title, company=payload.company, description=payload.description) # type: ignore
-        if lead:
-            updated_lead = await Lead.filter(id=id).first().values()
-            return updated_lead
-        return None
+    async def delete_all() -> list[int | None]:
+        leads = await Lead.all().delete()
+        return leads
 
 
 class SearchCRUD:
@@ -79,3 +82,40 @@ class SearchCRUD:
     async def delete(id: int) -> int:
         search = await Search.filter(id=id).delete()
         return search
+
+
+
+class LoaderCRUD:
+
+    @staticmethod
+    async def post(payload: LoaderPayloadSchema) -> Tuple:
+        loader = Loader()
+        await loader.save()
+        return loader.id, loader.created_at, loader.updated_at
+
+    @staticmethod
+    async def get(id: int) -> Union[dict, None]:
+        loader = await Loader.filter(id=id).first().values()
+        if loader:
+            return loader
+        return None
+
+    @staticmethod
+    async def get_all() -> list:
+        loaders = await Loader.all().values()
+        return loaders
+
+    @staticmethod
+    async def get_latest() -> Union[dict, None]:
+        loader = await Loader.all().order_by("-id").first().values()
+        if loader:
+            return loader
+        return None
+
+    @staticmethod
+    async def get_complete(id: int) -> Union[dict, None]:
+        loader = await Loader.filter(id=id).first().values()
+        if loader:
+            return loader
+        return None
+

@@ -1,7 +1,5 @@
 # app/api/searches.py
 
-import logging
-
 from fastapi import APIRouter, HTTPException, Path, BackgroundTasks
 
 

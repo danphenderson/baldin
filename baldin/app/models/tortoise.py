@@ -27,18 +27,25 @@ class Search(BaseModel):
 class Lead(BaseModel):
     """A lead model, having a one-to-many relationship with Search."""
     url = fields.CharField(index=True, max_length=255)
-    search = fields.ForeignKeyField("models.Search", related_name="leads") # type: ignore
-    title = fields.CharField(max_length=255)
-    company = fields.CharField(max_length=255)
+    title = fields.CharField(max_length=255, null=True)
+    company = fields.CharField(max_length=255, null=True)
     description = fields.TextField()
-
+    location = fields.CharField(max_length=255, null=True)
+    salary = fields.CharField(max_length=255, null=True)
+    job_function = fields.CharField(max_length=255, null=True)
+    industries = fields.CharField(max_length=255, null=True)
+    employment_type = fields.CharField(max_length=255, null=True)
+    seniority_level = fields.CharField(max_length=255, null=True)
+    
     def __str__(self):
-        return self.url    
+        return self.url
+
+
+class Loader(BaseModel):
+    """A loader model, ..."""
+    complete = fields.BooleanField(default=False, index=True)    
 
 
 SearchSchema = pydantic_model_creator(Search)
-
-
 LeadSchema = pydantic_model_creator(Lead)
-
-
+LoaderSchema = pydantic_model_creator(Loader)

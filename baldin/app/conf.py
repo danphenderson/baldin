@@ -3,7 +3,6 @@ from pathlib import Path
 
 from pydantic import AnyUrl, BaseSettings
 from selenium.webdriver.chrome.options import Options as ChromeOptions
-from app.logging import console_log
 
 
 class _Config:
@@ -18,7 +17,6 @@ class _BaseSettings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        console_log.info("Loaded settings from the environment.")
 
 class Settings(_BaseSettings):
     environment : str
@@ -85,30 +83,25 @@ class Glassdoor(_BaseSettings, env_prefix="GLASSDOOR_"):
 
 def get_settings(**kwargs) -> Settings:
     settings = Settings(**kwargs)
-    console_log.info(f"Loaded settings from the environment: {settings}")
     return settings
 
 def get_chrome_settings(**kwargs) -> Chrome:
     chrome = Chrome(**kwargs)
-    console_log.info(f"Loaded Chrome settings from the environment: {chrome}")
     return chrome
 
 
 def get_openai_settings(**kwargs) -> OpenAI:
     openai = OpenAI(**kwargs)
-    console_log.info(f"Loaded OpenAI settings from the environment: {openai}")
     return openai
 
 
 def get_linkedin_settings(**kwargs) -> Linkedin:
     linkedin = Linkedin(**kwargs)
-    console_log.info(f"Loaded LinkedIn settings from the environment: {linkedin}")
     return linkedin
 
 
 def get_glassdoor_settings(**kwargs) -> Glassdoor:
     glassdoor = Glassdoor(**kwargs)
-    console_log.info(f"Loaded Glassdoor settings from the environment: {glassdoor}")
     return glassdoor
 
 

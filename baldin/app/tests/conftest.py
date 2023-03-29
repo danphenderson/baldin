@@ -1,27 +1,14 @@
 # tests/conftest.py
 
-
-import os
-from typing import Generator
-
 import pytest
 from starlette.testclient import TestClient
 from tortoise.contrib.fastapi import register_tortoise
 from app.main import create_application
-from app.conf import settings, Settings
+from app.conf import settings
 
 
 @pytest.fixture(scope="module")
-def test_app():
-    # override config settings
-    app = create_application()
-    with TestClient(app) as test_client:
-        yield test_client
-    
-    # tear down
-
-@pytest.fixture(scope="module")
-def test_app_with_db():
+def test_client():
     # set up
     app = create_application()
     register_tortoise(

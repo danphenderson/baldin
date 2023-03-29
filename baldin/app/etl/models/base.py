@@ -72,4 +72,3 @@ class HRefBaseModel(BaseModel):
 
     def __ne__(self, other):
         return self.url != other.url
-

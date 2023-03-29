@@ -1,15 +1,17 @@
 # app/api/leads.py
 
 from fastapi import APIRouter, HTTPException, Path
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 
 from app.logging import console_log, get_async_logger
 from app.api.crud import LeadCRUD
 from app.models.pydantic import LeadPayloadSchema, LeadResponseSchema
-from app.models.tortoise import LeadSchema
+
+templates = Jinja2Templates(directory="templates/")
 
 log = get_async_logger(__name__)
-
 
 router = APIRouter()
 
@@ -18,6 +20,7 @@ router = APIRouter()
 async def create_lead(payload: LeadPayloadSchema):
     await log.info(f"Creating lead with payload: {payload}.")
     return await LeadCRUD.post(payload)
+
 
 @router.get("/{id}/", response_model=LeadResponseSchema)
 async def read_lead(id: int = Path(..., gt=0)):
@@ -45,4 +48,14 @@ async def delete_lead(id: int = Path(..., gt=0)):
     await LeadCRUD.delete(id)
     return lead
 
+
+
+@router.get("/html/{id}/", response_class=HTMLResponse)
+async def read_lead_html(id: int = Path(..., gt=0)):
+    await log.info(f"Reading lead with id: {id}.")
+    lead = await LeadCRUD.get(id)
+    if not lead:
+        console_log.error(f"Lead with id: {id} not found.")
+        raise HTTPException(status_code=404, detail="Lead not found")
+    return templates.TemplateResponse("lead.html", {"request": lead})
 

@@ -13,7 +13,11 @@ async def search_results():
         for file in path.iterdir():
             if file.is_dir():
                 return await recursive_search(file)
-            res.append(await Job.load(str(file)))
+            try:    
+                res.append(await Job.load(str(file)))
+            except Exception as e:
+                print(f"Error loading {file}: {e}")
+                continue
         return res
     return await recursive_search(Path(settings.public_asset_path) / "jobs")
 
@@ -67,7 +71,7 @@ class LinkedIn(JobSearch):
         
         # Create model instance and dump to json (Validate data)
         async with Job(**job_dict) as job:
-            await job.dump(str(Path(settings.public_asset_path) / "jobs" / f"{job.id}.json")) # type: ignore
+            await job.dump()
 
     async def scrape_job_page(self, page_number: int) -> None:
         def get_job_cards(soup) -> list[BeautifulSoup]:
@@ -164,15 +168,11 @@ class Glassdoor(JobSearch):
         # Iterate through the job cards     
         for job_button in job_buttons:
             job_payload = await self.scrape_job_post(job_button)
-            if job_payload:
-                job_payload['url'] = url
-                async with Job(**job_payload) as job:# type: ignore
-                    clean = lambda s : str(s).lower().replace(' ', '-').replace('/', '--') 
-                    path = Path(settings.public_asset_path) / "jobs" / str(job.id) / f"{clean(job.company)}_{clean(job.title)}.json"
-                    await job.dump(str(path))
-            else:
-                print("Job payload was empty, skipping...")
-            
+            if not job_payload:
+                continue
+            job_payload['url'] = url
+            async with Job(**job_payload) as job:# type: ignore
+                await job.dump()
 
 
 

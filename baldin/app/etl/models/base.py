@@ -1,15 +1,17 @@
 from abc import ABCMeta
-from uuid import NAMESPACE_URL, uuid5
-from pydantic import BaseModel as _BaseModel
-from pydantic import AnyHttpUrl, Field, root_validator, UUID5
+from uuid import uuid4
+from pydantic import UUID4, BaseModel as _BaseModel
+from pydantic import AnyHttpUrl, Field
 from asyncio import get_event_loop, ensure_future, Future, sleep
 from pathlib import Path
 from aiofiles import open as aopen
+from app.conf import settings
 
 from typing import Dict
 
 class BaseModel(_BaseModel, extra='allow', metaclass=ABCMeta):
     _tasks: list = []
+    id : UUID4 | None = Field(default_factory=uuid4)
 
     @staticmethod
     async def _run_sync(func, *args, **kwargs):
@@ -56,12 +58,6 @@ class BaseModel(_BaseModel, extra='allow', metaclass=ABCMeta):
 
 class HRefBaseModel(BaseModel):
     url: AnyHttpUrl
-    id: UUID5 | None = Field(default=None) # sha1 hash of url for unique id
-
-    @root_validator
-    def assign_id(cls, values):
-        values["id"] = uuid5(NAMESPACE_URL, values.get("url", ""))
-        return values
 
     def __eq__(self, other):
         if isinstance(other, str):
@@ -72,3 +68,6 @@ class HRefBaseModel(BaseModel):
 
     def __ne__(self, other):
         return self.url != other.url
+
+    async def dump(self):
+        return await super().dump(str(Path(settings.public_asset_path) / "leads" / f"{self.id}.json"))

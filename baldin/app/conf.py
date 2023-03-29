@@ -69,7 +69,7 @@ class Linkedin(_BaseSettings, env_prefix="LINKEDIN_"):
     username: str = ""
     password: str = ""
 
-    search_endpoint: str = "https://www.linkedin.com/jobs/search/?currentJobId=3505387285&f_E=2%2C3%2C4&f_JT=F&keywords=Python%20FastAPI"
+    search_endpoint: str = "https://www.linkedin.com/jobs/search/?currentJobId=3538510509&f_E=3%2C4&f_JT=F%2CC&f_TPR=r604800&f_WT=2&keywords=python%20aws"
     profile_endpoint: str = "https://www.linkedin.com/in/daniel-henderson-6a9485bb/"
     login_endpoint: str = "https://www.linkedin.com/login"
 

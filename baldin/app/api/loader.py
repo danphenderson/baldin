@@ -7,22 +7,19 @@ Routes to load the public assets bucket (datalake) into application database.
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 
 
-from app.logging import console_log, get_async_logger
-
 
 from app.api.crud import LoaderCRUD
-
-from app.models.pydantic import LoaderResponseSchema, LoaderPayloadSchema
-from app.models.tortoise import LoaderSchema
+from app.models.pydantic import LoaderResponseSchema
+from app.logging import console_log, get_async_logger
 from app import datalake
+
 log = get_async_logger(__name__)
 
 router = APIRouter()
 
 @router.post("/", response_model=LoaderResponseSchema, status_code=201)
-async def load_database(payload: LoaderPayloadSchema, background_tasks: BackgroundTasks):
-    await log.info(f"Loading datalake with url: {payload}")
-    loader_id, created_at, updated_at = await LoaderCRUD.post(payload)
+async def load_database(background_tasks: BackgroundTasks):
+    loader_id, created_at, updated_at = await LoaderCRUD.post()
     await log.debug(f"Created loader: {loader_id} at {created_at}. Starting background task to load database...")
     background_tasks.add_task(datalake.load, loader_id) 
     resp_obj =  {"id": loader_id, "created_at": created_at, "updated_at": updated_at}

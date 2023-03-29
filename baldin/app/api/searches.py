@@ -8,9 +8,7 @@ from app.glassdoor import generate_search as generate_search_glassdoor
 from app.indeed import generate_search as generate_search_indeed
 
 from app.api.crud import SearchCRUD
-
 from app.models.pydantic import SearchPayloadSchema, SearchResponseSchema
-from app.models.tortoise import SearchSchema
 from app.logging import console_log, get_async_logger
 
 log = get_async_logger(__name__)
@@ -37,7 +35,7 @@ async def create_search(payload: SearchPayloadSchema, background_tasks: Backgrou
     return {"id": search_id, "keywords": payload.keywords, "platform": payload.platform, "created_at": str(created_at), "updated_at": str(updated_at)}
 
 
-@router.get("/{id}/", response_model=SearchSchema)
+@router.get("/{id}/", response_model=SearchResponseSchema)
 async def read_search(id: int = Path(..., gt=0)):
     await log.info(f"Reading search with id: {id}")
     search = await SearchCRUD.get(id)
@@ -47,13 +45,13 @@ async def read_search(id: int = Path(..., gt=0)):
     return search
 
 
-@router.get("/", response_model=list[SearchSchema]) # type: ignore
+@router.get("/", response_model=list[SearchResponseSchema]) # type: ignore
 async def read_all_searches() -> list:
     await log.info("Reading all searches")
     return await SearchCRUD.get_all()
 
 
-@router.delete("/{id}/", response_model=SearchSchema)
+@router.delete("/{id}/", response_model=SearchResponseSchema)
 async def delete_search(id: int = Path(..., gt=0)):
     await log.info(f"Deleting search with id: {id}")
     search = await SearchCRUD.get(id)

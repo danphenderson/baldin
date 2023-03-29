@@ -32,7 +32,6 @@ class LeadPayloadSchema(BaseModel):
     seniority_level: str | None = None
 
 
-
 class LeadResponseSchema(LeadPayloadSchema, BaseResponseSchema):
     pass
 
@@ -46,11 +45,7 @@ class SearchResponseSchema(SearchPayloadSchema, BaseResponseSchema):
     pass
 
 
-class LoaderPayloadSchema(BaseModel):
-    pass
-
-
-class LoaderResponseSchema(LoaderPayloadSchema, BaseResponseSchema):
+class LoaderResponseSchema(BaseResponseSchema):
     pass
 
  

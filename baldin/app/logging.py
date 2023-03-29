@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
@@ -12,9 +13,10 @@ class AsyncJSONFileLogger:
         backupcount=5,
         interval='D',
         encoding='utf-8'
-    ):
+    ):  
         self.logger = logging.getLogger(name)
-        self.logger.setLevel(conf.settings.log_level)  
+        self.logger.setLevel(conf.settings.log_level)
+        self.filepath = filepath
         formatter = logging.Formatter('{"levelname": "%(levelname)s", "message": "%(message)s", "asctime": "%(asctime)s", "process_id": "%(process)s", "thread_id": "%(thread)s"}')  # noqa: E501
         handler = TimedRotatingFileHandler(
             filepath, backupCount=backupcount, when=interval, encoding=encoding
@@ -41,6 +43,11 @@ class AsyncJSONFileLogger:
     async def critical(self, msg, *args, **kwargs):
         await self.log("critical", msg, *args, **kwargs)
 
+    async def read(self):
+        async with _lock:
+            with open(self.filepath, 'r') as f:
+                return json.load(f)
+          
 
 _lock = asyncio.Lock()
 
@@ -57,5 +64,6 @@ def get_async_logger(
     return AsyncJSONFileLogger(
         name, str(filepath), backupcount, interval, encoding
     )
+
 
 console_log = logging.getLogger("uvicorn")

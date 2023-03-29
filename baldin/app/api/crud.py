@@ -4,7 +4,6 @@ from typing import Tuple
 
 from app.models.pydantic import (
     LeadPayloadSchema,
-    LoaderPayloadSchema,
     SearchPayloadSchema,
 )
 from app.models.tortoise import Lead, Search, Loader
@@ -48,11 +47,6 @@ class LeadCRUD:
             return lead
         return None
 
-    @staticmethod
-    async def delete_all() -> list[int | None]:
-        leads = await Lead.all().delete()
-        return leads
-
 
 class SearchCRUD:
 
@@ -88,7 +82,7 @@ class SearchCRUD:
 class LoaderCRUD:
 
     @staticmethod
-    async def post(payload: LoaderPayloadSchema) -> Tuple:
+    async def post() -> Tuple:
         loader = Loader()
         await loader.save()
         return loader.id, loader.created_at, loader.updated_at

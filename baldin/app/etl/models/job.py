@@ -12,5 +12,4 @@ class Job(HRefBaseModel):
     job_function: str | None = None
     industries: str | None = None
     hiring_manager: str | None = None
-    
-    
+   

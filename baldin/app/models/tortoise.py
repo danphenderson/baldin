@@ -1,8 +1,6 @@
 # app/models/tortoise.py
 
 from tortoise import fields, models
-from tortoise.contrib.pydantic.creator import pydantic_model_creator
-
 
 class BaseModel(models.Model):
     """An abstract base model that will include every system managed column."""
@@ -43,9 +41,4 @@ class Lead(BaseModel):
 
 class Loader(BaseModel):
     """A loader model, ..."""
-    complete = fields.BooleanField(default=False, index=True)    
-
-
-SearchSchema = pydantic_model_creator(Search)
-LeadSchema = pydantic_model_creator(Lead)
-LoaderSchema = pydantic_model_creator(Loader)
+    complete = fields.BooleanField(default=False, index=True)

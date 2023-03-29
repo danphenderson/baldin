@@ -5,8 +5,9 @@ import asyncio
 
 
 from app.models.tortoise import Lead, Search
-from app.conf import get_linkedin_settings
-from app.chrome import get_driver, Driver
+
+from app import conf
+
 
 async def generate_search(search_id, keywords) -> None:
     """

@@ -10,12 +10,13 @@ from fastapi.responses import HTMLResponse
 from fastapi.requests import Request
 
 from app.api import leads, searches
-from app.db import init_db, generate_schema
-from app.utils import openfile
+from app.db import init_db
+from app.utils import open_page
+
+from app.logging import console_log as log
 
 templates = Jinja2Templates(directory="templates")
 
-log = logging.getLogger("uvicorn")
 
 
 def include_routes(application: FastAPI) -> None:
@@ -50,11 +51,11 @@ async def shutdown_event():
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    data = openfile("home.md")
+    data = open_page("home.md")
     return templates.TemplateResponse("page.html", {"request": request, "data": data})
 
 
 @app.get("/page/{page_name}", response_class=HTMLResponse)
 async def show_page(request: Request, page_name: str):
-    data = openfile(page_name+".md")
+    data = open_page(page_name+".md")
     return templates.TemplateResponse(f"page.html", {"request": request, "data": data})

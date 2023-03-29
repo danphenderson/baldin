@@ -1,11 +1,10 @@
 # app/config.py
-import os
-import logging
 from pathlib import Path
-from selenium.webdriver.chrome.options import Options as ChromeOptions
-from pydantic import AnyUrl, BaseSettings
 
-log = logging.getLogger("uvicorn")
+from pydantic import AnyUrl, BaseSettings
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from app.logging import console_log
+
 
 class _Config:
     case_sensitive = False
@@ -19,12 +18,15 @@ class _BaseSettings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        log.info("Loaded settings from the environment.")
+        console_log.info("Loaded settings from the environment.")
 
 class Settings(_BaseSettings):
     environment : str
     database_url : AnyUrl
-        
+    database_test_url : AnyUrl
+    log_level : str = "DEBUG"
+    log_file_name : str = "app_log"
+    public_asset_path : str = "public" 
 
 class Chrome(_BaseSettings, env_prefix="CHROME_"):
     """
@@ -34,13 +36,13 @@ class Chrome(_BaseSettings, env_prefix="CHROME_"):
     """
     driver_path: str
     incognito_option: bool = True
-    headless_option: bool = False
+    headless_option: bool = True
 
     @property
     def options(self) -> ChromeOptions:
         options = ChromeOptions()
         options.add_argument('--no-sandbox')
-        #options.add_argument('--window-size=1420,1080')
+        options.add_argument('--window-size=1420,1080')
         options.add_argument('--ignore-certificate-errors')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
@@ -81,30 +83,42 @@ class Glassdoor(_BaseSettings, env_prefix="GLASSDOOR_"):
     username: str = ""
     password: str = ""
 
-def get_settings(**kwargs) -> BaseSettings:
+def get_settings(**kwargs) -> Settings:
     settings = Settings(**kwargs)
-    log.info(f"Loaded settings from the environment: {settings}")
+    console_log.info(f"Loaded settings from the environment: {settings}")
     return settings
 
 def get_chrome_settings(**kwargs) -> Chrome:
     chrome = Chrome(**kwargs)
-    log.info(f"Loaded Chrome settings from the environment: {chrome}")
+    console_log.info(f"Loaded Chrome settings from the environment: {chrome}")
     return chrome
 
 
 def get_openai_settings(**kwargs) -> OpenAI:
     openai = OpenAI(**kwargs)
-    log.info(f"Loaded OpenAI settings from the environment: {openai}")
+    console_log.info(f"Loaded OpenAI settings from the environment: {openai}")
     return openai
 
 
 def get_linkedin_settings(**kwargs) -> Linkedin:
     linkedin = Linkedin(**kwargs)
-    log.info(f"Loaded LinkedIn settings from the environment: {linkedin}")
+    console_log.info(f"Loaded LinkedIn settings from the environment: {linkedin}")
     return linkedin
 
 
 def get_glassdoor_settings(**kwargs) -> Glassdoor:
     glassdoor = Glassdoor(**kwargs)
-    log.info(f"Loaded Glassdoor settings from the environment: {glassdoor}")
+    console_log.info(f"Loaded Glassdoor settings from the environment: {glassdoor}")
     return glassdoor
+
+
+settings = get_settings()
+
+chrome = get_chrome_settings()
+
+openai = get_openai_settings()
+
+linkedin = get_linkedin_settings()
+
+glassdoor = get_glassdoor_settings()
+

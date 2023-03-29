@@ -28,6 +28,8 @@ webdriver-manager = "*"
 httpie = "*"
 mypy = "*"
 types-beautifulsoup4 = "*"
+types-markdown = "*"
+types-aiofiles = "*"
 
 [scripts]
 test = "docker-compose exec web python -m pytest"

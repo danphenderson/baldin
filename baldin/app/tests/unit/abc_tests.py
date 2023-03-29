@@ -1,5 +1,6 @@
 import pytest
-from employment_automation.models.base import BaseModel
+
+from app.etl.models.base import BaseModel
 
 
 class SampleModel(BaseModel):

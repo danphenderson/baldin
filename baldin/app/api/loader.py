@@ -19,12 +19,10 @@ router = APIRouter()
 
 @router.post("/", response_model=LoaderResponseSchema, status_code=201)
 async def load_database(background_tasks: BackgroundTasks):
-    loader_id, created_at, updated_at = await LoaderCRUD.post()
-    await log.debug(f"Created loader: {loader_id} at {created_at}. Starting background task to load database...")
-    background_tasks.add_task(datalake.load, loader_id) 
-    resp_obj =  {"id": loader_id, "created_at": created_at, "updated_at": updated_at}
-    await log.debug(f"Returning response object: {resp_obj}, with status code 201.")
-    return resp_obj
+    loader = await LoaderCRUD.post()
+    background_tasks.add_task(datalake.load, loader["id"]) 
+    await log.debug(f"Posted datalake load: {loader}, with status code 201.")
+    return loader
 
 
 @router.get("/{loader_id}/", response_model=LoaderResponseSchema)

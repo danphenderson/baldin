@@ -19,9 +19,15 @@ class LeadCRUD:
             title=payload.title,
             company=payload.company,
             description=payload.description,
+            location=payload.location,
+            salary=payload.salary,
+            job_function=payload.job_function,
+            industries=payload.industries,
+            employment_type=payload.employment_type,
+            seniority_level=payload.seniority_level,
         ) # empty fields will be filled in by the background task
         await lead.save()
-        return lead.id # type: ignore
+        return lead # type: ignore
 
     @staticmethod
     async def get(id: int) -> Union[dict, None]:
@@ -82,10 +88,10 @@ class SearchCRUD:
 class LoaderCRUD:
 
     @staticmethod
-    async def post() -> Tuple:
-        loader = Loader()
+    async def post() -> dict:
+        loader = Loader(completed=False)
         await loader.save()
-        return loader.id, loader.created_at, loader.updated_at
+        return loader.__dict__
 
     @staticmethod
     async def get(id: int) -> Union[dict, None]:

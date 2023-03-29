@@ -19,7 +19,7 @@ async def search_results():
                 print(f"Error loading {file}: {e}")
                 continue
         return res
-    return await recursive_search(Path(settings.public_asset_path) / "jobs")
+    return await recursive_search(Path(settings.public_asset_path) / "leads")
 
 
 class JobSearch:

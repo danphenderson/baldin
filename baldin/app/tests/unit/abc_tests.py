@@ -8,7 +8,7 @@ class SampleModel(BaseModel):
     age: int = 25
 
 
-@pytest.mark.asyncio
+
 async def test_async_base_model_to_dict():
     async with SampleModel() as model:
         expected_dict = {'name': 'John Doe', 'age': 25}
@@ -17,7 +17,7 @@ async def test_async_base_model_to_dict():
         assert await model.to_json() == expected_json
 
 
-@pytest.mark.asyncio
+
 async def test_async_base_model_run_async():
     async with SampleModel() as model:
         result = await model.run_async(model.to_dict)
@@ -28,7 +28,7 @@ async def test_async_base_model_run_async():
         result = await model.run_async(mock_async_function)
         assert await result == 10
 
-@pytest.mark.asyncio
+
 async def test_async_base_model_wait():
     async with SampleModel() as model:
         import time
@@ -37,7 +37,7 @@ async def test_async_base_model_wait():
         end_time = time.time()
         assert (end_time - start_time) >= 1
 
-@pytest.mark.asyncio
+
 async def test_async_base_model_async_with():
     class SampleModel2(BaseModel):
         name: str
@@ -55,7 +55,7 @@ async def test_async_base_model_async_with():
         assert model.name == 'John Doe'
         assert model.age == 25
 
-@pytest.mark.asyncio
+
 async def test_async_base_model_await():
     async with BaseModel() as model:
         assert model is not None

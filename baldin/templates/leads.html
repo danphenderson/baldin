@@ -1,27 +1,47 @@
 {% extends "base.html" %}
+
 {% set active_page = "lead" %}
 
-{% block title %}Lead Finder{% endblock %}
-
-{% block head %}
-{{ super() }}
-
-
-{% endblock %}
+{% block title %}Leads Admin Interface{% endblock %}
 
 {% block page_content %}
-<h1 class="cap">Lead Finder</h1>
-
-<img class="responsive" src="https://source.lead.com/400x400/?flower" width="400" height="400">
-<p>Source</p>
-
-<img class="responsive" src="https://source.lead.com/collection/827743/400x400" width="400" height="400">
-<p>Source</p>
-
+  <h1 class="cap">Leads Admin Interface</h1>
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-header">
+            <h4 class="card-title">Leads</h4>
+          </div>
+          <div class="card-body">
+            <ul class="list-unstyled">
+              {% for lead in leads %}
+                <li>
+                  <a href="{{ url_for('leads.url', lead_id=lead.id) }}">
+                    {{ lead.name }} ({{ lead.description }})
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-8">
+        {% block lead_detail %}
+          <div class="card">
+            <div class="card-header">
+              <h4 class="card-title">Lead Detail</h4>
+            </div>
+            <div class="card-body">
+              <p>Select a lead to view detail</p>
+            </div>
+          </div>
+        {% endblock %}
+      </div>
+    </div>
+  </div>
 {% endblock %}
 
 {% block scripts %}
-{{ super() }}
-
-
+  {{ super() }}
 {% endblock %}

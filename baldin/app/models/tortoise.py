@@ -13,15 +13,6 @@ class BaseModel(models.Model):
         abstract = True
 
 
-class Search(BaseModel):
-    """A lead search model."""
-    keywords = fields.CharField(index=True, max_length=255)
-    platform = fields.CharField(index=True, max_length=255)
-
-    def __str__(self):
-        return self.keywords
-
-
 class Lead(BaseModel):
     """A lead model, having a one-to-many relationship with Search."""
     url = fields.CharField(index=True, max_length=255)
@@ -37,6 +28,14 @@ class Lead(BaseModel):
     
     def __str__(self):
         return self.url
+
+class Search(BaseModel):
+    """A lead search model."""
+    keywords = fields.CharField(index=True, max_length=255)
+    platform = fields.CharField(index=True, max_length=255)
+
+    def __str__(self):
+        return self.keywords
 
 
 class Loader(BaseModel):

@@ -14,12 +14,6 @@ class BaseResponseSchema(BaseModel):
         extra = "allow"
         abstract = True
 
-
-class LoaderResponseSchema(BaseResponseSchema):
-    pass
-
- 
-
 class LeadPayloadSchema(BaseModel):
     url: AnyHttpUrl
     title: str | None = None
@@ -32,9 +26,18 @@ class LeadPayloadSchema(BaseModel):
     employment_type: str | None = None
     seniority_level: str | None = None
 
-
 class LeadResponseSchema(LeadPayloadSchema, BaseResponseSchema):
     pass
+
+class LoaderResponseSchema(BaseResponseSchema):
+    pass
+
+ 
+
+
+
+
+
 
 
 class SearchPayloadSchema(BaseModel):

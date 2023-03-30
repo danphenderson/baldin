@@ -31,10 +31,10 @@ async def read_lead(id: int = Path(..., gt=0)):
     return lead
 
 
-@router.get("/", response_model=list[LeadResponseSchema]) 
-async def read_all_leads() -> list:
-    await log.info("Reading all leads.")
-    return await LeadCRUD.get_all()
+@router.get("/", response_model=HTMLResponse) 
+async def read_all_leads():
+    leads = await LeadCRUD.get_all()
+    return templates.TemplateResponse("leads.html", {"leads": leads})
 
 
 @router.delete("/{id}/", response_model=LeadResponseSchema)

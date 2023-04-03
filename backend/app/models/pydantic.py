@@ -32,13 +32,6 @@ class LeadResponseSchema(LeadPayloadSchema, BaseResponseSchema):
 class LoaderResponseSchema(BaseResponseSchema):
     pass
 
- 
-
-
-
-
-
-
 
 class SearchPayloadSchema(BaseModel):
     keywords: str

@@ -1,13 +1,9 @@
 # app/api/leads.py
 
 from fastapi import APIRouter, HTTPException, Path
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from app.logging import console_log, get_async_logger
 from app.api.crud import LeadCRUD
 from app.models.pydantic import LeadPayloadSchema, LeadResponseSchema
-
-templates = Jinja2Templates(directory="templates/")
 
 log = get_async_logger(__name__)
 
@@ -31,10 +27,10 @@ async def read_lead(id: int = Path(..., gt=0)):
     return lead
 
 
-@router.get("/", response_model=HTMLResponse) 
+@router.get("/", response_model=list[LeadResponseSchema]) 
 async def read_all_leads():
     leads = await LeadCRUD.get_all()
-    return templates.TemplateResponse("leads.html", {"leads": leads})
+    return leads
 
 
 @router.delete("/{id}/", response_model=LeadResponseSchema)

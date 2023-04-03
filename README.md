@@ -12,11 +12,6 @@ Selenium grid: http://localhost:4444/ui
 - Ref: https://github.com/SeleniumHQ/docker-selenium
 
 
-### Packages
-
-jinja2: https://jinja.palletsprojects.com/en/3.0.x/api/
-css bootstrap: https://getbootstrap.com/docs/4.1/getting-started/introduction/
-
 # Material UI React
 
 https://mui.com/

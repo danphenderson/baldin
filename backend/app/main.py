@@ -1,30 +1,53 @@
 # app/main.py
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 
-from app.api import leads, searches, loader
-from app.core.db import init_db
+"""
+Main FastAPI app instance declaration
+"""
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.api import api_router, create_db_and_tables
+from app.core import conf
+
+
 from app.logging import console_log as log
 
-def include_routes(application: FastAPI) -> None:
-    log.critical(f"Attaching Application Routes: {application.title}")
-    application.include_router(leads.router, prefix="/leads", tags=["leads"])
-    application.include_router(searches.router, prefix="/searches", tags=["searches"])
-    application.include_router(loader.router, prefix="/loader", tags=["loader"])
 
-def create_application() -> FastAPI:
-    application = FastAPI(title="baldin", version="0.1.0", tags=["api"])
-    include_routes(application)
-    return application
+app = FastAPI(
+    title=conf.settings.PROJECT_NAME,
+    version=conf.settings.VERSION,
+    description=conf.settings.DESCRIPTION,
+    openapi_url="/openapi.json",
+    docs_url="/",
+)
 
-app = create_application()
+# Set all CORS enabled origins
+if conf.settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(origin) for origin in conf.settings.BACKEND_CORS_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
+app.include_router(api_router)
+ 
 
 @app.on_event("startup")
 async def startup_event():
     log.info("Starting up...")
-    init_db(app)
-
+    await create_db_and_tables()
 
 @app.on_event("shutdown")
 async def shutdown_event():
     log.info("Shutting down...")
+
+
+
+@app.get("/ping")
+async def pong():
+    log.info("Pong!")
+    return {"message": "success!"}

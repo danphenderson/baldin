@@ -15,6 +15,20 @@ log = get_async_logger(__name__)
 
 
 class Driver:
+    """
+    Example usage: working using connecting to the headless chrome server.
+        from selenium import webdriver
+
+
+        options = webdriver.ChromeOptions()
+        options.add_argument('--ignore-ssl-errors=yes')
+        options.add_argument('--ignore-certificate-errors')
+
+
+        driver = webdriver.Remote(
+        command_executor='http://localhost:4444/wd/hub',
+        options=options
+    """
     
     @staticmethod
     async def _run_sync(func) -> Awaitable[Any]:

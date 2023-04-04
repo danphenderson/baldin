@@ -15,7 +15,7 @@ class AsyncJSONFileLogger:
         encoding='utf-8'
     ):  
         self.logger = logging.getLogger(name)
-        self.logger.setLevel(conf.settings.log_level)
+        self.logger.setLevel(conf.settings.LOGGING_LEVEL)
         self.filepath = filepath
         formatter = logging.Formatter('{"levelname": "%(levelname)s", "message": "%(message)s", "asctime": "%(asctime)s", "process_id": "%(process)s", "thread_id": "%(thread)s"}')  # noqa: E501
         handler = TimedRotatingFileHandler(
@@ -58,7 +58,7 @@ def get_async_logger(
     encoding='utf-8'
 ) -> AsyncJSONFileLogger:
     backupcount = backupcount or 5
-    filepath = Path(conf.settings.public_asset_path) / f"{conf.settings.log_file_name}.json"
+    filepath = Path(conf.settings.PUBLIC_ASSETS_DIR) / f"{conf.settings.LOGGING_FILE_NAME}.json"
     if not filepath.exists():
         filepath.parent.mkdir(parents=True, exist_ok=True)
     return AsyncJSONFileLogger(

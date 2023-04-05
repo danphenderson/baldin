@@ -3,12 +3,17 @@
 """
 Main FastAPI app instance declaration
 """
+
+
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core import conf
 from app.api.api import api_router
 from app.logging import console_log as log
 from app.core.db import create_db_and_tables
+from app.core.security import create_default_superuser
+
 
 app = FastAPI(
     title=conf.settings.PROJECT_NAME,
@@ -35,6 +40,7 @@ app.include_router(api_router)
 async def startup_event():
     log.info("Starting up...")
     await create_db_and_tables()
+    await create_default_superuser()
     
 
 @app.on_event("shutdown")

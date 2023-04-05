@@ -14,7 +14,14 @@ https://fastapi-users.github.io/fastapi-users/configuration/user-manager/
 """
 
 import uuid
+import contextlib
 from typing import Optional
+
+
+from app.core.db import get_async_session, get_user_db
+from app.schemas.users import UserCreate
+
+from fastapi_users.exceptions import UserAlreadyExists
 
 from app.core import conf
 
@@ -71,10 +78,36 @@ async def get_user_manager(user_db: SQLAlchemyUserDatabase = Depends(get_user_db
 
 
 fastapi_users = FastAPIUsers[User, uuid.UUID](get_user_manager, [AUTH_BACKEND]) # type: ignore
-
-
 get_current_active_user = fastapi_users.current_user(active=True)
-
-
 get_current_superuser = fastapi_users.current_user(active=True, superuser=True)
 
+get_async_session_context = contextlib.asynccontextmanager(get_async_session)
+get_user_db_context = contextlib.asynccontextmanager(get_user_db)
+get_user_manager_context = contextlib.asynccontextmanager(get_user_manager)
+
+
+async def create_user(email: str, password: str, is_superuser: bool = False):
+    try:
+        async with get_async_session_context() as session:
+            async with get_user_db_context(session) as user_db:
+                async with get_user_manager_context(user_db) as user_manager:
+                    user = await user_manager.create(
+                        UserCreate(
+                            email=email, password=password, is_superuser=is_superuser # type: ignore
+                        )
+                    )
+                    print(f"User created {user}")
+    except UserAlreadyExists:
+        print(f"User {email} already exists")
+
+
+async def create_default_superuser():
+    await create_user(
+        email=conf.settings.FIRST_SUPERUSER_EMAIL,
+        password=conf.settings.FIRST_SUPERUSER_PASSWORD,
+        is_superuser=True,
+    )
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(create_default_superuser())

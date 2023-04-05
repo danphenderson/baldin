@@ -9,19 +9,11 @@ You can include more of them + oauth login endpoints.
 fastapi_users in defined in deps, because it also
 includes useful dependencies.
 """
-
-from typing import Awaitable
 from fastapi import APIRouter
 
 from app.api.deps import fastapi_users
 from app.core import security
-from app.models import Base
-from app.session import async_engine
-
-
-async def create_db_and_tables():
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+from app.schemas.user import UserCreate, UserRead, UserUpdate
 
 
 api_router : APIRouter = APIRouter()
@@ -32,12 +24,22 @@ api_router.include_router(
     tags=["auth"],
 )
 api_router.include_router(
-    fastapi_users.get_register_router(),
+    fastapi_users.get_register_router(UserRead, UserCreate),
     prefix="/auth",
     tags=["auth"],
 )
 api_router.include_router(
-    fastapi_users.get_users_router(),
+    fastapi_users.get_reset_password_router(),
+    prefix="/auth",
+    tags=["auth"],
+)
+api_router.include_router(
+    fastapi_users.get_verify_router(UserRead),
+    prefix="/auth",
+    tags=["auth"],
+)
+api_router.include_router(
+    fastapi_users.get_users_router(UserRead, UserUpdate),
     prefix="/users",
     tags=["users"],
 )

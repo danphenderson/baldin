@@ -5,16 +5,15 @@ Note, imported by alembic migrations logic, see `alembic/env.py`
 """
 
 from datetime import datetime
-from typing import Any, cast
-
-from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
 from sqlalchemy import Column, DateTime, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
+from fastapi_users.db import SQLAlchemyBaseUserTableUUID
+from sqlalchemy.orm import DeclarativeBase
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
-class UserTable(Base, SQLAlchemyBaseUserTable): # type: ignore
+class User(SQLAlchemyBaseUserTableUUID, Base):
     pass
 
 

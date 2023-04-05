@@ -1,39 +1,21 @@
 version: "3.8"
 
-# For local development, only database is running
-#
-# docker-compose up -d
-# uvicorn app.main:app --reload
-#
-
 services:
-  default_database:
-    restart: unless-stopped
-    image: postgres:latest
+  db:
+    build:
+      context: ./public/db
+      dockerfile: Dockerfile
+    restart: always
     volumes:
-      - ./public/db:/var/lib/postgresql/data
+      - ./public/db/baldin:/var/lib/postgresql/data
+    ports:
+      - "${DEFAULT_DATABASE_PORT}:5432"
     environment:
       - POSTGRES_DB=${DEFAULT_DATABASE_DB}
       - POSTGRES_USER=${DEFAULT_DATABASE_USER}
       - POSTGRES_PASSWORD=${DEFAULT_DATABASE_PASSWORD}
     env_file:
       - .env
-    ports:
-      - "${DEFAULT_DATABASE_PORT}:5432"
-
-  test_database:
-    restart: unless-stopped
-    image: postgres:latest
-    volumes:
-      - ./public/db_test:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=${TEST_DATABASE_DB}
-      - POSTGRES_USER=${TEST_DATABASE_USER}
-      - POSTGRES_PASSWORD=${TEST_DATABASE_PASSWORD}
-    env_file:
-      - .env
-    ports:
-      - "${TEST_DATABASE_PORT}:5432"
 
   headless-chrome:
     restart: unless-stopped
@@ -45,15 +27,4 @@ services:
     volumes:
       - "/dev/shm:/dev/shm"
     environment:
-      - SHM_SIZE=2g
-
-  pgadmin:
-    container_name: pgadmin4_container
-    image: dpage/pgadmin4
-    restart: always
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: root
-    ports:
-      - "5050:80"
-
+      - SHM_SIZE=${CHROME_SHM_SIZE}

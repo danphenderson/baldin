@@ -3,14 +3,10 @@
 """
 Main FastAPI app instance declaration
 """
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from app.api.api import api_router, create_db_and_tables
 from app.core import conf
-
-
+from app.api.api import api_router
 from app.logging import console_log as log
 
 
@@ -19,7 +15,7 @@ app = FastAPI(
     version=conf.settings.VERSION,
     description=conf.settings.DESCRIPTION,
     openapi_url="/openapi.json",
-    docs_url="/",
+    docs_url="/docs",
 )
 
 # Set all CORS enabled origins
@@ -34,17 +30,15 @@ if conf.settings.BACKEND_CORS_ORIGINS:
 
 
 app.include_router(api_router)
- 
 
 @app.on_event("startup")
 async def startup_event():
     log.info("Starting up...")
-    await create_db_and_tables()
+    
 
 @app.on_event("shutdown")
 async def shutdown_event():
     log.info("Shutting down...")
-
 
 
 @app.get("/ping")

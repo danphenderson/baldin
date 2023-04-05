@@ -8,10 +8,8 @@ fastapi = "*"
 uvicorn = "*"
 asyncpg = "*"
 fastapi-users = {extras = ["sqlalchemy"], version = "*"}
-sqlalchemy = {extras = ["asycio"], version = "*"}
 pydantic = "*"
 pytest = "*"
-pytest-asycio = "*"
 httpx = "*"
 selenium = "*"
 openai = "*"
@@ -26,18 +24,13 @@ passlib = "*"
 pyjwt = "*"
 python-dotenv = "*"
 toml = "*"
-
+sqlalchemy = "*"
 
 [dev-packages]
 ipython = "*"
-mypy = "*"
-types-beautifulsoup4 = "*"
-types-aiofiles = "*"
 coverage = "==6.2"
 pytest-asyncio = "*"
-mypy-extensions = "*"
 baldin = {editable = true, path = "."}
-sqlalchemy-stubs = "*"
 
 [scripts]
 test = "docker-compose exec web python -m pytest"

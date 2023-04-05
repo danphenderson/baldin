@@ -4,9 +4,6 @@ import re
 from typing import List
 from bs4 import BeautifulSoup
 
-
-
-
 def clean_text(text:str) -> str:
     """
     Removes extra whitespace from the HTML of the loaded source document.

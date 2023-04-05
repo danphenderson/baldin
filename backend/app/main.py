@@ -45,3 +45,10 @@ async def shutdown_event():
 async def pong():
     log.info("Pong!")
     return {"message": "success!"}
+
+
+
+@app.get("/")
+async def root():
+    log.info("Root!")
+    return {"message": "Hello World!"}

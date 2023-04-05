@@ -2,12 +2,8 @@ version: "3.8"
 
 services:
   db:
-    build:
-      context: ./public/db
-      dockerfile: Dockerfile
-    restart: always
-    volumes:
-      - ./public/db/baldin:/var/lib/postgresql/data
+    image: postgres:15
+    restart: unless-stopped
     ports:
       - "${DEFAULT_DATABASE_PORT}:5432"
     environment:
@@ -16,6 +12,8 @@ services:
       - POSTGRES_PASSWORD=${DEFAULT_DATABASE_PASSWORD}
     env_file:
       - .env
+    volumes:
+      - ./public/db:/var/lib/postgresql/data
 
   headless-chrome:
     restart: unless-stopped

@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core import conf
 from app.api.api import api_router
 from app.logging import console_log as log
-
+from app.core.db import create_db_and_tables
 
 app = FastAPI(
     title=conf.settings.PROJECT_NAME,
@@ -34,6 +34,7 @@ app.include_router(api_router)
 @app.on_event("startup")
 async def startup_event():
     log.info("Starting up...")
+    await create_db_and_tables()
     
 
 @app.on_event("shutdown")

@@ -1,6 +1,6 @@
 import uuid
 
-from pydantic import BaseModel as _BaseModel, UUID4, AnyHttpUrl
+from pydantic import BaseModel as _BaseModel, UUID4
 from datetime import datetime 
 
 from fastapi_users import schemas
@@ -29,7 +29,6 @@ class UserUpdate(schemas.BaseUserUpdate):
 
 
 class BaseLead(BaseModel):
-    url: str
     title: str | None = None
     company: str | None = None
     description: str | None = None
@@ -40,23 +39,33 @@ class BaseLead(BaseModel):
     employment_type: str | None = None
     seniority_level: str | None = None
 
+
 class LeadRead(BaseLead, BaseRead):
-    pass
+    url: str
+
+class LeadReadSearch(LeadRead):
+    searches: list["SearchRead"]
 
 class LeadCreate(BaseLead):
-    pass
+    url: str
 
-
+class LeadUpdate(BaseLead):
+    id: UUID4
 
 class BaseSearch(BaseModel):
-    keywords: str
-    platform: str
+    keywords: str | None = None
+    platform: str | None = None
+    location: str | None = None
 
 class SearchRead(BaseSearch, BaseRead):
     pass
 
+class SearchReadLeads(SearchRead):
+    leads: list["LeadRead"]
+
 class SearchCreate(BaseSearch):
     pass
+
 
 
 class BaseLoader(BaseModel):

@@ -14,7 +14,7 @@ from fastapi import APIRouter
 from app.api.deps import fastapi_users
 from app.core import security
 from app.schemas import UserCreate, UserRead, UserUpdate
-from app.api.routes import leads
+from app.api.routes import leads, searches
 
 api_router : APIRouter = APIRouter()
 
@@ -48,8 +48,8 @@ api_router.include_router(
     prefix="/leads",
     tags=["leads"],
 )
-# api_router.include_router(
-#     searches.router,
-#     prefix="/searches",
-#     tags=["searches"],
-# )
+api_router.include_router(
+    searches.router,
+    prefix="/searches",
+    tags=["searches"],
+)

@@ -1,8 +1,24 @@
+import uuid
+
 from pydantic import BaseModel, UUID4, AnyHttpUrl
 from datetime import datetime 
 
+from fastapi_users import schemas
 
-class LeadBase(BaseModel):
+
+class UserRead(schemas.BaseUser[uuid.UUID]):
+    pass
+
+
+class UserCreate(schemas.BaseUserCreate):
+    pass
+
+
+class UserUpdate(schemas.BaseUserUpdate):
+    pass
+
+
+class BaseLead(BaseModel):
     url: AnyHttpUrl
     title: str | None = None
     company: str | None = None
@@ -15,7 +31,7 @@ class LeadBase(BaseModel):
     seniority_level: str | None = None
 
 
-class LeadRead(LeadBase):
+class LeadRead(BaseLead):
     id: UUID4
     created_at: datetime
     updated_at: datetime
@@ -24,5 +40,5 @@ class LeadRead(LeadBase):
         orm_mode = True
 
 
-class LeadCreate(LeadBase):
+class LeadCreate(BaseLead):
     pass

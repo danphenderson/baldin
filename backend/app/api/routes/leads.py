@@ -5,6 +5,7 @@ from app.logging import console_log
 from app.api.deps import get_async_session
 from app import schemas, models
 from pydantic import UUID4
+from sqlalchemy import select
 
 router = APIRouter()
 
@@ -27,3 +28,8 @@ async def create_lead(payload: schemas.LeadCreate, db = Depends(get_async_sessio
 @router.get("/{id}/", response_model=schemas.LeadRead)
 async def read_lead(id: str, lead = Depends(get_lead)):
     return lead
+
+@router.get("/", response_model=list[schemas.LeadRead])
+async def read_leads(db = Depends(get_async_session)):
+   rows = await db.execute(select(models.Lead))
+   return rows.scalars().all()

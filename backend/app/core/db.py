@@ -12,7 +12,7 @@ else:
 
 async_engine = create_async_engine(sqlalchemy_database_uri, echo=True)
 
-async_session_maker = async_sessionmaker(async_engine, expire_on_commit=False)
+async_session_maker = async_sessionmaker(bind=async_engine, expire_on_commit=False)
 
 async def create_db_and_tables():
     async with async_engine.begin() as conn:

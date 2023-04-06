@@ -13,7 +13,7 @@ from app.api.api import api_router
 from app.logging import console_log as log
 from app.core.db import create_db_and_tables
 from app.core.security import create_default_superuser
-
+import tracemalloc
 
 app = FastAPI(
     title=conf.settings.PROJECT_NAME,
@@ -41,12 +41,13 @@ async def startup_event():
     log.info("Starting up...")
     await create_db_and_tables()
     await create_default_superuser()
+    tracemalloc.start()
     
 
 @app.on_event("shutdown")
 async def shutdown_event():
     log.info("Shutting down...")
-
+    tracemalloc.stop()
 
 @app.get("/ping")
 async def pong():

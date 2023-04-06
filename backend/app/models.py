@@ -7,20 +7,29 @@ from uuid import uuid4
 from datetime import datetime
 from sqlalchemy import Column, DateTime, Integer, String, UUID
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, relationship
 
 class Base(DeclarativeBase):
     pass
 
-
 class User(SQLAlchemyBaseUserTableUUID, Base):
+    # FIXME: Disregarding user-to-model relationships for now.
     pass
 
 
-class Lead(Base):  # type: ignore
+
+class Search(Base):
+    __tablename__ = "searches"
+
+    keywords = Column(String)
+    platform = Column(String)
+    id = Column(UUID, primary_key=True, default=uuid4)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class Lead(Base):
     __tablename__ = "leads"
 
-    id = Column(UUID, primary_key=True, index=True, default=uuid4)
     url = Column(String, unique=True, index=True)
     title = Column(String)
     company = Column(String)
@@ -31,15 +40,7 @@ class Lead(Base):  # type: ignore
     industries = Column(String)
     employment_type = Column(String)
     seniority_level = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-
-class Search(Base):  # type: ignore
-    __tablename__ = "searches"
-
-    id = Column(UUID, primary_key=True, index=True)
-    keywords = Column(String)
-    platform = Column(String)
+    id = Column(UUID, primary_key=True, default=uuid4)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -13,6 +13,7 @@ Selenium grid: http://localhost:4444/ui
 
 FastAPI Users: https://fastapi-users.github.io/fastapi-users/10.4/
 
+# SQLAlchemy
 
 # Status Code Ref:
 https://kinsta.com/blog/http-status-codes/#:~:text=200%20Status%20Codes&text=201%3A%20%E2%80%9CCreated.%E2%80%9D%20The,result%20in%20a%20completed%20response.

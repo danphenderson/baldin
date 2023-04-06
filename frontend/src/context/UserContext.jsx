@@ -1,13 +1,13 @@
 // look into react context hooks for technical details
 
-import React from "react";
+import React, {useState, useEffect} from "react";
 
 // declare components
 export const UserContext = React.createContext();
 
 export const UserProvider = (props) => {
-    const [token, setToken] = React.useState(localStorage.getItem("baldin_token"))
-    React.useEffect( () => {
+    const [token, setToken] = useState(localStorage.getItem("baldin_token"))
+    useEffect( () => {
         const fetchUser = async () => {
             const requestOptions = {
                 method : "GET",

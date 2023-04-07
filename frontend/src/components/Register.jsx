@@ -1,31 +1,14 @@
-
- 
-
 import React, { useContext, useState } from "react";
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
-import Link from '@mui/material/Link';
+
 import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import { UserContext } from "../context/UserContext";
 import ErrorMessage from "./ErrorMessage";
-
-
-function Copyright(props) {
-    return (
-      <Typography variant="body2" color="text.secondary" align="center" {...props}>
-        {'Copyright © '}
-        <Link color="inherit" href="https://baldin.app/">
-            baldin.app
-        </Link>{' '}
-        {new Date().getFullYear()}
-        {'.'}
-      </Typography>
-    );
-}
 
 
 
@@ -138,7 +121,6 @@ const Register = () => {
           <Button variant="text">Already Have an Account? Sign In.</Button>
         </Stack>
         </Box>
-        <Copyright sx={{ mt: 5 }} />
       </Container>
   );
 };

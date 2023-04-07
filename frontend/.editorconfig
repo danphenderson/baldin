@@ -1,6 +1,8 @@
 # EditorConfig is awesome: https://EditorConfig.org
 
 # top-most EditorConfig file
+# TODO: set this up as a global config file at the root of the repository,
+#       and specify appropriate indentation for each language
 root = true
 
 [*]

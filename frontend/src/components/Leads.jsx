@@ -5,7 +5,9 @@ import ErrorMessage from "./ErrorMessage";
 import LeadModal from "./LeadModal";
 import { UserContext } from "../context/UserContext";
 
-const Table = () => {
+  
+
+const Leads = () => {
   const [token] = useContext(UserContext);
   const [leads, setLeads] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -125,4 +127,4 @@ const Table = () => {
   );
 };
 
-export default Table;
+export default Leads;

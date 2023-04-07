@@ -1,18 +1,10 @@
-import AddIcon from '@mui/icons-material/Add'
-import GitHubIcon from '@mui/icons-material/GitHub'
-import AppBar from '@mui/material/AppBar'
-import Box from '@mui/material/Box'
-import Fab from '@mui/material/Fab'
-import IconButton from '@mui/material/IconButton'
-import Toolbar from '@mui/material/Toolbar'
-import Typography from '@mui/material/Typography'
 import Register from "./components/Register"
 import Login from "./components/Login"
 import Header from "./components/Header"
-import Table from "./components/Table"
+import Leads from "./components/Leads"
+
 import { UserContext } from "./context/UserContext"
 import React, { useContext, useEffect, useState } from "react"
-
 
 const App = () => {
     const [message, setMessage] = useState("");
@@ -41,19 +33,15 @@ const App = () => {
     return (
         <>
           <Header title={message} />
-          <div className="columns">
-            <div className="column"></div>
-            <div className="column m-5 is-two-thirds">
-              {!token ? (
-                <div className="columns">
-                  <Register /> <Login />
-                </div>
-              ) : (
-                <Table />
-              )}
+          {!token ? (
+            <div className="columns">
+              <Register /> <Login />
             </div>
-            <div className="column"></div>
-          </div>
+          ) : (
+            <div className="columns">
+              <Leads/>
+            </div>
+          )}
         </>
       );
 };

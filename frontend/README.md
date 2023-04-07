@@ -1,5 +1,10 @@
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+
+A great definition of React or its components is that it is, essentially, a function that converts a state to a user interface 
+
+
+
 ## Available Scripts
 
 In the project directory, you can run:

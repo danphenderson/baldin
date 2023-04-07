@@ -1,0 +1,41 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+fastapi = "*"
+uvicorn = "*"
+asyncpg = "*"
+fastapi-users = {extras = ["sqlalchemy"], version = "*"}
+pydantic = "*"
+pytest = "*"
+httpx = "*"
+selenium = "*"
+openai = "*"
+tiktoken = "*"
+beautifulsoup4 = "*"
+aiofiles = "*"
+webdriver-manager = "*"
+bcrypt = "*"
+dnspython = "*"
+email-validator = "*"
+passlib = "*"
+pyjwt = "*"
+python-dotenv = "*"
+toml = "*"
+sqlalchemy = "*"
+
+[dev-packages]
+ipython = "*"
+coverage = "==6.2"
+pytest-asyncio = "*"
+baldin = {editable = true, path = "."}
+
+[scripts]
+test = "docker-compose exec web python -m pytest"
+testv = "docker-compose exec web python -m pytest -vv"
+psql = "docker-compose exec db psql -U postgres"
+ipython = "docker-compose exec web ipython"
+shell = "docker-compose exec web bash"
+api = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8004"

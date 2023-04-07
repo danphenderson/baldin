@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    ports:
+      - "${DEFAULT_DATABASE_PORT}:5432"
+    environment:
+      - POSTGRES_DB=${DEFAULT_DATABASE_DB}
+      - POSTGRES_USER=${DEFAULT_DATABASE_USER}
+      - POSTGRES_PASSWORD=${DEFAULT_DATABASE_PASSWORD}
+    env_file:
+      - .env
+    volumes:
+      - ./public/db:/var/lib/postgresql/data
+
+  headless-chrome:
+    restart: unless-stopped
+    image: seleniarm/standalone-chromium:latest
+    ports:
+      - "4444:4444"
+      - "5900:5900"
+      - "7900:7900"
+    volumes:
+      - "/dev/shm:/dev/shm"
+    environment:
+      - SHM_SIZE=${CHROME_SHM_SIZE}

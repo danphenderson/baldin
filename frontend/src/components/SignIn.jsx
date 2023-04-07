@@ -7,6 +7,7 @@ import ErrorMessage from "./ErrorMessage";
 import { UserContext } from "../context/UserContext";
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
+import { Stack } from "@mui/material";
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -93,11 +94,9 @@ const SignIn = () => {
             </Grid>
             <ErrorMessage message={errorMessage} />
           </Box>
-          <Grid item>
-              <Button href="#" variant="text">
-                {"Don't have an account? Sign Up"}
-              </Button>
-          </Grid>
+          <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+              <Button href="#" variant="text">{"Don't have an account? Sign Up"}</Button>
+          </Stack>
         </Box>
       </Container>
   );

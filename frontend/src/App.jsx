@@ -1,6 +1,6 @@
-import Register from "./components/Register"
-import Header from "./components/Header"
-import Leads from "./components/Leads"
+import SignIn from "components/SignIn";
+import Header from "./components/Header";
+import Leads from "./components/Leads";
 
 import { UserContext } from "./context/UserContext"
 import React, { useContext, useEffect, useState } from "react"
@@ -34,7 +34,7 @@ const App = () => {
           <Header title={message} />
           {!token ? (
             <div className="columns">
-              <Register/>
+              <SignIn/>
             </div>
           ) : (
             <div className="columns">

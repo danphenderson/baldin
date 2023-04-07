@@ -3,6 +3,7 @@
 
 import React, { useContext, useState } from "react";
 import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Link from '@mui/material/Link';
 import Grid from '@mui/material/Grid';
@@ -132,6 +133,10 @@ const Register = () => {
             </Grid>
             <ErrorMessage message={errorMessage} />
           </Box>
+        <Stack direction="column">
+          <Button variant="text">Forgot Password?</Button>
+          <Button variant="text">Already Have an Account? Sign In.</Button>
+        </Stack>
         </Box>
         <Copyright sx={{ mt: 5 }} />
       </Container>

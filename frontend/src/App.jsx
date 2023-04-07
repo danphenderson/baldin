@@ -1,5 +1,4 @@
 import Register from "./components/Register"
-import Login from "./components/Login"
 import Header from "./components/Header"
 import Leads from "./components/Leads"
 
@@ -35,7 +34,7 @@ const App = () => {
           <Header title={message} />
           {!token ? (
             <div className="columns">
-              <Register /> <Login />
+              <Register/>
             </div>
           ) : (
             <div className="columns">

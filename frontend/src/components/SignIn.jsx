@@ -8,7 +8,7 @@ import { UserContext } from "../context/UserContext";
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 
-const Login = () => {
+const SignIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -87,15 +87,20 @@ const Login = () => {
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
             >
-              Login
+              Sign In
             </Button>
             <Grid container justifyContent="flex-end">
             </Grid>
             <ErrorMessage message={errorMessage} />
           </Box>
+          <Grid item>
+              <Button href="#" variant="text">
+                {"Don't have an account? Sign Up"}
+              </Button>
+          </Grid>
         </Box>
       </Container>
   );
 };
 
-export default Login;
+export default SignIn;

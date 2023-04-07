@@ -8,13 +8,10 @@ import {
 import Root from './routes/Root'
 import ThemeProvider from './ThemeProvider'
 import { UserProvider } from './context/UserContext'
-import ErrorPage from "./pages/ErrorPage";
+import ErrorPage from "./ErrorPage";
+import Register from './routes/Register';
+import Home from './routes/Home';
 
-
-const root = ReactDOM.createRoot(document.getElementById('root'))
-root.render(
-
-)
 
 const router = createBrowserRouter([
   {
@@ -22,6 +19,14 @@ const router = createBrowserRouter([
     element: <Root />,
     errorElement: <ErrorPage />,
   },
+  {
+    path: "/register",
+    element: <Register />,
+  },
+  {
+    path: "/home",
+    element: <Home />,
+  }
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")).render(

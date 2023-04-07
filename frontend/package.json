@@ -50,5 +50,6 @@
   "proxy": "http://127.0.0.1:8004/",
   "devDependencies": {
     "eslint-plugin-react": "^7.32.2"
-  }
+  },
+  "main": "./src/index.js"
 }

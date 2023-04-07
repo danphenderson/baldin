@@ -1,11 +1,12 @@
-import SignIn from "./components/SignIn";
-import Leads from "./components/Leads";
-import { UserContext } from "./context/UserContext"
+import SignIn from "../components/SignIn";
+import Leads from "../components/Leads";
+import { UserContext } from "../context/UserContext"
 import React, { useContext } from "react"
-import Footer from "./components/Footer";
-import Header from "./components/Header";
+import Footer from "../components/Footer";
+import Header from "../components/Header";
 
-const App = () => {
+
+const Root = () => {
   const [token] = useContext(UserContext);
   return (
     <>
@@ -24,5 +25,5 @@ const App = () => {
   )
 }
 
-export default App;
 
+export default Root;

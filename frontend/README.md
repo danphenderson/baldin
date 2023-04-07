@@ -6,3 +6,26 @@ A great definition of React or its components is that it is, essentially, a func
 
 Recomended Tutorial on latest MUI:
 https://www.youtube.com/watch?v=o1chMISeTC0&ab_channel=LaithAcademy
+
+Add to .eslinrc.json:
+
+
+  "rules": {
+      "react/jsx-filename-extension": [1, { "extensions": [".js", ".jsx"] }],
+      "indent": [
+          "error",
+          2
+      ],
+      "linebreak-style": [
+          "error",
+          "unix"
+      ],
+      "quotes": [
+          "error",
+          "single"
+      ],
+      "semi": [
+          "error",
+          "always"
+      ]
+  }

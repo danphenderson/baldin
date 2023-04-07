@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useState } from "react";
-import moment from "moment";
 
 import ErrorMessage from "./ErrorMessage";
 import LeadModal from "./LeadModal";
@@ -101,7 +100,6 @@ const Leads = () => {
                 <td>{lead.company}</td>
                 <td>{lead.email}</td>
                 <td>{lead.note}</td>
-                <td>{moment(lead.date_last_updated).format("MMM Do YY")}</td>
                 <td>
                   <button
                     className="button mr-2 is-info is-light"

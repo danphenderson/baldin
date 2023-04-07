@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
-    "baseUrl": "src",
+    "target": "ES6",
+    "allowSyntheticDefaultImports": true,
     "incremental": true
   },
-  "include": ["src"],
+  "include": ["src2"],
   "exclude": ["node_modules", "build", "functions"]
 }

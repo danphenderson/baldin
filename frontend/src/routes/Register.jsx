@@ -1,9 +1,12 @@
 import React from 'react'
-import { Typography } from '@mui/material'
+import SignUp from '../components/signup'
+
 
 const Register = () => {
   return (
-    <div><Typography variant='h2'> User Home Page </Typography> Home </div>
+    <div> 
+      <SignUp/>
+    </div>
   )
 }
 

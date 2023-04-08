@@ -1,26 +1,44 @@
-import SignIn from "../components/SignIn";
-import Leads from "../components/Leads";
-import { UserContext } from "../context/UserContext"
 import React, { useContext } from "react"
-import Footer from "../components/Footer";
-import Header from "../components/Header";
+import { Outlet } from "react-router-dom";
 
+
+import { getContacts, createContact } from "../contacts";
+import Login from "./login";
+import Home from "./home";
+import Footer from "../components/footer";
+import Header from "../components/header";
+
+import { UserContext } from "../context/user-context"
+
+export async function loader() {
+  const contacts = await getContacts();
+  return { contacts };
+}
+export async function action() {
+  const contact = await createContact();
+  return { contact };
+}
 
 const Root = () => {
   const [token] = useContext(UserContext);
   return (
     <>
-      <Header/>
-      {!token ? (
-        <div className="columns">
-          <SignIn/>
+      <div>
+        <Header/>
+        {!token ? (
+          <div className="columns">
+            <Login/>
+          </div>
+        ) : (
+          <div className="columns">
+            <Home />
+          </div>
+        )}
+        <Footer/>
+        <div id="detail">
+          <Outlet />
         </div>
-      ) : (
-        <div className="columns">
-          <Leads/>
-        </div>
-      )}
-      <Footer/>
+      </div>
     </>
   )
 }

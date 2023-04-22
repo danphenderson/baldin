@@ -66,8 +66,6 @@ class SearchReadLeads(SearchRead):
 class SearchCreate(BaseSearch):
     pass
 
-
-
 class BaseLoader(BaseModel):
     status: bool = False
 

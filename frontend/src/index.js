@@ -4,15 +4,9 @@ import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
-import Contact, {
-  loader as contactLoader,
-} from './routes/contact';
-import Root, { 
-  loader as rootLoader,
-  action as rootAction
-} from "./routes/root";
-import ThemeProvider from './ theme-provider'
-import { UserProvider } from './context/user-context'
+import Root from "./routes/root";
+import ThemeProvider  from './theme-provider';
+import { UserProvider } from './context/user-context';
 import ErrorPage from "./error-page";
 import Register from './routes/register';
 import Home from './routes/home';
@@ -24,8 +18,6 @@ const router = createBrowserRouter([
     path: "/",
     element: <Root />,
     errorElement: <ErrorPage />,
-    loader: rootLoader,
-    action: rootAction,
     children : [
       {
         path: "/login",
@@ -38,12 +30,7 @@ const router = createBrowserRouter([
       {
         path: "/home",
         element: <Home />,
-      },
-      {
-        path: "contacts/:contactId",
-        element: <Contact />,
-        loader: contactLoader,
-      },
+      }
     ]
   }
 ]);

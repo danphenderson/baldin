@@ -2,22 +2,13 @@ import React, { useContext } from "react"
 import { Outlet } from "react-router-dom";
 
 
-import { getContacts, createContact } from "../contacts";
 import Login from "./login";
 import Home from "./home";
-import Footer from "../components/footer";
-import Header from "../components/header";
+import Footer from "../component/footer";
+import Header from "../component/header";
+import Paper from '@mui/material/Paper';
 
 import { UserContext } from "../context/user-context"
-
-export async function loader() {
-  const contacts = await getContacts();
-  return { contacts };
-}
-export async function action() {
-  const contact = await createContact();
-  return { contact };
-}
 
 const Root = () => {
   const [token] = useContext(UserContext);
@@ -25,6 +16,7 @@ const Root = () => {
     <>
       <div>
         <Header/>
+        <Paper elevation={10} sx={{ p: 2, margin: 'auto', flexGrow: 1 }}>
         {!token ? (
           <div className="columns">
             <Login/>
@@ -34,6 +26,7 @@ const Root = () => {
             <Home />
           </div>
         )}
+        </Paper>
         <Footer/>
         <div id="detail">
           <Outlet />

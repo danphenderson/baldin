@@ -1,10 +1,17 @@
-import { Typography } from '@mui/material'
+import { Typography, Box } from '@mui/material'
 import React from 'react'
 
 const Home = () => {
   return (
     <>
-      <Typography variant='h4'>Home Page </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }} >
+        <Typography variant='h4'>Home Page </Typography>
+
+
+        
+      </Box>
+
+
     </>
   )
 }

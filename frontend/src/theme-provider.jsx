@@ -44,11 +44,13 @@ const theme = createTheme({
   },
 })
 
-export default function ThemeProvider({ children }) {
+const ThemeProvider = ({ children }) => {
   return (
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
       {children}
     </MuiThemeProvider>
   )
-}
+};
+
+export default ThemeProvider;

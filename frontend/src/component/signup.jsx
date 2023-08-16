@@ -1,42 +1,38 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext} from "react";
 import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
-import ErrorMessage from "./ErrorMessage";
-import { UserContext } from "../context/UserContext";
+import ErrorMessage from "./error-message";
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import { Stack } from "@mui/material";
+import { UserContext } from "../context/user-context";
+//import { Link as RouterLink } from "react-router-dom";
 
-const SignIn = () => {
+const SignUp = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmationPassword, setConfirmationPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [, setToken] = useContext(UserContext);
 
-  const submitLogin = async () => {
+  const submitRegistration = async () => {
     const requestOptions = {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: JSON.stringify(
-        `grant_type=&username=${email}&password=${password}&scope=&client_id=&client_secret=`
-      ),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email, hashed_password: password }),
     };
 
-    const response = await fetch("/auth/jwt/login", requestOptions);
+    const response = await fetch("/api/users", requestOptions);
     const data = await response.json();
 
-    if (!response.ok) {
-      setErrorMessage(data.detail);
-    } else {
-      setToken(data.access_token);
-    }
+    !response.ok ? setErrorMessage(data.detail) : setToken(data.access_token);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    submitLogin();
+    password === confirmationPassword && password.length > 5 ? 
+      submitRegistration() : setErrorMessage("Ensure that the passwords match and greater than 5 characters")
   };
 
   return (
@@ -50,7 +46,7 @@ const SignIn = () => {
       }}
     >
       <Typography component="h1" variant="h5">
-        Login
+        Sign Up
       </Typography>
       <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 3 }}>
         <Grid container spacing={2}>
@@ -58,13 +54,13 @@ const SignIn = () => {
             <TextField
               required
               fullWidth
-              id="login_email"
+              id="email"
               label="Email Address"
               name="email"
               autoComplete="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter email"
+              onChange={(e) => setEmail(e.target.value)}
             />
           </Grid>
           <Grid item xs={12}>
@@ -74,11 +70,25 @@ const SignIn = () => {
               name="password"
               label="Password"
               type="password"
-              id="login_password"
+              id="password"
               autoComplete="new-password"
               placeholder="Enter password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              required
+              fullWidth
+              name="confim-password"
+              label="Confirm Password"
+              type="password"
+              id="confirmation-password"
+              autoComplete="new-password"
+              placeholder="Enter password confirmation"
+              value={confirmationPassword}
+              onChange={(e) => setConfirmationPassword(e.target.value)}
             />
           </Grid>
           </Grid>
@@ -94,12 +104,10 @@ const SignIn = () => {
             </Grid>
             <ErrorMessage message={errorMessage} />
           </Box>
-          <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-              <Button href="#" variant="text">{"Don't have an account? Sign Up"}</Button>
-          </Stack>
+          <Button href={`/`} variant="text">{"Already Have An Account? Sign In."}</Button>
         </Box>
       </Container>
-  );
+  )
 };
 
-export default SignIn;
+export default SignUp;

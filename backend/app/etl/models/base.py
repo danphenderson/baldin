@@ -70,4 +70,4 @@ class HRefBaseModel(BaseModel):
         return self.url != other.url
 
     async def dump(self):
-        return await super().dump(str(Path(settings.public_asset_path) / "leads" / f"{self.id}.json"))
+        return await super().dump(str(Path(settings.PUBLIC_ASSETS_DIR) / "leads" / f"{self.id}.json"))

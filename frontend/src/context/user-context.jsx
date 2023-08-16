@@ -31,4 +31,4 @@ export const UserProvider = (props) => {
     return (
         <UserContext.Provider value={[token, setToken]}>{props.children}</UserContext.Provider>
     )
-};
+}

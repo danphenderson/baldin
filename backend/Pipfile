@@ -25,6 +25,7 @@ pyjwt = "*"
 python-dotenv = "*"
 toml = "*"
 sqlalchemy = "*"
+pydantic-settings = "*"
 
 [dev-packages]
 ipython = "*"

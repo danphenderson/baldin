@@ -8,7 +8,7 @@ from app.models import Base, User
 if conf.settings.ENVIRONMENT == "PYTEST":
     sqlalchemy_database_uri = conf.settings.TEST_SQLALCHEMY_DATABASE_URI
 else:
-    sqlalchemy_database_uri = conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI
+    sqlalchemy_database_uri = str(conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI) # hack
 
 async_engine = create_async_engine(sqlalchemy_database_uri, echo=True)
 

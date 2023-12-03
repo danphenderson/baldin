@@ -1,24 +1,20 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import {
-  createBrowserRouter,
-  RouterProvider,
-} from "react-router-dom";
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Root from "./routes/root";
-import ThemeProvider  from './theme-provider';
+import ThemeProvider from './theme-provider';
 import { UserProvider } from './context/user-context';
 import ErrorPage from "./error-page";
 import Register from './routes/register';
 import Home from './routes/home';
-import Login from './routes/login';
-
+import Login from './routes/Login';
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Root />,
     errorElement: <ErrorPage />,
-    children : [
+    children: [
       {
         path: "/login",
         element: <Login />,
@@ -35,12 +31,13 @@ const router = createBrowserRouter([
   }
 ]);
 
-ReactDOM.createRoot(document.getElementById("root")).render(
+const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
+root.render(
   <React.StrictMode>
-  <ThemeProvider>
-  <UserProvider>
-    <RouterProvider router={router} />
-  </UserProvider>
-  </ThemeProvider>
+    <ThemeProvider>
+      <UserProvider>
+        <RouterProvider router={router} />
+      </UserProvider>
+    </ThemeProvider>
   </React.StrictMode>
 );

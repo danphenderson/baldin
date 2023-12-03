@@ -1,13 +1,12 @@
-import React from 'react'
-import SignIn from '../component/signin'
+import React from 'react';
+import SignIn from '../component/signin';
 
-
-const Login = () => {
+const Login: React.FC = () => {
   return (
     <div>
-      <SignIn/>
+      <SignIn />
     </div>
-  )
+  );
 }
 
 export default Login;

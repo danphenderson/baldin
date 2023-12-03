@@ -1,13 +1,12 @@
-import React from 'react'
-import SignUp from '../component/signup'
+import React from 'react';
+import SignUp from '../component/signup';
 
-
-const Register = () => {
+const Register: React.FC = () => {
   return (
     <div>
-      <SignUp/>
+      <SignUp />
     </div>
-  )
+  );
 }
 
 export default Register;

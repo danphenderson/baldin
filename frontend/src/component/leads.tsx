@@ -1,7 +1,7 @@
 import React from "react";
 
-const Leads = () => {
-  return <div>Leads ROUTE</div>;
-}
+const Leads: React.FC = () => {
+  return <div>Leads Comp </div>;
+};
 
 export default Leads;

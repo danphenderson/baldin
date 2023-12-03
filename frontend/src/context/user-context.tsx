@@ -1,34 +1,46 @@
-// look into react context hooks for technical details
+import React, { useState, useEffect, createContext, ReactNode } from "react";
 
-import {useState, useEffect, createContext} from "react";
+// Define the type for the context value
+type UserContextType = [string | null, (token: string | null) => void];
 
-// declare components
-export const UserContext = createContext();
+// Create the context with an initial value
+export const UserContext = createContext<UserContextType>([null, () => {}]);
 
-export const UserProvider = (props) => {
-    const [token, setToken] = useState(localStorage.getItem("baldin_token"))
-    useEffect( () => {
+// Define the type for the UserProvider's props
+interface UserProviderProps {
+    children: ReactNode;
+}
+
+export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
+    const [token, setToken] = useState<string | null>(localStorage.getItem("baldin_token"));
+
+    useEffect(() => {
         const fetchUser = async () => {
             const requestOptions = {
-                method : "GET",
+                method: "GET",
                 headers: {
-                    "Conent-Type" : "application/json",
-                    "Authorization": "Bearer " + token
-            },
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token,
+                },
+            };
+
+            const response = await fetch("/users/me", requestOptions);
+
+            if (!response.ok) {
+                setToken(null);
+            }
+
+            if (token) {
+                localStorage.setItem("baldin_token", token);
+            }
         };
 
-        const response = await fetch("/users/me", requestOptions);
-
-        if (!response.ok) {
-            setToken(null);
-
-        }
-        localStorage.setItem("baldin_token", token);
-
-    };
-    fetchUser();
+        fetchUser();
     }, [token]);
+
     return (
-        <UserContext.Provider value={[token, setToken]}>{props.children}</UserContext.Provider>
-    )
-}
+        <UserContext.Provider value={[token, setToken]}>
+            {children}
+        </UserContext.Provider>
+    );
+};

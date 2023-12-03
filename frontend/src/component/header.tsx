@@ -7,26 +7,35 @@ import Button from '@mui/material/Button';
 import { useContext } from "react";
 import { UserContext } from "../context/user-context";
 
+// Define the type for the UserContext value
+interface UserContextType {
+  token: string | null;
+  setToken: (token: string | null) => void;
+}
 
+// Define the type for the Header's props
+interface HeaderProps {
+  title: string;
+}
 
-const Header = ({ title }) => {
-  const [token, setToken] = useContext(UserContext);
+const Header: React.FC<HeaderProps> = ({ title }) => {
+  const [token, setToken] = useContext<UserContextType>(UserContext);
 
   const handleLogout = () => {
     setToken(null);
   };
 
   return (
-  <Box sx={{ flexGrow: 1 }}>
-    <AppBar position="static">
-      <Toolbar>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            {title}
-        </Typography>
-        {token && <Button color="inherit" onClick={handleLogout}>Logout</Button>}
-      </Toolbar>
-    </AppBar>
-  </Box>
+    <Box sx={{ flexGrow: 1 }}>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              {title}
+          </Typography>
+          {token && <Button color="inherit" onClick={handleLogout}>Logout</Button>}
+        </Toolbar>
+      </AppBar>
+    </Box>
   );
 };
 

@@ -1,4 +1,38 @@
-# baldin (Under Development)
+# baldin
+
+TODO: Provide an Overview
+
+# Devlopment
+
+
+## cd backend
+
+After cloning the respository, build the Python environment in
+the `backend/` with [pipenv](https://pipenv.pypa.io/en/latest/)
+
+    pipenv install --dev .
+
+After referencing the `.env.example` file, create your own .env file.
+
+Using docker-compose to build API services:
+
+    docker-compose up --build
+
+The API is now ready to run:
+
+    pipenv run api
+
+
+## cd frontend
+
+After spinning up the baldin API, start the React application by executing
+
+    npm start
+
+in the frontend directory.
+
+
+# References
 
 Inspired by (albiet not limited to):
 - https://levelup.gitconnected.com/building-a-website-starter-with-fastapi-92d077092864#e696
@@ -12,9 +46,3 @@ Selenium grid: http://localhost:4444/ui
 - Ref: https://github.com/SeleniumHQ/docker-selenium
 
 FastAPI Users: https://fastapi-users.github.io/fastapi-users/10.4/
-
-
-# Material UI  React
-
-https://mui.com/
-https://create-react-app.dev/

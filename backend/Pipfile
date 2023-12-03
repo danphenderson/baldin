@@ -31,7 +31,7 @@ pydantic-settings = "*"
 ipython = "*"
 coverage = "==6.2"
 pytest-asyncio = "*"
-baldin = {editable = true, path = "."}
+baldin = {path = "."}
 
 [scripts]
 test = "docker-compose exec web python -m pytest"

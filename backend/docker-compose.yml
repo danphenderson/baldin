@@ -14,15 +14,3 @@ services:
       - .env
     volumes:
       - ./public/db:/var/lib/postgresql/data
-
-  headless-chrome:
-    restart: unless-stopped
-    image: seleniarm/standalone-chromium:latest
-    ports:
-      - "4444:4444"
-      - "5900:5900"
-      - "7900:7900"
-    volumes:
-      - "/dev/shm:/dev/shm"
-    environment:
-      - SHM_SIZE=${CHROME_SHM_SIZE}

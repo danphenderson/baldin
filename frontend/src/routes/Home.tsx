@@ -8,7 +8,7 @@ const Home = () => {
         <Typography variant='h4'>Home Page </Typography>
 
 
-        
+
       </Box>
 
 
@@ -17,4 +17,3 @@ const Home = () => {
 }
 
 export default Home;
-

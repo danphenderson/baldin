@@ -4,7 +4,7 @@ import SignUp from '../component/signup'
 
 const Register = () => {
   return (
-    <div> 
+    <div>
       <SignUp/>
     </div>
   )

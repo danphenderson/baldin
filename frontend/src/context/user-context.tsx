@@ -1,9 +1,9 @@
 // look into react context hooks for technical details
 
-import React, {useState, useEffect} from "react";
+import {useState, useEffect, createContext} from "react";
 
 // declare components
-export const UserContext = React.createContext();
+export const UserContext = createContext();
 
 export const UserProvider = (props) => {
     const [token, setToken] = useState(localStorage.getItem("baldin_token"))
@@ -21,7 +21,7 @@ export const UserProvider = (props) => {
 
         if (!response.ok) {
             setToken(null);
-            
+
         }
         localStorage.setItem("baldin_token", token);
 

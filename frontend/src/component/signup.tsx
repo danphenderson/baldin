@@ -31,7 +31,7 @@ const SignUp = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    password === confirmationPassword && password.length > 5 ? 
+    password === confirmationPassword && password.length > 5 ?
       submitRegistration() : setErrorMessage("Ensure that the passwords match and greater than 5 characters")
   };
 

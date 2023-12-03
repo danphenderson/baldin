@@ -4,7 +4,7 @@ import SignIn from '../component/signin'
 
 const Login = () => {
   return (
-    <div> 
+    <div>
       <SignIn/>
     </div>
   )

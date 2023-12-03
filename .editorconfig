@@ -1,7 +1,7 @@
 # see https://editorconfig.org/
 root = true
 
-[*]
+[backend/*]
 # Use Unix-style newlines for most files (except Windows files, see below).
 end_of_line = lf
 trim_trailing_whitespace = true
@@ -9,6 +9,14 @@ indent_style = space
 insert_final_newline = true
 indent_size = 4
 charset = utf-8
+
+[frontend/*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = false
+insert_final_newline = false
 
 [*.{bat,cmd,ps1}]
 end_of_line = crlf

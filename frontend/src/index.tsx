@@ -1,8 +1,20 @@
+import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './app';
+import { BrowserRouter } from 'react-router-dom';
+import { UserProvider } from './context/user-context';
+import AppRoutes from './routes/routes';
+import ThemeProvider from './theme/theme-provider';
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 
 root.render(
-    <App />
+  <React.StrictMode>
+    <ThemeProvider>
+      <UserProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </UserProvider>
+    </ThemeProvider>
+  </React.StrictMode>
 );

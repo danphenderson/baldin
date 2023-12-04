@@ -3,38 +3,51 @@ import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
-import ErrorMessage from "./error-message";
+import ErrorMessage from "../common/error-message";
+import { UserContext } from "../../context/user-context";
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import { UserContext } from "../context/user-context";
+import { useNavigate } from "react-router-dom";
 
-const SignUp: React.FC = () => {
+const SignIn: React.FC = () => {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [confirmationPassword, setConfirmationPassword] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [, setToken] = useContext(UserContext);
+  const navigate = useNavigate();
 
-  const submitRegistration = async () => {
+  const submitLogin = async () => {
+    // Correctly encode the body for x-www-form-urlencoded
+    const body = new URLSearchParams({
+      username: email,
+      password: password
+    }).toString();
+
     const requestOptions = {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, hashed_password: password }),
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body
     };
 
-    const response = await fetch("/api/users", requestOptions);
-    const data = await response.json();
+    try {
+      const response = await fetch("/auth/jwt/login", requestOptions);
+      const data = await response.json();
 
-    !response.ok ? setErrorMessage(data.detail) : setToken(data.access_token);
+      if (!response.ok) {
+        setErrorMessage(data.detail || "Login failed");
+        return;
+      }
+
+      setToken(data.access_token);
+      navigate('/'); // Navigate to home after successful login
+    } catch (error) {
+      setErrorMessage("Login request failed");
+    }
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (password === confirmationPassword && password.length > 5) {
-      submitRegistration();
-    } else {
-      setErrorMessage("Ensure that the passwords match and are greater than 5 characters");
-    }
+    submitLogin();
   };
 
   return (
@@ -48,7 +61,7 @@ const SignUp: React.FC = () => {
         }}
       >
         <Typography component="h1" variant="h5">
-          Sign Up
+          Login
         </Typography>
         <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 3 }}>
           <Grid container spacing={2}>
@@ -56,7 +69,7 @@ const SignUp: React.FC = () => {
               <TextField
                 required
                 fullWidth
-                id="email"
+                id="login_email"
                 label="Email Address"
                 name="email"
                 autoComplete="email"
@@ -72,25 +85,11 @@ const SignUp: React.FC = () => {
                 name="password"
                 label="Password"
                 type="password"
-                id="password"
+                id="login_password"
                 autoComplete="new-password"
+                placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                name="confirm-password"
-                label="Confirm Password"
-                type="password"
-                id="confirmation-password"
-                autoComplete="new-password"
-                value={confirmationPassword}
-                onChange={(e) => setConfirmationPassword(e.target.value)}
-                placeholder="Confirm password"
               />
             </Grid>
           </Grid>
@@ -100,14 +99,14 @@ const SignUp: React.FC = () => {
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
           >
-            Sign Up
+            Sign In
           </Button>
           <ErrorMessage message={errorMessage} />
         </Box>
-        <Button href={`/`} variant="text">{"Already Have An Account? Sign In."}</Button>
+        <Button href={`/register`} variant="text">{"Don't have an account? Sign Up"}</Button>
       </Box>
     </Container>
   );
 };
 
-export default SignUp;
+export default SignIn;

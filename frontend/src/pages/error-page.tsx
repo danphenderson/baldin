@@ -1,6 +1,6 @@
 import React from "react";
 import { useRouteError } from "react-router-dom";
-import ErrorMessage from "./component/error-message";
+import ErrorMessage from "../component/common/error-message";
 import { Typography, Container, Box } from '@mui/material';
 
 export default function ErrorPage() {

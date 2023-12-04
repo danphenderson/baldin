@@ -1,14 +1,16 @@
 import uuid
-
-from pydantic import BaseModel as _BaseModel, UUID4
-from datetime import datetime 
+from datetime import datetime
 
 from fastapi_users import schemas
+from pydantic import UUID4
+from pydantic import BaseModel as _BaseModel
+
 
 class BaseModel(_BaseModel):
     class Config:
         orm_mode = True
-        extra='allow'
+        extra = "allow"
+
 
 class BaseRead(BaseModel):
     id: UUID4 | str
@@ -16,15 +18,27 @@ class BaseRead(BaseModel):
     updated_at: datetime
 
 
-class UserRead(schemas.BaseUser[uuid.UUID]):
-    # TODO: FastAPI-Users should implement a UUID4 type
-    # reference documentation for details.
+class BaseUser(BaseModel):
+    first_name: str | None = None
+    last_name: str | None = None
+    phone_number: str | None = None
+    address_line_1: str | None = None
+    address_line_2: str | None = None
+    city: str | None = None
+    state: str | None = None
+    zip_code: str | None = None
+    country: str | None = None
+
+
+class UserRead(schemas.BaseUser[uuid.UUID], BaseUser):
     pass
 
-class UserCreate(schemas.BaseUserCreate):
+
+class UserCreate(schemas.BaseUserCreate, BaseUser):
     pass
 
-class UserUpdate(schemas.BaseUserUpdate):
+
+class UserUpdate(schemas.BaseUserUpdate, BaseUser):
     pass
 
 
@@ -43,37 +57,48 @@ class BaseLead(BaseModel):
 class LeadRead(BaseLead, BaseRead):
     url: str
 
+
 class LeadReadSearch(LeadRead):
     searches: list["SearchRead"]
+
 
 class LeadCreate(BaseLead):
     url: str
 
+
 class LeadUpdate(BaseLead):
     id: UUID4
+
 
 class BaseSearch(BaseModel):
     keywords: str | None = None
     platform: str | None = None
     location: str | None = None
 
+
 class SearchRead(BaseSearch, BaseRead):
     pass
+
 
 class SearchReadLeads(SearchRead):
     leads: list["LeadRead"]
 
+
 class SearchCreate(BaseSearch):
     pass
+
 
 class BaseLoader(BaseModel):
     status: bool = False
 
+
 class LoaderRead(BaseLoader, BaseRead):
     pass
 
+
 class LoaderCreate(BaseLoader):
     pass
+
 
 class LoaderUpdate(BaseLoader):
     pass

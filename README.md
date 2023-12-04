@@ -53,7 +53,7 @@ Ensure you have the following requirements installed:
 The following steps may serve as reference, outlining the process of making a contribution:
 
 2. Clone your fork locally:
-   `git clone git@github.com:YOURGITHUBNAME/python-chromex.git`
+   `git clone git@github.com:YOURGITHUBNAME/baldin.git`
 
 3. Create a branch for your changes:
     `git checkout -b <issue-number>-branch-name`

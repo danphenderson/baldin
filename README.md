@@ -16,14 +16,13 @@ planned for the first release:
 
 - [x] User authentication
 - [x] User registration
-- [ ] User profile
+- [x] User settings
 - [ ] ETL pipeline for job data
 - [ ] Job search
 - [ ] Job finder
-- [ ] Job lead manager
-- [ ] Job application tracker
+- [ ] Coverletter generator
+- [ ] Resume generator
 - [ ] Job application recommendation engine
-- [ ] Google Calendar integration
 
 
 ### Feature/Bug Request

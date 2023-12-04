@@ -22,16 +22,13 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
   const getDefaultTitle = () => {
     // Logic to derive a title from the location
     // For example, you might want to format the pathname or use a mapping
-    return location.pathname.substring(1) || 'home'; // Customize as needed
+    return location.pathname.substring(1) || 'Home'; // Customize as needed
   };
 
   const handleLogout = () => {
     setToken(null);
+    navigate('/login');
   };
-
-  const handleSettings = () => {
-    navigate('/settings');
-  }
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -41,7 +38,6 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
               {title || getDefaultTitle()}
           </Typography>
           {token && <Button color="inherit" onClick={handleLogout}>Logout</Button>}
-          {token && <Button color="inherit" onClick={handleSettings}>Settings</Button>}
         </Toolbar>
       </AppBar>
     </Box>

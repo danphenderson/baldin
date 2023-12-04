@@ -7,29 +7,41 @@ import ErrorMessage from "./error-message";
 import { UserContext } from "../context/user-context";
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
+import { useNavigate } from "react-router-dom";
 
 const SignIn: React.FC = () => {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [, setToken] = useContext(UserContext);
+  const navigate = useNavigate();
 
   const submitLogin = async () => {
+    // Correctly encode the body for x-www-form-urlencoded
+    const body = new URLSearchParams({
+      username: email,
+      password: password
+    }).toString();
+
     const requestOptions = {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: JSON.stringify(
-        `grant_type=&username=${email}&password=${password}&scope=&client_id=&client_secret=`
-      ),
+      body: body
     };
 
-    const response = await fetch("/auth/jwt/login", requestOptions);
-    const data = await response.json();
+    try {
+      const response = await fetch("/auth/jwt/login", requestOptions);
+      const data = await response.json();
 
-    if (!response.ok) {
-      setErrorMessage(data.detail);
-    } else {
+      if (!response.ok) {
+        setErrorMessage(data.detail || "Login failed");
+        return;
+      }
+
       setToken(data.access_token);
+      navigate('/'); // Navigate to home after successful login
+    } catch (error) {
+      setErrorMessage("Login request failed");
     }
   };
 
@@ -89,11 +101,9 @@ const SignIn: React.FC = () => {
           >
             Sign In
           </Button>
-          <Grid container justifyContent="flex-end">
-          </Grid>
           <ErrorMessage message={errorMessage} />
         </Box>
-        <Button href={`register/`} variant="text">{"Don't have an account? Sign Up"}</Button>
+        <Button href={`/register`} variant="text">{"Don't have an account? Sign Up"}</Button>
       </Box>
     </Container>
   );

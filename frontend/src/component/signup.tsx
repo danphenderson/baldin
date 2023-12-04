@@ -6,28 +6,47 @@ import Container from '@mui/material/Container';
 import ErrorMessage from "./error-message";
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import { UserContext } from "../context/user-context";
+import { useNavigate } from "react-router-dom";
 
 const SignUp: React.FC = () => {
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [confirmationPassword, setConfirmationPassword] = useState<string>("");
-  const [errorMessage, setErrorMessage] = useState<string>("");
-  const [, setToken] = useContext(UserContext);
+    const [email, setEmail] = useState<string>("");
+    const [password, setPassword] = useState<string>("");
+    const [confirmationPassword, setConfirmationPassword] = useState<string>("");
+    const [errorMessage, setErrorMessage] = useState<string>("");
+    const navigate = useNavigate();
 
-  const submitRegistration = async () => {
-    const requestOptions = {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, hashed_password: password }),
+    const submitRegistration = async () => {
+      if (password !== confirmationPassword) {
+        setErrorMessage("Passwords do not match.");
+        return;
+      }
+
+      const user = {
+        email,
+        password,
+        is_active: true,
+        is_superuser: false,
+        is_verified: false
+      };
+
+      try {
+        const response = await fetch("/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(user),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          setErrorMessage(data.detail || "Registration failed");
+          return;
+        }
+
+        navigate('/login');
+      } catch (error) {
+        setErrorMessage("Registration request failed");
+      }
     };
-
-    const response = await fetch("/api/users", requestOptions);
-    const data = await response.json();
-
-    !response.ok ? setErrorMessage(data.detail) : setToken(data.access_token);
-  };
-
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (password === confirmationPassword && password.length > 5) {

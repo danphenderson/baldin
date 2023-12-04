@@ -5,7 +5,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import { useContext } from "react";
-import { UserContext } from "../context/user-context";
+import { UserContext } from "../../context/user-context";
 
 // Define the type for the Header's props
 interface HeaderProps {

@@ -1,46 +1,43 @@
 import React, { useState, useEffect, createContext, ReactNode } from "react";
 
-// Define the type for the context value
-type UserContextType = [string | null, (token: string | null) => void];
+// Define the context value type
+type UserContextValue = [string | null, React.Dispatch<React.SetStateAction<string | null>>];
 
-// Create the context with an initial value
-export const UserContext = createContext<UserContextType>([null, () => {}]);
+// Create the context
+export const UserContext = createContext<UserContextValue>([null, () => {}]);
 
-// Define the type for the UserProvider's props
 interface UserProviderProps {
-    children: ReactNode;
+  children: ReactNode;
 }
 
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
-    const [token, setToken] = useState<string | null>(localStorage.getItem("baldin_token"));
+  const [token, setToken] = useState<string | null>(localStorage.getItem("danhenderson_token"));
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            const requestOptions = {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + token,
-                },
-            };
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!token) {
+        return; // If token is not available, no need to make the request
+      }
 
-            const response = await fetch("/users/me", requestOptions);
+      const requestOptions = {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token,
+        },
+      };
 
-            if (!response.ok) {
-                setToken(null);
-            }
+      const response = await fetch("/users/me", requestOptions);
 
-            if (token) {
-                localStorage.setItem("baldin_token", token);
-            }
-        };
+      if (!response.ok) {
+        setToken(null);
+      }
 
-        fetchUser();
-    }, [token]);
+      localStorage.setItem("baldin_token", token);
+    };
 
-    return (
-        <UserContext.Provider value={[token, setToken]}>
-            {children}
-        </UserContext.Provider>
-    );
+    fetchUser();
+  }, [token]);
+
+  return <UserContext.Provider value={[token, setToken]}>{children}</UserContext.Provider>;
 };

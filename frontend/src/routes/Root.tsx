@@ -1,8 +1,8 @@
 import React, { useContext } from "react";
 import { Outlet } from "react-router-dom";
 
-import Login from "./Login";
-import Home from "./Home";
+import Login from "./login";
+import Home from "./home";
 import Footer from "../component/footer";
 import Header from "../component/header";
 import Paper from '@mui/material/Paper';

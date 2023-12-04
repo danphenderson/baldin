@@ -7,6 +7,7 @@ import PublicLayout from '../layout/public-layout';
 import UserLayout from '../layout/user-layout';
 import Register from '../pages/register';
 import ErrorPage from '../pages/error-page';
+import Settings from '../pages/settings';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -15,9 +16,10 @@ const AppRoutes: React.FC = () => {
         <Route element={<UserLayout />}>
             <Route path="/" element={<UserRoute />}>
                 <Route index element={<Home />} />
+                <Route path="/settings" element={<Settings />} />
                 {/* More user routes can be added here */}
             </Route>
-        </Route>
+        </Route>a\
 
         <Route element={<PublicLayout />}>
             <Route path="/login" element={<Login />} />

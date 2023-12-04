@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import { useContext } from "react";
 import { UserContext } from "../../context/user-context";
+import { useNavigate } from 'react-router-dom';
 
 // Define the type for the Header's props
 interface HeaderProps {
@@ -15,9 +16,16 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ title }) => {
   const [token, setToken] = useContext(UserContext);
 
+  const navigate = useNavigate();
+
   const handleLogout = () => {
     setToken(null);
   };
+
+  const handleSettings = () => {
+    navigate('/settings');
+  }
+
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -27,6 +35,7 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
               {title}
           </Typography>
           {token && <Button color="inherit" onClick={handleLogout}>Logout</Button>}
+          {token && <Button color="inherit" onClick={handleSettings}>User Settings</Button>}
         </Toolbar>
       </AppBar>
     </Box>

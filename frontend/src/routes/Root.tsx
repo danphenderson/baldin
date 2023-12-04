@@ -15,7 +15,7 @@ const Root: React.FC = () => {
   return (
     <>
       <div>
-        <Header />
+        <Header title="Header Title"/>
         <Paper elevation={10} sx={{ p: 2, margin: 'auto', flexGrow: 1 }}>
           {!token ? (
             <div className="columns">
@@ -27,7 +27,7 @@ const Root: React.FC = () => {
             </div>
           )}
         </Paper>
-        <Footer />
+        <Footer title="Footer Title"/>
         <div id="detail">
           <Outlet />
         </div>

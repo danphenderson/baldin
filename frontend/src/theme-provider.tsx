@@ -1,7 +1,9 @@
-import { blue, pink, grey } from '@mui/material/colors'
-import CssBaseline from '@mui/material/CssBaseline'
-import { createTheme, ThemeProvider as MuiThemeProvider } from '@mui/material/styles'
+import React, { ReactNode } from 'react';
+import { blue, pink, grey } from '@mui/material/colors';
+import CssBaseline from '@mui/material/CssBaseline';
+import { createTheme, ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 
+// Typing the theme object
 const theme = createTheme({
   palette: {
     primary: blue,
@@ -42,15 +44,20 @@ const theme = createTheme({
       },
     },
   },
-})
+});
 
-const ThemeProvider = ({ children }) => {
+// Define the type for the ThemeProvider's props
+interface ThemeProviderProps {
+  children: ReactNode;
+}
+
+const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   return (
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
       {children}
     </MuiThemeProvider>
-  )
+  );
 };
 
 export default ThemeProvider;

@@ -7,37 +7,38 @@ import { UserProvider } from './context/user-context';
 import ErrorPage from "./error-page";
 import Register from './routes/register';
 import Home from './routes/home';
-import Login from './routes/Login';
+import Login from './routes/login';
 
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <Root />,
-    errorElement: <ErrorPage />,
-    children: [
+export default function App() {
+    const router = createBrowserRouter([
       {
-        path: "/login",
-        element: <Login />,
-      },
-      {
-        path: "/register",
-        element: <Register />,
-      },
-      {
-        path: "/home",
-        element: <Home />,
+        path: "/",
+        element: <Root />,
+        errorElement: <ErrorPage />,
+        children: [
+          {
+            path: "/login",
+            element: <Login />,
+          },
+          {
+            path: "/register",
+            element: <Register />,
+          },
+          {
+            path: "/home",
+            element: <Home />,
+          }
+        ]
       }
-    ]
-  }
-]);
+    ]);
 
-const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <ThemeProvider>
-      <UserProvider>
-        <RouterProvider router={router} />
-      </UserProvider>
-    </ThemeProvider>
-  </React.StrictMode>
-);
+    return (
+      <React.StrictMode>
+        <ThemeProvider>
+          <UserProvider>
+            <RouterProvider router={router} />
+          </UserProvider>
+        </ThemeProvider>
+      </React.StrictMode>
+    );
+}

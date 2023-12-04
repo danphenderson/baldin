@@ -1,9 +1,5 @@
 # References
 
-Inspired by (albiet not limited to):
-- https://levelup.gitconnected.com/building-a-website-starter-with-fastapi-92d077092864#e696
-- https://testdriven.io/courses/tdd-fastapi/
-
 Baldin: http://127.0.0.1:8004
 
 OpenAPI (re)docs: http://127.0.0.1:8004/docs | http://127.0.0.1:8004/redocs

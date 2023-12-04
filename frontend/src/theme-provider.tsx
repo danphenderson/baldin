@@ -1,61 +1,69 @@
-import React, { ReactNode } from 'react';
-import { blue, pink, grey } from '@mui/material/colors';
-import CssBaseline from '@mui/material/CssBaseline';
+import React, { ReactNode, useState } from 'react';
 import { createTheme, ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { blue, pink, grey } from '@mui/material/colors';
 
-// Typing the theme object
-const theme = createTheme({
-  palette: {
-    primary: blue,
-    secondary: pink,
-    text: {
-      primary: grey[900],
-      secondary: grey[700],
-    },
-    background: {
-      default: '#eee',
-      paper: '#fff',
-    },
-    divider: grey[300],
-  },
-  spacing: 8,
-  typography: {
-    fontFamily: [
-      '"Hiragino Sans"',
-      '-apple-system',
-      'BlinkMacSystemFont',
-      '"Segoe UI"',
-      'Roboto',
-      'Helvetica',
-      'Arial',
-      'sans-serif',
-    ].join(','),
-  },
-  components: {
-    MuiButton: {
-      defaultProps: {
-        disableElevation: true,
-      },
-      styleOverrides: {},
-    },
-    MuiTextField: {
-      defaultProps: {
-        variant: 'filled',
-      },
-    },
-  },
-});
-
-// Define the type for the ThemeProvider's props
 interface ThemeProviderProps {
   children: ReactNode;
 }
 
 const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+  const [darkMode, setDarkMode] = useState(false);
+
+  const theme = createTheme({
+    palette: {
+      mode: darkMode ? 'dark' : 'light',
+      primary: blue,
+      secondary: pink,
+      background: {
+        default: darkMode ? '#303030' : '#eee',
+        paper: darkMode ? '#424242' : '#fff',
+      },
+      text: {
+        primary: darkMode ? grey[300] : grey[900],
+        secondary: darkMode ? grey[500] : grey[700],
+      },
+      divider: grey[300],
+    },
+    typography: {
+      fontFamily: [
+        'Roboto',
+        '-apple-system',
+        'BlinkMacSystemFont',
+        '"Segoe UI"',
+        'Helvetica',
+        'Arial',
+        'sans-serif',
+      ].join(','),
+    },
+    components: {
+      MuiButton: {
+        defaultProps: {
+          disableElevation: true,
+        },
+        styleOverrides: {
+          root: {
+            // Add your global button style overrides here
+          },
+        },
+      },
+      MuiTextField: {
+        defaultProps: {
+          variant: 'filled',
+        },
+      },
+    },
+  });
+
+  // Toggle dark mode
+  const toggleDarkMode = () => setDarkMode(!darkMode);
+
   return (
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
       {children}
+      {/* Example Button to toggle dark mode. You can place it wherever you want in your app */}
+      <button onClick={toggleDarkMode}>Toggle Dark Mode</button>
     </MuiThemeProvider>
   );
 };

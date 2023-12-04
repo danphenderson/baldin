@@ -5,10 +5,10 @@ import Paper from '@mui/material/Paper';
 import Header from '../component/common/header';
 import Footer from '../component/common/footer';
 
-const UserLayout: React.FC = () => {
+const HomeLayout: React.FC = () => {
   return (
     <>
-      <Header title="Welcome to the Home User Dashboard" />
+      <Header/>
       <Paper elevation={10} sx={{ p: 2, margin: 'auto', flexGrow: 1 }}>
         <Outlet /> {/* This will render the current route's component */}
       </Paper>
@@ -17,4 +17,4 @@ const UserLayout: React.FC = () => {
   );
 };
 
-export default UserLayout;
+export default HomeLayout;

@@ -1,10 +1,10 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import UserRoute from './user-route';
-import Home from '../pages/home';
+import App from '../pages/home';
 import Login from '../pages/login';
 import PublicLayout from '../layout/public-layout';
-import UserLayout from '../layout/user-layout';
+import HomeLayout from '../layout/home-layout';
 import Register from '../pages/register';
 import ErrorPage from '../pages/error-page';
 import Settings from '../pages/settings';
@@ -13,9 +13,9 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
 
-        <Route element={<UserLayout />}>
+        <Route element={<HomeLayout />}>
             <Route path="/" element={<UserRoute />}>
-                <Route index element={<Home />} />
+                <Route index element={<App />} />
                 <Route path="/settings" element={<Settings />} />
                 {/* More user routes can be added here */}
             </Route>

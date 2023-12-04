@@ -2,6 +2,7 @@ import React, { ReactNode, useState } from 'react';
 import { createTheme, ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { blue, pink, grey } from '@mui/material/colors';
+import { Box } from '@mui/material';
 
 interface ThemeProviderProps {
   children: ReactNode;
@@ -60,10 +61,11 @@ const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   return (
     <MuiThemeProvider theme={theme}>
-      <CssBaseline />
-      {children}
-      {/* Example Button to toggle dark mode. You can place it wherever you want in your app */}
-      <button onClick={toggleDarkMode}>Toggle Dark Mode</button>
+
+          <CssBaseline />
+          {children}
+          {/* Example Button to toggle dark mode. You can place it wherever you want in your app */}
+          <button onClick={toggleDarkMode}>Toggle Dark Mode</button>
     </MuiThemeProvider>
   );
 };

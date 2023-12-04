@@ -29,9 +29,6 @@ interface FooterProps {
 const Footer: React.FC<FooterProps> = ({ title }) => {
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          {title}
-      </Typography>
       <Copyright sx={{ mt: 5 }} />
     </Box>
   );

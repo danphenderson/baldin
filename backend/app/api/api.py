@@ -51,10 +51,10 @@ api_router.include_router(
 api_router.include_router(
     etl.router,
     prefix="/etl",
-    tags=["leads"],
+    tags=["etl"],
 )
 api_router.include_router(
     applications.router,
     prefix="/applications",
-    tags=["leads"],
+    tags=["applications"],
 )

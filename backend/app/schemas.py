@@ -8,8 +8,7 @@ from pydantic import BaseModel as _BaseModel
 
 class BaseModel(_BaseModel):
     class Config:
-        orm_mode = True
-        extra = "allow"
+        from_attributes = True
 
 
 class BaseRead(BaseModel):
@@ -71,38 +70,35 @@ class LeadUpdate(BaseLead):
     id: UUID4
 
 
-class BaseJobApplication(BaseModel):
+class BaseApplication(BaseModel):
     cover_letter: str | None = None
     resume: str | None = None
 
 
-class JobApplicationRead(BaseJobApplication, BaseRead):
+class ApplicationRead(BaseApplication, BaseRead):
     lead: LeadRead
     user: UserRead
 
 
-class JobApplicationCreate(BaseJobApplication):
+class ApplicationCreate(BaseApplication):
     lead_id: UUID4
 
 
-class JobApplicationUpdate(BaseJobApplication):
+class ApplicationUpdate(BaseApplication):
     id: UUID4
 
 
 class BaseETLEvent(BaseModel):
     job_name: str | None = None
-    job_payload: str | None = None
     status: str | None = None
-
     # TODO: Add validators for the status field, e.g. running, success, failure
 
 
-class ETLEvenetRead(BaseETLEvent, BaseRead):
+class ETLEventRead(BaseETLEvent, BaseRead):
     pass
 
-
 class ETLEventCreate(BaseETLEvent):
-    job_name: str
+    pass
 
 
 class ETLEventUpdate(BaseETLEvent):

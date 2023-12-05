@@ -32,16 +32,12 @@ class ETLEvent(Base):
     __tablename__ = "etl_events"
 
     job_name = Column(String)
-    job_payload = Column(String)
     status = Column(String)  # running, success, failure
 
 
 class Lead(Base):
     """
-    Model representing a lead generated from a search.
-
-    There is a many-to-many relationship between
-    a lead and a job search.
+    Model representing a job lead.
 
     There is a one-to-one relationship between
     a lead and an application.
@@ -71,7 +67,7 @@ class Lead(Base):
 # begin region: User models
 
 
-class User(SQLAlchemyBaseUserTableUUID, Base):
+class User(SQLAlchemyBaseUserTableUUID, Base): # type: ignore
     """
     User model contain optional fields for user-related operations.
     """
@@ -97,7 +93,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
 
 class Application(Base):
     """
-    Represents a application for a user's job lead.
+    Represents a users application for a job lead.
 
     There is a many-to-one relationship between
     a job application and a user.

@@ -4,10 +4,11 @@ SQL Alchemy models declaration.
 Note, imported by alembic migrations logic, see `alembic/env.py`
 """
 from datetime import datetime
+from sys import version
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
-from sqlalchemy import UUID, Column, DateTime, ForeignKey, String, Text
+from sqlalchemy import JSON, UUID, Column, DateTime, ForeignKey, String, Text, desc
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -21,24 +22,43 @@ class Base(DeclarativeBase):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-class Search(Base):
+class JobSearch(Base):
     """
     Model representing a search for leads.
+
+    There is a many-to-many relationship between
+    a job search and a lead.
+
+    There is a many-to-one relationship between
+    a job search and a job search pipeline.
     """
 
-    __tablename__ = "searches"
+    __tablename__ = "job_searches"
 
-    keywords = Column(String)
+    query = Column(String)
     platform = Column(String)
     location = Column(String)
+    status = Column(String)  # running, success, failure
+
+    # keys, relationships
     leads = relationship(
-        "Lead", secondary="searches_x_leads", back_populates="searches"
+        "Lead", secondary="job_searches_x_leads", back_populates="job_searches"
+    )
+    job_search_pipeline_id = Column(UUID, ForeignKey("job_search_pipelines.id"))
+    job_search_pipeline = relationship(
+        "JobSearchPipeline", back_populates="job_searches"
     )
 
 
 class Lead(Base):
     """
     Model representing a lead generated from a search.
+
+    There is a many-to-many relationship between
+    a lead and a job search.
+
+    There is a one-to-one relationship between
+    a lead and an application.
     """
 
     __tablename__ = "leads"
@@ -53,29 +73,29 @@ class Lead(Base):
     industries = Column(String)
     employment_type = Column(String)
     seniority_level = Column(String)
-    searches = relationship(
-        Search, secondary="searches_x_leads", back_populates="leads"
+    notes = Column(Text)
+
+    # keys, relationships
+    job_searches = relationship(
+        JobSearch, secondary="job_searches_x_leads", back_populates="leads"
     )
-    applications = relationship("Application", back_populates="lead")
+    application = relationship("Application", back_populates="lead", uselist=False)
 
 
 class SearchXLead(Base):
     """
-    Association table for many-to-many relationship between searches and leads.
+    Association table for many-to-many relationship between job_searches and leads.
     """
 
-    __tablename__ = "searches_x_leads"
+    __tablename__ = "job_searches_x_leads"
 
-    search_id = Column(UUID, ForeignKey("searches.id"))
+    search_id = Column(UUID, ForeignKey("job_searches.id"))
     lead_id = Column(UUID, ForeignKey("leads.id"))
-
-
-# Begin region: User Models
 
 
 class User(SQLAlchemyBaseUserTableUUID, Base):
     """
-    Auth user model contain optional fields for user-related operations.
+    User model contain optional fields for user-related operations.
     """
 
     __tablename__ = "users"
@@ -89,24 +109,44 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     state = Column(String)
     zip_code = Column(String)
     country = Column(String)
+    skills = Column(String)  # FIXME: going to be a list of strings
+
+    # keys, relationships
+    job_search_pipelines = relationship("JobSearchPipeline", back_populates="user")
+    applications = relationship("Application", back_populates="user")
+    cover_letter_templates = relationship("CoverLetterTemplate", back_populates="user")
+    resume_templates = relationship("ResumeTemplate", back_populates="user")
 
 
 class Application(Base):
     """
-    Represents a user's application for a job lead.
+    Represents a job application for a user.
+
+    There is a many-to-one relationship between
+    a job application and a user.
+
+    There is a one-to-one relationship between
+    a job application and a lead.
     """
 
     __tablename__ = "applications"
-    lead_id = Column(UUID, ForeignKey("leads.id"))
+
     cover_letter = Column(Text)  # Storing cover letter content as text
     resume = Column(Text)  # Storing resume content or link as text
-    lead = relationship("Lead", back_populates="applications")
+
+    # keys, relationships
+    lead_id = Column(UUID, ForeignKey("leads.id"))
+    user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
+    lead = relationship("Lead", back_populates="application", uselist=False)
+    user = relationship("User", back_populates="applications")
 
 
 class CoverLetterTemplate(Base):
     """
     Represents a cover letter template for generating a user's
-    cover letter. There is a many-to-one relationship between
+    cover letter.
+
+    There is a many-to-one relationship between
     a cover letter template and a user.
     """
 
@@ -114,17 +154,52 @@ class CoverLetterTemplate(Base):
 
     content = Column(Text)  # Storing template content as text
 
+    # keys, relationships
+    user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
+    user = relationship("User", back_populates="cover_letter_templates")
+
 
 class ResumeTemplate(Base):
     """
     Represents a resume template for generating a user's
-    resume. There is a many-to-one relationship between
+    resume.
+
+    There is a many-to-one relationship between
     a resume template and a user.
     """
 
     __tablename__ = "resume_templates"
 
+    name = Column(String)
+    description = Column(String)
     content = Column(Text)  # Storing template content as text
 
+    # keys, relationships
+    user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
+    user = relationship("User", back_populates="resume_templates")
 
-# Begin region: User Models
+
+class JobSearchPipeline(Base):
+    """
+    Represents the state of the ETL execution of a user
+    job search event.
+
+    There is a one-to-many relationship between
+    a job search pipeline and a user.
+
+    There is a one-to-many relationship between
+    a job search pipeline and a job search.
+    """
+
+    __tablename__ = "job_search_pipelines"
+
+    name = Column(String)
+    platform = Column(String)
+    location = Column(String)
+    query = Column(String)
+    status = Column(String)  # running, success, failure
+
+    # keys, relationships
+    user_id = Column(UUID, ForeignKey("users.id"))
+    user = relationship("User", back_populates="job_search_pipelines")
+    job_searches = relationship("JobSearch", back_populates="job_search_pipeline")

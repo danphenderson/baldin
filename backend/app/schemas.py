@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from re import A
 
 from fastapi_users import schemas
 from pydantic import UUID4
@@ -18,6 +19,9 @@ class BaseRead(BaseModel):
     updated_at: datetime
 
 
+# Begin Schema definitions for model CRUD
+
+
 class BaseUser(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
@@ -28,6 +32,7 @@ class BaseUser(BaseModel):
     state: str | None = None
     zip_code: str | None = None
     country: str | None = None
+    skills: str | None = None  # FIXME: going to be a list of strings
 
 
 class UserRead(schemas.BaseUser[uuid.UUID], BaseUser):
@@ -56,10 +61,12 @@ class BaseLead(BaseModel):
 
 class LeadRead(BaseLead, BaseRead):
     url: str
+    notes: str | None = None
+    user: UserRead
 
 
 class LeadReadSearch(LeadRead):
-    searches: list["SearchRead"]
+    searches: list["JobSearchRead"]
 
 
 class LeadCreate(BaseLead):
@@ -70,35 +77,64 @@ class LeadUpdate(BaseLead):
     id: UUID4
 
 
-class BaseSearch(BaseModel):
+class BaseJobSearch(BaseModel):
     keywords: str | None = None
     platform: str | None = None
     location: str | None = None
 
 
-class SearchRead(BaseSearch, BaseRead):
+class JobSearchRead(BaseJobSearch, BaseRead):
     pass
 
 
-class SearchReadLeads(SearchRead):
-    leads: list["LeadRead"]
+class JobSearchReadLeads(JobSearchRead):
+    leads: list[LeadRead]
 
 
-class SearchCreate(BaseSearch):
+class JobSearchCreate(BaseJobSearch):
     pass
 
 
-class BaseLoader(BaseModel):
-    status: bool = False
+class JobSearchUpdate(BaseJobSearch):
+    id: UUID4
 
 
-class LoaderRead(BaseLoader, BaseRead):
+class BaseApplication(BaseModel):
+    cover_letter: str | None = None
+    resume: str | None = None
+
+
+class ApplicationRead(BaseApplication, BaseRead):
+    lead: LeadRead
+    user: UserRead
+
+
+class ApplicationCreate(BaseApplication):
+    lead_id: UUID4
+
+
+class ApplicationUpdate(BaseApplication):
+    id: UUID4
+
+
+class BaseJobSearchPipeline(BaseModel):
+    name: str | None = None
+    query: str | None = None
+    description: str | None = None
+    platform: str | None = None
+    location: str | None = None
+    status: str | None = None
+
+    # TODO: Add validators for the status field, e.g. running, success, failure
+
+
+class JobSearchPipelineRead(BaseJobSearchPipeline, BaseRead):
+    searches: list[JobSearchRead]
+
+
+class JobSearchPipelineCreate(BaseJobSearchPipeline):
     pass
 
 
-class LoaderCreate(BaseLoader):
-    pass
-
-
-class LoaderUpdate(BaseLoader):
-    pass
+class JobSearchPipelineUpdate(BaseJobSearchPipeline):
+    id: UUID4

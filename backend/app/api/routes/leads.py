@@ -32,16 +32,7 @@ async def create_lead(payload: schemas.LeadCreate, db=Depends(get_async_session)
 
 @router.get("/{id}/", status_code=202, response_model=schemas.LeadRead)
 async def read_lead(id: UUID4, lead=Depends(get_lead)):
-    return schemas.LeadRead.from_orm(lead)  # Is it necessary to use from_orm here?
-
-
-@router.get("/url/{url}/", status_code=202, response_model=schemas.LeadRead)
-async def read_lead_by_url(url: str, db=Depends(get_async_session)):
-    rows = await db.execute(select(models.Lead).where(models.Lead.url == url))
-    result = rows.scalars().first()
-    if not result:
-        raise HTTPException(status_code=404, detail="Lead not found")
-    return schemas.LeadRead.from_orm(result)
+    return lead
 
 
 @router.get("/", response_model=list[schemas.LeadRead])

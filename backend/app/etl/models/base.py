@@ -1,17 +1,20 @@
 from abc import ABCMeta
-from uuid import uuid4
-from pydantic import UUID4, BaseModel as _BaseModel
-from pydantic import AnyHttpUrl, Field
-from asyncio import get_event_loop, ensure_future, Future, sleep
+from asyncio import Future, ensure_future, get_event_loop, sleep
 from pathlib import Path
+from typing import Dict
+from uuid import uuid4
+
 from aiofiles import open as aopen
+from pydantic import UUID4, AnyHttpUrl
+from pydantic import BaseModel as _BaseModel
+from pydantic import Field
+
 from app.core.conf import settings
 
-from typing import Dict
 
-class BaseModel(_BaseModel, extra='allow', metaclass=ABCMeta):
+class BaseModel(_BaseModel, extra="allow", metaclass=ABCMeta):
     _tasks: list = []
-    id : UUID4 | None = Field(default_factory=uuid4)
+    id: UUID4 | None = Field(default_factory=uuid4)
 
     @staticmethod
     async def _run_sync(func, *args, **kwargs):
@@ -20,7 +23,7 @@ class BaseModel(_BaseModel, extra='allow', metaclass=ABCMeta):
 
     @classmethod
     async def load(cls, file_path: str):
-        async with aopen(file_path, 'r') as f:
+        async with aopen(file_path, "r") as f:
             data = await f.read()
             return await cls._run_sync(lambda: cls.parse_raw(data))
 
@@ -28,30 +31,30 @@ class BaseModel(_BaseModel, extra='allow', metaclass=ABCMeta):
         task = ensure_future(self._run_sync(func, *args, **kwargs))
         self._tasks.append(task)
         return await task
-    
+
     async def to_dict(self) -> Dict:
         return await self._run_sync(lambda: self.dict())
 
     async def to_json(self, indent: int = 4):
-        return await self._run_sync(lambda: self.json(indent=indent))
+        return await self._run_sync(lambda: self.json())
 
     async def dump(self, file_path: str, indent: int = 4):
         Path(file_path).parent.mkdir(parents=True, exist_ok=True)
-        async with aopen(file_path, 'a') as f:
+        async with aopen(file_path, "a") as f:
             await f.write(await self.to_json(indent=indent))
 
     async def wait(self, seconds: int) -> None:
         if seconds > 0:
             await sleep(seconds)
-            
+
     async def __aenter__(self):
         # Ref: https://peps.python.org/pep-0492/#asynchronous-context-managers-and-async-with
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
-        # Ref: https://peps.python.org/pep-0492/#asynchronous-context-managers-and-async-with 
+        # Ref: https://peps.python.org/pep-0492/#asynchronous-context-managers-and-async-with
         pass
-    
+
     async def __await__(self):
         return self._run_sync(lambda: self).__await__()
 
@@ -70,4 +73,6 @@ class HRefBaseModel(BaseModel):
         return self.url != other.url
 
     async def dump(self):
-        return await super().dump(str(Path(settings.PUBLIC_ASSETS_DIR) / "leads" / f"{self.id}.json"))
+        return await super().dump(
+            str(Path(settings.PUBLIC_ASSETS_DIR) / "leads" / f"{self.id}.json")
+        )

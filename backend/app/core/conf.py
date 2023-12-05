@@ -89,13 +89,20 @@ class Chrome(_BaseSettings, env_prefix="CHROME_"):
     @property
     def options(self) -> ChromeOptions:
         options = ChromeOptions()
-        options.add_argument("--no-sandbox")
-        options.add_argument("--window-size=1420,10")
-        options.add_argument("--ignore-certificate-errors")
-        options.add_argument("--disable-dev-shm-usage")
-        # options.add_argument("--headless")
-        options.add_argument("--dump-dom")
-        options.add_argument("--incognito")
+        options.add_argument("--no-sandbox")  # Bypass OS security model
+        # options.add_argument("--headless")  # Run in headless mode
+        # options.add_argument("--disable-gpu")  # Disable GPU hardware acceleration
+        options.add_argument("--window-size=1420,1080")  # Set window size
+        options.add_argument("--ignore-certificate-errors")  # Ignore certificate errors
+        options.add_argument(
+            "--disable-dev-shm-usage"
+        )  # Overcome limited resource problems
+        # options.add_argument("--disable-extensions")  # Disable extensions
+        options.add_argument(
+            "--disable-web-security"
+        )  # Disable web security - use with caution
+        # options.add_argument("--incognito")  # Use incognito mode
+        # Add any other arguments you find necessary
         return options
 
 
@@ -118,7 +125,7 @@ class Linkedin(_BaseSettings, env_prefix="LINKEDIN_"):
     USERNAME: str = ""
     PASSWORD: str = ""
 
-    search_endpoint: str = "https://www.linkedin.com/jobs/search/?currentJobId=3538510509&f_E=3%2C4&f_JT=F%2CC&f_TPR=r604800&f_WT=2&keywords=python%20aws"
+    search_endpoint: str = "https://www.linkedin.com/jobs/search/?currentJobId=3761064348&keywords=data%20engineer&origin=JOBS_HOME_SEARCH_BUTTON&refresh=true"
     profile_endpoint: str = "https://www.linkedin.com/in/daniel-henderson-6a9485bb/"
     login_endpoint: str = "https://www.linkedin.com/login"
 

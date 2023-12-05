@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from re import A
 
 from fastapi_users import schemas
 from pydantic import UUID4
@@ -57,6 +56,7 @@ class BaseLead(BaseModel):
     industries: str | None = None
     employment_type: str | None = None
     seniority_level: str | None = None
+    notes: str | None = None
 
 
 class LeadRead(BaseLead, BaseRead):

@@ -36,36 +36,6 @@ class ETLEvent(Base):
     status = Column(String)  # running, success, failure
 
 
-# end region: Platform models
-
-
-# begin region: User models
-
-
-class User(SQLAlchemyBaseUserTableUUID, Base):
-    """
-    User model contain optional fields for user-related operations.
-    """
-
-    __tablename__ = "users"
-
-    first_name = Column(String)
-    last_name = Column(String)
-    phone_number = Column(String)
-    address_line_1 = Column(String)
-    address_line_2 = Column(String)
-    city = Column(String)
-    state = Column(String)
-    zip_code = Column(String)
-    country = Column(String)
-    skills = Column(String)  # FIXME: going to be a list of strings
-
-    # keys, relationships
-    job_applications = relationship("JobApplication", back_populates="user")
-    cover_letter_templates = relationship("CoverLetterTemplate", back_populates="user")
-    resume_templates = relationship("ResumeTemplate", back_populates="user")
-
-
 class Lead(Base):
     """
     Model representing a lead generated from a search.
@@ -95,6 +65,36 @@ class Lead(Base):
     job_application = relationship(
         "JobApplication", back_populates="lead", uselist=False
     )
+
+
+# end region: Platform models
+
+
+# begin region: User models
+
+
+class User(SQLAlchemyBaseUserTableUUID, Base):
+    """
+    User model contain optional fields for user-related operations.
+    """
+
+    __tablename__ = "users"
+
+    first_name = Column(String)
+    last_name = Column(String)
+    phone_number = Column(String)
+    address_line_1 = Column(String)
+    address_line_2 = Column(String)
+    city = Column(String)
+    state = Column(String)
+    zip_code = Column(String)
+    country = Column(String)
+    skills = Column(String)  # FIXME: going to be a list of strings
+
+    # keys, relationships
+    job_applications = relationship("JobApplication", back_populates="user")
+    cover_letter_templates = relationship("CoverLetterTemplate", back_populates="user")
+    resume_templates = relationship("ResumeTemplate", back_populates="user")
 
 
 class JobApplication(Base):

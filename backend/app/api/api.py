@@ -12,11 +12,11 @@ includes useful dependencies.
 from fastapi import APIRouter
 
 from app.api.deps import fastapi_users
+from app.api.routes import leads
 from app.core import security
 from app.schemas import UserCreate, UserRead, UserUpdate
-from app.api.routes import leads, searches
 
-api_router : APIRouter = APIRouter()
+api_router: APIRouter = APIRouter()
 
 api_router.include_router(
     fastapi_users.get_auth_router(security.AUTH_BACKEND),
@@ -47,9 +47,4 @@ api_router.include_router(
     leads.router,
     prefix="/leads",
     tags=["leads"],
-)
-api_router.include_router(
-    searches.router,
-    prefix="/searches",
-    tags=["searches"],
 )

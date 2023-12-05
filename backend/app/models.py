@@ -21,51 +21,49 @@ class Base(DeclarativeBase):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-class Search(Base):
+# begin region: Platform models
+
+
+class ETLEvent(Base):
     """
-    Model representing a search for leads.
-
-    There is a many-to-many relationship between
-    a job search and a lead.
-
-    There is a many-to-one relationship between
-    a job search and a job search pipeline.
+    Represents an ETL event for the platform.
     """
 
-    __tablename__ = "searches"
+    __tablename__ = "etl_events"
 
-    query = Column(String)
-    platform = Column(String)
-    location = Column(String)
+    job_name = Column(String)
+    job_payload = Column(String)
     status = Column(String)  # running, success, failure
 
-    leads = relationship(
-        "Lead", secondary="searches_x_leads", back_populates="searches"
-    )
-    job_search_pipeline_id = Column(UUID, ForeignKey("job_search_pipelines.id"))
-    job_search_pipeline = relationship("JobSearchPipeline", back_populates="searches")
+
+# end region: Platform models
 
 
-class JobSearchPipeline(Base):
+# begin region: User models
+
+
+class User(SQLAlchemyBaseUserTableUUID, Base):
     """
-    Represents the state of the ETL execution of a user
-    job search event.
-
-    There is a one-to-many relationship between
-    a job search pipeline and a job search.
+    User model contain optional fields for user-related operations.
     """
 
-    __tablename__ = "job_search_pipelines"
+    __tablename__ = "users"
 
-    name = Column(String)
-    platform = Column(String)
-    location = Column(String)
-    query = Column(String)
-    status = Column(String)  # running, success, failure
+    first_name = Column(String)
+    last_name = Column(String)
+    phone_number = Column(String)
+    address_line_1 = Column(String)
+    address_line_2 = Column(String)
+    city = Column(String)
+    state = Column(String)
+    zip_code = Column(String)
+    country = Column(String)
+    skills = Column(String)  # FIXME: going to be a list of strings
 
-    user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
-    user = relationship("User", back_populates="job_search_pipelines")
-    searches = relationship("Search", back_populates="job_search_pipeline")
+    # keys, relationships
+    job_applications = relationship("JobApplication", back_populates="user")
+    cover_letter_templates = relationship("CoverLetterTemplate", back_populates="user")
+    resume_templates = relationship("ResumeTemplate", back_populates="user")
 
 
 class Lead(Base):
@@ -94,48 +92,9 @@ class Lead(Base):
     notes = Column(Text)
 
     # keys, relationships
-    searches = relationship(
-        Search, secondary="searches_x_leads", back_populates="leads"
-    )
     job_application = relationship(
         "JobApplication", back_populates="lead", uselist=False
     )
-
-
-class SearchXLead(Base):
-    """
-    Association table for many-to-many relationship between job_searches and leads.
-    """
-
-    __tablename__ = "searches_x_leads"
-
-    search_id = Column(UUID, ForeignKey("searches.id"))
-    lead_id = Column(UUID, ForeignKey("leads.id"))
-
-
-class User(SQLAlchemyBaseUserTableUUID, Base):
-    """
-    User model contain optional fields for user-related operations.
-    """
-
-    __tablename__ = "users"
-
-    first_name = Column(String)
-    last_name = Column(String)
-    phone_number = Column(String)
-    address_line_1 = Column(String)
-    address_line_2 = Column(String)
-    city = Column(String)
-    state = Column(String)
-    zip_code = Column(String)
-    country = Column(String)
-    skills = Column(String)  # FIXME: going to be a list of strings
-
-    # keys, relationships
-    job_search_pipelines = relationship("JobSearchPipeline", back_populates="user")
-    job_applications = relationship("JobApplication", back_populates="user")
-    cover_letter_templates = relationship("CoverLetterTemplate", back_populates="user")
-    resume_templates = relationship("ResumeTemplate", back_populates="user")
 
 
 class JobApplication(Base):

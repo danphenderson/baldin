@@ -65,37 +65,11 @@ class LeadRead(BaseLead, BaseRead):
     user: UserRead
 
 
-class LeadReadSearch(LeadRead):
-    searches: list["JobSearchRead"]
-
-
 class LeadCreate(BaseLead):
     url: str
 
 
 class LeadUpdate(BaseLead):
-    id: UUID4
-
-
-class BaseJobSearch(BaseModel):
-    keywords: str | None = None
-    platform: str | None = None
-    location: str | None = None
-
-
-class JobSearchRead(BaseJobSearch, BaseRead):
-    pass
-
-
-class JobSearchReadLeads(JobSearchRead):
-    leads: list[LeadRead]
-
-
-class JobSearchCreate(BaseJobSearch):
-    pass
-
-
-class JobSearchUpdate(BaseJobSearch):
     id: UUID4
 
 
@@ -117,24 +91,21 @@ class JobApplicationUpdate(BaseJobApplication):
     id: UUID4
 
 
-class BaseJobSearchPipeline(BaseModel):
-    name: str | None = None
-    query: str | None = None
-    description: str | None = None
-    platform: str | None = None
-    location: str | None = None
+class BaseETLEvent(BaseModel):
+    job_name: str | None = None
+    job_payload: str | None = None
     status: str | None = None
 
     # TODO: Add validators for the status field, e.g. running, success, failure
 
 
-class JobSearchPipelineRead(BaseJobSearchPipeline, BaseRead):
-    searches: list[JobSearchRead]
-
-
-class JobSearchPipelineCreate(BaseJobSearchPipeline):
+class ETLEvenetRead(BaseETLEvent, BaseRead):
     pass
 
 
-class JobSearchPipelineUpdate(BaseJobSearchPipeline):
+class ETLEventCreate(BaseETLEvent):
+    pass
+
+
+class ETLEventUpdate(BaseETLEvent):
     id: UUID4

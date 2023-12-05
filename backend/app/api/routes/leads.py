@@ -44,12 +44,6 @@ async def read_lead_by_url(url: str, db=Depends(get_async_session)):
     return schemas.LeadRead.from_orm(result)
 
 
-@router.get("/{id}/searches/", response_model=list[schemas.JobSearchRead])
-async def read_searches_by_lead(id: UUID4, lead=Depends(get_lead)):
-    # TODO: This is a hack. I need to use a query param in get_lead to have full data optional
-    return lead.searches
-
-
 @router.get("/", response_model=list[schemas.LeadRead])
 async def read_leads(db=Depends(get_async_session)):
     rows = await db.execute(select(models.Lead))

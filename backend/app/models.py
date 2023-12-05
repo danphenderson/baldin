@@ -21,7 +21,7 @@ class Base(DeclarativeBase):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-class JobSearch(Base):
+class Search(Base):
     """
     Model representing a search for leads.
 
@@ -32,7 +32,7 @@ class JobSearch(Base):
     a job search and a job search pipeline.
     """
 
-    __tablename__ = "job_searches"
+    __tablename__ = "searches"
 
     query = Column(String)
     platform = Column(String)
@@ -40,12 +40,10 @@ class JobSearch(Base):
     status = Column(String)  # running, success, failure
 
     leads = relationship(
-        "Lead", secondary="job_searches_x_leads", back_populates="job_searches"
+        "Lead", secondary="searches_x_leads", back_populates="searches"
     )
     job_search_pipeline_id = Column(UUID, ForeignKey("job_search_pipelines.id"))
-    job_search_pipeline = relationship(
-        "JobSearchPipeline", back_populates="job_searches"
-    )
+    job_search_pipeline = relationship("JobSearchPipeline", back_populates="searches")
 
 
 class JobSearchPipeline(Base):
@@ -67,7 +65,7 @@ class JobSearchPipeline(Base):
 
     user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
     user = relationship("User", back_populates="job_search_pipelines")
-    job_searches = relationship("JobSearch", back_populates="job_search_pipeline")
+    searches = relationship("Search", back_populates="job_search_pipeline")
 
 
 class Lead(Base):
@@ -96,10 +94,12 @@ class Lead(Base):
     notes = Column(Text)
 
     # keys, relationships
-    job_searches = relationship(
-        JobSearch, secondary="job_searches_x_leads", back_populates="leads"
+    searches = relationship(
+        Search, secondary="searches_x_leads", back_populates="leads"
     )
-    application = relationship("Application", back_populates="lead", uselist=False)
+    job_application = relationship(
+        "JobApplication", back_populates="lead", uselist=False
+    )
 
 
 class SearchXLead(Base):
@@ -107,9 +107,9 @@ class SearchXLead(Base):
     Association table for many-to-many relationship between job_searches and leads.
     """
 
-    __tablename__ = "job_searches_x_leads"
+    __tablename__ = "searches_x_leads"
 
-    search_id = Column(UUID, ForeignKey("job_searches.id"))
+    search_id = Column(UUID, ForeignKey("searches.id"))
     lead_id = Column(UUID, ForeignKey("leads.id"))
 
 
@@ -133,12 +133,12 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
 
     # keys, relationships
     job_search_pipelines = relationship("JobSearchPipeline", back_populates="user")
-    applications = relationship("Application", back_populates="user")
+    job_applications = relationship("JobApplication", back_populates="user")
     cover_letter_templates = relationship("CoverLetterTemplate", back_populates="user")
     resume_templates = relationship("ResumeTemplate", back_populates="user")
 
 
-class Application(Base):
+class JobApplication(Base):
     """
     Represents a job application for a user.
 
@@ -149,7 +149,7 @@ class Application(Base):
     a job application and a lead.
     """
 
-    __tablename__ = "applications"
+    __tablename__ = "job_applications"
 
     cover_letter = Column(Text)  # Storing cover letter content as text
     resume = Column(Text)  # Storing resume content or link as text
@@ -157,8 +157,8 @@ class Application(Base):
     # keys, relationships
     lead_id = Column(UUID, ForeignKey("leads.id"))
     user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
-    lead = relationship("Lead", back_populates="application", uselist=False)
-    user = relationship("User", back_populates="applications")
+    lead = relationship("Lead", back_populates="job_application", uselist=False)
+    user = relationship("User", back_populates="job_applications")
 
 
 class CoverLetterTemplate(Base):

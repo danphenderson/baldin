@@ -15,8 +15,8 @@ async def get_lead(id: UUID4, db=Depends(get_async_session)) -> models.Lead:
     return lead
 
 
-async def get_search(id: UUID4, db=Depends(get_async_session)) -> models.JobSearch:
-    search = await db.get(models.JobSearch, id)
+async def get_search(id: UUID4, db=Depends(get_async_session)) -> models.Search:
+    search = await db.get(models.Search, id)
     if not search:
         console_log.info(f"Search with id {id} not found")
         raise HTTPException(status_code=404, detail=f"Search with {id} not found")

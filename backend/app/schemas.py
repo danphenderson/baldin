@@ -99,21 +99,21 @@ class JobSearchUpdate(BaseJobSearch):
     id: UUID4
 
 
-class BaseApplication(BaseModel):
+class BaseJobApplication(BaseModel):
     cover_letter: str | None = None
     resume: str | None = None
 
 
-class ApplicationRead(BaseApplication, BaseRead):
+class JobApplicationRead(BaseJobApplication, BaseRead):
     lead: LeadRead
     user: UserRead
 
 
-class ApplicationCreate(BaseApplication):
+class JobApplicationCreate(BaseJobApplication):
     lead_id: UUID4
 
 
-class ApplicationUpdate(BaseApplication):
+class JobApplicationUpdate(BaseJobApplication):
     id: UUID4
 
 

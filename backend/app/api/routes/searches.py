@@ -16,7 +16,7 @@ async def create_search(
     payload: schemas.JobSearchCreate, db=Depends(get_async_session)
 ):
     # TODO: test that a 208 status code is returned when a lead url already exists
-    search = models.JobSearch(**payload.dict())
+    search = models.Search(**payload.dict())
     db.add(search)
     await db.commit()
     await db.refresh(search)
@@ -45,6 +45,6 @@ async def register_lead(id: UUID4, lead_id: UUID4, db=Depends(get_async_session)
 
 @router.delete("/{id}/", status_code=202)
 async def delete_search(id: UUID4, db=Depends(get_async_session)):
-    search = await db.get(models.JobSearch, id)
+    search = await db.get(models.Search, id)
     await db.delete(search)
     await db.commit()

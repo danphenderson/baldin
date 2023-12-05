@@ -4,11 +4,10 @@ SQL Alchemy models declaration.
 Note, imported by alembic migrations logic, see `alembic/env.py`
 """
 from datetime import datetime
-from sys import version
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
-from sqlalchemy import JSON, UUID, Column, DateTime, ForeignKey, String, Text, desc
+from sqlalchemy import UUID, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -40,7 +39,6 @@ class JobSearch(Base):
     location = Column(String)
     status = Column(String)  # running, success, failure
 
-    # keys, relationships
     leads = relationship(
         "Lead", secondary="job_searches_x_leads", back_populates="job_searches"
     )
@@ -48,6 +46,28 @@ class JobSearch(Base):
     job_search_pipeline = relationship(
         "JobSearchPipeline", back_populates="job_searches"
     )
+
+
+class JobSearchPipeline(Base):
+    """
+    Represents the state of the ETL execution of a user
+    job search event.
+
+    There is a one-to-many relationship between
+    a job search pipeline and a job search.
+    """
+
+    __tablename__ = "job_search_pipelines"
+
+    name = Column(String)
+    platform = Column(String)
+    location = Column(String)
+    query = Column(String)
+    status = Column(String)  # running, success, failure
+
+    user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
+    user = relationship("User", back_populates="job_search_pipelines")
+    job_searches = relationship("JobSearch", back_populates="job_search_pipeline")
 
 
 class Lead(Base):
@@ -177,29 +197,3 @@ class ResumeTemplate(Base):
     # keys, relationships
     user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
     user = relationship("User", back_populates="resume_templates")
-
-
-class JobSearchPipeline(Base):
-    """
-    Represents the state of the ETL execution of a user
-    job search event.
-
-    There is a one-to-many relationship between
-    a job search pipeline and a user.
-
-    There is a one-to-many relationship between
-    a job search pipeline and a job search.
-    """
-
-    __tablename__ = "job_search_pipelines"
-
-    name = Column(String)
-    platform = Column(String)
-    location = Column(String)
-    query = Column(String)
-    status = Column(String)  # running, success, failure
-
-    # keys, relationships
-    user_id = Column(UUID, ForeignKey("users.id"))
-    user = relationship("User", back_populates="job_search_pipelines")
-    job_searches = relationship("JobSearch", back_populates="job_search_pipeline")

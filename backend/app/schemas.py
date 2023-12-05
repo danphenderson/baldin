@@ -102,7 +102,7 @@ class ETLEvenetRead(BaseETLEvent, BaseRead):
 
 
 class ETLEventCreate(BaseETLEvent):
-    pass
+    job_name: str
 
 
 class ETLEventUpdate(BaseETLEvent):

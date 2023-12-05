@@ -62,9 +62,7 @@ class Lead(Base):
     notes = Column(Text)
 
     # keys, relationships
-    job_application = relationship(
-        "JobApplication", back_populates="lead", uselist=False
-    )
+    application = relationship("Application", back_populates="lead", uselist=False)
 
 
 # end region: Platform models
@@ -92,14 +90,14 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     skills = Column(String)  # FIXME: going to be a list of strings
 
     # keys, relationships
-    job_applications = relationship("JobApplication", back_populates="user")
+    applications = relationship("Application", back_populates="user")
     cover_letter_templates = relationship("CoverLetterTemplate", back_populates="user")
     resume_templates = relationship("ResumeTemplate", back_populates="user")
 
 
-class JobApplication(Base):
+class Application(Base):
     """
-    Represents a job application for a user.
+    Represents a application for a user's job lead.
 
     There is a many-to-one relationship between
     a job application and a user.
@@ -108,7 +106,7 @@ class JobApplication(Base):
     a job application and a lead.
     """
 
-    __tablename__ = "job_applications"
+    __tablename__ = "applications"
 
     cover_letter = Column(Text)  # Storing cover letter content as text
     resume = Column(Text)  # Storing resume content or link as text
@@ -116,8 +114,8 @@ class JobApplication(Base):
     # keys, relationships
     lead_id = Column(UUID, ForeignKey("leads.id"))
     user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
-    lead = relationship("Lead", back_populates="job_application", uselist=False)
-    user = relationship("User", back_populates="job_applications")
+    lead = relationship("Lead", back_populates="application", uselist=False)
+    user = relationship("User", back_populates="applications")
 
 
 class CoverLetterTemplate(Base):

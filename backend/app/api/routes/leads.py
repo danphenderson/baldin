@@ -49,3 +49,4 @@ async def delete_lead(id: UUID4, db=Depends(get_async_session)):
     lead = await db.get(models.Lead, id)
     await db.delete(lead)
     await db.commit()
+    return {"message": "Lead deleted successfully"}

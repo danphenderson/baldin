@@ -61,8 +61,6 @@ class BaseLead(BaseModel):
 
 class LeadRead(BaseLead, BaseRead):
     url: str
-    notes: str | None = None
-    user: UserRead
 
 
 class LeadCreate(BaseLead):

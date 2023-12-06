@@ -101,7 +101,7 @@ When modifying the api, generate the `frontend/schema.d.ts` using the openapi-ty
 
 Where `openapi.json` is the latest OpenAPI specification for the API.
 
-**Generating new API Key**: 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
+**Generating new API Key**: `openssl rand -base64 32`
 
 ## License
 This project is licensed under the terms of the [MIT license](/LICENSE).

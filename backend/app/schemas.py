@@ -1,6 +1,5 @@
 # app/schemas.py
 
-import uuid
 from datetime import datetime
 
 from fastapi_users import schemas
@@ -14,7 +13,7 @@ class BaseModel(_BaseModel):
 
 
 class BaseRead(BaseModel):
-    id: UUID4 | str
+    id: UUID4
     created_at: datetime
     updated_at: datetime
 
@@ -35,7 +34,7 @@ class BaseUser(BaseModel):
     skills: str | None = None  # FIXME: going to be a list of strings
 
 
-class UserRead(schemas.BaseUser[uuid.UUID], BaseUser):  # type: ignore
+class UserRead(schemas.BaseUser[UUID4], BaseUser):  # type: ignore
     pass
 
 
@@ -69,7 +68,7 @@ class LeadCreate(BaseLead):
 
 
 class LeadUpdate(BaseLead):
-    id: UUID4
+    pass
 
 
 class BaseApplication(BaseModel):
@@ -88,7 +87,7 @@ class ApplicationCreate(BaseApplication):
 
 
 class ApplicationUpdate(BaseApplication):
-    id: UUID4
+    pass
 
 
 class BaseETLEvent(BaseModel):
@@ -113,16 +112,16 @@ class BaseContact(BaseModel):
     last_name: str | None = None
     phone_number: str | None = None
     email: str | None = None
-    notes: str | None = None
     time_zone: str | None = None
+    notes: str | None = None
 
 
 class ContactRead(BaseContact, BaseRead):
-    pass
+    user: UserRead | None = None
 
 
 class ContactCreate(BaseContact):
-    user_id: UUID4
+    pass
 
 
 class ContactUpdate(BaseContact):

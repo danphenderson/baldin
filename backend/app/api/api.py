@@ -12,7 +12,7 @@ includes useful dependencies.
 from fastapi import APIRouter
 
 from app.api.deps import fastapi_users
-from app.api.routes import applications, etl, leads
+from app.api.routes import applications, contacts, etl, leads, services
 from app.core import security
 from app.schemas import UserCreate, UserRead, UserUpdate
 
@@ -59,12 +59,12 @@ api_router.include_router(
     tags=["applications"],
 )
 api_router.include_router(
-    applications.router,
+    contacts.router,
     prefix="/contacts",
     tags=["contacts"],
 )
 api_router.include_router(
-    applications.router,
+    services.router,
     prefix="/services",
     tags=["services"],
 )

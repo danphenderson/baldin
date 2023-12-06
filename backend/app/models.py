@@ -9,7 +9,9 @@ from sqlalchemy.orm import DeclarativeBase, relationship
 
 class Base(DeclarativeBase):
     """
-    Base model declaration, contains common columns for all tables.
+    Base model declaration for SQLAlchemy.
+
+    All models should inherit from this class.
     """
 
     id = Column(UUID, primary_key=True, default=uuid4)
@@ -138,6 +140,9 @@ class ChatCompletion(Base):
 class Contact(Base):
     """
     Represents a User Contact.
+
+    There is a many-to-one relationship between
+    a contact and a user.
     """
 
     __tablename__ = "contacts"
@@ -148,6 +153,7 @@ class Contact(Base):
     email = Column(String)
     time_zone = Column(String)
     notes = Column(Text)
+
     # keys, relationships
     user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
     user = relationship("User", back_populates="contacts")

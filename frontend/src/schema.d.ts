@@ -58,29 +58,86 @@ export interface paths {
     get: operations["read_lead_leads__id___get"];
     /** Delete Lead */
     delete: operations["delete_lead_leads__id___delete"];
+    /** Update Lead */
+    patch: operations["update_lead_leads__id___patch"];
   };
-  "/etl/": {
-    /**
-     * Read Etl Events
-     * @description Read all ETL events.
-     */
-    get: operations["read_etl_events_etl__get"];
-    /**
-     * Create Etl Event
-     * @description Create an ETL event.
-     */
-    post: operations["create_etl_event_etl__post"];
-  };
-  "/etl/{id}/": {
+  "/etl/events/{id}/": {
     /**
      * Read Etl Event
      * @description Read an ETL event.
      */
-    get: operations["read_etl_event_etl__id___get"];
+    get: operations["read_etl_event_etl_events__id___get"];
+  };
+  "/etl/events/": {
+    /**
+     * Read Etl Events
+     * @description Read all ETL events.
+     */
+    get: operations["read_etl_events_etl_events__get"];
   };
   "/etl/leads/": {
     /** Leads Etl Event */
     post: operations["leads_etl_event_etl_leads__post"];
+  };
+  "/applications/": {
+    /**
+     * Get Applications
+     * @description Get all applications for the current user.
+     */
+    get: operations["get_applications_applications__get"];
+    /** Create Application */
+    post: operations["create_application_applications__post"];
+  };
+  "/applications/{id}/": {
+    /**
+     * Get Application By Id
+     * @description Get an application by ID.
+     */
+    get: operations["get_application_by_id_applications__id___get"];
+    /** Delete Application */
+    delete: operations["delete_application_applications__id___delete"];
+    /** Update Application */
+    patch: operations["update_application_applications__id___patch"];
+  };
+  "/contacts/": {
+    /**
+     * Get Applications
+     * @description Get all applications for the current user.
+     */
+    get: operations["get_applications_contacts__get"];
+    /** Create Application */
+    post: operations["create_application_contacts__post"];
+  };
+  "/contacts/{id}/": {
+    /**
+     * Get Application By Id
+     * @description Get an application by ID.
+     */
+    get: operations["get_application_by_id_contacts__id___get"];
+    /** Delete Application */
+    delete: operations["delete_application_contacts__id___delete"];
+    /** Update Application */
+    patch: operations["update_application_contacts__id___patch"];
+  };
+  "/services/": {
+    /**
+     * Get Applications
+     * @description Get all applications for the current user.
+     */
+    get: operations["get_applications_services__get"];
+    /** Create Application */
+    post: operations["create_application_services__post"];
+  };
+  "/services/{id}/": {
+    /**
+     * Get Application By Id
+     * @description Get an application by ID.
+     */
+    get: operations["get_application_by_id_services__id___get"];
+    /** Delete Application */
+    delete: operations["delete_application_services__id___delete"];
+    /** Update Application */
+    patch: operations["update_application_services__id___patch"];
   };
   "/ping": {
     /** Pong */
@@ -96,6 +153,62 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    /** ApplicationCreate */
+    ApplicationCreate: {
+      /** Cover Letter */
+      cover_letter?: string | null;
+      /** Resume */
+      resume?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /** Status */
+      status?: string | null;
+      /**
+       * Lead Id
+       * Format: uuid4
+       */
+      lead_id: string;
+    };
+    /** ApplicationRead */
+    ApplicationRead: {
+      /** Id */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+      /** Cover Letter */
+      cover_letter?: string | null;
+      /** Resume */
+      resume?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /** Status */
+      status?: string | null;
+      lead?: components["schemas"]["LeadRead"] | null;
+    };
+    /** ApplicationUpdate */
+    ApplicationUpdate: {
+      /** Cover Letter */
+      cover_letter?: string | null;
+      /** Resume */
+      resume?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /** Status */
+      status?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       */
+      id: string;
+    };
     /** BearerResponse */
     BearerResponse: {
       /** Access Token */
@@ -148,13 +261,6 @@ export interface components {
     Body_verify_verify_auth_verify_post: {
       /** Token */
       token: string;
-    };
-    /** ETLEventCreate */
-    ETLEventCreate: {
-      /** Job Name */
-      job_name?: string | null;
-      /** Status */
-      status?: string | null;
     };
     /** ETLEventRead */
     ETLEventRead: {
@@ -248,6 +354,34 @@ export interface components {
       notes?: string | null;
       /** Url */
       url: string;
+    };
+    /** LeadUpdate */
+    LeadUpdate: {
+      /** Title */
+      title?: string | null;
+      /** Company */
+      company?: string | null;
+      /** Description */
+      description?: string | null;
+      /** Location */
+      location?: string | null;
+      /** Salary */
+      salary?: string | null;
+      /** Job Function */
+      job_function?: string | null;
+      /** Industries */
+      industries?: string | null;
+      /** Employment Type */
+      employment_type?: string | null;
+      /** Seniority Level */
+      seniority_level?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       */
+      id: string;
     };
     /** UserCreate */
     UserCreate: {
@@ -804,35 +938,23 @@ export interface operations {
       };
     };
   };
-  /**
-   * Read Etl Events
-   * @description Read all ETL events.
-   */
-  read_etl_events_etl__get: {
+  /** Update Lead */
+  update_lead_leads__id___patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadUpdate"];
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["ETLEventRead"][];
-        };
-      };
-    };
-  };
-  /**
-   * Create Etl Event
-   * @description Create an ETL event.
-   */
-  create_etl_event_etl__post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ETLEventCreate"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        content: {
-          "application/json": string;
+          "application/json": components["schemas"]["LeadRead"];
         };
       };
       /** @description Validation Error */
@@ -847,7 +969,7 @@ export interface operations {
    * Read Etl Event
    * @description Read an ETL event.
    */
-  read_etl_event_etl__id___get: {
+  read_etl_event_etl_events__id___get: {
     parameters: {
       path: {
         id: string;
@@ -868,6 +990,20 @@ export interface operations {
       };
     };
   };
+  /**
+   * Read Etl Events
+   * @description Read all ETL events.
+   */
+  read_etl_events_etl_events__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ETLEventRead"][];
+        };
+      };
+    };
+  };
   /** Leads Etl Event */
   leads_etl_event_etl_leads__post: {
     responses: {
@@ -875,6 +1011,330 @@ export interface operations {
       202: {
         content: {
           "application/json": string;
+        };
+      };
+    };
+  };
+  /**
+   * Get Applications
+   * @description Get all applications for the current user.
+   */
+  get_applications_applications__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"][];
+        };
+      };
+    };
+  };
+  /** Create Application */
+  create_application_applications__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Application By Id
+   * @description Get an application by ID.
+   */
+  get_application_by_id_applications__id___get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Application */
+  delete_application_applications__id___delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Application */
+  update_application_applications__id___patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Applications
+   * @description Get all applications for the current user.
+   */
+  get_applications_contacts__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"][];
+        };
+      };
+    };
+  };
+  /** Create Application */
+  create_application_contacts__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Application By Id
+   * @description Get an application by ID.
+   */
+  get_application_by_id_contacts__id___get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Application */
+  delete_application_contacts__id___delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Application */
+  update_application_contacts__id___patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Applications
+   * @description Get all applications for the current user.
+   */
+  get_applications_services__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"][];
+        };
+      };
+    };
+  };
+  /** Create Application */
+  create_application_services__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Application By Id
+   * @description Get an application by ID.
+   */
+  get_application_by_id_services__id___get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Application */
+  delete_application_services__id___delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Application */
+  update_application_services__id___patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

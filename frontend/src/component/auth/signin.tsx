@@ -13,7 +13,7 @@ const SignIn: React.FC = () => {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [, setToken] = useContext(UserContext);
+  const { setToken } = useContext(UserContext); // Correctly destructure setToken
   const navigate = useNavigate();
 
   const submitLogin = async () => {

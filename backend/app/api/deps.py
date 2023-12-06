@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException
 from pydantic import UUID4
 
 from app import models, schemas  # noqa
-from app.core.db import get_async_session
+from app.core.db import get_async_session, session_context
 from app.core.security import (  # noqa
     fastapi_users,
     get_current_superuser,
@@ -13,6 +13,8 @@ from app.core.security import (  # noqa
 from app.core.conf import settings
 from app.logging import console_log
 from sqlalchemy.orm import selectinload
+
+from sqlalchemy.future import select
 from pathlib import Path
 
 
@@ -55,30 +57,31 @@ def _convert_lead_public_assets():
     return leads
 
 
-async def execute_leads_etl(
-        etl_event_id: UUID4, db = Depends(get_async_session)
-):
-    try:
-        # Load JSON data from ./public/leads.json and insert into the database
-       
-        async with aiofiles.open(Path(settings.PUBLIC_ASSETS_DIR)/ 'leads.json', 'r') as json_file:
-            leads_data = json.loads(await json_file.read())
-        
-        
-        for lead_data in leads_data:
-            lead = models.Lead(**lead_data)
-            db.add(lead)
-        
-        # Update the ETL event status to success
-        etl_event = await db.execute(selectinload(models.ETLEvent).filter(models.ETLEvent.id == etl_event_id)) # type: ignore
-        etl_event.status = "success"
-        
-        await db.commit()
-    except Exception as e:
-        # Update the ETL event status to failure if an exception occurs
-        etl_event = await db.execute(selectinload(models.ETLEvent).filter(models.ETLEvent.id == etl_event_id)) # type: ignore
-        etl_event.status = "failure"
-        
-        await db.commit()
-        raise e
-    
+async def execute_leads_etl(etl_event_id: UUID4):
+    async with session_context() as db:
+        try:
+            # Load JSON data and insert into the database
+            async with aiofiles.open(Path(settings.PUBLIC_ASSETS_DIR) / 'leads.json', 'r') as json_file:
+                leads_data = json.loads(await json_file.read())
+            
+            for lead_data in leads_data:
+                # Check if lead exists or handle duplicates appropriately
+                lead = models.Lead(**lead_data)
+                db.merge(lead)  # or handle duplicates appropriately
+
+            await db.commit()
+
+            # Update ETLEvent status
+            result = await db.execute(select(models.ETLEvent).filter(models.ETLEvent.id == etl_event_id))
+            etl_event = result.scalars().first()
+            etl_event.status = "success"
+            await db.commit()
+
+        except Exception as e:
+            await db.rollback()  # Rollback on exception
+            # Handle failure scenario
+            result = await db.execute(select(models.ETLEvent).filter(models.ETLEvent.id == etl_event_id))
+            etl_event = result.scalars().first()
+            etl_event.status = "failure"
+            await db.commit()
+            raise e

@@ -33,6 +33,8 @@ coverage = "==6.2"
 pytest-asyncio = "*"
 baldin = {path = ".", editable = true}
 mypy = "*"
+install = "*"
+types-aiofiles = "*"
 
 [scripts]
 test = "docker-compose exec web python -m pytest"

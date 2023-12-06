@@ -1,3 +1,5 @@
+# app/core/db.py
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyUserDatabase
@@ -20,9 +22,26 @@ async def create_db_and_tables():
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Return an AsyncSession object.
+
+    Use this when performing dependancy injection.
+    """
     async with async_session_maker() as session:
         yield session
 
+@asynccontextmanager
+async def session_context():
+    """
+    Return a context manager for an AsyncSession object.
+
+    Use this when you need to manipulate the database
+    directly, without dependancy injection, e.g.:
+        - inside a background task
+        - from within a shell
+    """
+    async for session in get_async_session():
+        yield session
 
 async def get_user_db(session: AsyncSession = Depends(get_async_session)):
     yield SQLAlchemyUserDatabase(session, User)

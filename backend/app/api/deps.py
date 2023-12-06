@@ -1,3 +1,5 @@
+# app/api/deps.py
+
 import json
 from pathlib import Path
 
@@ -6,7 +8,7 @@ from fastapi import Depends, HTTPException
 from pydantic import UUID4
 from sqlalchemy.future import select
 
-from app import models, schemas  # noqa
+from app import models
 from app.core.conf import settings
 from app.core.db import get_async_session, session_context
 from app.core.security import (  # noqa
@@ -31,16 +33,6 @@ async def get_etl_event(id: UUID4, db=Depends(get_async_session)) -> models.ETLE
         console_log.info(f"ETL event with id {id} not found")
         raise HTTPException(status_code=404, detail=f"ETL event with {id} not found")
     return etl_event
-
-
-async def get_application(
-    id: UUID4, db=Depends(get_async_session)
-) -> models.Application:
-    application = await db.get(models.Application, id)
-    if not application:
-        console_log.info(f"Application with id {id} not found")
-        raise HTTPException(status_code=404, detail=f"Application with {id} not found")
-    return application
 
 
 async def get_contact(id: UUID4, db=Depends(get_async_session)) -> models.Contact:

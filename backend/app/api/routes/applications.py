@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from app import models, schemas
-from app.api.deps import get_application, get_async_session, get_current_user
+from app.api.deps import get_async_session, get_current_user
 
 router: APIRouter = APIRouter()
 
@@ -49,14 +49,6 @@ async def create_application(
     )
     application = result.scalars().first()
 
-    return application
-
-
-@router.get("/{id}/", status_code=202, response_model=schemas.ApplicationRead)
-async def get_application_by_id(
-    id: UUID4, application=Depends(get_application)
-) -> schemas.ApplicationRead:
-    """Get an application by ID."""
     return application
 
 

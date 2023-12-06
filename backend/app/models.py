@@ -1,8 +1,4 @@
-"""
-SQL Alchemy models declaration.
-
-Note, imported by alembic migrations logic, see `alembic/env.py`
-"""
+# app/models.py
 from datetime import datetime
 from uuid import uuid4
 

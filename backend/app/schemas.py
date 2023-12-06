@@ -1,3 +1,5 @@
+# app/schemas.py
+
 import uuid
 from datetime import datetime
 
@@ -33,7 +35,7 @@ class BaseUser(BaseModel):
     skills: str | None = None  # FIXME: going to be a list of strings
 
 
-class UserRead(schemas.BaseUser[uuid.UUID], BaseUser):
+class UserRead(schemas.BaseUser[uuid.UUID], BaseUser):  # type: ignore
     pass
 
 

@@ -29,7 +29,7 @@ async def create_lead(payload: schemas.LeadCreate, db=Depends(get_async_session)
     return lead.id  # Consider returning the full lead object
 
 
-@router.get("/{id}/", status_code=202, response_model=schemas.LeadRead)
+@router.get("/{id}", status_code=202, response_model=schemas.LeadRead)
 async def read_lead(id: UUID4, lead=Depends(get_lead)):
     return lead
 
@@ -43,7 +43,7 @@ async def read_leads(db=Depends(get_async_session)):
     return result
 
 
-@router.patch("/{id}/", status_code=200, response_model=schemas.LeadRead)
+@router.patch("/{id}", status_code=200, response_model=schemas.LeadRead)
 async def update_lead(
     id: UUID4, payload: schemas.LeadUpdate, db=Depends(get_async_session)
 ):
@@ -63,7 +63,7 @@ async def update_lead(
     return lead
 
 
-@router.delete("/{id}/", status_code=202)
+@router.delete("/{id}", status_code=202)
 async def delete_lead(id: UUID4, db=Depends(get_async_session)):
     lead = await db.get(models.Lead, id)
     await db.delete(lead)

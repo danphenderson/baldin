@@ -74,7 +74,7 @@ async def get_applications(
     return applications
 
 
-@router.patch("/{id}/", status_code=200, response_model=schemas.ApplicationRead)
+@router.patch("/{id}", status_code=200, response_model=schemas.ApplicationRead)
 async def update_application(
     id: UUID4, payload: schemas.ApplicationUpdate, db=Depends(get_async_session)
 ):
@@ -104,7 +104,7 @@ async def update_application(
     return application
 
 
-@router.delete("/{id}/", status_code=204)
+@router.delete("/{id}", status_code=204)
 async def delete_application(id: UUID4, db=Depends(get_async_session)):
     # Retrieve the existing application
     application = await db.get(models.Application, id)

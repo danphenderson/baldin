@@ -33,3 +33,10 @@ async def create_user_contact(
     await db.refresh(contact)
 
     return contact
+
+
+@router.get("/{contact_id}", response_model=schemas.ContactRead)
+async def get_user_contact(
+    contact: models.Contact = Depends(get_contact),
+):
+    return contact

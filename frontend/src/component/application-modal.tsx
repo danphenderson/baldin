@@ -10,8 +10,8 @@ type ApplicationRead = components['schemas']['ApplicationRead'];
 interface ApplicationModalProps {
   open: boolean;
   onClose: () => void;
-  onSave: (applicationData: ApplicationCreate | ApplicationUpdate | ApplicationRead) => Promise<void>;
-  initialData?: ApplicationCreate | ApplicationUpdate | ApplicationRead;
+  onSave: (applicationData: ApplicationRead) => Promise<void>;
+  initialData?: ApplicationRead;
 }
 
 const ApplicationModal: React.FC<ApplicationModalProps> = ({ open, onClose, onSave, initialData }) => {

@@ -49,8 +49,11 @@ const ApplicationsPage: React.FC = () => {
   };
 
   const handleSaveApplication = async (applicationData: ApplicationRead) => {
-    const endpoint = applicationData.id ? `/applications/${applicationData.id}/` : '/applications/';
-    const method = applicationData.id ? 'PATCH' : 'POST';
+    const isUpdate = applicationData.id != null;
+
+    const endpoint = isUpdate ? `/applications/${applicationData.id}/` : '/applications/';
+    const method = isUpdate ? 'PATCH' : 'POST';
+
 
     try {
       const response = await fetch(endpoint, {
@@ -114,8 +117,7 @@ const ApplicationsPage: React.FC = () => {
           lead_id: '',};
       }
       // Extract and return only the fields relevant for ApplicationCreate or ApplicationUpdate
-      const { cover_letter, resume, notes, status, id } = app;
-      return { cover_letter, resume, notes, status, id };
+      return app;
     };
 
   return (

@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Button, Box } from '@mui/material';
-import LeadModal from '../component/lead-modal'
+import { DataGrid, GridColDef, GridPagination } from '@mui/x-data-grid';
+import { Button, Box, Snackbar, Alert } from '@mui/material';
+import LeadModal from '../component/lead-modal';
 import { components } from '../schema.d';
 
 type LeadRead = components['schemas']['LeadRead'];
+
 
 const Leads: React.FC = () => {
   const [leads, setLeads] = useState<LeadRead[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedLead, setSelectedLead] = useState<LeadRead | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(5);
+
 
   // Fetch leads from your API
   useEffect(() => {
@@ -18,16 +23,18 @@ const Leads: React.FC = () => {
       setLoading(true);
       try {
         // Replace with your API call
-        const response = await fetch('/leads/');
+        const response = await fetch(`/leads/?page=${page}&size=${pageSize}`);
         const data = await response.json();
         setLeads(data);
       } catch (error) {
         console.error('Failed to fetch leads:', error);
+        setError('Failed to load leads');
       }
       setLoading(false);
     };
+
     fetchLeads();
-  }, []);
+  }, [page, pageSize]);
 
   // const handleAddLead = () => {
   //   setSelectedLead(null);
@@ -42,6 +49,7 @@ const Leads: React.FC = () => {
     } else {
       // Handle the case where the lead is not found
       console.error('Lead not found');
+      setError('Lead not found');
     }
   };
 
@@ -52,9 +60,15 @@ const Leads: React.FC = () => {
 
   const handleSaveLead = (lead: Omit<LeadRead, 'id' | 'created_at' | 'updated_at'>) => {
     // Save lead logic
-    // Ensure to update the state with the new or edited lead
+    // Update state with new or edited lead
     setModalOpen(false);
+    // Refresh the list or update the state with new data
   };
+
+  const handleCloseSnackbar = () => {
+    setError(null);
+  };
+
 
   const columns: GridColDef[] = [
     // { field: 'title', headerName: 'Title', width: 150 },
@@ -68,6 +82,15 @@ const Leads: React.FC = () => {
     { field: 'seniority_level', headerName: 'Seniority Level', width: 150 },
     // { field: 'notes', headerName: 'Notes', width: 200 },
     { field: 'url', headerName: 'URL', width: 200 },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      sortable: false,
+      width: 150,
+      renderCell: (params) => (
+        <Button onClick={() => handleEditLead(params.row.id)}>Edit</Button>
+      ),
+    },
     {
       field: 'actions',
       headerName: 'Actions',
@@ -91,9 +114,13 @@ const Leads: React.FC = () => {
         loading={loading}
         disableRowSelectionOnClick
         onRowDoubleClick={(params) => handleEditLead(params.id.toString())}
-        pagination  // Enable pagination
-        rowCount={5}
+        pagination
+        rowCount={100} // Replace with total row count from server
+        components={{
+          Pagination: GridPagination,
+        }}
       />
+
       <LeadModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -113,6 +140,13 @@ const Leads: React.FC = () => {
           // Add additional fields as required by the LeadCreate schema
         } : undefined}
       />
+      {error && (
+        <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
+          <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+            {error}
+          </Alert>
+        </Snackbar>
+      )}
     </Box>
   );
 };

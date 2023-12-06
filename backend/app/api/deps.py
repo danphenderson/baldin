@@ -32,12 +32,16 @@ async def get_etl_event(id: UUID4, db=Depends(get_async_session)) -> models.ETLE
         raise HTTPException(status_code=404, detail=f"ETL event with {id} not found")
     return etl_event
 
-async def get_application(id: UUID4, db=Depends(get_async_session)) -> models.Application:
+
+async def get_application(
+    id: UUID4, db=Depends(get_async_session)
+) -> models.Application:
     application = await db.get(models.Application, id)
     if not application:
         console_log.info(f"Application with id {id} not found")
         raise HTTPException(status_code=404, detail=f"Application with {id} not found")
     return application
+
 
 async def get_contact(id: UUID4, db=Depends(get_async_session)) -> models.Contact:
     contact = await db.get(models.Contact, id)
@@ -45,13 +49,6 @@ async def get_contact(id: UUID4, db=Depends(get_async_session)) -> models.Contac
         console_log.info(f"Contact with id {id} not found")
         raise HTTPException(status_code=404, detail=f"Contact with {id} not found")
     return contact
-
-async def get_generative_template(id: UUID4, db=Depends(get_async_session)) -> models.GenerativeTemplate:
-    generative_template = await db.get(models.GenerativeTemplate, id)
-    if not generative_template:
-        console_log.info(f"GenerativeTemplate with id {id} not found")
-        raise HTTPException(status_code=404, detail=f"GenerativeTemplate with {id} not found")
-    return generative_template
 
 
 def _convert_lead_public_assets():

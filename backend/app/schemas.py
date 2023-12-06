@@ -127,21 +127,21 @@ class ContactUpdate(BaseContact):
     id: UUID4
 
 
-class BaseGenerativeTemplate(BaseModel):
+class BaseChatCompletion(BaseModel):
     name: str | None = None
     description: str | None = None
-    content: str | None = None
+    prompt: str | None = None
 
 
-class GenerativeTemplateRead(BaseGenerativeTemplate, BaseRead):
+class ChatCompletionCreate(BaseChatCompletion):
     pass
 
 
-class GenerativeTemplateCreate(BaseGenerativeTemplate):
-    pass
+class ChatCompletionRead(BaseChatCompletion, BaseRead):
+    completion: str
 
 
-class GenerativeTemplateUpdate(BaseGenerativeTemplate):
+class ChatCompletionUpdate(BaseChatCompletion):
     id: UUID4
 
 

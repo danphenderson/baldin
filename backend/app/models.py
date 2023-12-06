@@ -4,7 +4,6 @@ SQL Alchemy models declaration.
 Note, imported by alembic migrations logic, see `alembic/env.py`
 """
 from datetime import datetime
-import time
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
@@ -68,7 +67,7 @@ class Lead(Base):
 # begin region: User models
 
 
-class User(SQLAlchemyBaseUserTableUUID, Base): # type: ignore
+class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     """
     User model contain optional fields for user-related operations.
     """
@@ -89,7 +88,8 @@ class User(SQLAlchemyBaseUserTableUUID, Base): # type: ignore
     # keys, relationships
     applications = relationship("Application", back_populates="user")
     contacts = relationship("Contact", back_populates="user")
-    generative_templates = relationship("GenerativeTemplate", back_populates="user")
+    chat_completions = relationship("ChatCompletion", back_populates="user")
+
 
 class Application(Base):
     """
@@ -116,24 +116,27 @@ class Application(Base):
     user = relationship("User", back_populates="applications")
 
 
-class GenerativeTemplate(Base):
+class ChatCompletion(Base):
     """
-    Represents a generative template for helping a user
-    generate a cover letter, resume, etc.
+    Represents a chat completion for a user.
 
     There is a many-to-one relationship between
-    a genertive template and a user.
+    a chat completion and a user.
+
+    There is a one-to-one relationship between
+    a chat completion and a
     """
 
-    __tablename__ = "generative_templates"
+    __tablename__ = "chat_completions"
 
     name = Column(String)
     description = Column(String)
-    content = Column(Text)  # Storing template content as text
+    completion = Column(Text)
+    prompt = Column(Text)  # Storing template content as text prompt
 
     # keys, relationships
     user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
-    user = relationship("User", back_populates="generative_templates")
+    user = relationship("User", back_populates="chat_completions")
 
 
 class Contact(Base):

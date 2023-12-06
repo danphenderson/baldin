@@ -117,15 +117,15 @@ class BaseContact(BaseModel):
 
 
 class ContactRead(BaseContact, BaseRead):
-    user: UserRead | None = None
-
-
-class ContactCreate(BaseContact):
     pass
 
 
+class ContactCreate(BaseContact):
+    user_id: UUID4
+
+
 class ContactUpdate(BaseContact):
-    id: UUID4
+    pass
 
 
 class BaseChatCompletion(BaseModel):
@@ -143,7 +143,7 @@ class ChatCompletionRead(BaseChatCompletion, BaseRead):
 
 
 class ChatCompletionUpdate(BaseChatCompletion):
-    id: UUID4
+    pass
 
 
 # End Schema definitions for model CRUD

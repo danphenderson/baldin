@@ -35,6 +35,7 @@ baldin = {path = ".", editable = true}
 mypy = "*"
 install = "*"
 types-aiofiles = "*"
+types-toml = "*"
 
 [scripts]
 test = "docker-compose exec web python -m pytest"

@@ -1,4 +1,4 @@
-# app/config.py
+# app/core/conf.py
 from pathlib import Path
 from typing import Literal, Union
 

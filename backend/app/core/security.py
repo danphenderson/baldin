@@ -1,3 +1,4 @@
+# app/core/security.py
 """
 You can have several authentication methods, e.g. a cookie
 authentication for browser-based queries and a JWT token authentication for pure API queries.

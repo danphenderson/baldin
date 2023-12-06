@@ -75,17 +75,15 @@ class BaseApplication(BaseModel):
     resume: str | None = None
     notes: str | None = None
     status: str | None = None
-    lead: LeadRead | None = None
-    user: UserRead | None = None
 
 
 class ApplicationRead(BaseApplication, BaseRead):
-    pass
+    lead: LeadRead | None = None
 
 
 class ApplicationCreate(BaseApplication):
     lead_id: UUID4
-    user_id: UUID4
+
 
 class ApplicationUpdate(BaseApplication):
     id: UUID4
@@ -95,8 +93,10 @@ class BaseETLEvent(BaseModel):
     job_name: str | None = None
     status: str | None = None
 
+
 class ETLEventRead(BaseETLEvent, BaseRead):
     pass
+
 
 class ETLEventCreate(BaseETLEvent):
     pass
@@ -105,6 +105,7 @@ class ETLEventCreate(BaseETLEvent):
 class ETLEventUpdate(BaseETLEvent):
     id: UUID4
 
+
 class BaseContact(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
@@ -112,30 +113,36 @@ class BaseContact(BaseModel):
     email: str | None = None
     notes: str | None = None
     time_zone: str | None = None
-    user: UserRead | None = None
+
 
 class ContactRead(BaseContact, BaseRead):
     pass
 
+
 class ContactCreate(BaseContact):
     user_id: UUID4
 
+
 class ContactUpdate(BaseContact):
     id: UUID4
+
 
 class BaseGenerativeTemplate(BaseModel):
     name: str | None = None
     description: str | None = None
     content: str | None = None
-    user: UserRead | None = None
+
 
 class GenerativeTemplateRead(BaseGenerativeTemplate, BaseRead):
     pass
 
+
 class GenerativeTemplateCreate(BaseGenerativeTemplate):
-    user_id: UUID4
+    pass
+
 
 class GenerativeTemplateUpdate(BaseGenerativeTemplate):
     id: UUID4
+
 
 # End Schema definitions for model CRUD

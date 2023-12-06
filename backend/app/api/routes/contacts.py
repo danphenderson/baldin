@@ -4,6 +4,6 @@ from pydantic import UUID4
 from sqlalchemy import select
 
 from app import models, schemas
-from app.core.db import get_async_session
+from app.api.deps import get_async_session, get_contact
 
 router: APIRouter = APIRouter()

@@ -4,8 +4,7 @@ from pydantic import UUID4
 from sqlalchemy import select
 
 from app import models, schemas
-from app.api.deps import get_lead
-from app.core.db import get_async_session
+from app.api.deps import get_async_session, get_lead
 
 router: APIRouter = APIRouter()
 
@@ -43,8 +42,11 @@ async def read_leads(db=Depends(get_async_session)):
         raise HTTPException(status_code=404, detail="No leads found")
     return result
 
+
 @router.patch("/{id}/", status_code=200, response_model=schemas.LeadRead)
-async def update_lead(id: UUID4, payload: schemas.LeadUpdate, db=Depends(get_async_session)):
+async def update_lead(
+    id: UUID4, payload: schemas.LeadUpdate, db=Depends(get_async_session)
+):
     # Retrieve the existing lead
     result = await db.execute(select(models.Lead).where(models.Lead.id == id))
     lead = result.scalars().first()
@@ -59,6 +61,7 @@ async def update_lead(id: UUID4, payload: schemas.LeadUpdate, db=Depends(get_asy
     await db.commit()
     await db.refresh(lead)
     return lead
+
 
 @router.delete("/{id}/", status_code=202)
 async def delete_lead(id: UUID4, db=Depends(get_async_session)):

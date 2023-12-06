@@ -113,7 +113,7 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
     See https://openai.com/ for more information.
     """
 
-    KEY: str = ""
+    SECRET_KEY: str = ""
     MODEL: str = "gpt-3.5-turbo"
 
 

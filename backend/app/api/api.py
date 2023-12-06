@@ -58,3 +58,13 @@ api_router.include_router(
     prefix="/applications",
     tags=["applications"],
 )
+api_router.include_router(
+    applications.router,
+    prefix="/contacts",
+    tags=["contacts"],
+)
+api_router.include_router(
+    applications.router,
+    prefix="/services",
+    tags=["services"],
+)

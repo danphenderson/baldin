@@ -7,6 +7,7 @@ import ErrorMessage from "../common/error-message";
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import { useNavigate } from "react-router-dom";
+import { components } from '../../schema.d';
 
 const SignUp: React.FC = () => {
     const [email, setEmail] = useState<string>("");
@@ -21,12 +22,11 @@ const SignUp: React.FC = () => {
         return;
       }
 
-      const user = {
+      const user: components['schemas']['UserCreate'] = {
         email,
         password,
-        is_active: true,
-        is_superuser: false,
-        is_verified: false
+        // Add other fields as required by your UserCreate schema
+        // is_active, is_superuser, is_verified, etc.
       };
 
       try {
@@ -42,91 +42,88 @@ const SignUp: React.FC = () => {
           return;
         }
 
-        navigate('/login');
+        navigate('/login'); // Navigate to login after successful registration
       } catch (error) {
         setErrorMessage("Registration request failed");
       }
     };
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (password === confirmationPassword && password.length > 5) {
-      submitRegistration();
-    } else {
-      setErrorMessage("Ensure that the passwords match and are greater than 5 characters");
-    }
-  };
 
-  return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Typography component="h1" variant="h5">
-          Sign Up
-        </Typography>
-        <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 3 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                id="email"
-                label="Email Address"
-                name="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter email"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type="password"
-                id="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                name="confirm-password"
-                label="Confirm Password"
-                type="password"
-                id="confirmation-password"
-                autoComplete="new-password"
-                value={confirmationPassword}
-                onChange={(e) => setConfirmationPassword(e.target.value)}
-                placeholder="Confirm password"
-              />
-            </Grid>
-          </Grid>
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-          >
-            Sign Up
-          </Button>
-          <ErrorMessage message={errorMessage} />
-        </Box>
-        <Button href={`/`} variant="text">{"Already Have An Account? Sign In."}</Button>
-      </Box>
-    </Container>
-  );
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      submitRegistration();
+    };
+
+    return (
+        <Container component="main" maxWidth="xs">
+            <Box
+                sx={{
+                    marginTop: 8,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                }}
+            >
+                <Typography component="h1" variant="h5">
+                    Sign Up
+                </Typography>
+                <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 3 }}>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                            <TextField
+                                required
+                                fullWidth
+                                id="email"
+                                label="Email Address"
+                                name="email"
+                                autoComplete="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="Enter email"
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <TextField
+                                required
+                                fullWidth
+                                name="password"
+                                label="Password"
+                                type="password"
+                                id="password"
+                                autoComplete="new-password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Enter password"
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <TextField
+                                required
+                                fullWidth
+                                name="confirm-password"
+                                label="Confirm Password"
+                                type="password"
+                                id="confirmation-password"
+                                autoComplete="new-password"
+                                value={confirmationPassword}
+                                onChange={(e) => setConfirmationPassword(e.target.value)}
+                                placeholder="Confirm password"
+                            />
+                        </Grid>
+                    </Grid>
+                    <Button
+                        type="submit"
+                        fullWidth
+                        variant="contained"
+                        sx={{ mt: 3, mb: 2 }}
+                    >
+                        Sign Up
+                    </Button>
+                    <ErrorMessage message={errorMessage} />
+                </Box>
+                <Button href={`/login`} variant="text">{"Already Have An Account? Sign In."}</Button>
+            </Box>
+        </Container>
+    );
 };
 
 export default SignUp;

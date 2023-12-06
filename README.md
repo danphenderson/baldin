@@ -93,5 +93,13 @@ After finishing the above steps, you're ready to start contributing!
 
 5. Wait for your changes to be reviewed and merged!
 
+### Futher Considerations
+
+When modifying the api, generate the `frontend/schema.d.ts` using the openapi-typescript package:
+
+`npx openapi-typescript ./openapi.json -o ./schema.d.ts`
+
+Where `openapi.json` is the latest OpenAPI specification for the API.
+
 ## License
 This project is licensed under the terms of the [MIT license](/LICENSE).

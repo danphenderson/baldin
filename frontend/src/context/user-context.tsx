@@ -1,17 +1,29 @@
 import React, { useState, useEffect, createContext, ReactNode } from "react";
+import { components } from '../schema.d';
+type UserRead = components['schemas']['UserRead'];
 
-// Define the context value type
-type UserContextValue = [string | null, React.Dispatch<React.SetStateAction<string | null>>];
+type UserContextValue = {
+  user: UserRead | null;
+  setUser: React.Dispatch<React.SetStateAction<UserRead | null>>;
+  token: string | null;
+  setToken: React.Dispatch<React.SetStateAction<string | null>>;
+};
 
-// Create the context
-export const UserContext = createContext<UserContextValue>([null, () => {}]);
+export const UserContext = createContext<UserContextValue>({
+  user: null,
+  setUser: () => {},
+  token: null,
+  setToken: () => {},
+});
 
 interface UserProviderProps {
   children: ReactNode;
 }
 
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<UserRead | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem("danhenderson_token"));
+
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -29,15 +41,19 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
       const response = await fetch("/users/me", requestOptions);
 
-      if (!response.ok) {
+      if (response.ok) {
+        const userData: UserRead = await response.json();
+        setUser(userData); // Set user data in state
+      } else {
         setToken(null);
+        setUser(null);
       }
-
       localStorage.setItem("baldin_token", token);
     };
 
     fetchUser();
   }, [token]);
+  const contextValue = { user, setUser, token, setToken };
 
-  return <UserContext.Provider value={[token, setToken]}>{children}</UserContext.Provider>;
+  return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
 };

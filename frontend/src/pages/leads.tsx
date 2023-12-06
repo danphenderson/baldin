@@ -1,95 +1,154 @@
-import React, { useState } from 'react';
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Paper } from '@mui/material';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import React, { useState, useEffect } from 'react';
+import { DataGrid, GridColDef, GridPagination } from '@mui/x-data-grid';
+import { Button, Box, Snackbar, Alert } from '@mui/material';
+import LeadModal from '../component/lead-modal';
+import { components } from '../schema.d';
 
-interface JobLead {
-    id: string;
-    created_at: string;
-    updated_at: string;
-    title: string;
-    company: string;
-    description: string;
-    location: string;
-    salary: string;
-    job_function: string;
-    industries: string;
-    employment_type: string;
-    seniority_level: string;
-    url: string;
-  }
-
-  interface JobSearchRequest {
-    keywords: string;
-    platform: string;
-    location: string;
-  }
+type LeadRead = components['schemas']['LeadRead'];
 
 
-const LeadsPage: React.FC = () => {
-    const [jobLeads, setJobLeads] = useState<JobLead[]>([]);
-    const [openDialog, setOpenDialog] = useState(false);
-    const [jobSearch, setJobSearch] = useState<JobSearchRequest>({ keywords: '', platform: '', location: '' });
+const Leads: React.FC = () => {
+  const [leads, setLeads] = useState<LeadRead[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<LeadRead | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(5);
 
-    const handleOpenDialog = () => setOpenDialog(true);
-    const handleCloseDialog = () => setOpenDialog(false);
 
-    const executeSearch = async () => {
-        // Logic to execute search and trigger ETL pipeline
-        handleCloseDialog();
-        // Fetch and set job leads here
+  // Fetch leads from your API
+  useEffect(() => {
+    const fetchLeads = async () => {
+      setLoading(true);
+      try {
+        // Replace with your API call
+        const response = await fetch(`/leads/?page=${page}&size=${pageSize}`);
+        const data = await response.json();
+        setLeads(data);
+      } catch (error) {
+        console.error('Failed to fetch leads:', error);
+        setError('Failed to load leads');
+      }
+      setLoading(false);
     };
 
-    const columns: GridColDef[] = [
-        { field: 'title', headerName: 'Title', width: 200 },
-        { field: 'company', headerName: 'Company', width: 150 },
-        // ... other columns based on JobLead properties
-    ];
+    fetchLeads();
+  }, [page, pageSize]);
 
-    return (
-        <Box sx={{ p: 2 }}>
-            <Button variant="contained" onClick={handleOpenDialog}>
-                Create Job Search
-            </Button>
+  // const handleAddLead = () => {
+  //   setSelectedLead(null);
+  //   setModalOpen(true);
+  // };
 
-            <Dialog open={openDialog} onClose={handleCloseDialog}>
-                <DialogTitle>Create a Job Search</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        label="Keywords"
-                        fullWidth
-                        margin="dense"
-                        value={jobSearch.keywords}
-                        onChange={(e) => setJobSearch({ ...jobSearch, keywords: e.target.value })}
-                    />
-                    <TextField
-                        label="Platform"
-                        fullWidth
-                        margin="dense"
-                        value={jobSearch.platform}
-                        onChange={(e) => setJobSearch({ ...jobSearch, platform: e.target.value })}
-                    />
-                    <TextField
-                        label="Location"
-                        fullWidth
-                        margin="dense"
-                        value={jobSearch.location}
-                        onChange={(e) => setJobSearch({ ...jobSearch, location: e.target.value })}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDialog}>Cancel</Button>
-                    <Button onClick={executeSearch}>Search</Button>
-                </DialogActions>
-            </Dialog>
+  const handleEditLead = (id: string) => {
+    const lead = leads.find(l => l.id === id);
+    if (lead) {
+      setSelectedLead(lead);
+      setModalOpen(true);
+    } else {
+      // Handle the case where the lead is not found
+      console.error('Lead not found');
+      setError('Lead not found');
+    }
+  };
 
-            <Box sx={{ height: 400, width: '100%', mt: 2 }}>
-                <DataGrid
-                    rows={jobLeads}
-                    columns={columns}
-                />
-            </Box>
-        </Box>
-    );
+  const handleAddLead = () => {
+    setSelectedLead(null);
+    setModalOpen(true);
+  };
+
+  const handleSaveLead = (lead: Omit<LeadRead, 'id' | 'created_at' | 'updated_at'>) => {
+    // Save lead logic
+    // Update state with new or edited lead
+    setModalOpen(false);
+    // Refresh the list or update the state with new data
+  };
+
+  const handleCloseSnackbar = () => {
+    setError(null);
+  };
+
+
+  const columns: GridColDef[] = [
+    // { field: 'title', headerName: 'Title', width: 150 },
+    // { field: 'company', headerName: 'Company', width: 150 },
+    { field: 'description', headerName: 'Description', width: 200 },
+    // { field: 'location', headerName: 'Location', width: 150 },
+    // { field: 'salary', headerName: 'Salary', width: 130 },
+    { field: 'job_function', headerName: 'Job Function', width: 150 },
+    { field: 'industries', headerName: 'Industries', width: 150 },
+    { field: 'employment_type', headerName: 'Employment Type', width: 150 },
+    { field: 'seniority_level', headerName: 'Seniority Level', width: 150 },
+    // { field: 'notes', headerName: 'Notes', width: 200 },
+    { field: 'url', headerName: 'URL', width: 200 },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      sortable: false,
+      width: 150,
+      renderCell: (params) => (
+        <Button onClick={() => handleEditLead(params.row.id)}>Edit</Button>
+      ),
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      sortable: false,
+      width: 150,
+      renderCell: (params) => (
+        <Button onClick={() => handleEditLead(params.row.id)}>Edit</Button>
+      ),
+    },
+  ];
+
+  return (
+    <Box sx={{ p: 2 }}>
+      {/* UI Elements here */}
+      <Button variant="contained" onClick={handleAddLead} sx={{ mb: 2 }}>
+        Add New Lead
+      </Button>
+      <DataGrid
+        rows={leads}
+        columns={columns}
+        loading={loading}
+        disableRowSelectionOnClick
+        onRowDoubleClick={(params) => handleEditLead(params.id.toString())}
+        pagination
+        rowCount={100} // Replace with total row count from server
+        components={{
+          Pagination: GridPagination,
+        }}
+      />
+
+      <LeadModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSaveLead}
+        initialData={selectedLead ? {
+          title: selectedLead.title,
+          company: selectedLead.company,
+          description: selectedLead.description,
+          location: selectedLead.location,
+          salary: selectedLead.salary,
+          job_function: selectedLead.job_function,
+          industries: selectedLead.industries,
+          employment_type: selectedLead.employment_type,
+          seniority_level: selectedLead.seniority_level,
+          notes: selectedLead.notes,
+          url: selectedLead.url,
+          // Add additional fields as required by the LeadCreate schema
+        } : undefined}
+      />
+      {error && (
+        <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
+          <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+            {error}
+          </Alert>
+        </Snackbar>
+      )}
+    </Box>
+  );
 };
 
-export default LeadsPage;
+export default Leads;

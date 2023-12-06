@@ -4,6 +4,7 @@ SQL Alchemy models declaration.
 Note, imported by alembic migrations logic, see `alembic/env.py`
 """
 from datetime import datetime
+import time
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
@@ -87,9 +88,8 @@ class User(SQLAlchemyBaseUserTableUUID, Base): # type: ignore
 
     # keys, relationships
     applications = relationship("Application", back_populates="user")
-    cover_letter_templates = relationship("CoverLetterTemplate", back_populates="user")
-    resume_templates = relationship("ResumeTemplate", back_populates="user")
-
+    contacts = relationship("Contact", back_populates="user")
+    generative_templates = relationship("GenerativeTemplate", back_populates="user")
 
 class Application(Base):
     """
@@ -106,6 +106,8 @@ class Application(Base):
 
     cover_letter = Column(Text)  # Storing cover letter content as text
     resume = Column(Text)  # Storing resume content or link as text
+    notes = Column(Text)
+    status = Column(String)  # applied, interviewing, offer, rejected
 
     # keys, relationships
     lead_id = Column(UUID, ForeignKey("leads.id"))
@@ -114,34 +116,16 @@ class Application(Base):
     user = relationship("User", back_populates="applications")
 
 
-class CoverLetterTemplate(Base):
+class GenerativeTemplate(Base):
     """
-    Represents a cover letter template for generating a user's
-    cover letter.
+    Represents a generative template for helping a user
+    generate a cover letter, resume, etc.
 
     There is a many-to-one relationship between
-    a cover letter template and a user.
+    a genertive template and a user.
     """
 
-    __tablename__ = "cover_letter_templates"
-
-    content = Column(Text)  # Storing template content as text
-
-    # keys, relationships
-    user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
-    user = relationship("User", back_populates="cover_letter_templates")
-
-
-class ResumeTemplate(Base):
-    """
-    Represents a resume template for generating a user's
-    resume.
-
-    There is a many-to-one relationship between
-    a resume template and a user.
-    """
-
-    __tablename__ = "resume_templates"
+    __tablename__ = "generative_templates"
 
     name = Column(String)
     description = Column(String)
@@ -149,4 +133,22 @@ class ResumeTemplate(Base):
 
     # keys, relationships
     user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
-    user = relationship("User", back_populates="resume_templates")
+    user = relationship("User", back_populates="generative_templates")
+
+
+class Contact(Base):
+    """
+    Represents a User Contact.
+    """
+
+    __tablename__ = "contacts"
+
+    first_name = Column(String)
+    last_name = Column(String)
+    phone_number = Column(String)
+    email = Column(String)
+    time_zone = Column(String)
+    notes = Column(Text)
+    # keys, relationships
+    user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
+    user = relationship("User", back_populates="contacts")

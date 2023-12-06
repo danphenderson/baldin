@@ -73,16 +73,19 @@ class LeadUpdate(BaseLead):
 class BaseApplication(BaseModel):
     cover_letter: str | None = None
     resume: str | None = None
+    notes: str | None = None
+    status: str | None = None
+    lead: LeadRead | None = None
+    user: UserRead | None = None
 
 
 class ApplicationRead(BaseApplication, BaseRead):
-    lead: LeadRead
-    user: UserRead
+    pass
 
 
 class ApplicationCreate(BaseApplication):
     lead_id: UUID4
-
+    user_id: UUID4
 
 class ApplicationUpdate(BaseApplication):
     id: UUID4
@@ -91,8 +94,6 @@ class ApplicationUpdate(BaseApplication):
 class BaseETLEvent(BaseModel):
     job_name: str | None = None
     status: str | None = None
-    # TODO: Add validators for the status field, e.g. running, success, failure
-
 
 class ETLEventRead(BaseETLEvent, BaseRead):
     pass
@@ -103,3 +104,38 @@ class ETLEventCreate(BaseETLEvent):
 
 class ETLEventUpdate(BaseETLEvent):
     id: UUID4
+
+class BaseContact(BaseModel):
+    first_name: str | None = None
+    last_name: str | None = None
+    phone_number: str | None = None
+    email: str | None = None
+    notes: str | None = None
+    time_zone: str | None = None
+    user: UserRead | None = None
+
+class ContactRead(BaseContact, BaseRead):
+    pass
+
+class ContactCreate(BaseContact):
+    user_id: UUID4
+
+class ContactUpdate(BaseContact):
+    id: UUID4
+
+class BaseGenerativeTemplate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    content: str | None = None
+    user: UserRead | None = None
+
+class GenerativeTemplateRead(BaseGenerativeTemplate, BaseRead):
+    pass
+
+class GenerativeTemplateCreate(BaseGenerativeTemplate):
+    user_id: UUID4
+
+class GenerativeTemplateUpdate(BaseGenerativeTemplate):
+    id: UUID4
+
+# End Schema definitions for model CRUD

@@ -43,6 +43,22 @@ async def read_leads(db=Depends(get_async_session)):
         raise HTTPException(status_code=404, detail="No leads found")
     return result
 
+@router.patch("/{id}/", status_code=200, response_model=schemas.LeadRead)
+async def update_lead(id: UUID4, payload: schemas.LeadUpdate, db=Depends(get_async_session)):
+    # Retrieve the existing lead
+    result = await db.execute(select(models.Lead).where(models.Lead.id == id))
+    lead = result.scalars().first()
+
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    # Update the lead's attributes
+    for var, value in payload.dict(exclude_unset=True).items():
+        setattr(lead, var, value)
+
+    await db.commit()
+    await db.refresh(lead)
+    return lead
 
 @router.delete("/{id}/", status_code=202)
 async def delete_lead(id: UUID4, db=Depends(get_async_session)):

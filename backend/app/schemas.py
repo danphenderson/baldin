@@ -81,9 +81,9 @@ class BaseLead(BaseModel):
     location: str | None = None
     salary: str | None = None
     job_function: str | None = None
-    industry: str | None = None
+    industries: str | None = None
     employment_type: str | None = None
-    experience_level: str | None = None
+    seniority_level: str | None = None
     education_level: str | None = None
     notes: str | None = None
 

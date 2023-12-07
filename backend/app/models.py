@@ -50,9 +50,9 @@ class Lead(Base):
     location = Column(String)
     salary = Column(String)
     job_function = Column(String)
-    industry = Column(String, index=True)
+    industries = Column(String, index=True)
     employment_type = Column(String)
-    experience_level = Column(String)
+    seniority_level = Column(String)
     education_level = Column(String)
     notes = Column(Text)
     application = relationship("Application", back_populates="lead")
@@ -96,13 +96,16 @@ class Application(Base):
 
     __tablename__ = "applications"
     cover_letter = Column(Text)
-    resume = Column(Text)
-    notes = Column(Text)
+
     status = Column(String)
     lead_id = Column(UUID, ForeignKey("leads.id"), index=True)
     user_id = Column(UUID, ForeignKey("users.id"))
     lead = relationship("Lead", back_populates="application", uselist=False)
     user = relationship("User", back_populates="applications")
+    resumes = relationship("Resume", secondary="resumes_x_applications")
+    cover_letters = relationship(
+        "CoverLetter", secondary="cover_letters_x_applications"
+    )
 
 
 class Contact(Base):
@@ -135,6 +138,7 @@ class Resume(Base):
     content_type = Column(String)  # Add validator in schemas.py BaseResume
     user_id = Column(UUID, ForeignKey("users.id"))
     user = relationship("User", back_populates="resumes")
+    applications = relationship("Application", secondary="resumes_x_applications")
 
 
 class ResumeXApplication(Base):

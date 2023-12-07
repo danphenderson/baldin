@@ -115,9 +115,35 @@ async def delete_application(id: UUID4, db=Depends(get_async_session)):
 
 @router.get("/{id}/resumes", response_model=list[schemas.ResumeRead])
 async def get_application_resumes(id: UUID4, db=Depends(get_async_session)):
-    pass
+    # Fetch resumes associated with the application
+    result = await db.execute(
+        select(models.Resume)
+        .join(models.ResumeXApplication)
+        .where(models.ResumeXApplication.application_id == id)
+    )
+    resumes = result.scalars().all()
+
+    if not resumes:
+        raise HTTPException(
+            status_code=404, detail="No resumes found for this application"
+        )
+
+    return resumes
 
 
-@router.get("/{id}/cover_letters", response_model=list[schemas.ResumeRead])
+@router.get("/{id}/cover_letters", response_model=list[schemas.CoverLetterRead])
 async def get_application_cover_letters(id: UUID4, db=Depends(get_async_session)):
-    pass
+    # Fetch cover letters associated with the application
+    result = await db.execute(
+        select(models.CoverLetter)
+        .join(models.CoverLetterXApplication)
+        .where(models.CoverLetterXApplication.application_id == id)
+    )
+    cover_letters = result.scalars().all()
+
+    if not cover_letters:
+        raise HTTPException(
+            status_code=404, detail="No cover letters found for this application"
+        )
+
+    return cover_letters

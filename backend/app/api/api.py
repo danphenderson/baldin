@@ -16,17 +16,15 @@ from app.api.routes import (
     applications,
     auth,
     contacts,
-    etl,
-    leads,
-    services,
-    users,
     cover_letters,
-    resumes,
-    skills,
+    etl,
     experiences,
-    applications,
+    leads,
+    resumes,
+    services,
+    skills,
+    users,
 )
-
 
 api_router: APIRouter = APIRouter()
 
@@ -65,4 +63,24 @@ api_router.include_router(
     services.router,
     prefix="/services",
     tags=["services"],
+)
+api_router.include_router(
+    skills.router,
+    prefix="/skills",
+    tags=["skills"],
+)
+api_router.include_router(
+    experiences.router,
+    prefix="/experiences",
+    tags=["experiences"],
+)
+api_router.include_router(
+    resumes.router,
+    prefix="/resumes",
+    tags=["resumes"],
+)
+api_router.include_router(
+    cover_letters.router,
+    prefix="/cover_letters",
+    tags=["cover_letters"],
 )

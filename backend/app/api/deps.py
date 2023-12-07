@@ -11,6 +11,7 @@ from sqlalchemy.future import select
 from app import models
 from app.core.conf import settings
 from app.core.db import get_async_session, session_context
+from app.core.openai import get_openai_client
 from app.core.security import (  # noqa
     fastapi_users,
     get_current_superuser,

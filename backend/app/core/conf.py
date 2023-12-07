@@ -150,8 +150,11 @@ def get_chrome_settings(**kwargs) -> Chrome:
 
 
 def get_openai_settings(**kwargs) -> OpenAI:
-    openai = OpenAI(**kwargs)
-    return openai
+    import openai as _openai
+
+    settings = OpenAI(**kwargs)
+    _openai.api_key = settings.SECRET_KEY
+    return settings
 
 
 def get_linkedin_settings(**kwargs) -> Linkedin:

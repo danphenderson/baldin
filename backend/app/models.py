@@ -1,10 +1,13 @@
 # app/models.py
 from datetime import datetime
+from urllib import response
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
-from sqlalchemy import UUID, Column, DateTime, ForeignKey, String, Text
+from pyexpat import model
+from sqlalchemy import UUID, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, relationship
+from traitlets import Int
 
 # Platform models
 
@@ -130,26 +133,3 @@ class Contact(Base):
     # keys, relationships
     user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
     user = relationship("User", back_populates="contacts")
-
-
-class ChatCompletion(Base):
-    """
-    Represents a chat completion for a user.
-
-    There is a many-to-one relationship between
-    a chat completion and a user.
-
-    There is a one-to-one relationship between
-    a chat completion and a
-    """
-
-    __tablename__ = "chat_completions"
-
-    name = Column(String)
-    description = Column(String)
-    completion = Column(Text)
-    prompt = Column(Text)  # Storing template content as text prompt
-
-    # keys, relationships
-    user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
-    user = relationship("User", back_populates="chat_completions")

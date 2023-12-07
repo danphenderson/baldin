@@ -126,24 +126,3 @@ class ContactCreate(BaseContact):
 
 class ContactUpdate(BaseContact):
     pass
-
-
-class BaseChatCompletion(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    prompt: str | None = None
-
-
-class ChatCompletionCreate(BaseChatCompletion):
-    pass
-
-
-class ChatCompletionRead(BaseChatCompletion, BaseRead):
-    completion: str
-
-
-class ChatCompletionUpdate(BaseChatCompletion):
-    pass
-
-
-# End Schema definitions for model CRUD

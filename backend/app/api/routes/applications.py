@@ -111,3 +111,13 @@ async def delete_application(id: UUID4, db=Depends(get_async_session)):
     await db.delete(application)
     await db.commit()
     return {"message": "Application deleted successfully"}
+
+
+@router.get("/{id}/resumes", response_model=list[schemas.ResumeRead])
+async def get_application_resumes(id: UUID4, db=Depends(get_async_session)):
+    pass
+
+
+@router.get("/{id}/cover_letters", response_model=list[schemas.ResumeRead])
+async def get_application_cover_letters(id: UUID4, db=Depends(get_async_session)):
+    pass

@@ -15,7 +15,7 @@ router: APIRouter = APIRouter()
 @router.get("/", response_model=list[schemas.ContactRead])
 async def get_current_user_contacts(
     user: schemas.UserRead = Depends(get_current_user), db=Depends(get_async_session)
-) -> list[schemas.ContactRead]:
+):
     result = await db.execute(
         select(models.Contact).where(models.Contact.user_id == user.id)
     )
@@ -55,7 +55,6 @@ async def update_user_contact(
     contact: schemas.ContactRead = Depends(get_contact),
     db=Depends(get_async_session),
 ):
-    # TODO: Confirm user owns contact
     if contact.user_id != user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Operation not permitted"
@@ -75,7 +74,10 @@ async def delete_user_contact(
     user: schemas.UserRead = Depends(get_current_user),
     db=Depends(get_async_session),
 ):
-    # TODO: Confirm user owns contact
+    if contact.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Operation not permitted"
+        )
     await db.delete(contact)
     await db.commit()
     return None

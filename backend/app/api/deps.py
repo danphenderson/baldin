@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import aiofiles
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 from pydantic import UUID4
 from sqlalchemy.future import select
 
@@ -67,6 +67,21 @@ async def get_contact(id: UUID4, db=Depends(get_async_session)) -> models.Contac
         console_log.info(f"Contact with id {id} not found")
         raise HTTPException(status_code=404, detail=f"Contact with {id} not found")
     return contact
+
+
+async def get_cover_letter(
+    id: UUID4, db=Depends(get_async_session), user=Depends(get_current_user)
+) -> models.CoverLetter:
+    cover_letter = await db.get(models.CoverLetter, id)
+    if not cover_letter:
+        console_log.info(f"Cover letter with id {id} not found")
+        raise HTTPException(status_code=404, detail=f"Cover letter with {id} not found")
+
+    if cover_letter.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Operation not permitted"
+        )
+    return cover_letter
 
 
 def _convert_lead_public_assets():

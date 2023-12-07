@@ -7,7 +7,7 @@ from pydantic import BaseModel as _BaseModel
 
 class BaseModel(_BaseModel):
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class BaseRead(BaseModel):
@@ -178,7 +178,7 @@ class CoverLetterUpdate(BaseCoverLetter):
     pass
 
 
-class BaseUser(schemas.BaseUser):
+class BaseUser(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     phone_number: str | None = None
@@ -191,7 +191,7 @@ class BaseUser(schemas.BaseUser):
     time_zone: str | None = None
 
 
-class UserRead(BaseUser, BaseRead):
+class UserRead(schemas.BaseUser[UUID4], BaseUser):  #
     pass
 
 

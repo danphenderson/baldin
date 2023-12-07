@@ -6,6 +6,8 @@ from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from sqlalchemy import UUID, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import DeclarativeBase, relationship
 
+# Platform models
+
 
 class Base(DeclarativeBase):
     """
@@ -17,9 +19,6 @@ class Base(DeclarativeBase):
     id = Column(UUID, primary_key=True, default=uuid4)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
-# begin region: Platform models
 
 
 class ETLEvent(Base):
@@ -59,10 +58,7 @@ class Lead(Base):
     application = relationship("Application", back_populates="lead", uselist=False)
 
 
-# end region: Platform models
-
-
-# begin region: User models
+# User models
 
 
 class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
@@ -114,6 +110,28 @@ class Application(Base):
     user = relationship("User", back_populates="applications")
 
 
+class Contact(Base):
+    """
+    Represents a User Contact.
+
+    There is a many-to-one relationship between
+    a contact and a user.
+    """
+
+    __tablename__ = "contacts"
+
+    first_name = Column(String)
+    last_name = Column(String)
+    phone_number = Column(String)
+    email = Column(String)
+    time_zone = Column(String)
+    notes = Column(Text)
+
+    # keys, relationships
+    user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
+    user = relationship("User", back_populates="contacts")
+
+
 class ChatCompletion(Base):
     """
     Represents a chat completion for a user.
@@ -135,25 +153,3 @@ class ChatCompletion(Base):
     # keys, relationships
     user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
     user = relationship("User", back_populates="chat_completions")
-
-
-class Contact(Base):
-    """
-    Represents a User Contact.
-
-    There is a many-to-one relationship between
-    a contact and a user.
-    """
-
-    __tablename__ = "contacts"
-
-    first_name = Column(String)
-    last_name = Column(String)
-    phone_number = Column(String)
-    email = Column(String)
-    time_zone = Column(String)
-    notes = Column(Text)
-
-    # keys, relationships
-    user_id = Column(UUID, ForeignKey("users.id"))  # Foreign key to User table
-    user = relationship("User", back_populates="contacts")

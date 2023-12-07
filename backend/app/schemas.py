@@ -191,13 +191,13 @@ class BaseUser(BaseModel):
     time_zone: str | None = None
 
 
-class UserRead(schemas.BaseUser[UUID4], BaseUser):  #
+class UserRead(schemas.BaseUser[UUID4], BaseUser):  # type: ignore
     pass
 
 
-class UserCreate(BaseUser):
+class UserCreate(schemas.BaseUserCreate, BaseUser):
     pass
 
 
-class UserUpdate(BaseUser):
+class UserUpdate(schemas.BaseUserUpdate, BaseUser):
     pass

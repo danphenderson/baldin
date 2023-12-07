@@ -135,7 +135,7 @@ class ContactRead(BaseRead, BaseContact):
 
 
 class ContactCreate(BaseContact):
-    user_id: UUID4
+    pass
 
 
 class ContactUpdate(BaseContact):

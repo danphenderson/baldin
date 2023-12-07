@@ -8,7 +8,8 @@ from fastapi import Depends, HTTPException
 from pydantic import UUID4
 from sqlalchemy.future import select
 
-from app import models
+from app import models, schemas
+from app.core import security
 from app.core.conf import settings
 from app.core.db import get_async_session, session_context
 from app.core.openai import get_openai_client
@@ -34,6 +35,30 @@ async def get_etl_event(id: UUID4, db=Depends(get_async_session)) -> models.ETLE
         console_log.info(f"ETL event with id {id} not found")
         raise HTTPException(status_code=404, detail=f"ETL event with {id} not found")
     return etl_event
+
+
+async def get_skill(id: UUID4, db=Depends(get_async_session)) -> models.Skill:
+    skill = await db.get(models.Skill, id)
+    if not skill:
+        console_log.info(f"Skill with id {id} not found")
+        raise HTTPException(status_code=404, detail=f"Skill with {id} not found")
+    return skill
+
+
+async def get_experience(id: UUID4, db=Depends(get_async_session)) -> models.Experience:
+    experience = await db.get(models.Experience, id)
+    if not experience:
+        console_log.info(f"Experience with id {id} not found")
+        raise HTTPException(status_code=404, detail=f"Experience with {id} not found")
+    return experience
+
+
+async def get_resume(id: UUID4, db=Depends(get_async_session)) -> models.Resume:
+    resume = await db.get(models.Resume, id)
+    if not resume:
+        console_log.info(f"Resume with id {id} not found")
+        raise HTTPException(status_code=404, detail=f"Resume with {id} not found")
+    return resume
 
 
 async def get_contact(id: UUID4, db=Depends(get_async_session)) -> models.Contact:

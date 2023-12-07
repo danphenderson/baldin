@@ -1,78 +1,81 @@
-# app/api/contacts.py
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
-from app import models, schemas
-from app.api.deps import get_async_session, get_contact
+from app.api.deps import (
+    get_async_session,
+    get_contact,
+    get_current_user,
+    models,
+    schemas,
+)
 
 router: APIRouter = APIRouter()
+
+
+@router.get("/", response_model=list[schemas.ContactRead])
+async def get_current_user_contacts(
+    user: schemas.UserRead = Depends(get_current_user), db=Depends(get_async_session)
+) -> list[schemas.ContactRead]:
+    result = await db.execute(
+        select(models.Contact).where(models.Contact.user_id == user.id)
+    )
+    contacts = result.scalars().all()
+    return contacts
 
 
 @router.post("/", status_code=201, response_model=schemas.ContactRead)
 async def create_user_contact(
     payload: schemas.ContactCreate,
+    user: schemas.UserRead = Depends(get_current_user),
     db=Depends(get_async_session),
 ):
-    # Check if contact already exists for the given email
-    existing_contact = await db.execute(
-        select(models.Contact).where(models.Contact.email == payload.email)
-    )
-    existing_contact = existing_contact.scalars().first()
-
-    if existing_contact:
-        # Contact for this email already exists, return an error response
-        raise HTTPException(
-            status_code=400, detail="Contact for this email already exists"
-        )
-
-    # Create a new contact
-    contact = models.Contact(**payload.dict())
+    contact = models.Contact(**payload.dict(), user_id=user.id)
     db.add(contact)
     await db.commit()
     await db.refresh(contact)
-
     return contact
-
-
-@router.get("/", response_model=list[schemas.ContactRead])
-async def get_all_contacts(
-    db=Depends(get_async_session),
-):
-    rows = await db.execute(select(models.Contact))
-    result = rows.scalars().all()
-    if not result:
-        raise HTTPException(status_code=404, detail="No contacts found")
-    return result
 
 
 @router.get("/{contact_id}", response_model=schemas.ContactRead)
-async def get_contact_by_id(
-    contact: models.Contact = Depends(get_contact),
+async def get_user_contact(
+    contact: schemas.ContactRead = Depends(get_contact),
+    user: schemas.UserRead = Depends(get_current_user),
 ):
+    if contact.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Operation not permitted"
+        )
     return contact
 
 
-@router.patch("/{contact_id}", response_model=schemas.ContactRead)
-async def update_contact_by_id(
+@router.put("/{contact_id}", response_model=schemas.ContactRead)
+async def update_user_contact(
     payload: schemas.ContactUpdate,
-    contact: models.Contact = Depends(get_contact),
+    user: schemas.UserRead = Depends(get_current_user),
+    contact: schemas.ContactRead = Depends(get_contact),
     db=Depends(get_async_session),
 ):
-    # Update the contact's attributes
-    for var, value in payload.dict(exclude_unset=True).items():
-        setattr(contact, var, value)
+    # TODO: Confirm user owns contact
+    if contact.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Operation not permitted"
+        )
 
+    contact_data = payload.dict(exclude_unset=True)
+    for field in contact_data:
+        setattr(contact, field, contact_data[field])
     await db.commit()
     await db.refresh(contact)
-
     return contact
 
 
 @router.delete("/{contact_id}", status_code=204)
-async def delete_contact_by_id(
-    contact: models.Contact = Depends(get_contact),
+async def delete_user_contact(
+    contact: schemas.ContactRead = Depends(get_contact),
+    user: schemas.UserRead = Depends(get_current_user),
     db=Depends(get_async_session),
 ):
-    db.delete(contact)
+    # TODO: Confirm user owns contact
+    await db.delete(contact)
     await db.commit()
     return None

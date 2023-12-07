@@ -9,7 +9,7 @@ import Register from '../pages/register';
 import ErrorPage from '../pages/error-page';
 import Settings from '../pages/settings';
 import Leads from '../pages/leads';
-import Applications from '../pages/applications';
+// import Applications from '../pages/applications';
 import ETL from '../pages/etl';
 
 const AppRoutes: React.FC = () => {
@@ -21,7 +21,7 @@ const AppRoutes: React.FC = () => {
                 <Route index element={<App />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/leads" element={<Leads />} />
-                <Route path="/applications" element={<Applications />} />
+                {/* <Route path="/applications" element={<Applications />} /> */}
                 <Route path="/etl" element={<ETL />} />
                 {/* More user routes can be added here */}
             </Route>

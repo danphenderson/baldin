@@ -30,8 +30,6 @@ class ETLEvent(Base):
     __tablename__ = "etl_events"
     job_name = Column(String)
     status = Column(String)  # running, success, failure
-    start_time = Column(DateTime)
-    end_time = Column(DateTime)
     error_message = Column(Text)
 
 
@@ -102,9 +100,13 @@ class Application(Base):
     user_id = Column(UUID, ForeignKey("users.id"))
     lead = relationship("Lead", back_populates="application", uselist=False)
     user = relationship("User", back_populates="applications")
-    resumes = relationship("Resume", secondary="resumes_x_applications")
+    resumes = relationship(
+        "Resume", secondary="resumes_x_applications", back_populates="applications"
+    )
     cover_letters = relationship(
-        "CoverLetter", secondary="cover_letters_x_applications"
+        "CoverLetter",
+        secondary="cover_letters_x_applications",
+        back_populates="applications",
     )
 
 
@@ -138,7 +140,9 @@ class Resume(Base):
     content_type = Column(String)  # Add validator in schemas.py BaseResume
     user_id = Column(UUID, ForeignKey("users.id"))
     user = relationship("User", back_populates="resumes")
-    applications = relationship("Application", secondary="resumes_x_applications")
+    applications = relationship(
+        "Application", secondary="resumes_x_applications", back_populates="resumes"
+    )
 
 
 class ResumeXApplication(Base):
@@ -164,6 +168,11 @@ class CoverLetter(Base):
     content_type = Column(String)  # Add validator in schemas.py BaseResume
     user_id = Column(UUID, ForeignKey("users.id"))
     user = relationship("User", back_populates="cover_letters")
+    applications = relationship(
+        "Application",
+        secondary="cover_letters_x_applications",
+        back_populates="cover_letters",
+    )
 
 
 class CoverLetterXApplication(Base):

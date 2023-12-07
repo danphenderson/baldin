@@ -20,8 +20,6 @@ class BaseRead(BaseModel):
 class BaseETLEvent(BaseModel):
     job_name: str | None = None
     status: str | None = None
-    start_time: datetime | None = None
-    end_time: datetime | None = None
     error_message: str | None = None
 
 
@@ -43,11 +41,11 @@ class BaseSkill(BaseModel):
 
 
 class SkillRead(BaseRead, BaseSkill):
-    user_id: UUID4
+    pass
 
 
 class SkillCreate(BaseSkill):
-    user_id: UUID4
+    pass
 
 
 class SkillUpdate(BaseSkill):
@@ -63,11 +61,11 @@ class BaseExperience(BaseModel):
 
 
 class ExperienceRead(BaseExperience, BaseRead):
-    user_id: UUID4
+    pass
 
 
 class ExperienceCreate(BaseExperience):
-    user_id: UUID4
+    pass
 
 
 class ExperienceUpdate(BaseExperience):
@@ -108,12 +106,10 @@ class BaseApplication(BaseModel):
 
 
 class ApplicationRead(BaseRead, BaseApplication):
-    user_id: UUID4
     lead_id: UUID4
 
 
 class ApplicationCreate(BaseApplication):
-    user_id: UUID4
     lead_id: UUID4
 
 
@@ -131,7 +127,7 @@ class BaseContact(BaseModel):
 
 
 class ContactRead(BaseRead, BaseContact):
-    user_id: UUID4
+    pass
 
 
 class ContactCreate(BaseContact):
@@ -149,11 +145,11 @@ class BaseResume(BaseModel):
 
 
 class ResumeRead(BaseRead, BaseResume):
-    user_id: UUID4
+    pass
 
 
 class ResumeCreate(BaseResume):
-    user_id: UUID4
+    pass
 
 
 class ResumeUpdate(BaseResume):
@@ -167,11 +163,11 @@ class BaseCoverLetter(BaseModel):
 
 
 class CoverLetterRead(BaseRead, BaseCoverLetter):
-    user_id: UUID4
+    pass
 
 
 class CoverLetterCreate(BaseCoverLetter):
-    user_id: UUID4
+    pass
 
 
 class CoverLetterUpdate(BaseCoverLetter):

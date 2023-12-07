@@ -47,6 +47,18 @@ export interface paths {
     /** Users:Patch User */
     patch: operations["users_patch_user_users__id__patch"];
   };
+  "/users/users/{user_id}/applications": {
+    /** Get User Applications */
+    get: operations["get_user_applications_users_users__user_id__applications_get"];
+  };
+  "/users/users/{user_id}/skills": {
+    /** Get User Skills */
+    get: operations["get_user_skills_users_users__user_id__skills_get"];
+  };
+  "/users/users/{user_id}/experiences": {
+    /** Get User Experiences */
+    get: operations["get_user_experiences_users_users__user_id__experiences_get"];
+  };
   "/leads/": {
     /** Read Leads */
     get: operations["read_leads_leads__get"];
@@ -94,6 +106,14 @@ export interface paths {
     /** Update Application */
     patch: operations["update_application_applications__id__patch"];
   };
+  "/applications/{id}/resumes": {
+    /** Get Application Resumes */
+    get: operations["get_application_resumes_applications__id__resumes_get"];
+  };
+  "/applications/{id}/cover_letters": {
+    /** Get Application Cover Letters */
+    get: operations["get_application_cover_letters_applications__id__cover_letters_get"];
+  };
   "/contacts/": {
     /** Get All Contacts */
     get: operations["get_all_contacts_contacts__get"];
@@ -107,6 +127,60 @@ export interface paths {
     delete: operations["delete_contact_by_id_contacts__contact_id__delete"];
     /** Update Contact By Id */
     patch: operations["update_contact_by_id_contacts__contact_id__patch"];
+  };
+  "/skills/": {
+    /** Get Skills */
+    get: operations["get_skills_skills__get"];
+    /** Create Skill */
+    post: operations["create_skill_skills__post"];
+  };
+  "/skills/{skill_id}": {
+    /** Get Skill */
+    get: operations["get_skill_skills__skill_id__get"];
+    /** Update Skill */
+    put: operations["update_skill_skills__skill_id__put"];
+    /** Delete Skill */
+    delete: operations["delete_skill_skills__skill_id__delete"];
+  };
+  "/experiences/": {
+    /** Get Experiences */
+    get: operations["get_experiences_experiences__get"];
+    /** Create Experience */
+    post: operations["create_experience_experiences__post"];
+  };
+  "/experiences/{experience_id}": {
+    /** Get Experience */
+    get: operations["get_experience_experiences__experience_id__get"];
+    /** Update Experience */
+    put: operations["update_experience_experiences__experience_id__put"];
+  };
+  "/resumes/": {
+    /** Get Resumes */
+    get: operations["get_resumes_resumes__get"];
+    /** Create Resume */
+    post: operations["create_resume_resumes__post"];
+  };
+  "/resumes/{resume_id}": {
+    /** Get Resume */
+    get: operations["get_resume_resumes__resume_id__get"];
+    /** Update Resume */
+    put: operations["update_resume_resumes__resume_id__put"];
+    /** Delete Resume */
+    delete: operations["delete_resume_resumes__resume_id__delete"];
+  };
+  "/cover_letters/": {
+    /** Get Cover Letters */
+    get: operations["get_cover_letters_cover_letters__get"];
+    /** Create Cover Letter */
+    post: operations["create_cover_letter_cover_letters__post"];
+  };
+  "/cover_letters/{cover_letter_id}": {
+    /** Get Cover Letter */
+    get: operations["get_cover_letter_cover_letters__cover_letter_id__get"];
+    /** Update Cover Letter */
+    put: operations["update_cover_letter_cover_letters__cover_letter_id__put"];
+    /** Delete Cover Letter */
+    delete: operations["delete_cover_letter_cover_letters__cover_letter_id__delete"];
   };
   "/ping": {
     /** Pong */
@@ -133,6 +207,11 @@ export interface components {
       /** Status */
       status?: string | null;
       /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+      /**
        * Lead Id
        * Format: uuid4
        */
@@ -140,6 +219,14 @@ export interface components {
     };
     /** ApplicationRead */
     ApplicationRead: {
+      /** Cover Letter */
+      cover_letter?: string | null;
+      /** Resume */
+      resume?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /** Status */
+      status?: string | null;
       /**
        * Id
        * Format: uuid4
@@ -155,15 +242,16 @@ export interface components {
        * Format: date-time
        */
       updated_at: string;
-      /** Cover Letter */
-      cover_letter?: string | null;
-      /** Resume */
-      resume?: string | null;
-      /** Notes */
-      notes?: string | null;
-      /** Status */
-      status?: string | null;
-      lead?: components["schemas"]["LeadRead"] | null;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+      /**
+       * Lead Id
+       * Format: uuid4
+       */
+      lead_id: string;
     };
     /** ApplicationUpdate */
     ApplicationUpdate: {
@@ -251,6 +339,18 @@ export interface components {
     };
     /** ContactRead */
     ContactRead: {
+      /** First Name */
+      first_name?: string | null;
+      /** Last Name */
+      last_name?: string | null;
+      /** Phone Number */
+      phone_number?: string | null;
+      /** Email */
+      email?: string | null;
+      /** Time Zone */
+      time_zone?: string | null;
+      /** Notes */
+      notes?: string | null;
       /**
        * Id
        * Format: uuid4
@@ -266,18 +366,11 @@ export interface components {
        * Format: date-time
        */
       updated_at: string;
-      /** First Name */
-      first_name?: string | null;
-      /** Last Name */
-      last_name?: string | null;
-      /** Phone Number */
-      phone_number?: string | null;
-      /** Email */
-      email?: string | null;
-      /** Time Zone */
-      time_zone?: string | null;
-      /** Notes */
-      notes?: string | null;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
     };
     /** ContactUpdate */
     ContactUpdate: {
@@ -294,8 +387,28 @@ export interface components {
       /** Notes */
       notes?: string | null;
     };
-    /** ETLEventRead */
-    ETLEventRead: {
+    /** CoverLetterCreate */
+    CoverLetterCreate: {
+      /** Name */
+      name?: string | null;
+      /** Content */
+      content?: string | null;
+      /** Content Type */
+      content_type?: string | null;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+    };
+    /** CoverLetterRead */
+    CoverLetterRead: {
+      /** Name */
+      name?: string | null;
+      /** Content */
+      content?: string | null;
+      /** Content Type */
+      content_type?: string | null;
       /**
        * Id
        * Format: uuid4
@@ -311,10 +424,48 @@ export interface components {
        * Format: date-time
        */
       updated_at: string;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+    };
+    /** CoverLetterUpdate */
+    CoverLetterUpdate: {
+      /** Name */
+      name?: string | null;
+      /** Content */
+      content?: string | null;
+      /** Content Type */
+      content_type?: string | null;
+    };
+    /** ETLEventRead */
+    ETLEventRead: {
       /** Job Name */
       job_name?: string | null;
       /** Status */
       status?: string | null;
+      /** Start Time */
+      start_time?: string | null;
+      /** End Time */
+      end_time?: string | null;
+      /** Error Message */
+      error_message?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
     };
     /** ErrorModel */
     ErrorModel: {
@@ -322,6 +473,70 @@ export interface components {
       detail: string | {
         [key: string]: string;
       };
+    };
+    /** ExperienceCreate */
+    ExperienceCreate: {
+      /** Title */
+      title?: string | null;
+      /** Company */
+      company?: string | null;
+      /** Start Date */
+      start_date?: string | null;
+      /** End Date */
+      end_date?: string | null;
+      /** Description */
+      description?: string | null;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+    };
+    /** ExperienceRead */
+    ExperienceRead: {
+      /**
+       * Id
+       * Format: uuid4
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+      /** Title */
+      title?: string | null;
+      /** Company */
+      company?: string | null;
+      /** Start Date */
+      start_date?: string | null;
+      /** End Date */
+      end_date?: string | null;
+      /** Description */
+      description?: string | null;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+    };
+    /** ExperienceUpdate */
+    ExperienceUpdate: {
+      /** Title */
+      title?: string | null;
+      /** Company */
+      company?: string | null;
+      /** Start Date */
+      start_date?: string | null;
+      /** End Date */
+      end_date?: string | null;
+      /** Description */
+      description?: string | null;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -348,6 +563,8 @@ export interface components {
       employment_type?: string | null;
       /** Seniority Level */
       seniority_level?: string | null;
+      /** Education Level */
+      education_level?: string | null;
       /** Notes */
       notes?: string | null;
       /** Url */
@@ -355,21 +572,6 @@ export interface components {
     };
     /** LeadRead */
     LeadRead: {
-      /**
-       * Id
-       * Format: uuid4
-       */
-      id: string;
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-      /**
-       * Updated At
-       * Format: date-time
-       */
-      updated_at: string;
       /** Title */
       title?: string | null;
       /** Company */
@@ -388,8 +590,25 @@ export interface components {
       employment_type?: string | null;
       /** Seniority Level */
       seniority_level?: string | null;
+      /** Education Level */
+      education_level?: string | null;
       /** Notes */
       notes?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
       /** Url */
       url: string;
     };
@@ -413,8 +632,108 @@ export interface components {
       employment_type?: string | null;
       /** Seniority Level */
       seniority_level?: string | null;
+      /** Education Level */
+      education_level?: string | null;
       /** Notes */
       notes?: string | null;
+    };
+    /** ResumeCreate */
+    ResumeCreate: {
+      /** Name */
+      name?: string | null;
+      /** Content */
+      content?: string | null;
+      /** Content Type */
+      content_type?: string | null;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+    };
+    /** ResumeRead */
+    ResumeRead: {
+      /** Name */
+      name?: string | null;
+      /** Content */
+      content?: string | null;
+      /** Content Type */
+      content_type?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+    };
+    /** ResumeUpdate */
+    ResumeUpdate: {
+      /** Name */
+      name?: string | null;
+      /** Content */
+      content?: string | null;
+      /** Content Type */
+      content_type?: string | null;
+    };
+    /** SkillCreate */
+    SkillCreate: {
+      /** Name */
+      name?: string | null;
+      /** Category */
+      category?: string | null;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+    };
+    /** SkillRead */
+    SkillRead: {
+      /** Name */
+      name?: string | null;
+      /** Category */
+      category?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+    };
+    /** SkillUpdate */
+    SkillUpdate: {
+      /** Name */
+      name?: string | null;
+      /** Category */
+      category?: string | null;
     };
     /** UserCreate */
     UserCreate: {
@@ -436,8 +755,8 @@ export interface components {
       zip_code?: string | null;
       /** Country */
       country?: string | null;
-      /** Skills */
-      skills?: string | null;
+      /** Time Zone */
+      time_zone?: string | null;
       /**
        * Email
        * Format: email
@@ -481,8 +800,8 @@ export interface components {
       zip_code?: string | null;
       /** Country */
       country?: string | null;
-      /** Skills */
-      skills?: string | null;
+      /** Time Zone */
+      time_zone?: string | null;
       /**
        * Id
        * Format: uuid4
@@ -529,8 +848,8 @@ export interface components {
       zip_code?: string | null;
       /** Country */
       country?: string | null;
-      /** Skills */
-      skills?: string | null;
+      /** Time Zone */
+      time_zone?: string | null;
       /** Password */
       password?: string | null;
       /** Email */
@@ -894,6 +1213,72 @@ export interface operations {
       };
     };
   };
+  /** Get User Applications */
+  get_user_applications_users_users__user_id__applications_get: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get User Skills */
+  get_user_skills_users_users__user_id__skills_get: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get User Experiences */
+  get_user_experiences_users_users__user_id__experiences_get: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Read Leads */
   read_leads_leads__get: {
     responses: {
@@ -1131,6 +1516,50 @@ export interface operations {
       };
     };
   };
+  /** Get Application Resumes */
+  get_application_resumes_applications__id__resumes_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Application Cover Letters */
+  get_application_cover_letters_applications__id__cover_letters_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Get All Contacts */
   get_all_contacts_contacts__get: {
     responses: {
@@ -1223,6 +1652,398 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["ContactRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Skills */
+  get_skills_skills__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"][];
+        };
+      };
+    };
+  };
+  /** Create Skill */
+  create_skill_skills__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SkillCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Skill */
+  get_skill_skills__skill_id__get: {
+    parameters: {
+      path: {
+        skill_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Skill */
+  update_skill_skills__skill_id__put: {
+    parameters: {
+      path: {
+        skill_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SkillUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Skill */
+  delete_skill_skills__skill_id__delete: {
+    parameters: {
+      path: {
+        skill_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Experiences */
+  get_experiences_experiences__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"][];
+        };
+      };
+    };
+  };
+  /** Create Experience */
+  create_experience_experiences__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExperienceCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Experience */
+  get_experience_experiences__experience_id__get: {
+    parameters: {
+      path: {
+        experience_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Experience */
+  update_experience_experiences__experience_id__put: {
+    parameters: {
+      path: {
+        experience_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExperienceUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Resumes */
+  get_resumes_resumes__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"][];
+        };
+      };
+    };
+  };
+  /** Create Resume */
+  create_resume_resumes__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResumeCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Resume */
+  get_resume_resumes__resume_id__get: {
+    parameters: {
+      path: {
+        resume_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Resume */
+  update_resume_resumes__resume_id__put: {
+    parameters: {
+      path: {
+        resume_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResumeUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Resume */
+  delete_resume_resumes__resume_id__delete: {
+    parameters: {
+      path: {
+        resume_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Cover Letters */
+  get_cover_letters_cover_letters__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"][];
+        };
+      };
+    };
+  };
+  /** Create Cover Letter */
+  create_cover_letter_cover_letters__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CoverLetterCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Cover Letter */
+  get_cover_letter_cover_letters__cover_letter_id__get: {
+    parameters: {
+      path: {
+        cover_letter_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Cover Letter */
+  update_cover_letter_cover_letters__cover_letter_id__put: {
+    parameters: {
+      path: {
+        cover_letter_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CoverLetterUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Cover Letter */
+  delete_cover_letter_cover_letters__cover_letter_id__delete: {
+    parameters: {
+      path: {
+        cover_letter_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
         };
       };
       /** @description Validation Error */

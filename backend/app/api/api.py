@@ -3,7 +3,16 @@
 from fastapi import APIRouter
 
 from app.api.deps import fastapi_users, schemas, security
-from app.api.routes import contacts, etl, experiences, leads, resumes, services, skills
+from app.api.routes import (
+    contacts,
+    cover_letters,
+    etl,
+    experiences,
+    leads,
+    resumes,
+    services,
+    skills,
+)
 
 api_router: APIRouter = APIRouter()
 
@@ -51,4 +60,24 @@ api_router.include_router(
     contacts.router,
     prefix="/contacts",
     tags=["contacts"],
+)
+api_router.include_router(
+    experiences.router,
+    prefix="/experiences",
+    tags=["experiences"],
+)
+api_router.include_router(
+    skills.router,
+    prefix="/skills",
+    tags=["skills"],
+)
+api_router.include_router(
+    cover_letters.router,
+    prefix="/cover_letters",
+    tags=["cover_letters"],
+)
+api_router.include_router(
+    resumes.router,
+    prefix="/resumes",
+    tags=["resumes"],
 )

@@ -53,31 +53,31 @@ export interface paths {
     /** Create Lead */
     post: operations["create_lead_leads__post"];
   };
-  "/leads/{id}/": {
+  "/leads/{id}": {
     /** Read Lead */
-    get: operations["read_lead_leads__id___get"];
+    get: operations["read_lead_leads__id__get"];
     /** Delete Lead */
-    delete: operations["delete_lead_leads__id___delete"];
+    delete: operations["delete_lead_leads__id__delete"];
     /** Update Lead */
-    patch: operations["update_lead_leads__id___patch"];
+    patch: operations["update_lead_leads__id__patch"];
   };
-  "/etl/events/{id}/": {
+  "/etl/events/{id}": {
     /**
      * Read Etl Event
      * @description Read an ETL event.
      */
-    get: operations["read_etl_event_etl_events__id___get"];
+    get: operations["read_etl_event_etl_events__id__get"];
   };
-  "/etl/events/": {
+  "/etl/events": {
     /**
      * Read Etl Events
      * @description Read all ETL events.
      */
-    get: operations["read_etl_events_etl_events__get"];
+    get: operations["read_etl_events_etl_events_get"];
   };
-  "/etl/leads/": {
+  "/etl/leads": {
     /** Leads Etl Event */
-    post: operations["leads_etl_event_etl_leads__post"];
+    post: operations["leads_etl_event_etl_leads_post"];
   };
   "/applications/": {
     /**
@@ -88,56 +88,25 @@ export interface paths {
     /** Create Application */
     post: operations["create_application_applications__post"];
   };
-  "/applications/{id}/": {
-    /**
-     * Get Application By Id
-     * @description Get an application by ID.
-     */
-    get: operations["get_application_by_id_applications__id___get"];
+  "/applications/{id}": {
     /** Delete Application */
-    delete: operations["delete_application_applications__id___delete"];
+    delete: operations["delete_application_applications__id__delete"];
     /** Update Application */
-    patch: operations["update_application_applications__id___patch"];
+    patch: operations["update_application_applications__id__patch"];
   };
   "/contacts/": {
-    /**
-     * Get Applications
-     * @description Get all applications for the current user.
-     */
-    get: operations["get_applications_contacts__get"];
-    /** Create Application */
-    post: operations["create_application_contacts__post"];
+    /** Get All Contacts */
+    get: operations["get_all_contacts_contacts__get"];
+    /** Create User Contact */
+    post: operations["create_user_contact_contacts__post"];
   };
-  "/contacts/{id}/": {
-    /**
-     * Get Application By Id
-     * @description Get an application by ID.
-     */
-    get: operations["get_application_by_id_contacts__id___get"];
-    /** Delete Application */
-    delete: operations["delete_application_contacts__id___delete"];
-    /** Update Application */
-    patch: operations["update_application_contacts__id___patch"];
-  };
-  "/services/": {
-    /**
-     * Get Applications
-     * @description Get all applications for the current user.
-     */
-    get: operations["get_applications_services__get"];
-    /** Create Application */
-    post: operations["create_application_services__post"];
-  };
-  "/services/{id}/": {
-    /**
-     * Get Application By Id
-     * @description Get an application by ID.
-     */
-    get: operations["get_application_by_id_services__id___get"];
-    /** Delete Application */
-    delete: operations["delete_application_services__id___delete"];
-    /** Update Application */
-    patch: operations["update_application_services__id___patch"];
+  "/contacts/{contact_id}": {
+    /** Get Contact By Id */
+    get: operations["get_contact_by_id_contacts__contact_id__get"];
+    /** Delete Contact By Id */
+    delete: operations["delete_contact_by_id_contacts__contact_id__delete"];
+    /** Update Contact By Id */
+    patch: operations["update_contact_by_id_contacts__contact_id__patch"];
   };
   "/ping": {
     /** Pong */
@@ -171,7 +140,10 @@ export interface components {
     };
     /** ApplicationRead */
     ApplicationRead: {
-      /** Id */
+      /**
+       * Id
+       * Format: uuid4
+       */
       id: string;
       /**
        * Created At
@@ -203,11 +175,6 @@ export interface components {
       notes?: string | null;
       /** Status */
       status?: string | null;
-      /**
-       * Id
-       * Format: uuid4
-       */
-      id: string;
     };
     /** BearerResponse */
     BearerResponse: {
@@ -262,9 +229,77 @@ export interface components {
       /** Token */
       token: string;
     };
+    /** ContactCreate */
+    ContactCreate: {
+      /** First Name */
+      first_name?: string | null;
+      /** Last Name */
+      last_name?: string | null;
+      /** Phone Number */
+      phone_number?: string | null;
+      /** Email */
+      email?: string | null;
+      /** Time Zone */
+      time_zone?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+    };
+    /** ContactRead */
+    ContactRead: {
+      /**
+       * Id
+       * Format: uuid4
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+      /** First Name */
+      first_name?: string | null;
+      /** Last Name */
+      last_name?: string | null;
+      /** Phone Number */
+      phone_number?: string | null;
+      /** Email */
+      email?: string | null;
+      /** Time Zone */
+      time_zone?: string | null;
+      /** Notes */
+      notes?: string | null;
+    };
+    /** ContactUpdate */
+    ContactUpdate: {
+      /** First Name */
+      first_name?: string | null;
+      /** Last Name */
+      last_name?: string | null;
+      /** Phone Number */
+      phone_number?: string | null;
+      /** Email */
+      email?: string | null;
+      /** Time Zone */
+      time_zone?: string | null;
+      /** Notes */
+      notes?: string | null;
+    };
     /** ETLEventRead */
     ETLEventRead: {
-      /** Id */
+      /**
+       * Id
+       * Format: uuid4
+       */
       id: string;
       /**
        * Created At
@@ -320,7 +355,10 @@ export interface components {
     };
     /** LeadRead */
     LeadRead: {
-      /** Id */
+      /**
+       * Id
+       * Format: uuid4
+       */
       id: string;
       /**
        * Created At
@@ -377,11 +415,6 @@ export interface components {
       seniority_level?: string | null;
       /** Notes */
       notes?: string | null;
-      /**
-       * Id
-       * Format: uuid4
-       */
-      id: string;
     };
     /** UserCreate */
     UserCreate: {
@@ -452,7 +485,7 @@ export interface components {
       skills?: string | null;
       /**
        * Id
-       * Format: uuid
+       * Format: uuid4
        */
       id: string;
       /**
@@ -895,7 +928,7 @@ export interface operations {
     };
   };
   /** Read Lead */
-  read_lead_leads__id___get: {
+  read_lead_leads__id__get: {
     parameters: {
       path: {
         id: string;
@@ -917,7 +950,7 @@ export interface operations {
     };
   };
   /** Delete Lead */
-  delete_lead_leads__id___delete: {
+  delete_lead_leads__id__delete: {
     parameters: {
       path: {
         id: string;
@@ -939,7 +972,7 @@ export interface operations {
     };
   };
   /** Update Lead */
-  update_lead_leads__id___patch: {
+  update_lead_leads__id__patch: {
     parameters: {
       path: {
         id: string;
@@ -969,7 +1002,7 @@ export interface operations {
    * Read Etl Event
    * @description Read an ETL event.
    */
-  read_etl_event_etl_events__id___get: {
+  read_etl_event_etl_events__id__get: {
     parameters: {
       path: {
         id: string;
@@ -994,7 +1027,7 @@ export interface operations {
    * Read Etl Events
    * @description Read all ETL events.
    */
-  read_etl_events_etl_events__get: {
+  read_etl_events_etl_events_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -1005,7 +1038,7 @@ export interface operations {
     };
   };
   /** Leads Etl Event */
-  leads_etl_event_etl_leads__post: {
+  leads_etl_event_etl_leads_post: {
     responses: {
       /** @description Successful Response */
       202: {
@@ -1051,33 +1084,8 @@ export interface operations {
       };
     };
   };
-  /**
-   * Get Application By Id
-   * @description Get an application by ID.
-   */
-  get_application_by_id_applications__id___get: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      202: {
-        content: {
-          "application/json": components["schemas"]["ApplicationRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Delete Application */
-  delete_application_applications__id___delete: {
+  delete_application_applications__id__delete: {
     parameters: {
       path: {
         id: string;
@@ -1097,7 +1105,7 @@ export interface operations {
     };
   };
   /** Update Application */
-  update_application_applications__id___patch: {
+  update_application_applications__id__patch: {
     parameters: {
       path: {
         id: string;
@@ -1123,32 +1131,29 @@ export interface operations {
       };
     };
   };
-  /**
-   * Get Applications
-   * @description Get all applications for the current user.
-   */
-  get_applications_contacts__get: {
+  /** Get All Contacts */
+  get_all_contacts_contacts__get: {
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["ApplicationRead"][];
+          "application/json": components["schemas"]["ContactRead"][];
         };
       };
     };
   };
-  /** Create Application */
-  create_application_contacts__post: {
+  /** Create User Contact */
+  create_user_contact_contacts__post: {
     requestBody: {
       content: {
-        "application/json": components["schemas"]["ApplicationCreate"];
+        "application/json": components["schemas"]["ContactCreate"];
       };
     };
     responses: {
       /** @description Successful Response */
       201: {
         content: {
-          "application/json": components["schemas"]["ApplicationRead"];
+          "application/json": components["schemas"]["ContactRead"];
         };
       };
       /** @description Validation Error */
@@ -1159,21 +1164,18 @@ export interface operations {
       };
     };
   };
-  /**
-   * Get Application By Id
-   * @description Get an application by ID.
-   */
-  get_application_by_id_contacts__id___get: {
+  /** Get Contact By Id */
+  get_contact_by_id_contacts__contact_id__get: {
     parameters: {
-      path: {
+      query: {
         id: string;
       };
     };
     responses: {
       /** @description Successful Response */
-      202: {
+      200: {
         content: {
-          "application/json": components["schemas"]["ApplicationRead"];
+          "application/json": components["schemas"]["ContactRead"];
         };
       };
       /** @description Validation Error */
@@ -1184,10 +1186,10 @@ export interface operations {
       };
     };
   };
-  /** Delete Application */
-  delete_application_contacts__id___delete: {
+  /** Delete Contact By Id */
+  delete_contact_by_id_contacts__contact_id__delete: {
     parameters: {
-      path: {
+      query: {
         id: string;
       };
     };
@@ -1204,131 +1206,23 @@ export interface operations {
       };
     };
   };
-  /** Update Application */
-  update_application_contacts__id___patch: {
+  /** Update Contact By Id */
+  update_contact_by_id_contacts__contact_id__patch: {
     parameters: {
-      path: {
+      query: {
         id: string;
       };
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["ApplicationUpdate"];
+        "application/json": components["schemas"]["ContactUpdate"];
       };
     };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["ApplicationRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get Applications
-   * @description Get all applications for the current user.
-   */
-  get_applications_services__get: {
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ApplicationRead"][];
-        };
-      };
-    };
-  };
-  /** Create Application */
-  create_application_services__post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ApplicationCreate"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        content: {
-          "application/json": components["schemas"]["ApplicationRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get Application By Id
-   * @description Get an application by ID.
-   */
-  get_application_by_id_services__id___get: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      202: {
-        content: {
-          "application/json": components["schemas"]["ApplicationRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Delete Application */
-  delete_application_services__id___delete: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      204: {
-        content: never;
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Update Application */
-  update_application_services__id___patch: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ApplicationUpdate"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ApplicationRead"];
+          "application/json": components["schemas"]["ContactRead"];
         };
       };
       /** @description Validation Error */

@@ -4,7 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import UUID4
 from sqlalchemy import select
 
-from app.api.deps import AsyncSession, get_async_session, get_lead, models, schemas
+from app.api.deps import (
+    AsyncSession,
+    get_async_session,
+    get_lead,
+    get_pagination_params,
+    models,
+    schemas,
+)
 
 router: APIRouter = APIRouter()
 
@@ -37,11 +44,21 @@ async def read_lead(lead: schemas.LeadRead = Depends(get_lead)):
 
 
 @router.get("/", response_model=list[schemas.LeadRead])
-async def read_leads(db: AsyncSession = Depends(get_async_session)):
-    rows = await db.execute(select(models.Lead))
+async def read_leads(
+    db: AsyncSession = Depends(get_async_session),
+    pagination: schemas.Pagination = Depends(get_pagination_params),
+):
+    # Calculate offset
+    offset = (pagination.page - 1) * pagination.page_size
+
+    # Execute the paginated query
+    query = select(models.Lead).offset(offset).limit(pagination.page_size)
+    rows = await db.execute(query)
     result = rows.scalars().all()
+
     if not result:
         raise HTTPException(status_code=404, detail="No leads found")
+
     return result
 
 

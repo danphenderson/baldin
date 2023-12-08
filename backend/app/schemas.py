@@ -10,9 +10,8 @@ from pydantic import EmailStr, Field
 
 # TODO: Handle validation as it arrises.
 
-# Shared properties
 
-
+# Base Models
 class BaseModel(_BaseModel):
     class Config:
         from_attributes = True
@@ -24,6 +23,7 @@ class BaseRead(BaseModel):
     updated_at: datetime = Field(description="The time the item was last updated")
 
 
+# Types and properties
 class ContentType(str, Enum):
     CUSTOM = "custom"
     GENERATED = "generated"
@@ -34,12 +34,15 @@ class ETLStatusType(str, Enum):
     PENDING = "pending"
     RUNNING = "running"
     SUCCESS = "success"
-    FAILED = "failed"
+    FAILED = "failure"
+
+
+class Pagination(BaseModel):
+    page: int = Field(1, ge=1, description="The page number")
+    page_size: int = Field(10, ge=1, description="The number of items per page")
 
 
 # Model CRUD Schemas
-
-
 class BaseETLEvent(BaseModel):
     job_name: str | None = Field(None, description="Name of the ETL job")
     status: ETLStatusType | None = Field(None, description="Status of the ETL job")

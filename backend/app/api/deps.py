@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 import aiofiles
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Query
 from pydantic import UUID4
 from sqlalchemy.future import select
 
@@ -18,6 +18,13 @@ from app.core.security import (  # noqa
     get_current_user,
 )
 from app.logging import console_log
+
+
+async def get_pagination_params(
+    page: int = Query(1, ge=1, description="Page number starting from 1"),
+    page_size: int = Query(10, ge=1, description="Number of records per page"),
+) -> schemas.Pagination:
+    return schemas.Pagination(page=page, page_size=page_size)
 
 
 async def get_lead(

@@ -1,11 +1,18 @@
-# app/api/applications.py
+# app/api/routes/user/applications.py
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import UUID4
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from app import models, schemas
-from app.api.deps import get_async_session, get_current_user
+from app.api.deps import (
+    AsyncSession,
+    get_application,
+    get_async_session,
+    get_current_user,
+    models,
+    schemas,
+)
 
 router: APIRouter = APIRouter()
 
@@ -13,8 +20,8 @@ router: APIRouter = APIRouter()
 @router.post("/", status_code=201, response_model=schemas.ApplicationRead)
 async def create_application(
     payload: schemas.ApplicationCreate,
-    db=Depends(get_async_session),
-    user=Depends(get_current_user),
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     # Check if application already exists for the given lead_id and user
     existing_application = await db.execute(
@@ -23,7 +30,7 @@ async def create_application(
             models.Application.user_id == user.id,
         )
     )
-    existing_application = existing_application.scalars().first()
+    existing_application = existing_application.scalars().first()  # type: ignore
 
     if existing_application:
         # Application for this lead already exists for the user, return an error response
@@ -47,14 +54,15 @@ async def create_application(
         )
         .where(models.Application.id == application.id)
     )
-    application = result.scalars().first()
+    application = result.scalars().first()  # type: ignore
 
     return application
 
 
 @router.get("/", response_model=list[schemas.ApplicationRead])
 async def get_applications(
-    db=Depends(get_async_session), user=Depends(get_current_user)
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Get all applications for the current user."""
     result = await db.execute(
@@ -76,13 +84,10 @@ async def get_applications(
 
 @router.patch("/{id}", status_code=200, response_model=schemas.ApplicationRead)
 async def update_application(
-    id: UUID4, payload: schemas.ApplicationUpdate, db=Depends(get_async_session)
+    payload: schemas.ApplicationUpdate,
+    application: schemas.ApplicationRead = Depends(get_application),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    # Retrieve the existing application
-    application = await db.get(models.Application, id)
-
-    if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
 
     # Update the application's attributes
     for var, value in payload.dict(exclude_unset=True).items():
@@ -105,9 +110,45 @@ async def update_application(
 
 
 @router.delete("/{id}", status_code=204)
-async def delete_application(id: UUID4, db=Depends(get_async_session)):
-    # Retrieve the existing application
-    application = await db.get(models.Application, id)
+async def delete_application(
+    application: schemas.ApplicationRead, db: AsyncSession = Depends(get_async_session)
+):
     await db.delete(application)
     await db.commit()
     return {"message": "Application deleted successfully"}
+
+
+@router.get("/{id}/resumes", response_model=list[schemas.ResumeRead])
+async def get_application_resumes(id: UUID4, db=Depends(get_async_session)):
+    # Fetch resumes associated with the application
+    result = await db.execute(
+        select(models.Resume)
+        .join(models.ResumeXApplication)
+        .where(models.ResumeXApplication.application_id == id)
+    )
+    resumes = result.scalars().all()
+
+    if not resumes:
+        raise HTTPException(
+            status_code=404, detail="No resumes found for this application"
+        )
+
+    return resumes
+
+
+@router.get("/{id}/cover_letters", response_model=list[schemas.CoverLetterRead])
+async def get_application_cover_letters(id: UUID4, db=Depends(get_async_session)):
+    # Fetch cover letters associated with the application
+    result = await db.execute(
+        select(models.CoverLetter)
+        .join(models.CoverLetterXApplication)
+        .where(models.CoverLetterXApplication.application_id == id)
+    )
+    cover_letters = result.scalars().all()
+
+    if not cover_letters:
+        raise HTTPException(
+            status_code=404, detail="No cover letters found for this application"
+        )
+
+    return cover_letters

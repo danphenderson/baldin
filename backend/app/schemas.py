@@ -1,5 +1,3 @@
-# app/schemas.py
-
 from datetime import datetime
 
 from fastapi_users import schemas
@@ -18,31 +16,59 @@ class BaseRead(BaseModel):
     updated_at: datetime
 
 
-# Begin Schema definitions for model CRUD
+# Model CRUD Schemas
+class BaseETLEvent(BaseModel):
+    job_name: str | None = None
+    status: str | None = None
+    error_message: str | None = None
 
 
-class BaseUser(BaseModel):
-    first_name: str | None = None
-    last_name: str | None = None
-    phone_number: str | None = None
-    address_line_1: str | None = None
-    address_line_2: str | None = None
-    city: str | None = None
-    state: str | None = None
-    zip_code: str | None = None
-    country: str | None = None
-    skills: str | None = None  # FIXME: going to be a list of strings
-
-
-class UserRead(schemas.BaseUser[UUID4], BaseUser):  # type: ignore
+class ETLEventRead(BaseRead, BaseETLEvent):
     pass
 
 
-class UserCreate(schemas.BaseUserCreate, BaseUser):
+class ETLEventCreate(BaseETLEvent):
     pass
 
 
-class UserUpdate(schemas.BaseUserUpdate, BaseUser):
+class ETLEventUpdate(BaseETLEvent):
+    pass
+
+
+class BaseSkill(BaseModel):
+    name: str | None = None
+    category: str | None = None
+
+
+class SkillRead(BaseRead, BaseSkill):
+    pass
+
+
+class SkillCreate(BaseSkill):
+    pass
+
+
+class SkillUpdate(BaseSkill):
+    pass
+
+
+class BaseExperience(BaseModel):
+    title: str | None = None
+    company: str | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    description: str | None = None
+
+
+class ExperienceRead(BaseExperience, BaseRead):
+    pass
+
+
+class ExperienceCreate(BaseExperience):
+    pass
+
+
+class ExperienceUpdate(BaseExperience):
     pass
 
 
@@ -56,10 +82,11 @@ class BaseLead(BaseModel):
     industries: str | None = None
     employment_type: str | None = None
     seniority_level: str | None = None
+    education_level: str | None = None
     notes: str | None = None
 
 
-class LeadRead(BaseLead, BaseRead):
+class LeadRead(BaseRead, BaseLead):
     url: str
 
 
@@ -78,8 +105,8 @@ class BaseApplication(BaseModel):
     status: str | None = None
 
 
-class ApplicationRead(BaseApplication, BaseRead):
-    lead: LeadRead | None = None
+class ApplicationRead(BaseRead, BaseApplication):
+    lead_id: UUID4
 
 
 class ApplicationCreate(BaseApplication):
@@ -88,23 +115,6 @@ class ApplicationCreate(BaseApplication):
 
 class ApplicationUpdate(BaseApplication):
     pass
-
-
-class BaseETLEvent(BaseModel):
-    job_name: str | None = None
-    status: str | None = None
-
-
-class ETLEventRead(BaseETLEvent, BaseRead):
-    pass
-
-
-class ETLEventCreate(BaseETLEvent):
-    pass
-
-
-class ETLEventUpdate(BaseETLEvent):
-    id: UUID4
 
 
 class BaseContact(BaseModel):
@@ -116,34 +126,74 @@ class BaseContact(BaseModel):
     notes: str | None = None
 
 
-class ContactRead(BaseContact, BaseRead):
+class ContactRead(BaseRead, BaseContact):
     pass
 
 
 class ContactCreate(BaseContact):
-    user_id: UUID4
+    pass
 
 
 class ContactUpdate(BaseContact):
     pass
 
 
-class BaseChatCompletion(BaseModel):
+class BaseResume(BaseModel):
     name: str | None = None
-    description: str | None = None
-    prompt: str | None = None
+    content: str | None = None
+    content_type: str | None = None
 
 
-class ChatCompletionCreate(BaseChatCompletion):
+class ResumeRead(BaseRead, BaseResume):
     pass
 
 
-class ChatCompletionRead(BaseChatCompletion, BaseRead):
-    completion: str
-
-
-class ChatCompletionUpdate(BaseChatCompletion):
+class ResumeCreate(BaseResume):
     pass
 
 
-# End Schema definitions for model CRUD
+class ResumeUpdate(BaseResume):
+    pass
+
+
+class BaseCoverLetter(BaseModel):
+    name: str | None = None
+    content: str | None = None
+    content_type: str | None = None
+
+
+class CoverLetterRead(BaseRead, BaseCoverLetter):
+    pass
+
+
+class CoverLetterCreate(BaseCoverLetter):
+    pass
+
+
+class CoverLetterUpdate(BaseCoverLetter):
+    pass
+
+
+class BaseUser(BaseModel):
+    first_name: str | None = None
+    last_name: str | None = None
+    phone_number: str | None = None
+    address_line_1: str | None = None
+    address_line_2: str | None = None
+    city: str | None = None
+    state: str | None = None
+    zip_code: str | None = None
+    country: str | None = None
+    time_zone: str | None = None
+
+
+class UserRead(schemas.BaseUser[UUID4], BaseUser):  # type: ignore
+    pass
+
+
+class UserCreate(schemas.BaseUserCreate, BaseUser):
+    pass
+
+
+class UserUpdate(schemas.BaseUserUpdate, BaseUser):
+    pass

@@ -22,7 +22,7 @@ interface UserProviderProps {
 
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserRead | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem("danhenderson_token"));
+  const [token, setToken] = useState<string | null>(localStorage.getItem("baldin_token"));
 
 
   useEffect(() => {

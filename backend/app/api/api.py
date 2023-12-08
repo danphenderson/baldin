@@ -1,20 +1,18 @@
 # app/api/api.py
 
-"""
-Users and auth routers 'for free' from FastAPI Users.
-https://fastapi-users.github.io/fastapi-users/configuration/routers/
-
-You can include more of them + oauth login endpoints.
-
-fastapi_users in defined in deps, because it also
-includes useful dependencies.
-"""
 from fastapi import APIRouter
 
-from app.api.deps import fastapi_users
-from app.api.routes import applications, contacts, etl, leads, services
-from app.core import security
-from app.schemas import UserCreate, UserRead, UserUpdate
+from app.api.deps import fastapi_users, schemas, security
+from app.api.routes import (
+    contacts,
+    cover_letters,
+    etl,
+    experiences,
+    leads,
+    resumes,
+    services,
+    skills,
+)
 
 api_router: APIRouter = APIRouter()
 
@@ -24,7 +22,7 @@ api_router.include_router(
     tags=["auth"],
 )
 api_router.include_router(
-    fastapi_users.get_register_router(UserRead, UserCreate),
+    fastapi_users.get_register_router(schemas.UserRead, schemas.UserCreate),
     prefix="/auth",
     tags=["auth"],
 )
@@ -34,12 +32,12 @@ api_router.include_router(
     tags=["auth"],
 )
 api_router.include_router(
-    fastapi_users.get_verify_router(UserRead),
+    fastapi_users.get_verify_router(schemas.UserRead),
     prefix="/auth",
     tags=["auth"],
 )
 api_router.include_router(
-    fastapi_users.get_users_router(UserRead, UserUpdate),
+    fastapi_users.get_users_router(schemas.UserRead, schemas.UserUpdate),
     prefix="/users",
     tags=["users"],
 )
@@ -54,9 +52,9 @@ api_router.include_router(
     tags=["etl"],
 )
 api_router.include_router(
-    applications.router,
-    prefix="/applications",
-    tags=["applications"],
+    services.router,
+    prefix="/services",
+    tags=["services"],
 )
 api_router.include_router(
     contacts.router,
@@ -64,7 +62,22 @@ api_router.include_router(
     tags=["contacts"],
 )
 api_router.include_router(
-    services.router,
-    prefix="/services",
-    tags=["services"],
+    experiences.router,
+    prefix="/experiences",
+    tags=["experiences"],
+)
+api_router.include_router(
+    skills.router,
+    prefix="/skills",
+    tags=["skills"],
+)
+api_router.include_router(
+    cover_letters.router,
+    prefix="/cover_letters",
+    tags=["cover_letters"],
+)
+api_router.include_router(
+    resumes.router,
+    prefix="/resumes",
+    tags=["resumes"],
 )

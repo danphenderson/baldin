@@ -14,6 +14,7 @@ from app.api.deps import (
 
 router: APIRouter = APIRouter()
 
+
 @router.get("/", response_model=list[schemas.ResumeRead])
 async def get_current_user_resumes(
     user: schemas.UserRead = Depends(get_current_user),
@@ -29,6 +30,7 @@ async def get_current_user_resumes(
         )
     return resumes
 
+
 @router.post("/", status_code=201, response_model=schemas.ResumeRead)
 async def create_user_resume(
     payload: schemas.ResumeCreate,
@@ -40,6 +42,7 @@ async def create_user_resume(
     await db.commit()
     await db.refresh(resume)
     return resume
+
 
 @router.get("/{resume_id}", response_model=schemas.ResumeRead)
 async def get_user_resume(
@@ -70,6 +73,3 @@ async def delete_user_resume(
     await db.delete(resume)
     await db.commit()
     return None
-
-
-

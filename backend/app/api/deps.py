@@ -190,7 +190,6 @@ async def execute_leads_etl(etl_event_id: UUID4):
             raise e
 
 
-
 def _convert_lead_public_assets():
     # Load JSON data from ./public/leads/* and insert into the database
     # Specify the directory path containing JSON files

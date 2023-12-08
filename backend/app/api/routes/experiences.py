@@ -7,13 +7,14 @@ from sqlalchemy import select
 from app.api.deps import (
     AsyncSession,
     get_async_session,
-    get_experience,
     get_current_user,
+    get_experience,
     models,
     schemas,
 )
 
 router: APIRouter = APIRouter()
+
 
 @router.get("/", response_model=list[schemas.ExperienceRead])
 async def read_current_user_experiences(
@@ -30,6 +31,7 @@ async def read_current_user_experiences(
         )
     return experiences
 
+
 @router.post("/", status_code=201, response_model=schemas.ExperienceRead)
 async def create_user_experience(
     payload: schemas.ExperienceCreate,
@@ -42,11 +44,13 @@ async def create_user_experience(
     await db.refresh(experience)
     return experience
 
+
 @router.get("/{experience_id}", response_model=schemas.ExperienceRead)
 async def read_user_experience(
     experience: schemas.ExperienceRead = Depends(get_experience),
 ):
     return experience
+
 
 @router.put("/{experience_id}", response_model=schemas.ExperienceRead)
 async def update_user_experience(
@@ -61,6 +65,7 @@ async def update_user_experience(
     await db.refresh(experience)
     return experience
 
+
 @router.delete("/{experience_id}", status_code=204)
 async def delete_user_experience(
     experience: schemas.ExperienceRead = Depends(get_experience),
@@ -69,4 +74,3 @@ async def delete_user_experience(
     await db.delete(experience)
     await db.commit()
     return None
-

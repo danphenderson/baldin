@@ -4,27 +4,20 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import UUID4
 from sqlalchemy import select
 
-from app.api.deps import (
-    AsyncSession,
-    get_async_session,
-    get_lead,
-    models,
-    schemas,
-)
+from app.api.deps import AsyncSession, get_async_session, get_lead, models, schemas
 
 router: APIRouter = APIRouter()
 
 
 @router.post("/", status_code=201, response_model=UUID4)
 async def create_lead(
-    payload: schemas.LeadCreate,
-    db: AsyncSession = Depends(get_async_session)
+    payload: schemas.LeadCreate, db: AsyncSession = Depends(get_async_session)
 ):
     # Check if a lead with the same URL already exists
     existing_lead = await db.execute(
         select(models.Lead).where(models.Lead.url == payload.url)
     )
-    existing_lead = existing_lead.scalars().first() # type: ignore
+    existing_lead = existing_lead.scalars().first()  # type: ignore
 
     if existing_lead:
         # Lead with the same URL already exists, return an error response
@@ -39,16 +32,12 @@ async def create_lead(
 
 
 @router.get("/{id}", status_code=202, response_model=schemas.LeadRead)
-async def read_lead(
-    lead: schemas.LeadRead = Depends(get_lead)
-):
+async def read_lead(lead: schemas.LeadRead = Depends(get_lead)):
     return lead
 
 
 @router.get("/", response_model=list[schemas.LeadRead])
-async def read_leads(
-    db: AsyncSession = Depends(get_async_session)
-):
+async def read_leads(db: AsyncSession = Depends(get_async_session)):
     rows = await db.execute(select(models.Lead))
     result = rows.scalars().all()
     if not result:
@@ -60,7 +49,7 @@ async def read_leads(
 async def update_lead(
     id: UUID4,
     payload: schemas.LeadUpdate,
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     # Retrieve the existing lead
     result = await db.execute(select(models.Lead).where(models.Lead.id == id))
@@ -79,10 +68,7 @@ async def update_lead(
 
 
 @router.delete("/{id}", status_code=202, response_model=dict)
-async def delete_lead(
-    id: UUID4,
-    db: AsyncSession = Depends(get_async_session)
-):
+async def delete_lead(id: UUID4, db: AsyncSession = Depends(get_async_session)):
     lead = await db.get(models.Lead, id)
     await db.delete(lead)
     await db.commit()

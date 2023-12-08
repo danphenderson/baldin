@@ -4,12 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
 from app.api.deps import (
+    AsyncSession,
     get_async_session,
     get_contact,
     get_current_user,
     models,
     schemas,
-    AsyncSession,
 )
 
 router: APIRouter = APIRouter()
@@ -18,7 +18,7 @@ router: APIRouter = APIRouter()
 @router.get("/", response_model=list[schemas.ContactRead])
 async def get_current_user_contacts(
     user: schemas.UserRead = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     result = await db.execute(
         select(models.Contact).where(models.Contact.user_id == user.id)
@@ -35,7 +35,7 @@ async def get_current_user_contacts(
 async def create_user_contact(
     payload: schemas.ContactCreate,
     user: schemas.UserRead = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     contact = models.Contact(**payload.dict(), user_id=user.id)
     db.add(contact)
@@ -55,7 +55,7 @@ async def get_user_contact(
 async def update_user_contact(
     payload: schemas.ContactUpdate,
     contact: schemas.ContactRead = Depends(get_contact),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     contact_data = payload.dict(exclude_unset=True)
     for field in contact_data:
@@ -68,7 +68,7 @@ async def update_user_contact(
 @router.delete("/{contact_id}", status_code=204)
 async def delete_user_contact(
     contact: schemas.ContactRead = Depends(get_contact),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     await db.delete(contact)
     await db.commit()

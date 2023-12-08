@@ -4,12 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
 from app.api.deps import (
+    AsyncSession,
     get_async_session,
     get_cover_letter,
     get_current_user,
     models,
     schemas,
-    AsyncSession,
 )
 
 router: APIRouter = APIRouter()
@@ -23,7 +23,7 @@ async def get_current_user_cover_letters(
     cover_letters = await db.execute(
         select(models.CoverLetter).filter(models.CoverLetter.user_id == user.id)
     )
-    cover_letters = cover_letters.scalars().all() # type: ignore
+    cover_letters = cover_letters.scalars().all()  # type: ignore
 
     if not cover_letters:
         raise HTTPException(
@@ -31,6 +31,7 @@ async def get_current_user_cover_letters(
         )
 
     return cover_letters
+
 
 @router.get("/{cover_letter_id}", response_model=schemas.CoverLetterRead)
 async def get_cover_letter_by_id(

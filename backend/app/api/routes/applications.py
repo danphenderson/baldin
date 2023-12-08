@@ -5,16 +5,14 @@ from pydantic import UUID4
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-
 from app.api.deps import (
-    get_async_session,
+    AsyncSession,
     get_application,
+    get_async_session,
     get_current_user,
     models,
     schemas,
-    AsyncSession,
 )
-
 
 router: APIRouter = APIRouter()
 
@@ -32,7 +30,7 @@ async def create_application(
             models.Application.user_id == user.id,
         )
     )
-    existing_application = existing_application.scalars().first() # type: ignore
+    existing_application = existing_application.scalars().first()  # type: ignore
 
     if existing_application:
         # Application for this lead already exists for the user, return an error response
@@ -56,7 +54,7 @@ async def create_application(
         )
         .where(models.Application.id == application.id)
     )
-    application = result.scalars().first() # type: ignore
+    application = result.scalars().first()  # type: ignore
 
     return application
 
@@ -113,8 +111,7 @@ async def update_application(
 
 @router.delete("/{id}", status_code=204)
 async def delete_application(
-    application: schemas.ApplicationRead,
-    db: AsyncSession = Depends(get_async_session)
+    application: schemas.ApplicationRead, db: AsyncSession = Depends(get_async_session)
 ):
     await db.delete(application)
     await db.commit()

@@ -8,7 +8,6 @@ fastapi = "*"
 uvicorn = "*"
 asyncpg = "*"
 fastapi-users = {extras = ["sqlalchemy"], version = "*"}
-pydantic = "*"
 pytest = "*"
 httpx = "*"
 selenium = "*"
@@ -26,6 +25,7 @@ python-dotenv = "*"
 toml = "*"
 sqlalchemy = "*"
 pydantic-settings = "*"
+pydantic = {extras = ["email"], version = "*"}
 
 [dev-packages]
 ipython = "*"

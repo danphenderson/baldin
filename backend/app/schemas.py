@@ -1,8 +1,16 @@
+# app/schemas.py
+
 from datetime import datetime
+from enum import Enum
 
 from fastapi_users import schemas
 from pydantic import UUID4
 from pydantic import BaseModel as _BaseModel
+from pydantic import EmailStr, Field
+
+# TODO: Handle validation as it arrises.
+
+# Shared properties
 
 
 class BaseModel(_BaseModel):
@@ -11,16 +19,31 @@ class BaseModel(_BaseModel):
 
 
 class BaseRead(BaseModel):
-    id: UUID4
-    created_at: datetime
-    updated_at: datetime
+    id: UUID4 = Field(description="The unique uuid4 record identifier.")
+    created_at: datetime = Field(description="The time the item was created")
+    updated_at: datetime = Field(description="The time the item was last updated")
+
+
+class ContentType(str, Enum):
+    CUSTOM = "custom"
+    GENERATED = "generated"
+    TEMPLATE = "template"
+
+
+class ETLStatusType(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failed"
 
 
 # Model CRUD Schemas
+
+
 class BaseETLEvent(BaseModel):
-    job_name: str | None = None
-    status: str | None = None
-    error_message: str | None = None
+    job_name: str | None = Field(None, description="Name of the ETL job")
+    status: ETLStatusType | None = Field(None, description="Status of the ETL job")
+    error_message: str | None = Field(None, description="Error message, if any")
 
 
 class ETLEventRead(BaseRead, BaseETLEvent):
@@ -36,8 +59,8 @@ class ETLEventUpdate(BaseETLEvent):
 
 
 class BaseSkill(BaseModel):
-    name: str | None = None
-    category: str | None = None
+    name: str | None = Field(None, description="Name of the skill")
+    category: str | None = Field(None, description="Category of the skill")
 
 
 class SkillRead(BaseRead, BaseSkill):
@@ -53,11 +76,13 @@ class SkillUpdate(BaseSkill):
 
 
 class BaseExperience(BaseModel):
-    title: str | None = None
-    company: str | None = None
-    start_date: datetime | None = None
-    end_date: datetime | None = None
-    description: str | None = None
+    title: str | None = Field(None, description="Job title")
+    company: str | None = Field(None, description="Company name")
+    start_date: datetime | None = Field(
+        None, description="Start date of the experience"
+    )
+    end_date: datetime | None = Field(None, description="End date of the experience")
+    description: str | None = Field(None, description="Description of the experience")
 
 
 class ExperienceRead(BaseExperience, BaseRead):
@@ -73,17 +98,17 @@ class ExperienceUpdate(BaseExperience):
 
 
 class BaseLead(BaseModel):
-    title: str | None = None
-    company: str | None = None
-    description: str | None = None
-    location: str | None = None
-    salary: str | None = None
-    job_function: str | None = None
-    industries: str | None = None
-    employment_type: str | None = None
-    seniority_level: str | None = None
-    education_level: str | None = None
-    notes: str | None = None
+    title: str | None = Field(None, description="Job title")
+    company: str | None = Field(None, description="Company name")
+    description: str | None = Field(None, description="Job description")
+    location: str | None = Field(None, description="Job location")
+    salary: str | None = Field(None, description="Salary range")
+    job_function: str | None = Field(None, description="Job function")
+    industries: str | None = Field(None, description="Industries involved")
+    employment_type: str | None = Field(None, description="Type of employment")
+    seniority_level: str | None = Field(None, description="Seniority level")
+    education_level: str | None = Field(None, description="Required education level")
+    notes: str | None = Field(None, description="Additional notes")
 
 
 class LeadRead(BaseRead, BaseLead):
@@ -118,12 +143,12 @@ class ApplicationUpdate(BaseApplication):
 
 
 class BaseContact(BaseModel):
-    first_name: str | None = None
-    last_name: str | None = None
-    phone_number: str | None = None
-    email: str | None = None
-    time_zone: str | None = None
-    notes: str | None = None
+    first_name: str | None = Field(None, description="First name")
+    last_name: str | None = Field(None, description="Last name")
+    phone_number: str | None = Field(None, description="Phone number")
+    email: EmailStr | None = Field(None, description="Email address")
+    time_zone: str | None = Field(None, description="Time zone")
+    notes: str | None = Field(None, description="Additional notes")
 
 
 class ContactRead(BaseRead, BaseContact):
@@ -139,9 +164,9 @@ class ContactUpdate(BaseContact):
 
 
 class BaseResume(BaseModel):
-    name: str | None = None
-    content: str | None = None
-    content_type: str | None = None
+    name: str | None = Field(None, description="Resume name")
+    content: str | None = Field(None, description="Resume content")
+    content_type: ContentType | None = Field(None, description="Resume content type")
 
 
 class ResumeRead(BaseRead, BaseResume):
@@ -157,9 +182,11 @@ class ResumeUpdate(BaseResume):
 
 
 class BaseCoverLetter(BaseModel):
-    name: str | None = None
-    content: str | None = None
-    content_type: str | None = None
+    name: str | None = Field(None, description="Cover letter name")
+    content: str | None = Field(None, description="Cover letter content")
+    content_type: ContentType | None = Field(
+        None, description="Cover letter content type"
+    )
 
 
 class CoverLetterRead(BaseRead, BaseCoverLetter):
@@ -175,16 +202,16 @@ class CoverLetterUpdate(BaseCoverLetter):
 
 
 class BaseUser(BaseModel):
-    first_name: str | None = None
-    last_name: str | None = None
-    phone_number: str | None = None
-    address_line_1: str | None = None
-    address_line_2: str | None = None
-    city: str | None = None
-    state: str | None = None
-    zip_code: str | None = None
-    country: str | None = None
-    time_zone: str | None = None
+    first_name: str | None = Field(None, description="First name")
+    last_name: str | None = Field(None, description="Last name")
+    phone_number: str | None = Field(None, description="Phone number")
+    address_line_1: str | None = Field(None, description="Address line 1")
+    address_line_2: str | None = Field(None, description="Address line 2")
+    city: str | None = Field(None, description="City")
+    state: str | None = Field(None, description="State")
+    zip_code: str | None = Field(None, description="Zip code")
+    country: str | None = Field(None, description="Country")
+    time_zone: str | None = Field(None, description="Time zone")
 
 
 class UserRead(schemas.BaseUser[UUID4], BaseUser):  # type: ignore

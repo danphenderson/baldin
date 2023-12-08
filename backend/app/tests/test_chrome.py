@@ -18,6 +18,7 @@ def mock_webdriver():
     return MagicMock()
 
 
+@pytest.mark.asyncio
 async def test_async_driver_get(driver, mock_webdriver):
     mock_webdriver.get.return_value = None
     driver.browser = mock_webdriver
@@ -25,6 +26,7 @@ async def test_async_driver_get(driver, mock_webdriver):
     mock_webdriver.get.assert_called_with("https://www.example.com")
 
 
+@pytest.mark.asyncio
 async def test_async_driver_page_soup(driver, mock_webdriver):
     mock_webdriver.page_source = "<html><body><p>Example</p></body></html>"
     driver._driver = mock_webdriver

@@ -430,7 +430,7 @@ export interface components {
      * ETLStatusType
      * @enum {string}
      */
-    ETLStatusType: "pending" | "running" | "success" | "failed";
+    ETLStatusType: "pending" | "running" | "success" | "failure";
     /** ErrorModel */
     ErrorModel: {
       /** Detail */
@@ -1431,11 +1431,25 @@ export interface operations {
   };
   /** Read Leads */
   read_leads_leads__get: {
+    parameters: {
+      query?: {
+        /** @description Page number starting from 1 */
+        page?: number;
+        /** @description Number of records per page */
+        page_size?: number;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
           "application/json": components["schemas"]["LeadRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

@@ -1,14 +1,10 @@
-from typing import AsyncGenerator, Callable
-
 import pytest
 from fastapi_users.password import PasswordHelper
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import conf
-from app.core.db import async_engine
-from app.core.db import async_session_maker as async_session
-from app.core.db import drop_and_create_db_and_tables
+from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
 from app.main import app
 from app.models import (
     Application,
@@ -32,29 +28,20 @@ superuser_user_hash = password_helper.hash("yennefer")
 
 
 @pytest.fixture(scope="session")
-async def test_client() -> AsyncGenerator[AsyncClient, None]:
+async def test_client():
     async with AsyncClient(app=app, base_url="http://doesnt.matter") as client:
         yield client
 
 
 @pytest.fixture(scope="session")
-async def test_db_setup_sessionmaker() -> Callable[
-    ..., AsyncGenerator[AsyncSession, None]
-]:
+async def session():
     assert conf.settings.ENVIRONMENT == "PYTEST"
     assert str(async_engine.url) == conf.settings.TEST_SQLALCHEMY_DATABASE_URI
 
     await drop_and_create_db_and_tables()
 
-    return async_session
-
-
-@pytest.fixture
-async def session(
-    test_db_setup_sessionmaker: Callable[..., AsyncGenerator[AsyncSession, None]]
-) -> AsyncGenerator[AsyncSession, None]:
-    async with test_db_setup_sessionmaker() as session:
-        yield session
+    async with session_context() as session:
+        return session
 
 
 @pytest.fixture

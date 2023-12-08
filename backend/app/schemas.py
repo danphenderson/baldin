@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
+from typing import Sequence
 
 from fastapi_users import schemas
 from pydantic import UUID4
@@ -40,6 +41,7 @@ class ETLStatusType(str, Enum):
 class Pagination(BaseModel):
     page: int = Field(1, ge=1, description="The page number")
     page_size: int = Field(10, ge=1, description="The number of items per page")
+    request_count: bool = Field(False, description="Request a query for total count")
 
 
 # Model CRUD Schemas
@@ -116,6 +118,14 @@ class BaseLead(BaseModel):
 
 class LeadRead(BaseRead, BaseLead):
     url: str
+
+
+class LeadsPaginatedRead(BaseModel):
+    leads: Sequence[LeadRead]
+    pagination: Pagination
+    total_count: int | None = Field(
+        ..., description="Total number of leads, if pagination requested"
+    )
 
 
 class LeadCreate(BaseLead):

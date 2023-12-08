@@ -1,29 +1,30 @@
-# app/api/etl.py
+# app/api/routes/etl.py
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import UUID4
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import models, schemas
-from app.api.deps import execute_leads_etl, get_async_session, get_etl_event
+from app.api.deps import (
+    AsyncSession,
+    get_async_session,
+    get_etl_event,
+    models,
+    schemas,
+)
 
 router: APIRouter = APIRouter()
 
-
 @router.get("/events/{id}", status_code=202, response_model=schemas.ETLEventRead)
-async def read_etl_event(id: UUID4, etl_event=Depends(get_etl_event)):
-    """
-    Read an ETL event.
-    """
+async def read_etl_event(
+    etl_event: schemas.ETLEventRead = Depends(get_etl_event)
+):
     return etl_event
 
 
 @router.get("/events", response_model=list[schemas.ETLEventRead])
-async def read_etl_events(db=Depends(get_async_session)):
-    """
-    Read all ETL events.
-    """
+async def read_etl_events(
+    db: AsyncSession = Depends(get_async_session)
+):
     rows = await db.execute(select(models.ETLEvent))
     result = rows.scalars().all()
     if not result:
@@ -31,12 +32,9 @@ async def read_etl_events(db=Depends(get_async_session)):
     return result
 
 
-# Begin Region: ETL routes
-#   Currently, the only ETL route loads leads from PUBLIC_ASSETS_DIR
-
-
+# TODO: this will be a service.
 @router.post("/leads", status_code=202, response_model=UUID4)
-async def leads_etl_event(
+async def load_leads_from_data_lake(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),
 ) -> UUID4:
@@ -52,5 +50,3 @@ async def leads_etl_event(
 
     return etl_event.id  # type: ignore
 
-
-# End Region: ETL routes

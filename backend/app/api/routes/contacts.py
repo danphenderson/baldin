@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+# app/api/routes/contacts.py
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
 from app.api.deps import (
@@ -7,6 +9,7 @@ from app.api.deps import (
     get_current_user,
     models,
     schemas,
+    AsyncSession,
 )
 
 router: APIRouter = APIRouter()
@@ -14,12 +17,17 @@ router: APIRouter = APIRouter()
 
 @router.get("/", response_model=list[schemas.ContactRead])
 async def get_current_user_contacts(
-    user: schemas.UserRead = Depends(get_current_user), db=Depends(get_async_session)
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session)
 ):
     result = await db.execute(
         select(models.Contact).where(models.Contact.user_id == user.id)
     )
     contacts = result.scalars().all()
+    if not contacts:
+        raise HTTPException(
+            status_code=404, detail="No contacts found for the current user"
+        )
     return contacts
 
 
@@ -27,7 +35,7 @@ async def get_current_user_contacts(
 async def create_user_contact(
     payload: schemas.ContactCreate,
     user: schemas.UserRead = Depends(get_current_user),
-    db=Depends(get_async_session),
+    db: AsyncSession = Depends(get_async_session)
 ):
     contact = models.Contact(**payload.dict(), user_id=user.id)
     db.add(contact)
@@ -39,27 +47,16 @@ async def create_user_contact(
 @router.get("/{contact_id}", response_model=schemas.ContactRead)
 async def get_user_contact(
     contact: schemas.ContactRead = Depends(get_contact),
-    user: schemas.UserRead = Depends(get_current_user),
 ):
-    if contact.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Operation not permitted"
-        )
     return contact
 
 
 @router.put("/{contact_id}", response_model=schemas.ContactRead)
 async def update_user_contact(
     payload: schemas.ContactUpdate,
-    user: schemas.UserRead = Depends(get_current_user),
     contact: schemas.ContactRead = Depends(get_contact),
-    db=Depends(get_async_session),
+    db: AsyncSession = Depends(get_async_session)
 ):
-    if contact.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Operation not permitted"
-        )
-
     contact_data = payload.dict(exclude_unset=True)
     for field in contact_data:
         setattr(contact, field, contact_data[field])
@@ -71,13 +68,8 @@ async def update_user_contact(
 @router.delete("/{contact_id}", status_code=204)
 async def delete_user_contact(
     contact: schemas.ContactRead = Depends(get_contact),
-    user: schemas.UserRead = Depends(get_current_user),
-    db=Depends(get_async_session),
+    db: AsyncSession = Depends(get_async_session)
 ):
-    if contact.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Operation not permitted"
-        )
     await db.delete(contact)
     await db.commit()
     return None

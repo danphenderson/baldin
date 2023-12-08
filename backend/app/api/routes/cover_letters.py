@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import UUID4
+# app/api/routes/cover_letters.py
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
 from app.api.deps import (
@@ -8,6 +9,7 @@ from app.api.deps import (
     get_current_user,
     models,
     schemas,
+    AsyncSession,
 )
 
 router: APIRouter = APIRouter()
@@ -16,13 +18,19 @@ router: APIRouter = APIRouter()
 @router.get("/", response_model=list[schemas.CoverLetterRead])
 async def get_current_user_cover_letters(
     user: schemas.UserRead = Depends(get_current_user),
-    db=Depends(get_async_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     cover_letters = await db.execute(
         select(models.CoverLetter).filter(models.CoverLetter.user_id == user.id)
     )
-    return cover_letters.scalars().all()
+    cover_letters = cover_letters.scalars().all() # type: ignore
 
+    if not cover_letters:
+        raise HTTPException(
+            status_code=404, detail="No cover letters found for the current user"
+        )
+
+    return cover_letters
 
 @router.get("/{cover_letter_id}", response_model=schemas.CoverLetterRead)
 async def get_cover_letter_by_id(
@@ -35,7 +43,7 @@ async def get_cover_letter_by_id(
 async def create_user_cover_letter(
     payload: schemas.CoverLetterCreate,
     user: schemas.UserRead = Depends(get_current_user),
-    db=Depends(get_async_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     cover_letter = models.CoverLetter(**payload.dict(), user_id=user.id)
     db.add(cover_letter)
@@ -48,7 +56,7 @@ async def create_user_cover_letter(
 async def update_user_cover_letter(
     payload: schemas.CoverLetterUpdate,
     cover_letter: schemas.CoverLetterRead = Depends(get_cover_letter),
-    db=Depends(get_async_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     for field, value in payload:
         setattr(cover_letter, field, value)

@@ -5,15 +5,16 @@ Main FastAPI app instance declaration
 """
 
 
+import tracemalloc
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core import conf
+
 from app.api.api import api_router
-from app.logging import console_log as log
+from app.core import conf
 from app.core.db import create_db_and_tables
 from app.core.security import create_default_superuser
-import tracemalloc
+from app.logging import console_log as log
 
 app = FastAPI(
     title=conf.settings.PROJECT_NAME,
@@ -36,24 +37,25 @@ if conf.settings.BACKEND_CORS_ORIGINS:
 
 app.include_router(api_router)
 
+
 @app.on_event("startup")
 async def startup_event():
     log.info("Starting up...")
     await create_db_and_tables()
     await create_default_superuser()
     tracemalloc.start()
-    
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     log.info("Shutting down...")
     tracemalloc.stop()
 
+
 @app.get("/ping")
 async def pong():
     log.info("Pong!")
     return {"message": "success!"}
-
 
 
 @app.get("/")

@@ -5,8 +5,8 @@ from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from pydantic.networks import EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import schemas
-from app.models import UserTable
+from app.models import User
+from app.schemas import UserRead
 
 
 def random_lower_string(length: int = 32) -> str:
@@ -23,14 +23,14 @@ async def create_db_user(
     session: AsyncSession,
     is_superuser: bool = False,
     is_verified: bool = True,
-) -> schemas.UserDB:
+) -> UserRead:
 
-    new_user = await SQLAlchemyUserDatabase(schemas.UserDB, session, UserTable).create(
-        schemas.UserDB(
-            email=EmailStr(email),
-            is_superuser=is_superuser,
-            is_verified=is_verified,
-            hashed_password=hashed_password,
-        )
+    new_user = await SQLAlchemyUserDatabase(session, User).create(
+        {
+            "email": email,
+            "hashed_password": hashed_password,
+            "is_superuser": is_superuser,
+            "is_verified": is_verified,
+        }
     )
-    return new_user
+    return UserRead(**new_user.__dict__)

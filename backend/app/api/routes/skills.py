@@ -1,20 +1,45 @@
-# app/api/skills.py
+# app/api/routes/skills.py
+
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import UUID4
 from sqlalchemy import select
 
-from app import models, schemas
-from app.api.deps import get_async_session
+from app.api.deps import (
+    AsyncSession,
+    get_async_session,
+    get_current_user,
+    get_skill,
+    models,
+    schemas,
+)
 
 router: APIRouter = APIRouter()
 
 
-@router.post("/", status_code=201, response_model=schemas.SkillRead)
-async def create_skill(
-    payload: schemas.SkillCreate,
-    db=Depends(get_async_session),
+@router.get("/", response_model=list[schemas.SkillRead])
+async def get_current_user_skills(
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    skill = models.Skill(**payload.dict())
+    result = await db.execute(
+        select(models.Skill).where(models.Skill.user_id == user.id)
+    )
+    skills = result.scalars().all()
+
+    if not skills:
+        raise HTTPException(
+            status_code=404, detail="No applications found for the current user"
+        )
+
+    return skills
+
+
+@router.post("/", status_code=201, response_model=schemas.SkillRead)
+async def create_user_skill(
+    payload: schemas.SkillCreate,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    skill = models.Skill(**payload.dict(), user_id=user.id)
     db.add(skill)
     await db.commit()
     await db.refresh(skill)
@@ -22,36 +47,18 @@ async def create_skill(
 
 
 @router.get("/{skill_id}", response_model=schemas.SkillRead)
-async def get_skill(
-    skill_id: UUID4,
-    db=Depends(get_async_session),
+async def get_user_skill(
+    skill: schemas.SkillRead = Depends(get_skill),
 ):
-    result = await db.execute(select(models.Skill).where(models.Skill.id == skill_id))
-    skill = result.scalars().first()
-    if not skill:
-        raise HTTPException(status_code=404, detail="Skill not found")
     return skill
 
 
-@router.get("/", response_model=list[schemas.SkillRead])
-async def get_skills(
-    db=Depends(get_async_session),
-):
-    result = await db.execute(select(models.Skill))
-    skills = result.scalars().all()
-    return skills
-
-
 @router.put("/{skill_id}", response_model=schemas.SkillRead)
-async def update_skill(
-    skill_id: UUID4,
+async def update_user_skill(
     payload: schemas.SkillUpdate,
-    db=Depends(get_async_session),
+    skill: schemas.SkillRead = Depends(get_skill),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    result = await db.execute(select(models.Skill).where(models.Skill.id == skill_id))
-    skill = result.scalars().first()
-    if not skill:
-        raise HTTPException(status_code=404, detail="Skill not found")
     skill_data = payload.dict(exclude_unset=True)
     for field in skill_data:
         setattr(skill, field, skill_data[field])
@@ -60,15 +67,11 @@ async def update_skill(
     return skill
 
 
-@router.delete("/{skill_id}", response_model=schemas.SkillRead)
-async def delete_skill(
-    skill_id: UUID4,
-    db=Depends(get_async_session),
+@router.delete("/{skill_id}", status_code=204, response_model=None)
+async def delete_user_skill(
+    skill: schemas.SkillRead = Depends(get_skill),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    result = await db.execute(select(models.Skill).where(models.Skill.id == skill_id))
-    skill = result.scalars().first()
-    if not skill:
-        raise HTTPException(status_code=404, detail="Skill not found")
     await db.delete(skill)
     await db.commit()
-    return skill
+    return None

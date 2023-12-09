@@ -2,9 +2,16 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import UUID4
-from sqlalchemy import select
+from sqlalchemy import func, select
 
-from app.api.deps import AsyncSession, get_async_session, get_lead, models, schemas
+from app.api.deps import (
+    AsyncSession,
+    get_async_session,
+    get_lead,
+    get_pagination_params,
+    models,
+    schemas,
+)
 
 router: APIRouter = APIRouter()
 
@@ -36,13 +43,39 @@ async def read_lead(lead: schemas.LeadRead = Depends(get_lead)):
     return lead
 
 
-@router.get("/", response_model=list[schemas.LeadRead])
-async def read_leads(db: AsyncSession = Depends(get_async_session)):
-    rows = await db.execute(select(models.Lead))
-    result = rows.scalars().all()
-    if not result:
+@router.get("/", response_model=schemas.LeadsPaginatedRead)
+async def read_leads(
+    db: AsyncSession = Depends(get_async_session),
+    pagination: schemas.Pagination = Depends(get_pagination_params),
+):
+    # Calculate offset
+    offset = (pagination.page - 1) * pagination.page_size
+
+    # Execute the paginated query
+    lead_query = select(models.Lead).offset(offset).limit(pagination.page_size)
+    leads = await db.execute(lead_query)
+
+    lead_list = leads.scalars().all()
+    # total_count = None
+
+    # # Get the total count
+    # if pagination.request_count:
+    #     total_count_query = select(func.count(models.Lead.id))
+    #     total_count_result = await db.execute(total_count_query)
+    #     total_count = total_count_result.scalar_one()
+    # HACK: This is a hack to get the total count
+    total_count_query = select(func.count(models.Lead.id))
+    total_count_result = await db.execute(total_count_query)
+    total_count = total_count_result.scalar_one()
+
+    if not lead_list:  # TODO: Should this be above the total_count check?
         raise HTTPException(status_code=404, detail="No leads found")
-    return result
+
+    return schemas.LeadsPaginatedRead(
+        leads=[schemas.LeadRead(**lead.__dict__) for lead in lead_list],
+        pagination=pagination,
+        total_count=total_count,
+    )
 
 
 @router.patch("/{id}", status_code=200, response_model=schemas.LeadRead)

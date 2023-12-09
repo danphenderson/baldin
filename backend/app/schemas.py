@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
+from typing import Sequence
 
 from fastapi_users import schemas
 from pydantic import UUID4
@@ -10,9 +11,8 @@ from pydantic import EmailStr, Field
 
 # TODO: Handle validation as it arrises.
 
-# Shared properties
 
-
+# Base Models
 class BaseModel(_BaseModel):
     class Config:
         from_attributes = True
@@ -24,6 +24,7 @@ class BaseRead(BaseModel):
     updated_at: datetime = Field(description="The time the item was last updated")
 
 
+# Types and properties
 class ContentType(str, Enum):
     CUSTOM = "custom"
     GENERATED = "generated"
@@ -34,12 +35,16 @@ class ETLStatusType(str, Enum):
     PENDING = "pending"
     RUNNING = "running"
     SUCCESS = "success"
-    FAILED = "failed"
+    FAILED = "failure"
+
+
+class Pagination(BaseModel):
+    page: int = Field(1, ge=1, description="The page number")
+    page_size: int = Field(10, ge=1, description="The number of items per page")
+    request_count: bool = Field(False, description="Request a query for total count")
 
 
 # Model CRUD Schemas
-
-
 class BaseETLEvent(BaseModel):
     job_name: str | None = Field(None, description="Name of the ETL job")
     status: ETLStatusType | None = Field(None, description="Status of the ETL job")
@@ -113,6 +118,14 @@ class BaseLead(BaseModel):
 
 class LeadRead(BaseRead, BaseLead):
     url: str
+
+
+class LeadsPaginatedRead(BaseModel):
+    leads: Sequence[LeadRead]
+    pagination: Pagination
+    total_count: int | None = Field(
+        ..., description="Total number of leads, if pagination requested"
+    )
 
 
 class LeadCreate(BaseLead):

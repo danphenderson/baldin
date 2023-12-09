@@ -2,10 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { CircularProgress, Stack, IconButton, Typography, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, Snackbar } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import { UserContext } from '../context/user-context';
-import { components } from '../schema.d';
-
-type UserRead = components['schemas']['UserRead'];
-type UserUpdate = components['schemas']['UserUpdate'];
+import { getUser, updateUser, UserUpdate } from '../services/user-service'; // Import service functions
 
 const Settings = () => {
     const { user, token, setUser } = useContext(UserContext);
@@ -13,13 +10,9 @@ const Settings = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
-    const [userDetails, setUserDetails] = useState<UserUpdate>({
-        // Initialize with user's current data or empty values
-        // Replace these fields with actual ones from your UserUpdate type
-        first_name: user?.first_name || '',
-        last_name: user?.last_name || '',
-        // ... other fields
-    });
+    // Initialize userDetails with the user object or an empty object cast to UserUpdate
+    const [userDetails, setUserDetails] = useState<UserUpdate>(user || {} as UserUpdate);
+
 
     const handleClickOpen = () => {
         setOpen(true);
@@ -31,35 +24,21 @@ const Settings = () => {
     };
 
     useEffect(() => {
-        setIsLoading(true);
         const fetchUserData = async () => {
-            if (!token) {
-                console.error('No authentication token found');
-                setIsLoading(false);
-                return;
-            }
-
-            try {
-                const response = await fetch('/users/me', {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data: UserRead = await response.json();
-                setUserDetails(data); // Update with fetched data
-            } catch (error) {
-                console.error('Error fetching user data', error);
+            setIsLoading(true);
+            const fetchedUser = await getUser(token || '');
+            if (fetchedUser) {
+                setUserDetails(fetchedUser);
+            } else {
                 setError('Failed to fetch user data');
-            } finally {
-                setIsLoading(false);
             }
+            setIsLoading(false);
         };
 
-        fetchUserData();
-    }, [token, user?.id]); // Re-fetch when token or user ID changes
+        if (token && !user) {
+            fetchUserData();
+        }
+    }, [token]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -72,32 +51,13 @@ const Settings = () => {
     const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
         setOpen(false);
-
-        if (!token) {
-            setMessage('No authentication token found');
-            return;
-        }
-
-        try {
-            const response = await fetch('/users/me', {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(userDetails),
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const updatedUserData: UserRead = await response.json();
-            setUser(updatedUserData); // Update user context
+        console.log(userDetails);
+        const updatedUser = await updateUser(token || '', userDetails);
+        if (updatedUser) {
+            setUser(updatedUser);
             setMessage('Profile updated successfully');
-        } catch (error) {
+        } else {
             setMessage('There was an error updating the profile');
-            console.error('There was an error updating the profile', error);
         }
     };
 
@@ -117,19 +77,22 @@ const Settings = () => {
             <Dialog open={open} onClose={handleClose}>
                 <DialogTitle>Edit User Information</DialogTitle>
                 <DialogContent>
-                    {Object.keys(userDetails).map(key => (
-                        <TextField
-                            key={key}
-                            margin="dense"
-                            label={key.replace(/_/g, ' ')}
-                            type="text"
-                            fullWidth
-                            variant="outlined"
-                            name={key}
-                            value={userDetails[key as keyof UserUpdate]}
-                            onChange={handleChange}
-                        />
-                    ))}
+                  {Object.keys(userDetails).map(key => {
+                      const value = userDetails[key as keyof UserUpdate] || ''; // Safely access the value
+                      return (
+                          <TextField
+                              key={key}
+                              margin="dense"
+                              label={key.replace(/_/g, ' ')}
+                              type="text"
+                              fullWidth
+                              variant="outlined"
+                              name={key}
+                              value={value} // Use the safely accessed value
+                              onChange={handleChange}
+                          />
+                      );
+                  })}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleClose}>Cancel</Button>

@@ -4,7 +4,14 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import UUID4
 from sqlalchemy import select
 
-from app.api.deps import AsyncSession, get_async_session, get_etl_event, models, schemas
+from app.api.deps import (
+    AsyncSession,
+    execute_leads_etl,
+    get_async_session,
+    get_etl_event,
+    models,
+    schemas,
+)
 
 router: APIRouter = APIRouter()
 
@@ -30,7 +37,7 @@ async def load_leads_from_data_lake(
     db: AsyncSession = Depends(get_async_session),
 ) -> UUID4:
 
-    etl_event = models.ETLEvent(**{"job_name": "leads", "status": "posted"})
+    etl_event = models.ETLEvent(**{"job_name": "leads", "status": "pending"})
 
     db.add(etl_event)
     await db.commit()

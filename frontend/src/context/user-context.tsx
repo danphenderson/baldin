@@ -1,5 +1,6 @@
-import React, { useState, useEffect, createContext, ReactNode } from "react";
-import { components } from '../schema.d';
+import React, { useState, useEffect, createContext } from "react";
+import { getUser } from "../services/user-service"; // Import the getUser function
+import { components } from "../schema.d";
 
 type UserRead = components['schemas']['UserRead'];
 
@@ -18,43 +19,35 @@ export const UserContext = createContext<UserContextValue>({
 });
 
 interface UserProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserRead | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem("baldin_token"));
 
-
   useEffect(() => {
     const fetchUser = async () => {
-      if (!token) {
-        return; // If token is not available, no need to make the request
+      if (token) {
+        try {
+          const userData = await getUser(token);
+          setUser(userData);
+          localStorage.setItem("baldin_token", token); // Save token only if user data is successfully fetched
+        } catch (error) {
+          console.error("Failed to fetch user data", error);
+          setToken(null);
+          setUser(null);
+          localStorage.removeItem("baldin_token"); // Clear token on failure
+        }
       }
-
-      const requestOptions = {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + token,
-        },
-      };
-
-      const response = await fetch("/users/me", requestOptions);
-
-      if (response.ok) {
-        const userData: UserRead = await response.json();
-        setUser(userData); // Set user data in state
-      } else {
-        setToken(null);
-        setUser(null);
-      }
-      localStorage.setItem("baldin_token", token);
     };
 
     fetchUser();
   }, [token]);
+
   const contextValue = { user, setUser, token, setToken };
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
 };
+
+export default UserProvider;

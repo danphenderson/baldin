@@ -741,6 +741,38 @@ export interface components {
        */
       notes?: string | null;
     };
+    /** LeadsPaginatedRead */
+    LeadsPaginatedRead: {
+      /** Leads */
+      leads: components["schemas"]["LeadRead"][];
+      pagination: components["schemas"]["Pagination"];
+      /**
+       * Total Count
+       * @description Total number of leads, if pagination requested
+       */
+      total_count: number | null;
+    };
+    /** Pagination */
+    Pagination: {
+      /**
+       * Page
+       * @description The page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description The number of items per page
+       * @default 10
+       */
+      page_size?: number;
+      /**
+       * Request Count
+       * @description Request a query for total count
+       * @default false
+       */
+      request_count?: boolean;
+    };
     /** ResumeCreate */
     ResumeCreate: {
       /**
@@ -1437,13 +1469,15 @@ export interface operations {
         page?: number;
         /** @description Number of records per page */
         page_size?: number;
+        /** @description Return total count of records */
+        request_count?: boolean;
       };
     };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["LeadRead"][];
+          "application/json": components["schemas"]["LeadsPaginatedRead"];
         };
       };
       /** @description Validation Error */

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { DataGrid, GridColDef  } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridPaginationModel  } from '@mui/x-data-grid';
 import { Button, Box, Snackbar, Alert } from '@mui/material';
 import CreateLeadModal from '../component/lead-modal';
-import { components } from '../schema.d';
 
-type LeadRead = components['schemas']['LeadRead'];
+
+import { LeadRead, LeadsPaginatedRead, LeadCreate, LeadUpdate, getLeads, createLead, updateLead  } from '../services/lead-service';
 
 
 const Leads: React.FC = () => {
@@ -15,24 +15,25 @@ const Leads: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paginationModel, setPaginationModel] = React.useState({
-    pageSize: 5,
+    page_size: 5,
     page: 1,
   });
-
-
 
   useEffect(() => {
     const fetchLeads = async () => {
       setLoading(true);
       try {
+        const data = await getLeads(paginationModel);
 
-        const response = await fetch(`/leads/?page=${paginationModel.page}&page_size=${paginationModel.pageSize}`);
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
+        if (!data) {
+          console.error('Failed to fetch leads');
+          setError('Failed to load leads');
+          return;
         }
-        const data = await response.json();
-        setLeads(data.leads); // Assuming the response has a 'leads' property
-        setTotalLeads(data.total_count); // Assuming the response has a 'totalCount' property
+        setLeads(data.leads);
+        if (data.total_count) {
+          setTotalLeads(data.total_count);
+        }
       } catch (error) {
         console.error('Failed to fetch leads:', error);
         setError(typeof error === 'string' ? error : 'Failed to load leads');
@@ -40,11 +41,13 @@ const Leads: React.FC = () => {
       setLoading(false);
     };
     fetchLeads();
-  }, [paginationModel.page, paginationModel.pageSize]);
+  }, [paginationModel.page, paginationModel.page_size]);
 
-
-  const handlePageSizeChange = (pageSize: number) => {
-    setPaginationModel({ ...paginationModel, pageSize: pageSize, page: 1 });
+  const handlePaginationModelChange = (model: GridPaginationModel) => {
+    setPaginationModel({
+      page_size: model.pageSize,
+      page: model.page + 1, // GridPaginationModel's page index starts at 0, so add 1 for your API
+    });
   };
 
   const handleEditLead = (id: string) => {
@@ -115,12 +118,12 @@ const Leads: React.FC = () => {
         initialState={{
           pagination: {
             paginationModel: {
-              pageSize: paginationModel.pageSize,
+              pageSize: paginationModel.page_size,
               page: paginationModel.page  // default value will be used if not passed */
             },
           },
         }}
-        onPaginationModelChange={setPaginationModel}
+        onPaginationModelChange={handlePaginationModelChange}
       />
       <CreateLeadModal
         open={modalOpen}

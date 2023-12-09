@@ -19,27 +19,28 @@ const Leads: React.FC = () => {
     page: 1,
   });
 
-  useEffect(() => {
-    const fetchLeads = async () => {
-      setLoading(true);
-      try {
-        const data = await getLeads(paginationModel);
+  const fetchLeads = async () => {
+    setLoading(true);
+    try {
+      const data = await getLeads(paginationModel);
 
-        if (!data) {
-          console.error('Failed to fetch leads');
-          setError('Failed to load leads');
-          return;
-        }
-        setLeads(data.leads);
-        if (data.total_count) {
-          setTotalLeads(data.total_count);
-        }
-      } catch (error) {
-        console.error('Failed to fetch leads:', error);
-        setError(typeof error === 'string' ? error : 'Failed to load leads');
+      if (!data) {
+        console.error('Failed to fetch leads');
+        setError('Failed to load leads');
+        return;
       }
-      setLoading(false);
-    };
+      setLeads(data.leads);
+      if (data.total_count) {
+        setTotalLeads(data.total_count);
+      }
+    } catch (error) {
+      console.error('Failed to fetch leads:', error);
+      setError(typeof error === 'string' ? error : 'Failed to load leads');
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
     fetchLeads();
   }, [paginationModel.page, paginationModel.page_size]);
 
@@ -67,8 +68,24 @@ const Leads: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleSaveLead = (lead: Omit<LeadRead, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleSaveLead = async (leadData: LeadCreate | LeadUpdate) => {
     setModalOpen(false);
+    setLoading(true);
+
+    try {
+      const savedLead = selectedLead?.id
+        ? await updateLead(selectedLead.id, leadData as LeadUpdate)
+        : await createLead(leadData as LeadCreate);
+
+      if (savedLead) {
+        await fetchLeads();  // Refresh the leads list
+      } else {
+        throw new Error('Failed to save lead');
+      }
+    } catch (error) {
+      setError('Error saving lead');
+    }
+    setLoading(false);
   };
 
   const handleCloseSnackbar = () => {
@@ -77,8 +94,8 @@ const Leads: React.FC = () => {
 
 
   const columns: GridColDef[] = [
-    // { field: 'title', headerName: 'Title', width: 150 },
-    // { field: 'company', headerName: 'Company', width: 150 },
+    { field: 'title', headerName: 'Title', width: 150 },
+    { field: 'company', headerName: 'Company', width: 150 },
     { field: 'description', headerName: 'Description', width: 200 },
     // { field: 'location', headerName: 'Location', width: 150 },
     // { field: 'salary', headerName: 'Salary', width: 130 },

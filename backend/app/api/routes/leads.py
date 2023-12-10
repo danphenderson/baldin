@@ -8,6 +8,7 @@ from app.api.deps import (
     AsyncSession,
     execute_leads_etl,
     get_async_session,
+    get_enriched_lead,
     get_lead,
     get_pagination_params,
     models,
@@ -50,7 +51,7 @@ async def read_leads(
     pagination: schemas.Pagination = Depends(get_pagination_params),
 ):
     # Calculate offset
-    offset = (pagination.page - 1) * pagination.page_size
+    offset = (pagination.page - 1) * pagination.page_sizeexi
 
     # Execute the paginated query
     lead_query = select(models.Lead).offset(offset).limit(pagination.page_size)
@@ -81,17 +82,10 @@ async def read_leads(
 
 @router.patch("/{id}", status_code=200, response_model=schemas.LeadRead)
 async def update_lead(
-    id: UUID4,
     payload: schemas.LeadUpdate,
+    lead: schemas.LeadRead = Depends(get_lead),
     db: AsyncSession = Depends(get_async_session),
 ):
-    # Retrieve the existing lead
-    result = await db.execute(select(models.Lead).where(models.Lead.id == id))
-    lead = result.scalars().first()
-
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
-
     # Update the lead's attributes
     for var, value in payload.dict(exclude_unset=True).items():
         setattr(lead, var, value)
@@ -126,7 +120,7 @@ async def load_leads_from_data_lake(
     db: AsyncSession = Depends(get_async_session),
 ):
 
-    etl_event = models.ETLEvent(**{"job_name": "leads", "status": "pending"})
+    etl_event = models.ETLEvent(**{"job_name": "load_leads", "status": "pending"})
 
     db.add(etl_event)
     await db.commit()
@@ -136,3 +130,13 @@ async def load_leads_from_data_lake(
     background_tasks.add_task(execute_leads_etl, etl_event.id)  # type: ignore
 
     return etl_event
+
+
+@router.patch("/{id}/enrich", status_code=202, response_model=schemas.ETLEventRead)
+async def enrich_lead(
+    lead: schemas.LeadRead = Depends(get_enriched_lead),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await db.commit()
+    await db.refresh(lead)
+    return lead

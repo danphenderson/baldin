@@ -1,4 +1,5 @@
 # app/api/deps.py
+import json
 from pathlib import Path
 from typing import Any
 
@@ -183,3 +184,57 @@ async def execute_leads_etl(etl_event_id: UUID4):
             # Update ETLEvent status to failed
             await update_etl_event(etl_event_id, schemas.ETLStatusType("failure"), db)
             raise e
+
+
+async def _enrich_lead(lead):
+    client = get_openai_client()
+
+    unset_fields = [k for k, v in lead.__dict__.items() if v is None]
+
+    description = lead.description
+
+    if not description:
+        raise ValueError("description field is required to enrich lead")
+
+    messages = [
+        {"role": "system", "content": "You excel at extracting information from text"},
+        {
+            "role": "user",
+            "content": f"You will be given job lead's description and you will need to extract the following information: {unset_fields}",
+        },
+        {
+            "role": "assistant",
+            "content": f"After extracting the {unset_fields}, how should I present the information to you?",
+        },
+        {"role": "user", "content": "Please present the information in a JSON format"},
+        {
+            "role": "assistant",
+            "content": f"Great, I will generate a JSON object containing {unset_fields} from the job lead's description",
+        },
+        {
+            "role": "user",
+            "content": f"Thank you! Here is the job lead's description: {description}",
+        },
+    ]
+
+    # Generate a response from the OpenAI ChatCompletion API
+    response = await client.chat.completions.create(
+        model="gpt-3.5-turbo", messages=messages  # type: ignore
+    )
+    completion = response.choices.pop()
+    # Parse the response into a dict
+    completion_dict = json.loads(completion.message.content)
+
+    # Update the lead's attributes
+    for var, value in completion_dict.items():
+        setattr(lead, var, value)
+
+    return lead
+
+
+async def get_enriched_lead(id: UUID4, db: AsyncSession = Depends(get_async_session)):
+    """
+    Enriches leads with OpenAI API using the description field
+    """
+    lead = await get_lead(id, db)
+    return await _enrich_lead(lead)

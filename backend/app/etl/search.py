@@ -9,8 +9,8 @@ from selenium.webdriver.remote.webelement import WebElement
 
 from app.core.chrome import Driver
 from app.core.conf import linkedin, settings
-from app.etl.models.job import Job
 from app.logging import console_log
+from backend.app.etl.job import Job
 
 
 async def search_results():
@@ -54,7 +54,7 @@ class LinkedIn(JobSearch):
         return f"{cls.redirect_job_search()}?page={page}"
 
     async def scrape_job_post(self, job_post: str) -> None:
-        await self.chrome.get(job_post, wait=3)
+        await self.chrome.get(job_post, wait=6)
         # Expand job description and wait for dynamic content to load.
         element = await self.chrome.element(
             '//*[@id="main-content"]/section[1]/div/div/section[1]/div/div/section/button[1]',

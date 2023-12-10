@@ -42,6 +42,9 @@ def extract_soup_hrefs(soup: BeautifulSoup) -> List[str]:
     return [link.get("href") for link in soup.find_all("a") if link.get("href")]
 
 
+# Asynchronous utils
+
+
 async def generate_pydantic_models_from_json(
     model: Type[BaseModel], directory: str | Path
 ):

@@ -1,4 +1,4 @@
-from app.etl.models.base import HRefBaseModel
+from app.etl.base import HRefBaseModel
 
 
 class Job(HRefBaseModel):
@@ -12,4 +12,3 @@ class Job(HRefBaseModel):
     job_function: str | None = None
     industries: str | None = None
     hiring_manager: str | None = None
-   

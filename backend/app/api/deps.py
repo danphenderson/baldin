@@ -16,6 +16,7 @@ from app.core.security import (  # noqa
     get_current_superuser,
     get_current_user,
 )
+from app.etl.leads import enrich
 from app.logging import get_async_logger  # noqa
 
 log = get_async_logger(__name__)
@@ -159,15 +160,17 @@ async def get_application(
     return application
 
 
-async def execute_leads_etl(etl_event_id: UUID4):
+async def execute_load_leads(etl_event_id: UUID4):
     async with session_context() as db:
         try:
             # Update ETLEvent status to running
             await update_etl_event(etl_event_id, schemas.ETLStatusType("running"), db)
 
+            file_path = Path(settings.PUBLIC_ASSETS_DIR) / "leads" / "enriched"
+
             # Generate Leads from JSON documents in data lake
             async for valid_lead in utils.generate_pydantic_models_from_json(
-                schemas.LeadCreate, Path(settings.PUBLIC_ASSETS_DIR) / "leads"
+                schemas.LeadCreate, file_path
             ):
                 await log.info(f"Inserting lead {valid_lead} into database")
                 lead = models.Lead(**valid_lead.__dict__)
@@ -186,55 +189,21 @@ async def execute_leads_etl(etl_event_id: UUID4):
             raise e
 
 
-async def _enrich_lead(lead):
-    client = get_openai_client()
+async def execute_leads_enrichment(etl_event_id):
+    async with session_context() as db:
+        try:
+            # Update ETLEvent status to running
+            await update_etl_event(etl_event_id, schemas.ETLStatusType("running"), db)
 
-    unset_fields = [k for k, v in lead.__dict__.items() if v is None]
+            # Enrich leads
+            await enrich.enrich_leads()
 
-    description = lead.description
+            # Update ETLEvent status to success
+            await update_etl_event(etl_event_id, schemas.ETLStatusType("success"), db)
 
-    if not description:
-        raise ValueError("description field is required to enrich lead")
-
-    messages = [
-        {"role": "system", "content": "You excel at extracting information from text"},
-        {
-            "role": "user",
-            "content": f"You will be given job lead's description and you will need to extract the following information: {unset_fields}",
-        },
-        {
-            "role": "assistant",
-            "content": f"After extracting the {unset_fields}, how should I present the information to you?",
-        },
-        {"role": "user", "content": "Please present the information in a JSON format"},
-        {
-            "role": "assistant",
-            "content": f"Great, I will generate a JSON object containing {unset_fields} from the job lead's description",
-        },
-        {
-            "role": "user",
-            "content": f"Thank you! Here is the job lead's description: {description}",
-        },
-    ]
-
-    # Generate a response from the OpenAI ChatCompletion API
-    response = await client.chat.completions.create(
-        model="gpt-3.5-turbo", messages=messages  # type: ignore
-    )
-    completion = response.choices.pop()
-    # Parse the response into a dict
-    completion_dict = json.loads(completion.message.content)
-
-    # Update the lead's attributes
-    for var, value in completion_dict.items():
-        setattr(lead, var, value)
-
-    return lead
-
-
-async def get_enriched_lead(id: UUID4, db: AsyncSession = Depends(get_async_session)):
-    """
-    Enriches leads with OpenAI API using the description field
-    """
-    lead = await get_lead(id, db)
-    return await _enrich_lead(lead)
+        except Exception as e:
+            await log.exception(f"Error executing leads enrichment: {e}")
+            await db.rollback()  # Rollback on exception
+            # Update ETLEvent status to failed
+            await update_etl_event(etl_event_id, schemas.ETLStatusType("failure"), db)
+            raise e

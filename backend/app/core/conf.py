@@ -114,7 +114,7 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
     """
 
     SECRET_KEY: str = ""
-    MODEL: str = "gpt-3.5-turbo"
+    COMPLETION_MODEL: str = "gpt-3.5-turbo"
 
 
 class Linkedin(_BaseSettings, env_prefix="LINKEDIN_"):

@@ -6,7 +6,7 @@ from app.api.deps import fastapi_users, schemas, security
 from app.api.routes import (
     contacts,
     cover_letters,
-    etl,
+    data_orchestration,
     experiences,
     leads,
     resumes,
@@ -47,9 +47,9 @@ api_router.include_router(
     tags=["leads"],
 )
 api_router.include_router(
-    etl.router,
-    prefix="/etl",
-    tags=["etl"],
+    data_orchestration.router,
+    prefix="/data_orchestration",
+    tags=["data_orchestration"],
 )
 api_router.include_router(
     services.router,

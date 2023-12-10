@@ -7,9 +7,9 @@ from sqlalchemy import delete, func, select
 
 from app.api.deps import (
     AsyncSession,
-    execute_leads_etl,
+    execute_leads_enrichment,
+    execute_load_leads,
     get_async_session,
-    get_enriched_lead,
     get_lead,
     get_pagination_params,
     models,
@@ -113,31 +113,3 @@ async def delete_lead(id: UUID4, db: AsyncSession = Depends(get_async_session)):
     await db.delete(lead)
     await db.commit()
     return {"message": "Lead deleted successfully"}
-
-
-@router.post("/load", status_code=202, response_model=schemas.ETLEventRead)
-async def load_leads_from_data_lake(
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_async_session),
-):
-
-    etl_event = models.ETLEvent(**{"job_name": "load_leads", "status": "pending"})
-
-    db.add(etl_event)
-    await db.commit()
-    await db.refresh(etl_event)
-
-    # Use background_tasks to execute the ETL pipeline
-    background_tasks.add_task(execute_leads_etl, etl_event.id)  # type: ignore
-
-    return etl_event
-
-
-@router.patch("/{id}/enrich", status_code=202, response_model=schemas.ETLEventRead)
-async def enrich_lead(
-    lead: schemas.LeadRead = Depends(get_enriched_lead),
-    db: AsyncSession = Depends(get_async_session),
-):
-    await db.commit()
-    await db.refresh(lead)
-    return lead

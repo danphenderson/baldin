@@ -29,13 +29,10 @@ class AsyncBaseModel(schemas.BaseModel, extra="allow"):
     async def to_dict(self) -> dict:
         return await self._run_sync(lambda: self.__dict__)
 
-    async def to_json(self, indent: int = 4):
-        return await self._run_sync(lambda: self.to_json())
-
     async def dump(self, file_path: str, indent: int = 4):
         Path(file_path).parent.mkdir(parents=True, exist_ok=True)
         async with aopen(file_path, "a") as f:
-            await f.write(await self.to_json(indent=indent))
+            await f.write(self.json())
 
     async def wait(self, seconds: int) -> None:
         if seconds > 0:
@@ -53,8 +50,8 @@ class AsyncBaseModel(schemas.BaseModel, extra="allow"):
         return self._run_sync(lambda: self).__await__()
 
 
-class Job(AsyncBaseModel, schemas.LeadRead):
-    async def dump(self):
+class Job(AsyncBaseModel, schemas.LeadCreate):
+    async def dump(self, file_path: str):
         return await super().dump(
-            str(Path(settings.PUBLIC_ASSETS_DIR) / "leads" / f"{self.id}.json")
+            file_path=file_path,
         )

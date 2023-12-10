@@ -53,6 +53,7 @@ class Lead(Base):
     seniority_level = Column(String)
     education_level = Column(String)
     notes = Column(Text)
+    hiring_manager = Column(String)
     application = relationship("Application", back_populates="lead")
 
 

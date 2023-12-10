@@ -29,7 +29,7 @@ class Settings(_BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     BACKEND_CORS_ORIGINS: Union[str, list[AnyHttpUrl]]
     LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
-    LOGGING_FILE_NAME: str = "app_log"
+    LOGGING_FILE_NAME: str = "app.log"
     PUBLIC_ASSETS_DIR: str = "public"
 
     # PROJECT NAME, VERSION AND DESCRIPTION

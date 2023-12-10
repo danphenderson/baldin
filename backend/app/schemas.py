@@ -114,6 +114,7 @@ class BaseLead(BaseModel):
     seniority_level: str | None = Field(None, description="Seniority level")
     education_level: str | None = Field(None, description="Required education level")
     notes: str | None = Field(None, description="Additional notes")
+    hiring_manager: str | None = Field(None, description="Hiring manager")
 
 
 class LeadRead(BaseRead, BaseLead):

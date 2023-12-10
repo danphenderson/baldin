@@ -2,12 +2,10 @@
 import json
 from pathlib import Path
 
-import aiofiles
 from fastapi import Depends, HTTPException, Query
 from pydantic import UUID4
-from sqlalchemy.future import select
 
-from app import models, schemas
+from app import models, schemas, utils
 from app.core import security  # noqa
 from app.core.conf import settings
 from app.core.db import AsyncSession, get_async_session, session_context
@@ -17,7 +15,9 @@ from app.core.security import (  # noqa
     get_current_superuser,
     get_current_user,
 )
-from app.logging import console_log
+from app.logging import get_async_logger  # noqa
+
+log = get_async_logger(__name__)
 
 
 async def get_pagination_params(
@@ -35,7 +35,7 @@ async def get_lead(
 ) -> models.Lead:
     lead = await db.get(models.Lead, id)
     if not lead:
-        console_log.info(f"Lead with id {id} not found")
+        await log.info(f"Lead with id {id} not found")
         raise HTTPException(status_code=404, detail=f"Lead with {id} not found")
     return lead
 
@@ -45,7 +45,19 @@ async def get_etl_event(
 ) -> models.ETLEvent:
     etl_event = await db.get(models.ETLEvent, id)
     if not etl_event:
-        console_log.info(f"ETL event with id {id} not found")
+        await log.info(f"ETL event with id {id} not found")
+        raise HTTPException(status_code=404, detail=f"ETL event with {id} not found")
+    return etl_event
+
+
+async def update_etl_event(
+    id: UUID4,
+    status: schemas.ETLStatusType,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.ETLEvent:
+    etl_event = await db.get(models.ETLEvent, id)
+    if not etl_event:
+        await log.info(f"ETL event with id {id} not found")
         raise HTTPException(status_code=404, detail=f"ETL event with {id} not found")
     return etl_event
 
@@ -57,10 +69,10 @@ async def get_skill(
 ) -> models.Skill:
     skill = await db.get(models.Skill, id)
     if not skill:
-        console_log.info(f"Skill with id {id} not found")
+        await log.info(f"Skill with id {id} not found")
         raise HTTPException(status_code=404, detail=f"Skill with {id} not found")
     if skill.user_id != user.id:  # type: ignore
-        console_log.warning(
+        await log.warning(
             f"Unauthorized user {user.id} requested access to skill with id {id}"
         )
         raise HTTPException(
@@ -76,10 +88,10 @@ async def get_experience(
 ) -> models.Experience:
     experience = await db.get(models.Experience, id)
     if not experience:
-        console_log.info(f"Experience with id {id} not found")
+        await log.info(f"Experience with id {id} not found")
         raise HTTPException(status_code=404, detail=f"Experience with {id} not found")
     if experience.user_id != user.id:  # type: ignore
-        console_log.warning(
+        await log.warning(
             f"Unauthorized user {user.id} requested access to experience with id {id}"
         )
         raise HTTPException(
@@ -95,10 +107,10 @@ async def get_resume(
 ) -> models.Resume:
     resume = await db.get(models.Resume, id)
     if not resume:
-        console_log.info(f"Resume with id {id} not found")
+        await log.info(f"Resume with id {id} not found")
         raise HTTPException(status_code=404, detail=f"Resume with {id} not found")
     if resume.user_id != user.id:  # type: ignore
-        console_log.warning(
+        await log.warning(
             f"Unauthorized user {user.id} requested access to resume with id {id}"
         )
         raise HTTPException(
@@ -114,10 +126,10 @@ async def get_contact(
 ) -> models.Contact:
     contact = await db.get(models.Contact, id)
     if not contact:
-        console_log.info(f"Contact with id {id} not found")
+        await log.info(f"Contact with id {id} not found")
         raise HTTPException(status_code=404, detail=f"Contact with {id} not found")
     if contact.user_id != user.id:  # type: ignore
-        console_log.warning(
+        await log.warning(
             f"Unauthorized user {user.id} requested access to contact with id {id}"
         )
         raise HTTPException(
@@ -133,10 +145,10 @@ async def get_cover_letter(
 ) -> models.CoverLetter:
     cover_letter = await db.get(models.CoverLetter, id)
     if not cover_letter:
-        console_log.info(f"Cover letter with id {id} not found")
+        await log.info(f"Cover letter with id {id} not found")
         raise HTTPException(status_code=404, detail=f"Cover letter with {id} not found")
     if cover_letter.user_id != user.id:  # type: ignore
-        console_log.warning(
+        await log.warning(
             f"Unauthorized user {user.id} requested access to cover letter with id {id}"
         )
         raise HTTPException(
@@ -152,10 +164,10 @@ async def get_application(
 ) -> models.Application:
     application = await db.get(models.Application, id)
     if not application:
-        console_log.info(f"Application with id {id} not found")
+        await log.info(f"Application with id {id} not found")
         raise HTTPException(status_code=404, detail=f"Application with {id} not found")
     if application.user_id != user.id:  # type: ignore
-        console_log.warning(
+        await log.warning(
             f"Unauthorized user {user.id} requested access to application with id {id}"
         )
         raise HTTPException(
@@ -167,36 +179,27 @@ async def get_application(
 async def execute_leads_etl(etl_event_id: UUID4):
     async with session_context() as db:
         try:
-            # Load JSON data and insert into the database
-            async with aiofiles.open(
-                Path(settings.PUBLIC_ASSETS_DIR) / "leads.json", "r"
-            ) as json_file:
-                leads_data = json.loads(await json_file.read())
+            # Update ETLEvent status to running
+            await update_etl_event(etl_event_id, schemas.ETLStatusType("running"), db)
 
-            for lead_data in leads_data:
-                # Check if lead exists or handle duplicates appropriately
-                lead = models.Lead(**lead_data)
-                await db.merge(lead)  # or handle duplicates appropriately
+            # Generate Leads from JSON documents in data lake
+            async for lead_dict in utils.generate_json_documents(
+                Path(settings.PUBLIC_ASSETS_DIR) / "leads"
+            ):
+                await log.info(f"Inserting lead {lead_dict['url']} into database")
+                lead = models.Lead(**lead_dict)
+                db.add(lead)
 
             await db.commit()
 
-            # Update ETLEvent status
-            result = await db.execute(
-                select(models.ETLEvent).filter(models.ETLEvent.id == etl_event_id)
-            )
-            etl_event = result.scalars().first()
-            etl_event.status = "success"  # type: ignore
-            await db.commit()
+            # Update ETLEvent status to success
+            await update_etl_event(etl_event_id, schemas.ETLStatusType("success"), db)
 
         except Exception as e:
+            await log.exception(f"Error executing leads ETL: {e}")
             await db.rollback()  # Rollback on exception
-            # Handle failure scenario
-            result = await db.execute(
-                select(models.ETLEvent).filter(models.ETLEvent.id == etl_event_id)
-            )
-            etl_event = result.scalars().first()
-            etl_event.status = "failure"  # type: ignore
-            await db.commit()
+            # Update ETLEvent status to failed
+            await update_etl_event(etl_event_id, schemas.ETLStatusType("failure"), db)
             raise e
 
 

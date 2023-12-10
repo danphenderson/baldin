@@ -54,5 +54,13 @@ async def generate_pydantic_models_from_json(
     directory_path = Path(directory) if not isinstance(directory, Path) else directory
     for path in directory_path.glob("*.json"):
         async with aiofiles.open(path, mode="r") as f:
-            doc = model.model_validate_json(await f.read())
+            doc = await f.read()
+            doc = model.model_validate_json(doc)
             yield doc
+
+async def load_data_from_uri(
+        source_uri: Path | str
+):
+    """
+    Loads data from source uri into memory
+    """

@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
-from sqlalchemy import UUID, Column, DateTime, ForeignKey, String, Text
+from sqlalchemy import JSON, UUID, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -20,7 +20,7 @@ class Base(DeclarativeBase):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-class ETLEvent(Base):
+class OrchestrationEvent(Base):
     """
     Model for ETL (Extract, Transform, Load) events.
     Tracks job names, status, start and end times, error messages.
@@ -29,6 +29,8 @@ class ETLEvent(Base):
 
     __tablename__ = "etl_events"
     job_name = Column(String)
+    source_uri = Column(String)
+    destination_uri = Column(String)
     status = Column(String)  # running, success, failure
     error_message = Column(Text)
 

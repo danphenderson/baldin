@@ -10,7 +10,7 @@ from app.models import (
     Application,
     Contact,
     CoverLetter,
-    ETLEvent,
+    OrchestrationEvent,
     Experience,
     Lead,
     Resume,
@@ -46,7 +46,7 @@ async def create_db_user(
 
 
 async def create_etl_event(session: AsyncSession):
-    etl_event = ETLEvent(
+    etl_event = OrchestrationEvent(
         job_name="Test Job",
         status=random.choice(["pending", "running", "success", "failed"]),
         error_message="Test error" if random.choice([True, False]) else None,

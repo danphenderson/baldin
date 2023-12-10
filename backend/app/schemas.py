@@ -8,7 +8,6 @@ from fastapi_users import schemas
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, model_validator
-
 from app import utils
 
 # TODO: Handle validation as it arrises.
@@ -33,7 +32,7 @@ class ContentType(str, Enum):
     TEMPLATE = "template"
 
 
-class ETLStatusType(str, Enum):
+class OrchestrationEventStatusType(str, Enum):
     PENDING = "pending"
     RUNNING = "running"
     SUCCESS = "success"
@@ -47,22 +46,22 @@ class Pagination(BaseModel):
 
 
 # Model CRUD Schemas
-class BaseETLEvent(BaseModel):
-    job_name: str | None = Field(None, description="Name of the ETL job")
-    status: ETLStatusType | None = Field(None, description="Status of the ETL job")
+class BaseOrchestrationEvent(BaseModel):
     error_message: str | None = Field(None, description="Error message, if any")
+    status: OrchestrationEventStatusType = Field(OrchestrationEventStatusType.PENDING, description="Status of the ETL job")
 
+class OrchestrationEventRead(BaseRead, BaseOrchestrationEvent):
+    job_name: str = Field(..., description="Name of the ETL job")
+    source_uri: str = Field(..., description="Source URI")
+    destination_uri: str = Field(..., description="Destination URI")
 
-class ETLEventRead(BaseRead, BaseETLEvent):
-    pass
+class OrchestrationEventCreate(BaseOrchestrationEvent):
+    job_name: str
+    source_uri: str
+    destination_uri: str
 
-
-class ETLEventCreate(BaseETLEvent):
-    pass
-
-
-class ETLEventUpdate(BaseETLEvent):
-    pass
+class OrchestrationEventUpdate(BaseOrchestrationEvent):
+    status: OrchestrationEventStatusType
 
 
 class BaseSkill(BaseModel):

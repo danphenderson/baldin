@@ -1,20 +1,15 @@
 from abc import ABCMeta
 from asyncio import Future, ensure_future, get_event_loop, sleep
 from pathlib import Path
-from typing import Dict
-from uuid import uuid4
 
 from aiofiles import open as aopen
-from pydantic import UUID4, AnyHttpUrl
-from pydantic import BaseModel as _BaseModel
-from pydantic import Field
 
+from app import schemas
 from app.core.conf import settings
 
 
-class BaseModel(_BaseModel, extra="allow", metaclass=ABCMeta):
+class AsyncBaseModel(schemas.BaseModel, extra="allow", metaclass=ABCMeta):
     _tasks: list = []
-    id: UUID4 | None = Field(default_factory=uuid4)
 
     @staticmethod
     async def _run_sync(func, *args, **kwargs):
@@ -32,11 +27,11 @@ class BaseModel(_BaseModel, extra="allow", metaclass=ABCMeta):
         self._tasks.append(task)
         return await task
 
-    async def to_dict(self) -> Dict:
-        return await self._run_sync(lambda: self.dict())
+    async def to_dict(self) -> dict:
+        return await self._run_sync(lambda: self.__dict__)
 
     async def to_json(self, indent: int = 4):
-        return await self._run_sync(lambda: self.json())
+        return await self._run_sync(lambda: self.to_json())
 
     async def dump(self, file_path: str, indent: int = 4):
         Path(file_path).parent.mkdir(parents=True, exist_ok=True)
@@ -59,19 +54,7 @@ class BaseModel(_BaseModel, extra="allow", metaclass=ABCMeta):
         return self._run_sync(lambda: self).__await__()
 
 
-class HRefBaseModel(BaseModel):
-    url: AnyHttpUrl
-
-    def __eq__(self, other):
-        if isinstance(other, str):
-            return self.url == other
-        elif isinstance(other, HRefBaseModel):
-            return self.url == other.url
-        return False
-
-    def __ne__(self, other):
-        return self.url != other.url
-
+class Job(AsyncBaseModel, schemas.LeadRead):
     async def dump(self):
         return await super().dump(
             str(Path(settings.PUBLIC_ASSETS_DIR) / "leads" / f"{self.id}.json")

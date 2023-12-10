@@ -9,8 +9,8 @@ from selenium.webdriver.remote.webelement import WebElement
 
 from app.core.chrome import Driver
 from app.core.conf import linkedin, settings
+from app.etl.base import Job
 from app.logging import console_log
-from backend.app.etl.job import Job
 
 
 async def search_results():

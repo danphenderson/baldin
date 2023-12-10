@@ -5,7 +5,7 @@ from enum import Enum  # TODO: Use Literal for performance improvement
 from typing import Any, Sequence
 
 from fastapi_users import schemas
-from pydantic import UUID4
+from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, model_validator
 
@@ -120,7 +120,7 @@ class BaseLead(BaseModel):
 
 
 class LeadRead(BaseRead, BaseLead):
-    url: str
+    url: AnyHttpUrl
 
 
 class LeadsPaginatedRead(BaseModel):

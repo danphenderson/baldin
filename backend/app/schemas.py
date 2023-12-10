@@ -1,7 +1,7 @@
 # app/schemas.py
 
 from datetime import datetime
-from enum import Enum
+from enum import Enum  # TODO: Use Literal for performance improvement
 from typing import Any, Sequence
 
 from fastapi_users import schemas

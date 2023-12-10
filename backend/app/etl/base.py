@@ -1,4 +1,3 @@
-from abc import ABCMeta
 from asyncio import Future, ensure_future, get_event_loop, sleep
 from pathlib import Path
 
@@ -8,7 +7,7 @@ from app import schemas
 from app.core.conf import settings
 
 
-class AsyncBaseModel(schemas.BaseModel, extra="allow", metaclass=ABCMeta):
+class AsyncBaseModel(schemas.BaseModel, extra="allow"):
     _tasks: list = []
 
     @staticmethod

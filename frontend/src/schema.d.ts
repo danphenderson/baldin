@@ -602,6 +602,11 @@ export interface components {
        * @description Additional notes
        */
       notes?: string | null;
+      /**
+       * Hiring Manager
+       * @description Hiring manager
+       */
+      hiring_manager?: string | null;
       /** Url */
       url: string;
     };
@@ -662,6 +667,11 @@ export interface components {
        * @description Additional notes
        */
       notes?: string | null;
+      /**
+       * Hiring Manager
+       * @description Hiring manager
+       */
+      hiring_manager?: string | null;
       /**
        * Id
        * Format: uuid4
@@ -740,6 +750,11 @@ export interface components {
        * @description Additional notes
        */
       notes?: string | null;
+      /**
+       * Hiring Manager
+       * @description Hiring manager
+       */
+      hiring_manager?: string | null;
     };
     /** LeadsPaginatedRead */
     LeadsPaginatedRead: {

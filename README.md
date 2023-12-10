@@ -21,7 +21,7 @@ planned for the first release:
 - [ ] Job search
 - [ ] Job finder
 - [ ] Coverletter generator
-- [ ] Resume generatorgs
+- [ ] Resume generators
 - [ ] Job application recommendation engine
 
 

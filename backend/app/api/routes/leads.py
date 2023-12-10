@@ -1,5 +1,6 @@
 # app/api/routes/leads.py
 
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import UUID4
 from sqlalchemy import delete, func, select
@@ -51,7 +52,7 @@ async def read_leads(
     pagination: schemas.Pagination = Depends(get_pagination_params),
 ):
     # Calculate offset
-    offset = (pagination.page - 1) * pagination.page_sizeexi
+    offset = (pagination.page - 1) * pagination.page_size
 
     # Execute the paginated query
     lead_query = select(models.Lead).offset(offset).limit(pagination.page_size)

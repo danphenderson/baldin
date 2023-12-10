@@ -1,11 +1,12 @@
 # app/api/routes/leads.py
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import UUID4
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from app.api.deps import (
     AsyncSession,
+    execute_leads_etl,
     get_async_session,
     get_lead,
     get_pagination_params,
@@ -100,9 +101,38 @@ async def update_lead(
     return lead
 
 
+@router.delete("/purge", status_code=202, response_model=dict)
+async def purge_leads(db: AsyncSession = Depends(get_async_session)):
+    """
+    Drops all leads records in the table.
+    """
+    # Execute a bulk delete query
+    await db.execute(delete(models.Lead))
+    await db.commit()
+    return {"message": "All leads have been purged successfully"}
+
+
 @router.delete("/{id}", status_code=202, response_model=dict)
 async def delete_lead(id: UUID4, db: AsyncSession = Depends(get_async_session)):
     lead = await db.get(models.Lead, id)
     await db.delete(lead)
     await db.commit()
     return {"message": "Lead deleted successfully"}
+
+
+@router.post("/load", status_code=202, response_model=schemas.ETLEventRead)
+async def load_leads_from_data_lake(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_async_session),
+):
+
+    etl_event = models.ETLEvent(**{"job_name": "leads", "status": "pending"})
+
+    db.add(etl_event)
+    await db.commit()
+    await db.refresh(etl_event)
+
+    # Use background_tasks to execute the ETL pipeline
+    background_tasks.add_task(execute_leads_etl, etl_event.id)  # type: ignore
+
+    return etl_event

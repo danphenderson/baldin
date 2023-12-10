@@ -1,17 +1,9 @@
 # app/api/routes/etl.py
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import UUID4
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
-from app.api.deps import (
-    AsyncSession,
-    execute_leads_etl,
-    get_async_session,
-    get_etl_event,
-    models,
-    schemas,
-)
+from app.api.deps import AsyncSession, get_async_session, get_etl_event, models, schemas
 
 router: APIRouter = APIRouter()
 
@@ -28,22 +20,3 @@ async def read_etl_events(db: AsyncSession = Depends(get_async_session)):
     if not result:
         raise HTTPException(status_code=404, detail="No ETL events found")
     return result
-
-
-# TODO: this will be a service.
-@router.post("/leads", status_code=202, response_model=UUID4)
-async def load_leads_from_data_lake(
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_async_session),
-) -> UUID4:
-
-    etl_event = models.ETLEvent(**{"job_name": "leads", "status": "pending"})
-
-    db.add(etl_event)
-    await db.commit()
-    await db.refresh(etl_event)
-
-    # Use background_tasks to execute the ETL pipeline
-    background_tasks.add_task(execute_leads_etl, etl_event.id)  # type: ignore
-
-    return etl_event.id  # type: ignore

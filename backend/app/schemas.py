@@ -2,12 +2,14 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Sequence
+from typing import Any, Sequence
 
 from fastapi_users import schemas
 from pydantic import UUID4
 from pydantic import BaseModel as _BaseModel
-from pydantic import EmailStr, Field
+from pydantic import EmailStr, Field, model_validator
+
+from app import utils
 
 # TODO: Handle validation as it arrises.
 
@@ -131,6 +133,15 @@ class LeadsPaginatedRead(BaseModel):
 
 class LeadCreate(BaseLead):
     url: str
+
+    @model_validator(mode="after")
+    def clean_and_wrap_text_fields(self) -> Any:
+        for field in self.model_fields_set:
+            v = getattr(self, field)
+            if isinstance(v, str):
+                cleaned_value = utils.clean_text(v)
+                setattr(self, field, utils.wrap_text(cleaned_value))
+        return self
 
 
 class LeadUpdate(BaseLead):

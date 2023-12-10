@@ -1,19 +1,31 @@
 # app/utils.py
 
-import json
 import re
+import textwrap
 from pathlib import Path
-from typing import List
+from typing import List, Type
 
 import aiofiles
 from bs4 import BeautifulSoup
+from pydantic import BaseModel
 
 
 def clean_text(text: str) -> str:
     """
-    Removes extra whitespace from the HTML of the loaded source document.
+    Removes extra whitespace from a string of text.
     """
-    return re.sub(r"\s+", " ", text)
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    starts_on_first_line = re.sub(r"^\n", "", cleaned)
+    consistent_newlines = re.sub(r"\n+", "\n", starts_on_first_line)
+    single_space_punctuation = re.sub(r"\s([,.!?;:])", r"\1", consistent_newlines)
+    return single_space_punctuation
+
+
+def wrap_text(text: str, width: int = 120) -> str:
+    """
+    Wraps text to a specified width.
+    """
+    return "\n".join(textwrap.wrap(text, width=width))
 
 
 def split_soup_lines(soup: BeautifulSoup) -> List[str]:
@@ -30,12 +42,14 @@ def extract_soup_hrefs(soup: BeautifulSoup) -> List[str]:
     return [link.get("href") for link in soup.find_all("a") if link.get("href")]
 
 
-async def generate_json_documents(directory: str | Path):
+async def generate_pydantic_models_from_json(
+    model: Type[BaseModel], directory: str | Path
+):
     """
     An asynchronous generator function to load JSON documents from a directory.
     """
     directory_path = Path(directory) if not isinstance(directory, Path) else directory
     for path in directory_path.glob("*.json"):
         async with aiofiles.open(path, mode="r") as f:
-            doc = json.loads(await f.read())
+            doc = model.model_validate_json(await f.read())
             yield doc

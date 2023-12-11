@@ -47,6 +47,21 @@ export interface paths {
     /** Users:Patch User */
     patch: operations["users_patch_user_users__id__patch"];
   };
+  "/leads/load_database": {
+    /**
+     * Load Database
+     * @description Loads the database with leads from the data lake.
+     * FIXME - This is hacky
+     */
+    post: operations["load_database_leads_load_database_post"];
+  };
+  "/leads/enrich_datalake": {
+    /**
+     * Enrich Datalake
+     * @description Loads the datalake with enriched leads from the data lake.
+     */
+    post: operations["enrich_datalake_leads_enrich_datalake_post"];
+  };
   "/leads/": {
     /** Read Leads */
     get: operations["read_leads_leads__get"];
@@ -61,17 +76,28 @@ export interface paths {
     /** Update Lead */
     patch: operations["update_lead_leads__id__patch"];
   };
-  "/etl/events/{id}": {
-    /** Read Etl Event */
-    get: operations["read_etl_event_etl_events__id__get"];
+  "/leads/purge": {
+    /**
+     * Purge Leads
+     * @description Drops all leads records in the table.
+     */
+    delete: operations["purge_leads_leads_purge_delete"];
   };
-  "/etl/events": {
-    /** Read Etl Events */
-    get: operations["read_etl_events_etl_events_get"];
+  "/data_orchestration/events": {
+    /** Read Orch Events */
+    get: operations["read_orch_events_data_orchestration_events_get"];
   };
-  "/etl/leads": {
-    /** Load Leads From Data Lake */
-    post: operations["load_leads_from_data_lake_etl_leads_post"];
+  "/data_orchestration/events/success": {
+    /** Read Successful Orch Events */
+    get: operations["read_successful_orch_events_data_orchestration_events_success_get"];
+  };
+  "/data_orchestration/events/failure": {
+    /** Read Failed Orch Events */
+    get: operations["read_failed_orch_events_data_orchestration_events_failure_get"];
+  };
+  "/data_orchestration/events/{id}": {
+    /** Read Orch Event */
+    get: operations["read_orch_event_data_orchestration_events__id__get"];
   };
   "/contacts/": {
     /** Get Current User Contacts */
@@ -393,44 +419,6 @@ export interface components {
       /** @description Cover letter content type */
       content_type?: components["schemas"]["ContentType"] | null;
     };
-    /** ETLEventRead */
-    ETLEventRead: {
-      /**
-       * Job Name
-       * @description Name of the ETL job
-       */
-      job_name?: string | null;
-      /** @description Status of the ETL job */
-      status?: components["schemas"]["ETLStatusType"] | null;
-      /**
-       * Error Message
-       * @description Error message, if any
-       */
-      error_message?: string | null;
-      /**
-       * Id
-       * Format: uuid4
-       * @description The unique uuid4 record identifier.
-       */
-      id: string;
-      /**
-       * Created At
-       * Format: date-time
-       * @description The time the item was created
-       */
-      created_at: string;
-      /**
-       * Updated At
-       * Format: date-time
-       * @description The time the item was last updated
-       */
-      updated_at: string;
-    };
-    /**
-     * ETLStatusType
-     * @enum {string}
-     */
-    ETLStatusType: "pending" | "running" | "success" | "failure";
     /** ErrorModel */
     ErrorModel: {
       /** Detail */
@@ -690,7 +678,10 @@ export interface components {
        * @description The time the item was last updated
        */
       updated_at: string;
-      /** Url */
+      /**
+       * Url
+       * Format: uri
+       */
       url: string;
     };
     /** LeadUpdate */
@@ -767,6 +758,48 @@ export interface components {
        */
       total_count: number | null;
     };
+    /** OrchestrationEventRead */
+    OrchestrationEventRead: {
+      /** @description Status */
+      status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+      /**
+       * Error Message
+       * @description Error message, if any
+       */
+      error_message?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Job Name
+       * @description Name of the ETL job
+       */
+      job_name?: string | null;
+      /** @description Source URI */
+      source_uri?: components["schemas"]["URI"] | null;
+      /** @description Destination URI */
+      destination_uri?: components["schemas"]["URI"] | null;
+    };
+    /**
+     * OrchestrationEventStatusType
+     * @enum {string}
+     */
+    OrchestrationEventStatusType: "pending" | "running" | "success" | "failure";
     /** Pagination */
     Pagination: {
       /**
@@ -908,6 +941,17 @@ export interface components {
        */
       category?: string | null;
     };
+    /** URI */
+    URI: {
+      /** Name */
+      name: string;
+      type: components["schemas"]["URIType"];
+    };
+    /**
+     * URIType
+     * @enum {string}
+     */
+    URIType: "filepath" | "datalake" | "database" | "api";
     /** UserCreate */
     UserCreate: {
       /**
@@ -1476,6 +1520,35 @@ export interface operations {
       };
     };
   };
+  /**
+   * Load Database
+   * @description Loads the database with leads from the data lake.
+   * FIXME - This is hacky
+   */
+  load_database_leads_load_database_post: {
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead"];
+        };
+      };
+    };
+  };
+  /**
+   * Enrich Datalake
+   * @description Loads the datalake with enriched leads from the data lake.
+   */
+  enrich_datalake_leads_enrich_datalake_post: {
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead"];
+        };
+      };
+    };
+  };
   /** Read Leads */
   read_leads_leads__get: {
     parameters: {
@@ -1596,8 +1669,55 @@ export interface operations {
       };
     };
   };
-  /** Read Etl Event */
-  read_etl_event_etl_events__id__get: {
+  /**
+   * Purge Leads
+   * @description Drops all leads records in the table.
+   */
+  purge_leads_leads_purge_delete: {
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": Record<string, never>;
+        };
+      };
+    };
+  };
+  /** Read Orch Events */
+  read_orch_events_data_orchestration_events_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead"][];
+        };
+      };
+    };
+  };
+  /** Read Successful Orch Events */
+  read_successful_orch_events_data_orchestration_events_success_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead"][];
+        };
+      };
+    };
+  };
+  /** Read Failed Orch Events */
+  read_failed_orch_events_data_orchestration_events_failure_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead"][];
+        };
+      };
+    };
+  };
+  /** Read Orch Event */
+  read_orch_event_data_orchestration_events__id__get: {
     parameters: {
       path: {
         id: string;
@@ -1607,35 +1727,13 @@ export interface operations {
       /** @description Successful Response */
       202: {
         content: {
-          "application/json": components["schemas"]["ETLEventRead"];
+          "application/json": components["schemas"]["OrchestrationEventRead"];
         };
       };
       /** @description Validation Error */
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Read Etl Events */
-  read_etl_events_etl_events_get: {
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ETLEventRead"][];
-        };
-      };
-    };
-  };
-  /** Load Leads From Data Lake */
-  load_leads_from_data_lake_etl_leads_post: {
-    responses: {
-      /** @description Successful Response */
-      202: {
-        content: {
-          "application/json": string;
         };
       };
     };

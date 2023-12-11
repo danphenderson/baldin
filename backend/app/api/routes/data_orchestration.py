@@ -1,5 +1,6 @@
 # app/api/routes/etl.py
 import json
+from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import UUID4
@@ -7,6 +8,7 @@ from sqlalchemy import select
 
 from app.api.deps import (  # noqa
     AsyncSession,
+    conf,
     database_load,
     execute_leads_enrichment,
     execute_load_leads,
@@ -20,7 +22,7 @@ from app.logging import console_log
 router: APIRouter = APIRouter()
 
 
-@router.post("/run", status_code=202, response_model=schemas.OrchestrationEventRead)
+@router.post("/runner", status_code=202, response_model=schemas.OrchestrationEventRead)
 async def create_orch_event(
     orch_event: schemas.OrchestrationEventCreate,
     background_tasks: BackgroundTasks,

@@ -5,9 +5,9 @@ from enum import Enum  # TODO: Use Literal for performance improvement
 from typing import Any, Sequence
 
 from fastapi_users import schemas
-from pydantic import UUID4, AnyHttpUrl, Json, field_validator
+from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
-from pydantic import EmailStr, Field, model_validator
+from pydantic import EmailStr, Field, Json, field_validator, model_validator
 
 from app import utils
 
@@ -40,7 +40,6 @@ class BaseModel(_BaseModel):
         from_attributes = True
 
 
-
 class URI(BaseModel):
     name: str
     type: URIType
@@ -49,16 +48,12 @@ class URI(BaseModel):
         json_encoders = {
             "URI": lambda v: v.dict(),
         }
-        json_loads = json.loads
-        json_dumps = json.dumps
 
 
 class BaseRead(BaseModel):
     id: UUID4 = Field(description="The unique uuid4 record identifier.")
     created_at: datetime = Field(description="The time the item was created")
     updated_at: datetime = Field(description="The time the item was last updated")
-
-
 
 
 class Pagination(BaseModel):

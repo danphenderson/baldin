@@ -4,7 +4,7 @@ import re
 import textwrap
 from pathlib import Path
 from typing import List, Type
-
+import json
 import aiofiles
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
@@ -51,16 +51,28 @@ async def generate_pydantic_models_from_json(
     """
     An asynchronous generator function to load JSON documents from a directory.
     """
+
+    def _generate_pydantic_model_from_json(model, item):
+        models = []
+        if isinstance(item, list):
+            for i in item:
+                models.append(model(**i))
+        else:
+            models.append(model(**item))
+        return models
+
     directory_path = Path(directory) if not isinstance(directory, Path) else directory
     for path in directory_path.glob("*.json"):
         async with aiofiles.open(path, mode="r") as f:
-            doc = await f.read()
-            doc = model.model_validate_json(doc)
-            yield doc
+            doc = json.loads(await f.read())
+            try:
+                for model in _generate_pydantic_model_from_json(model, doc):
+                    yield model
+            except Exception as e:
+                continue
 
-async def load_data_from_uri(
-        source_uri: Path | str
-):
+async def load_data_from_uri(source_uri: Path | str):
     """
     Loads data from source uri into memory
     """
+    pass

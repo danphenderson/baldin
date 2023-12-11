@@ -27,10 +27,10 @@ class OrchestrationEvent(Base):
     Useful for monitoring and debugging ETL processes.
     """
 
-    __tablename__ = "etl_events"
+    __tablename__ = "orchestration_events"
     job_name = Column(String)
-    source_uri = Column(String)
-    destination_uri = Column(String)
+    source_uri = Column(JSON)
+    destination_uri = Column(JSON)
     status = Column(String)  # running, success, failure
     error_message = Column(Text)
 

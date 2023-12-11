@@ -1,28 +1,17 @@
 # app/schemas.py
-
+import json
 from datetime import datetime
 from enum import Enum  # TODO: Use Literal for performance improvement
 from typing import Any, Sequence
 
 from fastapi_users import schemas
-from pydantic import UUID4, AnyHttpUrl
+from pydantic import UUID4, AnyHttpUrl, Json, field_validator
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, model_validator
+
 from app import utils
 
 # TODO: Handle validation as it arrises.
-
-
-# Base Models
-class BaseModel(_BaseModel):
-    class Config:
-        from_attributes = True
-
-
-class BaseRead(BaseModel):
-    id: UUID4 = Field(description="The unique uuid4 record identifier.")
-    created_at: datetime = Field(description="The time the item was created")
-    updated_at: datetime = Field(description="The time the item was last updated")
 
 
 # Types and properties
@@ -39,29 +28,66 @@ class OrchestrationEventStatusType(str, Enum):
     FAILED = "failure"
 
 
+class URIType(str, Enum):
+    FILE = "filepath"
+    DATABASE = "database"
+    API = "api"
+
+
+# Base Models
+class BaseModel(_BaseModel):
+    class Config:
+        from_attributes = True
+
+
+
+class URI(BaseModel):
+    name: str
+    type: URIType
+
+    class Config:
+        json_encoders = {
+            "URI": lambda v: v.dict(),
+        }
+        json_loads = json.loads
+        json_dumps = json.dumps
+
+
+class BaseRead(BaseModel):
+    id: UUID4 = Field(description="The unique uuid4 record identifier.")
+    created_at: datetime = Field(description="The time the item was created")
+    updated_at: datetime = Field(description="The time the item was last updated")
+
+
+
+
 class Pagination(BaseModel):
     page: int = Field(1, ge=1, description="The page number")
     page_size: int = Field(10, ge=1, description="The number of items per page")
     request_count: bool = Field(False, description="Request a query for total count")
 
 
-# Model CRUD Schemas
+# Model CRUD Schemas+
 class BaseOrchestrationEvent(BaseModel):
+    job_name: str | None = Field(None, description="Name of the ETL job")
+    source_uri: URI | None = Field(None, description="Source URI")
+    destination_uri: URI | None = Field(None, description="Destination URI")
+    status: OrchestrationEventStatusType | None = Field(None, description="Status")
     error_message: str | None = Field(None, description="Error message, if any")
-    status: OrchestrationEventStatusType = Field(OrchestrationEventStatusType.PENDING, description="Status of the ETL job")
+
 
 class OrchestrationEventRead(BaseRead, BaseOrchestrationEvent):
-    job_name: str = Field(..., description="Name of the ETL job")
-    source_uri: str = Field(..., description="Source URI")
-    destination_uri: str = Field(..., description="Destination URI")
+    pass
+
 
 class OrchestrationEventCreate(BaseOrchestrationEvent):
     job_name: str
-    source_uri: str
-    destination_uri: str
+    source_uri: URI
+    destination_uri: URI
+
 
 class OrchestrationEventUpdate(BaseOrchestrationEvent):
-    status: OrchestrationEventStatusType
+    pass
 
 
 class BaseSkill(BaseModel):

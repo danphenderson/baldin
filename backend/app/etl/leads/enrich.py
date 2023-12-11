@@ -11,7 +11,7 @@ def get_leads_dir() -> Path:
     return Path(conf.settings.PUBLIC_ASSETS_DIR) / "leads"
 
 
-async def enrich_lead(lead: Job) -> Job:
+async def enrich_lead(lead) -> Job:
     # Exit early if description is not set, as it is required for enrichment
     if not lead.description:
         return lead
@@ -55,7 +55,8 @@ async def enrich_lead(lead: Job) -> Job:
 
     # Update the lead's attributes
     for var, value in completion_dict.items():
-        setattr(lead, var, value)
+        if var in unset_fields:
+            setattr(lead, var, value)
 
     return lead
 
@@ -64,6 +65,7 @@ async def enrich_leads():
     async for lead in utils.generate_pydantic_models_from_json(Job, get_leads_dir()):
         # Enrich lead
         enriched_lead = await enrich_lead(lead)  # type: ignore
+
         file_path = str(get_leads_dir() / "enriched" / f"{enriched_lead.id}.json")
 
         try:

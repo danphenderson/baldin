@@ -1,13 +1,14 @@
 # app/utils.py
 
+import json
 import re
 import textwrap
 from pathlib import Path
 from typing import List, Type
-import json
+
 import aiofiles
 from bs4 import BeautifulSoup
-from pydantic import BaseModel
+from pydantic import BaseModel, InstanceOf
 
 
 def clean_text(text: str) -> str:
@@ -61,8 +62,11 @@ async def generate_pydantic_models_from_json(
             models.append(model(**item))
         return models
 
-    directory_path = Path(directory) if not isinstance(directory, Path) else directory
-    for path in directory_path.glob("*.json"):
+    path = Path(directory) if not isinstance(directory, Path) else directory
+    model_files = [p for p in path.glob("*.json") if path.is_dir()]
+    model_files = model_files if model_files else [path]
+
+    for path in model_files:
         async with aiofiles.open(path, mode="r") as f:
             doc = json.loads(await f.read())
             try:
@@ -71,8 +75,11 @@ async def generate_pydantic_models_from_json(
             except Exception as e:
                 continue
 
-async def load_data_from_uri(source_uri: Path | str):
+
+async def dump_pydantic_model_to_json(model, destination: Path | str):
     """
-    Loads data from source uri into memory
+    Dumps pydantic model to json
     """
-    pass
+    Path(destination).parent.mkdir(parents=True, exist_ok=True)
+    async with aiofiles.open(destination, mode="a") as f:
+        await f.write(json.dumps(model.__dict__, indent=4))

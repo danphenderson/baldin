@@ -1,23 +1,221 @@
 # app/api/routes/leads.py
 
+import json
+from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import RedirectResponse
+from httpx import get
 from pydantic import UUID4
 from sqlalchemy import delete, func, select
 
 from app.api.deps import (
     AsyncSession,
-    execute_leads_enrichment,
-    execute_load_leads,
+    conf,
+    create_orchestration_event,
+    enrich,
     get_async_session,
     get_lead,
+    get_orchestration_event,
     get_pagination_params,
     models,
     schemas,
+    session_context,
+    update_orchestration_event,
+    utils,
 )
 
 router: APIRouter = APIRouter()
+
+
+async def _load_leads_into_database(orch_event_id):
+    """
+    Loads the database with leads from the data lake.
+    """
+    async with session_context() as db:
+        # Get the orchestration event record
+        event = await get_orchestration_event(orch_event_id, db)
+        event_id = getattr(event, "id")
+
+        # Update the orchestration event status to "running"
+        setattr(event, "status", schemas.OrchestrationEventStatusType("running"))
+
+        event = await update_orchestration_event(
+            event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
+        )
+
+        # Unmarshal the source URI
+        source_uri = schemas.URI.model_validate_json(getattr(event, "source_uri"))
+
+        # Load the database
+        async for lead in utils.generate_pydantic_models_from_json(
+            schemas.LeadCreate, source_uri.name
+        ):
+            try:
+                # Create a new lead if it doesn't exist
+                lead = models.Lead(**lead.__dict__)
+                db.add(lead)
+                await db.commit()
+                await db.refresh(lead)
+            except Exception as e:
+                # Rollback on exception and update the orchestration event status to "failure" with error message
+                await db.rollback()
+                setattr(event, "error_message", str(e))
+                setattr(
+                    event, "status", schemas.OrchestrationEventStatusType("failure")
+                )
+                event = await update_orchestration_event(
+                    event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
+                )
+                raise e
+
+        # Update the orchestration event status to "success"
+        setattr(event, "status", schemas.OrchestrationEventStatusType("success"))
+        event = await update_orchestration_event(
+            event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
+        )
+
+
+@router.post(
+    "/load_database", status_code=202, response_model=schemas.OrchestrationEventRead
+)
+async def load_database(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    Loads the database with leads from the data lake.
+    FIXME - This is hacky
+    """
+    # Determin URI location of the data lake and database from settings
+    source_uri = schemas.URI(
+        name=str(
+            Path(str(conf.settings.DATALAKE_URI))
+            / "leads"
+            / "enriched"
+            / "enriched.json"
+        ),
+        type=schemas.URIType("datalake"),
+    )
+    destination_uri = schemas.URI(
+        name=str(Path(str(conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI)) / "leads"),
+        type=schemas.URIType("database"),
+    )
+
+    # Create an orchestration event
+    payload = schemas.OrchestrationEventCreate(
+        job_name="load_database",
+        source_uri=source_uri,
+        destination_uri=destination_uri,
+        status=schemas.OrchestrationEventStatusType("pending"),
+        error_message=None,
+    )
+
+    # Post orchestration event and wait for model to be created
+    orch_event = await create_orchestration_event(payload, db)
+
+    # Add the load_database_task to the background tasks
+    background_tasks.add_task(_load_leads_into_database, orch_event.id)
+
+    # Deserialize into URI object
+    setattr(orch_event, "source_uri", json.loads(getattr(orch_event, "source_uri")))
+    setattr(
+        orch_event,
+        "destination_uri",
+        json.loads(getattr(orch_event, "destination_uri")),
+    )
+    return orch_event
+
+
+async def _enrich_datalake(orch_event_id):
+    """
+    Enriches the leads in the database.
+
+    FIXME - This is hacky
+    """
+    async with session_context() as db:
+        # Get the orchestration event record
+        event = await get_orchestration_event(orch_event_id, db)
+        event_id = getattr(event, "id")
+
+        # Update the orchestration event status to "running"
+        setattr(event, "status", schemas.OrchestrationEventStatusType("running"))
+
+        event = await update_orchestration_event(
+            event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
+        )
+
+        # Unmarshal the source URI
+        source_uri = schemas.URI.model_validate_json(getattr(event, "source_uri"))
+        destination_uri = schemas.URI.model_validate_json(
+            getattr(event, "destination_uri")
+        )
+
+        # Enrich the leads
+        async for lead in utils.generate_pydantic_models_from_json(
+            schemas.LeadCreate, source_uri.name
+        ):
+            try:
+                # Enrich lead
+                enriched_lead = await enrich.enrich_lead(lead)
+                # Dump the enriched lead to the data lake
+                await utils.dump_pydantic_model_to_json(
+                    enriched_lead, Path(destination_uri.name) / "leads.json"
+                )
+
+            except Exception as e:
+                # Update the orchestration event status to "failure" with error message
+                setattr(event, "error_message", str(e))
+                setattr(
+                    event, "status", schemas.OrchestrationEventStatusType("failure")
+                )
+                event = await update_orchestration_event(
+                    event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
+                )
+                raise e
+
+        # Update the orchestration event status to "success"
+        setattr(event, "status", schemas.OrchestrationEventStatusType("success"))
+        event = await update_orchestration_event(
+            event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
+        )
+
+
+@router.post(
+    "/enrich_datalake", status_code=202, response_model=schemas.OrchestrationEventRead
+)
+async def enrich_datalake(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    Loads the datalake with enriched leads from the data lake.
+    """
+    # Determin URI location of the data lake and database from settings
+    source_uri = schemas.URI(
+        name=str(Path(conf.settings.DATALAKE_URI) / "leads"),
+        type=schemas.URIType("datalake"),
+    )
+    destination_uri = schemas.URI(
+        name=str(Path(source_uri.name) / "enriched"), type=schemas.URIType("datalake")
+    )
+
+    # Create an orchestration event
+    payload = schemas.OrchestrationEventCreate(
+        job_name="enrich_datalake",
+        source_uri=source_uri,
+        destination_uri=destination_uri,
+        status=schemas.OrchestrationEventStatusType("pending"),
+        error_message=None,
+    )
+
+    # Post orchestration event and wait for model to be created
+    orch_event = await create_orchestration_event(payload, db)
+
+    # Add the load_database_task to the background tasks
+    background_tasks.add_task(_enrich_datalake, orch_event.id)
+
+    return orch_event
 
 
 @router.post("/", status_code=201, response_model=UUID4)

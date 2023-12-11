@@ -57,6 +57,9 @@ class Settings(_BaseSettings):
     FIRST_SUPERUSER_EMAIL: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
 
+    # DATALAKE SETTINGS
+    DATALAKE_URI: str = f"public/datalake"
+
     # VALIDATORS
     @validator("BACKEND_CORS_ORIGINS")
     def _assemble_cors_origins(cls, cors_origins: Union[str, list[AnyHttpUrl]]):

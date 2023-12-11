@@ -30,6 +30,7 @@ class OrchestrationEventStatusType(str, Enum):
 
 class URIType(str, Enum):
     FILE = "filepath"
+    DATALAKE = "datalake"
     DATABASE = "database"
     API = "api"
 
@@ -64,15 +65,14 @@ class Pagination(BaseModel):
 
 # Model CRUD Schemas+
 class BaseOrchestrationEvent(BaseModel):
-    job_name: str | None = Field(None, description="Name of the ETL job")
-    source_uri: URI | None = Field(None, description="Source URI")
-    destination_uri: URI | None = Field(None, description="Destination URI")
     status: OrchestrationEventStatusType | None = Field(None, description="Status")
     error_message: str | None = Field(None, description="Error message, if any")
 
 
 class OrchestrationEventRead(BaseRead, BaseOrchestrationEvent):
-    pass
+    job_name: str | None = Field(None, description="Name of the ETL job")
+    source_uri: URI | None = Field(None, description="Source URI")
+    destination_uri: URI | None = Field(None, description="Destination URI")
 
 
 class OrchestrationEventCreate(BaseOrchestrationEvent):

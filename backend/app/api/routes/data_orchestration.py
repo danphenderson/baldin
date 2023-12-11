@@ -3,15 +3,13 @@ import json
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi.responses import RedirectResponse
 from pydantic import UUID4
 from sqlalchemy import select
 
 from app.api.deps import (  # noqa
     AsyncSession,
     conf,
-    database_load,
-    execute_leads_enrichment,
-    execute_load_leads,
     get_async_session,
     get_orchestration_event,
     models,
@@ -20,43 +18,6 @@ from app.api.deps import (  # noqa
 from app.logging import console_log
 
 router: APIRouter = APIRouter()
-
-
-@router.post("/runner", status_code=202, response_model=schemas.OrchestrationEventRead)
-async def create_orch_event(
-    orch_event: schemas.OrchestrationEventCreate,
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_async_session),
-):
-    # Serialization when creating a new event
-    event_dict = orch_event.dict()
-    event_dict["source_uri"] = json.dumps(event_dict["source_uri"])
-    event_dict["destination_uri"] = json.dumps(event_dict["destination_uri"])
-    event = models.OrchestrationEvent(**event_dict)
-
-    # Create orchestration event
-    db.add(event)
-    await db.commit()
-    await db.refresh(event)
-
-    # Determine which ETL process to run
-    pipeline = globals().get(getattr(event, "job_name"))
-
-    if pipeline is None or not callable(pipeline):
-        raise HTTPException(
-            status_code=404, detail=f"Job name {orch_event.job_name} not found"
-        )
-
-    console_log.info(f"Running {orch_event.job_name} ETL pipeline: {event.id}")
-
-    # # Run orchestration pipeline in the background
-    background_tasks.add_task(pipeline, event.id)
-
-    event.source_uri = json.loads(
-        getattr(event, "source_uri")
-    )  # Deserialize into URI object
-    event.destination_uri = json.loads(getattr(event, "destination_uri"))
-    return event
 
 
 @router.get("/events", response_model=list[schemas.OrchestrationEventRead])

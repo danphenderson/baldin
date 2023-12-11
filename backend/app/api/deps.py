@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, HTTPException, Query
+from fastapi import BackgroundTasks, Depends, HTTPException, Query
 from pydantic import UUID4
 
 from app import models, schemas, utils
@@ -20,7 +20,6 @@ from app.etl.leads import enrich
 from app.logging import get_async_logger  # noqa
 
 log = get_async_logger(__name__)
-
 
 
 async def _403(user_id: UUID4, obj: Any, obj_id: UUID4) -> HTTPException:
@@ -63,24 +62,42 @@ async def get_lead(
 async def get_orchestration_event(
     id: UUID4, db: AsyncSession = Depends(get_async_session)
 ) -> models.OrchestrationEvent:
-    etl_event = await db.get(models.OrchestrationEvent, id)
-    if not etl_event:
-        raise await _404(etl_event, id)
-    return etl_event
+    orch_event = await db.get(models.OrchestrationEvent, id)
+
+    if not orch_event:
+        raise await _404(orch_event, id)
+
+    return orch_event
 
 
-async def update_orchestration_event_status(
+async def update_orchestration_event(
     id: UUID4,
-    status: schemas.OrchestrationEventStatusType,
+    payload: schemas.OrchestrationEventUpdate,
     db: AsyncSession = Depends(get_async_session),
 ) -> models.OrchestrationEvent:
-    etl_event = await db.get(models.OrchestrationEvent, id)
-
-    if not etl_event:
-        raise await _404(etl_event, id)
-    setattr(etl_event, "status", status)
+    event = await get_orchestration_event(id, db)
+    for var, value in payload.dict(exclude_unset=True).items():
+        setattr(event, var, value)
     await db.commit()
-    return etl_event
+    await db.refresh(event)
+    return event
+
+
+async def create_orchestration_event(
+    payload: schemas.OrchestrationEventCreate,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.OrchestrationEvent:
+    # Seralize URIS to JSON stings (for database)
+    setattr(payload, "source_uri", payload.source_uri.json())
+    setattr(payload, "destination_uri", payload.destination_uri.json())
+
+    # Create new event record in database
+    event = models.OrchestrationEvent(**payload.__dict__)
+    db.add(event)
+    await db.commit()
+    await db.refresh(event)
+
+    return event
 
 
 async def get_skill(
@@ -159,108 +176,3 @@ async def get_application(
     if application.user_id != user.id:  # type: ignore
         raise await _403(user.id, application, id)
     return application
-
-
-async def execute_load_leads(etl_event_id: UUID4):
-    async with session_context() as db:
-        try:
-            # Update ETLEvent status to running
-            await update_orchestration_event_status(
-                etl_event_id, schemas.OrchestrationEventStatusType("running"), db
-            )
-
-            file_path = Path(conf.settings.PUBLIC_ASSETS_DIR) / "leads" / "enriched"
-
-            # Generate Leads from JSON documents in data lake
-            async for valid_lead in utils.generate_pydantic_models_from_json(
-                schemas.LeadCreate, file_path
-            ):
-                await log.info(f"Inserting lead {valid_lead} into database")
-                lead = models.Lead(**valid_lead.__dict__)
-                db.add(lead)
-
-            await db.commit()
-
-            # Update ETLEvent status to success
-            await update_orchestration_event_status(
-                etl_event_id, schemas.OrchestrationEventStatusType("success"), db
-            )
-
-        except Exception as e:
-            await log.exception(f"Error executing leads ETL: {e}")
-            await db.rollback()  # Rollback on exception
-            # Update ETLEvent status to failed
-            await update_orchestration_event_status(
-                etl_event_id, schemas.OrchestrationEventStatusType("failure"), db
-            )
-            raise e
-
-
-async def execute_leads_enrichment(etl_event_id):
-    async with session_context() as db:
-        try:
-            # Update ETLEvent status to running
-            await update_orchestration_event_status(
-                etl_event_id, schemas.OrchestrationEventStatusType("running"), db
-            )
-
-            # Enrich leads
-            await enrich.enrich_leads()
-
-            # Update ETLEvent status to success
-            await update_orchestration_event_status(
-                etl_event_id, schemas.OrchestrationEventStatusType("success"), db
-            )
-
-        except Exception as e:
-            await log.exception(f"Error executing leads enrichment: {e}")
-            await db.rollback()  # Rollback on exception
-            # Update ETLEvent status to failed
-            await update_orchestration_event_status(
-                etl_event_id, schemas.OrchestrationEventStatusType("failure"), db
-            )
-            raise e
-
-
-
-async def database_load(event_id):
-    async with session_context() as db:
-        try:
-            # Update ETLEvent status to running
-            event = await update_orchestration_event_status(
-                event_id, schemas.OrchestrationEventStatusType("running"), db
-            )
-
-            # Deserialize URIs
-            source_uri = schemas.URI.parse_raw(getattr(event, "source_uri"))
-            destination_uri = schemas.URI.parse_raw(getattr(event, "destination_uri"))
-
-            # Get model class and schema
-            model_class = globals().get(getattr(models, destination_uri.name))
-            model_schema = globals().get(getattr(schemas, f"{destination_uri.name}Create"))
-
-            # Validate model class and schema
-            if model_class is None or model_schema is None:
-                raise await _404(model_class)
-
-
-            # Load data into database
-            async for doc in utils.generate_pydantic_models_from_json(
-                model_schema, event.source_uri.name
-            ):
-                await log.info(f"Inserting {doc} into database")
-                db.add(model_class(**doc.__dict__))
-                await db.commit()  # TODO: wrap in try-catch-finally: commit after itterating? or chunk it?
-
-            # Update ETLEvent status to success
-            await update_orchestration_event_status(
-                event_id, schemas.OrchestrationEventStatusType("success"), db
-            )
-
-        except Exception as e:
-            await log.exception(f"Error executing database load: {e}")
-            await db.rollback()
-            # Update ETLEvent status to failed
-            await update_orchestration_event_status(
-                event_id, schemas.OrchestrationEventStatusType("failure"), db
-            )

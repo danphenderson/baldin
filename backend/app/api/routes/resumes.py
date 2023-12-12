@@ -51,7 +51,7 @@ async def get_user_resume(
     return resume
 
 
-@router.put("/{resume_id}", response_model=schemas.ResumeRead)
+@router.patch("/{resume_id}", response_model=schemas.ResumeRead)
 async def update_user_resume(
     payload: schemas.ResumeUpdate,
     resume: schemas.ResumeRead = Depends(get_resume),

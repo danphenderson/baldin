@@ -96,8 +96,6 @@ class Application(Base):
     """
 
     __tablename__ = "applications"
-    cover_letter = Column(Text)
-
     status = Column(String)
     lead_id = Column(UUID, ForeignKey("leads.id"), index=True)
     user_id = Column(UUID, ForeignKey("users.id"))
@@ -144,7 +142,9 @@ class Resume(Base):
     user_id = Column(UUID, ForeignKey("users.id"))
     user = relationship("User", back_populates="resumes")
     applications = relationship(
-        "Application", secondary="resumes_x_applications", back_populates="resumes"
+        "Application",
+        secondary="resumes_x_applications",
+        back_populates="resumes",
     )
 
 

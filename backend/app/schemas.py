@@ -1,5 +1,4 @@
 # app/schemas.py
-import json
 from datetime import datetime
 from enum import Enum  # TODO: Use Literal for performance improvement
 from typing import Any, Sequence
@@ -7,7 +6,7 @@ from typing import Any, Sequence
 from fastapi_users import schemas
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
-from pydantic import EmailStr, Field, Json, field_validator, model_validator
+from pydantic import EmailStr, Field, model_validator
 
 from app import utils
 
@@ -168,25 +167,6 @@ class LeadUpdate(BaseLead):
     pass
 
 
-class BaseApplication(BaseModel):
-    cover_letter: str | None = None
-    resume: str | None = None
-    notes: str | None = None
-    status: str | None = None
-
-
-class ApplicationRead(BaseRead, BaseApplication):
-    lead_id: UUID4
-
-
-class ApplicationCreate(BaseApplication):
-    lead_id: UUID4
-
-
-class ApplicationUpdate(BaseApplication):
-    pass
-
-
 class BaseContact(BaseModel):
     first_name: str | None = Field(None, description="First name")
     last_name: str | None = Field(None, description="Last name")
@@ -269,3 +249,18 @@ class UserCreate(schemas.BaseUserCreate, BaseUser):
 
 class UserUpdate(schemas.BaseUserUpdate, BaseUser):
     pass
+
+
+class ApplicationRead(BaseRead):
+    lead_id: UUID4
+    user_id: UUID4
+    lead: LeadRead
+    user: UserRead
+
+
+class ApplicationCreate(BaseModel):
+    lead_id: UUID4
+
+
+class ApplicationUpdate(BaseModel):
+    status: str | None = Field(None, description="Application status")

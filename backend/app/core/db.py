@@ -18,7 +18,7 @@ else:
     )  # Use string conversion as a workaround
 
 # Create an asynchronous engine for SQLAlchemy
-async_engine = create_async_engine(sqlalchemy_database_uri, echo=True)
+async_engine = create_async_engine(sqlalchemy_database_uri, echo=False)
 
 # Create an asynchronous session maker
 async_session_maker = async_sessionmaker(bind=async_engine, expire_on_commit=False)

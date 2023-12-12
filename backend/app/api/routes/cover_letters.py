@@ -64,3 +64,13 @@ async def update_user_cover_letter(
     await db.commit()
     await db.refresh(cover_letter)
     return cover_letter
+
+
+@router.delete("/{cover_letter_id}", status_code=204)
+async def delete_user_cover_letter(
+    cover_letter: schemas.CoverLetterRead = Depends(get_cover_letter),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await db.delete(cover_letter)
+    await db.commit()
+    return

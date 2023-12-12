@@ -1,69 +1,46 @@
-import React, { useState } from 'react';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Box } from '@mui/material';
-import { DataGrid, GridColDef, GridRowModel } from '@mui/x-data-grid';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography } from '@mui/material';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { getOrchestrations, OrchestrationEventRead } from '../services/data-orchestration';
 
-// Define a type for pipeline data
-type Pipeline = {
-    id: number;
-    name: string;
-    status: 'Pass' | 'Fail' | 'InProgress';
-    jobSearchRef: string;
-};
 
 const DataOrchestrationPage: React.FC = () => {
-    const [pipelines, setPipelines] = useState<Pipeline[]>([
-        { id: 1, name: 'Pipeline 1', status: 'Pass', jobSearchRef: 'Job1' },
-        // ... other pipelines
-    ]);
+  const [pipelines, setPipelines] = useState<OrchestrationEventRead[]>([]);
 
-    const [openDialog, setOpenDialog] = useState(false);
-    const [currentPipeline, setCurrentPipeline] = useState<Pipeline | null>(null);
-
-    const handleOpenDialog = (pipeline: Pipeline | null) => {
-        setCurrentPipeline(pipeline);
-        setOpenDialog(true);
-    };
-
-    const handleCloseDialog = () => {
-        setOpenDialog(false);
-        setCurrentPipeline(null);
-    };
+  useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const orchestrationData = await getOrchestrations();
+                setPipelines(orchestrationData);
+            } catch (error) {
+                console.error('Failed to fetch orchestration data:', error);
+                // Handle errors appropriately (e.g., show a notification to the user)
+            }
+        };
+        fetchData();
+    }, []);
 
     // Define columns for DataGrid
     const columns: GridColDef[] = [
-        { field: 'name', headerName: 'Name', width: 150 },
-        { field: 'status', headerName: 'Status', width: 110 },
-        { field: 'jobSearchRef', headerName: 'Job Search Reference', width: 200 },
+        { field: 'job_name', headerName: 'Status', width: 200 },
+        { field: 'status', headerName: 'Status', width: 100 },
+        // TODO: Need to unplick the source and destination URIs
+        // { field: "source_uri", headerName: "Source URI", width: 200 },
+        // { field: "destination_uri", headerName: "Destination URI", width: 200 },
+        { field: 'created_at', headerName: 'Created At', width: 220 },
+        { field: 'updated_at', headerName: 'Updated At', width: 220 },
+        { field: 'error_message', headerName: 'Error Message', width: 100 },
         // Add actions like edit, delete here if needed
     ];
 
     return (
         <Box sx={{ height: 400, width: '100%', p: 2 }}>
+          <Typography variant='h4'>Orchestration Events</Typography>
             <DataGrid
                 rows={pipelines}
                 columns={columns}
-                onRowClick={(params: GridRowModel) => handleOpenDialog(params as Pipeline)}
             />
 
-            <Dialog open={openDialog} onClose={handleCloseDialog}>
-                <DialogTitle>{currentPipeline ? 'Edit Pipeline' : 'Add New Pipeline'}</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        label="Name"
-                        fullWidth
-                        margin="dense"
-                        value={currentPipeline?.name || ''}
-                        onChange={(e) => setCurrentPipeline({ ...currentPipeline, name: e.target.value } as Pipeline)}
-                    />
-                    {/* Include other fields with similar structure */}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDialog}>Cancel</Button>
-                    <Button onClick={() => {/* Handle save logic */}}>
-                        {currentPipeline ? 'Save Changes' : 'Add Pipeline'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
         </Box>
     );
 };

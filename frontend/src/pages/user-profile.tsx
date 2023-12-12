@@ -1,8 +1,9 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { CircularProgress, Stack, IconButton, Typography, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, Snackbar } from '@mui/material';
+import { CircularProgress, Stack, IconButton, Typography, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, Snackbar, Card, CardContent, Avatar, Grid } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import { UserContext } from '../context/user-context';
-import { getUser, updateUser, UserUpdate } from '../services/user'; // Import service functions
+import { getUser, updateUser, UserUpdate } from '../services/user';
+
 
 const UserProfile = () => {
     const { user, token, setUser } = useContext(UserContext);
@@ -10,35 +11,27 @@ const UserProfile = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
-    // Initialize userDetails with the user object or an empty object cast to UserUpdate
     const [userDetails, setUserDetails] = useState<UserUpdate>(user || {} as UserUpdate);
 
+    const fetchUserData = async () => {
+        if (!token) return;
 
-    const handleClickOpen = () => {
-        setOpen(true);
-    };
-
-    const handleClose = () => {
-        setOpen(false);
-        setError('');
+        try {
+            setIsLoading(true);
+            const fetchedUser = await getUser(token);
+            setUserDetails(fetchedUser);
+        } catch (error) {
+            setError('Failed to fetch user data');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     useEffect(() => {
-        const fetchUserData = async () => {
-            setIsLoading(true);
-            const fetchedUser = await getUser(token || '');
-            if (fetchedUser) {
-                setUserDetails(fetchedUser);
-            } else {
-                setError('Failed to fetch user data');
-            }
-            setIsLoading(false);
-        };
-
         if (token && !user) {
             fetchUserData();
         }
-    }, [token]);
+    }, [token, user]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -48,72 +41,82 @@ const UserProfile = () => {
         }));
     };
 
+    const handleClose = () => {
+        setOpen(false);
+        setMessage('');
+        setError('');
+    };
+
     const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
-        setOpen(false);
-        console.log(userDetails);
-        const updatedUser = await updateUser(token || '', userDetails);
-        if (updatedUser) {
+        if (!token) {
+            setError('Authorization token is missing');
+            return;
+        }
+
+        try {
+            setOpen(false);
+            const updatedUser = await updateUser(token, userDetails);
             setUser(updatedUser);
             setMessage('Profile updated successfully');
-        } else {
-            setMessage('There was an error updating the profile');
+        } catch (error) {
+            setError('There was an error updating the profile');
         }
     };
 
     return (
-        <Stack spacing={2} alignItems="center">
-            <IconButton onClick={handleClickOpen}>
-                <EditIcon />
-            </IconButton>
-            {isLoading ? (
-                <CircularProgress />
-            ) : (
-                Object.entries(userDetails).map(([key, value]) => (
-                    <Typography key={key}>{`${key}: ${value}`}</Typography>
-                ))
-            )}
+      <Stack spacing={2} alignItems="center">
+      <Card sx={{ minWidth: 275, maxWidth: 500, width: '100%', m: 2 }}>
+          <CardContent>
+              <Stack spacing={2} alignItems="center">
+                  <Typography variant="h4"> User Profile </Typography>
+                  <IconButton onClick={() => setOpen(true)} size="large">
+                      <EditIcon />
+                  </IconButton>
+                  {isLoading ? <CircularProgress /> : Object.entries(userDetails).map(([key, value]) => {
+                      if (!['id', 'is_active', 'is_superuser', 'is_verified'].includes(key)) {
+                          return <Typography variant="body1" key={key}>{`${key}: ${value}`}</Typography>;
+                      }
+                      return null;
+                  })}
+              </Stack>
+          </CardContent>
+      </Card>
 
-            <Dialog open={open} onClose={handleClose}>
-                <DialogTitle>Edit User Information</DialogTitle>
-                <DialogContent>
+      <Dialog open={open} onClose={handleClose} fullWidth>
+          <DialogTitle>Edit User Information</DialogTitle>
+          <DialogContent>
+              <Grid container spacing={2}>
                   {Object.keys(userDetails).map(key => {
-                      const value = userDetails[key as keyof UserUpdate] || ''; // Safely access the value
+                      const value = userDetails[key as keyof UserUpdate] || '';
                       return (
-                          <TextField
-                              key={key}
-                              margin="dense"
-                              label={key.replace(/_/g, ' ')}
-                              type="text"
-                              fullWidth
-                              variant="outlined"
-                              name={key}
-                              value={value} // Use the safely accessed value
-                              onChange={handleChange}
-                          />
+                          <Grid item xs={12} key={key}>
+                              <TextField
+                                  margin="dense"
+                                  label={key.replace(/_/g, ' ')}
+                                  type="text"
+                                  fullWidth
+                                  variant="outlined"
+                                  name={key}
+                                  value={value}
+                                  onChange={handleChange}
+                              />
+                          </Grid>
                       );
                   })}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button onClick={handleSubmit}>Save</Button>
-                </DialogActions>
-            </Dialog>
+              </Grid>
+          </DialogContent>
+          <DialogActions>
+              <Button onClick={handleClose}>Cancel</Button>
+              <Button onClick={handleSubmit}>Save</Button>
+          </DialogActions>
+      </Dialog>
 
-            {message && (
-                <Snackbar
-                    open={!!message}
-                    autoHideDuration={6000}
-                    onClose={() => setMessage('')}
-                    message={message}
-                />
-            )}
+      {/* Snackbar component remains the same */}
 
-            {error && (
-                <Typography color="error">{error}</Typography>
-            )}
-        </Stack>
-    );
+      {error && <Typography color="error">{error}</Typography>}
+  </Stack>
+);
 };
 
 export default UserProfile;

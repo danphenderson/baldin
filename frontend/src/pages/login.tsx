@@ -1,7 +1,7 @@
 import React from 'react';
 import SignIn from '../component/auth/signin';
 
-const Login: React.FC = () => {
+const LoginPage: React.FC = () => {
   return (
     <div>
       <SignIn />
@@ -9,4 +9,4 @@ const Login: React.FC = () => {
   );
 }
 
-export default Login;
+export default LoginPage;

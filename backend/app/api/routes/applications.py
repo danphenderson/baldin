@@ -1,4 +1,4 @@
-# app/api/routes/user/applications.py
+# app/api/routes/applications.py
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import UUID4
@@ -39,8 +39,8 @@ async def create_application(
         )
 
     # Create a new application
-    application_data = payload.dict()
-    application_data["user_id"] = user.id  # Set the user_id from the current user
+    application_data = {**payload.dict(exclude_unset=True), "user_id": user.id}
+
     application = models.Application(**application_data)
     db.add(application)
     await db.commit()
@@ -78,6 +78,24 @@ async def get_applications(
         raise HTTPException(
             status_code=404, detail="No applications found for the current user"
         )
+
+    # # Eagerly load related objects (cover_letters and resumes) for serialization
+    # for application in applications:
+    #     result = await db.execute(
+    #         select(models.Resume)
+    #         .join(models.ResumeXApplication)
+    #         .where(models.ResumeXApplication.application_id == application.id)
+    #     )
+    #     resumes = result.scalars().all()
+    #     application.resumes = resumes
+
+    #     result = await db.execute(
+    #         select(models.CoverLetter)
+    #         .join(models.CoverLetterXApplication)
+    #         .where(models.CoverLetterXApplication.application_id == application.id)
+    #     )
+    #     cover_letters = result.scalars().all()
+    #     application.cover_letters = cover_letters
 
     return applications
 
@@ -152,3 +170,104 @@ async def get_application_cover_letters(id: UUID4, db=Depends(get_async_session)
         )
 
     return cover_letters
+
+
+@router.post("/{id}/resumes", status_code=201, response_model=schemas.ResumeRead)
+async def add_resume_to_application(
+    id: UUID4,
+    payload: schemas.ResumeCreate,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    # Create a new resume instance
+    resume = models.Resume(**payload.dict(), user_id=user.id)
+
+    # Add resume to the database
+    db.add(resume)
+    await db.commit()
+    await db.refresh(resume)
+
+    # Create an association between the resume and the application
+    association = models.ResumeXApplication(application_id=id, resume_id=resume.id)
+    db.add(association)
+    await db.commit()
+
+    return resume
+
+
+@router.post(
+    "/{id}/cover_letters", status_code=201, response_model=schemas.CoverLetterRead
+)
+async def add_cover_letter_to_application(
+    id: UUID4,
+    payload: schemas.CoverLetterCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    # Create a new cover letter instance
+    cover_letter = models.CoverLetter(**payload.dict(), user_id=user.id)
+
+    # Add cover letter to the database
+    db.add(cover_letter)
+    await db.commit()
+    await db.refresh(cover_letter)
+
+    # Create an association between the cover letter and the application
+    association = models.CoverLetterXApplication(
+        application_id=id, cover_letter_id=cover_letter.id
+    )
+    db.add(association)
+    await db.commit()
+
+    return cover_letter
+
+
+# @router.patch("/{id}/resumes/{resume_id}", status_code=200, response_model=schemas.ResumeRead)
+# async def update_application_resume(
+#     id: UUID4,
+#     resume_id: UUID4,
+#     payload: schemas.ResumeUpdate,
+#     db: AsyncSession = Depends(get_async_session),
+# ):
+#     # Fetch the resume from the database
+#     result = await db.execute(
+#         select(models.Resume).where(models.Resume.id == resume_id)
+#     )
+#     resume = result.scalars().first()
+
+#     if not resume:
+#         raise HTTPException(status_code=404, detail="Resume not found")
+
+#     # Update resume details
+#     for var, value in payload.dict(exclude_unset=True).items():
+#         setattr(resume, var, value)
+
+#     await db.commit()
+#     await db.refresh(resume)
+
+#     return resume
+
+# @router.patch("/{id}/cover_letters/{cover_letter_id}", status_code=200, response_model=schemas.CoverLetterRead)
+# async def update_application_cover_letter(
+#     id: UUID4,
+#     cover_letter_id: UUID4,
+#     payload: schemas.CoverLetterUpdate,
+#     db: AsyncSession = Depends(get_async_session),
+# ):
+#     # Fetch the cover letter from the database
+#     result = await db.execute(
+#         select(models.CoverLetter).where(models.CoverLetter.id == cover_letter_id)
+#     )
+#     cover_letter = result.scalars().first()
+
+#     if not cover_letter:
+#         raise HTTPException(status_code=404, detail="Cover letter not found")
+
+#     # Update cover letter details
+#     for var, value in payload.dict(exclude_unset=True).items():
+#         setattr(cover_letter, var, value)
+
+#     await db.commit()
+#     await db.refresh(cover_letter)
+
+#     return cover_letter

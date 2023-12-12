@@ -47,6 +47,21 @@ export interface paths {
     /** Users:Patch User */
     patch: operations["users_patch_user_users__id__patch"];
   };
+  "/leads/load_database": {
+    /**
+     * Load Database
+     * @description Loads the database with leads from the data lake.
+     * FIXME - This is hacky
+     */
+    post: operations["load_database_leads_load_database_post"];
+  };
+  "/leads/enrich_datalake": {
+    /**
+     * Enrich Datalake
+     * @description Loads the datalake with enriched leads from the data lake.
+     */
+    post: operations["enrich_datalake_leads_enrich_datalake_post"];
+  };
   "/leads/": {
     /** Read Leads */
     get: operations["read_leads_leads__get"];
@@ -61,17 +76,28 @@ export interface paths {
     /** Update Lead */
     patch: operations["update_lead_leads__id__patch"];
   };
-  "/etl/events/{id}": {
-    /** Read Etl Event */
-    get: operations["read_etl_event_etl_events__id__get"];
+  "/leads/purge": {
+    /**
+     * Purge Leads
+     * @description Drops all leads records in the table.
+     */
+    delete: operations["purge_leads_leads_purge_delete"];
   };
-  "/etl/events": {
-    /** Read Etl Events */
-    get: operations["read_etl_events_etl_events_get"];
+  "/data_orchestration/events": {
+    /** Read Orch Events */
+    get: operations["read_orch_events_data_orchestration_events_get"];
   };
-  "/etl/leads": {
-    /** Load Leads From Data Lake */
-    post: operations["load_leads_from_data_lake_etl_leads_post"];
+  "/data_orchestration/events/success": {
+    /** Read Successful Orch Events */
+    get: operations["read_successful_orch_events_data_orchestration_events_success_get"];
+  };
+  "/data_orchestration/events/failure": {
+    /** Read Failed Orch Events */
+    get: operations["read_failed_orch_events_data_orchestration_events_failure_get"];
+  };
+  "/data_orchestration/events/{id}": {
+    /** Read Orch Event */
+    get: operations["read_orch_event_data_orchestration_events__id__get"];
   };
   "/contacts/": {
     /** Get Current User Contacts */
@@ -124,6 +150,8 @@ export interface paths {
   "/cover_letters/{cover_letter_id}": {
     /** Get Cover Letter By Id */
     get: operations["get_cover_letter_by_id_cover_letters__cover_letter_id__get"];
+    /** Delete User Cover Letter */
+    delete: operations["delete_user_cover_letter_cover_letters__cover_letter_id__delete"];
     /** Update User Cover Letter */
     patch: operations["update_user_cover_letter_cover_letters__cover_letter_id__patch"];
   };
@@ -136,10 +164,37 @@ export interface paths {
   "/resumes/{resume_id}": {
     /** Get User Resume */
     get: operations["get_user_resume_resumes__resume_id__get"];
-    /** Update User Resume */
-    put: operations["update_user_resume_resumes__resume_id__put"];
     /** Delete User Resume */
     delete: operations["delete_user_resume_resumes__resume_id__delete"];
+    /** Update User Resume */
+    patch: operations["update_user_resume_resumes__resume_id__patch"];
+  };
+  "/applications/": {
+    /**
+     * Get Applications
+     * @description Get all applications for the current user.
+     */
+    get: operations["get_applications_applications__get"];
+    /** Create Application */
+    post: operations["create_application_applications__post"];
+  };
+  "/applications/{id}": {
+    /** Delete Application */
+    delete: operations["delete_application_applications__id__delete"];
+    /** Update Application */
+    patch: operations["update_application_applications__id__patch"];
+  };
+  "/applications/{id}/resumes": {
+    /** Get Application Resumes */
+    get: operations["get_application_resumes_applications__id__resumes_get"];
+    /** Add Resume To Application */
+    post: operations["add_resume_to_application_applications__id__resumes_post"];
+  };
+  "/applications/{id}/cover_letters": {
+    /** Get Application Cover Letters */
+    get: operations["get_application_cover_letters_applications__id__cover_letters_get"];
+    /** Add Cover Letter To Application */
+    post: operations["add_cover_letter_to_application_applications__id__cover_letters_post"];
   };
   "/ping": {
     /** Pong */
@@ -155,6 +210,55 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    /** ApplicationCreate */
+    ApplicationCreate: {
+      /**
+       * Lead Id
+       * Format: uuid4
+       */
+      lead_id: string;
+    };
+    /** ApplicationRead */
+    ApplicationRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Lead Id
+       * Format: uuid4
+       */
+      lead_id: string;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+      lead: components["schemas"]["LeadRead"];
+      user: components["schemas"]["UserRead"];
+    };
+    /** ApplicationUpdate */
+    ApplicationUpdate: {
+      /**
+       * Status
+       * @description Application status
+       */
+      status?: string | null;
+    };
     /** BearerResponse */
     BearerResponse: {
       /** Access Token */
@@ -393,44 +497,6 @@ export interface components {
       /** @description Cover letter content type */
       content_type?: components["schemas"]["ContentType"] | null;
     };
-    /** ETLEventRead */
-    ETLEventRead: {
-      /**
-       * Job Name
-       * @description Name of the ETL job
-       */
-      job_name?: string | null;
-      /** @description Status of the ETL job */
-      status?: components["schemas"]["ETLStatusType"] | null;
-      /**
-       * Error Message
-       * @description Error message, if any
-       */
-      error_message?: string | null;
-      /**
-       * Id
-       * Format: uuid4
-       * @description The unique uuid4 record identifier.
-       */
-      id: string;
-      /**
-       * Created At
-       * Format: date-time
-       * @description The time the item was created
-       */
-      created_at: string;
-      /**
-       * Updated At
-       * Format: date-time
-       * @description The time the item was last updated
-       */
-      updated_at: string;
-    };
-    /**
-     * ETLStatusType
-     * @enum {string}
-     */
-    ETLStatusType: "pending" | "running" | "success" | "failure";
     /** ErrorModel */
     ErrorModel: {
       /** Detail */
@@ -690,7 +756,10 @@ export interface components {
        * @description The time the item was last updated
        */
       updated_at: string;
-      /** Url */
+      /**
+       * Url
+       * Format: uri
+       */
       url: string;
     };
     /** LeadUpdate */
@@ -767,6 +836,48 @@ export interface components {
        */
       total_count: number | null;
     };
+    /** OrchestrationEventRead */
+    OrchestrationEventRead: {
+      /** @description Status */
+      status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+      /**
+       * Error Message
+       * @description Error message, if any
+       */
+      error_message?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Job Name
+       * @description Name of the ETL job
+       */
+      job_name?: string | null;
+      /** @description Source URI */
+      source_uri?: components["schemas"]["URI"] | null;
+      /** @description Destination URI */
+      destination_uri?: components["schemas"]["URI"] | null;
+    };
+    /**
+     * OrchestrationEventStatusType
+     * @enum {string}
+     */
+    OrchestrationEventStatusType: "pending" | "running" | "success" | "failure";
     /** Pagination */
     Pagination: {
       /**
@@ -908,6 +1019,17 @@ export interface components {
        */
       category?: string | null;
     };
+    /** URI */
+    URI: {
+      /** Name */
+      name: string;
+      type: components["schemas"]["URIType"];
+    };
+    /**
+     * URIType
+     * @enum {string}
+     */
+    URIType: "filepath" | "datalake" | "database" | "api";
     /** UserCreate */
     UserCreate: {
       /**
@@ -1476,6 +1598,35 @@ export interface operations {
       };
     };
   };
+  /**
+   * Load Database
+   * @description Loads the database with leads from the data lake.
+   * FIXME - This is hacky
+   */
+  load_database_leads_load_database_post: {
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead"];
+        };
+      };
+    };
+  };
+  /**
+   * Enrich Datalake
+   * @description Loads the datalake with enriched leads from the data lake.
+   */
+  enrich_datalake_leads_enrich_datalake_post: {
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead"];
+        };
+      };
+    };
+  };
   /** Read Leads */
   read_leads_leads__get: {
     parameters: {
@@ -1596,8 +1747,55 @@ export interface operations {
       };
     };
   };
-  /** Read Etl Event */
-  read_etl_event_etl_events__id__get: {
+  /**
+   * Purge Leads
+   * @description Drops all leads records in the table.
+   */
+  purge_leads_leads_purge_delete: {
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": Record<string, never>;
+        };
+      };
+    };
+  };
+  /** Read Orch Events */
+  read_orch_events_data_orchestration_events_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead"][];
+        };
+      };
+    };
+  };
+  /** Read Successful Orch Events */
+  read_successful_orch_events_data_orchestration_events_success_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead"][];
+        };
+      };
+    };
+  };
+  /** Read Failed Orch Events */
+  read_failed_orch_events_data_orchestration_events_failure_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead"][];
+        };
+      };
+    };
+  };
+  /** Read Orch Event */
+  read_orch_event_data_orchestration_events__id__get: {
     parameters: {
       path: {
         id: string;
@@ -1607,35 +1805,13 @@ export interface operations {
       /** @description Successful Response */
       202: {
         content: {
-          "application/json": components["schemas"]["ETLEventRead"];
+          "application/json": components["schemas"]["OrchestrationEventRead"];
         };
       };
       /** @description Validation Error */
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Read Etl Events */
-  read_etl_events_etl_events_get: {
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ETLEventRead"][];
-        };
-      };
-    };
-  };
-  /** Load Leads From Data Lake */
-  load_leads_from_data_lake_etl_leads_post: {
-    responses: {
-      /** @description Successful Response */
-      202: {
-        content: {
-          "application/json": string;
         };
       };
     };
@@ -2001,6 +2177,26 @@ export interface operations {
       };
     };
   };
+  /** Delete User Cover Letter */
+  delete_user_cover_letter_cover_letters__cover_letter_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Update User Cover Letter */
   update_user_cover_letter_cover_letters__cover_letter_id__patch: {
     parameters: {
@@ -2083,8 +2279,28 @@ export interface operations {
       };
     };
   };
+  /** Delete User Resume */
+  delete_user_resume_resumes__resume_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Update User Resume */
-  update_user_resume_resumes__resume_id__put: {
+  update_user_resume_resumes__resume_id__patch: {
     parameters: {
       query: {
         id: string;
@@ -2110,17 +2326,178 @@ export interface operations {
       };
     };
   };
-  /** Delete User Resume */
-  delete_user_resume_resumes__resume_id__delete: {
-    parameters: {
-      query: {
-        id: string;
+  /**
+   * Get Applications
+   * @description Get all applications for the current user.
+   */
+  get_applications_applications__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"][];
+        };
+      };
+    };
+  };
+  /** Create Application */
+  create_application_applications__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Application */
+  delete_application_applications__id__delete: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationRead"];
       };
     };
     responses: {
       /** @description Successful Response */
       204: {
         content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Application */
+  update_application_applications__id__patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Application Resumes */
+  get_application_resumes_applications__id__resumes_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Add Resume To Application */
+  add_resume_to_application_applications__id__resumes_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResumeCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Application Cover Letters */
+  get_application_cover_letters_applications__id__cover_letters_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Add Cover Letter To Application */
+  add_cover_letter_to_application_applications__id__cover_letters_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CoverLetterCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
+        };
       };
       /** @description Validation Error */
       422: {

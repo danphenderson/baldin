@@ -1,5 +1,4 @@
 # app/schemas.py
-
 from datetime import datetime
 from enum import Enum  # TODO: Use Literal for performance improvement
 from typing import Any, Sequence
@@ -14,10 +13,41 @@ from app import utils
 # TODO: Handle validation as it arrises.
 
 
+# Types and properties
+class ContentType(str, Enum):
+    CUSTOM = "custom"
+    GENERATED = "generated"
+    TEMPLATE = "template"
+
+
+class OrchestrationEventStatusType(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failure"
+
+
+class URIType(str, Enum):
+    FILE = "filepath"
+    DATALAKE = "datalake"
+    DATABASE = "database"
+    API = "api"
+
+
 # Base Models
 class BaseModel(_BaseModel):
     class Config:
         from_attributes = True
+
+
+class URI(BaseModel):
+    name: str
+    type: URIType
+
+    class Config:
+        json_encoders = {
+            "URI": lambda v: v.dict(),
+        }
 
 
 class BaseRead(BaseModel):
@@ -26,42 +56,31 @@ class BaseRead(BaseModel):
     updated_at: datetime = Field(description="The time the item was last updated")
 
 
-# Types and properties
-class ContentType(str, Enum):
-    CUSTOM = "custom"
-    GENERATED = "generated"
-    TEMPLATE = "template"
-
-
-class ETLStatusType(str, Enum):
-    PENDING = "pending"
-    RUNNING = "running"
-    SUCCESS = "success"
-    FAILED = "failure"
-
-
 class Pagination(BaseModel):
     page: int = Field(1, ge=1, description="The page number")
     page_size: int = Field(10, ge=1, description="The number of items per page")
     request_count: bool = Field(False, description="Request a query for total count")
 
 
-# Model CRUD Schemas
-class BaseETLEvent(BaseModel):
-    job_name: str | None = Field(None, description="Name of the ETL job")
-    status: ETLStatusType | None = Field(None, description="Status of the ETL job")
+# Model CRUD Schemas+
+class BaseOrchestrationEvent(BaseModel):
+    status: OrchestrationEventStatusType | None = Field(None, description="Status")
     error_message: str | None = Field(None, description="Error message, if any")
 
 
-class ETLEventRead(BaseRead, BaseETLEvent):
-    pass
+class OrchestrationEventRead(BaseRead, BaseOrchestrationEvent):
+    job_name: str | None = Field(None, description="Name of the ETL job")
+    source_uri: URI | None = Field(None, description="Source URI")
+    destination_uri: URI | None = Field(None, description="Destination URI")
 
 
-class ETLEventCreate(BaseETLEvent):
-    pass
+class OrchestrationEventCreate(BaseOrchestrationEvent):
+    job_name: str
+    source_uri: URI
+    destination_uri: URI
 
 
-class ETLEventUpdate(BaseETLEvent):
+class OrchestrationEventUpdate(BaseOrchestrationEvent):
     pass
 
 
@@ -148,25 +167,6 @@ class LeadUpdate(BaseLead):
     pass
 
 
-class BaseApplication(BaseModel):
-    cover_letter: str | None = None
-    resume: str | None = None
-    notes: str | None = None
-    status: str | None = None
-
-
-class ApplicationRead(BaseRead, BaseApplication):
-    lead_id: UUID4
-
-
-class ApplicationCreate(BaseApplication):
-    lead_id: UUID4
-
-
-class ApplicationUpdate(BaseApplication):
-    pass
-
-
 class BaseContact(BaseModel):
     first_name: str | None = Field(None, description="First name")
     last_name: str | None = Field(None, description="Last name")
@@ -249,3 +249,18 @@ class UserCreate(schemas.BaseUserCreate, BaseUser):
 
 class UserUpdate(schemas.BaseUserUpdate, BaseUser):
     pass
+
+
+class ApplicationRead(BaseRead):
+    lead_id: UUID4
+    user_id: UUID4
+    lead: LeadRead
+    user: UserRead
+
+
+class ApplicationCreate(BaseModel):
+    lead_id: UUID4
+
+
+class ApplicationUpdate(BaseModel):
+    status: str | None = Field(None, description="Application status")

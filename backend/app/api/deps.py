@@ -1,14 +1,14 @@
 # app/api/deps.py
-import json
+
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, HTTPException, Query
+from fastapi import BackgroundTasks, Depends, HTTPException, Query
 from pydantic import UUID4
 
 from app import models, schemas, utils
 from app.core import security  # noqa
-from app.core.conf import settings
+from app.core import conf
 from app.core.db import AsyncSession, get_async_session, session_context
 from app.core.openai import get_openai_client  # noqa
 from app.core.security import (  # noqa
@@ -32,7 +32,7 @@ async def _403(user_id: UUID4, obj: Any, obj_id: UUID4) -> HTTPException:
     )
 
 
-async def _404(obj: Any, id: UUID4 | None) -> HTTPException:
+async def _404(obj: Any, id: UUID4 | None = None) -> HTTPException:
     msg = (
         f"{obj.__name__} with id {id} not found" if id else f"{obj.__name__} not found"
     )
@@ -59,27 +59,45 @@ async def get_lead(
     return lead
 
 
-async def get_etl_event(
+async def get_orchestration_event(
     id: UUID4, db: AsyncSession = Depends(get_async_session)
-) -> models.ETLEvent:
-    etl_event = await db.get(models.ETLEvent, id)
-    if not etl_event:
-        raise await _404(etl_event, id)
-    return etl_event
+) -> models.OrchestrationEvent:
+    orch_event = await db.get(models.OrchestrationEvent, id)
+
+    if not orch_event:
+        raise await _404(orch_event, id)
+
+    return orch_event
 
 
-async def update_etl_event(
+async def update_orchestration_event(
     id: UUID4,
-    status: schemas.ETLStatusType,
+    payload: schemas.OrchestrationEventUpdate,
     db: AsyncSession = Depends(get_async_session),
-) -> models.ETLEvent:
-    etl_event = await db.get(models.ETLEvent, id)
-
-    if not etl_event:
-        raise await _404(etl_event, id)
-    setattr(etl_event, "status", status)
+) -> models.OrchestrationEvent:
+    event = await get_orchestration_event(id, db)
+    for var, value in payload.dict(exclude_unset=True).items():
+        setattr(event, var, value)
     await db.commit()
-    return etl_event
+    await db.refresh(event)
+    return event
+
+
+async def create_orchestration_event(
+    payload: schemas.OrchestrationEventCreate,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.OrchestrationEvent:
+    # Seralize URIS to JSON stings (for database)
+    setattr(payload, "source_uri", payload.source_uri.json())
+    setattr(payload, "destination_uri", payload.destination_uri.json())
+
+    # Create new event record in database
+    event = models.OrchestrationEvent(**payload.__dict__)
+    db.add(event)
+    await db.commit()
+    await db.refresh(event)
+
+    return event
 
 
 async def get_skill(
@@ -158,52 +176,3 @@ async def get_application(
     if application.user_id != user.id:  # type: ignore
         raise await _403(user.id, application, id)
     return application
-
-
-async def execute_load_leads(etl_event_id: UUID4):
-    async with session_context() as db:
-        try:
-            # Update ETLEvent status to running
-            await update_etl_event(etl_event_id, schemas.ETLStatusType("running"), db)
-
-            file_path = Path(settings.PUBLIC_ASSETS_DIR) / "leads" / "enriched"
-
-            # Generate Leads from JSON documents in data lake
-            async for valid_lead in utils.generate_pydantic_models_from_json(
-                schemas.LeadCreate, file_path
-            ):
-                await log.info(f"Inserting lead {valid_lead} into database")
-                lead = models.Lead(**valid_lead.__dict__)
-                db.add(lead)
-
-            await db.commit()
-
-            # Update ETLEvent status to success
-            await update_etl_event(etl_event_id, schemas.ETLStatusType("success"), db)
-
-        except Exception as e:
-            await log.exception(f"Error executing leads ETL: {e}")
-            await db.rollback()  # Rollback on exception
-            # Update ETLEvent status to failed
-            await update_etl_event(etl_event_id, schemas.ETLStatusType("failure"), db)
-            raise e
-
-
-async def execute_leads_enrichment(etl_event_id):
-    async with session_context() as db:
-        try:
-            # Update ETLEvent status to running
-            await update_etl_event(etl_event_id, schemas.ETLStatusType("running"), db)
-
-            # Enrich leads
-            await enrich.enrich_leads()
-
-            # Update ETLEvent status to success
-            await update_etl_event(etl_event_id, schemas.ETLStatusType("success"), db)
-
-        except Exception as e:
-            await log.exception(f"Error executing leads enrichment: {e}")
-            await db.rollback()  # Rollback on exception
-            # Update ETLEvent status to failed
-            await update_etl_event(etl_event_id, schemas.ETLStatusType("failure"), db)
-            raise e

@@ -2,15 +2,15 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import UserRoute from './user-route';
 import App from '../pages/home';
-import Login from '../pages/login';
+import LoginPage from '../pages/login';
 import PublicLayout from '../layout/public-layout';
 import AppLayout from '../layout/home-layout';
-import Register from '../pages/register';
-import ErrorPage from '../pages/error-page';
-import Settings from '../pages/settings';
-import Leads from '../pages/leads';
-// import Applications from '../pages/applications';
-import ETL from '../pages/etl';
+import RegistrationPage from '../pages/register';
+import ErrorPage from '../pages/error';
+import UserProfilePage from '../pages/user-profile';
+import LeadsPage from '../pages/leads';
+import ApplicationsPage from '../pages/application';
+import DataOrchestrationPage from '../pages/data-orchestration';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -19,17 +19,17 @@ const AppRoutes: React.FC = () => {
         <Route element={<AppLayout />}>
             <Route path="/" element={<UserRoute />}>
                 <Route index element={<App />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/leads" element={<Leads />} />
-                {/* <Route path="/applications" element={<Applications />} /> */}
-                <Route path="/etl" element={<ETL />} />
+                <Route path="/settings" element={<UserProfilePage />} />
+                <Route path="/leads" element={<LeadsPage />} />
+                <Route path="/applications" element={<ApplicationsPage />} />
+                <Route path="/data-orchestration" element={<DataOrchestrationPage />} />
                 {/* More user routes can be added here */}
             </Route>
         </Route>
 
         <Route element={<PublicLayout />}>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegistrationPage />} />
             {/* Other public routes */}
         </Route>
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import SignUp from '../component/auth/signup';
 
-const Register: React.FC = () => {
+const RegistrationPage: React.FC = () => {
   return (
     <div>
       <SignUp />
@@ -9,4 +9,4 @@ const Register: React.FC = () => {
   );
 }
 
-export default Register;
+export default RegistrationPage;

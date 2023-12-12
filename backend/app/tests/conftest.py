@@ -10,9 +10,9 @@ from app.models import (
     Application,
     Contact,
     CoverLetter,
-    ETLEvent,
     Experience,
     Lead,
+    OrchestrationEvent,
     Resume,
     Skill,
     User,
@@ -57,7 +57,7 @@ async def superuser_user(session: AsyncSession) -> User:
 
 
 @pytest.fixture
-async def etl_event(session: AsyncSession) -> ETLEvent:
+async def etl_event(session: AsyncSession) -> OrchestrationEvent:
     return await utils.create_etl_event(session)
 
 

@@ -1,40 +1,29 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { List, ListItem, IconButton, ListItemIcon, ListItemText } from '@mui/material';
+import { List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
-import LeadsIcon from '@mui/icons-material/Leaderboard'; // Placeholder icon
-import ApplicationsIcon from '@mui/icons-material/Apps'; // Placeholder icon
-import EtlIcon from '@mui/icons-material/Transform'; // Placeholder icon
+import GroupIcon from '@mui/icons-material/Group'; // More relevant for Leads
+import ApplicationIcon from '@mui/icons-material/TouchApp'; // More relevant for Applications
+import DataArrayIcon from '@mui/icons-material/DataArray'; // More relevant for Data Orchestration
+
+const menuItems = [
+  { text: 'User Profile', icon: <SettingsIcon />, path: '/settings' },
+  { text: 'Leads', icon: <GroupIcon />, path: '/leads' },
+  { text: 'Applications', icon: <ApplicationIcon />, path: '/applications' },
+  { text: 'Data Orchestration', icon: <DataArrayIcon />, path: '/data-orchestration' },
+];
 
 const Navigator: React.FC = () => {
   const navigate = useNavigate();
 
   return (
     <List>
-      <ListItem button onClick={() => navigate('/settings')}>
-        <ListItemIcon>
-          <SettingsIcon />
-        </ListItemIcon>
-        <ListItemText primary="Settings" />
-      </ListItem>
-      <ListItem button onClick={() => navigate('/leads')}>
-        <ListItemIcon>
-          <LeadsIcon />
-        </ListItemIcon>
-        <ListItemText primary="Leads" />
-      </ListItem>
-      <ListItem button onClick={() => navigate('/applications')}>
-        <ListItemIcon>
-          <ApplicationsIcon />
-        </ListItemIcon>
-        <ListItemText primary="Applications" />
-      </ListItem>
-      <ListItem button onClick={() => navigate('/etl')}>
-        <ListItemIcon>
-          <EtlIcon />
-        </ListItemIcon>
-        <ListItemText primary="ETL" />
-      </ListItem>
+      {menuItems.map((item, index) => (
+        <ListItem button key={index} onClick={() => navigate(item.path)}>
+          <ListItemIcon>{item.icon}</ListItemIcon>
+          <ListItemText primary={item.text} />
+        </ListItem>
+      ))}
     </List>
   );
 };

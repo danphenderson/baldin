@@ -1,64 +1,78 @@
-# app/api/routes/etl.py
+# app/api/routes/data_orchestration.py
+import json
+from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi.responses import RedirectResponse
+from pydantic import UUID4
 from sqlalchemy import select
 
-from app.api.deps import (
+from app.api.deps import (  # noqa
     AsyncSession,
-    execute_leads_enrichment,
-    execute_load_leads,
+    conf,
     get_async_session,
-    get_etl_event,
+    get_orchestration_event,
     models,
     schemas,
 )
+from app.logging import console_log
 
 router: APIRouter = APIRouter()
 
 
-@router.get("/events/{id}", status_code=202, response_model=schemas.ETLEventRead)
-async def read_etl_event(etl_event: schemas.ETLEventRead = Depends(get_etl_event)):
-    return etl_event
-
-
-@router.get("/events", response_model=list[schemas.ETLEventRead])
-async def read_etl_events(db: AsyncSession = Depends(get_async_session)):
-    rows = await db.execute(select(models.ETLEvent))
+@router.get("/events", response_model=list[schemas.OrchestrationEventRead])
+async def read_orch_events(db: AsyncSession = Depends(get_async_session)):
+    rows = await db.execute(select(models.OrchestrationEvent))
     result = rows.scalars().all()
+
+    for row in result:
+        row.source_uri = json.loads(getattr(row, "source_uri"))
+        row.destination_uri = json.loads(getattr(row, "destination_uri"))
+
     if not result:
         raise HTTPException(status_code=404, detail="No ETL events found")
     return result
 
 
-@router.post("/load_leads", status_code=202, response_model=schemas.ETLEventRead)
-async def load_leads_from_data_lake(
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_async_session),
-):
+@router.get("/events/success", response_model=list[schemas.OrchestrationEventRead])
+async def read_successful_orch_events(db: AsyncSession = Depends(get_async_session)):
+    rows = await db.execute(
+        select(models.OrchestrationEvent).filter(
+            models.OrchestrationEvent.status == "success"
+        )
+    )
+    result = rows.scalars().all()
+    for row in result:
+        row.source_uri = json.loads(getattr(row, "source_uri"))
+        row.destination_uri = json.loads(getattr(row, "destination_uri"))
 
-    etl_event = models.ETLEvent(**{"job_name": "load_leads", "status": "pending"})
-
-    db.add(etl_event)
-    await db.commit()
-    await db.refresh(etl_event)
-
-    # Use background_tasks to execute the ETL pipeline
-    background_tasks.add_task(execute_load_leads, etl_event.id)  # type: ignore
-
-    return etl_event
+    if not result:
+        raise HTTPException(status_code=404, detail="No ETL events found")
+    return result
 
 
-@router.post("/enrich_leads", status_code=202, response_model=schemas.ETLEventRead)
-async def enrich_lead(
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_async_session),
-):
-    etl_event = models.ETLEvent(**{"job_name": "enrich_leads", "status": "pending"})
-    db.add(etl_event)
-    await db.commit()
-    await db.refresh(etl_event)
+@router.get("/events/failure", response_model=list[schemas.OrchestrationEventRead])
+async def read_failed_orch_events(db: AsyncSession = Depends(get_async_session)):
+    rows = await db.execute(
+        select(models.OrchestrationEvent).filter(
+            models.OrchestrationEvent.status == "failure"
+        )
+    )
+    result = rows.scalars().all()
+    if not result:
+        raise HTTPException(status_code=404, detail="No failed ETL events found")
+    return result
 
-    # Use background_tasks to execute the ETL pipeline
-    background_tasks.add_task(execute_leads_enrichment, etl_event.id)
 
-    return etl_event
+@router.get(
+    "/events/{id}", status_code=202, response_model=schemas.OrchestrationEventRead
+)
+async def read_orch_event(id: UUID4, db: AsyncSession = Depends(get_async_session)):
+    event = await get_orchestration_event(id, db)
+    event.source_uri = json.loads(
+        getattr(event, "source_uri")
+    )  # Deserialize into URI object
+    event.destination_uri = json.loads(
+        getattr(event, "destination_uri")
+    )  # Deserialize into URI object
+    return event

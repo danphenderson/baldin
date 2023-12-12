@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.deps import fastapi_users, schemas, security
 from app.api.routes import (
+    applications,
     contacts,
     cover_letters,
     data_orchestration,
@@ -80,4 +81,9 @@ api_router.include_router(
     resumes.router,
     prefix="/resumes",
     tags=["resumes"],
+)
+api_router.include_router(
+    applications.router,
+    prefix="/applications",
+    tags=["applications"],
 )

@@ -1,6 +1,6 @@
 import { components } from "../schema";
 
-type OrchestrationEventRead = components['schemas']['OrchestrationEventRead'];
+export type OrchestrationEventRead = components['schemas']['OrchestrationEventRead'];
 
 // TODO - pull this from the environment schema.d.ts
 const BASE_URL = `/data_orchestration`;
@@ -18,17 +18,17 @@ const fetchAPI = async (url: string): Promise<OrchestrationEventRead[]> => {
   if (!response.ok) {
     throw new Error('API request failed');
   }
-  return await response.json();
+  return response.json();
 };
 
-export const getOrchestrations = (): Promise<OrchestrationEventRead[] > => {
+export const getOrchestrations = async (): Promise<OrchestrationEventRead[] > => {
   return fetchAPI(`${BASE_URL}/events`);
 };
 
-export const getOrchestrationSuccesses = (): Promise<OrchestrationEventRead[]> => {
+export const getOrchestrationSuccesses = async (): Promise<OrchestrationEventRead[]> => {
   return fetchAPI(`${BASE_URL}/events/success`);
 };
 
-export const getOrchestrationFailures = (): Promise<OrchestrationEventRead[]> => {
+export const getOrchestrationFailures = async (): Promise<OrchestrationEventRead[]> => {
   return fetchAPI(`${BASE_URL}/events/failure`);
 };

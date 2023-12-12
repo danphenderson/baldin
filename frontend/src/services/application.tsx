@@ -1,5 +1,5 @@
 import { components } from "../schema";
-
+import { UserContext } from "../context/user-context";
 export type ApplicationRead = components['schemas']['ApplicationRead'];
 export type ApplicationCreate = components['schemas']['ApplicationCreate'];
 export type ApplicationUpdate = components['schemas']['ApplicationUpdate'];
@@ -9,45 +9,76 @@ type ResumeRead = components['schemas']['ResumeRead'];
 type CoverLetterRead = components['schemas']['CoverLetterRead'];
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = '/applications';
+const BASE_URL = '/applications/';
 const DEFAULT_HEADERS = {
   "Content-Type": "application/json",
 };
 
+const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
+  if (!token) {
+    console.log("Authorization token is required")
+    throw new Error("Authorization token is required");
+  }
 
-
-const fetchAPI = async (url: string, method: string) => {
-  const requestOptions = {
+  return {
     method: method,
-    headers: DEFAULT_HEADERS,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: body ? JSON.stringify(body) : null,
   };
+};
 
-  const response = await fetch(url, requestOptions);
+const fetchAPI = async (url: string, options: RequestInit) => {
+
+  const response = await fetch(url, options);
 
   if (!response.ok) {
-    throw new Error(`API request failed for ${url}`);
+    throw new Error(`API request failed for ${url} using options ${JSON.stringify(options)}: ${response.status} ${response.statusText}`);
   }
   return response.json();
 };
 
 
-export const getApplications = async (): Promise<ApplicationRead[]> => {
-  return fetchAPI(`${BASE_URL}`, "GET");
+export const getApplications = async (token: string): Promise<ApplicationRead[]> => {
+  const requestOptions = createRequestOptions(token, "GET");
+  return await fetchAPI(`${BASE_URL}`, requestOptions);
 };
 
 
-export const getApplication = async (id: string): Promise<ApplicationRead> => {
-  return fetchAPI(`${BASE_URL}/${id}`, "GET");
+export const getApplicationResumes = async (token: string, id: string): Promise<ApplicationRead> => {
+  const requestOptions = createRequestOptions(token, "GET", id);
+  return await fetchAPI(`${BASE_URL}${id}/resumes`, requestOptions);
 };
 
-export const createApplication = async (application: ApplicationCreate): Promise<ApplicationRead>  => {
-  return fetchAPI(`${BASE_URL}`, "POST");
+export const getApplicationCoverLetters = async (token: string, id: string): Promise<ApplicationRead> => {
+  const requestOptions = createRequestOptions(token, "GET", id);
+  return await fetchAPI(`${BASE_URL}${id}/resumes`, requestOptions);
 };
 
-export const updateApplication = async (id: string, application: ApplicationUpdate): Promise<ApplicationRead> =>  {
-  return fetchAPI(`${BASE_URL}/${id}`, "PUT");
+export const createApplicationResume = async (token: string, id: string, resume: ResumeRead): Promise<ApplicationRead> => {
+
+  const requestOptions = createRequestOptions(token, "POST", resume);
+  return fetchAPI(`${BASE_URL}${id}/resumes`, requestOptions);
+}
+
+export const createApplicationCoverLetter = async (token: string, id: string, coverLetter: CoverLetterRead): Promise<ApplicationRead> => {
+  const requestOptions = createRequestOptions(token, "POST", coverLetter);
+  return fetchAPI(`${BASE_URL}${id}/cover_letters`, requestOptions);
+}
+
+export const createApplication = async (token: string, application: ApplicationCreate): Promise<ApplicationRead>  => {
+  const requestOptions = createRequestOptions(token, "POST", application);
+  return fetchAPI(`${BASE_URL}`, requestOptions);
 };
 
-export const deleteApplication = async (id: string): Promise<ApplicationRead> =>  {
-  return fetchAPI(`${BASE_URL}/${id}`, "DELETE");
+export const updateApplication = async (token: string, id: string, application: ApplicationUpdate): Promise<ApplicationRead> =>  {
+  const requestOptions = createRequestOptions(token, "PATCH", application);
+  return fetchAPI(`${BASE_URL}${id}`, requestOptions);
+};
+
+export const deleteApplication = async (token: string, id: string): Promise<ApplicationRead> =>  {
+  const requestOptions = createRequestOptions(token, "DELETE");
+  return fetchAPI(`${BASE_URL}${id}`, requestOptions);
 };

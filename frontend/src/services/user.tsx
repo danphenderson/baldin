@@ -21,23 +21,21 @@ const createRequestOptions = (token: string, method: string, body?: any): Reques
   };
 };
 
-const fetchApi = async (url: string, options: RequestInit): Promise<Response> => {
+const fetchApi = async (url: string, options: RequestInit) => {
   const response = await fetch(url, options);
   if (!response.ok) {
     // Custom error handling can be implemented here
     throw new Error('API request failed');
   }
-  return response;
+  return response.json();
 };
 
 export const getUser = async (token: string): Promise<UserRead> => {
   const requestOptions = createRequestOptions(token, "GET");
-  const response = await fetchApi(BASE_URL, requestOptions);
-  return response.json();
+  return await fetchApi(BASE_URL, requestOptions);
 };
 
 export const updateUser = async (token: string, user: UserUpdate): Promise<UserRead> => {
   const requestOptions = createRequestOptions(token, "PATCH", user);
-  const response = await fetchApi(BASE_URL, requestOptions);
-  return response.json();
+  return await fetchApi(BASE_URL, requestOptions);
 };

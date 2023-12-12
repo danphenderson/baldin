@@ -1,46 +1,85 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { UserContext } from '../context/user-context';
 import { getApplications, createApplication, updateApplication, deleteApplication, ApplicationRead, ApplicationCreate, ApplicationUpdate } from '../services/application';
 
 const ApplicationPage: React.FC = () => {
+    const { token } = useContext(UserContext);
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const [applications, setApplications] = useState<ApplicationRead[]>([]);
     const [currentApplication, setCurrentApplication] = useState<ApplicationRead | null>(null);
     const [openDialog, setOpenDialog] = useState(false);
     const [isNew, setIsNew] = useState(true);
 
+    const fetchApplications = async () => {
+      if (!token) return;
+      try {
+        setIsLoading(true);
+        const apps = await getApplications(token);
+        setApplications(apps);
+      } catch (error) {
+        if (error instanceof Error) {
+          setError(`Failed to fetch application: ${error.message || error}`);
+          console.error(error); // Log error for debugging
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     useEffect(() => {
-        const fetchApplications = async () => {
-            const apps = await getApplications();
-            setApplications(apps);
-        };
+      if (token && !applications.length)
         fetchApplications();
-    }, []);
+    }, [token, applications]);
 
     const handleOpenDialog = (app: ApplicationRead | null) => {
-        setCurrentApplication(app);
-        setOpenDialog(true);
-        setIsNew(!app);
+      setCurrentApplication(app);
+      setOpenDialog(true);
+      setIsNew(!app);
     };
 
     const handleCloseDialog = () => {
-        setOpenDialog(false);
-        setCurrentApplication(null);
+      setOpenDialog(false);
+      setCurrentApplication(null);
     };
 
     const handleSave = async () => {
+      if (!token) {
+        setError('Authorization token is missing');
+        return;
+      }
+      try {
         if (currentApplication) {
-            const savedApplication = isNew
-                ? await createApplication(currentApplication as ApplicationCreate)
-                : await updateApplication(currentApplication.id.toString(), currentApplication as ApplicationUpdate);
-            setApplications([...applications.filter(a => a.id !== savedApplication.id), savedApplication]);
+          const savedApplication = isNew
+            ? await createApplication(token, currentApplication as ApplicationCreate)
+            : await updateApplication(token, currentApplication.id.toString(), currentApplication as ApplicationUpdate);
+          setApplications([...applications.filter(a => a.id !== savedApplication.id), savedApplication]);
         }
         handleCloseDialog();
+      } catch (error) {
+        if (error instanceof Error) {
+          setError(`Failed to save application: ${error.message || error}`);
+          console.error(error); // Log error for debugging
+        }
+      }
     };
 
     const handleDelete = async (id: number) => {
-        await deleteApplication(id.toString());
-        setApplications(applications.filter(a => a.id !== id.toString()));
+        if (!token) {
+            setError('Authorization token is missing');
+            return;
+        }
+        try {
+          await deleteApplication(token, id.toString());
+          setApplications(applications.filter(a => a.id !== id.toString()));
+        } catch (error) {
+          if (error instanceof Error) {
+            setError(`Failed to delete application: ${error.message || error}`);
+            console.error(error); // Log error for debugging
+          }
+        }
     };
 
     // Define columns for DataGrid

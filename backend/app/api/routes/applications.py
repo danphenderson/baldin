@@ -106,6 +106,12 @@ async def update_application(
     application: schemas.ApplicationRead = Depends(get_application),
     db: AsyncSession = Depends(get_async_session),
 ):
+    # Check if the user owns the application
+    if application.user_id != getattr(payload, "id"):
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to update this application",
+        )
 
     # Update the application's attributes
     for var, value in payload.dict(exclude_unset=True).items():
@@ -129,20 +135,42 @@ async def update_application(
 
 @router.delete("/{id}", status_code=204)
 async def delete_application(
-    application: schemas.ApplicationRead, db: AsyncSession = Depends(get_async_session)
+    application=Depends(get_application),
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
 ):
+    # Confirm that the user owns the application
+    if application.user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to delete this application",
+        )
+
+    # Delete the application
     await db.delete(application)
     await db.commit()
     return {"message": "Application deleted successfully"}
 
 
 @router.get("/{id}/resumes", response_model=list[schemas.ResumeRead])
-async def get_application_resumes(id: UUID4, db=Depends(get_async_session)):
+async def get_application_resumes(
+    app: schemas.ApplicationRead = Depends(get_application),
+    db=Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+
+    # Confirm that the user owns the application
+    if app.user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to view this application",
+        )
+
     # Fetch resumes associated with the application
     result = await db.execute(
         select(models.Resume)
         .join(models.ResumeXApplication)
-        .where(models.ResumeXApplication.application_id == id)
+        .where(models.ResumeXApplication.application_id == app.id)
     )
     resumes = result.scalars().all()
 
@@ -155,12 +183,24 @@ async def get_application_resumes(id: UUID4, db=Depends(get_async_session)):
 
 
 @router.get("/{id}/cover_letters", response_model=list[schemas.CoverLetterRead])
-async def get_application_cover_letters(id: UUID4, db=Depends(get_async_session)):
+async def get_application_cover_letters(
+    app: schemas.ApplicationRead = Depends(get_application),
+    db=Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+
+    # Confirm that the user owns the application
+    if app.user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to view this application",
+        )
+
     # Fetch cover letters associated with the application
     result = await db.execute(
         select(models.CoverLetter)
         .join(models.CoverLetterXApplication)
-        .where(models.CoverLetterXApplication.application_id == id)
+        .where(models.CoverLetterXApplication.application_id == app.id)
     )
     cover_letters = result.scalars().all()
 

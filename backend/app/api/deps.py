@@ -1,22 +1,22 @@
 # app/api/deps.py
 
-from pathlib import Path
+from pathlib import Path  # noqa
 from typing import Any
 
-from fastapi import BackgroundTasks, Depends, HTTPException, Query
+from fastapi import BackgroundTasks, Depends, HTTPException, Query  # noqa
 from pydantic import UUID4
 
-from app import models, schemas, utils
+from app import models, schemas, utils  # noqa
+from app.core import conf  # noqa
 from app.core import security  # noqa
-from app.core import conf
-from app.core.db import AsyncSession, get_async_session, session_context
+from app.core.db import AsyncSession, get_async_session, session_context  # noqa
 from app.core.openai import get_openai_client  # noqa
 from app.core.security import (  # noqa
     fastapi_users,
     get_current_superuser,
     get_current_user,
 )
-from app.etl.leads import enrich
+from app.etl.leads import enrich  # noqa
 from app.logging import get_async_logger  # noqa
 
 log = get_async_logger(__name__)
@@ -33,9 +33,7 @@ async def _403(user_id: UUID4, obj: Any, obj_id: UUID4) -> HTTPException:
 
 
 async def _404(obj: Any, id: UUID4 | None = None) -> HTTPException:
-    msg = (
-        f"{obj.__name__} with id {id} not found" if id else f"{obj.__name__} not found"
-    )
+    msg = f"Object with {id} not found" if id else "Unable to find object"
     await log.info(msg)
     raise HTTPException(status_code=404, detail=f"Object with id {id} not found")
 

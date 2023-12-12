@@ -2364,9 +2364,9 @@ export interface operations {
   };
   /** Delete Application */
   delete_application_applications__id__delete: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ApplicationRead"];
+    parameters: {
+      path: {
+        id: string;
       };
     };
     responses: {

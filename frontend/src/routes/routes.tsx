@@ -9,7 +9,7 @@ import RegistrationPage from '../pages/register';
 import ErrorPage from '../pages/error';
 import UserProfilePage from '../pages/user-profile';
 import LeadsPage from '../pages/leads';
-import ApplicationsPage from '../pages/applications';
+import ApplicationsPage from '../pages/application';
 import DataOrchestrationPage from '../pages/data-orchestration';
 
 const AppRoutes: React.FC = () => {

@@ -150,6 +150,8 @@ export interface paths {
   "/cover_letters/{cover_letter_id}": {
     /** Get Cover Letter By Id */
     get: operations["get_cover_letter_by_id_cover_letters__cover_letter_id__get"];
+    /** Delete User Cover Letter */
+    delete: operations["delete_user_cover_letter_cover_letters__cover_letter_id__delete"];
     /** Update User Cover Letter */
     patch: operations["update_user_cover_letter_cover_letters__cover_letter_id__patch"];
   };
@@ -162,10 +164,10 @@ export interface paths {
   "/resumes/{resume_id}": {
     /** Get User Resume */
     get: operations["get_user_resume_resumes__resume_id__get"];
-    /** Update User Resume */
-    put: operations["update_user_resume_resumes__resume_id__put"];
     /** Delete User Resume */
     delete: operations["delete_user_resume_resumes__resume_id__delete"];
+    /** Update User Resume */
+    patch: operations["update_user_resume_resumes__resume_id__patch"];
   };
   "/applications/": {
     /**
@@ -185,10 +187,14 @@ export interface paths {
   "/applications/{id}/resumes": {
     /** Get Application Resumes */
     get: operations["get_application_resumes_applications__id__resumes_get"];
+    /** Add Resume To Application */
+    post: operations["add_resume_to_application_applications__id__resumes_post"];
   };
   "/applications/{id}/cover_letters": {
     /** Get Application Cover Letters */
     get: operations["get_application_cover_letters_applications__id__cover_letters_get"];
+    /** Add Cover Letter To Application */
+    post: operations["add_cover_letter_to_application_applications__id__cover_letters_post"];
   };
   "/ping": {
     /** Pong */
@@ -206,14 +212,6 @@ export interface components {
   schemas: {
     /** ApplicationCreate */
     ApplicationCreate: {
-      /** Cover Letter */
-      cover_letter?: string | null;
-      /** Resume */
-      resume?: string | null;
-      /** Notes */
-      notes?: string | null;
-      /** Status */
-      status?: string | null;
       /**
        * Lead Id
        * Format: uuid4
@@ -222,14 +220,6 @@ export interface components {
     };
     /** ApplicationRead */
     ApplicationRead: {
-      /** Cover Letter */
-      cover_letter?: string | null;
-      /** Resume */
-      resume?: string | null;
-      /** Notes */
-      notes?: string | null;
-      /** Status */
-      status?: string | null;
       /**
        * Id
        * Format: uuid4
@@ -253,16 +243,20 @@ export interface components {
        * Format: uuid4
        */
       lead_id: string;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+      lead: components["schemas"]["LeadRead"];
+      user: components["schemas"]["UserRead"];
     };
     /** ApplicationUpdate */
     ApplicationUpdate: {
-      /** Cover Letter */
-      cover_letter?: string | null;
-      /** Resume */
-      resume?: string | null;
-      /** Notes */
-      notes?: string | null;
-      /** Status */
+      /**
+       * Status
+       * @description Application status
+       */
       status?: string | null;
     };
     /** BearerResponse */
@@ -2183,6 +2177,26 @@ export interface operations {
       };
     };
   };
+  /** Delete User Cover Letter */
+  delete_user_cover_letter_cover_letters__cover_letter_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Update User Cover Letter */
   update_user_cover_letter_cover_letters__cover_letter_id__patch: {
     parameters: {
@@ -2265,8 +2279,28 @@ export interface operations {
       };
     };
   };
+  /** Delete User Resume */
+  delete_user_resume_resumes__resume_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Update User Resume */
-  update_user_resume_resumes__resume_id__put: {
+  update_user_resume_resumes__resume_id__patch: {
     parameters: {
       query: {
         id: string;
@@ -2283,26 +2317,6 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["ResumeRead"];
         };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Delete User Resume */
-  delete_user_resume_resumes__resume_id__delete: {
-    parameters: {
-      query: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      204: {
-        content: never;
       };
       /** @description Validation Error */
       422: {
@@ -2417,6 +2431,33 @@ export interface operations {
       };
     };
   };
+  /** Add Resume To Application */
+  add_resume_to_application_applications__id__resumes_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResumeCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Get Application Cover Letters */
   get_application_cover_letters_applications__id__cover_letters_get: {
     parameters: {
@@ -2429,6 +2470,33 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["CoverLetterRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Add Cover Letter To Application */
+  add_cover_letter_to_application_applications__id__cover_letters_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CoverLetterCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
         };
       };
       /** @description Validation Error */

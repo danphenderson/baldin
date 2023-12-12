@@ -5,7 +5,7 @@ import { UserContext } from '../context/user-context';
 import { getUser, updateUser, UserUpdate } from '../services/user';
 
 
-const UserProfile = () => {
+const UserProfilePage = () => {
     const { user, token, setUser } = useContext(UserContext);
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -119,4 +119,4 @@ const UserProfile = () => {
 );
 };
 
-export default UserProfile;
+export default UserProfilePage;

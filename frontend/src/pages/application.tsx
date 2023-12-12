@@ -1,155 +1,78 @@
-// import React, { useState, useEffect } from 'react';
-// import { Button, Container, Typography, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton } from '@mui/material';
-// import EditIcon from '@mui/icons-material/Edit';
-// import { components } from '../schema.d';
-// import DeleteIcon from '@mui/icons-material/Delete';
-// import ApplicationModal from '../component/application-modal';
-// // Add other imports as needed
+import React, { useState, useEffect } from 'react';
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { getApplications, createApplication, updateApplication, deleteApplication, ApplicationRead, ApplicationCreate, ApplicationUpdate } from '../services/application';
 
-// type ApplicationRead = components['schemas']['ApplicationRead'];
-// type ApplicationCreate = components['schemas']['ApplicationCreate'];
-// type ApplicationUpdate = components['schemas']['ApplicationUpdate'];
+const ApplicationPage: React.FC = () => {
+    const [applications, setApplications] = useState<ApplicationRead[]>([]);
+    const [currentApplication, setCurrentApplication] = useState<ApplicationRead | null>(null);
+    const [openDialog, setOpenDialog] = useState(false);
+    const [isNew, setIsNew] = useState(true);
 
-// const ApplicationsPage: React.FC = () => {
-//   const [applications, setApplications] = useState<ApplicationRead[]>([]);
-//   const [currentApplication, setCurrentApplication] = useState<ApplicationRead | null>(null);
-//   const [isModalOpen, setIsModalOpen] = useState(false);
+    useEffect(() => {
+        const fetchApplications = async () => {
+            const apps = await getApplications();
+            setApplications(apps);
+        };
+        fetchApplications();
+    }, []);
 
+    const handleOpenDialog = (app: ApplicationRead | null) => {
+        setCurrentApplication(app);
+        setOpenDialog(true);
+        setIsNew(!app);
+    };
 
-//   useEffect(() => {
-//     const fetchApplications = async () => {
-//       try {
-//         const response = await fetch('/applications/', {
-//           method: 'GET',
-//           headers: {
-//             'Content-Type': 'application/json',
-//             // Include authentication headers if required
-//           },
-//         });
-//         if (!response.ok) {
-//           throw new Error('Error fetching applications');
-//         }
-//         const data = await response.json();
-//         setApplications(data);
-//       } catch (error) {
-//         console.error('Failed to fetch applications:', error);
-//       }
-//     };
+    const handleCloseDialog = () => {
+        setOpenDialog(false);
+        setCurrentApplication(null);
+    };
 
-//     fetchApplications();
-//   }, []);
-//   const openModal = (application?: ApplicationRead) => {
-//     setCurrentApplication(application || null);
-//     setIsModalOpen(true);
-//   };
+    const handleSave = async () => {
+        if (currentApplication) {
+            const savedApplication = isNew
+                ? await createApplication(currentApplication as ApplicationCreate)
+                : await updateApplication(currentApplication.id.toString(), currentApplication as ApplicationUpdate);
+            setApplications([...applications.filter(a => a.id !== savedApplication.id), savedApplication]);
+        }
+        handleCloseDialog();
+    };
 
-//   const closeModal = () => {
-//     setIsModalOpen(false);
-//     setCurrentApplication(null);
-//   };
+    const handleDelete = async (id: number) => {
+        await deleteApplication(id.toString());
+        setApplications(applications.filter(a => a.id !== id.toString()));
+    };
 
-//   const handleSaveApplication = async (applicationData: ApplicationRead) => {
-//     const isUpdate = applicationData.id != null;
+    // Define columns for DataGrid
+    const columns: GridColDef[] = [
+        { field: 'id', headerName: 'ID', width: 70 },
+        { field: 'name', headerName: 'Name', width: 150 },
+        // ... other fields
+        { field: 'actions', headerName: 'Actions', width: 150, renderCell: (params) => (
+            <>
+                <Button onClick={() => handleOpenDialog(params.row)}>Edit</Button>
+                <Button onClick={() => handleDelete(params.row.id)}>Delete</Button>
+            </>
+        )},
+    ];
 
-//     const endpoint = isUpdate ? `/applications/${applicationData.id}/` : '/applications/';
-//     const method = isUpdate ? 'PATCH' : 'POST';
+    return (
+        <Box>
+            <Button onClick={() => handleOpenDialog(null)}>Add New Application</Button>
+            <DataGrid rows={applications} columns={columns} />
 
+            <Dialog open={openDialog} onClose={handleCloseDialog}>
+                <DialogTitle>{isNew ? 'Add New Application' : 'Edit Application'}</DialogTitle>
+                <DialogContent>
+                    {/* Create form fields based on ApplicationRead structure */}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseDialog}>Cancel</Button>
+                    <Button onClick={handleSave}>{isNew ? 'Add' : 'Save'}</Button>
+                </DialogActions>
+            </Dialog>
+        </Box>
+    );
+};
 
-//     try {
-//       const response = await fetch(endpoint, {
-//         method: method,
-//         headers: {
-//           'Content-Type': 'application/json',
-//           // Include authentication headers if required
-//         },
-//         body: JSON.stringify(applicationData),
-//       });
-
-//       if (!response.ok) {
-//         throw new Error('Error saving application');
-//       }
-//       const savedApplication = await response.json();
-
-//       // Update state
-//       if (method === 'POST') {
-//         setApplications([...applications, savedApplication]);
-//       } else {
-//         setApplications(applications.map(app => app.id === savedApplication.id ? savedApplication : app));
-//       }
-
-//       closeModal();
-//     } catch (error) {
-//       console.error('Failed to save application:', error);
-//     }
-//   };
-
-//   const handleDeleteApplication = async (applicationId: string) => {
-//     try {
-//       const response = await fetch(`/applications/${applicationId}/`, {
-//         method: 'DELETE',
-//         headers: {
-//           'Content-Type': 'application/json',
-//           // Include authentication headers if required
-//         },
-//       });
-
-//       if (!response.ok) {
-//         throw new Error('Error deleting application');
-//       }
-
-//       // Update state
-//       setApplications(applications.filter(app => app.id !== applicationId));
-//     } catch (error) {
-//       console.error('Failed to delete application:', error);
-//     }
-//   };
-
-
-//     // Extract and return the required fields
-//     const formatApplicationData = (app: ApplicationRead | null): ApplicationCreate | ApplicationUpdate => {
-//       if (!app) {
-//         // Provide default values for a new application
-//         return {
-//           cover_letter: '',
-//           resume: '',
-//           notes: '',
-//           status: '',
-//           lead_id: '',};
-//       }
-//       // Extract and return only the fields relevant for ApplicationCreate or ApplicationUpdate
-//       return app;
-//     };
-
-//   return (
-//     <Container>
-//       <Typography variant="h4" gutterBottom>Job Applications</Typography>
-//       <Button variant="contained" color="primary" onClick={() => openModal()}>Add New Application</Button>
-
-//       {/* List of Applications */}
-//       <List>
-//         {applications.map((application) => (
-//           <ListItem key={application.id} divider>
-//             <ListItemText primary={application.id} secondary={application.status} />
-//             <ListItemSecondaryAction>
-//               <IconButton edge="end" aria-label="edit" onClick={() => openModal(application)}>
-//                 <EditIcon />
-//               </IconButton>
-//               <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteApplication(application.id)}>
-//                 <DeleteIcon />
-//               </IconButton>
-//             </ListItemSecondaryAction>
-//           </ListItem>
-//         ))}
-//       </List>
-
-//       <ApplicationModal
-//         open={isModalOpen}
-//         onClose={closeModal}
-//         onSave={handleSaveApplication}
-//         initialData={formatApplicationData(currentApplication)}
-//       />
-//     </Container>
-//   );
-// };
-// export default ApplicationsPage;
-export {};
+export default ApplicationPage;

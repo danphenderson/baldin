@@ -7,7 +7,7 @@ import CreateLeadModal from '../component/lead-modal';
 import { LeadRead, LeadsPaginatedRead, LeadCreate, LeadUpdate, getLeads, createLead, updateLead  } from '../services/lead';
 
 
-const Leads: React.FC = () => {
+const LeadsPage: React.FC = () => {
   const [leads, setLeads] = useState<LeadRead[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalLeads, setTotalLeads] = useState(0);
@@ -173,4 +173,4 @@ const Leads: React.FC = () => {
   );
 };
 
-export default Leads;
+export default LeadsPage;

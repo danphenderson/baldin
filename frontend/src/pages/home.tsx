@@ -1,7 +1,7 @@
 import React from 'react';
 import { Typography } from '@mui/material';
 
-const AppHome: React.FC = () => {
+const HomePage: React.FC = () => {
   return (
     <>
       <Typography variant='h4'>Home Page</Typography>
@@ -9,4 +9,4 @@ const AppHome: React.FC = () => {
   );
 }
 
-export default AppHome;
+export default HomePage;

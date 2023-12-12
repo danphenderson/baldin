@@ -167,6 +167,29 @@ export interface paths {
     /** Delete User Resume */
     delete: operations["delete_user_resume_resumes__resume_id__delete"];
   };
+  "/applications/": {
+    /**
+     * Get Applications
+     * @description Get all applications for the current user.
+     */
+    get: operations["get_applications_applications__get"];
+    /** Create Application */
+    post: operations["create_application_applications__post"];
+  };
+  "/applications/{id}": {
+    /** Delete Application */
+    delete: operations["delete_application_applications__id__delete"];
+    /** Update Application */
+    patch: operations["update_application_applications__id__patch"];
+  };
+  "/applications/{id}/resumes": {
+    /** Get Application Resumes */
+    get: operations["get_application_resumes_applications__id__resumes_get"];
+  };
+  "/applications/{id}/cover_letters": {
+    /** Get Application Cover Letters */
+    get: operations["get_application_cover_letters_applications__id__cover_letters_get"];
+  };
   "/ping": {
     /** Pong */
     get: operations["pong_ping_get"];
@@ -181,6 +204,67 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    /** ApplicationCreate */
+    ApplicationCreate: {
+      /** Cover Letter */
+      cover_letter?: string | null;
+      /** Resume */
+      resume?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /** Status */
+      status?: string | null;
+      /**
+       * Lead Id
+       * Format: uuid4
+       */
+      lead_id: string;
+    };
+    /** ApplicationRead */
+    ApplicationRead: {
+      /** Cover Letter */
+      cover_letter?: string | null;
+      /** Resume */
+      resume?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /** Status */
+      status?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Lead Id
+       * Format: uuid4
+       */
+      lead_id: string;
+    };
+    /** ApplicationUpdate */
+    ApplicationUpdate: {
+      /** Cover Letter */
+      cover_letter?: string | null;
+      /** Resume */
+      resume?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /** Status */
+      status?: string | null;
+    };
     /** BearerResponse */
     BearerResponse: {
       /** Access Token */
@@ -2219,6 +2303,133 @@ export interface operations {
       /** @description Successful Response */
       204: {
         content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Applications
+   * @description Get all applications for the current user.
+   */
+  get_applications_applications__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"][];
+        };
+      };
+    };
+  };
+  /** Create Application */
+  create_application_applications__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Application */
+  delete_application_applications__id__delete: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationRead"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Application */
+  update_application_applications__id__patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Application Resumes */
+  get_application_resumes_applications__id__resumes_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Application Cover Letters */
+  get_application_cover_letters_applications__id__cover_letters_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"][];
+        };
       };
       /** @description Validation Error */
       422: {

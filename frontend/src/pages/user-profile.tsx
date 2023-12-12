@@ -2,9 +2,9 @@ import React, { useState, useContext, useEffect } from 'react';
 import { CircularProgress, Stack, IconButton, Typography, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, Snackbar } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import { UserContext } from '../context/user-context';
-import { getUser, updateUser, UserUpdate } from '../services/user-service'; // Import service functions
+import { getUser, updateUser, UserUpdate } from '../services/user'; // Import service functions
 
-const Settings = () => {
+const UserProfile = () => {
     const { user, token, setUser } = useContext(UserContext);
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -116,4 +116,4 @@ const Settings = () => {
     );
 };
 
-export default Settings;
+export default UserProfile;

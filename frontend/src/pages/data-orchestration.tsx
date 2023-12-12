@@ -10,7 +10,7 @@ type Pipeline = {
     jobSearchRef: string;
 };
 
-const EtlPage: React.FC = () => {
+const DataOrchestrationPage: React.FC = () => {
     const [pipelines, setPipelines] = useState<Pipeline[]>([
         { id: 1, name: 'Pipeline 1', status: 'Pass', jobSearchRef: 'Job1' },
         // ... other pipelines
@@ -68,4 +68,4 @@ const EtlPage: React.FC = () => {
     );
 };
 
-export default EtlPage;
+export default DataOrchestrationPage;

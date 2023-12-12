@@ -6,11 +6,11 @@ import Login from '../pages/login';
 import PublicLayout from '../layout/public-layout';
 import AppLayout from '../layout/home-layout';
 import Register from '../pages/register';
-import ErrorPage from '../pages/error-page';
-import Settings from '../pages/settings';
+import ErrorPage from '../pages/error';
+import UserProfile from '../pages/user-profile';
 import Leads from '../pages/leads';
 // import Applications from '../pages/applications';
-import ETL from '../pages/etl';
+import DataOrchestrationPage from '../pages/data-orchestration';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -19,10 +19,10 @@ const AppRoutes: React.FC = () => {
         <Route element={<AppLayout />}>
             <Route path="/" element={<UserRoute />}>
                 <Route index element={<App />} />
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/settings" element={<UserProfile />} />
                 <Route path="/leads" element={<Leads />} />
                 {/* <Route path="/applications" element={<Applications />} /> */}
-                <Route path="/etl" element={<ETL />} />
+                <Route path="/data-orchestration" element={<DataOrchestrationPage />} />
                 {/* More user routes can be added here */}
             </Route>
         </Route>

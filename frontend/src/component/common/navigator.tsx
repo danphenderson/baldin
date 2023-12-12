@@ -29,7 +29,7 @@ const Navigator: React.FC = () => {
         </ListItemIcon>
         <ListItemText primary="Applications" />
       </ListItem>
-      <ListItem button onClick={() => navigate('/etl')}>
+      <ListItem button onClick={() => navigate('/data-orchestration')}>
         <ListItemIcon>
           <EtlIcon />
         </ListItemIcon>

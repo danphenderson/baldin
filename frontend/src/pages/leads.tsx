@@ -4,7 +4,7 @@ import { Button, Box, Snackbar, Alert } from '@mui/material';
 import CreateLeadModal from '../component/lead-modal';
 
 
-import { LeadRead, LeadsPaginatedRead, LeadCreate, LeadUpdate, getLeads, createLead, updateLead  } from '../services/lead-service';
+import { LeadRead, LeadsPaginatedRead, LeadCreate, LeadUpdate, getLeads, createLead, updateLead  } from '../services/lead';
 
 
 const Leads: React.FC = () => {

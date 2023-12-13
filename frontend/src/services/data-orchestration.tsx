@@ -1,4 +1,4 @@
-import { components } from "../schema";
+import { components } from "../schema.d";
 
 export type OrchestrationEventRead = components['schemas']['OrchestrationEventRead'];
 

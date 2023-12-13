@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { UserProvider } from './context/user-context';
 import AppRoutes from './routes/routes';
 import ThemeProvider from './theme/theme-provider';
+import reportWebVitals from './report-web-vitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 
@@ -18,3 +19,4 @@ root.render(
     </ThemeProvider>
   </React.StrictMode>
 );
+reportWebVitals(console.log);

@@ -2,7 +2,6 @@ import React, { ReactNode, useState } from 'react';
 import { createTheme, ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { blue, pink, grey } from '@mui/material/colors';
-import { Box } from '@mui/material';
 
 interface ThemeProviderProps {
   children: ReactNode;

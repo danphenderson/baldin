@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext } from "react";
 import { getUser } from "../services/user"; // Import the getUser function
-import { components } from "../schema.d";
+import { components } from '../schema.d';
 
 type UserRead = components['schemas']['UserRead'];
 

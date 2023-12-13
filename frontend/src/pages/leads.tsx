@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { DataGrid, GridColDef, GridPaginationModel  } from '@mui/x-data-grid';
 import { Button, Box, Snackbar, Alert } from '@mui/material';
 import CreateLeadModal from '../component/lead-modal';
+import { createApplication, ApplicationCreate } from '../services/application';
+import { UserContext } from '../context/user-context';
 
 
 import { LeadRead, LeadsPaginatedRead, LeadCreate, LeadUpdate, getLeads, createLead, updateLead  } from '../services/lead';
 
 
 const LeadsPage: React.FC = () => {
+  const { token } = useContext(UserContext);
   const [leads, setLeads] = useState<LeadRead[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalLeads, setTotalLeads] = useState(0);
@@ -15,7 +18,7 @@ const LeadsPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paginationModel, setPaginationModel] = React.useState({
-    page_size: 5,
+    page_size: 10,
     page: 1,
   });
 
@@ -92,26 +95,44 @@ const LeadsPage: React.FC = () => {
     setError(null);
   };
 
+  const handleApply = async (id: string) => {
+    // For now I am just going to "register" an application using the current lead
+    // In the future, clicking the Apply button should open a modal to create a new application
+    // That modal should contain pregenerated application documents (resume, cover letter, etc)
+    // And the user should be able to upload their own documents
+    if (!token) {
+      setError('Authorization token is missing, unable to create application for lead with id: ' + id);
+      return;
+    }
+    try {
+      const applicationData: ApplicationCreate = {
+        lead_id: id, // Assuming 'id' is the lead_id for the application
+      };
+      await createApplication(token, applicationData);
+    } catch (error) {
+      setError('Failed to create application for lead with id: ' + id);
+    }
+  };
+
 
   const columns: GridColDef[] = [
     { field: 'title', headerName: 'Title', width: 150 },
     { field: 'company', headerName: 'Company', width: 150 },
     { field: 'description', headerName: 'Description', width: 200 },
-    // { field: 'location', headerName: 'Location', width: 150 },
-    // { field: 'salary', headerName: 'Salary', width: 130 },
-    // { field: 'job_function', headerName: 'Job Function', width: 150 },
-    { field: 'industries', headerName: 'Industries', width: 150 },
     { field: 'employment_type', headerName: 'Employment Type', width: 150 },
     { field: 'seniority_level', headerName: 'Seniority Level', width: 150 },
+    { field: 'location', headerName: 'Location', width: 150 },
+    { field: 'salary', headerName: 'Salary', width: 130 },
+    { field: 'job_function', headerName: 'Job Function', width: 150 },
+    { field: 'industries', headerName: 'Industries', width: 150 },
+
     // { field: 'notes', headerName: 'Notes', width: 200 },
-    { field: 'url', headerName: 'URL', width: 200 },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      sortable: false,
-      width: 150,
-      renderCell: (params) => (
+    // { field: 'url', headerName: 'URL', width: 200 },
+    {field: 'actions', headerName: 'Actions', sortable: false, width: 150, renderCell: (params) => (
+      <>
         <Button onClick={() => handleEditLead(params.row.id)}>Edit</Button>
+        <Button onClick={() => handleApply(params.row.id)}>Apply</Button>
+      </>
       ),
     },
   ];
@@ -129,7 +150,7 @@ const LeadsPage: React.FC = () => {
         disableRowSelectionOnClick
         onRowDoubleClick={(params) => handleEditLead(params.id.toString())}
         pagination
-        pageSizeOptions={[5, 10]}
+        pageSizeOptions={[10, 15, 20]}
         rowCount={totalLeads}
         paginationMode="server"
         initialState={{

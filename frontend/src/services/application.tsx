@@ -1,5 +1,5 @@
 import { components } from "../schema";
-import { UserContext } from "../context/user-context";
+
 export type ApplicationRead = components['schemas']['ApplicationRead'];
 export type ApplicationCreate = components['schemas']['ApplicationCreate'];
 export type ApplicationUpdate = components['schemas']['ApplicationUpdate'];
@@ -40,10 +40,28 @@ const fetchAPI = async (url: string, options: RequestInit) => {
   return response.json();
 };
 
-
 export const getApplications = async (token: string): Promise<ApplicationRead[]> => {
   const requestOptions = createRequestOptions(token, "GET");
-  return await fetchAPI(`${BASE_URL}`, requestOptions);
+  const applications = await fetchAPI(`${BASE_URL}`, requestOptions);
+
+  // Function to add prefix to each key in an object
+  const addPrefix = (obj: any, prefix: string) => {
+    return Object.keys(obj).reduce((acc: {[key: string]: any}, key) => {
+      acc[prefix + key] = obj[key];
+      return acc;
+    }, {});
+  };
+
+  return applications.map((app: any) => {
+    const leadWithPrefix = addPrefix(app.lead, 'lead_');
+    const userWithPrefix = addPrefix(app.user, 'user_');
+
+    return {
+      ...app, // Spread the original application properties
+      ...leadWithPrefix, // Spread the lead properties with 'lead_' prefix
+      ...userWithPrefix, // Spread the user properties with 'user_' prefix
+    };
+  });
 };
 
 

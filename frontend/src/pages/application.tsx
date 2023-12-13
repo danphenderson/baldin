@@ -84,14 +84,19 @@ const ApplicationPage: React.FC = () => {
 
     // Define columns for DataGrid
     const columns: GridColDef[] = [
-        { field: 'id', headerName: 'ID', width: 70 },
-        { field: 'name', headerName: 'Name', width: 150 },
+        //{ field: 'id', headerName: 'ID', width: 70 },
+        { field: 'lead_title', headerName: 'Lead', width: 150 },
+        { field: 'lead_company', headerName: 'Company', width: 150 },
+        { field: 'lead_location', headerName: 'Location', width: 150 },
+        { field: 'lead_salary', headerName: 'Salary', width: 150 },
+        { field: 'lead_industies', headerName: 'Industry', width: 150 },
+
         // ... other fields
-        { field: 'actions', headerName: 'Actions', width: 150, renderCell: (params) => (
-            <>
-                <Button onClick={() => handleOpenDialog(params.row)}>Edit</Button>
-                <Button onClick={() => handleDelete(params.row.id)}>Delete</Button>
-            </>
+        { field: 'actions', headerName: 'Generate', width: 300, renderCell: (params) => (
+          <>
+            <Button onClick={() => handleOpenDialog(params.row)}>Resume</Button>
+            <Button onClick={() => handleDelete(params.row.id)}>Cover Letter</Button>
+          </>
         )},
     ];
 

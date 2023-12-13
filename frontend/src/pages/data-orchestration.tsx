@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, List, ListItem, ListItemText, Typography } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getOrchestrations, OrchestrationEventRead } from '../services/data-orchestration';
+import { loadLeadDatabase, erichLeadDataLake } from '../services/lead';
 
+const actions = [
+  { text: 'Load Lead Database', action: loadLeadDatabase},
+  { text: 'Enrich Lead Datalake', action: erichLeadDataLake},
+];
 
 const DataOrchestrationPage: React.FC = () => {
   const [pipelines, setPipelines] = useState<OrchestrationEventRead[]>([]);
@@ -35,6 +40,13 @@ const DataOrchestrationPage: React.FC = () => {
 
     return (
         <Box sx={{ height: 400, width: '100%', p: 2 }}>
+          <List>
+            {actions.map((item, index) => (
+              <ListItem button key={index} onClick={async () => await item.action()}>
+                <ListItemText primary={item.text} />
+              </ListItem>
+            ))}
+          </List>
           <Typography variant='h4'>Orchestration Events</Typography>
             <DataGrid
                 rows={pipelines}

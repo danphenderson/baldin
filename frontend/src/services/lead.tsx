@@ -66,16 +66,16 @@ export const deleteLead = async (id: string): Promise<void> => {
 };
 
 export const loadLeadDatabase = async (): Promise<OrchestrationEventRead> => {
-  const response = await fetchApi(`${BASE_URL}/database_load`, {
-    method: "GET",
+  const response = await fetchApi(`${BASE_URL}/load_database`, {
+    method: "POST",
     headers: DEFAULT_HEADERS,
   });
   return response.json();
 }
 
 export const erichLeadDataLake = async (): Promise<OrchestrationEventRead> => {
-  const response = await fetchApi(`${BASE_URL}/erich_data_lake`, {
-    method: "GET",
+  const response = await fetchApi(`${BASE_URL}/erich_datalake`, {
+    method: "POST",
     headers: DEFAULT_HEADERS,
   });
   return response.json();

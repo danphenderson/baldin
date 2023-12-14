@@ -1,12 +1,15 @@
 # app/schemas.py
 from datetime import datetime
-from enum import Enum  # TODO: Use Literal for performance improvement
+from enum import Enum
+from io import BytesIO
+from pathlib import Path  # TODO: Use Literal for performance improvement
 from typing import Any, Sequence
 
 from fastapi_users import schemas
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, model_validator
+from PyPDF2 import PdfReader
 
 from app import utils
 
@@ -201,6 +204,13 @@ class ResumeRead(BaseRead, BaseResume):
 class ResumeCreate(BaseResume):
     pass
 
+    @classmethod
+    async def from_pdf(cls, filepath: str | Path) -> ResumeRead:
+        pdf_dict = await utils.pdf_to_dict(filepath)
+        # TODO: content may need to be a list of strings.
+        # This may only load the first page.
+        return cls(name=pdf_dict["name"], content=pdf_dict["content"][0])  # type: ignore
+
 
 class ResumeUpdate(BaseResume):
     pass
@@ -220,6 +230,22 @@ class CoverLetterRead(BaseRead, BaseCoverLetter):
 
 class CoverLetterCreate(BaseCoverLetter):
     pass
+
+    @classmethod
+    async def from_pdf(cls, filepath: str) -> CoverLetterRead:
+        pdf_dict = await utils.pdf_to_dict(filepath)
+        # TODO: content may need to be a list of strings.
+        # This may only load the first page.
+        return cls(name=pdf_dict["name"], content=pdf_dict["content"][0])  # type: ignore
+
+    @classmethod
+    def from_bytes(cls, name: str, content: BytesIO) -> CoverLetterRead:
+        reader = PdfReader(content)
+        text_content = []
+        for page_num in range(len(reader.pages)):
+            page = reader.pages[page_num]
+            text_content.append(page.extract_text())
+        return cls(name=name, content=text_content[0], content_type=ContentType.GENERATED)  # type: ignore
 
 
 class CoverLetterUpdate(BaseCoverLetter):

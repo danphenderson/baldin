@@ -28,6 +28,7 @@ pydantic-settings = "*"
 pydantic = {extras = ["email"], version = "*"}
 install = "*"
 types-beautifulsoup4 = "*"
+pypdf2 = "*"
 
 [dev-packages]
 ipython = "*"

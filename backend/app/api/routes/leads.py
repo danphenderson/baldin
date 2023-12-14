@@ -4,8 +4,6 @@ import json
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from fastapi.responses import RedirectResponse
-from httpx import get
 from pydantic import UUID4
 from sqlalchemy import delete, func, select
 
@@ -67,7 +65,7 @@ async def _load_leads_into_database(orch_event_id):
                 event = await update_orchestration_event(
                     event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
                 )
-                raise e
+                raise HTTPException(status_code=500, detail=str(e))
 
         # Update the orchestration event status to "success"
         setattr(event, "status", schemas.OrchestrationEventStatusType("success"))

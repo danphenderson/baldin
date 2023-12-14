@@ -3,8 +3,8 @@ from datetime import datetime
 from enum import Enum
 from io import BytesIO
 from pathlib import Path  # TODO: Use Literal for performance improvement
-from typing import Any, Sequence
-from typing import TypeVar
+from typing import Any, Sequence, TypeVar
+
 from fastapi_users import schemas
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
@@ -14,20 +14,16 @@ from PyPDF2 import PdfReader
 from app import utils
 
 
-
-
 # Base Model
 class BaseSchema(_BaseModel):
     class Config:
         from_attributes = True
 
 
-
-
 # Types, properties, and shared models
 
 
-BaseSchemaSubclass = TypeVar('BaseSchemaSubclass', bound=BaseSchema)
+BaseSchemaSubclass = TypeVar("BaseSchemaSubclass", bound=BaseSchema)
 
 
 class ContentType(str, Enum):

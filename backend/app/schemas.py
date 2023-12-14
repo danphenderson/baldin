@@ -4,7 +4,7 @@ from enum import Enum
 from io import BytesIO
 from pathlib import Path  # TODO: Use Literal for performance improvement
 from typing import Any, Sequence
-
+from typing import TypeVar
 from fastapi_users import schemas
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
@@ -13,10 +13,23 @@ from PyPDF2 import PdfReader
 
 from app import utils
 
-# TODO: Handle validation as it arrises.
 
 
-# Types and properties
+
+# Base Model
+class BaseSchema(_BaseModel):
+    class Config:
+        from_attributes = True
+
+
+
+
+# Types, properties, and shared models
+
+
+BaseSchemaSubclass = TypeVar('BaseSchemaSubclass', bound=BaseSchema)
+
+
 class ContentType(str, Enum):
     CUSTOM = "custom"
     GENERATED = "generated"
@@ -37,13 +50,7 @@ class URIType(str, Enum):
     API = "api"
 
 
-# Base Models
-class BaseModel(_BaseModel):
-    class Config:
-        from_attributes = True
-
-
-class URI(BaseModel):
+class URI(BaseSchema):
     name: str
     type: URIType
 
@@ -53,20 +60,20 @@ class URI(BaseModel):
         }
 
 
-class BaseRead(BaseModel):
+class BaseRead(BaseSchema):
     id: UUID4 = Field(description="The unique uuid4 record identifier.")
     created_at: datetime = Field(description="The time the item was created")
     updated_at: datetime = Field(description="The time the item was last updated")
 
 
-class Pagination(BaseModel):
+class Pagination(BaseSchema):
     page: int = Field(1, ge=1, description="The page number")
     page_size: int = Field(10, ge=1, description="The number of items per page")
     request_count: bool = Field(False, description="Request a query for total count")
 
 
 # Model CRUD Schemas+
-class BaseOrchestrationEvent(BaseModel):
+class BaseOrchestrationEvent(BaseSchema):
     status: OrchestrationEventStatusType | None = Field(None, description="Status")
     error_message: str | None = Field(None, description="Error message, if any")
 
@@ -87,7 +94,7 @@ class OrchestrationEventUpdate(BaseOrchestrationEvent):
     pass
 
 
-class BaseSkill(BaseModel):
+class BaseSkill(BaseSchema):
     name: str | None = Field(None, description="Name of the skill")
     category: str | None = Field(None, description="Category of the skill")
 
@@ -104,7 +111,7 @@ class SkillUpdate(BaseSkill):
     pass
 
 
-class BaseExperience(BaseModel):
+class BaseExperience(BaseSchema):
     title: str | None = Field(None, description="Job title")
     company: str | None = Field(None, description="Company name")
     start_date: datetime | None = Field(
@@ -126,7 +133,7 @@ class ExperienceUpdate(BaseExperience):
     pass
 
 
-class BaseLead(BaseModel):
+class BaseLead(BaseSchema):
     title: str | None = Field(None, description="Job title")
     company: str | None = Field(None, description="Company name")
     description: str | None = Field(None, description="Job description")
@@ -145,7 +152,7 @@ class LeadRead(BaseRead, BaseLead):
     url: AnyHttpUrl
 
 
-class LeadsPaginatedRead(BaseModel):
+class LeadsPaginatedRead(BaseSchema):
     leads: Sequence[LeadRead]
     pagination: Pagination
     total_count: int | None = Field(
@@ -170,7 +177,7 @@ class LeadUpdate(BaseLead):
     pass
 
 
-class BaseContact(BaseModel):
+class BaseContact(BaseSchema):
     first_name: str | None = Field(None, description="First name")
     last_name: str | None = Field(None, description="Last name")
     phone_number: str | None = Field(None, description="Phone number")
@@ -191,7 +198,7 @@ class ContactUpdate(BaseContact):
     pass
 
 
-class BaseResume(BaseModel):
+class BaseResume(BaseSchema):
     name: str | None = Field(None, description="Resume name")
     content: str | None = Field(None, description="Resume content")
     content_type: ContentType | None = Field(None, description="Resume content type")
@@ -216,7 +223,7 @@ class ResumeUpdate(BaseResume):
     pass
 
 
-class BaseCoverLetter(BaseModel):
+class BaseCoverLetter(BaseSchema):
     name: str | None = Field(None, description="Cover letter name")
     content: str | None = Field(None, description="Cover letter content")
     content_type: ContentType | None = Field(
@@ -252,7 +259,7 @@ class CoverLetterUpdate(BaseCoverLetter):
     pass
 
 
-class BaseUser(BaseModel):
+class BaseUser(BaseSchema):
     first_name: str | None = Field(None, description="First name")
     last_name: str | None = Field(None, description="Last name")
     phone_number: str | None = Field(None, description="Phone number")
@@ -284,9 +291,9 @@ class ApplicationRead(BaseRead):
     user: UserRead
 
 
-class ApplicationCreate(BaseModel):
+class ApplicationCreate(BaseSchema):
     lead_id: UUID4
 
 
-class ApplicationUpdate(BaseModel):
+class ApplicationUpdate(BaseSchema):
     status: str | None = Field(None, description="Application status")

@@ -7,7 +7,7 @@ from app import schemas
 from app.core.conf import settings
 
 
-class AsyncBaseModel(schemas.BaseModel, extra="allow"):
+class AsyncBaseModel(schemas.BaseSchema, extra="allow"):
     _tasks: list = []
 
     @staticmethod

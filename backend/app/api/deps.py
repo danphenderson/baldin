@@ -5,6 +5,7 @@ from typing import Any
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Query  # noqa
 from pydantic import UUID4
+from typing import Type
 
 from app import models, schemas, utils  # noqa
 from app.core import conf  # noqa
@@ -36,6 +37,33 @@ async def _404(obj: Any, id: UUID4 | None = None) -> HTTPException:
     msg = f"Object with {id} not found" if id else "Unable to find object"
     await log.info(msg)
     raise HTTPException(status_code=404, detail=f"Object with id {id} not found")
+
+
+
+async def load_record_into_table(
+    create_schema: schemas.BaseSchemaSubclass,
+    table_model: Type[models.Base]
+) -> None:
+    """
+    Inserts record into the table.
+    """
+    ...
+
+async def load_user_record_into_table(
+    user_id: UUID4,
+    created_schema: Type[schemas.BaseSchema],
+    table_model: Type[models.Base],
+    db: AsyncSession = Depends(get_async_session),
+) -> None:
+    """
+    Inserts record into a table that has a foreign key to the user table.
+    """
+    record_data = { **created_schema.dict(), "user_id": user_id }
+    record = table_model(**record_data)
+
+
+
+
 
 
 async def get_pagination_params(

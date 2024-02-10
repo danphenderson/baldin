@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { DataGrid, GridColDef, GridPaginationModel  } from '@mui/x-data-grid';
-import { Button, Box, Snackbar, Alert } from '@mui/material';
-import CreateLeadModal from '../component/lead-modal';
+import { Stack, Typography, Button, Box, Snackbar, Alert } from '@mui/material';
+import LeadModal from '../component/lead-modal';
 import { createApplication, ApplicationCreate } from '../services/application';
 import { UserContext } from '../context/user-context';
 
@@ -148,6 +148,7 @@ const LeadsPage: React.FC = () => {
         columns={columns}
         loading={loading}
         disableRowSelectionOnClick
+        onRowClick={(params) => setSelectedLead(params.row)}
         onRowDoubleClick={(params) => handleEditLead(params.id.toString())}
         pagination
         pageSizeOptions={[10, 15, 20]}
@@ -163,7 +164,7 @@ const LeadsPage: React.FC = () => {
         }}
         onPaginationModelChange={handlePaginationModelChange}
       />
-      <CreateLeadModal
+      <LeadModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSave={handleSaveLead}
@@ -189,7 +190,18 @@ const LeadsPage: React.FC = () => {
           </Alert>
         </Snackbar>
       )}
+      <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+        {selectedLead && (
+          <Stack>
+            <Typography><strong>{selectedLead.title}, {selectedLead.company}, {selectedLead.employment_type} </strong></Typography>
+            <Typography></Typography>
+            <Typography><strong>Description:</strong> {selectedLead.description}</Typography>
+            {/* Add more fields as needed, using <Typography> for each */}
+          </Stack>
+        )}
+      </Box>
     </Box>
+
     </div>
   );
 };

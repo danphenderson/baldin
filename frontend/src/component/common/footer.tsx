@@ -1,7 +1,9 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Typography';
 import Link from '@mui/material/Link';
+import Typography from '@mui/material/Typography';
+import { useNavigate } from 'react-router-dom';
 
 // Typing the props for Copyright
 interface CopyrightProps {
@@ -27,9 +29,15 @@ interface FooterProps {
 }
 
 const Footer: React.FC<FooterProps> = ({ title }) => {
+  const navigator = useNavigate();
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       <Copyright sx={{ mt: 5 }} />
+      <Button color="text.secondary" onClick={() => {navigator('/user-terms')}}>
+      Click to read our Privacy Policy and Terms and Conditions
+      </Button>
+
     </Box>
   );
 };

@@ -4,7 +4,7 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { UserContext } from '../context/user-context';
 import { getApplications, createApplication, updateApplication, deleteApplication, ApplicationRead, ApplicationCreate, ApplicationUpdate } from '../services/application';
 
-const ApplicationPage: React.FC = () => {
+const ManagerPage: React.FC = () => {
     const { token } = useContext(UserContext);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -119,4 +119,4 @@ const ApplicationPage: React.FC = () => {
     );
 };
 
-export default ApplicationPage;
+export default ManagerPage;

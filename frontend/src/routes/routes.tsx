@@ -9,8 +9,9 @@ import RegistrationPage from '../pages/register';
 import ErrorPage from '../pages/error';
 import UserProfilePage from '../pages/user-profile';
 import LeadsPage from '../pages/leads';
-import ApplicationsPage from '../pages/application';
 import DataOrchestrationPage from '../pages/data-orchestration';
+import ManagerPage from '../pages/manager';
+import UserTermsPage from '../pages/user-terms';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -21,8 +22,10 @@ const AppRoutes: React.FC = () => {
                 <Route index element={<App />} />
                 <Route path="/settings" element={<UserProfilePage />} />
                 <Route path="/leads" element={<LeadsPage />} />
-                <Route path="/applications" element={<ApplicationsPage />} />
+                <Route path="/manager" element={<ManagerPage />} />
                 <Route path="/data-orchestration" element={<DataOrchestrationPage />} />
+
+                <Route path="*" element={<ErrorPage />} />
                 {/* More user routes can be added here */}
             </Route>
         </Route>
@@ -30,6 +33,7 @@ const AppRoutes: React.FC = () => {
         <Route element={<PublicLayout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegistrationPage />} />
+            <Route path="/user-terms" element={<UserTermsPage/>} />
             {/* Other public routes */}
         </Route>
 

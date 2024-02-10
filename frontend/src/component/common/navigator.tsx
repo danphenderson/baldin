@@ -8,8 +8,8 @@ import DataArrayIcon from '@mui/icons-material/DataArray'; // More relevant for 
 
 const menuItems = [
   { text: 'User Profile', icon: <SettingsIcon />, path: '/settings' },
-  { text: 'Leads', icon: <GroupIcon />, path: '/leads' },
-  { text: 'Applications', icon: <ApplicationIcon />, path: '/applications' },
+  { text: 'Job Leads', icon: <GroupIcon />, path: '/leads' },
+  { text: 'Manager Hub', icon: <ApplicationIcon />, path: '/manager' },
   { text: 'Data Orchestration', icon: <DataArrayIcon />, path: '/data-orchestration' },
 ];
 

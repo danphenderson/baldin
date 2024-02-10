@@ -19,7 +19,7 @@ const fetchApi = async (url: string, options: RequestInit): Promise<Response> =>
   const response = await fetch(url, options);
   if (!response.ok) {
     // You can customize the error handling here
-    throw new Error('API request failed');
+    throw new Error('API request failed with status ${response.status}: ${response.statusText}`');
   }
   return response;
 };

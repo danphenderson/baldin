@@ -26,7 +26,7 @@ interface HeaderProps {
 
 const menuItems = [
   { text: 'Leads', icon: <GroupIcon />, path: '/leads' },
-  { text: 'Manager Hub', icon: <ApplicationIcon />, path: '/manager' },
+  { text: 'Applications', icon: <ApplicationIcon />, path: '/manager' },
   { text: 'Data Orchestration', icon: <DataArrayIcon />, path: '/data-orchestration' },
 ];
 

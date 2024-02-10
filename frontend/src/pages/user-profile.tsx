@@ -66,8 +66,6 @@ const UserProfilePage = () => {
 
     return (
       <Stack spacing={2} alignItems="center">
-      <Card sx={{ minWidth: 275, maxWidth: 500, width: '100%', m: 2 }}>
-          <CardContent>
               <Stack spacing={2} alignItems="center">
                   <Typography variant="h4"> User Profile </Typography>
                   <IconButton onClick={() => setOpen(true)} size="large">
@@ -80,8 +78,6 @@ const UserProfilePage = () => {
                       return null;
                   })}
               </Stack>
-          </CardContent>
-      </Card>
 
       <Dialog open={open} onClose={handleClose} fullWidth>
           <DialogTitle>Edit User Information</DialogTitle>

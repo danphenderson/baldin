@@ -24,7 +24,6 @@ const AppRoutes: React.FC = () => {
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/manager" element={<ManagerPage />} />
                 <Route path="/data-orchestration" element={<DataOrchestrationPage />} />
-
                 <Route path="*" element={<ErrorPage />} />
                 {/* More user routes can be added here */}
             </Route>

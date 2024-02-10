@@ -11,12 +11,10 @@ const HomeLayout: React.FC = () => {
   return (
     <Stack>
       <Header />
-      <Container component="main" sx={{ flexGrow: 1, py: 3 }}>
-        <Paper elevation={20} sx={{ minHeight: 'calc(100vh - 64px - 48px)', borderRadius: 0 }}> {/* Adjusted for header and footer height */}
-          <Outlet /> {/* This will render the current route's component */}
-        </Paper>
-      </Container>
-      <Footer title="Footer Content" />
+      <Paper component="main" elevation={10} sx={{borderRadius: 0 }}>
+        <Outlet/> {/* This will render the current route's page */}
+      </Paper>
+      <Footer />
     </Stack>
   );
 };

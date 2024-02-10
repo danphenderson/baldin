@@ -8,12 +8,25 @@ import { useContext } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { components } from '../../schema.d';
+import { List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import SettingsIcon from '@mui/icons-material/Settings';
+import GroupIcon from '@mui/icons-material/Group'; // More relevant for Leads
+import ApplicationIcon from '@mui/icons-material/TouchApp'; // More relevant for Applications
+import DataArrayIcon from '@mui/icons-material/DataArray'; // More relevant for Data Orchestration
 
 type UserRead = components['schemas']['UserRead'];
 
 interface HeaderProps {
   title?: string; // Make title optional
 }
+
+const menuItems = [
+  { text: 'User Profile', icon: <SettingsIcon />, path: '/settings' },
+  { text: 'Job Leads', icon: <GroupIcon />, path: '/leads' },
+  { text: 'Manager Hub', icon: <ApplicationIcon />, path: '/manager' },
+  { text: 'Data Orchestration', icon: <DataArrayIcon />, path: '/data-orchestration' },
+];
+
 
 const Header: React.FC<HeaderProps> = ({ title }) => {
   const { user, setUser, token, setToken } = useContext(UserContext);
@@ -34,20 +47,28 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
   };
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            {title || (user && `Welcome, ${user.first_name}`) || getDefaultTitle()}
-          </Typography>
-          {token && (
-            <Button color="inherit" onClick={handleLogout}>
-              Logout
-            </Button>
-          )}
-        </Toolbar>
-      </AppBar>
-    </Box>
+  <Box sx={{ flexGrow: 1 }}>
+    <AppBar position="static">
+      <Toolbar>
+        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+          {title || getDefaultTitle()}
+          <List sx={{ display: 'flex' }}>
+            {menuItems.map((item, index) => (
+              <ListItem button key={index} onClick={() => navigate(item.path)}>
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+        {token && (
+          <Button color="inherit" onClick={handleLogout}>
+            Logout
+          </Button>
+        )}
+      </Toolbar>
+    </AppBar>
+  </Box>
   );
 };
 

@@ -13,6 +13,10 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import GroupIcon from '@mui/icons-material/Group'; // More relevant for Leads
 import ApplicationIcon from '@mui/icons-material/TouchApp'; // More relevant for Applications
 import DataArrayIcon from '@mui/icons-material/DataArray'; // More relevant for Data Orchestration
+import IconButton from '@mui/material/IconButton';
+import MenuIcon from '@mui/icons-material/Menu';
+import { AccountCircle } from '@mui/icons-material';
+
 
 type UserRead = components['schemas']['UserRead'];
 
@@ -21,8 +25,7 @@ interface HeaderProps {
 }
 
 const menuItems = [
-  { text: 'User Profile', icon: <SettingsIcon />, path: '/settings' },
-  { text: 'Job Leads', icon: <GroupIcon />, path: '/leads' },
+  { text: 'Leads', icon: <GroupIcon />, path: '/leads' },
   { text: 'Manager Hub', icon: <ApplicationIcon />, path: '/manager' },
   { text: 'Data Orchestration', icon: <DataArrayIcon />, path: '/data-orchestration' },
 ];
@@ -32,12 +35,18 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
   const { user, setUser, token, setToken } = useContext(UserContext);
   const navigate = useNavigate();
   const location = useLocation();
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
 
-  // Function to extract a title from the current route
-  const getDefaultTitle = () => {
-    // Example logic to derive a title from the location
-    const path = location.pathname.substring(1);
-    return path.charAt(0).toUpperCase() + path.slice(1) || 'Home'; // Capitalize first letter
+
+  // App bar handlers
+  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
+    // check to see if it is open, if so, close it
+    if (open) {
+      setAnchorEl(null);
+      return;
+    }
+    setAnchorEl(event.currentTarget);
   };
 
   const handleLogout = () => {
@@ -50,22 +59,44 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
   <Box sx={{ flexGrow: 1 }}>
     <AppBar position="static">
       <Toolbar>
+      { token && (
         <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-          {title || getDefaultTitle()}
+
+          {/* Display User Application MenuItems */}
+          {/* TODO: This should be displayed in MenuIcon (the same way User Setting Options are displayed) and the title should appear on the page */}
           <List sx={{ display: 'flex' }}>
             {menuItems.map((item, index) => (
               <ListItem button key={index} onClick={() => navigate(item.path)}>
-                <ListItemIcon>{item.icon}</ListItemIcon>
+                {/* Uncoment for icons  */}
+                {/* <ListItemIcon>{item.icon}</ListItemIcon> */}
                 <ListItemText primary={item.text} />
               </ListItem>
             ))}
           </List>
+
+          {/* Display User Setting Options */}
+          <IconButton
+                size="large"
+                aria-label="account of current user"
+                aria-controls="menu-appbar"
+                aria-haspopup="true"
+                onClick={handleMenu}
+                color="inherit"
+              >
+            <SettingsIcon />
+              { open && (
+                <>
+                  <Button color="inherit" onClick={() => navigate('/settings')}>
+                    Settings
+                  </Button>
+                  <Button color="inherit" onClick={handleLogout}>
+                    Logout
+                  </Button>
+                </>
+              )}
+          </IconButton>
         </Box>
-        {token && (
-          <Button color="inherit" onClick={handleLogout}>
-            Logout
-          </Button>
-        )}
+      )}
       </Toolbar>
     </AppBar>
   </Box>

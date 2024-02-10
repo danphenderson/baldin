@@ -1,120 +1,101 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import { Box, Button, CircularProgress, Typography } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { UserContext } from '../context/user-context';
 import { getApplications, createApplication, updateApplication, deleteApplication, ApplicationRead, ApplicationCreate, ApplicationUpdate } from '../services/application';
+import ApplicationCreateModal from '../component/application-modal'; // Adjust the import path as necessary
 
 const ManagerPage: React.FC = () => {
     const { token } = useContext(UserContext);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [applications, setApplications] = useState<ApplicationRead[]>([]);
-    const [currentApplication, setCurrentApplication] = useState<ApplicationRead | null>(null);
-    const [openDialog, setOpenDialog] = useState(false);
+    const [currentApplication, setCurrentApplication] = useState<ApplicationCreate | ApplicationUpdate | null>(null);
+    const [openModal, setOpenModal] = useState(false);
     const [isNew, setIsNew] = useState(true);
+
+    useEffect(() => {
+      if (token && applications.length === 0) fetchApplications();
+    }, [token]);
 
     const fetchApplications = async () => {
       if (!token) return;
+      setIsLoading(true);
       try {
-        setIsLoading(true);
         const apps = await getApplications(token);
         setApplications(apps);
       } catch (error) {
-        if (error instanceof Error) {
-          setError(`Failed to fetch application: ${error.message || error}`);
-          console.error(error); // Log error for debugging
-        }
+        setError(`Failed to fetch applications: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
         setIsLoading(false);
       }
     };
 
-    useEffect(() => {
-      if (token && !applications.length)
-        fetchApplications();
-    }, [token, applications]);
-
-    const handleOpenDialog = (app: ApplicationRead | null) => {
+    const handleOpenModal = (app: ApplicationRead | null) => {
       setCurrentApplication(app);
-      setOpenDialog(true);
+      setOpenModal(true);
       setIsNew(!app);
     };
 
-    const handleCloseDialog = () => {
-      setOpenDialog(false);
+    const handleCloseModal = () => {
+      setOpenModal(false);
       setCurrentApplication(null);
     };
 
-    const handleSave = async () => {
+    const handleSave = async (application: ApplicationCreate | ApplicationUpdate) => {
       if (!token) {
-        setError('Authorization token is missing');
+        setError('Missing required fields');
         return;
       }
+      setIsLoading(true);
       try {
-        if (currentApplication) {
-          const savedApplication = isNew
-            ? await createApplication(token, currentApplication as ApplicationCreate)
-            : await updateApplication(token, currentApplication.id.toString(), currentApplication as ApplicationUpdate);
-          setApplications([...applications.filter(a => a.id !== savedApplication.id), savedApplication]);
-        }
-        handleCloseDialog();
+        const savedApplication = isNew
+          ? await createApplication(token, application as ApplicationCreate)
+          : await updateApplication(token, application.id, application as ApplicationUpdate);
+        setApplications([...applications.filter(a => a.id !== savedApplication.id), savedApplication]);
+        handleCloseModal();
       } catch (error) {
-        if (error instanceof Error) {
-          setError(`Failed to save application: ${error.message || error}`);
-          console.error(error); // Log error for debugging
-        }
+        setError(`Failed to save application: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (id: string) => {
         if (!token) {
             setError('Authorization token is missing');
             return;
         }
+        setIsLoading(true);
         try {
-          await deleteApplication(token, id.toString());
-          setApplications(applications.filter(a => a.id !== id.toString()));
+          await deleteApplication(token, id);
+          setApplications(applications.filter(a => a.id !== id));
         } catch (error) {
-          if (error instanceof Error) {
-            setError(`Failed to delete application: ${error.message || error}`);
-            console.error(error); // Log error for debugging
-          }
+          setError(`Failed to delete application: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+          setIsLoading(false);
         }
     };
 
-    // Define columns for DataGrid
     const columns: GridColDef[] = [
-        //{ field: 'id', headerName: 'ID', width: 70 },
-        { field: 'lead_title', headerName: 'Lead', width: 150 },
-        { field: 'lead_company', headerName: 'Company', width: 150 },
-        { field: 'lead_location', headerName: 'Location', width: 150 },
-        { field: 'lead_salary', headerName: 'Salary', width: 150 },
-        { field: 'lead_industies', headerName: 'Industry', width: 150 },
-
-        // ... other fields
-        { field: 'actions', headerName: 'Generate', width: 300, renderCell: (params) => (
-          <>
-            <Button onClick={() => handleOpenDialog(params.row)}>Resume</Button>
-            <Button onClick={() => handleDelete(params.row.id)}>Cover Letter</Button>
-          </>
-        )},
+      { field: 'lead_title', headerName: 'Lead', width: 150 },
+      { field: 'lead_company', headerName: 'Company', width: 150 },
+      { field: 'lead_location', headerName: 'Location', width: 150 },
+      { field: 'lead_salary', headerName: 'Salary', width: 150 },
+      { field: 'status', headerName: 'Status', width: 150 },
     ];
 
     return (
         <Box>
-            <Button onClick={() => handleOpenDialog(null)}>Add New Application</Button>
-            <DataGrid rows={applications} columns={columns} />
-
-            <Dialog open={openDialog} onClose={handleCloseDialog}>
-                <DialogTitle>{isNew ? 'Add New Application' : 'Edit Application'}</DialogTitle>
-                <DialogContent>
-                    {/* Create form fields based on ApplicationRead structure */}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDialog}>Cancel</Button>
-                    <Button onClick={handleSave}>{isNew ? 'Add' : 'Save'}</Button>
-                </DialogActions>
-            </Dialog>
+            <Button onClick={() => handleOpenModal(null)}>Add New Application</Button>
+            {isLoading ? <CircularProgress /> : <DataGrid rows={applications} columns={columns} />}
+            {error && <Typography color="error">{error}</Typography>}
+            <ApplicationCreateModal
+              open={openModal}
+              onClose={handleCloseModal}
+              onSave={handleSave}
+              initialData={currentApplication as ApplicationCreate | undefined} // Cast to ApplicationCreate for simplicity; adjust as needed for your types
+            />
         </Box>
     );
 };

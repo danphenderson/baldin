@@ -190,13 +190,19 @@ const LeadsPage: React.FC = () => {
           </Alert>
         </Snackbar>
       )}
-      <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+      <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 800, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
         {selectedLead && (
           <Stack>
             <Typography><strong>{selectedLead.title}, {selectedLead.company}, {selectedLead.employment_type} </strong></Typography>
-            <Typography></Typography>
-            <Typography><strong>Description:</strong> {selectedLead.description}</Typography>
-            {/* Add more fields as needed, using <Typography> for each */}
+            <Typography><strong>Location:</strong> {selectedLead.location}</Typography>
+            <Typography><strong>Salary:</strong> {selectedLead.salary}</Typography>
+            <Typography><strong>Job Function:</strong> {selectedLead.job_function}</Typography>
+            <Typography><strong>Industries:</strong> {selectedLead.industries}</Typography>
+            <Typography><strong>Seniority Level:</strong> {selectedLead.seniority_level}</Typography>
+            <Typography><strong>Notes:</strong> {selectedLead.notes}</Typography>
+            <Typography><strong>Description:</strong>{selectedLead.description}</Typography>
+            <Typography><strong>ID:</strong> {selectedLead.id}</Typography>
+            <Typography><strong>URL:</strong> {selectedLead.url}</Typography>
           </Stack>
         )}
       </Box>

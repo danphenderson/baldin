@@ -11,7 +11,6 @@ from app.api.deps import (
     AsyncSession,
     conf,
     create_orchestration_event,
-    enrich,
     get_async_session,
     get_lead,
     get_orchestration_event,

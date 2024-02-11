@@ -16,7 +16,6 @@ from app.core.security import (  # noqa
     get_current_superuser,
     get_current_user,
 )
-from app.etl.leads import enrich  # noqa
 from app.logging import get_async_logger  # noqa
 
 log = get_async_logger(__name__)
@@ -61,7 +60,6 @@ async def load_user_record_into_table(
     # record_data = {**create_schema.dict(), "user_id": user_id}
     # record = table_model(**record_data)
     ...
-
 
 
 async def get_pagination_params(

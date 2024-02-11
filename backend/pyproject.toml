@@ -30,22 +30,20 @@ classifiers = [
 dependencies = []
 
 [tool.coverage.paths]
-source = ["app"]
-
+source = ["app", "etl"]
 
 [tool.coverage.run]
-branch = ["true"]
-source =[
+branch = true
+source = [
     "app",
     "tests",
+    "etl",
 ]
-parallel = ["false"]
-
+parallel = false
 
 [tool.coverage.report]
-show_missing = ["true"]
+show_missing = true
 precision = 2
-
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -64,6 +62,6 @@ profile = "black"
 
 [tool.mypy]
 python_version = "3.11"
-warn_unused_configs = "true"
-warn_unused_ignores = "true"
-files = ["app"]
+warn_unused_configs = true
+warn_unused_ignores = true
+files = ["app", "etl"]

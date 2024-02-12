@@ -13,9 +13,9 @@ aiofiles = "*"
 python-dotenv = "*"
 pydantic-settings = "*"
 pydantic = {extras = ["email"], version = "*"}
-pypdf2 = "*"
 playwright = "*"
 toml = "*"
+playwright-stealth = "*"
 
 [dev-packages]
 ipython = "*"

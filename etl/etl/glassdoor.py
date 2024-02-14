@@ -1,6 +1,6 @@
 
 from .conf import settings
-from .scrapper import Scrapper
+from .base import Scrapper
 from .logging import get_logger
 
 logger = get_logger(__name__)

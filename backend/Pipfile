@@ -30,6 +30,10 @@ install = "*"
 types-beautifulsoup4 = "*"
 pypdf2 = "*"
 playwright = "*"
+llama-index = "*"
+langchain = "*"
+transformers = "*"
+accelerate = "*"
 
 [dev-packages]
 ipython = "*"
@@ -40,6 +44,7 @@ mypy = "*"
 install = "*"
 types-aiofiles = "*"
 types-toml = "*"
+jupyter = "*"
 
 [scripts]
 test = "docker-compose exec web python -m pytest"

@@ -58,7 +58,7 @@ class Settings(_BaseSettings):
     FIRST_SUPERUSER_PASSWORD: str
 
     # DATALAKE SETTINGS
-    DATALAKE_URI: str = f"public/datalake"
+    DATALAKE_URI: str = "public/datalake"
 
     # VALIDATORS
     @validator("BACKEND_CORS_ORIGINS")
@@ -86,7 +86,7 @@ class Chrome(_BaseSettings, env_prefix="CHROME_"):
     See https://pypi.org/project/selenium/, `ChromeOptions` for more information.
     """
 
-    DRIVER_PATH: str
+    DRIVER_PATH: str = ""
     SHM_SIZE: str = "2g"
 
     @property

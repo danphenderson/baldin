@@ -145,7 +145,7 @@ class BaseLead(BaseSchema):
 
 
 class LeadRead(BaseRead, BaseLead):
-    url: AnyHttpUrl
+    url: AnyHttpUrl | str | None = Field(None, description="Job posting URL")
 
 
 class LeadsPaginatedRead(BaseSchema):

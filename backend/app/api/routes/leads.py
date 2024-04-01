@@ -88,9 +88,7 @@ async def load_database(
     source_uri = schemas.URI(
         name=str(
             Path(str(conf.settings.DATALAKE_URI))
-            / "leads"
-            / "enriched"
-            / "enriched.json"
+            / "leads.json"
         ),
         type=schemas.URIType("datalake"),
     )

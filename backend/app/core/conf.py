@@ -58,7 +58,7 @@ class Settings(_BaseSettings):
     FIRST_SUPERUSER_PASSWORD: str
 
     # DATALAKE SETTINGS
-    DATALAKE_URI: str = "public/datalake"
+    DATALAKE_URI: str = "public/seeds"
 
     # VALIDATORS
     @validator("BACKEND_CORS_ORIGINS")

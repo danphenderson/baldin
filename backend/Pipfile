@@ -34,6 +34,9 @@ llama-index = "*"
 langchain = "*"
 transformers = "*"
 accelerate = "*"
+llama-index-llms-openai = "*"
+jsonpath-ng = "*"
+langchain-openai = "*"
 
 [dev-packages]
 ipython = "*"

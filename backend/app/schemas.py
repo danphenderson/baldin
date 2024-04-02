@@ -272,6 +272,12 @@ class UserRead(schemas.BaseUser[UUID4], BaseUser):  # type: ignore
     pass
 
 
+# Define a schema for the user profile that includes skills and experiences
+class UserProfileRead(BaseSchema):
+    skills: list[SkillRead]
+    experiences: list[ExperienceRead]
+
+
 class UserCreate(schemas.BaseUserCreate, BaseUser):
     pass
 

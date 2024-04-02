@@ -13,6 +13,7 @@ from app.api.routes import (
     resumes,
     services,
     skills,
+    users,
 )
 
 api_router: APIRouter = APIRouter()
@@ -38,7 +39,7 @@ api_router.include_router(
     tags=["auth"],
 )
 api_router.include_router(
-    fastapi_users.get_users_router(schemas.UserRead, schemas.UserUpdate),
+    users.router,
     prefix="/users",
     tags=["users"],
 )

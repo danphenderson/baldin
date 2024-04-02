@@ -10,7 +10,6 @@ from app import models, schemas, utils  # noqa
 from app.core import conf  # noqa
 from app.core import security  # noqa
 from app.core.db import AsyncSession, get_async_session, session_context  # noqa
-from app.core.openai import get_openai_client  # noqa
 from app.core.security import (  # noqa
     fastapi_users,
     get_current_superuser,

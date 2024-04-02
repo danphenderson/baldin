@@ -116,7 +116,7 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
     See https://openai.com/ for more information.
     """
 
-    SECRET_KEY: str = ""
+    API_KEY: str = ""
     COMPLETION_MODEL: str = "gpt-3.5-turbo"
 
 
@@ -156,7 +156,7 @@ def get_openai_settings(**kwargs) -> OpenAI:
     import openai as _openai
 
     settings = OpenAI(**kwargs)
-    _openai.api_key = settings.SECRET_KEY
+    _openai.api_key = settings.API_KEY
     return settings
 
 

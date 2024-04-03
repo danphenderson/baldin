@@ -2,7 +2,12 @@ import React, { useState, useContext, useEffect } from 'react';
 import { CircularProgress, Stack, IconButton, Typography, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, Snackbar, Card, CardContent, Avatar, Grid } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import { UserContext } from '../context/user-context';
-import { getUser, updateUser, UserUpdate } from '../services/user';
+import { getUser, getUserProfile, updateUser, UserUpdate } from '../services/user';
+import { getExperience, getExperiences, ExperienceRead } from '../services/experiences';
+import { getSkill, getSkills, SkillRead } from '../services/skills';
+import { getEducation, getEducations, EducationRead } from '../services/education';
+import { getCertificate, getCertificates, CertificateRead } from '../services/certificate';
+
 
 
 const UserProfilePage = () => {
@@ -12,14 +17,22 @@ const UserProfilePage = () => {
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
     const [userDetails, setUserDetails] = useState<UserUpdate>(user || {} as UserUpdate);
+    // User Profile Information
+    const [experiences, setExperiences] = useState<ExperienceRead[]>([]);
+    const [skills, setSkills] = useState<SkillRead[]>([]);
+    const [educations, setEducations] = useState<EducationRead[]>([]);
+    const [certificates, setCertificates] = useState<CertificateRead[]>([]);
 
     const fetchUserData = async () => {
         if (!token) return;
 
         try {
             setIsLoading(true);
-            const fetchedUser = await getUser(token);
-            setUserDetails(fetchedUser);
+            setUserDetails(await getUser(token));
+            setExperiences(await getExperiences(token));
+            setSkills(await getSkills(token));
+            setEducations(await getEducations(token));
+            setCertificates(await getCertificates(token));
         } catch (error) {
             setError('Failed to fetch user data');
         } finally {
@@ -66,53 +79,56 @@ const UserProfilePage = () => {
 
     return (
       <Stack spacing={2} alignItems="center">
-              <Stack spacing={2} alignItems="center">
-                  <Typography variant="h4"> User Profile </Typography>
-                  <IconButton onClick={() => setOpen(true)} size="large">
-                      <EditIcon />
-                  </IconButton>
-                  {isLoading ? <CircularProgress /> : Object.entries(userDetails).map(([key, value]) => {
-                      if (!['id', 'is_active', 'is_superuser', 'is_verified'].includes(key)) {
-                          return <Typography variant="body1" key={key}>{`${key}: ${value}`}</Typography>;
-                      }
-                      return null;
-                  })}
-              </Stack>
+          <Typography variant="h4">User Profile</Typography>
+          <IconButton onClick={() => setOpen(true)} size="large">
+              <EditIcon />
+          </IconButton>
+          {isLoading ? <CircularProgress /> : (
+              <>
+                  <Stack spacing={1}>
+                      {Object.entries(userDetails).map(([key, value]) => {
+                          if (!['id', 'is_active', 'is_superuser', 'is_verified'].includes(key)) {
+                              return <Typography variant="body1" key={key}>{`${key}: ${value}`}</Typography>;
+                          }
+                          return null;
+                      })}
+                  </Stack>
+              </>
+          )}
+          <Dialog open={open} onClose={handleClose} fullWidth>
+              <DialogTitle>Edit User Information</DialogTitle>
+              <DialogContent>
+                  <Grid container spacing={2}>
+                      {Object.keys(userDetails).map(key => {
+                          const value = userDetails[key as keyof UserUpdate] || '';
+                          return (
+                              <Grid item xs={12} key={key}>
+                                  <TextField
+                                      margin="dense"
+                                      label={key.replace(/_/g, ' ')}
+                                      type="text"
+                                      fullWidth
+                                      variant="outlined"
+                                      name={key}
+                                      value={value}
+                                      onChange={handleChange}
+                                  />
+                              </Grid>
+                          );
+                      })}
+                  </Grid>
+              </DialogContent>
+              <DialogActions>
+                  <Button onClick={handleClose}>Cancel</Button>
+                  <Button onClick={handleSubmit}>Save</Button>
+              </DialogActions>
+          </Dialog>
 
-      <Dialog open={open} onClose={handleClose} fullWidth>
-          <DialogTitle>Edit User Information</DialogTitle>
-          <DialogContent>
-              <Grid container spacing={2}>
-                  {Object.keys(userDetails).map(key => {
-                      const value = userDetails[key as keyof UserUpdate] || '';
-                      return (
-                          <Grid item xs={12} key={key}>
-                              <TextField
-                                  margin="dense"
-                                  label={key.replace(/_/g, ' ')}
-                                  type="text"
-                                  fullWidth
-                                  variant="outlined"
-                                  name={key}
-                                  value={value}
-                                  onChange={handleChange}
-                              />
-                          </Grid>
-                      );
-                  })}
-              </Grid>
-          </DialogContent>
-          <DialogActions>
-              <Button onClick={handleClose}>Cancel</Button>
-              <Button onClick={handleSubmit}>Save</Button>
-          </DialogActions>
-      </Dialog>
+          {/* Snackbar component remains the same */}
 
-      {/* Snackbar component remains the same */}
-
-      {error && <Typography color="error">{error}</Typography>}
-  </Stack>
-);
+          {error && <Typography color="error">{error}</Typography>}
+      </Stack>
+  );
 };
 
 export default UserProfilePage;

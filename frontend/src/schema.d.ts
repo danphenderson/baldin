@@ -196,6 +196,34 @@ export interface paths {
     /** Add Cover Letter To Application */
     post: operations["add_cover_letter_to_application_applications__id__cover_letters_post"];
   };
+  "/education/": {
+    /** Read Current User Educations */
+    get: operations["read_current_user_educations_education__get"];
+    /** Create User Education */
+    post: operations["create_user_education_education__post"];
+  };
+  "/education/{education_id}": {
+    /** Read User Education */
+    get: operations["read_user_education_education__education_id__get"];
+    /** Update User Education */
+    put: operations["update_user_education_education__education_id__put"];
+    /** Delete User Education */
+    delete: operations["delete_user_education_education__education_id__delete"];
+  };
+  "/certificate/": {
+    /** Read Current User Certificates */
+    get: operations["read_current_user_certificates_certificate__get"];
+    /** Create User Certificate */
+    post: operations["create_user_certificate_certificate__post"];
+  };
+  "/certificate/{certificate_id}": {
+    /** Read User Certificate */
+    get: operations["read_user_certificate_certificate__certificate_id__get"];
+    /** Update User Certificate */
+    put: operations["update_user_certificate_certificate__certificate_id__put"];
+    /** Delete User Certificate */
+    delete: operations["delete_user_certificate_certificate__certificate_id__delete"];
+  };
   "/ping": {
     /** Pong */
     get: operations["pong_ping_get"];
@@ -312,6 +340,29 @@ export interface components {
       /** Token */
       token: string;
     };
+    /** CertificateCreate */
+    CertificateCreate: {
+      /**
+       * Title
+       * @description Certificate title
+       */
+      title?: string | null;
+      /**
+       * Issuer
+       * @description Issuer of the certificate
+       */
+      issuer?: string | null;
+      /**
+       * Expiration Date
+       * @description Expiration date of the certificate
+       */
+      expiration_date?: string | null;
+      /**
+       * Issued Date
+       * @description Issued date of the certificate
+       */
+      issued_date?: string | null;
+    };
     /** CertificateRead */
     CertificateRead: {
       /**
@@ -332,6 +383,29 @@ export interface components {
        * @description The time the item was last updated
        */
       updated_at: string;
+      /**
+       * Title
+       * @description Certificate title
+       */
+      title?: string | null;
+      /**
+       * Issuer
+       * @description Issuer of the certificate
+       */
+      issuer?: string | null;
+      /**
+       * Expiration Date
+       * @description Expiration date of the certificate
+       */
+      expiration_date?: string | null;
+      /**
+       * Issued Date
+       * @description Issued date of the certificate
+       */
+      issued_date?: string | null;
+    };
+    /** CertificateUpdate */
+    CertificateUpdate: {
       /**
        * Title
        * @description Certificate title
@@ -538,6 +612,44 @@ export interface components {
       /** @description Cover letter content type */
       content_type?: components["schemas"]["ContentType"] | null;
     };
+    /** EducationCreate */
+    EducationCreate: {
+      /**
+       * University
+       * @description University name
+       */
+      university?: string | null;
+      /**
+       * Degree
+       * @description Degree name
+       */
+      degree?: string | null;
+      /**
+       * Gradepoint
+       * @description Grade point
+       */
+      gradePoint?: string | null;
+      /**
+       * Activities
+       * @description Activities involved
+       */
+      activities?: string | null;
+      /**
+       * Achievements
+       * @description Achievements
+       */
+      achievements?: string | null;
+      /**
+       * Start Date
+       * @description Start date of the education
+       */
+      start_date?: string | null;
+      /**
+       * End Date
+       * @description End date of the education
+       */
+      end_date?: string | null;
+    };
     /** EducationRead */
     EducationRead: {
       /**
@@ -558,6 +670,44 @@ export interface components {
        * @description The time the item was last updated
        */
       updated_at: string;
+      /**
+       * University
+       * @description University name
+       */
+      university?: string | null;
+      /**
+       * Degree
+       * @description Degree name
+       */
+      degree?: string | null;
+      /**
+       * Gradepoint
+       * @description Grade point
+       */
+      gradePoint?: string | null;
+      /**
+       * Activities
+       * @description Activities involved
+       */
+      activities?: string | null;
+      /**
+       * Achievements
+       * @description Achievements
+       */
+      achievements?: string | null;
+      /**
+       * Start Date
+       * @description Start date of the education
+       */
+      start_date?: string | null;
+      /**
+       * End Date
+       * @description End date of the education
+       */
+      end_date?: string | null;
+    };
+    /** EducationUpdate */
+    EducationUpdate: {
       /**
        * University
        * @description University name
@@ -2713,6 +2863,214 @@ export interface operations {
       201: {
         content: {
           "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Current User Educations */
+  read_current_user_educations_education__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"][];
+        };
+      };
+    };
+  };
+  /** Create User Education */
+  create_user_education_education__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EducationCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read User Education */
+  read_user_education_education__education_id__get: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Education */
+  update_user_education_education__education_id__put: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EducationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User Education */
+  delete_user_education_education__education_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Current User Certificates */
+  read_current_user_certificates_certificate__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"][];
+        };
+      };
+    };
+  };
+  /** Create User Certificate */
+  create_user_certificate_certificate__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CertificateCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read User Certificate */
+  read_user_certificate_certificate__certificate_id__get: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Certificate */
+  update_user_certificate_certificate__certificate_id__put: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CertificateUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User Certificate */
+  delete_user_certificate_certificate__certificate_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"];
         };
       };
       /** @description Validation Error */

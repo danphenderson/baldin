@@ -2,7 +2,7 @@ import { components } from '../schema.d';
 
 export type UserRead = components['schemas']['UserRead'];
 export type UserUpdate = components['schemas']['UserUpdate'];
-export type UserProfilePage = components['schemas']['UserProfileRead'];
+export type UserProfile = components['schemas']['UserProfileRead'];
 
 // TODO - pull this from the environment schema.d.ts
 const BASE_URL = "/users/me";
@@ -40,3 +40,8 @@ export const updateUser = async (token: string, user: UserUpdate): Promise<UserR
   const requestOptions = createRequestOptions(token, "PATCH", user);
   return await fetchApi(BASE_URL, requestOptions);
 };
+
+export const getUserProfile = async (token: string): Promise<UserProfile> => {
+  const requestOptions = createRequestOptions(token, "GET");
+  return await fetchApi(`${BASE_URL}/profile`, requestOptions);
+}

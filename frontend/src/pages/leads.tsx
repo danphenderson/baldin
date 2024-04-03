@@ -171,7 +171,7 @@ const LeadsPage: React.FC = () => {
           employment_type: selectedLead.employment_type,
           seniority_level: selectedLead.seniority_level,
           notes: selectedLead.notes,
-          url: selectedLead.url,
+          url: selectedLead.url || '', // Provide a default value of an empty string for url
           // Add additional fields as required by the LeadCreate schema
         } : undefined}
       />

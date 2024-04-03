@@ -6,7 +6,6 @@ from pathlib import Path  # TODO: Use Literal for performance improvement
 from typing import Any, Sequence, TypeVar
 
 from fastapi_users import schemas
-from networkx import project
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, model_validator
@@ -161,6 +160,9 @@ class BaseCertificate(BaseSchema):
     issuer: str | None = Field(None, description="Issuer of the certificate")
     expiration_date: datetime | None = Field(
         None, description="Expiration date of the certificate"
+    )
+    issued_date: datetime | None = Field(
+        None, description="Issued date of the certificate"
     )
 
 

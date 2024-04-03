@@ -1,8 +1,6 @@
 # app/models.py
 
-from ast import Tuple
 from datetime import datetime
-from re import L
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
@@ -119,6 +117,7 @@ class Certificate(Base):
     title = Column(String)
     issuer = Column(String)
     expiration_date = Column(DateTime)  # Assuming date is stored as a DateTime
+    issued_date = Column(DateTime)  # Assuming date is stored as a DateTime
     user_id = Column(UUID, ForeignKey("users.id"))
     user = relationship("User", back_populates="certificates")
 

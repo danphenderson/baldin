@@ -1,6 +1,6 @@
 # app/api/routes/cover_letters.py
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 
 from app.api.deps import (
@@ -17,12 +17,15 @@ router: APIRouter = APIRouter()
 
 @router.get("/", response_model=list[schemas.CoverLetterRead])
 async def get_current_user_cover_letters(
+    content_type: schemas.ContentType
+    | None = Query(None, description="Filter by content type"),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    cover_letters = await db.execute(
-        select(models.CoverLetter).filter(models.CoverLetter.user_id == user.id)
-    )
+    query = select(models.CoverLetter).filter(models.CoverLetter.user_id == user.id)
+    if content_type:
+        query = query.filter(models.CoverLetter.content_type == content_type)
+    cover_letters = await db.execute(query)
     cover_letters = cover_letters.scalars().all()  # type: ignore
 
     if not cover_letters:

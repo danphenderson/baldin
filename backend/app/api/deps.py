@@ -155,7 +155,7 @@ async def get_resume(
 ) -> models.Resume:
     resume = await db.get(models.Resume, id)
     if not resume:
-        await _404(resume, id)
+        raise await _404(resume, id)
     if resume.user_id != user.id:  # type: ignore
         raise await _403(user.id, resume, id)
     return resume

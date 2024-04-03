@@ -198,3 +198,29 @@ async def get_application(
     if application.user_id != user.id:  # type: ignore
         raise await _403(user.id, application, id)
     return application
+
+
+async def get_education(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Education:
+    education = await db.get(models.Education, id)
+    if not education:
+        raise await _404(education, id)
+    if education.user_id != user.id:  # type: ignore
+        raise await _403(user.id, education, id)
+    return education
+
+
+async def get_certificate(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Certificate:
+    certificate = await db.get(models.Certificate, id)
+    if not certificate:
+        raise await _404(certificate, id)
+    if certificate.user_id != user.id:  # type: ignore
+        raise await _403(user.id, certificate, id)
+    return certificate

@@ -2187,11 +2187,23 @@ export interface operations {
   };
   /** Get Current User Cover Letters */
   get_current_user_cover_letters_cover_letters__get: {
+    parameters: {
+      query?: {
+        /** @description Filter by content type */
+        content_type?: components["schemas"]["ContentType"] | null;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
           "application/json": components["schemas"]["CoverLetterRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

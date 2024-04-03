@@ -25,9 +25,10 @@ interface HeaderProps {
 }
 
 const menuItems = [
+  { text: 'Profile', icon: <AccountCircle />, path: '/profile'},
   { text: 'Leads', icon: <GroupIcon />, path: '/leads' },
   { text: 'Applications', icon: <ApplicationIcon />, path: '/manager' },
-  { text: 'Data Orchestration', icon: <DataArrayIcon />, path: '/data-orchestration' },
+  { text: 'Templates', incon: <DataArrayIcon />, path: '/templates' },
 ];
 
 
@@ -86,8 +87,8 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
             <SettingsIcon />
               { open && (
                 <>
-                  <Button color="inherit" onClick={() => navigate('/settings')}>
-                    Settings
+                  <Button color="inherit" onClick={() => navigate('/data-orchestration')}>
+                    Data Orchestration
                   </Button>
                   <Button color="inherit" onClick={handleLogout}>
                     Logout

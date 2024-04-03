@@ -2,6 +2,7 @@ import { components } from '../schema.d';
 
 export type UserRead = components['schemas']['UserRead'];
 export type UserUpdate = components['schemas']['UserUpdate'];
+export type UserProfilePage = components['schemas']['UserProfileRead'];
 
 // TODO - pull this from the environment schema.d.ts
 const BASE_URL = "/users/me";

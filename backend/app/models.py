@@ -244,4 +244,6 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     skills = relationship("Skill", back_populates="user")
     experiences = relationship("Experience", back_populates="user")
     resumes = relationship("Resume", back_populates="user")
+    education = relationship("Education", back_populates="user")
+    certificates = relationship("Certificate", back_populates="user")
     cover_letters = relationship("CoverLetter", back_populates="user")

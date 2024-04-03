@@ -5,6 +5,7 @@ import os
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
+
 # Third party imports
 from langchain_openai import ChatOpenAI
 
@@ -18,6 +19,7 @@ os.environ["OPENAI_API_KEY"] = conf.openai.API_KEY
 llm = ChatOpenAI(model="gpt-4")  # type: ignore
 
 str_output_parser = StrOutputParser()
+
 
 
 def generate_cover_letter(profile, job, template) -> str:

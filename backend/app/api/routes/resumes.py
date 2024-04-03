@@ -83,7 +83,7 @@ router: APIRouter = APIRouter()
 #     # load resumes into database as a background task
 #     background_tasks.add_task(_load_resumes_into_database, event.id, user.id)
 
-#     return event
+#     return events
 
 
 @router.get("/", response_model=list[schemas.ResumeRead])

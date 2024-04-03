@@ -137,6 +137,10 @@ export interface paths {
     /** Delete User Skill */
     delete: operations["delete_user_skill_skills__skill_id__delete"];
   };
+  "/cover_letters/generate": {
+    /** Generate User Cover Letter */
+    post: operations["generate_user_cover_letter_cover_letters_generate_post"];
+  };
   "/cover_letters/": {
     /** Get Current User Cover Letters */
     get: operations["get_current_user_cover_letters_cover_letters__get"];
@@ -150,10 +154,6 @@ export interface paths {
     delete: operations["delete_user_cover_letter_cover_letters__cover_letter_id__delete"];
     /** Update User Cover Letter */
     patch: operations["update_user_cover_letter_cover_letters__cover_letter_id__patch"];
-  };
-  "/resumes/load_database": {
-    /** Load Database */
-    post: operations["load_database_resumes_load_database_post"];
   };
   "/resumes/": {
     /** Get Current User Resumes */
@@ -311,6 +311,47 @@ export interface components {
     Body_verify_verify_auth_verify_post: {
       /** Token */
       token: string;
+    };
+    /** CertificateRead */
+    CertificateRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Title
+       * @description Certificate title
+       */
+      title?: string | null;
+      /**
+       * Issuer
+       * @description Issuer of the certificate
+       */
+      issuer?: string | null;
+      /**
+       * Expiration Date
+       * @description Expiration date of the certificate
+       */
+      expiration_date?: string | null;
+      /**
+       * Issued Date
+       * @description Issued date of the certificate
+       */
+      issued_date?: string | null;
     };
     /** ContactCreate */
     ContactCreate: {
@@ -496,6 +537,62 @@ export interface components {
       content?: string | null;
       /** @description Cover letter content type */
       content_type?: components["schemas"]["ContentType"] | null;
+    };
+    /** EducationRead */
+    EducationRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * University
+       * @description University name
+       */
+      university?: string | null;
+      /**
+       * Degree
+       * @description Degree name
+       */
+      degree?: string | null;
+      /**
+       * Gradepoint
+       * @description Grade point
+       */
+      gradePoint?: string | null;
+      /**
+       * Activities
+       * @description Activities involved
+       */
+      activities?: string | null;
+      /**
+       * Achievements
+       * @description Achievements
+       */
+      achievements?: string | null;
+      /**
+       * Start Date
+       * @description Start date of the education
+       */
+      start_date?: string | null;
+      /**
+       * End Date
+       * @description End date of the education
+       */
+      end_date?: string | null;
     };
     /** ErrorModel */
     ErrorModel: {
@@ -1167,10 +1264,30 @@ export interface components {
     };
     /** UserProfileRead */
     UserProfileRead: {
-      /** Skills */
-      skills: components["schemas"]["SkillRead"][];
-      /** Experiences */
-      experiences: components["schemas"]["ExperienceRead"][];
+      /**
+       * Skills
+       * @description User's skills
+       * @default []
+       */
+      skills?: components["schemas"]["SkillRead"][];
+      /**
+       * Experiences
+       * @description User's professional experiences
+       * @default []
+       */
+      experiences?: components["schemas"]["ExperienceRead"][];
+      /**
+       * Educations
+       * @description User's educational background
+       * @default []
+       */
+      educations?: components["schemas"]["EducationRead"][];
+      /**
+       * Certificates
+       * @description User's certificates
+       * @default []
+       */
+      certificates?: components["schemas"]["CertificateRead"][];
     };
     /** UserRead */
     UserRead: {
@@ -2185,6 +2302,30 @@ export interface operations {
       };
     };
   };
+  /** Generate User Cover Letter */
+  generate_user_cover_letter_cover_letters_generate_post: {
+    parameters: {
+      query: {
+        lead_id: string;
+        /** @description Template ID for the cover letter */
+        template_id?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Get Current User Cover Letters */
   get_current_user_cover_letters_cover_letters__get: {
     parameters: {
@@ -2295,17 +2436,6 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Load Database */
-  load_database_resumes_load_database_post: {
-    responses: {
-      /** @description Successful Response */
-      201: {
-        content: {
-          "application/json": unknown;
         };
       };
     };

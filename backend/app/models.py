@@ -1,10 +1,12 @@
 # app/models.py
 
+from ast import Tuple
 from datetime import datetime
+from re import L
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
-from sqlalchemy import JSON, UUID, Column, DateTime, ForeignKey, String, Text
+from sqlalchemy import JSON, UUID, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -20,6 +22,7 @@ class Base(DeclarativeBase):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+# System models
 class OrchestrationEvent(Base):
     """
     Model for ETL (Extract, Transform, Load) events.
@@ -59,6 +62,9 @@ class Lead(Base):
     application = relationship("Application", back_populates="lead")
 
 
+# End of system models
+
+# User models
 class Skill(Base):
     """
     Model for user skills.
@@ -68,6 +74,8 @@ class Skill(Base):
     __tablename__ = "user_skills"
     name = Column(String)
     category = Column(String)
+    yoe = Column(Integer)
+    subskills = Column(String)
     user_id = Column(UUID, ForeignKey("users.id"))
     user = relationship("User", back_populates="skills")
 
@@ -81,11 +89,38 @@ class Experience(Base):
     __tablename__ = "user_experiences"
     title = Column(String)
     company = Column(String)
+    location = Column(String)
     start_date = Column(DateTime)
     end_date = Column(DateTime)
     description = Column(Text)
+    projects = Column(String)
+
     user_id = Column(UUID, ForeignKey("users.id"))
     user = relationship("User", back_populates="experiences")
+
+
+# Add Education model
+class Education(Base):
+    __tablename__ = "user_education"
+    university = Column(String)
+    degree = Column(String)
+    gradePoint = Column(String)
+    activities = Column(JSON)  # Assuming activities are stored as JSON
+    achievements = Column(JSON)  # Assuming achievements are stored as JSON
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
+    user_id = Column(UUID, ForeignKey("users.id"))
+    user = relationship("User", back_populates="education")
+
+
+# Add Certificate model
+class Certificate(Base):
+    __tablename__ = "user_certificates"
+    title = Column(String)
+    issuer = Column(String)
+    expiration_date = Column(DateTime)  # Assuming date is stored as a DateTime
+    user_id = Column(UUID, ForeignKey("users.id"))
+    user = relationship("User", back_populates="certificates")
 
 
 class Application(Base):

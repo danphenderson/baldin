@@ -6,6 +6,7 @@ from pathlib import Path  # TODO: Use Literal for performance improvement
 from typing import Any, Sequence, TypeVar
 
 from fastapi_users import schemas
+from networkx import project
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, model_validator
@@ -93,6 +94,8 @@ class OrchestrationEventUpdate(BaseOrchestrationEvent):
 class BaseSkill(BaseSchema):
     name: str | None = Field(None, description="Name of the skill")
     category: str | None = Field(None, description="Category of the skill")
+    yoe: int | None = Field(None, description="Years of Experience")
+    subskills: str | None = Field(None, description="Sub-Skills")
 
 
 class SkillRead(BaseRead, BaseSkill):
@@ -115,6 +118,8 @@ class BaseExperience(BaseSchema):
     )
     end_date: datetime | None = Field(None, description="End date of the experience")
     description: str | None = Field(None, description="Description of the experience")
+    location: str | None = Field(None, description="Location of the experience")
+    projects: str | None = Field(None, description="Projects involved")
 
 
 class ExperienceRead(BaseExperience, BaseRead):
@@ -126,6 +131,48 @@ class ExperienceCreate(BaseExperience):
 
 
 class ExperienceUpdate(BaseExperience):
+    pass
+
+
+class BaseEducation(BaseSchema):
+    university: str | None = Field(None, description="University name")
+    degree: str | None = Field(None, description="Degree name")
+    gradePoint: str | None = Field(None, description="Grade point")
+    activities: str | None = Field(None, description="Activities involved")
+    achievements: str | None = Field(None, description="Achievements")
+    start_date: datetime | None = Field(None, description="Start date of the education")
+    end_date: datetime | None = Field(None, description="End date of the education")
+
+
+class EducationRead(BaseEducation, BaseRead):
+    pass
+
+
+class EducationCreate(BaseEducation):
+    pass
+
+
+class EducationUpdate(BaseEducation):
+    pass
+
+
+class BaseCertificate(BaseSchema):
+    title: str | None = Field(None, description="Certificate title")
+    issuer: str | None = Field(None, description="Issuer of the certificate")
+    expiration_date: datetime | None = Field(
+        None, description="Expiration date of the certificate"
+    )
+
+
+class CertificateRead(BaseCertificate, BaseRead):
+    pass
+
+
+class CertificateCreate(BaseCertificate):
+    pass
+
+
+class CertificateUpdate(BaseCertificate):
     pass
 
 

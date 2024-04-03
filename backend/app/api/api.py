@@ -5,9 +5,11 @@ from fastapi import APIRouter
 from app.api.deps import fastapi_users, schemas, security
 from app.api.routes import (
     applications,
+    certificate,
     contacts,
     cover_letters,
     data_orchestration,
+    education,
     experiences,
     leads,
     resumes,
@@ -87,4 +89,14 @@ api_router.include_router(
     applications.router,
     prefix="/applications",
     tags=["applications"],
+)
+api_router.include_router(
+    education.router,
+    prefix="/education",
+    tags=["education"],
+)
+api_router.include_router(
+    certificate.router,
+    prefix="/certificate",
+    tags=["certificate"],
 )

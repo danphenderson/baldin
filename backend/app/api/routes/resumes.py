@@ -22,78 +22,68 @@ from app.api.deps import (
 
 router: APIRouter = APIRouter()
 
+# async def _load_resumes_into_database(orch_event_id, user_id):
+#     async with session_context() as db:
+#         try:
+#             # get orchestration event and update its status
+#             event = await get_orchestration_event(orch_event_id, db)
+#             setattr(event, "status", "running")
+#             await db.commit()
 
-async def _load_resumes_into_database(orch_event_id, user_id):
+#             # get all resumes from the unmarshaled source_uri in the orchestration event
+#             source_uri = schemas.URI.model_validate_json(getattr(event, "source_uri"))
 
-    async with session_context() as db:
-        # get orchestration event and update it's status
-        event = await get_orchestration_event(orch_event_id, db)
-        setattr(event, "status", "running")
-        event = await update_orchestration_event(
-            orch_event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
-        )
+#             for filepath in utils.generate_resourouces(source_uri.name):
+#                 resume = await schemas.ResumeCreate.from_pdf(filepath)
+#                 resume_model = models.Resume(**resume.dict(), user_id=user_id)
+#                 db.add(resume_model)
+#                 await db.commit()
+#                 await db.refresh(resume_model)
 
-        # get all resumes from the unmarsheled source_uri in the orchestration event
-        # Unmarshal the source URI
-        source_uri = schemas.URI.model_validate_json(getattr(event, "source_uri"))
+#             # update orchestration event status to success
+#             setattr(event, "status", "success")
+#             await db.commit()
 
-        for filepath in utils.generate_resourouces(source_uri.name):
-            try:
-                resume = await schemas.ResumeCreate.from_pdf(filepath)
-                resume_model = models.Resume(**resume.__dict__, user_id=user_id)
-                db.add(resume_model)
-                await db.commit()
-                await db.refresh(resume_model)
-
-            except Exception as e:
-                await db.rollback()
-                setattr(event, "status", "failure")
-                setattr(event, "error_message", str(e))
-                event = await update_orchestration_event(
-                    orch_event_id,
-                    schemas.OrchestrationEventUpdate(**event.__dict__),
-                    db,
-                )
-                raise HTTPException(status_code=500, detail=str(e))
-
-        # update orchestration event status
-        setattr(event, "status", "success")
-        event = await update_orchestration_event(
-            orch_event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
-        )
+#         except Exception as e:
+#             # handle exceptions, log errors, and set the event status to failure
+#             await db.rollback()  # rollback the transaction in case of an error
+#             setattr(event, "status", "failure")
+#             setattr(event, "error_message", str(e))
+#             await db.commit()  # commit the status update
+#             raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/load_database", status_code=201)
-async def load_database(
-    background_tasks: BackgroundTasks,
-    user=Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    source_uri = schemas.URI(
-        name=str(Path(conf.settings.DATALAKE_URI) / "resumes"),
-        type=schemas.URIType.DATALAKE,
-    )
+# @router.post("/load_database", status_code=201)
+# async def load_database(
+#     background_tasks: BackgroundTasks,
+#     user=Depends(get_current_user),
+#     db: AsyncSession = Depends(get_async_session),
+# ):
+#     source_uri = schemas.URI(
+#         name=str(Path(conf.settings.DATALAKE_URI) / "resumes"),
+#         type=schemas.URIType.DATALAKE,
+#     )
 
-    destination_uri = schemas.URI(
-        name=str(Path(str(conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI)) / "resumes"),
-        type=schemas.URIType.DATABASE,
-    )
+#     destination_uri = schemas.URI(
+#         name=str(Path(str(conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI)) / "resumes"),
+#         type=schemas.URIType.DATABASE,
+#     )
 
-    # create orchestration event
-    payload = schemas.OrchestrationEventCreate(
-        job_name="load_database",
-        source_uri=source_uri,
-        destination_uri=destination_uri,
-        status=schemas.OrchestrationEventStatusType.PENDING,
-        error_message=None,
-    )
+#     # create orchestration event
+#     payload = schemas.OrchestrationEventCreate(
+#         job_name="load_database",
+#         source_uri=source_uri,
+#         destination_uri=destination_uri,
+#         status=schemas.OrchestrationEventStatusType.PENDING,
+#         error_message=None,
+#     )
 
-    event = await create_orchestration_event(payload, db)
+#     event = await create_orchestration_event(payload, db)
 
-    # load resumes into database as a background task
-    background_tasks.add_task(_load_resumes_into_database, event.id, user.id)
+#     # load resumes into database as a background task
+#     background_tasks.add_task(_load_resumes_into_database, event.id, user.id)
 
-    return event
+#     return event
 
 
 @router.get("/", response_model=list[schemas.ResumeRead])

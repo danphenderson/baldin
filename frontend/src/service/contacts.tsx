@@ -1,11 +1,13 @@
-import { components } from "../schema.d";
+// Path: frontend/src/services/skills.tsx
+import { components } from "../schema";
 
-export type CertificateRead = components['schemas']['CertificateRead'];
-export type CertificateCreate = components['schemas']['CertificateCreate'];
-export type CertificateUpdate = components['schemas']['CertificateUpdate'];
+export type ContactRead = components['schemas']['ContactRead'];
+export type ContactCreate = components['schemas']['ContactCreate'];
+export type ContactUpdate = components['schemas']['ContactUpdate'];
+
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = '/certificate/';
+const BASE_URL = '/contacts/';
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
   if (!token) {
@@ -31,27 +33,29 @@ const fetchAPI = async (url: string, options: RequestInit) => {
   return response.json();
 };
 
-export const getCertificates = async (token: string): Promise<CertificateRead[]> => {
+export const getContacts = async (token: string): Promise<ContactRead[]> => {
   const requestOptions = createRequestOptions(token, "GET");
   return fetchAPI(`${BASE_URL}`, requestOptions);
 };
 
-export const getCertificate = async (token: string, id: string): Promise<CertificateRead> => {
+export const getContact = async (token: string, id: string): Promise<ContactRead> => {
   const requestOptions = createRequestOptions(token, "GET");
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
 }
 
-export const createCertificate = async (token: string, certificate: CertificateCreate): Promise<CertificateRead> => {
-  const requestOptions = createRequestOptions(token, "POST", certificate);
+export const createContact = async (token: string, contact: ContactCreate): Promise<ContactRead> => {
+  const requestOptions = createRequestOptions(token, "POST", contact);
   return fetchAPI(BASE_URL, requestOptions);
 }
 
-export const updateCertificate = async (token: string, id: string, certificate: CertificateUpdate): Promise<CertificateRead> => {
-  const requestOptions = createRequestOptions(token, "PATCH", certificate);
+export const updateContact = async (token: string, id: string, contact: ContactUpdate): Promise<ContactRead> => {
+  const requestOptions = createRequestOptions(token, "PATCH", contact);
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
 }
 
-export const deleteCertificate = async (token: string, id: string): Promise<void> => {
+export const deleteContact = async (token: string, id: string): Promise<void> => {
   const requestOptions = createRequestOptions(token, "DELETE");
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
 }
+
+// Path: frontend/src/services/skills.tsx

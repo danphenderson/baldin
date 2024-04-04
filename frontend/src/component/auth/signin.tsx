@@ -2,7 +2,7 @@ import React, { useState, useContext } from "react";
 import { Grid, Box, Typography, Container, TextField, Button } from '@mui/material';
 import { useNavigate } from "react-router-dom";
 
-import { login } from "../../services/auth";
+import { login } from "../../service/auth";
 import ErrorMessage from "../common/error-message";
 import { UserContext } from "../../context/user-context";
 

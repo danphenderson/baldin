@@ -1,13 +1,11 @@
-import { components } from "../schema.d";
+import { components } from "../schema";
 
-export type SkillRead = components['schemas']['SkillRead'];
-export type SkillCreate = components['schemas']['SkillCreate'];
-export type SkillUpdate = components['schemas']['SkillUpdate'];
-
+export type CertificateRead = components['schemas']['CertificateRead'];
+export type CertificateCreate = components['schemas']['CertificateCreate'];
+export type CertificateUpdate = components['schemas']['CertificateUpdate'];
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = '/skills/';
-
+const BASE_URL = '/certificate/';
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
   if (!token) {
@@ -33,28 +31,27 @@ const fetchAPI = async (url: string, options: RequestInit) => {
   return response.json();
 };
 
-export const getSkills = async (token: string): Promise<SkillRead[]> => {
+export const getCertificates = async (token: string): Promise<CertificateRead[]> => {
   const requestOptions = createRequestOptions(token, "GET");
   return fetchAPI(`${BASE_URL}`, requestOptions);
 };
 
-
-export const getSkill = async (token: string, id: string): Promise<SkillRead> => {
+export const getCertificate = async (token: string, id: string): Promise<CertificateRead> => {
   const requestOptions = createRequestOptions(token, "GET");
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
-};
+}
 
-export const createSkill = async (token: string, skill: SkillCreate): Promise<SkillRead> => {
-  const requestOptions = createRequestOptions(token, "POST", skill);
+export const createCertificate = async (token: string, certificate: CertificateCreate): Promise<CertificateRead> => {
+  const requestOptions = createRequestOptions(token, "POST", certificate);
   return fetchAPI(BASE_URL, requestOptions);
 }
 
-export const updateSkill = async (token: string, id: string, skill: SkillUpdate): Promise<SkillRead> => {
-  const requestOptions = createRequestOptions(token, "PATCH", skill);
+export const updateCertificate = async (token: string, id: string, certificate: CertificateUpdate): Promise<CertificateRead> => {
+  const requestOptions = createRequestOptions(token, "PATCH", certificate);
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
 }
 
-export const deleteSkill = async (token: string, id: string): Promise<void> => {
+export const deleteCertificate = async (token: string, id: string): Promise<void> => {
   const requestOptions = createRequestOptions(token, "DELETE");
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
 }

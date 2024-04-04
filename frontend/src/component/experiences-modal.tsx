@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
-import { ExperienceRead, ExperienceCreate, ExperienceUpdate } from '../services/experiences';  // Adjust import path as necessary
+import { ExperienceRead, ExperienceCreate, ExperienceUpdate } from '../service/experiences';  // Adjust import path as necessary
 
 interface ExperiencesModalProps {
   open: boolean;

@@ -1,12 +1,13 @@
-import { components } from "../schema.d";
+import { components } from "../schema";
 
-export type ExperienceRead = components['schemas']['ExperienceRead'];
-export type ExperienceUpdate = components['schemas']['ExperienceUpdate'];
-export type ExperienceCreate = components['schemas']['ExperienceCreate'];
+export type SkillRead = components['schemas']['SkillRead'];
+export type SkillCreate = components['schemas']['SkillCreate'];
+export type SkillUpdate = components['schemas']['SkillUpdate'];
 
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = '/experiences/';
+const BASE_URL = '/skills/';
+
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
   if (!token) {
@@ -32,29 +33,28 @@ const fetchAPI = async (url: string, options: RequestInit) => {
   return response.json();
 };
 
-export const getExperiences = async (token: string): Promise<ExperienceRead[]> => {
+export const getSkills = async (token: string): Promise<SkillRead[]> => {
   const requestOptions = createRequestOptions(token, "GET");
   return fetchAPI(`${BASE_URL}`, requestOptions);
 };
 
-export const getExperience = async (token: string, id: string): Promise<ExperienceRead> => {
+
+export const getSkill = async (token: string, id: string): Promise<SkillRead> => {
   const requestOptions = createRequestOptions(token, "GET");
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
 };
 
-
-export const createExperience = async (token: string, experience: ExperienceCreate): Promise<ExperienceRead> => {
-  const requestOptions = createRequestOptions(token, "POST", experience);
+export const createSkill = async (token: string, skill: SkillCreate): Promise<SkillRead> => {
+  const requestOptions = createRequestOptions(token, "POST", skill);
   return fetchAPI(BASE_URL, requestOptions);
-};
+}
 
-export const updateExperience = async (token: string, id: string, experience: ExperienceUpdate): Promise<ExperienceRead> => {
-  const requestOptions = createRequestOptions(token, "PATCH", experience);
+export const updateSkill = async (token: string, id: string, skill: SkillUpdate): Promise<SkillRead> => {
+  const requestOptions = createRequestOptions(token, "PATCH", skill);
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
-};
+}
 
-
-export const deleteExperience = async (token: string, id: string): Promise<void> => {
+export const deleteSkill = async (token: string, id: string): Promise<void> => {
   const requestOptions = createRequestOptions(token, "DELETE");
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
 }

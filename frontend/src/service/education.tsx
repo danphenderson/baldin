@@ -1,4 +1,4 @@
-import { components } from "../schema.d";
+import { components } from "../schema";
 
 export type EducationRead = components['schemas']['EducationRead'];
 export type EducationCreate = components['schemas']['EducationCreate'];

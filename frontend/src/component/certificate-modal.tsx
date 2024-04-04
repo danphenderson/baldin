@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
-import { CertificateRead, CertificateCreate, CertificateUpdate } from '../services/certificate';  // Adjust import path as necessary
+import { CertificateRead, CertificateCreate, CertificateUpdate } from '../service/certificates';  // Adjust import path as necessary
 
 interface CertificateModalProps {
   open: boolean;

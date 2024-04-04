@@ -2,11 +2,11 @@ import React, { useState, useEffect, useContext } from 'react';
 import { DataGrid, GridColDef, GridPaginationModel  } from '@mui/x-data-grid';
 import { Stack, Typography, Button, Box, Snackbar, Alert } from '@mui/material';
 import LeadModal from '../component/lead-modal';
-import { createApplication, ApplicationCreate } from '../services/application';
+import { createApplication, ApplicationCreate } from '../service/applications';
 import { UserContext } from '../context/user-context';
 
 
-import { LeadRead, LeadsPaginatedRead, LeadCreate, LeadUpdate, getLeads, createLead, updateLead  } from '../services/lead';
+import { LeadRead, LeadsPaginatedRead, LeadCreate, LeadUpdate, getLeads, createLead, updateLead  } from '../service/leads';
 
 
 const LeadsPage: React.FC = () => {
@@ -107,6 +107,7 @@ const LeadsPage: React.FC = () => {
     try {
       const applicationData: ApplicationCreate = {
         lead_id: id, // Assuming 'id' is the lead_id for the application
+        status: 'Not Submitted',
       };
       await createApplication(token, applicationData);
     } catch (error) {

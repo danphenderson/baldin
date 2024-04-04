@@ -52,7 +52,6 @@ const ManagerPage: React.FC = () => {
       { field: 'lead_company', headerName: 'Company', width: 150 },
       { field: 'lead_location', headerName: 'Location', width: 150 },
       { field: 'lead_salary', headerName: 'Salary', width: 150 },
-      { field: 'status', headerName: 'Status', width: 150 },
       { field: 'action', headerName: 'Action', width: 150, renderCell: (params) => (
           <Button color="error" onClick={() => handleDelete(params.id.toString())}>Delete</Button>
         )
@@ -74,11 +73,10 @@ const ManagerPage: React.FC = () => {
                 <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
                     <Typography variant="h6">Application Details</Typography>
                     <Stack spacing={2}>
-                        <Typography><strong>Lead:</strong> {selectedApplication.lead_title}</Typography>
-                        <Typography><strong>Company:</strong> {selectedApplication.lead_company}</Typography>
-                        <Typography><strong>Location:</strong> {selectedApplication.lead_location}</Typography>
-                        <Typography><strong>Salary:</strong> {selectedApplication.lead_salary}</Typography>
-                        <Typography><strong>Status:</strong> {selectedApplication.status}</Typography>
+                        <Typography><strong>Lead:</strong> {selectedApplication.lead.title}</Typography>
+                        <Typography><strong>Company:</strong> {selectedApplication.lead.company}</Typography>
+                        <Typography><strong>Location:</strong> {selectedApplication.lead.location}</Typography>
+                        <Typography><strong>Salary:</strong> {selectedApplication.lead.salary}</Typography>
                         {/* Display more fields as needed */}
                     </Stack>
                 </Box>

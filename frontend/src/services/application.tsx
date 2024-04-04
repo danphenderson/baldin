@@ -10,9 +10,6 @@ type CoverLetterRead = components['schemas']['CoverLetterRead'];
 
 // TODO - pull this from the environment schema.d.ts
 const BASE_URL = '/applications/';
-const DEFAULT_HEADERS = {
-  "Content-Type": "application/json",
-};
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
   if (!token) {

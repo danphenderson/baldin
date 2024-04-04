@@ -4,11 +4,11 @@ import EditIcon from '@mui/icons-material/Edit';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { UserContext } from '../context/user-context';
 import { getUser, getUserProfile, updateUser, UserUpdate } from '../services/user';
-import { getExperience, getExperiences, ExperienceRead, createExperience, updateExperience } from '../services/experiences';
-import { getSkill, getSkills, SkillRead, createSkill, updateSkill } from '../services/skills';
-import { getEducation, getEducations, createEducation, updateEducation, EducationRead } from '../services/education';
-import { getCertificate, getCertificates, CertificateRead, createCertificate, updateCertificate } from '../services/certificate';
-import { getContact, getContacts, createContact, updateContact, ContactRead } from '../services/contacts';
+import { getExperience, getExperiences, createExperience, updateExperience, ExperienceRead, ExperienceCreate, ExperienceUpdate } from '../services/experiences';
+import { getSkill, getSkills, createSkill, updateSkill, SkillRead, SkillCreate, SkillUpdate } from '../services/skills';
+import { getEducation, getEducations, createEducation, updateEducation, EducationRead, EducationCreate, EducationUpdate } from '../services/education';
+import { getCertificate, getCertificates, createCertificate, updateCertificate, CertificateRead, CertificateCreate, CertificateUpdate } from '../services/certificate';
+import { getContact, getContacts, createContact, updateContact, ContactRead, ContactCreate, ContactUpdate } from '../services/contacts';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import SkillsModal from '../component/skills-modal';
 import ExperiencesModal from '../component/experiences-modal';
@@ -31,11 +31,11 @@ const UserProfilePage = () => {
 
   // Skills State
   const [skillsModalOpen, setSkillsModalOpen] = useState(false);
-  const [selectedSkill, setSelectedSkill] = useState<SkillRead | null>(null);
+  const [selectedSkill, setSelectedSkill] = useState<SkillRead | undefined>(undefined);
   const [skills, setSkills] = useState<SkillRead[]>([]);
 
   const handleOpenSkillsModal = (skill?: SkillRead) => {
-    setSelectedSkill(skill || null);
+    setSelectedSkill(skill);
     setSkillsModalOpen(true);
   };
 
@@ -46,13 +46,14 @@ const UserProfilePage = () => {
           [name]: value
       }));
   };
-
-  const handleSaveSkill = async (skillData: SkillRead) => {
+  // Ensure that skillData is of a type that includes `id` as a string
+  const handleSaveSkill = async (skillData: SkillCreate | SkillUpdate) => {
     if (!token) return;
 
     try {
-        if (selectedSkill) {
-            await updateSkill(token, selectedSkill.id, skillData);
+        if ('id' in skillData && typeof skillData.id === 'string') {
+            // Now TypeScript knows skillData.id is a string
+            await updateSkill(token, skillData.id, skillData);
         } else {
             await createSkill(token, skillData);
         }
@@ -85,19 +86,20 @@ const UserProfilePage = () => {
   // Experiences State
   const [experienceModalOpen, setExperienceModalOpen] = useState(false);
   const [experiences, setExperiences] = useState<ExperienceRead[]>([]);
-  const [selectedExperience, setSelectedExperience] = useState<ExperienceRead | null>(null);
+  const [selectedExperience, setSelectedExperience] = useState<ExperienceRead | undefined>(undefined);
 
   const handleOpenExperienceModal = (experience?: ExperienceRead) => {
-    setSelectedExperience(experience || null);
+    setSelectedExperience(experience);
     setExperienceModalOpen(true);
   }
 
-  const handleSaveExperience = async (experienceData: ExperienceRead) => {
+  const handleSaveExperience = async (experienceData: ExperienceCreate | ExperienceUpdate) => {
     if (!token) return;
 
     try {
-        if (selectedExperience) {
-            await updateExperience(token, selectedExperience.id, experienceData);
+        // Check if experienceData has an id to determine if it's an update or create operation
+        if ('id' in experienceData && typeof experienceData.id === 'string') {
+            await updateExperience(token, experienceData.id, experienceData);
         } else {
             await createExperience(token, experienceData);
         }
@@ -134,19 +136,18 @@ const UserProfilePage = () => {
   // Education State
   const [educationModalOpen, setEducationModalOpen] = useState(false);
   const [educations, setEducations] = useState<EducationRead[]>([]);
-  const [selectedEducation, setSelectedEducation] = useState<EducationRead | null>(null);
+  const [selectedEducation, setSelectedEducation] = useState<EducationRead | undefined>(undefined);
 
   const handleOpenEducationModal = (education?: EducationRead) => {
-    setSelectedEducation(education || null);
+    setSelectedEducation(education);
     setEducationModalOpen(true);
   }
-
-  const handleSaveEducation = async (educationData: EducationRead) => {
+  const handleSaveEducation = async (educationData: EducationCreate | EducationUpdate) => {
     if (!token) return;
-
     try {
-        if (selectedEducation) {
-            await updateEducation(token, selectedEducation.id, educationData);
+        // Check if educationData has an id to determine if it's an update or create operation
+        if ('id' in educationData && typeof educationData.id === 'string') {
+            await updateEducation(token, educationData.id, educationData);
         } else {
             await createEducation(token, educationData);
         }
@@ -155,7 +156,7 @@ const UserProfilePage = () => {
     } catch (error) {
         console.error('Failed to save education data', error);
     }
-  };
+};
 
   const educationColumns: GridColDef[] = [
     { field: 'university', headerName: 'Institution', width: 250 },
@@ -180,24 +181,25 @@ const UserProfilePage = () => {
   // Certificate State
   const [certificateModalOpen, setCertificateModalOpen] = useState(false);
   const [certificates, setCertificates] = useState<CertificateRead[]>([]);
-  const [selectedCertificate, setSelectedCertificate] = useState<CertificateRead | null>(null);
+  const [selectedCertificate, setSelectedCertificate] = useState<CertificateRead | undefined>(undefined);
 
   const handleOpenCertificateModal = (certificate?: CertificateRead) => {
-    setSelectedCertificate(certificate || null);
+    setSelectedCertificate(certificate);
     setCertificateModalOpen(true);
   }
 
-  const handleSaveCertificate = async (certificateData: CertificateRead) => {
+  const handleSaveCertificate = async (certificateData: CertificateCreate | CertificateUpdate) => {
     if (!token) return;
 
     try {
-        if (selectedCertificate) {
-            await updateCertificate(token, selectedCertificate.id, certificateData);
-        } else {
-            await createCertificate(token, certificateData);
-        }
-        setCertificateModalOpen(false);
-        fetchUserData();  // Refresh the list after saving
+      if ('id' in certificateData && typeof certificateData.id === 'string') {
+          await updateCertificate(token, certificateData.id, certificateData);
+      }
+      else {
+          await createCertificate(token, certificateData);
+      }
+      setCertificateModalOpen(false);
+      fetchUserData();  // Refresh the list after saving
     } catch (error) {
         console.error('Failed to save certificate data', error);
     }
@@ -223,25 +225,23 @@ const UserProfilePage = () => {
 
   // Contacs State
   const [contacts, setContacts] = useState<ContactRead[]>([]);
-  const [selectedContact, setSelectedContact] = useState<ContactRead | null>(null);
+  const [selectedContact, setSelectedContact] = useState<ContactRead | undefined>(undefined);
   const [contactModalOpen, setContactModalOpen] = useState(false);
 
   const handleOpenContactModal = (contact?: ContactRead) => {
-    setSelectedContact(contact || null);
+    setSelectedContact(contact);
     setContactModalOpen(true);
   };
 
-  const handleSaveContact = async (contactData: ContactRead) => {
+  const handleSaveContact = async (contactData: ContactCreate | ContactUpdate) => {
     if (!token) return;
 
     try {
-        if (selectedContact) {
-            await updateContact(token, selectedContact.id, contactData);
-        } else {
-            await createContact(token, contactData);
-        }
-        setContactModalOpen(false);
-        fetchUserData();  // Refresh the list after saving
+      if ('id' in contactData && typeof contactData.id === 'string') {
+          await updateContact(token, contactData.id, contactData);
+      } else {
+          await createContact(token, contactData);
+      }
     } catch (error) {
         console.error('Failed to save contact data', error);
     };
@@ -419,8 +419,6 @@ const UserProfilePage = () => {
                   <DataGrid
                     rows={skills}
                     columns={skillsColumns}
-                    pageSize={5}
-                    rowsPerPageOptions={[5]}
                     onRowDoubleClick={(params) => handleOpenSkillsModal(params.row)}
                   />
               </div>
@@ -446,8 +444,6 @@ const UserProfilePage = () => {
                   <DataGrid
                     rows={experiences}
                     columns={experienceColumns}
-                    pageSize={5}
-                    rowsPerPageOptions={[5]}
                     onRowDoubleClick={(params) => handleOpenExperienceModal(params.row)}
                   />
               </div>
@@ -473,8 +469,6 @@ const UserProfilePage = () => {
                   <DataGrid
                     rows={educations}
                     columns={educationColumns}
-                    pageSize={5}
-                    rowsPerPageOptions={[5]}
                     onRowDoubleClick={(params) => handleOpenEducationModal(params.row)}
                   />
               </div>
@@ -500,8 +494,6 @@ const UserProfilePage = () => {
                   <DataGrid
                     rows={certificates}
                     columns={certificateColumns}
-                    pageSize={5}
-                    rowsPerPageOptions={[5]}
                     onRowDoubleClick={(params) => handleOpenCertificateModal(params.row)}
                   />
               </div>
@@ -527,8 +519,6 @@ const UserProfilePage = () => {
                   <DataGrid
                     rows={contacts}
                     columns={contactsColumns}
-                    pageSize={5}
-                    rowsPerPageOptions={[5]}
                     onRowDoubleClick={(params) => handleOpenContactModal(params.row)}
                   />
               </div>

@@ -79,6 +79,7 @@ const ApplicationsPage: React.FC = () => {
                         <Typography><strong>Salary:</strong> {selectedApplication.lead.salary}</Typography>
                         {/* Display more fields as needed */}
                     </Stack>
+                    <Button onClick={() => handleDelete(selectedApplication.id)}>Delete</Button>
                 </Box>
             )}
         </Box>

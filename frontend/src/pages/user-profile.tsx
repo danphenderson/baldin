@@ -8,11 +8,13 @@ import { getExperience, getExperiences, ExperienceRead, createExperience, update
 import { getSkill, getSkills, SkillRead, createSkill, updateSkill } from '../services/skills';
 import { getEducation, getEducations, createEducation, updateEducation, EducationRead } from '../services/education';
 import { getCertificate, getCertificates, CertificateRead, createCertificate, updateCertificate } from '../services/certificate';
+import { getContact, getContacts, createContact, updateContact, ContactRead } from '../services/contacts';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import SkillsModal from '../component/skills-modal';
 import ExperiencesModal from '../component/experiences-modal';
 import CertificateModal from '../component/certificate-modal';
 import EducationModal from '../component/education-modal';
+import ContactModal from '../component/contacts-modal';
 
 
 const UserProfilePage = () => {
@@ -219,6 +221,51 @@ const UserProfilePage = () => {
     },
   ];
 
+  // Contacs State
+  const [contacts, setContacts] = useState<ContactRead[]>([]);
+  const [selectedContact, setSelectedContact] = useState<ContactRead | null>(null);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+
+  const handleOpenContactModal = (contact?: ContactRead) => {
+    setSelectedContact(contact || null);
+    setContactModalOpen(true);
+  };
+
+  const handleSaveContact = async (contactData: ContactRead) => {
+    if (!token) return;
+
+    try {
+        if (selectedContact) {
+            await updateContact(token, selectedContact.id, contactData);
+        } else {
+            await createContact(token, contactData);
+        }
+        setContactModalOpen(false);
+        fetchUserData();  // Refresh the list after saving
+    } catch (error) {
+        console.error('Failed to save contact data', error);
+    };
+  };
+
+  const contactsColumns: GridColDef[] = [
+    { field: 'first_name', headerName: 'First Name', width: 150 },
+    { field: 'last_name', headerName: 'Last Name', width: 150 },
+    { field: 'email', headerName: 'Email', width: 200 },
+    { field: 'phone_number', headerName: 'Phone Number', width: 150 },
+    { field: 'time_zone', headerName: 'Time Zone', width: 150 },
+    {
+        field: 'actions',
+        headerName: 'Actions',
+        sortable: false,
+        renderCell: (params) => (
+            <Button color="primary" onClick={() => handleOpenContactModal(params.row)}>
+                Edit
+            </Button>
+        ),
+        width: 100,
+    },
+  ];
+
 
   /// Load Data
   const fetchUserData = async () => {
@@ -231,6 +278,7 @@ const UserProfilePage = () => {
           setSkills(await getSkills(token));
           setEducations(await getEducations(token));
           setCertificates(await getCertificates(token));
+          setContacts(await getContacts(token));
       } catch (error) {
           setError('Failed to fetch user data');
       } finally {
@@ -269,8 +317,8 @@ const UserProfilePage = () => {
       }
   };
 
-  const UserDetails = ({ userDetails, isLoading, setOpen }) => {
-    const formatKey = (key) => key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const UserDetails = ({ userDetails, isLoading, setOpen }: { userDetails: any, isLoading: boolean, setOpen: React.Dispatch<React.SetStateAction<boolean>> }) => {
+    const formatKey = (key: string) => key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
     const nameFields = ['first_name', 'last_name'];
     const addressFields = ['address_line_1', 'address_line_2', 'city', 'state', 'zip_code', 'country'];
@@ -462,6 +510,33 @@ const UserProfilePage = () => {
                 onClose={() => setCertificateModalOpen(false)}
                 onSave={handleSaveCertificate}
                 initialData={selectedCertificate}
+              />
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Contacts */}
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-contacts-content" id="panel-contacts-header">
+              <Typography variant="h6">Contacts</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+              <Button onClick={() => handleOpenContactModal()} variant="contained" color="primary">
+                  Add Contact
+              </Button>
+              <div style={{ height: 400, width: '100%' }}>
+                  <DataGrid
+                    rows={contacts}
+                    columns={contactsColumns}
+                    pageSize={5}
+                    rowsPerPageOptions={[5]}
+                    onRowDoubleClick={(params) => handleOpenContactModal(params.row)}
+                  />
+              </div>
+              <ContactModal
+                open={contactModalOpen}
+                onClose={() => setContactModalOpen(false)}
+                onSave={handleSaveContact}
+                initialData={selectedContact}
               />
           </AccordionDetails>
         </Accordion>

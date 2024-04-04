@@ -100,14 +100,24 @@ async def get_applications(
     return applications
 
 
-@router.patch("/{id}", status_code=200, response_model=schemas.ApplicationRead)
+@router.patch("/{id}", response_model=schemas.ApplicationRead)
 async def update_application(
+    id: UUID4,  # Ensure 'id' is extracted from the path parameter and is of the correct type
     payload: schemas.ApplicationUpdate,
-    application: schemas.ApplicationRead = Depends(get_application),
     db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
 ):
+    # Fetch the application to be updated using 'id'
+    result = await db.execute(
+        select(models.Application).where(models.Application.id == id)
+    )
+    application = result.scalars().first()
+
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+
     # Check if the user owns the application
-    if application.user_id != getattr(payload, "id"):
+    if application.user_id != user.id:
         raise HTTPException(
             status_code=403,
             detail="You do not have permission to update this application",
@@ -185,7 +195,7 @@ async def get_application_resumes(
 @router.get("/{id}/cover_letters", response_model=list[schemas.CoverLetterRead])
 async def get_application_cover_letters(
     app: schemas.ApplicationRead = Depends(get_application),
-    db=Depends(get_async_session),
+    db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
 

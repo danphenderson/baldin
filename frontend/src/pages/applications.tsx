@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Box, CircularProgress, Typography, Stack, Button } from '@mui/material';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRowModel } from '@mui/x-data-grid';
 import { UserContext } from '../context/user-context';
-import { getApplications, deleteApplication, ApplicationRead } from '../services/application';
+import {
+  getApplications,
+  deleteApplication,
+  updateApplication,
+  ApplicationRead,
+  ApplicationUpdate
+} from '../services/application';
 
 const ApplicationsPage: React.FC = () => {
     const { token } = useContext(UserContext);
@@ -38,7 +44,7 @@ const ApplicationsPage: React.FC = () => {
           await deleteApplication(token, id);
           setApplications(applications.filter(a => a.id !== id));
           if (selectedApplication && selectedApplication.id === id) {
-            setSelectedApplication(null); // Clear selection if the deleted application was selected
+            setSelectedApplication(null);
           }
         } catch (error) {
           setError(`Failed to delete application: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -47,12 +53,42 @@ const ApplicationsPage: React.FC = () => {
         }
     };
 
+    const handleProcessRowUpdate = async (newRow: GridRowModel) => {
+      if (!token) {
+          setError('Authorization token is missing');
+          return newRow;
+      }
+      setIsLoading(true);
+      try {
+          // Prepare the update payload with only the fields allowed in ApplicationUpdate
+          const updatedApplication: ApplicationUpdate = {
+              status: newRow.status as string,
+          };
+          // Pass the id as a separate argument to the updateApplication function
+          await updateApplication(token, newRow.id.toString(), updatedApplication);
+          const updatedApplications = applications.map(app =>
+              app.id === newRow.id ? { ...app, status: newRow.status } : app
+          );
+          setApplications(updatedApplications);
+          return newRow;
+      } catch (error) {
+          setError(`Failed to update application: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          return newRow;
+      } finally {
+          setIsLoading(false);
+      }
+    };
     const columns: GridColDef[] = [
       { field: 'lead_title', headerName: 'Lead', width: 150 },
       { field: 'lead_company', headerName: 'Company', width: 150 },
       { field: 'lead_location', headerName: 'Location', width: 150 },
       { field: 'lead_salary', headerName: 'Salary', width: 150 },
-      { field : 'status', headerName: 'Status', width: 150}
+      {
+        field : 'status',
+        headerName: 'Status',
+        width: 150,
+        editable: true,
+      }
     ];
 
     return (
@@ -61,6 +97,7 @@ const ApplicationsPage: React.FC = () => {
               <DataGrid
                 rows={applications}
                 columns={columns}
+                processRowUpdate={handleProcessRowUpdate}
                 onRowClick={(params) => setSelectedApplication(params.row as ApplicationRead)}
               />
             )}
@@ -68,13 +105,13 @@ const ApplicationsPage: React.FC = () => {
 
             {selectedApplication && (
                 <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-                    <Typography variant="h6">Application Details</Typography>
+                    <Typography variant="h6">Details</Typography>
                     <Stack spacing={2}>
                         <Typography><strong>Lead:</strong> {selectedApplication.lead.title}</Typography>
                         <Typography><strong>Company:</strong> {selectedApplication.lead.company}</Typography>
                         <Typography><strong>Location:</strong> {selectedApplication.lead.location}</Typography>
                         <Typography><strong>Salary:</strong> {selectedApplication.lead.salary}</Typography>
-                        {/* Display more fields as needed */}
+                        <Typography><strong>Status:</strong> {selectedApplication.status}</Typography>
                     </Stack>
                     <Button onClick={() => handleDelete(selectedApplication.id)}>Delete</Button>
                 </Box>

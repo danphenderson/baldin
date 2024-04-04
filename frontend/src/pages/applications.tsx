@@ -52,10 +52,7 @@ const ApplicationsPage: React.FC = () => {
       { field: 'lead_company', headerName: 'Company', width: 150 },
       { field: 'lead_location', headerName: 'Location', width: 150 },
       { field: 'lead_salary', headerName: 'Salary', width: 150 },
-      { field: 'action', headerName: 'Action', width: 150, renderCell: (params) => (
-          <Button color="error" onClick={() => handleDelete(params.id.toString())}>Delete</Button>
-        )
-      },
+      { field : 'status', headerName: 'Status', width: 150}
     ];
 
     return (

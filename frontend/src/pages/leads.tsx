@@ -107,6 +107,7 @@ const LeadsPage: React.FC = () => {
     try {
       const applicationData: ApplicationCreate = {
         lead_id: id, // Assuming 'id' is the lead_id for the application
+        status: 'Not Submitted',
       };
       await createApplication(token, applicationData);
     } catch (error) {

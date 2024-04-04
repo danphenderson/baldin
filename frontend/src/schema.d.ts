@@ -245,6 +245,8 @@ export interface components {
        * Format: uuid4
        */
       lead_id: string;
+      /** Status */
+      status: string;
     };
     /** ApplicationRead */
     ApplicationRead: {
@@ -278,14 +280,16 @@ export interface components {
       user_id: string;
       lead: components["schemas"]["LeadRead"];
       user: components["schemas"]["UserRead"];
-    };
-    /** ApplicationUpdate */
-    ApplicationUpdate: {
       /**
        * Status
        * @description Application status
        */
       status?: string | null;
+    };
+    /** ApplicationUpdate */
+    ApplicationUpdate: {
+      /** Status */
+      status: string;
     };
     /** BearerResponse */
     BearerResponse: {

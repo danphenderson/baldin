@@ -63,8 +63,8 @@ const UserProfilePage = () => {
 
   const skillsColumns: GridColDef[] = [
     { field: 'name', headerName: 'Name', width: 150 },
-    { field: 'category', headerName: 'Category', width: 150 },
-    { field: 'subskills', headerName: 'Subskills', width: 200 },
+    { field: 'category', headerName: 'Category', width: 250 },
+    { field: 'subskills', headerName: 'Subskills', width: 300 },
     { field: 'yoe', headerName: 'Years of Experience', type: 'number', width: 180 },
     {
         field: 'actions',
@@ -107,11 +107,14 @@ const UserProfilePage = () => {
   };
 
   const experienceColumns: GridColDef[] = [
+    { field: 'title', headerName: 'Title', width: 150},
     { field: 'company', headerName: 'Company', width: 150 },
     { field: 'position', headerName: 'Position', width: 150 },
     { field: 'start_date', headerName: 'Start Date', width: 150 },
     { field: 'end_date', headerName: 'End Date', width: 150 },
     { field: 'description', headerName: 'Description', width: 200 },
+    { field: 'location', headerName: 'Location', width: 150},
+    { field: 'projects', headerName: 'Projects', width: 200},
     {
         field: 'actions',
         headerName: 'Actions',
@@ -153,11 +156,12 @@ const UserProfilePage = () => {
   };
 
   const educationColumns: GridColDef[] = [
-    { field: 'institution', headerName: 'Institution', width: 150 },
-    { field: 'degree', headerName: 'Degree', width: 150 },
-    { field: 'field_of_study', headerName: 'Field of Study', width: 150 },
+    { field: 'university', headerName: 'Institution', width: 250 },
+    { field: 'degree', headerName: 'Degree', width: 300 },
+    { field: 'activities', headerName: 'Involvement', width: 300 },
     { field: 'start_date', headerName: 'Start Date', width: 150 },
     { field: 'end_date', headerName: 'End Date', width: 150 },
+    { field: 'gradePoint', headerName: 'Grade Point', width: 50},
     {
         field: 'actions',
         headerName: 'Actions',
@@ -198,10 +202,10 @@ const UserProfilePage = () => {
   };
 
   const certificateColumns: GridColDef[] = [
-    { field: 'title', headerName: 'Title', width: 150 },
-    { field: 'organization', headerName: 'Organization', width: 150 },
+    { field: 'title', headerName: 'Title', width: 250 },
+    { field: 'organization', headerName: 'Organization', width: 250 },
     { field: 'date', headerName: 'Date', width: 150 },
-    { field: 'description', headerName: 'Description', width: 200 },
+    { field: 'description', headerName: 'Description', width: 300 },
     {
         field: 'actions',
         headerName: 'Actions',
@@ -265,41 +269,65 @@ const UserProfilePage = () => {
       }
   };
 
-  const UserDetails = () => {
+  const UserDetails = ({ userDetails, isLoading, setOpen }) => {
+    const formatKey = (key) => key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+    const nameFields = ['first_name', 'last_name'];
+    const addressFields = ['address_line_1', 'address_line_2', 'city', 'state', 'zip_code', 'country'];
+    const contactFields = ['phone_number', 'email', 'time_zone'];
+
     return (
       <Card>
         <CardContent>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs>
-              {isLoading ? (
+            {isLoading ? (
+              <Grid item xs={12}>
                 <CircularProgress />
-              ) : (
-                Object.entries(userDetails).map(([key, value]) => {
-                  if (!['id', 'is_active', 'is_superuser', 'is_verified'].includes(key)) {
-                    return <Typography key={key}>{`${key}: ${value}`}</Typography>;
-                  }
-                  return null;
-                })
-              )}
-            </Grid>
+              </Grid>
+            ) : (
+              <>
+                <Grid item xs={4}>
+                  {Object.entries(userDetails).map(([key, value]) => {
+                    if (nameFields.includes(key)) {
+                      return <Typography key={key}>{`${formatKey(key)}: ${value}`}</Typography>;
+                    }
+                    return null;
+                  })}
+                </Grid>
+                <Grid item xs={4}>
+                  {Object.entries(userDetails).map(([key, value]) => {
+                    if (addressFields.includes(key)) {
+                      return <Typography key={key}>{`${formatKey(key)}: ${value}`}</Typography>;
+                    }
+                    return null;
+                  })}
+                </Grid>
+                <Grid item xs={4}>
+                  {Object.entries(userDetails).map(([key, value]) => {
+                    if (contactFields.includes(key)) {
+                      return <Typography key={key}>{`${formatKey(key)}: ${value}`}</Typography>;
+                    }
+                    return null;
+                  })}
+                </Grid>
+              </>
+            )}
           </Grid>
         </CardContent>
         <CardActions>
           <IconButton onClick={() => setOpen(true)} size="small">
             <EditIcon />
+            <Typography>Edit User Info</Typography>
           </IconButton>
         </CardActions>
       </Card>
     );
   };
 
-
   return (
     <Stack spacing={10}>
-      <Typography variant="h2">Profile</Typography>
       {/* Header: Base User */}
-
-      {userDetails && <UserDetails />}
+      {userDetails && <UserDetails userDetails={userDetails} isLoading={isLoading} setOpen={setOpen} />}
       <Dialog open={open} onClose={handleClose} fullWidth>
           <DialogTitle>Edit User Information</DialogTitle>
           <DialogContent>

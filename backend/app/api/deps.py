@@ -1,7 +1,7 @@
 # app/api/deps.py
 
 from pathlib import Path  # noqa
-from typing import Any
+from typing import Any, Type
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Query  # noqa
 from pydantic import UUID4
@@ -10,13 +10,12 @@ from app import models, schemas, utils  # noqa
 from app.core import conf  # noqa
 from app.core import security  # noqa
 from app.core.db import AsyncSession, get_async_session, session_context  # noqa
-from app.core.openai import get_openai_client  # noqa
+from app.core.langchain import generate_cover_letter, generate_resume  # noqa
 from app.core.security import (  # noqa
     fastapi_users,
     get_current_superuser,
     get_current_user,
 )
-from app.etl.leads import enrich  # noqa
 from app.logging import get_async_logger  # noqa
 
 log = get_async_logger(__name__)
@@ -36,6 +35,31 @@ async def _404(obj: Any, id: UUID4 | None = None) -> HTTPException:
     msg = f"Object with {id} not found" if id else "Unable to find object"
     await log.info(msg)
     raise HTTPException(status_code=404, detail=f"Object with id {id} not found")
+
+
+async def load_record_into_table(
+    create_schema: schemas.BaseSchema,
+    table_model: Type[models.Base],
+    db: AsyncSession = Depends(get_async_session),
+) -> None:
+    """
+    Inserts record into the table.
+    """
+    ...
+
+
+async def load_user_record_into_table(
+    user_id: UUID4,
+    create_schema: schemas.BaseSchema,
+    table_model: Type[models.Base],
+    db: AsyncSession = Depends(get_async_session),
+) -> None:
+    """
+    Inserts record into a table that has a foreign key to the user table.
+    """
+    # record_data = {**create_schema.dict(), "user_id": user_id}
+    # record = table_model(**record_data)
+    ...
 
 
 async def get_pagination_params(
@@ -131,7 +155,7 @@ async def get_resume(
 ) -> models.Resume:
     resume = await db.get(models.Resume, id)
     if not resume:
-        await _404(resume, id)
+        raise await _404(resume, id)
     if resume.user_id != user.id:  # type: ignore
         raise await _403(user.id, resume, id)
     return resume
@@ -174,3 +198,29 @@ async def get_application(
     if application.user_id != user.id:  # type: ignore
         raise await _403(user.id, application, id)
     return application
+
+
+async def get_education(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Education:
+    education = await db.get(models.Education, id)
+    if not education:
+        raise await _404(education, id)
+    if education.user_id != user.id:  # type: ignore
+        raise await _403(user.id, education, id)
+    return education
+
+
+async def get_certificate(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Certificate:
+    certificate = await db.get(models.Certificate, id)
+    if not certificate:
+        raise await _404(certificate, id)
+    if certificate.user_id != user.id:  # type: ignore
+        raise await _403(user.id, certificate, id)
+    return certificate

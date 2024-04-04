@@ -1,18 +1,89 @@
 # app/api/routes/resumes.py
 
-from fastapi import APIRouter, Depends, HTTPException
+from pathlib import Path
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import select
 
 from app.api.deps import (
     AsyncSession,
+    conf,
+    create_orchestration_event,
     get_async_session,
     get_current_user,
+    get_orchestration_event,
     get_resume,
     models,
     schemas,
+    session_context,
+    update_orchestration_event,
+    utils,
 )
 
 router: APIRouter = APIRouter()
+
+# async def _load_resumes_into_database(orch_event_id, user_id):
+#     async with session_context() as db:
+#         try:
+#             # get orchestration event and update its status
+#             event = await get_orchestration_event(orch_event_id, db)
+#             setattr(event, "status", "running")
+#             await db.commit()
+
+#             # get all resumes from the unmarshaled source_uri in the orchestration event
+#             source_uri = schemas.URI.model_validate_json(getattr(event, "source_uri"))
+
+#             for filepath in utils.generate_resourouces(source_uri.name):
+#                 resume = await schemas.ResumeCreate.from_pdf(filepath)
+#                 resume_model = models.Resume(**resume.dict(), user_id=user_id)
+#                 db.add(resume_model)
+#                 await db.commit()
+#                 await db.refresh(resume_model)
+
+#             # update orchestration event status to success
+#             setattr(event, "status", "success")
+#             await db.commit()
+
+#         except Exception as e:
+#             # handle exceptions, log errors, and set the event status to failure
+#             await db.rollback()  # rollback the transaction in case of an error
+#             setattr(event, "status", "failure")
+#             setattr(event, "error_message", str(e))
+#             await db.commit()  # commit the status update
+#             raise HTTPException(status_code=500, detail=str(e))
+
+
+# @router.post("/load_database", status_code=201)
+# async def load_database(
+#     background_tasks: BackgroundTasks,
+#     user=Depends(get_current_user),
+#     db: AsyncSession = Depends(get_async_session),
+# ):
+#     source_uri = schemas.URI(
+#         name=str(Path(conf.settings.DATALAKE_URI) / "resumes"),
+#         type=schemas.URIType.DATALAKE,
+#     )
+
+#     destination_uri = schemas.URI(
+#         name=str(Path(str(conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI)) / "resumes"),
+#         type=schemas.URIType.DATABASE,
+#     )
+
+#     # create orchestration event
+#     payload = schemas.OrchestrationEventCreate(
+#         job_name="load_database",
+#         source_uri=source_uri,
+#         destination_uri=destination_uri,
+#         status=schemas.OrchestrationEventStatusType.PENDING,
+#         error_message=None,
+#     )
+
+#     event = await create_orchestration_event(payload, db)
+
+#     # load resumes into database as a background task
+#     background_tasks.add_task(_load_resumes_into_database, event.id, user.id)
+
+#     return events
 
 
 @router.get("/", response_model=list[schemas.ResumeRead])

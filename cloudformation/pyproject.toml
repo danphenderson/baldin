@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"cloudformation" = ""}
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/markdown"}
+
+[project]
+name = "cloudformation"
+version = "0.1.0-alpha"
+description = "API serving baldin cloudformation"
+requires-python = ">=3.9"
+authors = [
+    {name = "Daniel Henderson", email = "me@danhenderson.dev"},
+]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: Unix",
+    "Operating System :: POSIX",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11"
+]
+dependencies = []
+
+[tool.coverage.paths]
+source = ["cloudformation"]
+
+[tool.coverage.run]
+branch = true
+source = [
+    "tests",
+    "cloudformation",
+]
+parallel = false
+
+[tool.coverage.report]
+show_missing = true
+precision = 2
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-v -ra --strict-markers --ignore=.eggs --doctest-modules --tb=long"
+norecursedirs = [
+    ".git",
+    "dist",
+    "build",
+]
+testpaths = [
+    "tests"
+]
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+warn_unused_ignores = true
+files = ["cloudformation", "tests"]

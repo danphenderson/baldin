@@ -5,7 +5,7 @@ import Paper from '@mui/material/Paper';
 
 const PublicLayout: React.FC = () => {
   return (
-    <Paper elevation={5} sx={{ p: 2, margin: 'auto', maxWidth: 500 }}>
+    <Paper elevation={10} sx={{ p: 2, margin: 'auto'}}>
       <Outlet /> {/* This will render the current route's component */}
     </Paper>
   );

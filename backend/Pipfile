@@ -28,6 +28,15 @@ pydantic-settings = "*"
 pydantic = {extras = ["email"], version = "*"}
 install = "*"
 types-beautifulsoup4 = "*"
+pypdf2 = "*"
+playwright = "*"
+llama-index = "*"
+langchain = "*"
+transformers = "*"
+accelerate = "*"
+llama-index-llms-openai = "*"
+jsonpath-ng = "*"
+langchain-openai = "*"
 
 [dev-packages]
 ipython = "*"
@@ -38,6 +47,7 @@ mypy = "*"
 install = "*"
 types-aiofiles = "*"
 types-toml = "*"
+jupyter = "*"
 
 [scripts]
 test = "docker-compose exec web python -m pytest"
@@ -48,4 +58,4 @@ shell = "docker-compose exec web bash"
 api = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8004"
 
 [requires]
-python_version = "3.11.2"
+python_version = "3.11"

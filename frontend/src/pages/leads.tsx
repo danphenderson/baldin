@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { DataGrid, GridColDef, GridPaginationModel  } from '@mui/x-data-grid';
-import { Button, Box, Snackbar, Alert } from '@mui/material';
-import CreateLeadModal from '../component/lead-modal';
+import { Stack, Typography, Button, Box, Snackbar, Alert } from '@mui/material';
+import LeadModal from '../component/lead-modal';
 import { createApplication, ApplicationCreate } from '../services/application';
 import { UserContext } from '../context/user-context';
 
@@ -125,29 +125,19 @@ const LeadsPage: React.FC = () => {
     { field: 'salary', headerName: 'Salary', width: 130 },
     { field: 'job_function', headerName: 'Job Function', width: 150 },
     { field: 'industries', headerName: 'Industries', width: 150 },
-
     // { field: 'notes', headerName: 'Notes', width: 200 },
     // { field: 'url', headerName: 'URL', width: 200 },
-    {field: 'actions', headerName: 'Actions', sortable: false, width: 150, renderCell: (params) => (
-      <>
-        <Button onClick={() => handleEditLead(params.row.id)}>Edit</Button>
-        <Button onClick={() => handleApply(params.row.id)}>Apply</Button>
-      </>
-      ),
-    },
   ];
 
   return (
     <div>
     <Box sx={{ p: 2 }}>
-      <Button variant="contained" onClick={handleAddLead} sx={{ mb: 2 }}>
-        Add New Lead
-      </Button>
       <DataGrid
         rows={leads}
         columns={columns}
         loading={loading}
         disableRowSelectionOnClick
+        onRowClick={(params) => setSelectedLead(params.row)}
         onRowDoubleClick={(params) => handleEditLead(params.id.toString())}
         pagination
         pageSizeOptions={[10, 15, 20]}
@@ -163,7 +153,10 @@ const LeadsPage: React.FC = () => {
         }}
         onPaginationModelChange={handlePaginationModelChange}
       />
-      <CreateLeadModal
+      <Button variant="contained" onClick={handleAddLead} sx={{ mb: 2 }}>
+        Add New Lead
+      </Button>
+      <LeadModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSave={handleSaveLead}
@@ -178,7 +171,7 @@ const LeadsPage: React.FC = () => {
           employment_type: selectedLead.employment_type,
           seniority_level: selectedLead.seniority_level,
           notes: selectedLead.notes,
-          url: selectedLead.url,
+          url: selectedLead.url || '', // Provide a default value of an empty string for url
           // Add additional fields as required by the LeadCreate schema
         } : undefined}
       />
@@ -189,7 +182,28 @@ const LeadsPage: React.FC = () => {
           </Alert>
         </Snackbar>
       )}
+      <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 800, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+        {selectedLead && (
+            <>
+            <Button onClick={() => handleEditLead(selectedLead.id)}>Edit</Button><Button onClick={() => handleApply(selectedLead.id)}>Apply</Button>
+            <Stack>
+              {/* Actions to perform on the selected lead */}
+              {/* Display the selected lead's details */}
+              <Typography><strong>{selectedLead.title}, {selectedLead.company}, {selectedLead.employment_type} </strong></Typography>
+              <Typography><strong>Location:</strong> {selectedLead.location}</Typography>
+              <Typography><strong>Salary:</strong> {selectedLead.salary}</Typography>
+              <Typography><strong>Job Function:</strong> {selectedLead.job_function}</Typography>
+              <Typography><strong>Industries:</strong> {selectedLead.industries}</Typography>
+              <Typography><strong>Seniority Level:</strong> {selectedLead.seniority_level}</Typography>
+              <Typography><strong>Notes:</strong> {selectedLead.notes}</Typography>
+              <Typography><strong>Description:</strong>{selectedLead.description}</Typography>
+              <Typography><strong>ID:</strong> {selectedLead.id}</Typography>
+              <Typography><strong>URL:</strong> {selectedLead.url}</Typography>
+            </Stack></>
+        )}
+      </Box>
     </Box>
+
     </div>
   );
 };

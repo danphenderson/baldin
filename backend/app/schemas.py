@@ -1,19 +1,31 @@
 # app/schemas.py
 from datetime import datetime
-from enum import Enum  # TODO: Use Literal for performance improvement
-from typing import Any, Sequence
+from enum import Enum
+from io import BytesIO
+from pathlib import Path  # TODO: Use Literal for performance improvement
+from typing import Any, Sequence, TypeVar
 
 from fastapi_users import schemas
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, model_validator
+from PyPDF2 import PdfReader
 
 from app import utils
 
-# TODO: Handle validation as it arrises.
+
+# Base Model
+class BaseSchema(_BaseModel):
+    class Config:
+        from_attributes = True
 
 
-# Types and properties
+# Types, properties, and shared models
+
+
+BaseSchemaSubclass = TypeVar("BaseSchemaSubclass", bound=BaseSchema)
+
+
 class ContentType(str, Enum):
     CUSTOM = "custom"
     GENERATED = "generated"
@@ -34,13 +46,7 @@ class URIType(str, Enum):
     API = "api"
 
 
-# Base Models
-class BaseModel(_BaseModel):
-    class Config:
-        from_attributes = True
-
-
-class URI(BaseModel):
+class URI(BaseSchema):
     name: str
     type: URIType
 
@@ -50,20 +56,20 @@ class URI(BaseModel):
         }
 
 
-class BaseRead(BaseModel):
+class BaseRead(BaseSchema):
     id: UUID4 = Field(description="The unique uuid4 record identifier.")
     created_at: datetime = Field(description="The time the item was created")
     updated_at: datetime = Field(description="The time the item was last updated")
 
 
-class Pagination(BaseModel):
+class Pagination(BaseSchema):
     page: int = Field(1, ge=1, description="The page number")
     page_size: int = Field(10, ge=1, description="The number of items per page")
     request_count: bool = Field(False, description="Request a query for total count")
 
 
 # Model CRUD Schemas+
-class BaseOrchestrationEvent(BaseModel):
+class BaseOrchestrationEvent(BaseSchema):
     status: OrchestrationEventStatusType | None = Field(None, description="Status")
     error_message: str | None = Field(None, description="Error message, if any")
 
@@ -84,9 +90,11 @@ class OrchestrationEventUpdate(BaseOrchestrationEvent):
     pass
 
 
-class BaseSkill(BaseModel):
+class BaseSkill(BaseSchema):
     name: str | None = Field(None, description="Name of the skill")
     category: str | None = Field(None, description="Category of the skill")
+    yoe: int | None = Field(None, description="Years of Experience")
+    subskills: str | None = Field(None, description="Sub-Skills")
 
 
 class SkillRead(BaseRead, BaseSkill):
@@ -101,7 +109,7 @@ class SkillUpdate(BaseSkill):
     pass
 
 
-class BaseExperience(BaseModel):
+class BaseExperience(BaseSchema):
     title: str | None = Field(None, description="Job title")
     company: str | None = Field(None, description="Company name")
     start_date: datetime | None = Field(
@@ -109,6 +117,8 @@ class BaseExperience(BaseModel):
     )
     end_date: datetime | None = Field(None, description="End date of the experience")
     description: str | None = Field(None, description="Description of the experience")
+    location: str | None = Field(None, description="Location of the experience")
+    projects: str | None = Field(None, description="Projects involved")
 
 
 class ExperienceRead(BaseExperience, BaseRead):
@@ -123,7 +133,52 @@ class ExperienceUpdate(BaseExperience):
     pass
 
 
-class BaseLead(BaseModel):
+class BaseEducation(BaseSchema):
+    university: str | None = Field(None, description="University name")
+    degree: str | None = Field(None, description="Degree name")
+    gradePoint: str | None = Field(None, description="Grade point")
+    activities: str | None = Field(None, description="Activities involved")
+    achievements: str | None = Field(None, description="Achievements")
+    start_date: datetime | None = Field(None, description="Start date of the education")
+    end_date: datetime | None = Field(None, description="End date of the education")
+
+
+class EducationRead(BaseEducation, BaseRead):
+    pass
+
+
+class EducationCreate(BaseEducation):
+    pass
+
+
+class EducationUpdate(BaseEducation):
+    pass
+
+
+class BaseCertificate(BaseSchema):
+    title: str | None = Field(None, description="Certificate title")
+    issuer: str | None = Field(None, description="Issuer of the certificate")
+    expiration_date: datetime | None = Field(
+        None, description="Expiration date of the certificate"
+    )
+    issued_date: datetime | None = Field(
+        None, description="Issued date of the certificate"
+    )
+
+
+class CertificateRead(BaseCertificate, BaseRead):
+    pass
+
+
+class CertificateCreate(BaseCertificate):
+    pass
+
+
+class CertificateUpdate(BaseCertificate):
+    pass
+
+
+class BaseLead(BaseSchema):
     title: str | None = Field(None, description="Job title")
     company: str | None = Field(None, description="Company name")
     description: str | None = Field(None, description="Job description")
@@ -139,10 +194,10 @@ class BaseLead(BaseModel):
 
 
 class LeadRead(BaseRead, BaseLead):
-    url: AnyHttpUrl
+    url: AnyHttpUrl | str | None = Field(None, description="Job posting URL")
 
 
-class LeadsPaginatedRead(BaseModel):
+class LeadsPaginatedRead(BaseSchema):
     leads: Sequence[LeadRead]
     pagination: Pagination
     total_count: int | None = Field(
@@ -167,7 +222,7 @@ class LeadUpdate(BaseLead):
     pass
 
 
-class BaseContact(BaseModel):
+class BaseContact(BaseSchema):
     first_name: str | None = Field(None, description="First name")
     last_name: str | None = Field(None, description="Last name")
     phone_number: str | None = Field(None, description="Phone number")
@@ -188,7 +243,7 @@ class ContactUpdate(BaseContact):
     pass
 
 
-class BaseResume(BaseModel):
+class BaseResume(BaseSchema):
     name: str | None = Field(None, description="Resume name")
     content: str | None = Field(None, description="Resume content")
     content_type: ContentType | None = Field(None, description="Resume content type")
@@ -201,12 +256,19 @@ class ResumeRead(BaseRead, BaseResume):
 class ResumeCreate(BaseResume):
     pass
 
+    @classmethod
+    async def from_pdf(cls, filepath: str | Path) -> ResumeRead:
+        pdf_dict = await utils.pdf_to_dict(filepath)
+        # TODO: content may need to be a list of strings.
+        # This may only load the first page.
+        return cls(name=pdf_dict["name"], content=pdf_dict["content"][0])  # type: ignore
+
 
 class ResumeUpdate(BaseResume):
     pass
 
 
-class BaseCoverLetter(BaseModel):
+class BaseCoverLetter(BaseSchema):
     name: str | None = Field(None, description="Cover letter name")
     content: str | None = Field(None, description="Cover letter content")
     content_type: ContentType | None = Field(
@@ -221,12 +283,28 @@ class CoverLetterRead(BaseRead, BaseCoverLetter):
 class CoverLetterCreate(BaseCoverLetter):
     pass
 
+    @classmethod
+    async def from_pdf(cls, filepath: str) -> CoverLetterRead:
+        pdf_dict = await utils.pdf_to_dict(filepath)
+        # TODO: content may need to be a list of strings.
+        # This may only load the first page.
+        return cls(name=pdf_dict["name"], content=pdf_dict["content"][0])  # type: ignore
+
+    @classmethod
+    def from_bytes(cls, name: str, content: BytesIO) -> CoverLetterRead:
+        reader = PdfReader(content)
+        text_content = []
+        for page_num in range(len(reader.pages)):
+            page = reader.pages[page_num]
+            text_content.append(page.extract_text())
+        return cls(name=name, content=text_content[0], content_type=ContentType.GENERATED)  # type: ignore
+
 
 class CoverLetterUpdate(BaseCoverLetter):
     pass
 
 
-class BaseUser(BaseModel):
+class BaseUser(BaseSchema):
     first_name: str | None = Field(None, description="First name")
     last_name: str | None = Field(None, description="Last name")
     phone_number: str | None = Field(None, description="Phone number")
@@ -241,6 +319,14 @@ class BaseUser(BaseModel):
 
 class UserRead(schemas.BaseUser[UUID4], BaseUser):  # type: ignore
     pass
+
+
+# Define a schema for the user profile that includes skills and experiences
+class UserProfileRead(BaseSchema):
+    skills: list[SkillRead] = Field([], description="User's skills")
+    experiences: list[ExperienceRead] = Field([], description="User's professional experiences")
+    educations: list[EducationRead] = Field([], description="User's educational background")
+    certificates: list[CertificateRead] = Field([], description="User's certificates")
 
 
 class UserCreate(schemas.BaseUserCreate, BaseUser):
@@ -258,9 +344,9 @@ class ApplicationRead(BaseRead):
     user: UserRead
 
 
-class ApplicationCreate(BaseModel):
+class ApplicationCreate(BaseSchema):
     lead_id: UUID4
 
 
-class ApplicationUpdate(BaseModel):
+class ApplicationUpdate(BaseSchema):
     status: str | None = Field(None, description="Application status")

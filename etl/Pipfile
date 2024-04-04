@@ -1,0 +1,31 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pytest = "*"
+httpx = "*"
+openai = "*"
+tiktoken = "*"
+beautifulsoup4 = "*"
+aiofiles = "*"
+python-dotenv = "*"
+pydantic-settings = "*"
+pydantic = {extras = ["email"], version = "*"}
+playwright = "*"
+toml = "*"
+playwright-stealth = "*"
+
+[dev-packages]
+ipython = "*"
+coverage = "==6.2"
+pytest-asyncio = "*"
+mypy = "*"
+install = "*"
+types-aiofiles = "*"
+types-toml = "*"
+types-beautifulsoup4 = "*"
+
+[requires]
+python_version = "3.11"

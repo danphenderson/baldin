@@ -58,7 +58,7 @@ class Settings(_BaseSettings):
     FIRST_SUPERUSER_PASSWORD: str
 
     # DATALAKE SETTINGS
-    DATALAKE_URI: str = f"public/datalake"
+    DATALAKE_URI: str = "public/seeds"
 
     # VALIDATORS
     @validator("BACKEND_CORS_ORIGINS")
@@ -86,7 +86,7 @@ class Chrome(_BaseSettings, env_prefix="CHROME_"):
     See https://pypi.org/project/selenium/, `ChromeOptions` for more information.
     """
 
-    DRIVER_PATH: str
+    DRIVER_PATH: str = ""
     SHM_SIZE: str = "2g"
 
     @property
@@ -116,7 +116,7 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
     See https://openai.com/ for more information.
     """
 
-    SECRET_KEY: str = ""
+    API_KEY: str = ""
     COMPLETION_MODEL: str = "gpt-3.5-turbo"
 
 
@@ -156,7 +156,7 @@ def get_openai_settings(**kwargs) -> OpenAI:
     import openai as _openai
 
     settings = OpenAI(**kwargs)
-    _openai.api_key = settings.SECRET_KEY
+    _openai.api_key = settings.API_KEY
     return settings
 
 

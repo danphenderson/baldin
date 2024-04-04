@@ -1,35 +1,26 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import Link from '@mui/material/Link';
+import Typography from '@mui/material/Typography';
 
-// Typing the props for Copyright
-interface CopyrightProps {
-  [key: string]: any; // Accepts any prop that Typography can take
-}
 
-function Copyright(props: CopyrightProps) {
-  return (
-    <Typography variant="body2" color="text.secondary" align="center" {...props}>
-      {'Copyright © '}
-      <Link color="inherit" href="https://baldin.app/">
-        baldin.app
-      </Link>{' '}
-      {new Date().getFullYear()}
-      {'.'}
-    </Typography>
-  );
-}
 
-// Typing the props for Footer
-interface FooterProps {
-  title: string;
-}
-
-const Footer: React.FC<FooterProps> = ({ title }) => {
+const Footer: React.FC = () => {
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <Copyright sx={{ mt: 5 }} />
+      <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 2 }}>
+        {'Copyright © '}
+        <Link color="inherit" href="https://baldin.app/">
+          baldin.app
+        </Link>{' '}
+        {new Date().getFullYear()}
+      </Typography>
+
+      <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 2 }}>
+        <Link color="inherit" href="/user-terms">
+          Privacy Policy and Terms and Conditions
+        </Link>{' '}
+      </Typography>
     </Box>
   );
 };

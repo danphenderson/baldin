@@ -47,20 +47,16 @@ export interface paths {
     /** Users:Patch User */
     patch: operations["users_patch_user_users__id__patch"];
   };
+  "/users/me/profile": {
+    /** Read Profile */
+    get: operations["read_profile_users_me_profile_get"];
+  };
   "/leads/load_database": {
     /**
      * Load Database
      * @description Loads the database with leads from the data lake.
-     * FIXME - This is hacky
      */
     post: operations["load_database_leads_load_database_post"];
-  };
-  "/leads/enrich_datalake": {
-    /**
-     * Enrich Datalake
-     * @description Loads the datalake with enriched leads from the data lake.
-     */
-    post: operations["enrich_datalake_leads_enrich_datalake_post"];
   };
   "/leads/": {
     /** Read Leads */
@@ -141,6 +137,10 @@ export interface paths {
     /** Delete User Skill */
     delete: operations["delete_user_skill_skills__skill_id__delete"];
   };
+  "/cover_letters/generate": {
+    /** Generate User Cover Letter */
+    post: operations["generate_user_cover_letter_cover_letters_generate_post"];
+  };
   "/cover_letters/": {
     /** Get Current User Cover Letters */
     get: operations["get_current_user_cover_letters_cover_letters__get"];
@@ -195,6 +195,34 @@ export interface paths {
     get: operations["get_application_cover_letters_applications__id__cover_letters_get"];
     /** Add Cover Letter To Application */
     post: operations["add_cover_letter_to_application_applications__id__cover_letters_post"];
+  };
+  "/education/": {
+    /** Read Current User Educations */
+    get: operations["read_current_user_educations_education__get"];
+    /** Create User Education */
+    post: operations["create_user_education_education__post"];
+  };
+  "/education/{education_id}": {
+    /** Read User Education */
+    get: operations["read_user_education_education__education_id__get"];
+    /** Update User Education */
+    put: operations["update_user_education_education__education_id__put"];
+    /** Delete User Education */
+    delete: operations["delete_user_education_education__education_id__delete"];
+  };
+  "/certificate/": {
+    /** Read Current User Certificates */
+    get: operations["read_current_user_certificates_certificate__get"];
+    /** Create User Certificate */
+    post: operations["create_user_certificate_certificate__post"];
+  };
+  "/certificate/{certificate_id}": {
+    /** Read User Certificate */
+    get: operations["read_user_certificate_certificate__certificate_id__get"];
+    /** Update User Certificate */
+    put: operations["update_user_certificate_certificate__certificate_id__put"];
+    /** Delete User Certificate */
+    delete: operations["delete_user_certificate_certificate__certificate_id__delete"];
   };
   "/ping": {
     /** Pong */
@@ -311,6 +339,93 @@ export interface components {
     Body_verify_verify_auth_verify_post: {
       /** Token */
       token: string;
+    };
+    /** CertificateCreate */
+    CertificateCreate: {
+      /**
+       * Title
+       * @description Certificate title
+       */
+      title?: string | null;
+      /**
+       * Issuer
+       * @description Issuer of the certificate
+       */
+      issuer?: string | null;
+      /**
+       * Expiration Date
+       * @description Expiration date of the certificate
+       */
+      expiration_date?: string | null;
+      /**
+       * Issued Date
+       * @description Issued date of the certificate
+       */
+      issued_date?: string | null;
+    };
+    /** CertificateRead */
+    CertificateRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Title
+       * @description Certificate title
+       */
+      title?: string | null;
+      /**
+       * Issuer
+       * @description Issuer of the certificate
+       */
+      issuer?: string | null;
+      /**
+       * Expiration Date
+       * @description Expiration date of the certificate
+       */
+      expiration_date?: string | null;
+      /**
+       * Issued Date
+       * @description Issued date of the certificate
+       */
+      issued_date?: string | null;
+    };
+    /** CertificateUpdate */
+    CertificateUpdate: {
+      /**
+       * Title
+       * @description Certificate title
+       */
+      title?: string | null;
+      /**
+       * Issuer
+       * @description Issuer of the certificate
+       */
+      issuer?: string | null;
+      /**
+       * Expiration Date
+       * @description Expiration date of the certificate
+       */
+      expiration_date?: string | null;
+      /**
+       * Issued Date
+       * @description Issued date of the certificate
+       */
+      issued_date?: string | null;
     };
     /** ContactCreate */
     ContactCreate: {
@@ -497,6 +612,138 @@ export interface components {
       /** @description Cover letter content type */
       content_type?: components["schemas"]["ContentType"] | null;
     };
+    /** EducationCreate */
+    EducationCreate: {
+      /**
+       * University
+       * @description University name
+       */
+      university?: string | null;
+      /**
+       * Degree
+       * @description Degree name
+       */
+      degree?: string | null;
+      /**
+       * Gradepoint
+       * @description Grade point
+       */
+      gradePoint?: string | null;
+      /**
+       * Activities
+       * @description Activities involved
+       */
+      activities?: string | null;
+      /**
+       * Achievements
+       * @description Achievements
+       */
+      achievements?: string | null;
+      /**
+       * Start Date
+       * @description Start date of the education
+       */
+      start_date?: string | null;
+      /**
+       * End Date
+       * @description End date of the education
+       */
+      end_date?: string | null;
+    };
+    /** EducationRead */
+    EducationRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * University
+       * @description University name
+       */
+      university?: string | null;
+      /**
+       * Degree
+       * @description Degree name
+       */
+      degree?: string | null;
+      /**
+       * Gradepoint
+       * @description Grade point
+       */
+      gradePoint?: string | null;
+      /**
+       * Activities
+       * @description Activities involved
+       */
+      activities?: string | null;
+      /**
+       * Achievements
+       * @description Achievements
+       */
+      achievements?: string | null;
+      /**
+       * Start Date
+       * @description Start date of the education
+       */
+      start_date?: string | null;
+      /**
+       * End Date
+       * @description End date of the education
+       */
+      end_date?: string | null;
+    };
+    /** EducationUpdate */
+    EducationUpdate: {
+      /**
+       * University
+       * @description University name
+       */
+      university?: string | null;
+      /**
+       * Degree
+       * @description Degree name
+       */
+      degree?: string | null;
+      /**
+       * Gradepoint
+       * @description Grade point
+       */
+      gradePoint?: string | null;
+      /**
+       * Activities
+       * @description Activities involved
+       */
+      activities?: string | null;
+      /**
+       * Achievements
+       * @description Achievements
+       */
+      achievements?: string | null;
+      /**
+       * Start Date
+       * @description Start date of the education
+       */
+      start_date?: string | null;
+      /**
+       * End Date
+       * @description End date of the education
+       */
+      end_date?: string | null;
+    };
     /** ErrorModel */
     ErrorModel: {
       /** Detail */
@@ -531,6 +778,16 @@ export interface components {
        * @description Description of the experience
        */
       description?: string | null;
+      /**
+       * Location
+       * @description Location of the experience
+       */
+      location?: string | null;
+      /**
+       * Projects
+       * @description Projects involved
+       */
+      projects?: string | null;
     };
     /** ExperienceRead */
     ExperienceRead: {
@@ -577,6 +834,16 @@ export interface components {
        * @description Description of the experience
        */
       description?: string | null;
+      /**
+       * Location
+       * @description Location of the experience
+       */
+      location?: string | null;
+      /**
+       * Projects
+       * @description Projects involved
+       */
+      projects?: string | null;
     };
     /** ExperienceUpdate */
     ExperienceUpdate: {
@@ -605,6 +872,16 @@ export interface components {
        * @description Description of the experience
        */
       description?: string | null;
+      /**
+       * Location
+       * @description Location of the experience
+       */
+      location?: string | null;
+      /**
+       * Projects
+       * @description Projects involved
+       */
+      projects?: string | null;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -758,9 +1035,9 @@ export interface components {
       updated_at: string;
       /**
        * Url
-       * Format: uri
+       * @description Job posting URL
        */
-      url: string;
+      url?: string | null;
     };
     /** LeadUpdate */
     LeadUpdate: {
@@ -974,6 +1251,16 @@ export interface components {
        * @description Category of the skill
        */
       category?: string | null;
+      /**
+       * Yoe
+       * @description Years of Experience
+       */
+      yoe?: number | null;
+      /**
+       * Subskills
+       * @description Sub-Skills
+       */
+      subskills?: string | null;
     };
     /** SkillRead */
     SkillRead: {
@@ -987,6 +1274,16 @@ export interface components {
        * @description Category of the skill
        */
       category?: string | null;
+      /**
+       * Yoe
+       * @description Years of Experience
+       */
+      yoe?: number | null;
+      /**
+       * Subskills
+       * @description Sub-Skills
+       */
+      subskills?: string | null;
       /**
        * Id
        * Format: uuid4
@@ -1018,6 +1315,16 @@ export interface components {
        * @description Category of the skill
        */
       category?: string | null;
+      /**
+       * Yoe
+       * @description Years of Experience
+       */
+      yoe?: number | null;
+      /**
+       * Subskills
+       * @description Sub-Skills
+       */
+      subskills?: string | null;
     };
     /** URI */
     URI: {
@@ -1104,6 +1411,33 @@ export interface components {
        * @default false
        */
       is_verified?: boolean | null;
+    };
+    /** UserProfileRead */
+    UserProfileRead: {
+      /**
+       * Skills
+       * @description User's skills
+       * @default []
+       */
+      skills?: components["schemas"]["SkillRead"][];
+      /**
+       * Experiences
+       * @description User's professional experiences
+       * @default []
+       */
+      experiences?: components["schemas"]["ExperienceRead"][];
+      /**
+       * Educations
+       * @description User's educational background
+       * @default []
+       */
+      educations?: components["schemas"]["EducationRead"][];
+      /**
+       * Certificates
+       * @description User's certificates
+       * @default []
+       */
+      certificates?: components["schemas"]["CertificateRead"][];
     };
     /** UserRead */
     UserRead: {
@@ -1598,26 +1932,22 @@ export interface operations {
       };
     };
   };
-  /**
-   * Load Database
-   * @description Loads the database with leads from the data lake.
-   * FIXME - This is hacky
-   */
-  load_database_leads_load_database_post: {
+  /** Read Profile */
+  read_profile_users_me_profile_get: {
     responses: {
       /** @description Successful Response */
-      202: {
+      200: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead"];
+          "application/json": components["schemas"]["UserProfileRead"];
         };
       };
     };
   };
   /**
-   * Enrich Datalake
-   * @description Loads the datalake with enriched leads from the data lake.
+   * Load Database
+   * @description Loads the database with leads from the data lake.
    */
-  enrich_datalake_leads_enrich_datalake_post: {
+  load_database_leads_load_database_post: {
     responses: {
       /** @description Successful Response */
       202: {
@@ -2122,13 +2452,49 @@ export interface operations {
       };
     };
   };
+  /** Generate User Cover Letter */
+  generate_user_cover_letter_cover_letters_generate_post: {
+    parameters: {
+      query: {
+        lead_id: string;
+        /** @description Template ID for the cover letter */
+        template_id?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Get Current User Cover Letters */
   get_current_user_cover_letters_cover_letters__get: {
+    parameters: {
+      query?: {
+        /** @description Filter by content type */
+        content_type?: components["schemas"]["ContentType"] | null;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
           "application/json": components["schemas"]["CoverLetterRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -2497,6 +2863,214 @@ export interface operations {
       201: {
         content: {
           "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Current User Educations */
+  read_current_user_educations_education__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"][];
+        };
+      };
+    };
+  };
+  /** Create User Education */
+  create_user_education_education__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EducationCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read User Education */
+  read_user_education_education__education_id__get: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Education */
+  update_user_education_education__education_id__put: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EducationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User Education */
+  delete_user_education_education__education_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Current User Certificates */
+  read_current_user_certificates_certificate__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"][];
+        };
+      };
+    };
+  };
+  /** Create User Certificate */
+  create_user_certificate_certificate__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CertificateCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read User Certificate */
+  read_user_certificate_certificate__certificate_id__get: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Certificate */
+  update_user_certificate_certificate__certificate_id__put: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CertificateUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User Certificate */
+  delete_user_certificate_certificate__certificate_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"];
         };
       };
       /** @description Validation Error */

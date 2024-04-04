@@ -52,6 +52,11 @@ const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           variant: 'filled',
         },
       },
+      MuiStack: {
+        defaultProps: {
+          useFlexGap: true,
+        },
+      },
     },
   });
 

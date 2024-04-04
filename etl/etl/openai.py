@@ -2,11 +2,11 @@
 
 from openai import AsyncOpenAI
 
-from app.core import conf
+from .conf import settings
 
 
 def get_openai_client() -> AsyncOpenAI:
-    return AsyncOpenAI(api_key=conf.openai.SECRET_KEY)
+    return AsyncOpenAI(api_key=settings.SECRET_OPENAI_KEY)
 
 
 async def chat_completion(model, messages, stop=None):

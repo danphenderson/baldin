@@ -324,8 +324,12 @@ class UserRead(schemas.BaseUser[UUID4], BaseUser):  # type: ignore
 # Define a schema for the user profile that includes skills and experiences
 class UserProfileRead(BaseSchema):
     skills: list[SkillRead] = Field([], description="User's skills")
-    experiences: list[ExperienceRead] = Field([], description="User's professional experiences")
-    educations: list[EducationRead] = Field([], description="User's educational background")
+    experiences: list[ExperienceRead] = Field(
+        [], description="User's professional experiences"
+    )
+    educations: list[EducationRead] = Field(
+        [], description="User's educational background"
+    )
     certificates: list[CertificateRead] = Field([], description="User's certificates")
 
 
@@ -342,11 +346,13 @@ class ApplicationRead(BaseRead):
     user_id: UUID4
     lead: LeadRead
     user: UserRead
+    status: str | None = Field(None, description="Application status")
 
 
 class ApplicationCreate(BaseSchema):
     lead_id: UUID4
+    status: str
 
 
 class ApplicationUpdate(BaseSchema):
-    status: str | None = Field(None, description="Application status")
+    status: str

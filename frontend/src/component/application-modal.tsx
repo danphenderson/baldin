@@ -16,7 +16,6 @@ interface ApplicationCreateProps {
 const ApplicationCreateModal: React.FC<ApplicationCreateProps> = ({ open, onClose, onSave, initialData }) => {
   const defaultApplicationData: ApplicationCreate = {
     lead_id: '',
-
   };
 
   const [applicationData, setApplicationData] = useState<ApplicationCreate>(defaultApplicationData);

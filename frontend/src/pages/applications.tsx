@@ -104,18 +104,20 @@ const ApplicationsPage: React.FC = () => {
             {error && <Typography color="error">{error}</Typography>}
 
             {selectedApplication && (
-                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-                    <Typography variant="h6">Details</Typography>
-                    <Stack spacing={2}>
-                        <Typography><strong>Lead:</strong> {selectedApplication.lead.title}</Typography>
-                        <Typography><strong>Company:</strong> {selectedApplication.lead.company}</Typography>
-                        <Typography><strong>Location:</strong> {selectedApplication.lead.location}</Typography>
-                        <Typography><strong>Salary:</strong> {selectedApplication.lead.salary}</Typography>
-                        <Typography><strong>Status:</strong> {selectedApplication.status}</Typography>
-                    </Stack>
-                    <Button onClick={() => handleDelete(selectedApplication.id)}>Delete</Button>
-                </Box>
-            )}
+            <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+              <Typography variant="h6">Details</Typography>
+              <Stack spacing={2}>
+                <Typography><strong>Lead:</strong> {selectedApplication.lead.title}</Typography>
+                <Typography><strong>Company:</strong> {selectedApplication.lead.company}</Typography>
+                <Typography><strong>Location:</strong> {selectedApplication.lead.location}</Typography>
+                <Typography><strong>Salary:</strong> {selectedApplication.lead.salary}</Typography>
+                <Typography><strong>Status:</strong> {selectedApplication.status}</Typography>
+                <Button onClick={() => alert('Create Cover Letter functionality not implemented')}>Generate Cover Letter</Button>
+                <Button onClick={() => alert('Create Resume functionality not implemented')}>Generate Resume</Button>
+                <Button onClick={() => handleDelete(selectedApplication.id)}>Delete</Button>
+              </Stack>
+            </Box>
+          )}
         </Box>
     );
 };

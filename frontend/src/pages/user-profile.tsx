@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { CircularProgress, Stack, IconButton, Typography, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, Snackbar, Card, CardContent, Avatar, Grid, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import { CircularProgress, Stack, IconButton, Typography, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, Snackbar, Card, CardContent, Avatar, Grid, Accordion, AccordionSummary, AccordionDetails, CardActions } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { UserContext } from '../context/user-context';
@@ -265,25 +265,41 @@ const UserProfilePage = () => {
       }
   };
 
+  const UserDetails = () => {
+    return (
+      <Card>
+        <CardContent>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs>
+              {isLoading ? (
+                <CircularProgress />
+              ) : (
+                Object.entries(userDetails).map(([key, value]) => {
+                  if (!['id', 'is_active', 'is_superuser', 'is_verified'].includes(key)) {
+                    return <Typography key={key}>{`${key}: ${value}`}</Typography>;
+                  }
+                  return null;
+                })
+              )}
+            </Grid>
+          </Grid>
+        </CardContent>
+        <CardActions>
+          <IconButton onClick={() => setOpen(true)} size="small">
+            <EditIcon />
+          </IconButton>
+        </CardActions>
+      </Card>
+    );
+  };
+
+
   return (
-    <Stack spacing={2} alignItems="center">
+    <Stack spacing={10}>
+      <Typography variant="h2">Profile</Typography>
       {/* Header: Base User */}
-      <Typography variant="h1">Profile</Typography>
-      <IconButton onClick={() => setOpen(true)} size="large">
-          <EditIcon />
-      </IconButton>
-      {isLoading ? <CircularProgress /> : (
-          <>
-              <Stack spacing={1}>
-                  {Object.entries(userDetails).map(([key, value]) => {
-                      if (!['id', 'is_active', 'is_superuser', 'is_verified'].includes(key)) {
-                          return <Typography variant="body1" key={key}>{`${key}: ${value}`}</Typography>;
-                      }
-                      return null;
-                  })}
-              </Stack>
-          </>
-      )}
+
+      {userDetails && <UserDetails />}
       <Dialog open={open} onClose={handleClose} fullWidth>
           <DialogTitle>Edit User Information</DialogTitle>
           <DialogContent>
@@ -313,8 +329,9 @@ const UserProfilePage = () => {
           </DialogActions>
       </Dialog>
 
-      {/* User Details */ }
-      <Accordion>
+      {/* Skills */}
+      <div>
+        <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-skills-content" id="panel-skills-header">
               <Typography variant="h6">Skills</Typography>
           </AccordionSummary>
@@ -338,9 +355,10 @@ const UserProfilePage = () => {
                   initialData={selectedSkill}
               />
           </AccordionDetails>
-      </Accordion>
+        </Accordion>
 
-      <Accordion>
+        {/* Experiences */}
+        <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-experiences-content" id="panel-experiences-header">
               <Typography variant="h6">Experiences</Typography>
           </AccordionSummary>
@@ -364,9 +382,10 @@ const UserProfilePage = () => {
                 initialData={selectedExperience}
               />
           </AccordionDetails>
-      </Accordion>
+        </Accordion>
 
-      <Accordion>
+        {/* Education */}
+        <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-education-content" id="panel-education-header">
               <Typography variant="h6">Education</Typography>
           </AccordionSummary>
@@ -390,9 +409,10 @@ const UserProfilePage = () => {
                 initialData={selectedEducation}
               />
           </AccordionDetails>
-      </Accordion>
+        </Accordion>
 
-      <Accordion>
+        {/* Certificates */}
+        <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-certificates-content" id="panel-certificates-header">
               <Typography variant="h6">Certificates</Typography>
           </AccordionSummary>
@@ -416,7 +436,9 @@ const UserProfilePage = () => {
                 initialData={selectedCertificate}
               />
           </AccordionDetails>
-      </Accordion>
+        </Accordion>
+      </div>
+
 
       {/* Error Handeling */}
       {error && <Typography color="error">{error}</Typography>}

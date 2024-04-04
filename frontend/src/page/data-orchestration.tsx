@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Box, List, ListItem, ListItemText, Typography } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { getOrchestrations, OrchestrationEventRead } from '../services/data-orchestration';
-import { loadLeadDatabase, erichLeadDataLake } from '../services/lead';
+import { getOrchestrations, OrchestrationEventRead } from '../service/data-orchestration';
+import { loadLeadDatabase, erichLeadDataLake } from '../service/leads';
 
 const actions = [
   { text: 'Load Lead Database', action: loadLeadDatabase},

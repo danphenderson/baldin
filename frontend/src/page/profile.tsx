@@ -3,12 +3,12 @@ import { CircularProgress, Stack, IconButton, Typography, Dialog, DialogTitle, D
 import EditIcon from '@mui/icons-material/Edit';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { UserContext } from '../context/user-context';
-import { getUser, getUserProfile, updateUser, UserUpdate } from '../services/user';
-import { getExperience, getExperiences, createExperience, updateExperience, ExperienceRead, ExperienceCreate, ExperienceUpdate } from '../services/experiences';
-import { getSkill, getSkills, createSkill, updateSkill, SkillRead, SkillCreate, SkillUpdate } from '../services/skills';
-import { getEducation, getEducations, createEducation, updateEducation, EducationRead, EducationCreate, EducationUpdate } from '../services/education';
-import { getCertificate, getCertificates, createCertificate, updateCertificate, CertificateRead, CertificateCreate, CertificateUpdate } from '../services/certificate';
-import { getContact, getContacts, createContact, updateContact, ContactRead, ContactCreate, ContactUpdate } from '../services/contacts';
+import { getUser, getUserProfile, updateUser, UserUpdate } from '../service/users';
+import { getExperience, getExperiences, createExperience, updateExperience, ExperienceRead, ExperienceCreate, ExperienceUpdate } from '../service/experiences';
+import { getSkill, getSkills, createSkill, updateSkill, SkillRead, SkillCreate, SkillUpdate } from '../service/skills';
+import { getEducation, getEducations, createEducation, updateEducation, EducationRead, EducationCreate, EducationUpdate } from '../service/education';
+import { getCertificate, getCertificates, createCertificate, updateCertificate, CertificateRead, CertificateCreate, CertificateUpdate } from '../service/certificates';
+import { getContact, getContacts, createContact, updateContact, ContactRead, ContactCreate, ContactUpdate } from '../service/contacts';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import SkillsModal from '../component/skills-modal';
 import ExperiencesModal from '../component/experiences-modal';

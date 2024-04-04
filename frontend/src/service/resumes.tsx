@@ -1,4 +1,4 @@
-import { components } from "../schema.d";
+import { components } from "../schema";
 
 // do not export these types, as they should be asscessed from the resume and cover-letter services
 export type ResumeRead = components['schemas']['ResumeRead'];

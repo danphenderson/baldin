@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
-import { EducationRead, EducationCreate, EducationUpdate } from '../services/education';  // Adjust import path as necessary
+import { EducationRead, EducationCreate, EducationUpdate } from '../service/education';  // Adjust import path as necessary
 
 interface EducationModalProps {
   open: boolean;

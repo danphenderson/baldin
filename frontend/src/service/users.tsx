@@ -1,4 +1,4 @@
-import { components } from '../schema.d';
+import { components } from '../schema';
 
 export type UserRead = components['schemas']['UserRead'];
 export type UserUpdate = components['schemas']['UserUpdate'];

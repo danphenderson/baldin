@@ -1,4 +1,4 @@
-import { components } from "../schema.d";
+import { components } from "../schema";
 
 export type ApplicationRead = components['schemas']['ApplicationRead'];
 export type ApplicationCreate = components['schemas']['ApplicationCreate'];

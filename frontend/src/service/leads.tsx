@@ -1,4 +1,4 @@
-import { components } from '../schema.d';
+import { components } from '../schema';
 
 export type LeadRead = components['schemas']['LeadRead'];
 export type LeadUpdate = components['schemas']['LeadUpdate'];

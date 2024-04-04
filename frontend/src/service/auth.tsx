@@ -1,4 +1,4 @@
-import { components } from '../schema.d';
+import { components } from '../schema';
 
 const BASE_URL = "/auth"; // Can be moved to a config file
 const JSON_HEADERS = {"Content-Type": "application/json"};

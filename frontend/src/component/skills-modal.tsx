@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
-import { SkillRead, SkillCreate, SkillUpdate } from '../services/skills';  // Adjust the import path as necessary
+import { SkillRead, SkillCreate, SkillUpdate } from '../service/skills';  // Adjust the import path as necessary
 
 interface SkillsModalProps {
   open: boolean;

@@ -8,7 +8,7 @@ import {
   updateApplication,
   ApplicationRead,
   ApplicationUpdate
-} from '../services/application';
+} from '../service/applications';
 
 const ApplicationsPage: React.FC = () => {
     const { token } = useContext(UserContext);

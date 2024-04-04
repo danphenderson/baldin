@@ -1,13 +1,12 @@
-// Path: frontend/src/services/skills.tsx
-import { components } from "../schema.d";
+import { components } from "../schema";
 
-export type ContactRead = components['schemas']['ContactRead'];
-export type ContactCreate = components['schemas']['ContactCreate'];
-export type ContactUpdate = components['schemas']['ContactUpdate'];
+export type ExperienceRead = components['schemas']['ExperienceRead'];
+export type ExperienceUpdate = components['schemas']['ExperienceUpdate'];
+export type ExperienceCreate = components['schemas']['ExperienceCreate'];
 
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = '/contacts/';
+const BASE_URL = '/experiences/';
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
   if (!token) {
@@ -33,29 +32,29 @@ const fetchAPI = async (url: string, options: RequestInit) => {
   return response.json();
 };
 
-export const getContacts = async (token: string): Promise<ContactRead[]> => {
+export const getExperiences = async (token: string): Promise<ExperienceRead[]> => {
   const requestOptions = createRequestOptions(token, "GET");
   return fetchAPI(`${BASE_URL}`, requestOptions);
 };
 
-export const getContact = async (token: string, id: string): Promise<ContactRead> => {
+export const getExperience = async (token: string, id: string): Promise<ExperienceRead> => {
   const requestOptions = createRequestOptions(token, "GET");
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
-}
+};
 
-export const createContact = async (token: string, contact: ContactCreate): Promise<ContactRead> => {
-  const requestOptions = createRequestOptions(token, "POST", contact);
+
+export const createExperience = async (token: string, experience: ExperienceCreate): Promise<ExperienceRead> => {
+  const requestOptions = createRequestOptions(token, "POST", experience);
   return fetchAPI(BASE_URL, requestOptions);
-}
+};
 
-export const updateContact = async (token: string, id: string, contact: ContactUpdate): Promise<ContactRead> => {
-  const requestOptions = createRequestOptions(token, "PATCH", contact);
+export const updateExperience = async (token: string, id: string, experience: ExperienceUpdate): Promise<ExperienceRead> => {
+  const requestOptions = createRequestOptions(token, "PATCH", experience);
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
-}
+};
 
-export const deleteContact = async (token: string, id: string): Promise<void> => {
+
+export const deleteExperience = async (token: string, id: string): Promise<void> => {
   const requestOptions = createRequestOptions(token, "DELETE");
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
 }
-
-// Path: frontend/src/services/skills.tsx

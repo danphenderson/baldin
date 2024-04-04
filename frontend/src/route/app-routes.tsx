@@ -1,18 +1,18 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import UserRoute from './user-route';
-import App from '../pages/home';
-import LoginPage from '../pages/login';
+import UserRoute from './user-routes';
+import App from '../page/home';
+import LoginPage from '../page/login';
 import PublicLayout from '../layout/public-layout';
 import AppLayout from '../layout/home-layout';
-import RegistrationPage from '../pages/register';
-import ErrorPage from '../pages/error';
-import UserProfilePage from '../pages/user-profile';
-import LeadsPage from '../pages/leads';
-import DataOrchestrationPage from '../pages/data-orchestration';
-import ApplicationsPage from '../pages/applications';
-import UserTermsPage from '../pages/user-terms';
-import TemplatesPage from '../pages/templates';
+import RegistrationPage from '../page/register';
+import ErrorPage from '../page/error';
+import UserProfilePage from '../page/profile';
+import LeadsPage from '../page/leads';
+import DataOrchestrationPage from '../page/data-orchestration';
+import ApplicationsPage from '../page/applications';
+import UserTermsPage from '../page/user-terms';
+import TemplatesPage from '../page/templates';
 
 const AppRoutes: React.FC = () => {
   return (

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
-import { ContactRead, ContactCreate, ContactUpdate } from '../services/contacts';  // Adjust import path as necessary
+import { ContactRead, ContactCreate, ContactUpdate } from '../service/contacts';  // Adjust import path as necessary
 
 interface ContactModalProps {
   open: boolean;

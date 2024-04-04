@@ -10,7 +10,7 @@ import ErrorPage from '../pages/error';
 import UserProfilePage from '../pages/user-profile';
 import LeadsPage from '../pages/leads';
 import DataOrchestrationPage from '../pages/data-orchestration';
-import ManagerPage from '../pages/manager';
+import ApplicationsPage from '../pages/applications';
 import UserTermsPage from '../pages/user-terms';
 import TemplatesPage from '../pages/templates';
 
@@ -22,7 +22,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/" element={<UserRoute />}>
                 <Route index element={<App />} />
                 <Route path="/leads" element={<LeadsPage />} />
-                <Route path="/manager" element={<ManagerPage />} />
+                <Route path="/applications" element={<ApplicationsPage />} />
                 <Route path="/data-orchestration" element={<DataOrchestrationPage />} />
                 <Route path="/templates" element={<TemplatesPage />} />
                 <Route path="/profile" element={<UserProfilePage />} />

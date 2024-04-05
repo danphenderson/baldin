@@ -14,9 +14,9 @@ interface CoverLetterModalProps {
 const CoverLetterModal: React.FC<CoverLetterModalProps> = ({ open, onClose, onSave, initialData }) => {
   const defaultCoverLetterData: CoverLetterCreate = {
     // Assuming these are the fields in CoverLetterCreate, adjust as per actual schema
-    name: "string",
-    content: "string",
-    content_type: "custom"
+    name: "",
+    content: "",
+    content_type: "template"
   };
 
   const [coverLetterData, setCoverLetterData] = useState<CoverLetterCreate | CoverLetterUpdate>(defaultCoverLetterData);

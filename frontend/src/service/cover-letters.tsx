@@ -8,7 +8,7 @@ export type CoverLetterUpdate = components['schemas']['CoverLetterUpdate'];
 export type CoverLetterCreate = components['schemas']['CoverLetterCreate'];
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = '/cover-letters';
+const BASE_URL = '/cover_letters';
 
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {

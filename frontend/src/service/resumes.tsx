@@ -37,7 +37,7 @@ const fetchAPI = async (url: string, options: RequestInit) => {
 // Base Resume Crud
 export const getResumes = async (token: string): Promise<ResumeRead[]> => {
   const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}`, requestOptions);
+  return fetchAPI(`${BASE_URL}/`, requestOptions);
 };
 
 export const getResume = async (token: string, id: string): Promise<ResumeRead> => {
@@ -47,7 +47,7 @@ export const getResume = async (token: string, id: string): Promise<ResumeRead> 
 
 export const createResume = async (token: string, resume: ResumeCreate): Promise<ResumeRead> => {
   const requestOptions = createRequestOptions(token, "POST", resume);
-  return fetchAPI(BASE_URL, requestOptions);
+  return fetchAPI(`${BASE_URL}/`, requestOptions);
 }
 
 export const updateResume = async (token: string, id: string, resume: ResumeUpdate): Promise<ResumeRead> => {
@@ -72,7 +72,7 @@ export const getResumeTemplates = async (token: string): Promise<ResumeRead[]> =
 // Otherwise, there is no added benefit of declaring the functions below
 export const createResumeTemplate = async (token: string, resume: ResumeCreate): Promise<ResumeRead> => {
   const requestOptions = createRequestOptions(token, "POST", resume);
-  return fetchAPI(BASE_URL, requestOptions);
+  return fetchAPI(`${BASE_URL}/`, requestOptions);
 }
 
 export const updateResumeTemplate = async (token: string, id: string, resume: ResumeUpdate): Promise<ResumeRead> => {

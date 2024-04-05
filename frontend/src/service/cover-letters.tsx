@@ -38,7 +38,7 @@ const fetchAPI = async (url: string, options: RequestInit) => {
 // Base Cover Letter Crud
 export const getCoverLetters = async (token: string): Promise<CoverLetterRead[]> => {
   const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}`, requestOptions);
+  return fetchAPI(`${BASE_URL}/`, requestOptions);
 };
 
 export const getCoverLetter = async (token: string, id: string): Promise<CoverLetterRead> => {
@@ -48,7 +48,7 @@ export const getCoverLetter = async (token: string, id: string): Promise<CoverLe
 
 export const createCoverLetter = async (token: string, coverLetter: CoverLetterCreate): Promise<CoverLetterRead> => {
   const requestOptions = createRequestOptions(token, "POST", coverLetter);
-  return fetchAPI(BASE_URL, requestOptions);
+  return fetchAPI(`${BASE_URL}/`, requestOptions);
 }
 
 export const updateCoverLetter = async (token: string, id: string, coverLetter: CoverLetterUpdate): Promise<CoverLetterRead> => {
@@ -72,7 +72,7 @@ export const getCoverLetterTemplates = async (token: string): Promise<CoverLette
 // Otherwise, there is no added benifit of declaring the functions below
 export const createCoverLetterTemplate = async (token: string, coverLetter: CoverLetterCreate): Promise<CoverLetterRead> => {
   const requestOptions = createRequestOptions(token, "POST", coverLetter);
-  return fetchAPI(BASE_URL, requestOptions);
+  return fetchAPI(`${BASE_URL}/`, requestOptions);
 }
 
 export const getCoverLetterTemplate = async (token: string, id: string): Promise<CoverLetterRead> => {

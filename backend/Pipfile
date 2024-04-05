@@ -37,6 +37,7 @@ accelerate = "*"
 llama-index-llms-openai = "*"
 jsonpath-ng = "*"
 langchain-openai = "*"
+playwright-stealth = "*"
 
 [dev-packages]
 ipython = "*"

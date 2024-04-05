@@ -1,4 +1,4 @@
-// Path: frontend/src/service/resumes.tsx
+// Path: frontend/src/service/cover-letters.tsx
 
 import { components } from "../schema";
 
@@ -8,58 +8,84 @@ export type CoverLetterUpdate = components['schemas']['CoverLetterUpdate'];
 export type CoverLetterCreate = components['schemas']['CoverLetterCreate'];
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = '/cover_letters';
-const DEFAULT_HEADERS = {
-  "Content-Type": "application/json",
+const BASE_URL = '/cover-letters';
+
+
+const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
+  if (!token) {
+    throw new Error("Authorization token is required");
+  }
+
+  return {
+    method: method,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: body ? JSON.stringify(body) : null,
+  };
 };
 
-
-const fetchApi = async (url: string, options: RequestInit): Promise<Response> => {
+const fetchAPI = async (url: string, options: RequestInit) => {
   const response = await fetch(url, options);
   if (!response.ok) {
-    // You can customize the error handling here
+    // Custom error handling can be implemented here
     throw new Error('API request failed');
   }
-  return response;
-};
-
-export const getCoverLetters = async (): Promise<CoverLetterRead[]> => {
-  const response = await fetchApi(`${BASE_URL}/`, {
-    method: "GET",
-    headers: DEFAULT_HEADERS,
-  });
   return response.json();
 };
 
-export const getCoverLetter = async (id: string): Promise<CoverLetterRead> => {
-  const response = await fetchApi(`${BASE_URL}/${id}`, {
-    method: "GET",
-    headers: DEFAULT_HEADERS,
-  });
-  return response.json();
+// Base Cover Letter Crud
+export const getCoverLetters = async (token: string): Promise<CoverLetterRead[]> => {
+  const requestOptions = createRequestOptions(token, "GET");
+  return fetchAPI(`${BASE_URL}`, requestOptions);
 };
 
-export const createCoverLetter = async (coverLetter: CoverLetterCreate): Promise<CoverLetterRead> => {
-  const response = await fetchApi(BASE_URL, {
-    method: "POST",
-    headers: DEFAULT_HEADERS,
-    body: JSON.stringify(coverLetter),
-  });
-  return response.json();
+export const getCoverLetter = async (token: string, id: string): Promise<CoverLetterRead> => {
+  const requestOptions = createRequestOptions(token, "GET");
+  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
+}
+
+export const createCoverLetter = async (token: string, coverLetter: CoverLetterCreate): Promise<CoverLetterRead> => {
+  const requestOptions = createRequestOptions(token, "POST", coverLetter);
+  return fetchAPI(BASE_URL, requestOptions);
+}
+
+export const updateCoverLetter = async (token: string, id: string, coverLetter: CoverLetterUpdate): Promise<CoverLetterRead> => {
+  const requestOptions = createRequestOptions(token, "PATCH", coverLetter);
+  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
+}
+
+export const deleteCoverLetter = async (token: string, id: string): Promise<void> => {
+  const requestOptions = createRequestOptions(token, "DELETE");
+  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
+}
+
+// Cover Letter Templates
+export const getCoverLetterTemplates = async (token: string): Promise<CoverLetterRead[]> => {
+  const requestOptions = createRequestOptions(token, "GET");
+  const url = `${BASE_URL}/?content_type=template`; // Add the query parameter
+  return fetchAPI(url, requestOptions);
 };
 
-export const updateCoverLetter = async (id: string, coverLetter: CoverLetterUpdate): Promise<CoverLetterRead> => {
-  const response = await fetchApi(`${BASE_URL}/${id}`, {
-    method: "PATCH",
-    headers: DEFAULT_HEADERS,
-    body: JSON.stringify(coverLetter),
-  });
-  return response.json();
-};
+// TODO: Ensure cover letter content_type is set to 'template' when creating a new template
+// Otherwise, there is no added benifit of declaring the functions below
+export const createCoverLetterTemplate = async (token: string, coverLetter: CoverLetterCreate): Promise<CoverLetterRead> => {
+  const requestOptions = createRequestOptions(token, "POST", coverLetter);
+  return fetchAPI(BASE_URL, requestOptions);
+}
 
-export const deleteCoverLetter = async (id: string): Promise<void> => {
-  await fetchApi(`${BASE_URL}/${id}`, {
-    method: "DELETE",
-    headers: DEFAULT_HEADERS,
-  });
-};
+export const getCoverLetterTemplate = async (token: string, id: string): Promise<CoverLetterRead> => {
+  const requestOptions = createRequestOptions(token, "GET");
+  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
+}
+
+export const updateCoverLetterTemplate = async (token: string, id: string, coverLetter: CoverLetterUpdate): Promise<CoverLetterRead> => {
+  const requestOptions = createRequestOptions(token, "PATCH", coverLetter);
+  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
+}
+
+export const deleteCoverLetterTemplate = async (token: string, id: string): Promise<void> => {
+  const requestOptions = createRequestOptions(token, "DELETE");
+  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
+}

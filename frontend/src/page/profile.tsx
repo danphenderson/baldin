@@ -1,24 +1,33 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { CircularProgress, Stack, IconButton, Typography, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, Snackbar, Card, CardContent, Avatar, Grid, Accordion, AccordionSummary, AccordionDetails, CardActions } from '@mui/material';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+
+// User Context and Services
 import { UserContext } from '../context/user-context';
 import { getUser, getUserProfile, updateUser, UserUpdate } from '../service/users';
-import { getExperience, getExperiences, createExperience, updateExperience, ExperienceRead, ExperienceCreate, ExperienceUpdate } from '../service/experiences';
-import { getSkill, getSkills, createSkill, updateSkill, SkillRead, SkillCreate, SkillUpdate } from '../service/skills';
-import { getEducation, getEducations, createEducation, updateEducation, EducationRead, EducationCreate, EducationUpdate } from '../service/education';
-import { getCertificate, getCertificates, createCertificate, updateCertificate, CertificateRead, CertificateCreate, CertificateUpdate } from '../service/certificates';
-import { getContact, getContacts, createContact, updateContact, ContactRead, ContactCreate, ContactUpdate } from '../service/contacts';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { getExperiences, createExperience, updateExperience, ExperienceRead, ExperienceCreate, ExperienceUpdate } from '../service/experiences';
+import { getSkills, createSkill, updateSkill, SkillRead, SkillCreate, SkillUpdate } from '../service/skills';
+import { getEducations, createEducation, updateEducation, EducationRead, EducationCreate, EducationUpdate } from '../service/education';
+import { getCertificates, createCertificate, updateCertificate, CertificateRead, CertificateCreate, CertificateUpdate } from '../service/certificates';
+import { getContacts, createContact, updateContact, ContactRead, ContactCreate, ContactUpdate } from '../service/contacts';
+import { getCoverLetterTemplates, updateCoverLetterTemplate, createCoverLetterTemplate, CoverLetterRead, CoverLetterCreate, CoverLetterUpdate } from '../service/cover-letters';
+import { getResumeTemplates, updateResumeTemplate, createResumeTemplate, ResumeRead, ResumeCreate, ResumeUpdate } from '../service/resumes';
+
+// Modals
 import SkillsModal from '../component/skills-modal';
 import ExperiencesModal from '../component/experiences-modal';
 import CertificateModal from '../component/certificate-modal';
 import EducationModal from '../component/education-modal';
 import ContactModal from '../component/contacts-modal';
-
+import CoverLetterModal from '../component/cover-letters-modal';
+import ResumeModal from '../component/resumes-modal';
 
 const UserProfilePage = () => {
-  const { user, token, setUser } = useContext(UserContext);
+
+
+  const {user, token, setUser } = useContext(UserContext);
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,6 +36,58 @@ const UserProfilePage = () => {
 
   // User State
   const [userDetails, setUserDetails] = useState<UserUpdate>(user || {} as UserUpdate);
+
+
+
+  /// Load Data
+  const fetchUserData = async () => {
+    if (!token) return;
+
+    try {
+        setIsLoading(true);
+        setUserDetails(await getUser(token));
+        setExperiences(await getExperiences(token));
+        setSkills(await getSkills(token));
+        setEducations(await getEducations(token));
+        setCertificates(await getCertificates(token));
+        setContacts(await getContacts(token));
+    } catch (error) {
+        setError('Failed to fetch user data');
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+      if (token && !user) {
+          fetchUserData();
+      }
+  }, [token, user]);
+
+
+
+  const handleClose = () => {
+      setOpen(false);
+      setMessage('');
+      setError('');
+  };
+
+  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      if (!token) {
+          setError('Authorization token is missing');
+          return;
+      }
+
+      try {
+          setOpen(false);
+          const updatedUser = await updateUser(token, userDetails);
+          setUser(updatedUser);
+          setMessage('Profile updated successfully');
+      } catch (error) {
+          setError('There was an error updating the profile');
+      }
+  };
 
 
   // Skills State
@@ -223,7 +284,7 @@ const UserProfilePage = () => {
     },
   ];
 
-  // Contacs State
+  // Contacts State
   const [contacts, setContacts] = useState<ContactRead[]>([]);
   const [selectedContact, setSelectedContact] = useState<ContactRead | undefined>(undefined);
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -267,56 +328,126 @@ const UserProfilePage = () => {
   ];
 
 
-  /// Load Data
-  const fetchUserData = async () => {
-      if (!token) return;
 
-      try {
-          setIsLoading(true);
-          setUserDetails(await getUser(token));
-          setExperiences(await getExperiences(token));
-          setSkills(await getSkills(token));
-          setEducations(await getEducations(token));
-          setCertificates(await getCertificates(token));
-          setContacts(await getContacts(token));
-      } catch (error) {
-          setError('Failed to fetch user data');
-      } finally {
-          setIsLoading(false);
-      }
+  // Cover Letter Templates
+  const [coverLetterTemplates, setCoverLetterTemplates] = useState<CoverLetterRead[]>([]);
+  const [selectedCoverLetter, setSelectedCoverLetter] = useState<CoverLetterRead | undefined>(undefined);
+  const [coverLetterModalOpen, setCoverLetterModalOpen] = useState(false);
+
+  const handleOpenCoverLetterModal = (coverLetter?: CoverLetterRead) => {
+    setSelectedCoverLetter(coverLetter);
+    setCoverLetterModalOpen(true);
   };
+
+  const handleSaveCoverLetter = async (coverLetterData: CoverLetterCreate | CoverLetterUpdate) => {
+    if (!token) return;
+
+    try {
+      if ('id' in coverLetterData && typeof coverLetterData.id === 'string') {
+          await updateCoverLetterTemplate(token, coverLetterData.id, coverLetterData);
+      } else {
+          await createCoverLetterTemplate(token, coverLetterData);
+      }
+      setCoverLetterModalOpen(false);
+      fetchUserData();  // Refresh the list after saving
+    } catch (error) {
+        console.error('Failed to save cover letter data', error);
+    }
+  };
+
+  const coverLetterColumns: GridColDef[] = [
+    { field: 'title', headerName: 'Title', width: 250 },
+    { field: 'content', headerName: 'Content', width: 250 },
+    {
+        field: 'actions',
+        headerName: 'Actions',
+        sortable: false,
+        renderCell: (params) => (
+            <Button color="primary" onClick={() => handleOpenCoverLetterModal(params.row)}>
+                Edit
+            </Button>
+        ),
+        width: 100,
+    },
+  ];
+
+  const fetchCoverLetterTemplates = async () => {
+    if (!token) return;
+
+    try {
+      setCoverLetterTemplates(await getCoverLetterTemplates(token));
+    } catch (error) {
+      setError('Failed to fetch cover letter templates');
+    }
+  }
 
   useEffect(() => {
-      if (token && !user) {
-          fetchUserData();
-      }
-  }, [token, user]);
+    if (token) {
+      fetchCoverLetterTemplates();
+    }
+  }, [token]);
 
 
+  // Resume Templates
+  const [resumeTemplates, setResumeTemplates] = useState<ResumeRead[]>([]);
+  const [selectedResume, setSelectedResume] = useState<ResumeRead | undefined>(undefined);
+  const [resumeModalOpen, setResumeModalOpen] = useState(false);
 
-  const handleClose = () => {
-      setOpen(false);
-      setMessage('');
-      setError('');
+  const handleOpenResumeModal = (resume?: ResumeRead) => {
+    setSelectedResume(resume);
+    setResumeModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.preventDefault();
-      if (!token) {
-          setError('Authorization token is missing');
-          return;
-      }
+  const handleSaveResume = async (resumeData: ResumeCreate | ResumeUpdate) => {
+    if (!token) return;
 
-      try {
-          setOpen(false);
-          const updatedUser = await updateUser(token, userDetails);
-          setUser(updatedUser);
-          setMessage('Profile updated successfully');
-      } catch (error) {
-          setError('There was an error updating the profile');
+    try {
+      if ('id' in resumeData && typeof resumeData.id === 'string') {
+          await updateResumeTemplate(token, resumeData.id, resumeData);
+      } else {
+          await createResumeTemplate(token, resumeData);
       }
+      setResumeModalOpen(false);
+      fetchUserData();  // Refresh the list after saving
+    } catch (error) {
+        console.error('Failed to save resume data', error);
+    }
   };
 
+  const resumeColumns: GridColDef[] = [
+    { field: 'title', headerName: 'Title', width: 250 },
+    { field: 'content', headerName: 'Content', width: 250 },
+    {
+        field: 'actions',
+        headerName: 'Actions',
+        sortable: false,
+        renderCell: (params) => (
+            <Button color="primary" onClick={() => handleOpenResumeModal(params.row)}>
+                Edit
+            </Button>
+        ),
+        width: 100,
+    },
+  ];
+
+  const fetchResumeTemplates = async () => {
+    if (!token) return;
+
+    try {
+      setResumeTemplates(await getResumeTemplates(token));
+    } catch (error) {
+      setError('Failed to fetch resume templates');
+    }
+  }
+
+  useEffect(() => {
+    if (token) {
+      fetchResumeTemplates();
+    }
+  }, [token]);
+
+
+  // User Details
   const UserDetails = ({ userDetails, isLoading, setOpen }: { userDetails: any, isLoading: boolean, setOpen: React.Dispatch<React.SetStateAction<boolean>> }) => {
     const formatKey = (key: string) => key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
@@ -405,8 +536,10 @@ const UserProfilePage = () => {
           </DialogActions>
       </Dialog>
 
-      {/* Skills */}
-      <div>
+      {/* User Profile Details */}
+      <Stack>
+        <Typography variant="h4">Personal Background</Typography>
+        {/* Skills */}
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-skills-content" id="panel-skills-header">
               <Typography variant="h6">Skills</Typography>
@@ -530,7 +663,63 @@ const UserProfilePage = () => {
               />
           </AccordionDetails>
         </Accordion>
-      </div>
+      </Stack>
+
+      {/* Templates */}
+      <Stack>
+        <Typography variant="h4">Template Designer</Typography>
+        {/* Cover Letter Templates */}
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-cover-letters-content" id="panel-cover-letters-header">
+              <Typography variant="h6">Cover Letter Templates</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+              <Button onClick={() => handleOpenCoverLetterModal()} variant="contained" color="primary">
+                  Add Cover Letter Template
+              </Button>
+              <div style={{ height: 400, width: '100%' }}>
+                  <DataGrid
+                    rows={coverLetterTemplates}
+                    columns={coverLetterColumns}
+                    onRowDoubleClick={(params) => handleOpenCoverLetterModal(params.row)}
+                  />
+              </div>
+              <CoverLetterModal
+                open={coverLetterModalOpen}
+                onClose={() => setCoverLetterModalOpen(false)}
+                onSave={handleSaveCoverLetter}
+                initialData={selectedCoverLetter}
+              />
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Resume Templates */}
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-resumes-content" id="panel-resumes-header">
+              <Typography variant="h6">Resume Templates</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+              <Button onClick={() => handleOpenResumeModal()} variant="contained" color="primary">
+                  Add Resume Template
+              </Button>
+              <div style={{ height: 400, width: '100%' }}>
+                  <DataGrid
+                    rows={resumeTemplates}
+                    columns={resumeColumns}
+                    onRowDoubleClick={(params) => handleOpenResumeModal(params.row)}
+                  />
+              </div>
+              <ResumeModal
+                open={resumeModalOpen}
+                onClose={() => setResumeModalOpen(false)}
+                onSave={handleSaveResume}
+                initialData={selectedResume}
+              />
+          </AccordionDetails>
+        </Accordion>
+
+      </Stack>
+
 
 
       {/* Error Handeling */}

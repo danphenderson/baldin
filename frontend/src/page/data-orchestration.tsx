@@ -29,12 +29,12 @@ const DataOrchestrationPage: React.FC = () => {
     const columns: GridColDef[] = [
         { field: 'job_name', headerName: 'Status', width: 200 },
         { field: 'status', headerName: 'Status', width: 100 },
-        // TODO: Need to unplick the source and destination URIs
+        // TODO: Need to unpiccle the source and destination URIs
         // { field: "source_uri", headerName: "Source URI", width: 200 },
         // { field: "destination_uri", headerName: "Destination URI", width: 200 },
         { field: 'created_at', headerName: 'Created At', width: 220 },
         { field: 'updated_at', headerName: 'Updated At', width: 220 },
-        { field: 'error_message', headerName: 'Error Message', width: 100 },
+        { field: 'error_message', headerName: 'Error Message', width: 300 },
         // Add actions like edit, delete here if needed
     ];
 

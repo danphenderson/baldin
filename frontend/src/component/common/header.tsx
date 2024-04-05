@@ -28,8 +28,8 @@ const menuItems = [
   { text: 'Profile', icon: <AccountCircle />, path: '/profile'},
   { text: 'Leads', icon: <GroupIcon />, path: '/leads' },
   { text: 'Applications', icon: <ApplicationIcon />, path: '/applications' },
+  { text: 'Data Orchestration', icon: <DataArrayIcon />, path: '/data-orchestration' },
 ];
-
 
 const Header: React.FC<HeaderProps> = ({ title }) => {
   const { user, setUser, token, setToken } = useContext(UserContext);
@@ -86,9 +86,6 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
             <SettingsIcon />
               { open && (
                 <>
-                  <Button color="inherit" onClick={() => navigate('/data-orchestration')}>
-                    Data Orchestration
-                  </Button>
                   <Button color="inherit" onClick={handleLogout}>
                     Logout
                   </Button>

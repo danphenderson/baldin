@@ -606,7 +606,6 @@ const UserProfilePage = () => {
                   <Stack spacing={2}>
                     <Typography><strong>Title:</strong> {selectedExperience.title}</Typography>
                     <Typography><strong>Company:</strong> {selectedExperience.company}</Typography>
-                    <Typography><strong>Position:</strong> {selectedExperience.position}</Typography>
                     <Typography><strong>Start Date:</strong> {selectedExperience.start_date}</Typography>
                     <Typography><strong>End Date:</strong> {selectedExperience.end_date}</Typography>
                     <Typography><strong>Description:</strong> {selectedExperience.description}</Typography>

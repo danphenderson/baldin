@@ -1,3 +1,5 @@
+// Path: frontend/src/service/certificates.tsx
+
 import { components } from "../schema";
 
 export type CertificateRead = components['schemas']['CertificateRead'];

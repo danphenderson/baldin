@@ -1,3 +1,5 @@
+// Path: frontend/src/service/auth.tsx
+
 import { components } from '../schema';
 
 const BASE_URL = "/auth"; // Can be moved to a config file

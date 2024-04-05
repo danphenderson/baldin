@@ -1,3 +1,5 @@
+// Path: frontend/src/service/experiences.tsx
+
 import { components } from "../schema";
 
 export type ExperienceRead = components['schemas']['ExperienceRead'];

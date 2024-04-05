@@ -1,3 +1,5 @@
+// Path: frontend/src/service/resumes.tsx
+
 import { components } from "../schema";
 
 // do not export these types, as they should be asscessed from the resume and cover-letter services

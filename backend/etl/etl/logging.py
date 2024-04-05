@@ -1,5 +1,5 @@
-import sys
 import logging
+import sys
 
 from .conf import settings
 
@@ -8,6 +8,7 @@ logging.basicConfig(
     format="%(levelname)s: %(message)s",
     level=settings.LOGGING_LEVEL,
 )
+
 
 def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)

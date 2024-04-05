@@ -1,12 +1,11 @@
-
-from .conf import settings
 from .base import Scrapper
+from .conf import settings
 from .logging import get_logger
 
 logger = get_logger(__name__)
 
-class Glassdoor:
 
+class Glassdoor:
     def __init__(self, scrapper: Scrapper):
         self.scrapper = scrapper
 
@@ -22,7 +21,7 @@ class Glassdoor:
 
     async def search(self, keywords: str, location: str):
         # Navigate to glassdoor Job Search page
-        await self.scrapper.goto('https://www.glassdoor.com/Job/index.htm')
+        await self.scrapper.goto("https://www.glassdoor.com/Job/index.htm")
 
         # Find the job search textbox and type the keywords
         job_textbox = self.scrapper.locator('//*[@id="searchBar-jobTitle"]')
@@ -33,7 +32,7 @@ class Glassdoor:
         await location_textbox.type(location)
 
         # Enter in the search using the keyboard
-        await self.scrapper.keyboard_press('Enter')
+        await self.scrapper.keyboard_press("Enter")
 
         # Wait for the page to load
         await self.scrapper.wait_for_load_state("networkidle")
@@ -42,7 +41,6 @@ class Glassdoor:
         res = await self._scrape_search()
 
         return res
-
 
     async def _scrape_search(self):
         # Find the job postings
@@ -60,11 +58,15 @@ class Glassdoor:
                 await self.scrapper.wait_for_load_state()
 
                 # Expand the job description by clicking "Show More"
-                await self.scrapper.locator('//*[@id="app-navigation"]/div[3]/div[2]/div[2]/div[1]/section/div/div[2]/button/span').click()
+                await self.scrapper.locator(
+                    '//*[@id="app-navigation"]/div[3]/div[2]/div[2]/div[1]/section/div/div[2]/button/span'
+                ).click()
                 await self.scrapper.wait_for_load_state()
 
                 # Scrape the job post
-                description = await self.scrapper.locator('//*[@id="app-navigation"]/div[3]/div[2]/div[2]/div[1]').inner_text()
+                description = await self.scrapper.locator(
+                    '//*[@id="app-navigation"]/div[3]/div[2]/div[2]/div[1]'
+                ).inner_text()
                 result.append(description)
 
                 logger.info(f"Scraped job post: {description}")

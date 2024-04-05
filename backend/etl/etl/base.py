@@ -1,14 +1,15 @@
 from typing import Literal
+
 from bs4 import BeautifulSoup
-from playwright.async_api import async_playwright, Locator, Keyboard
+from playwright.async_api import Keyboard, Locator, async_playwright
 from playwright_stealth import stealth_async
 
 from .logging import get_logger
 
 logger = get_logger(__name__)
 
-class Scrapper:
 
+class Scrapper:
     def __init__(self):
         self._playwright = None
         self.context = None
@@ -34,7 +35,9 @@ class Scrapper:
         if self._playwright is not None:
             await self.playwright.stop()
 
-    async def wait_for_load_state(self, state: Literal['domcontentloaded', 'load', 'networkidle'] | None = "load"):
+    async def wait_for_load_state(
+        self, state: Literal["domcontentloaded", "load", "networkidle"] | None = "load"
+    ):
         if self.page is not None:
             await self.page.wait_for_load_state(state)
 
@@ -42,9 +45,9 @@ class Scrapper:
         if self.page is not None:
             logger.info(f"Getting {url} and waiting for dynamic content to load")
             await self.page.goto(url)
-            #await self.page.wait_for_load_state()
+            # await self.page.wait_for_load_state()
 
-    async def keyboard_press(self, key:str):
+    async def keyboard_press(self, key: str):
         if self.page is None:
             raise ValueError("Page is not initialized")
         await self.page.keyboard.press(key)
@@ -78,12 +81,12 @@ class Scrapper:
             await self.page.screenshot(path=path)
 
     async def capture_bot_test(self):
-        await self.goto('https://bot.sannysoft.com/')
-        await self.screenshot(path='bot_test.png')
+        await self.goto("https://bot.sannysoft.com/")
+        await self.screenshot(path="bot_test.png")
 
     async def capture_headless_test(self):
-        await self.goto('https://arh.antoinevastel.com/bots/areyouheadless')
-        await self.screenshot(path='headless_test.png')
+        await self.goto("https://arh.antoinevastel.com/bots/areyouheadless")
+        await self.screenshot(path="headless_test.png")
 
     async def __aenter__(self):
         await self.start()

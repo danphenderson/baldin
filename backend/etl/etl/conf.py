@@ -1,10 +1,12 @@
-from typing import Literal
 from pathlib import Path
+from typing import Literal
+
 from pydantic_settings import BaseSettings
 from toml import load as toml_load
 
 PROJECT_DIR = Path(__file__).parent.parent
 PYPROJECT_CONTENT = toml_load(f"{PROJECT_DIR}/pyproject.toml")["project"]
+
 
 class Settings(BaseSettings):
     # LOGGING SETTINGS
@@ -19,15 +21,16 @@ class Settings(BaseSettings):
     SECRET_OPENAI_KEY: str
     DATA_LAKE_BUCKET: str
 
-
     class Config:
         case_sensitive = False
         env_file = PROJECT_DIR / ".env"
         env_file_encoding = "utf-8"
         extra = "allow"
 
+
 def get_settings(**kwargs) -> Settings:
     settings = Settings(**kwargs)
     return settings
+
 
 settings = get_settings()

@@ -42,12 +42,12 @@ langchain-openai = "*"
 ipython = "*"
 coverage = "==6.2"
 pytest-asyncio = "*"
-baldin = {path = ".", editable = true}
 mypy = "*"
 install = "*"
 types-aiofiles = "*"
 types-toml = "*"
 jupyter = "*"
+baldin = {file = "."}
 
 [scripts]
 test = "docker-compose exec web python -m pytest"

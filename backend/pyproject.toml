@@ -36,7 +36,6 @@ source = ["app", "etl"]
 branch = true
 source = [
     "app",
-    "tests",
     "etl",
 ]
 parallel = false
@@ -54,7 +53,8 @@ norecursedirs = [
     "build",
 ]
 testpaths = [
-    "app/tests"
+    "app/tests",
+    "etl/tests",
 ]
 
 [tool.isort]

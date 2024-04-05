@@ -2,7 +2,7 @@ from typing import Literal
 
 from bs4 import BeautifulSoup
 from playwright.async_api import Keyboard, Locator, async_playwright
-from playwright_stealth import stealth_async
+from playwright_stealth import stealth_async  # type: ignore
 
 from .logging import get_logger
 

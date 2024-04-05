@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     DESCRIPTION: str = PYPROJECT_CONTENT["description"]
 
     # ETL SECRET KEYS
-    SECRET_OPENAI_KEY: str
-    DATA_LAKE_BUCKET: str
+    OPENAI_API_KEY: str
+    DATALAKE_URI: str = "public/seeds"
 
     class Config:
         case_sensitive = False

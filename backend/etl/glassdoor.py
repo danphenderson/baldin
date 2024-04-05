@@ -51,7 +51,7 @@ class Glassdoor:
         result = []
 
         # Scrape each job post
-        for job_button in job_buttons:
+        for job_button in job_buttons[0:2]:
             try:
                 # Click on the job listing to load the job post
                 await job_button.click()
@@ -70,8 +70,8 @@ class Glassdoor:
                 result.append(description)
 
                 logger.info(f"Scraped job post: {description}")
-            except:
-                logger.error("Error scraping job post")
+            except Exception as e:
+                logger.exception(f"Error scraping job post {e}")
                 await self.bypass_login()
                 continue
 

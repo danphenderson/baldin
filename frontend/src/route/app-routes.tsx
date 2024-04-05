@@ -12,7 +12,6 @@ import LeadsPage from '../page/leads';
 import DataOrchestrationPage from '../page/data-orchestration';
 import ApplicationsPage from '../page/applications';
 import UserTermsPage from '../page/user-terms';
-import TemplatesPage from '../page/templates';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -24,7 +23,6 @@ const AppRoutes: React.FC = () => {
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/applications" element={<ApplicationsPage />} />
                 <Route path="/data-orchestration" element={<DataOrchestrationPage />} />
-                <Route path="/templates" element={<TemplatesPage />} />
                 <Route path="/profile" element={<UserProfilePage />} />
                 <Route path="*" element={<ErrorPage />} />
                 {/* More user routes can be added here */}

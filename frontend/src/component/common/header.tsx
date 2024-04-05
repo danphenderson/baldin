@@ -28,7 +28,6 @@ const menuItems = [
   { text: 'Profile', icon: <AccountCircle />, path: '/profile'},
   { text: 'Leads', icon: <GroupIcon />, path: '/leads' },
   { text: 'Applications', icon: <ApplicationIcon />, path: '/applications' },
-  { text: 'Templates', incon: <DataArrayIcon />, path: '/templates' },
 ];
 
 

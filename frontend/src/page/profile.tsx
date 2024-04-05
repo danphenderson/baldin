@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { CircularProgress, Stack, IconButton, Typography, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, Snackbar, Card, CardContent, Avatar, Grid, Accordion, AccordionSummary, AccordionDetails, CardActions } from '@mui/material';
+import { Box, CircularProgress, Stack, IconButton, Typography, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, Snackbar, Card, CardContent, Avatar, Grid, Accordion, AccordionSummary, AccordionDetails, CardActions } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -538,7 +538,7 @@ const UserProfilePage = () => {
 
       {/* User Profile Details */}
       <Stack>
-        <Typography variant="h4">Personal Background</Typography>
+        <Typography variant="h4" align='center'>Personal Background</Typography>
         {/* Skills */}
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-skills-content" id="panel-skills-header">
@@ -553,6 +553,7 @@ const UserProfilePage = () => {
                     rows={skills}
                     columns={skillsColumns}
                     onRowDoubleClick={(params) => handleOpenSkillsModal(params.row)}
+                    onRowClick={(params) => setSelectedSkill(params.row as SkillRead)}
                   />
               </div>
               <SkillsModal
@@ -561,6 +562,18 @@ const UserProfilePage = () => {
                   onSave={handleSaveSkill}
                   initialData={selectedSkill}
               />
+              {selectedSkill && (
+                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+                  <Typography variant="h6">Details</Typography>
+                  <Stack spacing={2}>
+                    <Typography><strong>Name:</strong> {selectedSkill.name}</Typography>
+                    <Typography><strong>Category:</strong> {selectedSkill.category}</Typography>
+                    <Typography><strong>Subskills:</strong> {selectedSkill.subskills}</Typography>
+                    <Typography><strong>Years of Experience:</strong> {selectedSkill.yoe}</Typography>
+                  </Stack>
+                </Box>
+              )
+              }
           </AccordionDetails>
         </Accordion>
 
@@ -578,6 +591,7 @@ const UserProfilePage = () => {
                     rows={experiences}
                     columns={experienceColumns}
                     onRowDoubleClick={(params) => handleOpenExperienceModal(params.row)}
+                    onRowClick={(params) => setSelectedExperience(params.row as ExperienceRead)}
                   />
               </div>
               <ExperiencesModal
@@ -586,6 +600,22 @@ const UserProfilePage = () => {
                 onSave={handleSaveExperience}
                 initialData={selectedExperience}
               />
+              {selectedExperience && (
+                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+                  <Typography variant="h6">Details</Typography>
+                  <Stack spacing={2}>
+                    <Typography><strong>Title:</strong> {selectedExperience.title}</Typography>
+                    <Typography><strong>Company:</strong> {selectedExperience.company}</Typography>
+                    <Typography><strong>Position:</strong> {selectedExperience.position}</Typography>
+                    <Typography><strong>Start Date:</strong> {selectedExperience.start_date}</Typography>
+                    <Typography><strong>End Date:</strong> {selectedExperience.end_date}</Typography>
+                    <Typography><strong>Description:</strong> {selectedExperience.description}</Typography>
+                    <Typography><strong>Location:</strong> {selectedExperience.location}</Typography>
+                    <Typography><strong>Projects:</strong> {selectedExperience.projects}</Typography>
+                  </Stack>
+                </Box>
+              )
+              }
           </AccordionDetails>
         </Accordion>
 
@@ -603,6 +633,7 @@ const UserProfilePage = () => {
                     rows={educations}
                     columns={educationColumns}
                     onRowDoubleClick={(params) => handleOpenEducationModal(params.row)}
+                    onRowClick={(params) => setSelectedEducation(params.row as EducationRead)}
                   />
               </div>
               <EducationModal
@@ -611,6 +642,20 @@ const UserProfilePage = () => {
                 onSave={handleSaveEducation}
                 initialData={selectedEducation}
               />
+              {selectedEducation && (
+                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+                  <Typography variant="h6">Details</Typography>
+                  <Stack spacing={2}>
+                    <Typography><strong>Institution:</strong> {selectedEducation.university}</Typography>
+                    <Typography><strong>Degree:</strong> {selectedEducation.degree}</Typography>
+                    <Typography><strong>Involvement:</strong> {selectedEducation.activities}</Typography>
+                    <Typography><strong>Start Date:</strong> {selectedEducation.start_date}</Typography>
+                    <Typography><strong>End Date:</strong> {selectedEducation.end_date}</Typography>
+                    <Typography><strong>Grade Point:</strong> {selectedEducation.gradePoint}</Typography>
+                  </Stack>
+                </Box>
+              )
+              }
           </AccordionDetails>
         </Accordion>
 
@@ -628,6 +673,7 @@ const UserProfilePage = () => {
                     rows={certificates}
                     columns={certificateColumns}
                     onRowDoubleClick={(params) => handleOpenCertificateModal(params.row)}
+                    onRowClick={(params) => setSelectedCertificate(params.row as CertificateRead)}
                   />
               </div>
               <CertificateModal
@@ -636,6 +682,18 @@ const UserProfilePage = () => {
                 onSave={handleSaveCertificate}
                 initialData={selectedCertificate}
               />
+              {selectedCertificate && (
+                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+                  <Typography variant="h6">Details</Typography>
+                  <Stack spacing={2}>
+                    <Typography><strong>Name:</strong> {selectedCertificate.title}</Typography>
+                    <Typography><strong>Issuer:</strong> {selectedCertificate.issuer}</Typography>
+                    <Typography><strong>Date:</strong> {selectedCertificate.issued_date}</Typography>
+                    <Typography><strong>Expiration:</strong> {selectedCertificate.expiration_date}</Typography>
+                  </Stack>
+                </Box>
+              )
+              }
           </AccordionDetails>
         </Accordion>
 
@@ -653,6 +711,7 @@ const UserProfilePage = () => {
                     rows={contacts}
                     columns={contactsColumns}
                     onRowDoubleClick={(params) => handleOpenContactModal(params.row)}
+                    onRowClick={(params) => setSelectedContact(params.row as ContactRead)}
                   />
               </div>
               <ContactModal
@@ -661,13 +720,26 @@ const UserProfilePage = () => {
                 onSave={handleSaveContact}
                 initialData={selectedContact}
               />
+              {selectedContact && (
+                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+                  <Typography variant="h6">Details</Typography>
+                  <Stack spacing={2}>
+                    <Typography><strong>First Name:</strong> {selectedContact.first_name}</Typography>
+                    <Typography><strong>Last Name:</strong> {selectedContact.last_name}</Typography>
+                    <Typography><strong>Email:</strong> {selectedContact.email}</Typography>
+                    <Typography><strong>Phone Number:</strong> {selectedContact.phone_number}</Typography>
+                    <Typography><strong>Time Zone:</strong> {selectedContact.time_zone}</Typography>
+                  </Stack>
+                </Box>
+              )
+              }
           </AccordionDetails>
         </Accordion>
       </Stack>
 
       {/* Templates */}
       <Stack>
-        <Typography variant="h4">Template Designer</Typography>
+        <Typography variant="h4" align='center'>Template Designer</Typography>
         {/* Cover Letter Templates */}
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-cover-letters-content" id="panel-cover-letters-header">
@@ -681,6 +753,7 @@ const UserProfilePage = () => {
                   <DataGrid
                     rows={coverLetterTemplates}
                     columns={coverLetterColumns}
+                    onRowClick={(params) => setSelectedCoverLetter(params.row as CoverLetterRead)}
                     onRowDoubleClick={(params) => handleOpenCoverLetterModal(params.row)}
                   />
               </div>
@@ -690,6 +763,18 @@ const UserProfilePage = () => {
                 onSave={handleSaveCoverLetter}
                 initialData={selectedCoverLetter}
               />
+              {selectedCoverLetter && (
+                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+                  <Typography variant="h6">Details</Typography>
+                  <Stack spacing={2}>
+                    <Typography><strong>Title:</strong> {selectedCoverLetter.title}</Typography>
+                    <Typography><strong>Content:</strong> {selectedCoverLetter.content}</Typography>
+                    <Button onClick={() => alert('Create Cover Letter functionality not implemented')}>Generate Cover Letter</Button>
+                    <Button onClick={() => alert('Create Resume functionality not implemented')}>Generate Resume</Button>
+                  </Stack>
+                </Box>
+              )
+              }
           </AccordionDetails>
         </Accordion>
 
@@ -707,6 +792,7 @@ const UserProfilePage = () => {
                     rows={resumeTemplates}
                     columns={resumeColumns}
                     onRowDoubleClick={(params) => handleOpenResumeModal(params.row)}
+                    onRowClick={(params) => setSelectedResume(params.row as ResumeRead)}
                   />
               </div>
               <ResumeModal
@@ -715,6 +801,18 @@ const UserProfilePage = () => {
                 onSave={handleSaveResume}
                 initialData={selectedResume}
               />
+              {selectedResume && (
+                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+                  <Typography variant="h6">Details</Typography>
+                  <Stack spacing={2}>
+                    <Typography><strong>Title:</strong> {selectedResume.title}</Typography>
+                    <Typography><strong>Content:</strong> {selectedResume.content}</Typography>
+                    <Button onClick={() => alert('Create Cover Letter functionality not implemented')}>Generate Cover Letter</Button>
+                    <Button onClick={() => alert('Create Resume functionality not implemented')}>Generate Resume</Button>
+                  </Stack>
+                </Box>
+              )
+              }
           </AccordionDetails>
         </Accordion>
 

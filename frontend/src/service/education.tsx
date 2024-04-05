@@ -1,3 +1,5 @@
+// Path: frontend/src/service/education.tsx
+
 import { components } from "../schema";
 
 export type EducationRead = components['schemas']['EducationRead'];

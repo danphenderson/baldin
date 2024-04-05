@@ -1,3 +1,5 @@
+// Path: frontend/src/service/data-orchestration.tsx
+
 import { components } from "../schema";
 
 export type OrchestrationEventRead = components['schemas']['OrchestrationEventRead'];

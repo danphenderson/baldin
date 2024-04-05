@@ -1,3 +1,5 @@
+// Path: frontend/src/service/users.tsx
+
 import { components } from '../schema';
 
 export type UserRead = components['schemas']['UserRead'];

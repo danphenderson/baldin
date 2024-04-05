@@ -1,3 +1,5 @@
+// Path: frontend/src/service/skills.tsx
+
 import { components } from "../schema";
 
 export type SkillRead = components['schemas']['SkillRead'];

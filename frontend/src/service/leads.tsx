@@ -1,3 +1,5 @@
+// Path: frontend/src/service/leads.tsx
+
 import { components } from '../schema';
 
 export type LeadRead = components['schemas']['LeadRead'];

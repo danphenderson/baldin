@@ -1,3 +1,5 @@
+// Path: frontend/src/service/applications.tsx
+
 import { components } from "../schema";
 
 export type ApplicationRead = components['schemas']['ApplicationRead'];

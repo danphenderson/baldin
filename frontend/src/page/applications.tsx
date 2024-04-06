@@ -7,7 +7,9 @@ import {
   deleteApplication,
   updateApplication,
   ApplicationRead,
-  ApplicationUpdate
+  ApplicationUpdate,
+  CoverLetterRead,
+  createApplicationCoverLetter,
 } from '../service/applications';
 
 const ApplicationsPage: React.FC = () => {
@@ -20,6 +22,23 @@ const ApplicationsPage: React.FC = () => {
     useEffect(() => {
       if (token && applications.length === 0) fetchApplications();
     }, [token]);
+
+    const handleGenerateCoverLetter = async () => {
+      if (!selectedApplication || !token) {
+          setError('Application or authorization token is missing');
+          return;
+      }
+      setIsLoading(true);
+      try {
+          const coverLetter: CoverLetterRead = { /* Populate this with required fields */ };
+          await createApplicationCoverLetter(token, selectedApplication.id, coverLetter);
+          alert('Cover letter generated successfully');
+      } catch (error) {
+          setError(`Failed to generate cover letter: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+          setIsLoading(false);
+      }
+  };
 
     const fetchApplications = async () => {
       if (!token) return;
@@ -92,34 +111,34 @@ const ApplicationsPage: React.FC = () => {
     ];
 
     return (
-        <Box>
-            {isLoading ? <CircularProgress /> : (
-              <DataGrid
-                rows={applications}
-                columns={columns}
-                processRowUpdate={handleProcessRowUpdate}
-                onRowClick={(params) => setSelectedApplication(params.row as ApplicationRead)}
-              />
-            )}
-            {error && <Typography color="error">{error}</Typography>}
-
-            {selectedApplication && (
-            <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-              <Typography variant="h6">Details</Typography>
-              <Stack spacing={2}>
-                <Typography><strong>Lead:</strong> {selectedApplication.lead.title}</Typography>
-                <Typography><strong>Company:</strong> {selectedApplication.lead.company}</Typography>
-                <Typography><strong>Location:</strong> {selectedApplication.lead.location}</Typography>
-                <Typography><strong>Salary:</strong> {selectedApplication.lead.salary}</Typography>
-                <Typography><strong>Status:</strong> {selectedApplication.status}</Typography>
-                <Button onClick={() => alert('Create Cover Letter functionality not implemented')}>Generate Cover Letter</Button>
-                <Button onClick={() => alert('Create Resume functionality not implemented')}>Generate Resume</Button>
-                <Button onClick={() => handleDelete(selectedApplication.id)}>Delete</Button>
-              </Stack>
-            </Box>
+      <Box>
+          {isLoading ? <CircularProgress /> : (
+            <DataGrid
+              rows={applications}
+              columns={columns}
+              processRowUpdate={handleProcessRowUpdate}
+              onRowClick={(params) => setSelectedApplication(params.row as ApplicationRead)}
+            />
           )}
-        </Box>
-    );
+          {error && <Typography color="error">{error}</Typography>}
+
+          {selectedApplication && (
+              <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+                  <Typography variant="h6">Details</Typography>
+                  <Stack spacing={2}>
+                      <Typography><strong>Lead:</strong> {selectedApplication.lead.title}</Typography>
+                      <Typography><strong>Company:</strong> {selectedApplication.lead.company}</Typography>
+                      <Typography><strong>Location:</strong> {selectedApplication.lead.location}</Typography>
+                      <Typography><strong>Salary:</strong> {selectedApplication.lead.salary}</Typography>
+                      <Typography><strong>Status:</strong> {selectedApplication.status}</Typography>
+                      <Button onClick={handleGenerateCoverLetter}>Generate Cover Letter</Button>
+                      <Button onClick={() => alert('Create Resume functionality not implemented')}>Generate Resume</Button>
+                      <Button onClick={() => handleDelete(selectedApplication.id)}>Delete</Button>
+                  </Stack>
+              </Box>
+          )}
+      </Box>
+  );
 };
 
 export default ApplicationsPage;

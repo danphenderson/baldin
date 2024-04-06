@@ -1,15 +1,18 @@
 # app/api/routes/applications.py
+import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import UUID4
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from app.api.deps import (
     AsyncSession,
+    generate_cover_letter,
     get_application,
     get_async_session,
     get_current_user,
+    model_to_dict,
     models,
     schemas,
 )
@@ -165,7 +168,7 @@ async def delete_application(
 @router.get("/{id}/resumes", response_model=list[schemas.ResumeRead])
 async def get_application_resumes(
     app: schemas.ApplicationRead = Depends(get_application),
-    db=Depends(get_async_session),
+    db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
 
@@ -272,52 +275,83 @@ async def add_cover_letter_to_application(
     return cover_letter
 
 
-# @router.patch("/{id}/resumes/{resume_id}", status_code=200, response_model=schemas.ResumeRead)
-# async def update_application_resume(
-#     id: UUID4,
-#     resume_id: UUID4,
-#     payload: schemas.ResumeUpdate,
-#     db: AsyncSession = Depends(get_async_session),
-# ):
-#     # Fetch the resume from the database
-#     result = await db.execute(
-#         select(models.Resume).where(models.Resume.id == resume_id)
-#     )
-#     resume = result.scalars().first()
+@router.post(
+    "/{id}/cover_letters/generate",
+    status_code=201,
+    response_model=schemas.CoverLetterRead,
+)
+async def generate_cover_letter_for_application(
+    id: UUID4,
+    template_id: str
+    | None = Query(None, description="Template ID for cover letter generation"),
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
 
-#     if not resume:
-#         raise HTTPException(status_code=404, detail="Resume not found")
+    # Eagerly load the lead with the application
+    app = await db.execute(
+        select(models.Application)
+        .options(joinedload(models.Application.lead))
+        .where(models.Application.id == id)
+    )
+    app = app.scalars().first()
 
-#     # Update resume details
-#     for var, value in payload.dict(exclude_unset=True).items():
-#         setattr(resume, var, value)
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
 
-#     await db.commit()
-#     await db.refresh(resume)
+    if app.user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to generate a cover letter for this application",
+        )
 
-#     return resume
+    # Fetch the user profile details
+    user_details = await db.execute(
+        select(models.User)
+        .options(
+            joinedload(models.User.education),
+            joinedload(models.User.certificates),
+            joinedload(models.User.skills),
+            joinedload(models.User.experiences),
+        )
+        .filter(models.User.id == user.id)  # type: ignore
+    )
+    user_profile = user_details.scalars().first()
 
-# @router.patch("/{id}/cover_letters/{cover_letter_id}", status_code=200, response_model=schemas.CoverLetterRead)
-# async def update_application_cover_letter(
-#     id: UUID4,
-#     cover_letter_id: UUID4,
-#     payload: schemas.CoverLetterUpdate,
-#     db: AsyncSession = Depends(get_async_session),
-# ):
-#     # Fetch the cover letter from the database
-#     result = await db.execute(
-#         select(models.CoverLetter).where(models.CoverLetter.id == cover_letter_id)
-#     )
-#     cover_letter = result.scalars().first()
+    # Convert user_profile and lead to JSON
+    user_profile_json = json.dumps(model_to_dict(user_profile))
+    lead_json = json.dumps(model_to_dict(app.lead))
 
-#     if not cover_letter:
-#         raise HTTPException(status_code=404, detail="Cover letter not found")
+    # Get the cover letter template if a template_id is provided
+    template_content = ""
+    if template_id:
+        template = await db.get(models.CoverLetter, template_id)
+        if template and template.content_type == "template":
+            template_content = template.content
 
-#     # Update cover letter details
-#     for var, value in payload.dict(exclude_unset=True).items():
-#         setattr(cover_letter, var, value)
+    # Ensure template_content is a JSON string
+    template_json = json.dumps({"content": template_content})
 
-#     await db.commit()
-#     await db.refresh(cover_letter)
+    # Generate the cover letter
+    generated_content = generate_cover_letter(
+        profile=user_profile_json, job=lead_json, template=template_json
+    )
 
-#     return cover_letter
+    # Create a new cover letter entry in the database
+    cover_letter = models.CoverLetter(
+        name=f"Cover Letter for {app.lead.title}",
+        content=generated_content,
+        content_type="generated",
+        user_id=user.id,
+    )
+    db.add(cover_letter)
+    await db.commit()
+    await db.refresh(cover_letter)
+
+    # Create an association between the cover letter and the application
+    association = models.CoverLetterXApplication(
+        application_id=app.id, cover_letter_id=cover_letter.id
+    )
+    db.add(association)
+    await db.commit()
+    return cover_letter

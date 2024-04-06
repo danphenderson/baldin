@@ -1,5 +1,7 @@
 # app/api/deps.py
-
+import json
+import uuid
+from datetime import datetime
 from pathlib import Path  # noqa
 from typing import Any, Type
 
@@ -224,3 +226,31 @@ async def get_certificate(
     if certificate.user_id != user.id:  # type: ignore
         raise await _403(user.id, certificate, id)
     return certificate
+
+
+def model_to_dict(model_instance):
+    """
+    Convert SQLAlchemy model instance to dictionary, handling nested relationships
+    and converting non-serializable types like UUID and datetime to strings.
+    FIXME: Hack solution, langchain should be using my schemas instead of JSON strings
+    - start by updating schemas.py to include a UserProfileRead type
+    - modify the parameter types in generate_cover_letter to accept schemas.UserProfileRead, schemas.LeadRead, and schemas.CoverLetterRead
+    - modify the return type of generate_cover_letter to return schemas.CoverLetterRead
+    - update generate_cover_letter to use the schemas instead of JSON strings
+    """
+    if model_instance is None:
+        return None
+    if hasattr(model_instance, "__table__"):
+        data = {}
+        for c in model_instance.__table__.columns:
+            value = getattr(model_instance, c.name)
+            if isinstance(value, uuid.UUID):
+                data[c.name] = str(value)
+            elif isinstance(value, datetime):
+                data[c.name] = value.isoformat()
+            else:
+                data[c.name] = value
+        return data
+    elif isinstance(model_instance, list):
+        return [model_to_dict(item) for item in model_instance]
+    return model_instance

@@ -196,6 +196,10 @@ export interface paths {
     /** Add Cover Letter To Application */
     post: operations["add_cover_letter_to_application_applications__id__cover_letters_post"];
   };
+  "/applications/{id}/cover_letters/generate": {
+    /** Generate Cover Letter For Application */
+    post: operations["generate_cover_letter_for_application_applications__id__cover_letters_generate_post"];
+  };
   "/education/": {
     /** Read Current User Educations */
     get: operations["read_current_user_educations_education__get"];
@@ -2860,6 +2864,32 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["CoverLetterCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Generate Cover Letter For Application */
+  generate_cover_letter_for_application_applications__id__cover_letters_generate_post: {
+    parameters: {
+      query?: {
+        /** @description Template ID for cover letter generation */
+        template_id?: string | null;
+      };
+      path: {
+        id: string;
       };
     };
     responses: {

@@ -65,17 +65,16 @@ export const getApplications = async (token: string): Promise<ApplicationRead[]>
 
 
 export const getApplicationResumes = async (token: string, id: string): Promise<ApplicationRead> => {
-  const requestOptions = createRequestOptions(token, "GET", id);
+  const requestOptions = createRequestOptions(token, "GET");
   return await fetchAPI(`${BASE_URL}${id}/resumes`, requestOptions);
 };
 
 export const getApplicationCoverLetters = async (token: string, id: string): Promise<CoverLetterRead[]> => {
-  const requestOptions = createRequestOptions(token, "GET", id);
+  const requestOptions = createRequestOptions(token, "GET");
   return await fetchAPI(`${BASE_URL}${id}/cover_letters`, requestOptions);
 };
 
 export const createApplicationResume = async (token: string, id: string, resume: ResumeRead): Promise<ApplicationRead> => {
-
   const requestOptions = createRequestOptions(token, "POST", resume);
   return fetchAPI(`${BASE_URL}${id}/resumes`, requestOptions);
 }

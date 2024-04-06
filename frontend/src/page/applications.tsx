@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Box, CircularProgress, Typography, Stack, Button } from '@mui/material';
+import { Box, CircularProgress, Typography, Stack, Button, AccordionSummary, Accordion, AccordionDetails } from '@mui/material';
 import { DataGrid, GridColDef, GridRowModel } from '@mui/x-data-grid';
 import { UserContext } from '../context/user-context';
 import {
@@ -8,30 +8,99 @@ import {
   updateApplication,
   ApplicationRead,
   ApplicationUpdate,
-  CoverLetterRead,
-  createApplicationCoverLetter,
+  getApplicationCoverLetters,
+  generatecoverLetter,
 } from '../service/applications';
+import { GridExpandMoreIcon } from '@mui/x-data-grid';
+import { CoverLetterRead, CoverLetterCreate, CoverLetterUpdate, updateCoverLetter, createCoverLetter } from '../service/cover-letters';
 
 const ApplicationsPage: React.FC = () => {
-    const { token } = useContext(UserContext);
-    const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [applications, setApplications] = useState<ApplicationRead[]>([]);
-    const [selectedApplication, setSelectedApplication] = useState<ApplicationRead | null>(null);
+  const { token } = useContext(UserContext);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [applications, setApplications] = useState<ApplicationRead[]>([]);
+  const [applicationCoverLetters, setApplicationCoverLetters] = useState<CoverLetterRead[]>([]);
+  const [selectedApplication, setSelectedApplication] = useState<ApplicationRead | undefined>(undefined);
+  const [selectedCoverLetter, setSelectedCoverLetter] = useState<CoverLetterRead | undefined>(undefined);
 
-    useEffect(() => {
-      if (token && applications.length === 0) fetchApplications();
-    }, [token]);
+  useEffect(() => {
+    if (token) {
+        fetchApplications();
+    }
+  } , [token]);
+
+  const fetchApplications = async () => {
+    if (!token) {
+      setError('Authorization token is missing');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const apps = await getApplications(token);
+      setApplications(apps);
+    } catch (error) {
+      setError(`Failed to fetch applications: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRowClick = async (params: GridRowModel) => {
+    setSelectedApplication(params.row as ApplicationRead);
+    fetchApplicationCoverLetters(params.row.id.toString());
+  };
+
+
+  const fetchApplicationCoverLetters = async (applicationId: string) => {
+    if (!token) {
+      setError('Authorization token is missing');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const coverLetters = await getApplicationCoverLetters(token, applicationId);
+      setApplicationCoverLetters(coverLetters);
+    } catch (error) {
+      setError(`Failed to fetch cover letters: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Assuming the onSave prop in CoverLetterModal expects a parameter of type CoverLetterCreate | CoverLetterUpdate
+  const handleCoverLetterSave = (coverLetterData: CoverLetterCreate | CoverLetterUpdate) => {
+    if (!token || !selectedApplication) {
+      setError('Authorization token or selected application is missing');
+      return;
+  }
+
+  // You need to check if coverLetterData contains an id to decide if you are updating or creating a new cover letter
+  const saveOrUpdate = coverLetterData ? updateCoverLetter : createCoverLetter;
+    setIsLoading(true);
+    saveOrUpdate(token, selectedCoverLetter?.id || '', coverLetterData)
+      .then((updatedCoverLetter) => {
+        const updatedCoverLetters = applicationCoverLetters.map(cl =>
+          cl.id === updatedCoverLetter.id ? updatedCoverLetter : cl
+        );
+        setApplicationCoverLetters(updatedCoverLetters);
+      })
+      .catch(error => {
+        setError(`Failed to save cover letter: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+    }
 
     const handleGenerateCoverLetter = async () => {
-      if (!selectedApplication || !token) {
+      if (!selectedApplication) {
           setError('Application or authorization token is missing');
           return;
       }
       setIsLoading(true);
       try {
-          const coverLetter: CoverLetterRead = { /* Populate this with required fields */ };
-          await createApplicationCoverLetter(token, selectedApplication.id, coverLetter);
+          const template_id = selectedCoverLetter?.id || '';
+          await generatecoverLetter(token || '', selectedApplication.id, template_id);
           alert('Cover letter generated successfully');
       } catch (error) {
           setError(`Failed to generate cover letter: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -40,104 +109,116 @@ const ApplicationsPage: React.FC = () => {
       }
   };
 
-    const fetchApplications = async () => {
-      if (!token) return;
-      setIsLoading(true);
-      try {
-        const apps = await getApplications(token);
-        setApplications(apps);
-      } catch (error) {
-        setError(`Failed to fetch applications: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      } finally {
+  const handleDelete = async (id: string) => {
+    if (!token) {
+        setError('Authorization token is missing');
+        return;
+    }
+    setIsLoading(true);
+    try {
+      await deleteApplication(token, id);
+      setApplications(applications.filter(a => a.id !== id));
+      if (selectedApplication && selectedApplication.id === id) {
+        setSelectedApplication(undefined);
+      }
+    } catch (error) {
+      setError(`Failed to delete application: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const coverLetterColumns: GridColDef[] = [
+    { field: 'name', headerName: 'Name', width: 200 },
+    { field: 'content', headerName: 'Content', width: 200 },
+    { field: 'content_type', headerName: 'Content Type', width: 200 },
+    // Add other necessary columns
+  ];
+
+  const handleProcessRowUpdate = async (newRow: GridRowModel) => {
+    if (!token) {
+        setError('Authorization token is missing');
+        return newRow;
+    }
+    setIsLoading(true);
+    try {
+        // Prepare the update payload with only the fields allowed in ApplicationUpdate
+        const updatedApplication: ApplicationUpdate = {
+            status: newRow.status as string,
+        };
+        // Pass the id as a separate argument to the updateApplication function
+        await updateApplication(token, newRow.id.toString(), updatedApplication);
+        const updatedApplications = applications.map(app =>
+            app.id === newRow.id ? { ...app, status: newRow.status } : app
+        );
+        setApplications(updatedApplications);
+        return newRow;
+    } catch (error) {
+        setError(`Failed to update application: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return newRow;
+    } finally {
         setIsLoading(false);
-      }
-    };
+    }
+  };
 
-    const handleDelete = async (id: string) => {
-        if (!token) {
-            setError('Authorization token is missing');
-            return;
-        }
-        setIsLoading(true);
-        try {
-          await deleteApplication(token, id);
-          setApplications(applications.filter(a => a.id !== id));
-          if (selectedApplication && selectedApplication.id === id) {
-            setSelectedApplication(null);
-          }
-        } catch (error) {
-          setError(`Failed to delete application: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        } finally {
-          setIsLoading(false);
-        }
-    };
 
-    const handleProcessRowUpdate = async (newRow: GridRowModel) => {
-      if (!token) {
-          setError('Authorization token is missing');
-          return newRow;
-      }
-      setIsLoading(true);
-      try {
-          // Prepare the update payload with only the fields allowed in ApplicationUpdate
-          const updatedApplication: ApplicationUpdate = {
-              status: newRow.status as string,
-          };
-          // Pass the id as a separate argument to the updateApplication function
-          await updateApplication(token, newRow.id.toString(), updatedApplication);
-          const updatedApplications = applications.map(app =>
-              app.id === newRow.id ? { ...app, status: newRow.status } : app
-          );
-          setApplications(updatedApplications);
-          return newRow;
-      } catch (error) {
-          setError(`Failed to update application: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          return newRow;
-      } finally {
-          setIsLoading(false);
-      }
-    };
-    const columns: GridColDef[] = [
-      { field: 'lead_title', headerName: 'Lead', width: 150 },
-      { field: 'lead_company', headerName: 'Company', width: 150 },
-      { field: 'lead_location', headerName: 'Location', width: 150 },
-      { field: 'lead_salary', headerName: 'Salary', width: 150 },
-      {
-        field : 'status',
-        headerName: 'Status',
-        width: 150,
-        editable: true,
-      }
-    ];
+  const columns: GridColDef[] = [
+    { field: 'lead_title', headerName: 'Lead', width: 150 },
+    { field: 'lead_company', headerName: 'Company', width: 150 },
+    { field: 'lead_location', headerName: 'Location', width: 150 },
+    { field: 'lead_salary', headerName: 'Salary', width: 150 },
+    {
+      field : 'status',
+      headerName: 'Status',
+      width: 150,
+      editable: true,
+    }
+  ];
 
-    return (
-      <Box>
-          {isLoading ? <CircularProgress /> : (
+  return (
+    <Box>
+      {isLoading ? <CircularProgress /> : (
+        <DataGrid
+          rows={applications}
+          columns={columns}
+          onRowClick={handleRowClick}
+        />
+      )}
+      {selectedApplication && (
+        <Accordion>
+          <AccordionSummary expandIcon={<GridExpandMoreIcon />}>
+            <Typography>Application Details and Cover Letters</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography variant="h6">Application Details</Typography>
+            <Typography>ID: {selectedApplication.id}</Typography>
+            <Typography>Lead Title: {selectedApplication.lead.title}</Typography>
+            <Typography>Status: {selectedApplication.status}</Typography>
+            <Typography variant="h6" sx={{ mt: 2 }}>Cover Letters</Typography>
             <DataGrid
-              rows={applications}
-              columns={columns}
-              processRowUpdate={handleProcessRowUpdate}
-              onRowClick={(params) => setSelectedApplication(params.row as ApplicationRead)}
+              rows={applicationCoverLetters}
+              columns={coverLetterColumns}
+              autoHeight
             />
-          )}
-          {error && <Typography color="error">{error}</Typography>}
-
-          {selectedApplication && (
-              <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-                  <Typography variant="h6">Details</Typography>
-                  <Stack spacing={2}>
-                      <Typography><strong>Lead:</strong> {selectedApplication.lead.title}</Typography>
-                      <Typography><strong>Company:</strong> {selectedApplication.lead.company}</Typography>
-                      <Typography><strong>Location:</strong> {selectedApplication.lead.location}</Typography>
-                      <Typography><strong>Salary:</strong> {selectedApplication.lead.salary}</Typography>
-                      <Typography><strong>Status:</strong> {selectedApplication.status}</Typography>
-                      <Button onClick={handleGenerateCoverLetter}>Generate Cover Letter</Button>
-                      <Button onClick={() => alert('Create Resume functionality not implemented')}>Generate Resume</Button>
-                      <Button onClick={() => handleDelete(selectedApplication.id)}>Delete</Button>
-                  </Stack>
-              </Box>
-          )}
-      </Box>
+            <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+              <Button
+                variant="contained"
+                onClick={handleGenerateCoverLetter}
+              >
+                Generate Cover Letter
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => handleDelete(selectedApplication.id)}
+              >
+                Delete Application
+              </Button>
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
+      )}
+      {error && <Typography color="error">{error}</Typography>}
+    </Box>
   );
 };
 

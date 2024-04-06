@@ -69,9 +69,9 @@ export const getApplicationResumes = async (token: string, id: string): Promise<
   return await fetchAPI(`${BASE_URL}${id}/resumes`, requestOptions);
 };
 
-export const getApplicationCoverLetters = async (token: string, id: string): Promise<ApplicationRead> => {
+export const getApplicationCoverLetters = async (token: string, id: string): Promise<CoverLetterRead[]> => {
   const requestOptions = createRequestOptions(token, "GET", id);
-  return await fetchAPI(`${BASE_URL}${id}/resumes`, requestOptions);
+  return await fetchAPI(`${BASE_URL}${id}/cover_letters`, requestOptions);
 };
 
 export const createApplicationResume = async (token: string, id: string, resume: ResumeRead): Promise<ApplicationRead> => {
@@ -80,7 +80,7 @@ export const createApplicationResume = async (token: string, id: string, resume:
   return fetchAPI(`${BASE_URL}${id}/resumes`, requestOptions);
 }
 
-export const createApplicationCoverLetter = async (token: string, id: string, coverLetter: CoverLetterRead): Promise<ApplicationRead> => {
+export const createApplicationCoverLetter = async (token: string, id: string, coverLetter: CoverLetterRead): Promise<CoverLetterRead> => {
   const requestOptions = createRequestOptions(token, "POST", coverLetter);
   return fetchAPI(`${BASE_URL}${id}/cover_letters`, requestOptions);
 }
@@ -99,3 +99,9 @@ export const deleteApplication = async (token: string, id: string): Promise<Appl
   const requestOptions = createRequestOptions(token, "DELETE");
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
 };
+
+export const generatecoverLetter = async (token: string, id: string, template_id: string): Promise<CoverLetterRead> =>  {
+  const requestOptions = createRequestOptions(token, "POST");
+  const url = `${BASE_URL}${id}/cover_letters/generate?template_id=${template_id}`
+  return fetchAPI(url, requestOptions);
+}

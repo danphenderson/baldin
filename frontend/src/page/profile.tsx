@@ -804,7 +804,7 @@ const UserProfilePage = () => {
                 <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
                   <Typography variant="h6">Details</Typography>
                   <Stack spacing={2}>
-                    <Typography><strong>Title:</strong> {selectedResume.title}</Typography>
+                    <Typography><strong>Title:</strong> {selectedResume.name}</Typography>
                     <Typography><strong>Content:</strong> {selectedResume.content}</Typography>
                     <Button onClick={() => alert('Create Cover Letter functionality not implemented')}>Generate Cover Letter</Button>
                     <Button onClick={() => alert('Create Resume functionality not implemented')}>Generate Resume</Button>

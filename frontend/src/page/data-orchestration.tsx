@@ -82,6 +82,7 @@ const DataOrchestrationPage: React.FC = () => {
               <Typography> Destination URI: {selectedPipeline.destination_uri?.name}</Typography>
             </Stack>
           )}
+          {error && <Typography color="error">{error}</Typography>}
         </Box>
     );
 };

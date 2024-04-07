@@ -247,6 +247,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     zip_code = Column(String)
     country = Column(String)
     time_zone = Column(String)
+    avatar_uri = Column(String)
     applications = relationship("Application", back_populates="user")
     contacts = relationship("Contact", back_populates="user")
     skills = relationship("Skill", back_populates="user")

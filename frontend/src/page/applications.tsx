@@ -185,16 +185,16 @@ const ApplicationsPage: React.FC = () => {
         />
       )}
       {selectedApplication && (
+      <Stack spacing={2} sx={{ mt: 2 }}>
+        <Typography variant="h4">Application Details</Typography>
+        <Typography>ID: {selectedApplication.id}</Typography>
+        <Typography>Lead Title: {selectedApplication.lead.title}</Typography>
+        <Typography>Status: {selectedApplication.status}</Typography>
         <Accordion>
           <AccordionSummary expandIcon={<GridExpandMoreIcon />}>
-            <Typography>Application Details and Cover Letters</Typography>
+            <Typography variant="h6" sx={{ mt: 2 }}>Cover Letters</Typography>
           </AccordionSummary>
           <AccordionDetails>
-            <Typography variant="h6">Application Details</Typography>
-            <Typography>ID: {selectedApplication.id}</Typography>
-            <Typography>Lead Title: {selectedApplication.lead.title}</Typography>
-            <Typography>Status: {selectedApplication.status}</Typography>
-            <Typography variant="h6" sx={{ mt: 2 }}>Cover Letters</Typography>
             <DataGrid
               rows={applicationCoverLetters}
               columns={coverLetterColumns}
@@ -209,13 +209,29 @@ const ApplicationsPage: React.FC = () => {
               </Button>
               <Button
                 variant="contained"
-                onClick={() => handleDelete(selectedApplication.id)}
+                onClick={() => setSelectedCoverLetter(undefined)}
               >
-                Delete Application
+                Download PDF (Todo)
               </Button>
             </Stack>
           </AccordionDetails>
         </Accordion>
+        <Stack direction="row" spacing={2}>
+          <Button
+            variant="contained"
+            onClick={() => handleDelete(selectedApplication.id)}
+          >
+            Delete
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => setSelectedApplication(undefined)}
+          >
+            Update
+          </Button>
+        </Stack>
+
+      </Stack>
       )}
       {error && <Typography color="error">{error}</Typography>}
     </Box>

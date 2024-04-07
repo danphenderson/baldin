@@ -82,10 +82,10 @@ const SignUp: React.FC = () => {
                 }}
             >
                 <Typography component="h1" variant="h5">
-                    Sign Up
+                    <strong>Sign Up</strong>
                 </Typography>
-                <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 3 }}>
-                    <Grid container spacing={2}>
+                <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 2 }}>
+                    <Grid container spacing={2} sx={{mt: 2}}>
                         <Grid item xs={12}>
                             <TextField
                                 required

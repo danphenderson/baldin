@@ -315,6 +315,7 @@ class BaseUser(BaseSchema):
     zip_code: str | None = Field(None, description="Zip code")
     country: str | None = Field(None, description="Country")
     time_zone: str | None = Field(None, description="Time zone")
+    avatar_uri: URI | None = Field(None, description="Avatar URI")
 
 
 class UserRead(schemas.BaseUser[UUID4], BaseUser):  # type: ignore

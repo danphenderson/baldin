@@ -1397,6 +1397,8 @@ export interface components {
        * @description Time zone
        */
       time_zone?: string | null;
+      /** @description Avatar URI */
+      avatar_uri?: components["schemas"]["URI"] | null;
       /**
        * Email
        * Format: email
@@ -1499,6 +1501,8 @@ export interface components {
        * @description Time zone
        */
       time_zone?: string | null;
+      /** @description Avatar URI */
+      avatar_uri?: components["schemas"]["URI"] | null;
       /**
        * Id
        * Format: uuid4
@@ -1577,6 +1581,8 @@ export interface components {
        * @description Time zone
        */
       time_zone?: string | null;
+      /** @description Avatar URI */
+      avatar_uri?: components["schemas"]["URI"] | null;
       /** Password */
       password?: string | null;
       /** Email */

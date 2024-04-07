@@ -1,45 +1,63 @@
 import React, { useState, useEffect } from 'react';
-import { Box, List, ListItem, ListItemText, Typography } from '@mui/material';
+import { Box, CircularProgress, List, ListItem, ListItemText, Stack, Typography } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getOrchestrations, OrchestrationEventRead } from '../service/data-orchestration';
-import { loadLeadDatabase, erichLeadDataLake } from '../service/leads';
+import { erichLeadDataLake, loadLeadDatabase } from '../service/leads';
 
 const actions = [
-  { text: 'Load Lead Database', action: loadLeadDatabase},
-  { text: 'Enrich Lead Datalake', action: erichLeadDataLake},
+  { text: 'Erich Leads DataLake', action: erichLeadDataLake},
+  { text: 'Load Leads From DataLake', action: loadLeadDatabase},
 ];
 
 const DataOrchestrationPage: React.FC = () => {
+  const [error, setError] = useState('');
   const [pipelines, setPipelines] = useState<OrchestrationEventRead[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedPipeline, setSelectedPipeline] = useState<OrchestrationEventRead | undefined>(undefined);
+
 
   useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const orchestrationData = await getOrchestrations();
-                setPipelines(orchestrationData);
-            } catch (error) {
-                console.error('Failed to fetch orchestration data:', error);
-                // Handle errors appropriately (e.g., show a notification to the user)
-            }
-        };
-        fetchData();
+      fetchData();
     }, []);
 
-    // Define columns for DataGrid
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            const data = await getOrchestrations();
+            setPipelines(data);
+        } catch (error) {
+            setError(`Failed to fetch data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleRowClick = async (params: any) => {
+        setSelectedPipeline(params.row as OrchestrationEventRead);
+    };
+
+
+
     const columns: GridColDef[] = [
-        { field: 'job_name', headerName: 'Status', width: 200 },
-        { field: 'status', headerName: 'Status', width: 100 },
-        // TODO: Need to unpiccle the source and destination URIs
-        // { field: "source_uri", headerName: "Source URI", width: 200 },
-        // { field: "destination_uri", headerName: "Destination URI", width: 200 },
-        { field: 'created_at', headerName: 'Created At', width: 220 },
-        { field: 'updated_at', headerName: 'Updated At', width: 220 },
-        { field: 'error_message', headerName: 'Error Message', width: 300 },
-        // Add actions like edit, delete here if needed
+      { field: 'job_name', headerName: 'Job', width: 150 },
+      { field: 'status', headerName: 'Status', width: 100 },
+      {
+          field: "source_uri",
+          headerName: "Source URI",
+          width: 350,
+          valueGetter: (params) => params.row.source_uri.name,
+      },
+      {
+          field: "destination_uri",
+          headerName: "Destination URI",
+          width: 350,
+          valueGetter: (params) => params.row.destination_uri.name,
+      },
+      // Add actions like edit, delete here if needed
     ];
 
     return (
-        <Box sx={{ height: 400, width: '100%', p: 2 }}>
+        <Box>
           <List>
             {actions.map((item, index) => (
               <ListItem button key={index} onClick={async () => await item.action()}>
@@ -47,12 +65,23 @@ const DataOrchestrationPage: React.FC = () => {
               </ListItem>
             ))}
           </List>
-          <Typography variant='h4'>Orchestration Events</Typography>
+          {isLoading ? <CircularProgress/> : (
             <DataGrid
-                rows={pipelines}
-                columns={columns}
+              rows={pipelines}
+              columns={columns}
+              onRowClick={handleRowClick}
+              autoHeight
             />
-
+          )}
+          {selectedPipeline && (
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              <Typography variant="h4">Pipeline Details</Typography>
+              <Typography> Job Name: {selectedPipeline.job_name}</Typography>
+              <Typography> Status: {selectedPipeline.status}</Typography>
+              <Typography> Source URI: {selectedPipeline.source_uri?.name}</Typography>
+              <Typography> Destination URI: {selectedPipeline.destination_uri?.name}</Typography>
+            </Stack>
+          )}
         </Box>
     );
 };

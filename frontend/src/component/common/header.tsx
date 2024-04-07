@@ -6,23 +6,21 @@ import Button from '@mui/material/Button';
 import Avatar from '@mui/material/Avatar';
 import IconButton from '@mui/material/IconButton';
 import { useContext } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
-import { List, ListItem, ListItemText } from '@mui/material';
+import { List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
-import GroupIcon from '@mui/icons-material/Group';
-import ApplicationIcon from '@mui/icons-material/TouchApp';
-import DataArrayIcon from '@mui/icons-material/DataArray';
 
 const menuItems = [
-  { text: 'Leads', icon: <GroupIcon />, path: '/leads' },
-  { text: 'Applications', icon: <ApplicationIcon />, path: '/applications' },
-  { text: 'Data Orchestration', icon: <DataArrayIcon />, path: '/data-orchestration' },
+  { text: 'Leads', path: '/leads' },
+  { text: 'Applications', path: '/applications' },
+  { text: 'Data Orchestration', path: '/data-orchestration' },
 ];
 
 const Header: React.FC<{ title?: string }> = ({ title }) => {
   const { user, setToken } = useContext(UserContext);
   const navigate = useNavigate();
+  const location = useLocation();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -51,7 +49,8 @@ const Header: React.FC<{ title?: string }> = ({ title }) => {
           </IconButton>
           <List sx={{ display: 'flex', flexGrow: 1 }}>
             {menuItems.map((item, index) => (
-              <ListItem button key={index} onClick={() => navigate(item.path)}>
+              <ListItem button key={index} onClick={() => navigate(item.path)} sx={{ backgroundColor: location.pathname === item.path ? 'rgba(255, 255, 255, 0.2)' : 'inherit' }}  // Shade the selected menu item
+              >
                 <ListItemText primary={item.text} />
               </ListItem>
             ))}

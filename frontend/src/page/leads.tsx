@@ -131,81 +131,85 @@ const LeadsPage: React.FC = () => {
   ];
 
   return (
-    <div>
-    <Box sx={{ p: 2 }}>
-      <DataGrid
-        rows={leads}
-        columns={columns}
-        loading={loading}
-        disableRowSelectionOnClick
-        onRowClick={(params) => setSelectedLead(params.row)}
-        onRowDoubleClick={(params) => handleEditLead(params.id.toString())}
-        pagination
-        pageSizeOptions={[10, 15, 20]}
-        rowCount={totalLeads}
-        paginationMode="server"
-        initialState={{
-          pagination: {
-            paginationModel: {
-              pageSize: paginationModel.page_size,
-              page: paginationModel.page  // default value will be used if not passed */
+    <Stack spacing={16}>
+      <Box sx={{ p: 2 }}>
+        <DataGrid
+          rows={leads}
+          columns={columns}
+          loading={loading}
+          disableRowSelectionOnClick
+          onRowClick={(params) => setSelectedLead(params.row)}
+          onRowDoubleClick={(params) => handleEditLead(params.id.toString())}
+          pagination
+          pageSizeOptions={[10, 15, 20]}
+          rowCount={totalLeads}
+          paginationMode="server"
+          initialState={{
+            pagination: {
+              paginationModel: {
+                pageSize: paginationModel.page_size,
+                page: paginationModel.page  // default value will be used if not passed */
+              },
             },
-          },
-        }}
-        onPaginationModelChange={handlePaginationModelChange}
-      />
-      <Button variant="contained" onClick={handleAddLead} sx={{ mb: 2 }}>
-        Add New Lead
-      </Button>
-      <LeadModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSave={handleSaveLead}
-        initialData={selectedLead ? {
-          title: selectedLead.title,
-          company: selectedLead.company,
-          description: selectedLead.description,
-          location: selectedLead.location,
-          salary: selectedLead.salary,
-          job_function: selectedLead.job_function,
-          industries: selectedLead.industries,
-          employment_type: selectedLead.employment_type,
-          seniority_level: selectedLead.seniority_level,
-          notes: selectedLead.notes,
-          url: selectedLead.url || '', // Provide a default value of an empty string for url
-          // Add additional fields as required by the LeadCreate schema
-        } : undefined}
-      />
-      {error && (
-        <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-          <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
-            {error}
-          </Alert>
-        </Snackbar>
-      )}
-      <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 800, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-        {selectedLead && (
-            <>
-            <Button onClick={() => handleEditLead(selectedLead.id)}>Edit</Button><Button onClick={() => handleApply(selectedLead.id)}>Apply</Button>
-            <Stack>
-              {/* Actions to perform on the selected lead */}
-              {/* Display the selected lead's details */}
-              <Typography><strong>{selectedLead.title}, {selectedLead.company}, {selectedLead.employment_type} </strong></Typography>
-              <Typography><strong>Location:</strong> {selectedLead.location}</Typography>
-              <Typography><strong>Salary:</strong> {selectedLead.salary}</Typography>
-              <Typography><strong>Job Function:</strong> {selectedLead.job_function}</Typography>
-              <Typography><strong>Industries:</strong> {selectedLead.industries}</Typography>
-              <Typography><strong>Seniority Level:</strong> {selectedLead.seniority_level}</Typography>
-              <Typography><strong>Notes:</strong> {selectedLead.notes}</Typography>
-              <Typography><strong>Description:</strong>{selectedLead.description}</Typography>
-              <Typography><strong>ID:</strong> {selectedLead.id}</Typography>
-              <Typography><strong>URL:</strong> {selectedLead.url}</Typography>
-            </Stack></>
+          }}
+          onPaginationModelChange={handlePaginationModelChange}
+        />
+        <Stack direction="row" spacing={2}>
+          <Button variant="contained" onClick={handleAddLead} sx={{ mb: 2 }}>
+            Add
+          </Button>
+          <Button variant="contained" onClick={fetchLeads} sx={{ mb: 2 }}>
+            Extract
+          </Button>
+        </Stack>
+        <LeadModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSave={handleSaveLead}
+          initialData={selectedLead ? {
+            title: selectedLead.title,
+            company: selectedLead.company,
+            description: selectedLead.description,
+            location: selectedLead.location,
+            salary: selectedLead.salary,
+            job_function: selectedLead.job_function,
+            industries: selectedLead.industries,
+            employment_type: selectedLead.employment_type,
+            seniority_level: selectedLead.seniority_level,
+            notes: selectedLead.notes,
+            url: selectedLead.url || '', // Provide a default value of an empty string for url
+            // Add additional fields as required by the LeadCreate schema
+          } : undefined}
+        />
+        {error && (
+          <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
+            <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+              {error}
+            </Alert>
+          </Snackbar>
         )}
+        <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 800, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+          {selectedLead && (
+              <>
+              <Button onClick={() => handleEditLead(selectedLead.id)}>Edit</Button><Button onClick={() => handleApply(selectedLead.id)}>Apply</Button>
+              <Stack>
+                {/* Actions to perform on the selected lead */}
+                {/* Display the selected lead's details */}
+                <Typography><strong>{selectedLead.title}, {selectedLead.company}, {selectedLead.employment_type} </strong></Typography>
+                <Typography><strong>Location:</strong> {selectedLead.location}</Typography>
+                <Typography><strong>Salary:</strong> {selectedLead.salary}</Typography>
+                <Typography><strong>Job Function:</strong> {selectedLead.job_function}</Typography>
+                <Typography><strong>Industries:</strong> {selectedLead.industries}</Typography>
+                <Typography><strong>Seniority Level:</strong> {selectedLead.seniority_level}</Typography>
+                <Typography><strong>Notes:</strong> {selectedLead.notes}</Typography>
+                <Typography><strong>Description:</strong>{selectedLead.description}</Typography>
+                <Typography><strong>ID:</strong> {selectedLead.id}</Typography>
+                <Typography><strong>URL:</strong> {selectedLead.url}</Typography>
+              </Stack></>
+          )}
+        </Box>
       </Box>
-    </Box>
-
-    </div>
+    </Stack>
   );
 };
 

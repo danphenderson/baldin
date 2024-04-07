@@ -504,7 +504,7 @@ const UserProfilePage = () => {
   };
 
   return (
-    <Stack spacing={10}>
+    <Stack spacing={16}>
       {/* Header: Base User */}
       {userDetails && <UserDetails userDetails={userDetails} isLoading={isLoading} setOpen={setOpen} />}
       <Dialog open={open} onClose={handleClose} fullWidth>

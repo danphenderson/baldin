@@ -79,17 +79,23 @@ export interface paths {
      */
     delete: operations["purge_leads_leads_purge_delete"];
   };
+  "/data_orchestration/pipelines": {
+    /** Read Orch Pipelines */
+    get: operations["read_orch_pipelines_data_orchestration_pipelines_get"];
+    /** Create Orch Pipeline */
+    post: operations["create_orch_pipeline_data_orchestration_pipelines_post"];
+  };
+  "/data_orchestration/pipelines/{id}": {
+    /** Read Orch Pipeline */
+    get: operations["read_orch_pipeline_data_orchestration_pipelines__id__get"];
+    /** Update Orch Pipeline */
+    put: operations["update_orch_pipeline_data_orchestration_pipelines__id__put"];
+  };
   "/data_orchestration/events": {
     /** Read Orch Events */
     get: operations["read_orch_events_data_orchestration_events_get"];
-  };
-  "/data_orchestration/events/success": {
-    /** Read Successful Orch Events */
-    get: operations["read_successful_orch_events_data_orchestration_events_success_get"];
-  };
-  "/data_orchestration/events/failure": {
-    /** Read Failed Orch Events */
-    get: operations["read_failed_orch_events_data_orchestration_events_failure_get"];
+    /** Create Orch Event */
+    post: operations["create_orch_event_data_orchestration_events_post"];
   };
   "/data_orchestration/events/{id}": {
     /** Read Orch Event */
@@ -1121,15 +1127,44 @@ export interface components {
        */
       total_count: number | null;
     };
-    /** OrchestrationEventRead */
-    OrchestrationEventRead: {
-      /** @description Status */
-      status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+    /** OrchestrationEventCreate */
+    OrchestrationEventCreate: {
       /**
-       * Error Message
-       * @description Error message, if any
+       * Name
+       * @description Name of the event
        */
-      error_message?: string | null;
+      name?: string | null;
+      /**
+       * Message
+       * @description Error message
+       */
+      message?: string | null;
+      /** @description Source of the pipeline */
+      source_uri?: components["schemas"]["URI"] | null;
+      /** @description Destination of the pipeline */
+      destination_uri?: components["schemas"]["URI"] | null;
+      /**
+       * Pipeline Id
+       * Format: uuid4
+       */
+      pipeline_id: string;
+    };
+    /** OrchestrationEventRead */
+    "OrchestrationEventRead-Input": {
+      /**
+       * Name
+       * @description Name of the event
+       */
+      name?: string | null;
+      /**
+       * Message
+       * @description Error message
+       */
+      message?: string | null;
+      /** @description Source of the pipeline */
+      source_uri?: components["schemas"]["URI"] | null;
+      /** @description Destination of the pipeline */
+      destination_uri?: components["schemas"]["URI"] | null;
       /**
        * Id
        * Format: uuid4
@@ -1149,20 +1184,144 @@ export interface components {
        */
       updated_at: string;
       /**
-       * Job Name
-       * @description Name of the ETL job
+       * Pipeline Id
+       * Format: uuid4
        */
-      job_name?: string | null;
-      /** @description Source URI */
+      pipeline_id: string;
+      /** @description Status of the event */
+      status: components["schemas"]["OrchestrationEventStatusType"];
+    };
+    /** OrchestrationEventRead */
+    "OrchestrationEventRead-Output": {
+      /**
+       * Name
+       * @description Name of the event
+       */
+      name?: string | null;
+      /**
+       * Message
+       * @description Error message
+       */
+      message?: string | null;
+      /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
-      /** @description Destination URI */
+      /** @description Destination of the pipeline */
       destination_uri?: components["schemas"]["URI"] | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Pipeline Id
+       * Format: uuid4
+       */
+      pipeline_id: string;
+      /** @description Status of the event */
+      status: components["schemas"]["OrchestrationEventStatusType"];
     };
     /**
      * OrchestrationEventStatusType
      * @enum {string}
      */
     OrchestrationEventStatusType: "pending" | "running" | "success" | "failure";
+    /** OrchestrationPipelineCreate */
+    OrchestrationPipelineCreate: {
+      /**
+       * Name
+       * @description Name of the pipeline
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Description of the pipeline
+       */
+      description?: string | null;
+      /**
+       * Params
+       * @description Parameters for the pipeline
+       */
+      params?: Record<string, never> | null;
+    };
+    /** OrchestrationPipelineRead */
+    OrchestrationPipelineRead: {
+      /**
+       * Name
+       * @description Name of the pipeline
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Description of the pipeline
+       */
+      description?: string | null;
+      /**
+       * Params
+       * @description Parameters for the pipeline
+       */
+      params?: Record<string, never> | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Events
+       * @description Events in the pipeline
+       * @default []
+       */
+      events?: components["schemas"]["OrchestrationEventRead-Output"][];
+    };
+    /** OrchestrationPipelineUpdate */
+    OrchestrationPipelineUpdate: {
+      /**
+       * Name
+       * @description Name of the pipeline
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Description of the pipeline
+       */
+      description?: string | null;
+      /**
+       * Params
+       * @description Parameters for the pipeline
+       */
+      params?: Record<string, never> | null;
+      /**
+       * Events
+       * @description Events in the pipeline
+       * @default []
+       */
+      events?: components["schemas"]["OrchestrationEventRead-Input"][];
+    };
     /** Pagination */
     Pagination: {
       /**
@@ -1966,7 +2125,7 @@ export interface operations {
       /** @description Successful Response */
       202: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead"];
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
         };
       };
     };
@@ -2105,35 +2264,117 @@ export interface operations {
       };
     };
   };
+  /** Read Orch Pipelines */
+  read_orch_pipelines_data_orchestration_pipelines_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationPipelineRead"][];
+        };
+      };
+    };
+  };
+  /** Create Orch Pipeline */
+  create_orch_pipeline_data_orchestration_pipelines_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrchestrationPipelineCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Orch Pipeline */
+  read_orch_pipeline_data_orchestration_pipelines__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Orch Pipeline */
+  update_orch_pipeline_data_orchestration_pipelines__id__put: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrchestrationPipelineUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Read Orch Events */
   read_orch_events_data_orchestration_events_get: {
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead"][];
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"][];
         };
       };
     };
   };
-  /** Read Successful Orch Events */
-  read_successful_orch_events_data_orchestration_events_success_get: {
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["OrchestrationEventRead"][];
-        };
+  /** Create Orch Event */
+  create_orch_event_data_orchestration_events_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrchestrationEventCreate"];
       };
     };
-  };
-  /** Read Failed Orch Events */
-  read_failed_orch_events_data_orchestration_events_failure_get: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead"][];
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -2149,7 +2390,7 @@ export interface operations {
       /** @description Successful Response */
       202: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead"];
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
         };
       };
       /** @description Validation Error */

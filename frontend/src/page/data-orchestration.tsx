@@ -76,7 +76,7 @@ const DataOrchestrationPage: React.FC = () => {
           {selectedPipeline && (
             <Stack spacing={2} sx={{ mt: 2 }}>
               <Typography variant="h4">Pipeline Details</Typography>
-              <Typography> Job Name: {selectedPipeline.job_name}</Typography>
+              <Typography> Job Name: {selectedPipeline.name}</Typography>
               <Typography> Status: {selectedPipeline.status}</Typography>
               <Typography> Source URI: {selectedPipeline.source_uri?.name}</Typography>
               <Typography> Destination URI: {selectedPipeline.destination_uri?.name}</Typography>

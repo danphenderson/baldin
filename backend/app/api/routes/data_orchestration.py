@@ -97,33 +97,6 @@ async def read_orch_events(db: AsyncSession = Depends(get_async_session)):
         processed_result.append(processed_event)
 
     return processed_result
-    return processed_result
-
-
-@router.get("/events/success", response_model=list[schemas.OrchestrationEventRead])
-async def read_successful_orch_events(db: AsyncSession = Depends(get_async_session)):
-    rows = await db.execute(
-        select(models.OrchestrationEvent).filter(
-            models.OrchestrationEvent.status == "success"
-        )
-    )
-    result = rows.scalars().all()
-    if not result:
-        raise HTTPException(status_code=404, detail="No successful ETL events found")
-    return result
-
-
-@router.get("/events/failure", response_model=list[schemas.OrchestrationEventRead])
-async def read_failed_orch_events(db: AsyncSession = Depends(get_async_session)):
-    rows = await db.execute(
-        select(models.OrchestrationEvent).filter(
-            models.OrchestrationEvent.status == "failure"
-        )
-    )
-    result = rows.scalars().all()
-    if not result:
-        raise HTTPException(status_code=404, detail="No failed ETL events found")
-    return result
 
 
 @router.get(

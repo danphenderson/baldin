@@ -31,20 +31,20 @@ def get_supported_models():
     return models
 
 
-def get_model(model_name: str | None = None) -> BaseChatModel:
+def get_model(name: str | None = None) -> BaseChatModel:
     """Get the model."""
     SUPPORTED_MODELS = get_supported_models()
-    if model_name is None:
+    if name is None:
         return SUPPORTED_MODELS["gpt-3.5-turbo"]["chat_model"]
     else:
         supported_model_names = list(SUPPORTED_MODELS.keys())
-        if model_name not in supported_model_names:
+        if name not in supported_model_names:
             raise ValueError(
-                f"Model {model_name} not found. "
+                f"Model {name} not found. "
                 f"Supported models: {supported_model_names}"
             )
         else:
-            return SUPPORTED_MODELS[model_name]["chat_model"]
+            return SUPPORTED_MODELS[name]["chat_model"]
 
 
 CHUNK_SIZES = {  # in tokens, defaults to int(4_096 * 0.8). Override here.
@@ -52,9 +52,9 @@ CHUNK_SIZES = {  # in tokens, defaults to int(4_096 * 0.8). Override here.
 }
 
 
-def get_chunk_size(model_name: str) -> int:
+def get_chunk_size(name: str) -> int:
     """Get the chunk size."""
-    return CHUNK_SIZES.get(model_name, int(4_096 * 0.8))
+    return CHUNK_SIZES.get(name, int(4_096 * 0.8))
 
 
 class _BaseSettings(BaseSettings):
@@ -175,9 +175,11 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
 
     API_KEY: str = ""
     COMPLETION_MODEL: str = "gpt-3.5-turbo"
-    SUPPORTED_MODELS: dict[str, dict[str, str]] = get_supported_models()
     DEFAULT_MODEL: str = "gpt-3.5-turbo"
 
+    @property
+    def SUPPORTED_MODELS(self):
+        return get_supported_models()
 
 class Linkedin(_BaseSettings, env_prefix="LINKEDIN_"):
     """

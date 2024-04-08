@@ -1,11 +1,10 @@
 # app/api/routes/extractor.py
-import json
-from typing import Annotated, Literal, Sequence, TypedDict
-from urllib import response
+from typing import Annotated, Literal, Sequence
+from typing_extensions import TypedDict
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import UUID4
-from sqlalchemy import UUID, select
+from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from app.api.deps import (
@@ -25,23 +24,23 @@ from app.core import conf
 
 router: APIRouter = APIRouter()
 
-@router.post("", response_model=schemas.ExtractorRead)
+@router.post("/run", response_model=schemas.ExtractorRead)
 async def run_extractor(
-    extractor_id: Annotated[UUID, Form()],,
+    extractor_id: Annotated[UUID4, Form()],
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
     mode: Literal["entire_document", "retrieval"] = Form("entire_document"),
     file: UploadFile | None = File(None),
     text: str | None = Form(None),
-    model_name: str = Form(conf.openai.COMPLETION_MODEL),
-) -> schemas.ExtractorRespose:
+    llm: str = Form(conf.openai.COMPLETION_MODEL),
+) -> schemas.ExtractorResponse:
     if text is None and file is None:
         raise HTTPException(status_code=422, detail="No text or file provided.")
 
     extractor = (
         await db.execute(
             select(models.Extractor)
-            .filter_by(uuid=extractor_id, owner_id=user.id)
+            .filter_by(uuid=extractor_id, user_id=user.id)
         )
     ).scalar()
 
@@ -56,18 +55,59 @@ async def run_extractor(
         # the text was extracted from
         text_ = "\n".join([document.page_content for document in documents])
     if mode == "entire_document":
-        return await extract_entire_document(text_, extractor, model_name)
+        return await extract_entire_document(text_, extractor, llm)
     elif mode == "retrieval":
-        return await extract_from_content(text_, extractor, model_name)
+        return await extract_from_content(text_, extractor, llm)
     else:
         raise ValueError(
             f"Invalid mode {mode}. Expected one of 'entire_document', 'retrieval'."
         )
 
 @router.get("/{id}", response_model=schemas.ExtractorRead)
-async def get_extractors(
+async def read_extractor(
     extractor: schemas.ExtractorRead = Depends(get_extractor),
 ) -> schemas.ExtractorRead:
+    return extractor
+
+
+@router.get("/", response_model=Sequence[schemas.ExtractorRead])
+async def read_extractors(
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+    limit: int = Query(10, ge=1),
+    offset: int = Query(0, ge=0),
+) -> Sequence[schemas.ExtractorRead]:
+    result = await db.execute(
+        select(models.Extractor)
+        .filter_by(user_id=user.id)
+        .limit(limit)
+        .offset(offset)
+    )
+    return result.scalars().all() # type: ignore
+
+
+
+
+@router.post("/", response_model=schemas.ExtractorRead)
+async def create_extractor(
+    extractor_in: schemas.ExtractorCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> schemas.ExtractorRead:
+    extractor = models.Extractor(**extractor_in.dict(), user_id=user.id)
+    db.add(extractor)
+    await db.commit()
+    return extractor # type: ignore
+
+@router.put("/{id}", response_model=schemas.ExtractorRead)
+async def update_extractor(
+    extractor_in: schemas.ExtractorUpdate,
+    extractor: schemas.ExtractorRead = Depends(get_extractor),
+    db: AsyncSession = Depends(get_async_session),
+) -> schemas.ExtractorRead:
+    for field, value in extractor_in.dict().items():
+        setattr(extractor, field, value)
+    await db.commit()
     return extractor
 
 @router.get("/{id}/examples", response_model=list[schemas.ExtractorExampleRead])

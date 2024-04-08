@@ -16,6 +16,7 @@ from app import schemas
 from app.core.conf import get_chunk_size, get_model, openai, settings
 from app.models import Extractor, ExtractorExample
 from app.utils import update_json_schema, validate_json_schema
+from app.core import conf
 
 
 def _cast_example_to_dict(example: ExtractorExample) -> dict[str, Any]:
@@ -83,8 +84,8 @@ def _make_prompt_template(
 
 
 def deduplicate(
-    extract_responses: list[schemas.ExtractorRespose],
-) -> schemas.ExtractorRespose:
+    extract_responses: list[schemas.ExtractorResponse],
+) -> schemas.ExtractorResponse:
     """Deduplicate the results.
 
     The deduplication is done by comparing the serialized JSON of each of the results
@@ -115,7 +116,7 @@ def get_examples_from_extractor(extractor: Extractor) -> list[dict[str, Any]]:
 @chain
 async def extraction_runnable(
     extraction_request: schemas.ExtractorRequest,
-) -> schemas.ExtractorRespose:
+) -> schemas.ExtractorResponse:
     """An end point to extract content from a given text object."""
     # TODO: Add validation for model context window size
     schema = update_json_schema(getattr(extraction_request, "json_schema", {}))
@@ -129,7 +130,7 @@ async def extraction_runnable(
         getattr(extraction_request, "examples", None),
         schema["title"],
     )
-    model = get_model(getattr(extraction_request, "model_name", None) or DEFAULT_MODEL)
+    model = get_model(getattr(extraction_request, "llm_name", None) or conf.openai.DEFAULT_MODEL)
     # N.B. method must be consistent with examples in _make_prompt_template
     runnable = (
         prompt | model.with_structured_output(schema=schema, method="function_calling")
@@ -141,14 +142,14 @@ async def extraction_runnable(
 async def extract_entire_document(
     content: str,
     extractor: Extractor,
-    model_name: str,
-) -> schemas.ExtractorRespose:
+    llm_name: str,
+) -> schemas.ExtractorResponse:
     """Extract from entire document."""
 
     json_schema = extractor.schema
     examples = get_examples_from_extractor(extractor)
     text_splitter = TokenTextSplitter(
-        chunk_size=get_chunk_size(model_name),
+        chunk_size=get_chunk_size(llm_name),
         chunk_overlap=20,
         model_name=openai.DEFAULT_MODEL,
     )
@@ -159,7 +160,7 @@ async def extract_entire_document(
             json_schema=json_schema,
             instructions=extractor.instruction,  # TODO: consistent naming
             examples=examples,
-            model_name=model_name,  # type: ignore
+            llm_name=llm_name,  # type: ignore
         )
         for text in texts
     ]
@@ -173,7 +174,7 @@ async def extract_entire_document(
 
     # Run extractions which may potentially yield duplicate results
     extract_responses: Sequence[
-        schemas.ExtractorRespose
+        schemas.ExtractorResponse
     ] = await extraction_runnable.abatch(
         extraction_requests, {"max_concurrency": settings.MAX_CONCURRENCY}
     )

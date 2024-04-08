@@ -47,7 +47,7 @@ async def extract_from_content(
             "schema": itemgetter("schema"),
             "instructions": lambda x: x.get("instructions"),
             "examples": lambda x: x.get("examples"),
-            "llm_name": lambda x: x.get("llm_name"), # type: ignore
+            "llm_name": lambda x: x.get("llm_name"),
         }
         | RunnableLambda(_make_extract_requests)
         | extraction_runnable.abatch

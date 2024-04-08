@@ -18,7 +18,7 @@ from app import utils
 class BaseSchema(_BaseModel):
     class Config:
         from_attributes = True
-        protected_namespaces = ()
+        protected_namespaces = ()  # Setting protected namespaces to empty
 
 
 # Types, properties, and shared models
@@ -116,7 +116,7 @@ class OrchestrationEventUpdate(BaseOrchestrationEvent):
 
 
 class ExtractorRequest(BaseSchema):
-    model_name: str | None = Field("gpt-3.5-turbo", description="Model name")
+    llm_name: str | None = Field("gpt-3.5-turbo", description="Model name")
     examples: list["ExtractorExampleRead"] = Field(
         [], description="Extraction examples"
     )
@@ -131,7 +131,7 @@ class ExtractorRequest(BaseSchema):
         return v
 
 
-class ExtractorRespose(BaseSchema):
+class ExtractorResponse(BaseSchema):
     data: list[Any]
     content_too_long: bool | None
 
@@ -342,7 +342,7 @@ class CoverLetterCreate(BaseCoverLetter):
         text_content = []
         for page_num in range(len(reader.pages)):
             page = reader.pages[page_num]
-            text_content.append(page.extract_text())
+            text_content.append(page.or_text())
         return cls(name=name, content=text_content[0], content_type=ContentType.GENERATED)  # type: ignore
 
 

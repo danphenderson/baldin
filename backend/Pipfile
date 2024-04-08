@@ -41,6 +41,7 @@ playwright-stealth = "*"
 rich = "*"
 jsonschema = "*"
 langchain-community = "*"
+typing-extensions = "*"
 
 [dev-packages]
 ipython = "*"

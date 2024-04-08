@@ -95,7 +95,7 @@ class Extractor(Base):
     __tablename__ = "extractors"
     name = Column(String)
     description = Column(Text)
-    schema = Column(JSONB)
+    json_schema = Column(JSONB)
     instruction = Column(Text)
     user_id = Column(UUID, ForeignKey("users.id"))
     user = relationship("User", back_populates="extractors")

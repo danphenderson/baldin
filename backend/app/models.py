@@ -37,6 +37,7 @@ class OrchestrationEvent(Base):
     error_message = Column(Text)
 
 
+# Extractor models
 class ExtractorExample(Base):
     """A representation of an example.
 
@@ -52,11 +53,11 @@ class ExtractorExample(Base):
     the JSON schema can represent a list of objects.
     """
 
-    __tablename__ = "examples"
+    __tablename__ = "extractor_examples"
     content = Column(Text, nullable=False, comment="The input portion of the example.")
     output = Column(JSONB, comment="The output associated with the example.")
     extractor_id = Column(UUID, ForeignKey("extractors.id"))
-    extractor = relationship("ExtractorExample", back_populates="examples")
+    extractor = relationship("Extractor", back_populates="extractor_examples")
 
     def __repr__(self) -> str:
         return f"<ExtractorExample(uuid={self.id}, content={self.content[:20]}>"
@@ -295,4 +296,3 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     certificates = relationship("Certificate", back_populates="user")
     cover_letters = relationship("CoverLetter", back_populates="user")
     extractors = relationship("Extractor", back_populates="user")
-    extractor_examples = relationship("ExtractorExample", back_populates="user")

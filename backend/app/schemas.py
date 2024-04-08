@@ -342,6 +342,45 @@ class UserUpdate(schemas.BaseUserUpdate, BaseUser):
     pass
 
 
+class BaseExtractorExample(BaseSchema):
+    content: str | None = Field(None, description="Example content")
+    output: str | None = Field(None, description="Example output")
+
+
+class ExtractorExampleRead(BaseRead, BaseExtractorExample):
+    pass
+
+
+class ExtractorExampleCreate(BaseExtractorExample):
+    pass
+
+
+class ExtractorExampleUpdate(BaseExtractorExample):
+    pass
+
+
+class BaseExtractor(BaseSchema):
+    name: str | None = Field(None, description="Extractor name")
+    description: str | None = Field(None, description="Extractor description")
+    json_schema: dict | None = Field(None, description="JSON schema")
+    instruction: str | None = Field(None, description="Extractor instruction")
+    extractor_examples: list[ExtractorExampleRead] = Field(
+        [], description="Extractor examples"
+    )
+
+
+class ExtractorRead(BaseRead, BaseExtractor):
+    pass
+
+
+class ExtractorCreate(BaseExtractor):
+    pass
+
+
+class ExtractorUpdate(BaseExtractor):
+    pass
+
+
 class ApplicationRead(BaseRead):
     lead_id: UUID4
     user_id: UUID4

@@ -148,7 +148,7 @@ async def update_application(
 
 @router.delete("/{id}", status_code=204)
 async def delete_application(
-    application=Depends(get_application),
+    application: schemas.ApplicationRead = Depends(get_application),
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):

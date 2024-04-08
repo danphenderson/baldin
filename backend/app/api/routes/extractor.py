@@ -1,4 +1,5 @@
 # app/api/routes/extractor.py
+import re
 from typing import Annotated, Literal, Sequence
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
@@ -16,6 +17,7 @@ from app.api.deps import (
     get_async_session,
     get_current_user,
     get_extractor,
+    get_extractor_example,
     models,
     parse_binary_input,
     schemas,
@@ -145,10 +147,10 @@ async def create_extractor_example(
     return example
 
 
-@router.delete("/{id}/examples/{example_id}")
+@router.delete("/{id}/examples/{example_id}", status_code=204)
 async def delete_extractor_example(
-    extractor: schemas.ExtractorRead = Depends(get_extractor),
-    example: models.ExtractorExample = Depends(get_extractor_examples),
+    id: UUID4,
+    example: models.ExtractorExample = Depends(get_extractor_example),
     db: AsyncSession = Depends(get_async_session),
 ) -> None:
     await db.delete(example)

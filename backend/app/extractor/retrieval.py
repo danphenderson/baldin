@@ -1,24 +1,23 @@
 from operator import itemgetter
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
-from api.extraction_runnable import (
-    ExtractRequest,
-    ExtractResponse,
-    deduplicate,
-    extraction_runnable,
-    get_examples_from_extractor,
-)
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_core.runnables import RunnableLambda
 from langchain_openai import OpenAIEmbeddings
 
-from backend.extract.backend.models import Extractor
+from app.extractor.extraction_runnable import (
+    deduplicate,
+    extraction_runnable,
+    get_examples_from_extractor,
+)
+from app.models import Extractor
+from app.schemas import ExtractorRequest, ExtractorRespose
 
 
-def _make_extract_requests(input_dict: Dict[str, Any]) -> List[ExtractRequest]:
+def _make_extract_requests(input_dict: dict[str, Any]) -> list[ExtractorRequest]:
     docs = input_dict.pop("text")
-    return [ExtractRequest(text=doc.page_content, **input_dict) for doc in docs]
+    return [ExtractorRequest(text=doc.page_content, **input_dict) for doc in docs]
 
 
 async def extract_from_content(
@@ -26,8 +25,8 @@ async def extract_from_content(
     extractor: Extractor,
     model_name: str,
     *,
-    text_splitter_kwargs: Optional[Dict[str, Any]] = None,
-) -> ExtractResponse:
+    text_splitter_kwargs: Optional[dict[str, Any]] = None,
+) -> ExtractorRespose:
     """Extract from potentially long-form content."""
     if text_splitter_kwargs is None:
         text_splitter_kwargs = {

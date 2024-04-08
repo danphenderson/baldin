@@ -8,7 +8,7 @@ from typing import Any, Sequence, TypeVar
 from fastapi_users import schemas
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
-from pydantic import EmailStr, Field, model_validator
+from pydantic import EmailStr, Field, model_validator, validator
 from PyPDF2 import PdfReader
 
 from app import utils
@@ -18,6 +18,7 @@ from app import utils
 class BaseSchema(_BaseModel):
     class Config:
         from_attributes = True
+        protected_namespaces = ()
 
 
 # Types, properties, and shared models
@@ -112,6 +113,27 @@ class OrchestrationEventCreate(BaseOrchestrationEvent):
 
 class OrchestrationEventUpdate(BaseOrchestrationEvent):
     pass
+
+
+class ExtractorRequest(BaseSchema):
+    model_name: str | None = Field("gpt-3.5-turbo", description="Model name")
+    examples: list["ExtractorExampleRead"] = Field(
+        [], description="Extraction examples"
+    )
+    instructions: str | None = Field(None, description="Extraction instruction")
+    json_schema: dict | None = Field(None, description="JSON schema")
+    text: str | None = Field(None, description="Text to extract from")
+
+    @validator("json_schema")
+    def validate_schema(cls, v: Any) -> dict[str, Any]:
+        """Validate the schema."""
+        utils.validate_json_schema(v)
+        return v
+
+
+class ExtractorRespose(BaseSchema):
+    data: list[Any]
+    content_too_long: bool | None
 
 
 class BaseSkill(BaseSchema):

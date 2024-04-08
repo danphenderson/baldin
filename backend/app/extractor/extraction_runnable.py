@@ -1,72 +1,24 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Sequence
 
-from api import settings
-from api.validators import validate_json_schema
 from fastapi import HTTPException
 from jsonschema import Draft202012Validator, exceptions
 from langchain.text_splitter import TokenTextSplitter
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import chain
-from langserve import CustomUserType
 from pydantic import BaseModel, Field, validator
-from typing_extensions import TypedDict
+from torch import ge
 
-from backend.app.extractor.llm import DEFAULT_MODEL, get_chunk_size, get_model
-from backend.extract.backend.models import Example, Extractor
-from backend.extract.backend.utils import update_json_schema
-
-
-class ExtractionExample(BaseModel):
-    """An example extraction.
-
-    This example consists of a text and the expected output of the extraction.
-    """
-
-    text: str = Field(..., description="The input text")
-    output: List[Dict[str, Any]] = Field(
-        ..., description="The expected output of the example. A list of objects."
-    )
+from app import schemas
+from app.core.conf import get_chunk_size, get_model, openai, settings
+from app.models import Extractor, ExtractorExample
+from app.utils import update_json_schema, validate_json_schema
 
 
-class ExtractRequest(CustomUserType):
-    """Request body for the extract endpoint."""
-
-    text: str = Field(..., description="The text to extract from.")
-    json_schema: Dict[str, Any] = Field(
-        ...,
-        description="JSON schema that describes what content should be extracted "
-        "from the text.",
-        alias="schema",
-    )
-    instructions: Optional[str] = Field(
-        None, description="Supplemental system instructions."
-    )
-    examples: Optional[List[ExtractionExample]] = Field(
-        None, description="Examples of extractions."
-    )
-    model_name: Optional[str] = Field("gpt-3.5-turbo", description="Chat model to use.")
-
-    @validator("json_schema")
-    def validate_schema(cls, v: Any) -> Dict[str, Any]:
-        """Validate the schema."""
-        validate_json_schema(v)
-        return v
-
-
-class ExtractResponse(TypedDict, total=False):
-    """Response body for the extract endpoint."""
-
-    data: List[Any]
-    # content to long will be set to true if the content is too long
-    # and had to be truncated
-    content_too_long: Optional[bool]
-
-
-def _cast_example_to_dict(example: Example) -> Dict[str, Any]:
+def _cast_example_to_dict(example: ExtractorExample) -> dict[str, Any]:
     """Cast example record to dictionary."""
     return {
         "text": example.content,
@@ -75,8 +27,8 @@ def _cast_example_to_dict(example: Example) -> Dict[str, Any]:
 
 
 def _make_prompt_template(
-    instructions: Optional[str],
-    examples: Optional[Sequence[ExtractionExample]],
+    instructions: str | None,
+    examples: Sequence[ExtractorExample] | None,
     function_name: str,
 ) -> ChatPromptTemplate:
     """Make a system message from instructions and examples."""
@@ -107,7 +59,9 @@ def _make_prompt_template(
             }
             few_shot_prompt.extend(
                 [
-                    HumanMessage(content=example.text),
+                    HumanMessage(
+                        content=getattr(example, "text", ""),
+                    ),
                     AIMessage(
                         content="", additional_kwargs={"function_call": function_call}
                     ),
@@ -120,7 +74,7 @@ def _make_prompt_template(
             "human",
             "I need to extract information from "
             "the following text: ```\n{text}\n```\n",
-        ),
+        ),  # type: ignore
     )
     return ChatPromptTemplate.from_messages(prompt_components)
 
@@ -129,8 +83,8 @@ def _make_prompt_template(
 
 
 def deduplicate(
-    extract_responses: Sequence[ExtractResponse],
-) -> ExtractResponse:
+    extract_responses: list[schemas.ExtractorRespose],
+) -> schemas.ExtractorRespose:
     """Deduplicate the results.
 
     The deduplication is done by comparing the serialized JSON of each of the results
@@ -147,44 +101,48 @@ def deduplicate(
                 unique_extracted.append(data_item)
 
     return {
-        "data": unique_extracted,
+        "data": unique_extracted,  # type: ignore
     }
 
 
-def get_examples_from_extractor(extractor: Extractor) -> List[Dict[str, Any]]:
+def get_examples_from_extractor(extractor: Extractor) -> list[dict[str, Any]]:
     """Get examples from an extractor."""
-    return [_cast_example_to_dict(example) for example in extractor.examples]
+    return [
+        _cast_example_to_dict(example) for example in getattr(extractor, "examples", [])
+    ]
 
 
 @chain
-async def extraction_runnable(extraction_request: ExtractRequest) -> ExtractResponse:
+async def extraction_runnable(
+    extraction_request: schemas.ExtractorRequest,
+) -> schemas.ExtractorRespose:
     """An end point to extract content from a given text object."""
     # TODO: Add validation for model context window size
-    schema = update_json_schema(extraction_request.json_schema)
+    schema = update_json_schema(getattr(extraction_request, "json_schema", {}))
     try:
         Draft202012Validator.check_schema(schema)
     except exceptions.ValidationError as e:
         raise HTTPException(status_code=422, detail=f"Invalid schema: {e.message}")
 
     prompt = _make_prompt_template(
-        extraction_request.instructions,
-        extraction_request.examples,
+        getattr(extraction_request, "instructions", None),
+        getattr(extraction_request, "examples", None),
         schema["title"],
     )
-    model = get_model(extraction_request.model_name)
+    model = get_model(getattr(extraction_request, "model_name", None) or DEFAULT_MODEL)
     # N.B. method must be consistent with examples in _make_prompt_template
     runnable = (
         prompt | model.with_structured_output(schema=schema, method="function_calling")
     ).with_config({"run_name": "extraction"})
 
-    return await runnable.ainvoke({"text": extraction_request.text})
+    return await runnable.ainvoke({"text": extraction_request.text})  # type: ignore
 
 
 async def extract_entire_document(
     content: str,
     extractor: Extractor,
     model_name: str,
-) -> ExtractResponse:
+) -> schemas.ExtractorRespose:
     """Extract from entire document."""
 
     json_schema = extractor.schema
@@ -192,16 +150,16 @@ async def extract_entire_document(
     text_splitter = TokenTextSplitter(
         chunk_size=get_chunk_size(model_name),
         chunk_overlap=20,
-        model_name=DEFAULT_MODEL,
+        model_name=openai.DEFAULT_MODEL,
     )
     texts = text_splitter.split_text(content)
     extraction_requests = [
-        ExtractRequest(
+        schemas.ExtractorRequest(
             text=text,
-            schema=json_schema,
+            json_schema=json_schema,
             instructions=extractor.instruction,  # TODO: consistent naming
             examples=examples,
-            model_name=model_name,
+            model_name=model_name,  # type: ignore
         )
         for text in texts
     ]
@@ -214,11 +172,13 @@ async def extract_entire_document(
         content_too_long = False
 
     # Run extractions which may potentially yield duplicate results
-    extract_responses: List[ExtractResponse] = await extraction_runnable.abatch(
+    extract_responses: Sequence[
+        schemas.ExtractorRespose
+    ] = await extraction_runnable.abatch(
         extraction_requests, {"max_concurrency": settings.MAX_CONCURRENCY}
     )
     # Deduplicate the results
     return {
         "data": deduplicate(extract_responses)["data"],
-        "content_too_long": content_too_long,
+        "content_too_long": content_too_long,  # type: ignore
     }

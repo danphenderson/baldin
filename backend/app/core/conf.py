@@ -1,7 +1,10 @@
 # app/core/conf.py
+from os import getenv
 from pathlib import Path
 from typing import Literal, Union
 
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_openai import ChatOpenAI
 from pydantic import AnyHttpUrl, AnyUrl, EmailStr, validator
 from pydantic_settings import BaseSettings
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -9,6 +12,49 @@ from toml import load as toml_load
 
 PROJECT_DIR = Path(__file__).parent.parent.parent
 PYPROJECT_CONTENT = toml_load(f"{PROJECT_DIR}/pyproject.toml")["project"]
+
+
+def get_supported_models():
+    """Get models according to environment secrets."""
+    models = {}
+    if getenv("OPENAI_API_KEY", None):
+        models["gpt-3.5-turbo"] = {
+            "chat_model": ChatOpenAI(model="gpt-3.5-turbo", temperature=0),
+            "description": "GPT-3.5 Turbo",
+        }
+        if getenv("DISABLE_GPT4", "").lower() != "true":
+            models["gpt-4-0125-preview"] = {
+                "chat_model": ChatOpenAI(model="gpt-4-0125-preview", temperature=0),
+                "description": "GPT-4 0125 Preview",
+            }
+
+    return models
+
+
+def get_model(model_name: str | None = None) -> BaseChatModel:
+    """Get the model."""
+    SUPPORTED_MODELS = get_supported_models()
+    if model_name is None:
+        return SUPPORTED_MODELS["gpt-3.5-turbo"]["chat_model"]
+    else:
+        supported_model_names = list(SUPPORTED_MODELS.keys())
+        if model_name not in supported_model_names:
+            raise ValueError(
+                f"Model {model_name} not found. "
+                f"Supported models: {supported_model_names}"
+            )
+        else:
+            return SUPPORTED_MODELS[model_name]["chat_model"]
+
+
+CHUNK_SIZES = {  # in tokens, defaults to int(4_096 * 0.8). Override here.
+    "gpt-4-0125-preview": int(128_000 * 0.8),
+}
+
+
+def get_chunk_size(model_name: str) -> int:
+    """Get the chunk size."""
+    return CHUNK_SIZES.get(model_name, int(4_096 * 0.8))
 
 
 class _BaseSettings(BaseSettings):
@@ -36,6 +82,17 @@ class Settings(_BaseSettings):
     PROJECT_NAME: str = PYPROJECT_CONTENT["name"]
     VERSION: str = PYPROJECT_CONTENT["version"]
     DESCRIPTION: str = PYPROJECT_CONTENT["description"]
+
+    # Max concurrency used for extracting content from documents.
+    # A long document is broken into smaller chunks this controls
+    # how many chunks are processed concurrently.
+    MAX_CONCURRENCY: int
+
+    # Max number of chunks to process per documents
+    # When a long document is split into chunks, this controls
+    # how many of those chunks will be processed.
+    # Set to 0 or negative to disable the max chunks limit.
+    MAX_CHUNKS: int = 0
 
     # POSTGRESQL DEFAULT DATABASE
     DEFAULT_DATABASE_HOSTNAME: str
@@ -118,6 +175,8 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
 
     API_KEY: str = ""
     COMPLETION_MODEL: str = "gpt-3.5-turbo"
+    SUPPORTED_MODELS: dict[str, dict[str, str]] = get_supported_models()
+    DEFAULT_MODEL: str = "gpt-3.5-turbo"
 
 
 class Linkedin(_BaseSettings, env_prefix="LINKEDIN_"):

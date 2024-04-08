@@ -1,11 +1,11 @@
 # app/api/routes/extractor.py
 from typing import Annotated, Literal, Sequence
-from typing_extensions import TypedDict
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import UUID4
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
+from typing_extensions import TypedDict
 
 from app.api.deps import (
     MAX_FILE_SIZE_MB,
@@ -24,6 +24,7 @@ from app.core import conf
 
 router: APIRouter = APIRouter()
 
+
 @router.post("/run", response_model=schemas.ExtractorRead)
 async def run_extractor(
     extractor_id: Annotated[UUID4, Form()],
@@ -39,8 +40,7 @@ async def run_extractor(
 
     extractor = (
         await db.execute(
-            select(models.Extractor)
-            .filter_by(uuid=extractor_id, user_id=user.id)
+            select(models.Extractor).filter_by(uuid=extractor_id, user_id=user.id)
         )
     ).scalar()
 
@@ -63,6 +63,7 @@ async def run_extractor(
             f"Invalid mode {mode}. Expected one of 'entire_document', 'retrieval'."
         )
 
+
 @router.get("/{id}", response_model=schemas.ExtractorRead)
 async def read_extractor(
     extractor: schemas.ExtractorRead = Depends(get_extractor),
@@ -74,18 +75,20 @@ async def read_extractor(
 async def read_extractors(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
-    limit: int = Query(10, ge=1),
-    offset: int = Query(0, ge=0),
 ) -> Sequence[schemas.ExtractorRead]:
-    result = await db.execute(
-        select(models.Extractor)
-        .filter_by(user_id=user.id)
-        .limit(limit)
-        .offset(offset)
-    )
-    return result.scalars().all() # type: ignore
+    try:
+        query = (
+            select(models.Extractor)
+            .options(selectinload(models.Extractor.extractor_examples))
+            .where(models.Extractor.user_id == user.id)
+        )
+        result = await db.execute(query)
+        extractors = result.scalars().all()
 
-
+        return [schemas.ExtractorRead.from_orm(extractor) for extractor in extractors]
+    except Exception as e:
+        # Log the exception for debugging
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/", response_model=schemas.ExtractorRead)
@@ -97,7 +100,8 @@ async def create_extractor(
     extractor = models.Extractor(**extractor_in.dict(), user_id=user.id)
     db.add(extractor)
     await db.commit()
-    return extractor # type: ignore
+    return extractor  # type: ignore
+
 
 @router.put("/{id}", response_model=schemas.ExtractorRead)
 async def update_extractor(
@@ -109,6 +113,7 @@ async def update_extractor(
         setattr(extractor, field, value)
     await db.commit()
     return extractor
+
 
 @router.get("/{id}/examples", response_model=list[schemas.ExtractorExampleRead])
 async def get_extractor_examples(
@@ -124,7 +129,7 @@ async def get_extractor_examples(
         .limit(limit)
         .offset(offset)
     )
-    return result.scalars().all() # type: ignore
+    return result.scalars().all()  # type: ignore
 
 
 @router.post("/{id}/examples", response_model=schemas.ExtractorExampleRead)
@@ -175,5 +180,5 @@ def get_configuration() -> ConfigurationResponse:
         "accepted_mimetypes": SUPPORTED_MIMETYPES,
         "max_file_size_mb": MAX_FILE_SIZE_MB,
         "max_concurrency": conf.settings.MAX_CONCURRENCY,
-        "max_chunks": conf.settings.MAX_CHUNKS, # type: ignore
+        "max_chunks": conf.settings.MAX_CHUNKS,  # type: ignore
     }

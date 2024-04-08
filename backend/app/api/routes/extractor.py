@@ -12,6 +12,7 @@ from app.api.deps import (
     MAX_FILE_SIZE_MB,
     SUPPORTED_MIMETYPES,
     AsyncSession,
+    console_log,
     extract_entire_document,
     extract_from_content,
     get_async_session,
@@ -25,6 +26,41 @@ from app.api.deps import (
 from app.core import conf
 
 router: APIRouter = APIRouter()
+
+
+class ConfigurationResponse(TypedDict):
+    """Response for configuration."""
+
+    available_models: list[str]
+    accepted_mimetypes: list[str]
+    max_file_size_mb: int
+    max_concurrency: int
+    max_chunks: int
+    models: list[dict]
+
+
+@router.get("/configurables", response_model=ConfigurationResponse)
+def get_configuration(
+    user: schemas.UserRead = Depends(get_current_user),
+) -> ConfigurationResponse:
+    """Endpoint to show server configuration."""
+    res = {
+        "available_models": sorted(conf.openai.SUPPORTED_MODELS),  # Deprecate
+        "models": [
+            {
+                "name": model,
+                "description": data["description"],
+            }
+            for model, data in conf.openai.SUPPORTED_MODELS.items()
+        ],
+        "accepted_mimetypes": SUPPORTED_MIMETYPES,
+        "max_file_size_mb": MAX_FILE_SIZE_MB,
+        "max_concurrency": conf.settings.MAX_CONCURRENCY,
+        "max_chunks": conf.settings.MAX_CHUNKS,  # type: ignore
+    }
+    console_log.info("User %s requested configuration.", user.first_name)
+    console_log.info(f"Returning configuration: {res}")
+    return res  # type: ignore
 
 
 @router.post("/run", response_model=schemas.ExtractorRead)
@@ -118,6 +154,15 @@ async def update_extractor(
     return schemas.ExtractorRead.from_orm(extractor)
 
 
+@router.delete("/{id}", status_code=204)
+async def delete_extractor(
+    extractor: schemas.ExtractorRead = Depends(get_extractor),
+    db: AsyncSession = Depends(get_async_session),
+) -> None:
+    await db.delete(extractor)
+    await db.commit()
+
+
 @router.get("/{id}/examples", response_model=list[schemas.ExtractorExampleRead])
 async def get_extractor_examples(
     extractor: schemas.ExtractorRead = Depends(get_extractor),
@@ -155,33 +200,3 @@ async def delete_extractor_example(
 ) -> None:
     await db.delete(example)
     await db.commit()
-
-
-class ConfigurationResponse(TypedDict):
-    """Response for configuration."""
-
-    available_models: list[str]
-    accepted_mimetypes: list[str]
-    max_file_size_mb: int
-    max_concurrency: int
-    max_chunks: int
-    models: list[dict]
-
-
-@router.get("/configurables", response_model=ConfigurationResponse)
-def get_configuration() -> ConfigurationResponse:
-    """Endpoint to show server configuration."""
-    return {
-        "available_models": sorted(conf.openai.SUPPORTED_MODELS),  # Deprecate
-        "models": [
-            {
-                "name": model,
-                "description": data["description"],
-            }
-            for model, data in conf.openai.SUPPORTED_MODELS.items()
-        ],
-        "accepted_mimetypes": SUPPORTED_MIMETYPES,
-        "max_file_size_mb": MAX_FILE_SIZE_MB,
-        "max_concurrency": conf.settings.MAX_CONCURRENCY,
-        "max_chunks": conf.settings.MAX_CHUNKS,  # type: ignore
-    }

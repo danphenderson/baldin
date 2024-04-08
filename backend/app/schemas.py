@@ -76,7 +76,7 @@ class BaseOrchestrationPipeline(BaseSchema):
     params: dict | None = Field(None, description="Parameters for the pipeline")
 
 
-class OrchestrationPipelineRead(BaseRead, BaseOrchestrationPipeline):
+class OrchestrationPipelineRead(BaseOrchestrationPipeline, BaseRead):
     events: list["OrchestrationEventRead"] = Field(
         [], description="Events in the pipeline"
     )
@@ -100,11 +100,11 @@ class BaseOrchestrationEvent(BaseSchema):
     status: OrchestrationEventStatusType | None = Field(
         None, description="Status of the event"
     )
+    pipeline_id: UUID4 | None = Field(None, description="Pipeline ID")
 
 
-class OrchestrationEventRead(BaseRead, BaseOrchestrationEvent):
-    pipeline_id: UUID4
-    status: OrchestrationEventStatusType = Field(..., description="Status of the event")
+class OrchestrationEventRead(BaseOrchestrationEvent, BaseRead):
+    pass
 
 
 class OrchestrationEventCreate(BaseOrchestrationEvent):

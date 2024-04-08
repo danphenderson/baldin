@@ -27,7 +27,7 @@ from app.extractor.parsing import (
     parse_binary_input,
 )
 from app.extractor.retrieval import extract_from_content
-from app.logging import get_async_logger  # noqa
+from app.logging import console_log, get_async_logger  # noqa
 
 log = get_async_logger(__name__)
 

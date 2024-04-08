@@ -90,6 +90,8 @@ export interface paths {
     get: operations["read_orch_pipeline_data_orchestration_pipelines__id__get"];
     /** Update Orch Pipeline */
     put: operations["update_orch_pipeline_data_orchestration_pipelines__id__put"];
+    /** Delete Orch Pipeline */
+    delete: operations["delete_orch_pipeline_data_orchestration_pipelines__id__delete"];
   };
   "/data_orchestration/events": {
     /** Read Orch Events */
@@ -100,6 +102,8 @@ export interface paths {
   "/data_orchestration/events/{id}": {
     /** Read Orch Event */
     get: operations["read_orch_event_data_orchestration_events__id__get"];
+    /** Update Orch Event */
+    put: operations["update_orch_event_data_orchestration_events__id__put"];
   };
   "/contacts/": {
     /** Get Current User Contacts */
@@ -1143,6 +1147,8 @@ export interface components {
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
       destination_uri?: components["schemas"]["URI"] | null;
+      /** @description Status of the event */
+      status?: components["schemas"]["OrchestrationEventStatusType"] | null;
       /**
        * Pipeline Id
        * Format: uuid4
@@ -1165,6 +1171,8 @@ export interface components {
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
       destination_uri?: components["schemas"]["URI"] | null;
+      /** @description Status of the event */
+      status: components["schemas"]["OrchestrationEventStatusType"];
       /**
        * Id
        * Format: uuid4
@@ -1188,8 +1196,6 @@ export interface components {
        * Format: uuid4
        */
       pipeline_id: string;
-      /** @description Status of the event */
-      status: components["schemas"]["OrchestrationEventStatusType"];
     };
     /** OrchestrationEventRead */
     "OrchestrationEventRead-Output": {
@@ -1207,6 +1213,8 @@ export interface components {
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
       destination_uri?: components["schemas"]["URI"] | null;
+      /** @description Status of the event */
+      status: components["schemas"]["OrchestrationEventStatusType"];
       /**
        * Id
        * Format: uuid4
@@ -1230,14 +1238,31 @@ export interface components {
        * Format: uuid4
        */
       pipeline_id: string;
-      /** @description Status of the event */
-      status: components["schemas"]["OrchestrationEventStatusType"];
     };
     /**
      * OrchestrationEventStatusType
      * @enum {string}
      */
     OrchestrationEventStatusType: "pending" | "running" | "success" | "failure";
+    /** OrchestrationEventUpdate */
+    OrchestrationEventUpdate: {
+      /**
+       * Name
+       * @description Name of the event
+       */
+      name?: string | null;
+      /**
+       * Message
+       * @description Error message
+       */
+      message?: string | null;
+      /** @description Source of the pipeline */
+      source_uri?: components["schemas"]["URI"] | null;
+      /** @description Destination of the pipeline */
+      destination_uri?: components["schemas"]["URI"] | null;
+      /** @description Status of the event */
+      status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+    };
     /** OrchestrationPipelineCreate */
     OrchestrationPipelineCreate: {
       /**
@@ -2346,6 +2371,28 @@ export interface operations {
       };
     };
   };
+  /** Delete Orch Pipeline */
+  delete_orch_pipeline_data_orchestration_pipelines__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Read Orch Events */
   read_orch_events_data_orchestration_events_get: {
     responses: {
@@ -2384,6 +2431,33 @@ export interface operations {
     parameters: {
       path: {
         id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Orch Event */
+  update_orch_event_data_orchestration_events__id__put: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrchestrationEventUpdate"];
       };
     };
     responses: {

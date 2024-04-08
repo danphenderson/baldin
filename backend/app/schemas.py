@@ -6,7 +6,6 @@ from pathlib import Path  # TODO: Use Literal for performance improvement
 from typing import Any, Sequence, TypeVar
 
 from fastapi_users import schemas
-from numpy import source
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, model_validator
@@ -97,6 +96,9 @@ class BaseOrchestrationEvent(BaseSchema):
     message: str | None = Field(None, description="Error message")
     source_uri: URI | None = Field(None, description="Source of the pipeline")
     destination_uri: URI | None = Field(None, description="Destination of the pipeline")
+    status: OrchestrationEventStatusType | None = Field(
+        None, description="Status of the event"
+    )
 
 
 class OrchestrationEventRead(BaseRead, BaseOrchestrationEvent):
@@ -109,9 +111,7 @@ class OrchestrationEventCreate(BaseOrchestrationEvent):
 
 
 class OrchestrationEventUpdate(BaseOrchestrationEvent):
-    status: OrchestrationEventStatusType | None = Field(
-        None, description="Status of the event"
-    )
+    pass
 
 
 class BaseSkill(BaseSchema):

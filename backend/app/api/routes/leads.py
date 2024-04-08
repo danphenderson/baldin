@@ -12,6 +12,7 @@ from app.api.deps import (
     conf,
     create_orchestration_event,
     get_async_session,
+    get_current_user,
     get_lead,
     get_orchestration_event,
     get_pagination_params,
@@ -79,6 +80,7 @@ async def _load_leads_into_database(orch_event_id):
 async def load_database(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
 ):
     """
     Loads the database with leads from the data lake.
@@ -93,13 +95,33 @@ async def load_database(
         type=schemas.URIType("database"),
     )
 
+    # Get orchestration pipeline record, if it doesn't exist, create it
+    pipeline = await db.execute(
+        select(models.OrchestrationPipeline).where(
+            models.OrchestrationPipeline.name == "load_database"
+        )
+    )
+
+    pipeline = pipeline.scalars().first()  # type: ignore
+
+    if not pipeline:
+        pipeline = models.OrchestrationPipeline(
+            name="load_database",
+            description="Loads the database with leads from the data lake",
+            user_id=user.id,  # type: ignore
+        )
+        db.add(pipeline)
+        await db.commit()
+        await db.refresh(pipeline)
+
     # Create an orchestration event
     payload = schemas.OrchestrationEventCreate(
-        job_name="load_database",
+        name="load_database",
         source_uri=source_uri,
         destination_uri=destination_uri,
         status=schemas.OrchestrationEventStatusType("pending"),
-        error_message=None,
+        message=f"Triggered by pipeline {getattr(pipeline, 'name')}",
+        pipeline_id=getattr(pipeline, "id"),
     )
 
     # Post orchestration event and wait for model to be created

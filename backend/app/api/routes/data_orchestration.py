@@ -1,11 +1,8 @@
 # app/api/routes/data_orchestration.py
 import json
-from pathlib import Path
 
-import pip
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import RedirectResponse
 from pydantic import UUID4
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -20,7 +17,6 @@ from app.api.deps import (  # noqa
     models,
     schemas,
 )
-from app.logging import console_log
 
 router: APIRouter = APIRouter()
 
@@ -71,6 +67,16 @@ async def update_orch_pipeline(
     return existing_pipeline
 
 
+@router.delete("/pipelines/{id}")
+async def delete_orch_pipeline(
+    pipeline: schemas.OrchestrationPipelineRead = Depends(get_orchestration_pipeline),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await db.delete(pipeline)
+    await db.commit()
+    return {"message": "Pipeline deleted"}
+
+
 @router.get("/events", response_model=list[schemas.OrchestrationEventRead])
 async def read_orch_events(db: AsyncSession = Depends(get_async_session)):
     rows = await db.execute(select(models.OrchestrationEvent))
@@ -80,19 +86,18 @@ async def read_orch_events(db: AsyncSession = Depends(get_async_session)):
 
     processed_result = []
     for event in result:
-        # Prepare source_uri and destination_uri
-        # Set them to None or provide a default valid object matching the URI schema
-        event.source_uri = (
-            event.source_uri or None
-        )  # Adjust according to your schema requirements
-        event.destination_uri = (
-            event.destination_uri or None
-        )  # Adjust according to your schema requirements
-        event.status = (
-            event.status or "pending"
-        )  # Ensure status is set to a valid string
-        # Convert SQLAlchemy model to dictionary and ensure it conforms to the schema
+        # Parse source_uri and destination_uri from JSON string to dictionary
+        source_uri = json.loads(event.source_uri) if event.source_uri else None
+        destination_uri = (
+            json.loads(event.destination_uri) if event.destination_uri else None
+        )
+
         event_data = jsonable_encoder(event)
+        # Update the event_data with parsed URIs
+        event_data.update(
+            {"source_uri": source_uri, "destination_uri": destination_uri}
+        )
+
         processed_event = schemas.OrchestrationEventRead(**event_data)
         processed_result.append(processed_event)
 
@@ -102,14 +107,9 @@ async def read_orch_events(db: AsyncSession = Depends(get_async_session)):
 @router.get(
     "/events/{id}", status_code=202, response_model=schemas.OrchestrationEventRead
 )
-async def read_orch_event(id: UUID4, db: AsyncSession = Depends(get_async_session)):
-    event = await get_orchestration_event(id, db)
-    event.source_uri = json.loads(
-        getattr(event, "source_uri")
-    )  # Deserialize into URI object
-    event.destination_uri = json.loads(
-        getattr(event, "destination_uri")
-    )  # Deserialize into URI object
+async def read_orch_event(
+    event: schemas.OrchestrationEventRead = Depends(get_orchestration_event),
+):
     return event
 
 
@@ -145,3 +145,24 @@ async def create_orch_event(
         await session.commit()
 
     return event_model
+
+
+@router.put(
+    "/events/{id}",
+    status_code=202,
+    response_model=schemas.OrchestrationEventRead,
+)
+async def update_orch_event(
+    id: UUID4,
+    event: schemas.OrchestrationEventUpdate,
+    db: AsyncSession = Depends(get_async_session),
+):
+    async with db as session:
+        existing_event = await session.get(models.OrchestrationEvent, id)
+        if not existing_event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        for field, value in event:
+            setattr(existing_event, field, value)
+        await session.commit()
+        await session.refresh(existing_event)
+        return existing_event

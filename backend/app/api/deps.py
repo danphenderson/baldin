@@ -228,6 +228,19 @@ async def get_certificate(
     return certificate
 
 
+async def get_orchestration_pipeline(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.OrchestrationPipeline:
+    pipeline = await db.get(models.OrchestrationPipeline, id)
+    if not pipeline:
+        raise await _404(pipeline, id)
+    if pipeline.user_id != user.id:  # type: ignore
+        raise await _403(user.id, pipeline, id)
+    return pipeline
+
+
 def model_to_dict(model_instance):
     """
     Convert SQLAlchemy model instance to dictionary, handling nested relationships

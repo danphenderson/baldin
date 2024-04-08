@@ -22,19 +22,41 @@ class Base(DeclarativeBase):
 
 
 # Data Orchestration models
+class OrchestrationPipeline(Base):
+    """
+    Model for ETL (Extract, Transform, Load) pipelines.
+    Contains name, description, source, destination, and parameters.
+    Linked to orchestration events via one-to-many relationship.
+    """
+
+    __tablename__ = "orchestration_pipelines"
+    name = Column(String)
+    description = Column(Text)
+    params = Column(JSON)
+    user_id = Column(UUID, ForeignKey("users.id"))
+    user = relationship("User", back_populates="orchestration_pipelines")
+    orchestration_events = relationship(
+        "OrchestrationEvent", back_populates="orchestration_pipeline"
+    )
+
+
 class OrchestrationEvent(Base):
     """
-    Model for ETL (Extract, Transform, Load) events.
-    Tracks job names, status, start and end times, error messages.
-    Useful for monitoring and debugging ETL processes.
+    Model for orchestration events.
+    Contains job name, status, message, and reference to the pipeline.
+    Useful for tracking the status of ETL jobs.
     """
 
     __tablename__ = "orchestration_events"
-    job_name = Column(String)
+    name = Column(String)
+    status = Column(String, default="pending")  # running, success, failure
+    message = Column(Text)
     source_uri = Column(JSON)
     destination_uri = Column(JSON)
-    status = Column(String)  # running, success, failure
-    error_message = Column(Text)
+    pipeline_id = Column(UUID, ForeignKey("orchestration_pipelines.id"))
+    orchestration_pipeline = relationship(
+        "OrchestrationPipeline", back_populates="orchestration_events"
+    )
 
 
 # Extractor models
@@ -296,3 +318,6 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     certificates = relationship("Certificate", back_populates="user")
     cover_letters = relationship("CoverLetter", back_populates="user")
     extractors = relationship("Extractor", back_populates="user")
+    orchestration_pipelines = relationship(
+        "OrchestrationPipeline", back_populates="user"
+    )

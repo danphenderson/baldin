@@ -6,6 +6,7 @@ from pathlib import Path  # TODO: Use Literal for performance improvement
 from typing import Any, Sequence, TypeVar
 
 from fastapi_users import schemas
+from numpy import source
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, model_validator
@@ -68,26 +69,49 @@ class Pagination(BaseSchema):
     request_count: bool = Field(False, description="Request a query for total count")
 
 
-# Model CRUD Schemas+
+# Model CRUD Schemas
+class BaseOrchestrationPipeline(BaseSchema):
+    name: str | None = Field(None, description="Name of the pipeline")
+    description: str | None = Field(None, description="Description of the pipeline")
+    params: dict | None = Field(None, description="Parameters for the pipeline")
+
+
+class OrchestrationPipelineRead(BaseRead, BaseOrchestrationPipeline):
+    events: list["OrchestrationEventRead"] = Field(
+        [], description="Events in the pipeline"
+    )
+
+
+class OrchestrationPipelineCreate(BaseOrchestrationPipeline):
+    pass
+
+
+class OrchestrationPipelineUpdate(BaseOrchestrationPipeline):
+    events: list["OrchestrationEventRead"] = Field(
+        [], description="Events in the pipeline"
+    )
+
+
 class BaseOrchestrationEvent(BaseSchema):
-    status: OrchestrationEventStatusType | None = Field(None, description="Status")
-    error_message: str | None = Field(None, description="Error message, if any")
+    name: str | None = Field(None, description="Name of the event")
+    message: str | None = Field(None, description="Error message")
+    source_uri: URI | None = Field(None, description="Source of the pipeline")
+    destination_uri: URI | None = Field(None, description="Destination of the pipeline")
 
 
 class OrchestrationEventRead(BaseRead, BaseOrchestrationEvent):
-    job_name: str | None = Field(None, description="Name of the ETL job")
-    source_uri: URI | None = Field(None, description="Source URI")
-    destination_uri: URI | None = Field(None, description="Destination URI")
+    pipeline_id: UUID4
+    status: OrchestrationEventStatusType = Field(..., description="Status of the event")
 
 
 class OrchestrationEventCreate(BaseOrchestrationEvent):
-    job_name: str
-    source_uri: URI
-    destination_uri: URI
+    pipeline_id: UUID4
 
 
 class OrchestrationEventUpdate(BaseOrchestrationEvent):
-    pass
+    status: OrchestrationEventStatusType | None = Field(
+        None, description="Status of the event"
+    )
 
 
 class BaseSkill(BaseSchema):

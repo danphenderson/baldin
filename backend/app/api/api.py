@@ -13,7 +13,6 @@ from app.api.routes import (
     experiences,
     leads,
     resumes,
-    services,
     skills,
     users,
 )
@@ -54,11 +53,6 @@ api_router.include_router(
     data_orchestration.router,
     prefix="/data_orchestration",
     tags=["data_orchestration"],
-)
-api_router.include_router(
-    services.router,
-    prefix="/services",
-    tags=["services"],
 )
 api_router.include_router(
     contacts.router,

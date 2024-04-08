@@ -27,23 +27,34 @@ router: APIRouter = APIRouter()
 
 
 async def _load_leads_into_database(orch_event_id):
-    """
-    Loads the database with leads from the data lake.
-    """
     async with session_context() as db:
         # Get the orchestration event record
         event = await get_orchestration_event(orch_event_id, db)
         event_id = getattr(event, "id")
 
         # Update the orchestration event status to "running"
-        setattr(event, "status", schemas.OrchestrationEventStatusType("running"))
+        event_dict = event.__dict__
+        event_dict["status"] = schemas.OrchestrationEventStatusType("running").value
 
+        def _update_event_dict(event_dict):
+            # Correctly parse source_uri and destination_uri before updating
+            if isinstance(event_dict.get("source_uri"), str):
+                event_dict["source_uri"] = json.loads(event_dict["source_uri"])
+            if isinstance(event_dict.get("destination_uri"), str):
+                event_dict["destination_uri"] = json.loads(
+                    event_dict["destination_uri"]
+                )
+            return event_dict
+
+        event_dict = _update_event_dict(event_dict)
+
+        # Update the event
         event = await update_orchestration_event(
-            event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
+            event_id, schemas.OrchestrationEventUpdate(**event_dict), db
         )
 
         # Unmarshal the source URI
-        source_uri = schemas.URI.model_validate_json(getattr(event, "source_uri"))
+        source_uri = schemas.URI.model_validate_json(event.source_uri)
 
         # Load the database
         async for lead in utils.generate_pydantic_models_from_json(
@@ -51,26 +62,28 @@ async def _load_leads_into_database(orch_event_id):
         ):
             try:
                 # Create a new lead if it doesn't exist
-                lead = models.Lead(**lead.__dict__)
+                lead = models.Lead(**lead.dict())
                 db.add(lead)
                 await db.commit()
                 await db.refresh(lead)
             except Exception as e:
                 # Rollback on exception and update the orchestration event status to "failure" with error message
                 await db.rollback()
-                setattr(event, "error_message", str(e))
-                setattr(
-                    event, "status", schemas.OrchestrationEventStatusType("failure")
-                )
-                event = await update_orchestration_event(
-                    event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
+                event_dict["error_message"] = str(e)
+                event_dict["status"] = schemas.OrchestrationEventStatusType(
+                    "failure"
+                ).value
+                await update_orchestration_event(
+                    event_id, schemas.OrchestrationEventUpdate(**event_dict), db
                 )
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Update the orchestration event status to "success"
-        setattr(event, "status", schemas.OrchestrationEventStatusType("success"))
-        event = await update_orchestration_event(
-            event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
+        event_dict["status"] = schemas.OrchestrationEventStatusType("success").value
+
+        event_dict = _update_event_dict(event_dict)
+        await update_orchestration_event(
+            event_id, schemas.OrchestrationEventUpdate(**event_dict), db
         )
 
 

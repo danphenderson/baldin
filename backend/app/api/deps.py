@@ -8,6 +8,7 @@ from typing import Any, Sequence, Type
 from fastapi import BackgroundTasks, Depends, HTTPException, Query  # noqa
 from pydantic import UUID4
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app import models, schemas, utils  # noqa
 from app.core import conf  # noqa
@@ -254,7 +255,13 @@ async def get_extractor(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Extractor:
-    extractor = await db.get(models.Extractor, id)
+    query = (
+        select(models.Extractor)
+        .filter(models.Extractor.id == id)
+        .options(selectinload(models.Extractor.extractor_examples))
+    )
+    extractor = await db.execute(query)
+    extractor = extractor.scalars().first()
     if not extractor:
         raise await _404(extractor, id)
     if extractor.user_id != user.id:  # type: ignore

@@ -105,14 +105,15 @@ async def create_extractor(
 
 @router.put("/{id}", response_model=schemas.ExtractorRead)
 async def update_extractor(
-    extractor_in: schemas.ExtractorUpdate,
+    payload: schemas.ExtractorUpdate,
     extractor: schemas.ExtractorRead = Depends(get_extractor),
     db: AsyncSession = Depends(get_async_session),
 ) -> schemas.ExtractorRead:
-    for field, value in extractor_in.dict().items():
+    for field, value in payload.dict(exclude_unset=True).items():
         setattr(extractor, field, value)
     await db.commit()
-    return extractor
+    await db.refresh(extractor)
+    return schemas.ExtractorRead.from_orm(extractor)
 
 
 @router.get("/{id}/examples", response_model=list[schemas.ExtractorExampleRead])

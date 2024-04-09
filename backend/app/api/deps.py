@@ -3,10 +3,12 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path  # noqa
-from typing import Any, Type
+from typing import Any, Sequence, Type
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Query  # noqa
 from pydantic import UUID4
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app import models, schemas, utils  # noqa
 from app.core import conf  # noqa
@@ -18,7 +20,14 @@ from app.core.security import (  # noqa
     get_current_superuser,
     get_current_user,
 )
-from app.logging import get_async_logger  # noqa
+from app.extractor.extraction_runnable import extract_entire_document
+from app.extractor.parsing import (
+    MAX_FILE_SIZE_MB,
+    SUPPORTED_MIMETYPES,
+    parse_binary_input,
+)
+from app.extractor.retrieval import extract_from_content
+from app.logging import console_log, get_async_logger  # noqa
 
 log = get_async_logger(__name__)
 
@@ -226,6 +235,66 @@ async def get_certificate(
     if certificate.user_id != user.id:  # type: ignore
         raise await _403(user.id, certificate, id)
     return certificate
+
+
+async def get_orchestration_pipeline(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.OrchestrationPipeline:
+    pipeline = await db.get(models.OrchestrationPipeline, id)
+    if not pipeline:
+        raise await _404(pipeline, id)
+    if pipeline.user_id != user.id:  # type: ignore
+        raise await _403(user.id, pipeline, id)
+    return pipeline
+
+
+async def get_extractor(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Extractor:
+    query = (
+        select(models.Extractor)
+        .filter(models.Extractor.id == id)
+        .options(selectinload(models.Extractor.extractor_examples))
+    )
+    extractor = await db.execute(query)
+    extractor = extractor.scalars().first()
+    if not extractor:
+        raise await _404(extractor, id)
+    if extractor.user_id != user.id:  # type: ignore
+        raise await _403(user.id, extractor, id)
+    return extractor
+
+
+async def get_extractor_example(
+    example_id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.ExtractorExample:
+    example = await db.get(models.ExtractorExample, example_id)
+    if not example:
+        raise HTTPException(
+            status_code=404, detail=f"Example with id {example_id} not found"
+        )
+    # Further checks for user access to this example can be performed here
+    return example
+
+
+async def get_extractor_examples(
+    extractor_id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> Sequence[models.ExtractorExample]:
+    examples = await db.execute(
+        select(models.ExtractorExample)
+        .filter(models.Extractor.user_id == user.id)
+        .filter(models.ExtractorExample.extractor_id == extractor_id)
+        .order_by(models.ExtractorExample.created_at)
+    )
+    return examples.scalars().all()
 
 
 def model_to_dict(model_instance):

@@ -1,7 +1,10 @@
 # app/core/conf.py
+from os import getenv
 from pathlib import Path
 from typing import Literal, Union
 
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_openai import ChatOpenAI
 from pydantic import AnyHttpUrl, AnyUrl, EmailStr, validator
 from pydantic_settings import BaseSettings
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -9,6 +12,56 @@ from toml import load as toml_load
 
 PROJECT_DIR = Path(__file__).parent.parent.parent
 PYPROJECT_CONTENT = toml_load(f"{PROJECT_DIR}/pyproject.toml")["project"]
+
+# FIXME: A big hack here to resolve this error when posting to `extractor/run` in retrieval mode:
+# OMP: Error #15: Initializing libomp.dylib, but found libomp.dylib already initialized.
+# OMP: Hint This means that multiple copies of the OpenMP runtime have been linked into the program. That is dangerous, since it can degrade performance or cause incorrect results. The best thing to do is to ensure that only a single OpenMP runtime is linked into the process, e.g. by avoiding static linking of the OpenMP runtime in any library. As an unsafe, unsupported, undocumented workaround you can set the environment variable KMP_DUPLICATE_LIB_OK=TRUE to allow the program to continue to execute, but that may cause crashes or silently produce incorrect results. For more information, please see http://openmp.llvm.org/
+
+import os
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+
+def get_supported_models():
+    """Get models according to environment secrets."""
+    models = {}
+    if getenv("OPENAI_API_KEY", None):
+        models["gpt-3.5-turbo"] = {
+            "chat_model": ChatOpenAI(model="gpt-3.5-turbo", temperature=0),
+            "description": "GPT-3.5 Turbo",
+        }
+        if getenv("DISABLE_GPT4", "").lower() != "true":
+            models["gpt-4-0125-preview"] = {
+                "chat_model": ChatOpenAI(model="gpt-4-0125-preview", temperature=0),
+                "description": "GPT-4 0125 Preview",
+            }
+
+    return models
+
+
+def get_model(name: str | None = None) -> BaseChatModel:
+    """Get the model."""
+    SUPPORTED_MODELS = get_supported_models()
+    if name is None:
+        return SUPPORTED_MODELS["gpt-3.5-turbo"]["chat_model"]
+    else:
+        supported_model_names = list(SUPPORTED_MODELS.keys())
+        if name not in supported_model_names:
+            raise ValueError(
+                f"Model {name} not found. " f"Supported models: {supported_model_names}"
+            )
+        else:
+            return SUPPORTED_MODELS[name]["chat_model"]
+
+
+CHUNK_SIZES = {  # in tokens, defaults to int(4_096 * 0.8). Override here.
+    "gpt-4-0125-preview": int(128_000 * 0.8),
+}
+
+
+def get_chunk_size(name: str) -> int:
+    """Get the chunk size."""
+    return CHUNK_SIZES.get(name, int(4_096 * 0.8))
 
 
 class _BaseSettings(BaseSettings):
@@ -28,7 +81,7 @@ class Settings(_BaseSettings):
     ENVIRONMENT: Literal["DEV", "PYTEST", "STAGE", "PRODUCTION"]
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     BACKEND_CORS_ORIGINS: Union[str, list[AnyHttpUrl]]
-    LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
     LOGGING_FILE_NAME: str = "app.log"
     PUBLIC_ASSETS_DIR: str = "public"
 
@@ -36,6 +89,17 @@ class Settings(_BaseSettings):
     PROJECT_NAME: str = PYPROJECT_CONTENT["name"]
     VERSION: str = PYPROJECT_CONTENT["version"]
     DESCRIPTION: str = PYPROJECT_CONTENT["description"]
+
+    # Max concurrency used for extracting content from documents.
+    # A long document is broken into smaller chunks this controls
+    # how many chunks are processed concurrently.
+    MAX_CONCURRENCY: int
+
+    # Max number of chunks to process per documents
+    # When a long document is split into chunks, this controls
+    # how many of those chunks will be processed.
+    # Set to 0 or negative to disable the max chunks limit.
+    MAX_CHUNKS: int = 0
 
     # POSTGRESQL DEFAULT DATABASE
     DEFAULT_DATABASE_HOSTNAME: str
@@ -118,6 +182,14 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
 
     API_KEY: str = ""
     COMPLETION_MODEL: str = "gpt-3.5-turbo"
+    DEFAULT_MODEL: str = "gpt-3.5-turbo"
+
+    @property
+    def SUPPORTED_MODELS(self):
+        return get_supported_models()
+
+    def get_model(self, name: str | None = None) -> BaseChatModel:
+        return get_model(name or self.DEFAULT_MODEL)
 
 
 class Linkedin(_BaseSettings, env_prefix="LINKEDIN_"):

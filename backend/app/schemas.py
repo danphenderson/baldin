@@ -1,4 +1,5 @@
 # app/schemas.py
+import json
 from datetime import datetime
 from enum import Enum
 from io import BytesIO
@@ -8,7 +9,7 @@ from typing import Any, Sequence, TypeVar
 from fastapi_users import schemas
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
-from pydantic import EmailStr, Field, model_validator
+from pydantic import EmailStr, Field, model_validator, validator
 from PyPDF2 import PdfReader
 
 from app import utils
@@ -18,6 +19,7 @@ from app import utils
 class BaseSchema(_BaseModel):
     class Config:
         from_attributes = True
+        protected_namespaces = ()  # Setting protected namespaces to empty
 
 
 # Types, properties, and shared models
@@ -68,26 +70,71 @@ class Pagination(BaseSchema):
     request_count: bool = Field(False, description="Request a query for total count")
 
 
-# Model CRUD Schemas+
+# Model CRUD Schemas
+class BaseOrchestrationPipeline(BaseSchema):
+    name: str | None = Field(None, description="Name of the pipeline")
+    description: str | None = Field(None, description="Description of the pipeline")
+    params: dict | None = Field(None, description="Parameters for the pipeline")
+
+
+class OrchestrationPipelineRead(BaseOrchestrationPipeline, BaseRead):
+    events: list["OrchestrationEventRead"] = Field(
+        [], description="Events in the pipeline"
+    )
+
+
+class OrchestrationPipelineCreate(BaseOrchestrationPipeline):
+    pass
+
+
+class OrchestrationPipelineUpdate(BaseOrchestrationPipeline):
+    events: list["OrchestrationEventRead"] = Field(
+        [], description="Events in the pipeline"
+    )
+
+
 class BaseOrchestrationEvent(BaseSchema):
-    status: OrchestrationEventStatusType | None = Field(None, description="Status")
-    error_message: str | None = Field(None, description="Error message, if any")
+    name: str | None = Field(None, description="Name of the event")
+    message: str | None = Field(None, description="Error message")
+    source_uri: URI | None = Field(None, description="Source of the pipeline")
+    destination_uri: URI | None = Field(None, description="Destination of the pipeline")
+    status: OrchestrationEventStatusType | None = Field(
+        None, description="Status of the event"
+    )
+    pipeline_id: UUID4 | None = Field(None, description="Pipeline ID")
 
 
-class OrchestrationEventRead(BaseRead, BaseOrchestrationEvent):
-    job_name: str | None = Field(None, description="Name of the ETL job")
-    source_uri: URI | None = Field(None, description="Source URI")
-    destination_uri: URI | None = Field(None, description="Destination URI")
+class OrchestrationEventRead(BaseOrchestrationEvent, BaseRead):
+    pass
 
 
 class OrchestrationEventCreate(BaseOrchestrationEvent):
-    job_name: str
-    source_uri: URI
-    destination_uri: URI
+    pipeline_id: UUID4
 
 
 class OrchestrationEventUpdate(BaseOrchestrationEvent):
     pass
+
+
+class ExtractorRequest(BaseSchema):
+    llm_name: str | None = Field("gpt-3.5-turbo", description="Model name")
+    examples: list["ExtractorExampleRead"] = Field(
+        [], description="Extraction examples"
+    )
+    instructions: str | None = Field(None, description="Extraction instruction")
+    json_schema: dict | None = Field(None, description="JSON schema", alias="schema")
+    text: str | None = Field(None, description="Text to extract from")
+
+    @validator("json_schema")
+    def validate_schema(cls, v: Any) -> dict[str, Any]:
+        """Validate the schema."""
+        utils.validate_json_schema(v)
+        return v
+
+
+class ExtractorResponse(BaseSchema):
+    data: list[Any] = Field([], description="Extracted data")
+    content_too_long: bool = Field(False, description="Content too long to extract")
 
 
 class BaseSkill(BaseSchema):
@@ -296,7 +343,7 @@ class CoverLetterCreate(BaseCoverLetter):
         text_content = []
         for page_num in range(len(reader.pages)):
             page = reader.pages[page_num]
-            text_content.append(page.extract_text())
+            text_content.append(page.or_text())
         return cls(name=name, content=text_content[0], content_type=ContentType.GENERATED)  # type: ignore
 
 
@@ -339,6 +386,54 @@ class UserCreate(schemas.BaseUserCreate, BaseUser):
 
 
 class UserUpdate(schemas.BaseUserUpdate, BaseUser):
+    pass
+
+
+class BaseExtractorExample(BaseSchema):
+    content: str | None = Field(None, description="Example content")
+    output: str | None = Field(None, description="Example output")
+
+
+class ExtractorExampleRead(BaseRead, BaseExtractorExample):
+    pass
+
+
+class ExtractorExampleCreate(BaseExtractorExample):
+    pass
+
+
+class ExtractorExampleUpdate(BaseExtractorExample):
+    pass
+
+
+class BaseExtractor(BaseSchema):
+    name: str | None = Field(None, description="Extractor name")
+    description: str | None = Field(None, description="Extractor description")
+    json_schema: dict | str | None = Field(None, description="JSON schema")
+    instruction: str | None = Field(None, description="Extractor instruction")
+    extractor_examples: list[ExtractorExampleRead] = Field(
+        [], description="Extractor examples"
+    )
+
+    @validator("json_schema")
+    def validate_schema(cls, v: Any) -> dict[str, Any]:
+        """Validate the schema."""
+        if isinstance(v, str):
+            v = json.loads(v)
+        if v:
+            utils.validate_json_schema(v)
+        return v
+
+
+class ExtractorRead(BaseRead, BaseExtractor):
+    pass
+
+
+class ExtractorCreate(BaseExtractor):
+    pass
+
+
+class ExtractorUpdate(BaseExtractor):
     pass
 
 

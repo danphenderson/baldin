@@ -7,7 +7,7 @@ name = "pypi"
 fastapi = "*"
 uvicorn = "*"
 asyncpg = "*"
-fastapi-users = {extras = ["sqlalchemy"], version = "*"}
+fastapi-users = {extras = ["sqlalchemy"] }
 pytest = "*"
 httpx = "*"
 selenium = "*"
@@ -25,7 +25,7 @@ python-dotenv = "*"
 toml = "*"
 sqlalchemy = "*"
 pydantic-settings = "*"
-pydantic = {extras = ["email"], version = "*"}
+pydantic = {extras = ["email"] }
 install = "*"
 types-beautifulsoup4 = "*"
 pypdf2 = "*"
@@ -38,6 +38,11 @@ llama-index-llms-openai = "*"
 jsonpath-ng = "*"
 langchain-openai = "*"
 playwright-stealth = "*"
+rich = "*"
+jsonschema = "*"
+langchain-community = "*"
+typing-extensions = "*"
+faiss-cpu = "*"
 
 [dev-packages]
 ipython = "*"

@@ -79,21 +79,31 @@ export interface paths {
      */
     delete: operations["purge_leads_leads_purge_delete"];
   };
+  "/data_orchestration/pipelines": {
+    /** Read Orch Pipelines */
+    get: operations["read_orch_pipelines_data_orchestration_pipelines_get"];
+    /** Create Orch Pipeline */
+    post: operations["create_orch_pipeline_data_orchestration_pipelines_post"];
+  };
+  "/data_orchestration/pipelines/{id}": {
+    /** Read Orch Pipeline */
+    get: operations["read_orch_pipeline_data_orchestration_pipelines__id__get"];
+    /** Update Orch Pipeline */
+    put: operations["update_orch_pipeline_data_orchestration_pipelines__id__put"];
+    /** Delete Orch Pipeline */
+    delete: operations["delete_orch_pipeline_data_orchestration_pipelines__id__delete"];
+  };
   "/data_orchestration/events": {
     /** Read Orch Events */
     get: operations["read_orch_events_data_orchestration_events_get"];
-  };
-  "/data_orchestration/events/success": {
-    /** Read Successful Orch Events */
-    get: operations["read_successful_orch_events_data_orchestration_events_success_get"];
-  };
-  "/data_orchestration/events/failure": {
-    /** Read Failed Orch Events */
-    get: operations["read_failed_orch_events_data_orchestration_events_failure_get"];
+    /** Create Orch Event */
+    post: operations["create_orch_event_data_orchestration_events_post"];
   };
   "/data_orchestration/events/{id}": {
     /** Read Orch Event */
     get: operations["read_orch_event_data_orchestration_events__id__get"];
+    /** Update Orch Event */
+    put: operations["update_orch_event_data_orchestration_events__id__put"];
   };
   "/contacts/": {
     /** Get Current User Contacts */
@@ -228,6 +238,48 @@ export interface paths {
     /** Delete User Certificate */
     delete: operations["delete_user_certificate_certificate__certificate_id__delete"];
   };
+  "/extractor/configurables": {
+    /**
+     * Get Configuration
+     * @description Endpoint to show server configuration.
+     */
+    get: operations["get_configuration_extractor_configurables_get"];
+  };
+  "/extractor/suggest": {
+    /**
+     * Suggest Extractor
+     * @description Suggest an extractor based on a description.
+     */
+    post: operations["suggest_extractor_extractor_suggest_post"];
+  };
+  "/extractor/run": {
+    /** Run Extractor */
+    post: operations["run_extractor_extractor_run_post"];
+  };
+  "/extractor/{id}": {
+    /** Read Extractor */
+    get: operations["read_extractor_extractor__id__get"];
+    /** Update Extractor */
+    put: operations["update_extractor_extractor__id__put"];
+    /** Delete Extractor */
+    delete: operations["delete_extractor_extractor__id__delete"];
+  };
+  "/extractor/": {
+    /** Read Extractors */
+    get: operations["read_extractors_extractor__get"];
+    /** Create Extractor */
+    post: operations["create_extractor_extractor__post"];
+  };
+  "/extractor/{id}/examples": {
+    /** Get Extractor Examples */
+    get: operations["get_extractor_examples_extractor__id__examples_get"];
+    /** Create Extractor Example */
+    post: operations["create_extractor_example_extractor__id__examples_post"];
+  };
+  "/extractor/{id}/examples/{example_id}": {
+    /** Delete Extractor Example */
+    delete: operations["delete_extractor_example_extractor__id__examples__example_id__delete"];
+  };
   "/ping": {
     /** Pong */
     get: operations["pong_ping_get"];
@@ -335,6 +387,29 @@ export interface components {
       /** Password */
       password: string;
     };
+    /** Body_run_extractor_extractor_run_post */
+    Body_run_extractor_extractor_run_post: {
+      /**
+       * Extractor Id
+       * Format: uuid4
+       */
+      extractor_id: string;
+      /**
+       * Mode
+       * @default entire_document
+       * @enum {string}
+       */
+      mode?: "entire_document" | "retrieval";
+      /** File */
+      file?: string | null;
+      /** Text */
+      text?: string | null;
+      /**
+       * Llm
+       * @default gpt-3.5-turbo
+       */
+      llm?: string;
+    };
     /** Body_verify_request_token_auth_request_verify_token_post */
     Body_verify_request_token_auth_request_verify_token_post: {
       /**
@@ -434,6 +509,24 @@ export interface components {
        * @description Issued date of the certificate
        */
       issued_date?: string | null;
+    };
+    /**
+     * ConfigurationResponse
+     * @description Response for configuration.
+     */
+    ConfigurationResponse: {
+      /** Available Models */
+      available_models: string[];
+      /** Accepted Mimetypes */
+      accepted_mimetypes: string[];
+      /** Max File Size Mb */
+      max_file_size_mb: number;
+      /** Max Concurrency */
+      max_concurrency: number;
+      /** Max Chunks */
+      max_chunks: number;
+      /** Models */
+      models: Record<string, never>[];
     };
     /** ContactCreate */
     ContactCreate: {
@@ -891,6 +984,181 @@ export interface components {
        */
       projects?: string | null;
     };
+    /** ExtractorCreate */
+    ExtractorCreate: {
+      /**
+       * Name
+       * @description Extractor name
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Extractor description
+       */
+      description?: string | null;
+      /**
+       * Json Schema
+       * @description JSON schema
+       */
+      json_schema?: Record<string, never> | string | null;
+      /**
+       * Instruction
+       * @description Extractor instruction
+       */
+      instruction?: string | null;
+      /**
+       * Extractor Examples
+       * @description Extractor examples
+       * @default []
+       */
+      extractor_examples?: components["schemas"]["ExtractorExampleRead"][];
+    };
+    /**
+     * ExtractorDefinition
+     * @description Define an information extractor to be used in an information extraction system.
+     */
+    ExtractorDefinition: {
+      /**
+       * Json Schema
+       * @description JSON Schema that describes the entity / information that should be extracted. This schema is specified in JSON Schema format.
+       */
+      json_schema: string;
+    };
+    /** ExtractorExampleCreate */
+    ExtractorExampleCreate: {
+      /**
+       * Content
+       * @description Example content
+       */
+      content?: string | null;
+      /**
+       * Output
+       * @description Example output
+       */
+      output?: string | null;
+    };
+    /** ExtractorExampleRead */
+    ExtractorExampleRead: {
+      /**
+       * Content
+       * @description Example content
+       */
+      content?: string | null;
+      /**
+       * Output
+       * @description Example output
+       */
+      output?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+    };
+    /** ExtractorRead */
+    ExtractorRead: {
+      /**
+       * Name
+       * @description Extractor name
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Extractor description
+       */
+      description?: string | null;
+      /**
+       * Json Schema
+       * @description JSON schema
+       */
+      json_schema?: Record<string, never> | string | null;
+      /**
+       * Instruction
+       * @description Extractor instruction
+       */
+      instruction?: string | null;
+      /**
+       * Extractor Examples
+       * @description Extractor examples
+       * @default []
+       */
+      extractor_examples?: components["schemas"]["ExtractorExampleRead"][];
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+    };
+    /** ExtractorResponse */
+    ExtractorResponse: {
+      /**
+       * Data
+       * @description Extracted data
+       * @default []
+       */
+      data?: unknown[];
+      /**
+       * Content Too Long
+       * @description Content too long to extract
+       * @default false
+       */
+      content_too_long?: boolean;
+    };
+    /** ExtractorUpdate */
+    ExtractorUpdate: {
+      /**
+       * Name
+       * @description Extractor name
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Extractor description
+       */
+      description?: string | null;
+      /**
+       * Json Schema
+       * @description JSON schema
+       */
+      json_schema?: Record<string, never> | string | null;
+      /**
+       * Instruction
+       * @description Extractor instruction
+       */
+      instruction?: string | null;
+      /**
+       * Extractor Examples
+       * @description Extractor examples
+       * @default []
+       */
+      extractor_examples?: components["schemas"]["ExtractorExampleRead"][];
+    };
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -1121,15 +1389,32 @@ export interface components {
        */
       total_count: number | null;
     };
-    /** OrchestrationEventRead */
-    OrchestrationEventRead: {
-      /** @description Status */
+    /** OrchestrationEventCreate */
+    OrchestrationEventCreate: {
+      /**
+       * Name
+       * @description Name of the event
+       */
+      name?: string | null;
+      /**
+       * Message
+       * @description Error message
+       */
+      message?: string | null;
+      /** @description Source of the pipeline */
+      source_uri?: components["schemas"]["URI"] | null;
+      /** @description Destination of the pipeline */
+      destination_uri?: components["schemas"]["URI"] | null;
+      /** @description Status of the event */
       status?: components["schemas"]["OrchestrationEventStatusType"] | null;
       /**
-       * Error Message
-       * @description Error message, if any
+       * Pipeline Id
+       * Format: uuid4
        */
-      error_message?: string | null;
+      pipeline_id: string;
+    };
+    /** OrchestrationEventRead */
+    "OrchestrationEventRead-Input": {
       /**
        * Id
        * Format: uuid4
@@ -1149,20 +1434,182 @@ export interface components {
        */
       updated_at: string;
       /**
-       * Job Name
-       * @description Name of the ETL job
+       * Name
+       * @description Name of the event
        */
-      job_name?: string | null;
-      /** @description Source URI */
+      name?: string | null;
+      /**
+       * Message
+       * @description Error message
+       */
+      message?: string | null;
+      /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
-      /** @description Destination URI */
+      /** @description Destination of the pipeline */
       destination_uri?: components["schemas"]["URI"] | null;
+      /** @description Status of the event */
+      status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+      /**
+       * Pipeline Id
+       * @description Pipeline ID
+       */
+      pipeline_id?: string | null;
+    };
+    /** OrchestrationEventRead */
+    "OrchestrationEventRead-Output": {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Name
+       * @description Name of the event
+       */
+      name?: string | null;
+      /**
+       * Message
+       * @description Error message
+       */
+      message?: string | null;
+      /** @description Source of the pipeline */
+      source_uri?: components["schemas"]["URI"] | null;
+      /** @description Destination of the pipeline */
+      destination_uri?: components["schemas"]["URI"] | null;
+      /** @description Status of the event */
+      status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+      /**
+       * Pipeline Id
+       * @description Pipeline ID
+       */
+      pipeline_id?: string | null;
     };
     /**
      * OrchestrationEventStatusType
      * @enum {string}
      */
     OrchestrationEventStatusType: "pending" | "running" | "success" | "failure";
+    /** OrchestrationEventUpdate */
+    OrchestrationEventUpdate: {
+      /**
+       * Name
+       * @description Name of the event
+       */
+      name?: string | null;
+      /**
+       * Message
+       * @description Error message
+       */
+      message?: string | null;
+      /** @description Source of the pipeline */
+      source_uri?: components["schemas"]["URI"] | null;
+      /** @description Destination of the pipeline */
+      destination_uri?: components["schemas"]["URI"] | null;
+      /** @description Status of the event */
+      status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+      /**
+       * Pipeline Id
+       * @description Pipeline ID
+       */
+      pipeline_id?: string | null;
+    };
+    /** OrchestrationPipelineCreate */
+    OrchestrationPipelineCreate: {
+      /**
+       * Name
+       * @description Name of the pipeline
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Description of the pipeline
+       */
+      description?: string | null;
+      /**
+       * Params
+       * @description Parameters for the pipeline
+       */
+      params?: Record<string, never> | null;
+    };
+    /** OrchestrationPipelineRead */
+    OrchestrationPipelineRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Name
+       * @description Name of the pipeline
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Description of the pipeline
+       */
+      description?: string | null;
+      /**
+       * Params
+       * @description Parameters for the pipeline
+       */
+      params?: Record<string, never> | null;
+      /**
+       * Events
+       * @description Events in the pipeline
+       * @default []
+       */
+      events?: components["schemas"]["OrchestrationEventRead-Output"][];
+    };
+    /** OrchestrationPipelineUpdate */
+    OrchestrationPipelineUpdate: {
+      /**
+       * Name
+       * @description Name of the pipeline
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Description of the pipeline
+       */
+      description?: string | null;
+      /**
+       * Params
+       * @description Parameters for the pipeline
+       */
+      params?: Record<string, never> | null;
+      /**
+       * Events
+       * @description Events in the pipeline
+       * @default []
+       */
+      events?: components["schemas"]["OrchestrationEventRead-Input"][];
+    };
     /** Pagination */
     Pagination: {
       /**
@@ -1333,6 +1780,23 @@ export interface components {
        * @description Sub-Skills
        */
       subskills?: string | null;
+    };
+    /**
+     * SuggestExtractor
+     * @description A request to create an extractor from a text sample.
+     */
+    SuggestExtractor: {
+      /**
+       * Description
+       * @description A description of the extractor.
+       * @default
+       */
+      description?: string;
+      /**
+       * Json Schema
+       * @description Existing JSON schema that describes the entity information that should be extracted.
+       */
+      json_schema?: string | null;
     };
     /** URI */
     URI: {
@@ -1966,7 +2430,7 @@ export interface operations {
       /** @description Successful Response */
       202: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead"];
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
         };
       };
     };
@@ -2105,35 +2569,139 @@ export interface operations {
       };
     };
   };
+  /** Read Orch Pipelines */
+  read_orch_pipelines_data_orchestration_pipelines_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationPipelineRead"][];
+        };
+      };
+    };
+  };
+  /** Create Orch Pipeline */
+  create_orch_pipeline_data_orchestration_pipelines_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrchestrationPipelineCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Orch Pipeline */
+  read_orch_pipeline_data_orchestration_pipelines__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Orch Pipeline */
+  update_orch_pipeline_data_orchestration_pipelines__id__put: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrchestrationPipelineUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Orch Pipeline */
+  delete_orch_pipeline_data_orchestration_pipelines__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Read Orch Events */
   read_orch_events_data_orchestration_events_get: {
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead"][];
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"][];
         };
       };
     };
   };
-  /** Read Successful Orch Events */
-  read_successful_orch_events_data_orchestration_events_success_get: {
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["OrchestrationEventRead"][];
-        };
+  /** Create Orch Event */
+  create_orch_event_data_orchestration_events_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrchestrationEventCreate"];
       };
     };
-  };
-  /** Read Failed Orch Events */
-  read_failed_orch_events_data_orchestration_events_failure_get: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead"][];
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -2149,7 +2717,34 @@ export interface operations {
       /** @description Successful Response */
       202: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead"];
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Orch Event */
+  update_orch_event_data_orchestration_events__id__put: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrchestrationEventUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
         };
       };
       /** @description Validation Error */
@@ -3112,6 +3707,243 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["CertificateRead"];
         };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Configuration
+   * @description Endpoint to show server configuration.
+   */
+  get_configuration_extractor_configurables_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConfigurationResponse"];
+        };
+      };
+    };
+  };
+  /**
+   * Suggest Extractor
+   * @description Suggest an extractor based on a description.
+   */
+  suggest_extractor_extractor_suggest_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SuggestExtractor"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorDefinition"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Run Extractor */
+  run_extractor_extractor_run_post: {
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_run_extractor_extractor_run_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Extractor */
+  read_extractor_extractor__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Extractor */
+  update_extractor_extractor__id__put: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Extractor */
+  delete_extractor_extractor__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Extractors */
+  read_extractors_extractor__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorRead"][];
+        };
+      };
+    };
+  };
+  /** Create Extractor */
+  create_extractor_extractor__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Extractor Examples */
+  get_extractor_examples_extractor__id__examples_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorExampleRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Extractor Example */
+  create_extractor_example_extractor__id__examples_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorExampleCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorExampleRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Extractor Example */
+  delete_extractor_example_extractor__id__examples__example_id__delete: {
+    parameters: {
+      path: {
+        id: string;
+        example_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
       };
       /** @description Validation Error */
       422: {

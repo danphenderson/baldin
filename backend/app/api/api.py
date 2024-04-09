@@ -11,9 +11,9 @@ from app.api.routes import (
     data_orchestration,
     education,
     experiences,
+    extractor,
     leads,
     resumes,
-    services,
     skills,
     users,
 )
@@ -56,11 +56,6 @@ api_router.include_router(
     tags=["data_orchestration"],
 )
 api_router.include_router(
-    services.router,
-    prefix="/services",
-    tags=["services"],
-)
-api_router.include_router(
     contacts.router,
     prefix="/contacts",
     tags=["contacts"],
@@ -99,4 +94,9 @@ api_router.include_router(
     certificate.router,
     prefix="/certificate",
     tags=["certificate"],
+)
+api_router.include_router(
+    extractor.router,
+    prefix="/extractor",
+    tags=["extractor"],
 )

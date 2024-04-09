@@ -159,7 +159,22 @@ def update_json_schema(
     multi: bool = True,
 ) -> dict:
     """Add missing fields to JSON schema and add support for multiple records."""
+    from app.logging import console_log
+
+    if schema is None:
+        console_log.error("Schema is None in update_json_schema.")
+        raise ValueError("Schema cannot be None.")
+
+    console_log.warning(f"Original schema in update_json_schema: {schema}")
     if multi:
+        dereferenced_schema = dereference_refs(schema)
+        # Ensure dereferenced_schema is valid before using it as 'items'
+        if not isinstance(dereferenced_schema, dict):
+            console_log.error(
+                f"Expected a dictionary but got: {type(dereferenced_schema)}"
+            )
+            raise ValueError("The dereferenced schema should be a dictionary.")
+
         # Wrap the schema in an object called "Root" with a property called: "data"
         # which will be a json array of the original schema.
         schema_ = {
@@ -167,7 +182,7 @@ def update_json_schema(
             "properties": {
                 "data": {
                     "type": "array",
-                    "items": dereference_refs(schema),
+                    "items": dereferenced_schema,
                 },
             },
             "required": ["data"],
@@ -177,6 +192,10 @@ def update_json_schema(
 
     schema_["title"] = "extractor"
     schema_["description"] = "Extract information matching the given schema."
+
+    from app.logging import console_log
+
+    console_log.warning(f"Updated schema: {schema_}")
     return schema_
 
 
@@ -184,6 +203,9 @@ def update_json_schema(
 def validate_json_schema(schema: dict[str, Any]) -> None:
     """Validate a JSON schema."""
     try:
+        from app.logging import console_log
+
+        console_log.warning(f"Validating schema: {schema}")
         Draft202012Validator.check_schema(schema)
     except exceptions.ValidationError as e:
         raise HTTPException(

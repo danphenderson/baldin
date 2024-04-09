@@ -1,6 +1,8 @@
+# app/extractor/retrieval.py
 from operator import itemgetter
 from typing import Any, Optional
 
+from fastapi import HTTPException
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_core.runnables import RunnableLambda
@@ -11,6 +13,7 @@ from app.extractor.extraction_runnable import (
     extraction_runnable,
     get_examples_from_extractor,
 )
+from app.logging import console_log
 from app.models import Extractor
 from app.schemas import ExtractorRequest, ExtractorResponse
 
@@ -27,7 +30,10 @@ async def extract_from_content(
     *,
     text_splitter_kwargs: Optional[dict[str, Any]] = None,
 ) -> ExtractorResponse:
-    """Extract from potentially long-form content."""
+    console_log.warning(f"Extracting from content: {content}")
+    console_log.warning(f"Extractor: {extractor}")
+    console_log.warning(f"LLM: {llm_name}")
+
     if text_splitter_kwargs is None:
         text_splitter_kwargs = {
             "separator": "\n\n",
@@ -38,6 +44,8 @@ async def extract_from_content(
     docs = text_splitter.create_documents([content])
     doc_contents = [doc.page_content for doc in docs]
 
+    console_log.warning(f"Extracting from {len(docs)} chunks")
+
     vectorstore = FAISS.from_texts(doc_contents, embedding=OpenAIEmbeddings())
     retriever = vectorstore.as_retriever()
 
@@ -47,21 +55,38 @@ async def extract_from_content(
             "schema": itemgetter("schema"),
             "instructions": lambda x: x.get("instructions"),
             "examples": lambda x: x.get("examples"),
-            "llm_name": lambda x: x.get("llm_name"),
+            "model_name": lambda x: x.get("llm_name"),
         }
         | RunnableLambda(_make_extract_requests)
         | extraction_runnable.abatch
     )
+
     schema = extractor.json_schema
     examples = get_examples_from_extractor(extractor)
-    description = extractor.description  # TODO: improve this
-    result = await runnable.ainvoke(
-        {
-            "query": description,
-            "schema": schema,
-            "examples": examples,
-            "instructions": extractor.instruction,
-            "llm_name": llm_name,
-        }
+    description = extractor.description or ""
+    invoke_data = {
+        "query": description,
+        "schema": schema,
+        "examples": examples,
+        "instructions": extractor.instruction,
+        "model_name": llm_name,
+    }
+
+    console_log.warning(f"Invoke data: {invoke_data}")
+
+    console_log.warning(
+        f"Extractor details: ID={extractor.id}, Description={extractor.description}, Schema={extractor.json_schema}"
     )
-    return deduplicate(result)
+    if not extractor.json_schema:
+        console_log.error("Extractor schema is missing.")
+        raise HTTPException(status_code=400, detail="Extractor schema is missing.")
+
+    result = await runnable.ainvoke(invoke_data)
+
+    console_log.warning(f"Result: {result}")
+
+    deduped_res = deduplicate(result)
+
+    console_log.warning(f"Deduped result: {deduped_res}")
+
+    return deduped_res

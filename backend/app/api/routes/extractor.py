@@ -173,6 +173,10 @@ async def run_extractor(
     if extractor is None:
         raise HTTPException(status_code=404, detail="Extractor not found for user.")
 
+    console_log.warning(f"Extractor schema before extraction: {extractor.json_schema}")
+    if extractor.json_schema is None:
+        raise HTTPException(status_code=500, detail="Extractor schema is not loaded.")
+
     if text:
         text_ = text
     else:
@@ -181,19 +185,21 @@ async def run_extractor(
         # the text was extracted from
         text_ = "\n".join([document.page_content for document in documents])
 
-    console_log.warning(f"Running extractor on text: {text_}")
-
-    console_log.warning(f"Running extractor {extractor}")
-
     if mode == "entire_document":
         res = await extract_entire_document(text_, extractor, llm)
     elif mode == "retrieval":
+        console_log.warning(f"Extracting from content: {text_}")
+        console_log.warning(f"Extractor schema: {extractor.json_schema}")
+        console_log.warning(f"LLM: {llm}")
         res = await extract_from_content(text_, extractor, llm)
     else:
         raise ValueError(
             f"Invalid mode {mode}. Expected one of 'entire_document', 'retrieval'."
         )
     console_log.warning(res)
+    if "content_to_long" not in res:
+        res["content_to_long"] = False
+
     return schemas.ExtractorResponse(**res)
 
 

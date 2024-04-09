@@ -122,7 +122,7 @@ class ExtractorRequest(BaseSchema):
         [], description="Extraction examples"
     )
     instructions: str | None = Field(None, description="Extraction instruction")
-    json_schema: dict | None = Field(None, description="JSON schema")
+    json_schema: dict | None = Field(None, description="JSON schema", alias="schema")
     text: str | None = Field(None, description="Text to extract from")
 
     @validator("json_schema")
@@ -133,8 +133,8 @@ class ExtractorRequest(BaseSchema):
 
 
 class ExtractorResponse(BaseSchema):
-    data: list[Any]
-    content_too_long: bool | None
+    data: list[Any] = Field([], description="Extracted data")
+    content_too_long: bool = Field(False, description="Content too long to extract")
 
 
 class BaseSkill(BaseSchema):

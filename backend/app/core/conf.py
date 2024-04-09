@@ -13,6 +13,14 @@ from toml import load as toml_load
 PROJECT_DIR = Path(__file__).parent.parent.parent
 PYPROJECT_CONTENT = toml_load(f"{PROJECT_DIR}/pyproject.toml")["project"]
 
+# FIXME: A big hack here to resolve this error when posting to `extractor/run` in retrieval mode:
+# OMP: Error #15: Initializing libomp.dylib, but found libomp.dylib already initialized.
+# OMP: Hint This means that multiple copies of the OpenMP runtime have been linked into the program. That is dangerous, since it can degrade performance or cause incorrect results. The best thing to do is to ensure that only a single OpenMP runtime is linked into the process, e.g. by avoiding static linking of the OpenMP runtime in any library. As an unsafe, unsupported, undocumented workaround you can set the environment variable KMP_DUPLICATE_LIB_OK=TRUE to allow the program to continue to execute, but that may cause crashes or silently produce incorrect results. For more information, please see http://openmp.llvm.org/
+
+import os
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 
 def get_supported_models():
     """Get models according to environment secrets."""
@@ -73,7 +81,7 @@ class Settings(_BaseSettings):
     ENVIRONMENT: Literal["DEV", "PYTEST", "STAGE", "PRODUCTION"]
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     BACKEND_CORS_ORIGINS: Union[str, list[AnyHttpUrl]]
-    LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
     LOGGING_FILE_NAME: str = "app.log"
     PUBLIC_ASSETS_DIR: str = "public"
 

@@ -1,8 +1,9 @@
-from __future__ import annotations
+# app/extractor/extraction_runnable.py
 
 import json
 from typing import Any, Sequence
 
+from arrow import get
 from fastapi import HTTPException
 from jsonschema import Draft202012Validator, exceptions
 from langchain.text_splitter import TokenTextSplitter
@@ -15,6 +16,7 @@ from torch import ge
 from app import schemas
 from app.core import conf
 from app.core.conf import get_chunk_size, get_model, openai, settings
+from app.logging import console_log
 from app.models import Extractor, ExtractorExample
 from app.utils import update_json_schema, validate_json_schema
 
@@ -119,7 +121,14 @@ async def extraction_runnable(
 ) -> schemas.ExtractorResponse:
     """An end point to extract content from a given text object."""
     # TODO: Add validation for model context window size
+    console_log.warning(f"Extraction request: {extraction_request}")
+    schema = extraction_request.json_schema
+    console_log.warning(f"Original schema in extract_from_content: {schema}")
+    if schema is None:
+        console_log.error("No schema found for the extractor.")
+        raise HTTPException(status_code=400, detail="Extractor schema is missing.")
     schema = update_json_schema(getattr(extraction_request, "json_schema", {}))
+    console_log.warning(f"Extracting to schema: {schema}")
     try:
         Draft202012Validator.check_schema(schema)
     except exceptions.ValidationError as e:
@@ -147,8 +156,9 @@ async def extract_entire_document(
     llm_name: str,
 ) -> schemas.ExtractorResponse:
     """Extract from entire document."""
+    json_schema = getattr(extractor, "json_schema", {})
+    console_log.warning(f"Extracting to schema: {json_schema}")
 
-    json_schema = extractor.json_schema
     examples = get_examples_from_extractor(extractor)
     text_splitter = TokenTextSplitter(
         chunk_size=get_chunk_size(llm_name),
@@ -156,10 +166,11 @@ async def extract_entire_document(
         model_name=openai.DEFAULT_MODEL,
     )
     texts = text_splitter.split_text(content)
+    console_log.warning(f"Extracting from {len(texts)} chunks")
     extraction_requests = [
         schemas.ExtractorRequest(
             text=text,
-            json_schema=json_schema,
+            schema=json_schema,
             instructions=extractor.instruction,  # TODO: consistent naming
             examples=examples,
             llm_name=llm_name,  # type: ignore

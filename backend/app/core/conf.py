@@ -40,8 +40,7 @@ def get_model(name: str | None = None) -> BaseChatModel:
         supported_model_names = list(SUPPORTED_MODELS.keys())
         if name not in supported_model_names:
             raise ValueError(
-                f"Model {name} not found. "
-                f"Supported models: {supported_model_names}"
+                f"Model {name} not found. " f"Supported models: {supported_model_names}"
             )
         else:
             return SUPPORTED_MODELS[name]["chat_model"]
@@ -180,6 +179,10 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
     @property
     def SUPPORTED_MODELS(self):
         return get_supported_models()
+
+    def get_model(self, name: str | None = None) -> BaseChatModel:
+        return get_model(name or self.DEFAULT_MODEL)
+
 
 class Linkedin(_BaseSettings, env_prefix="LINKEDIN_"):
     """

@@ -3,7 +3,8 @@ import re
 from typing import Annotated, Literal, Sequence
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
-from pydantic import UUID4
+from langchain_core.prompts import ChatPromptTemplate
+from pydantic import UUID4, Field
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 from typing_extensions import TypedDict
@@ -61,6 +62,98 @@ def get_configuration(
     console_log.info("User %s requested configuration.", user.first_name)
     console_log.info(f"Returning configuration: {res}")
     return res  # type: ignore
+
+
+class SuggestExtractor(schemas._BaseModel):
+    """A request to create an extractor from a text sample."""
+
+    description: str = Field("", description="A description of the extractor.")
+    json_schema: str | None = Field(
+        None,
+        description="Existing JSON schema that describes the entity information that should be extracted.",
+    )
+
+
+class ExtractorDefinition(schemas._BaseModel):
+    """Define an information extractor to be used in an information extraction system."""  # noqa: E501
+
+    json_schema: str = Field(
+        ...,
+        description=(
+            "JSON Schema that describes the entity / "
+            "information that should be extracted. "
+            "This schema is specified in JSON Schema format. "
+        ),
+    )
+
+
+SUGGEST_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are are an expert ontologist and have been asked to help a user "
+            "define an information extractor.The user will describe an entity, "
+            "a topic or a piece of information that they would like to extract from "
+            "text. Based on the user input, you are to provide a schema and "
+            "description for the extractor. The schema should be a JSON Schema that "
+            "describes the entity or information to be extracted. information to be "
+            "extracted. Make sure to include title and description for all the "
+            "attributes in the schema.The JSON Schema should describe a top level "
+            "object. The object MUST have a title and description.Unless otherwise "
+            "stated all entity properties in the schema should be considered optional.",
+        ),
+        ("human", "{input}"),
+    ]
+)
+
+suggestion_chain = SUGGEST_PROMPT | conf.openai.get_model().with_structured_output(
+    schema=ExtractorDefinition  # type: ignore
+).with_config({"run_name": "suggest"})
+
+UPDATE_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are are an expert ontologist and have been asked to help a user "
+            "define an information extractor.gThe existing extractor schema is "
+            "provided.\ng```\n{json_schema}\n```\nThe user will describe a desired "
+            "modification to the schema (e.g., adding a new field, changing a field "
+            "type, etc.).Your goal is to provide a new schema that incorporates the "
+            "user's desired modification.The user may also request a completely new "
+            "schema, in which case you should provide a new schema based on the "
+            "user's input, and ignore the existing schema.The JSON Schema should "
+            "describe a top level object. The object MUST have a title and "
+            "description.Unless otherwise stated all entity properties in the schema "
+            "should be considered optional.",
+        ),
+        ("human", "{input}"),
+    ]
+)
+
+UPDATE_CHAIN = (
+    UPDATE_PROMPT
+    | conf.openai.get_model().with_structured_output(
+        schema=ExtractorDefinition  # type: ignore
+    )
+).with_config({"run_name": "suggest_update"})
+
+
+@router.post("/suggest", response_model=ExtractorDefinition)
+async def suggest_extractor(suggest_extractor: SuggestExtractor) -> ExtractorDefinition:
+    """Suggest an extractor based on a description."""
+    if suggest_extractor.json_schema:
+        console_log.warning(
+            f"Updating extractor with schema: {suggest_extractor.json_schema}"
+        )
+        res = await UPDATE_CHAIN.ainvoke(
+            {"input": suggest_extractor.description, "json_schema": suggest_extractor.json_schema}  # type: ignore
+        )
+        console_log.warning(f"Updated extractor: {res}")
+        return res
+    console_log.warning(
+        f"Suggesting extractor based on description: {suggest_extractor.description}"
+    )
+    return await suggestion_chain.ainvoke({"input": suggest_extractor.description})  # type: ignore
 
 
 @router.post("/run", response_model=schemas.ExtractorRead)

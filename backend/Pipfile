@@ -43,6 +43,7 @@ jsonschema = "*"
 langchain-community = "*"
 typing-extensions = "*"
 faiss-cpu = "*"
+typer = "*"
 
 [dev-packages]
 ipython = "*"

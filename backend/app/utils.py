@@ -9,7 +9,6 @@ from typing import Any, Type
 
 import aiofiles
 from bs4 import BeautifulSoup
-from fastapi import HTTPException
 from jsonschema import exceptions
 from jsonschema.validators import Draft202012Validator
 from langchain_core.utils.json_schema import dereference_refs
@@ -49,6 +48,28 @@ def extract_soup_hrefs(soup: BeautifulSoup) -> list[str]:
     return [link.get("href") for link in soup.find_all("a") if link.get("href")]
 
 
+def extract_json(text: str) -> list[dict]:
+    """Extracts JSON content from a string where JSON is embedded between ```json and ``` tags.
+
+    Parameters:
+        text (str): The text containing the JSON content.
+
+    Returns:
+        list: A list of extracted JSON strings.
+    """
+    # Define the regular expression pattern to match JSON blocks
+    pattern = r"```json(.*?)```"
+
+    # Find all non-overlapping matches of the pattern in the string
+    matches = re.findall(pattern, text, re.DOTALL)
+
+    # Return the list of matched JSON strings, stripping any leading or trailing whitespace
+    try:
+        return [json.loads(match.strip()) for match in matches]
+    except Exception:
+        raise ValueError(f"Failed to parse: {text}")
+
+
 # Asynchronous utils
 
 
@@ -78,7 +99,7 @@ async def generate_pydantic_models_from_json(
             try:
                 for model in _generate_pydantic_model_from_json(model, doc):
                     yield model
-            except Exception as _:
+            except Exception as _:  # noqa
                 continue
 
 
@@ -190,12 +211,9 @@ def update_json_schema(
     else:
         raise NotImplementedError("Only multi is supported for now.")
 
+    # TODO: Function should return schema_ here instead of adding specific extractor fields
     schema_["title"] = "extractor"
     schema_["description"] = "Extract information matching the given schema."
-
-    from app.logging import console_log
-
-    console_log.warning(f"Updated schema: {schema_}")
     return schema_
 
 
@@ -203,11 +221,6 @@ def update_json_schema(
 def validate_json_schema(schema: dict[str, Any]) -> None:
     """Validate a JSON schema."""
     try:
-        from app.logging import console_log
-
-        console_log.warning(f"Validating schema: {schema}")
         Draft202012Validator.check_schema(schema)
     except exceptions.ValidationError as e:
-        raise HTTPException(
-            status_code=422, detail=f"Not a valid JSON schema: {e.message}"
-        )
+        raise ValueError(f"Invalid schema: {e.message}")

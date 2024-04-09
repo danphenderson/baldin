@@ -151,7 +151,7 @@ async def suggest_extractor(suggest_extractor: SuggestExtractor) -> ExtractorDef
     return res
 
 
-@router.post("/run", response_model=schemas.ExtractorRead)
+@router.post("/run", response_model=schemas.ExtractorResponse)
 async def run_extractor(
     extractor_id: Annotated[UUID4, Form()],
     db: AsyncSession = Depends(get_async_session),
@@ -166,12 +166,12 @@ async def run_extractor(
 
     extractor = (
         await db.execute(
-            select(models.Extractor).filter_by(uuid=extractor_id, user_id=user.id)
+            select(models.Extractor).filter_by(id=extractor_id, user_id=user.id)
         )
     ).scalar()
 
     if extractor is None:
-        raise HTTPException(status_code=404, detail="Extractor not found for owner.")
+        raise HTTPException(status_code=404, detail="Extractor not found for user.")
 
     if text:
         text_ = text
@@ -180,14 +180,21 @@ async def run_extractor(
         # TODO: Add metadata like location from original file where
         # the text was extracted from
         text_ = "\n".join([document.page_content for document in documents])
+
+    console_log.warning(f"Running extractor on text: {text_}")
+
+    console_log.warning(f"Running extractor {extractor}")
+
     if mode == "entire_document":
-        return await extract_entire_document(text_, extractor, llm)
+        res = await extract_entire_document(text_, extractor, llm)
     elif mode == "retrieval":
-        return await extract_from_content(text_, extractor, llm)
+        res = await extract_from_content(text_, extractor, llm)
     else:
         raise ValueError(
             f"Invalid mode {mode}. Expected one of 'entire_document', 'retrieval'."
         )
+    console_log.warning(res)
+    return schemas.ExtractorResponse(**res)
 
 
 @router.get("/{id}", response_model=schemas.ExtractorRead)

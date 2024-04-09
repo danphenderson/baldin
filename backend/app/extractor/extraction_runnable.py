@@ -13,10 +13,10 @@ from pydantic import BaseModel, Field, validator
 from torch import ge
 
 from app import schemas
+from app.core import conf
 from app.core.conf import get_chunk_size, get_model, openai, settings
 from app.models import Extractor, ExtractorExample
 from app.utils import update_json_schema, validate_json_schema
-from app.core import conf
 
 
 def _cast_example_to_dict(example: ExtractorExample) -> dict[str, Any]:
@@ -130,7 +130,9 @@ async def extraction_runnable(
         getattr(extraction_request, "examples", None),
         schema["title"],
     )
-    model = get_model(getattr(extraction_request, "llm_name", None) or conf.openai.DEFAULT_MODEL)
+    model = get_model(
+        getattr(extraction_request, "llm_name", None) or conf.openai.DEFAULT_MODEL
+    )
     # N.B. method must be consistent with examples in _make_prompt_template
     runnable = (
         prompt | model.with_structured_output(schema=schema, method="function_calling")
@@ -146,7 +148,7 @@ async def extract_entire_document(
 ) -> schemas.ExtractorResponse:
     """Extract from entire document."""
 
-    json_schema = extractor.schema
+    json_schema = extractor.json_schema
     examples = get_examples_from_extractor(extractor)
     text_splitter = TokenTextSplitter(
         chunk_size=get_chunk_size(llm_name),

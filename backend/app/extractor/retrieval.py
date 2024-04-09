@@ -52,7 +52,7 @@ async def extract_from_content(
         | RunnableLambda(_make_extract_requests)
         | extraction_runnable.abatch
     )
-    schema = extractor.schema
+    schema = extractor.json_schema
     examples = get_examples_from_extractor(extractor)
     description = extractor.description  # TODO: improve this
     result = await runnable.ainvoke(

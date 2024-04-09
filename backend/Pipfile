@@ -42,6 +42,7 @@ rich = "*"
 jsonschema = "*"
 langchain-community = "*"
 typing-extensions = "*"
+faiss-cpu = "*"
 
 [dev-packages]
 ipython = "*"

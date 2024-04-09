@@ -245,6 +245,13 @@ export interface paths {
      */
     get: operations["get_configuration_extractor_configurables_get"];
   };
+  "/extractor/suggest": {
+    /**
+     * Suggest Extractor
+     * @description Suggest an extractor based on a description.
+     */
+    post: operations["suggest_extractor_extractor_suggest_post"];
+  };
   "/extractor/run": {
     /** Run Extractor */
     post: operations["run_extractor_extractor_run_post"];
@@ -993,7 +1000,7 @@ export interface components {
        * Json Schema
        * @description JSON schema
        */
-      json_schema?: Record<string, never> | null;
+      json_schema?: Record<string, never> | string | null;
       /**
        * Instruction
        * @description Extractor instruction
@@ -1005,6 +1012,17 @@ export interface components {
        * @default []
        */
       extractor_examples?: components["schemas"]["ExtractorExampleRead"][];
+    };
+    /**
+     * ExtractorDefinition
+     * @description Define an information extractor to be used in an information extraction system.
+     */
+    ExtractorDefinition: {
+      /**
+       * Json Schema
+       * @description JSON Schema that describes the entity / information that should be extracted. This schema is specified in JSON Schema format.
+       */
+      json_schema: string;
     };
     /** ExtractorExampleCreate */
     ExtractorExampleCreate: {
@@ -1066,7 +1084,7 @@ export interface components {
        * Json Schema
        * @description JSON schema
        */
-      json_schema?: Record<string, never> | null;
+      json_schema?: Record<string, never> | string | null;
       /**
        * Instruction
        * @description Extractor instruction
@@ -1097,6 +1115,21 @@ export interface components {
        */
       updated_at: string;
     };
+    /** ExtractorResponse */
+    ExtractorResponse: {
+      /**
+       * Data
+       * @description Extracted data
+       * @default []
+       */
+      data?: unknown[];
+      /**
+       * Content Too Long
+       * @description Content too long to extract
+       * @default false
+       */
+      content_too_long?: boolean;
+    };
     /** ExtractorUpdate */
     ExtractorUpdate: {
       /**
@@ -1113,7 +1146,7 @@ export interface components {
        * Json Schema
        * @description JSON schema
        */
-      json_schema?: Record<string, never> | null;
+      json_schema?: Record<string, never> | string | null;
       /**
        * Instruction
        * @description Extractor instruction
@@ -1747,6 +1780,23 @@ export interface components {
        * @description Sub-Skills
        */
       subskills?: string | null;
+    };
+    /**
+     * SuggestExtractor
+     * @description A request to create an extractor from a text sample.
+     */
+    SuggestExtractor: {
+      /**
+       * Description
+       * @description A description of the extractor.
+       * @default
+       */
+      description?: string;
+      /**
+       * Json Schema
+       * @description Existing JSON schema that describes the entity information that should be extracted.
+       */
+      json_schema?: string | null;
     };
     /** URI */
     URI: {
@@ -3680,6 +3730,31 @@ export interface operations {
       };
     };
   };
+  /**
+   * Suggest Extractor
+   * @description Suggest an extractor based on a description.
+   */
+  suggest_extractor_extractor_suggest_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SuggestExtractor"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorDefinition"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Run Extractor */
   run_extractor_extractor_run_post: {
     requestBody: {
@@ -3691,7 +3766,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["ExtractorRead"];
+          "application/json": components["schemas"]["ExtractorResponse"];
         };
       };
       /** @description Validation Error */

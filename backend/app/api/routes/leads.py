@@ -246,7 +246,9 @@ async def load_database(
 
 @router.post("/", status_code=201, response_model=UUID4)
 async def create_lead(
-    payload: schemas.LeadCreate, db: AsyncSession = Depends(get_async_session)
+    payload: schemas.LeadCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
 ):
     # Check if a lead with the same URL already exists
     existing_lead = await db.execute(
@@ -275,6 +277,7 @@ async def read_lead(lead: schemas.LeadRead = Depends(get_lead)):
 async def read_leads(
     db: AsyncSession = Depends(get_async_session),
     pagination: schemas.Pagination = Depends(get_pagination_params),
+    user: schemas.UserRead = Depends(get_current_user),
 ):
     # Calculate offset
     offset = (pagination.page - 1) * pagination.page_size
@@ -311,6 +314,7 @@ async def update_lead(
     payload: schemas.LeadUpdate,
     lead: schemas.LeadRead = Depends(get_lead),
     db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
 ):
     # Update the lead's attributes
     for var, value in payload.dict(exclude_unset=True).items():
@@ -322,7 +326,10 @@ async def update_lead(
 
 
 @router.delete("/purge", status_code=202, response_model=dict)
-async def purge_leads(db: AsyncSession = Depends(get_async_session)):
+async def purge_leads(
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
     """
     Drops all leads records in the table.
     """

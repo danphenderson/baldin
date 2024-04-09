@@ -25,7 +25,10 @@ const LeadsPage: React.FC = () => {
   const fetchLeads = async () => {
     setLoading(true);
     try {
-      const data = await getLeads(paginationModel);
+      if (!token) {
+        throw new Error('Authentication token is missing');
+      }
+      const data = await getLeads(token, paginationModel);
 
       if (!data) {
         console.error('Failed to fetch leads');
@@ -42,6 +45,7 @@ const LeadsPage: React.FC = () => {
     }
     setLoading(false);
   };
+
 
   useEffect(() => {
     fetchLeads();

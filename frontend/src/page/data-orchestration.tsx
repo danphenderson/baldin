@@ -6,19 +6,19 @@ import { erichLeadDataLake, loadLeadDatabase } from '../service/leads';
 import { useContext } from 'react';
 import { UserContext } from '../context/user-context';
 
-const actions = [
-  { text: 'Erich Leads DataLake', action: erichLeadDataLake},
-  { text: 'Load Leads From DataLake', action: loadLeadDatabase},
-];
+
 
 const DataOrchestrationPage: React.FC = () => {
+
   const { token } = useContext(UserContext);
   const [error, setError] = useState('');
   const [pipelines, setPipelines] = useState<OrchestrationEventRead[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPipeline, setSelectedPipeline] = useState<OrchestrationEventRead | undefined>(undefined);
-
-
+  const actions = [
+    { text: 'Erich Leads DataLake', action: (event: React.MouseEvent<HTMLDivElement>) => erichLeadDataLake() },
+    { text: 'Load Leads From DataLake', action: (event: React.MouseEvent<HTMLDivElement>) => loadLeadDatabase(token, event) },
+  ];
   useEffect(() => {
     if (token) {
         fetchState();
@@ -68,7 +68,7 @@ const DataOrchestrationPage: React.FC = () => {
       <Box>
         <List>
           {actions.map((item, index) => (
-            <ListItem button key={index} onClick={async () => await item.action()}>
+            <ListItem button key={index} onClick={async (event) => await item.action(event)}>
               <ListItemText primary={item.text} />
             </ListItem>
           ))}

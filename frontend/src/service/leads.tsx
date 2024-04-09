@@ -13,72 +13,64 @@ type OrchestrationEventRead = components['schemas']['OrchestrationEventRead-Outp
 
 
 const BASE_URL = "/leads"; // Can be moved to a config file or environment variable
-const DEFAULT_HEADERS = {
-  "Content-Type": "application/json",
+
+
+const createRequestOptions = (token: string | null, method: string, body?: any): RequestInit => {
+  if (!token) {
+    throw new Error("Authorization token is required");
+  }
+  return {
+    method: method,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: body ? JSON.stringify(body) : null,
+  };
 };
 
-const fetchApi = async (url: string, options: RequestInit): Promise<Response> => {
+
+const fetchAPI = async (url: string, options: RequestInit) => {
   const response = await fetch(url, options);
   if (!response.ok) {
-    // You can customize the error handling here
-    throw new Error('API request failed with status ${response.status}: ${response.statusText}`');
+    // Custom error handling can be implemented here
+    throw new Error('API request failed');
   }
-  return response;
-};
-
-export const getLeads = async (pagination: Pagination): Promise<LeadsPaginatedRead> => {
-  const response = await fetchApi(`${BASE_URL}/?page=${pagination.page}&page_size=${pagination.page_size}`, {
-    method: "GET",
-    headers: DEFAULT_HEADERS,
-  });
   return response.json();
 };
 
-export const getLead = async (id: string): Promise<LeadRead> => {
-  const response = await fetchApi(`${BASE_URL}/${id}`, {
-    method: "GET",
-    headers: DEFAULT_HEADERS,
-  });
-  return response.json();
+
+export const getLeads = async (token: string, pagination: Pagination): Promise<LeadsPaginatedRead> => {
+  const resquestOptions = createRequestOptions(token, "GET");
+  return await fetchAPI(`${BASE_URL}/?page=${pagination.page}&page_size=${pagination.page_size}`, resquestOptions);
 };
 
-export const createLead = async (lead: LeadCreate): Promise<LeadRead> => {
-  const response = await fetchApi(BASE_URL, {
-    method: "POST",
-    headers: DEFAULT_HEADERS,
-    body: JSON.stringify(lead),
-  });
-  return response.json();
+export const getLead = async (token: string, id: string): Promise<LeadRead> => {
+  const requestOptions = createRequestOptions(token, "GET");
+  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
 };
 
-export const updateLead = async (id: string, lead: LeadUpdate): Promise<LeadRead> => {
-  const response = await fetchApi(`${BASE_URL}/${id}`, {
-    method: "PATCH",
-    headers: DEFAULT_HEADERS,
-    body: JSON.stringify(lead),
-  });
-  return response.json();
+export const createLead = async (token: string, lead: LeadCreate): Promise<LeadRead> => {
+  const requestOptions = createRequestOptions(token, "POST", lead);
+  return fetchAPI(BASE_URL, requestOptions);
 };
 
-export const deleteLead = async (id: string): Promise<void> => {
-  await fetchApi(`${BASE_URL}/${id}`, {
-    method: "DELETE",
-    headers: DEFAULT_HEADERS,
-  });
+export const updateLead = async (token: string, id: string, lead: LeadUpdate): Promise<LeadRead> => {
+  const requestOptions = createRequestOptions(token, "PATCH", lead);
+  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
 };
 
-export const loadLeadDatabase = async (): Promise<OrchestrationEventRead> => {
-  const response = await fetchApi(`${BASE_URL}/load_database`, {
-    method: "POST",
-    headers: DEFAULT_HEADERS,
-  });
-  return response.json();
+export const deleteLead = async (token: string, id: string): Promise<void> => {
+  const requestOptions = createRequestOptions(token, "DELETE");
+  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
+};
+
+export const loadLeadDatabase = async (token: string, params: any): Promise<OrchestrationEventRead> => {
+  const requestOptions = createRequestOptions(token, "POST", params);
+  return fetchAPI(`${BASE_URL}/load_database`, requestOptions);
 }
 
 export const erichLeadDataLake = async (): Promise<OrchestrationEventRead> => {
-  const response = await fetchApi(`${BASE_URL}/erich_datalake`, {
-    method: "POST",
-    headers: DEFAULT_HEADERS,
-  });
-  return response.json();
+  const requestOptions = createRequestOptions(null, "POST");
+  return fetchAPI(`${BASE_URL}/enrich_data_lake`, requestOptions);
 }

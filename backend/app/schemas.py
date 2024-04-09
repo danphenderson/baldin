@@ -1,4 +1,5 @@
 # app/schemas.py
+import json
 from datetime import datetime
 from enum import Enum
 from io import BytesIO
@@ -408,11 +409,20 @@ class ExtractorExampleUpdate(BaseExtractorExample):
 class BaseExtractor(BaseSchema):
     name: str | None = Field(None, description="Extractor name")
     description: str | None = Field(None, description="Extractor description")
-    json_schema: dict | None = Field(None, description="JSON schema")
+    json_schema: dict | str | None = Field(None, description="JSON schema")
     instruction: str | None = Field(None, description="Extractor instruction")
     extractor_examples: list[ExtractorExampleRead] = Field(
         [], description="Extractor examples"
     )
+
+    @validator("json_schema")
+    def validate_schema(cls, v: Any) -> dict[str, Any]:
+        """Validate the schema."""
+        if isinstance(v, str):
+            v = json.loads(v)
+        if v:
+            utils.validate_json_schema(v)
+        return v
 
 
 class ExtractorRead(BaseRead, BaseExtractor):

@@ -1,5 +1,4 @@
 # app/api/routes/extractor.py
-import re
 from typing import Annotated, Literal, Sequence
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
@@ -142,18 +141,14 @@ UPDATE_CHAIN = (
 async def suggest_extractor(suggest_extractor: SuggestExtractor) -> ExtractorDefinition:
     """Suggest an extractor based on a description."""
     if suggest_extractor.json_schema:
-        console_log.warning(
-            f"Updating extractor with schema: {suggest_extractor.json_schema}"
-        )
         res = await UPDATE_CHAIN.ainvoke(
             {"input": suggest_extractor.description, "json_schema": suggest_extractor.json_schema}  # type: ignore
         )
-        console_log.warning(f"Updated extractor: {res}")
-        return res
-    console_log.warning(
-        f"Suggesting extractor based on description: {suggest_extractor.description}"
-    )
-    return await suggestion_chain.ainvoke({"input": suggest_extractor.description})  # type: ignore
+    else:
+        res = await suggestion_chain.ainvoke({"input": suggest_extractor.description})  # type: ignore
+
+    console_log.warning(f"Suggested extractor: {res}")
+    return res
 
 
 @router.post("/run", response_model=schemas.ExtractorRead)

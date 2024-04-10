@@ -242,7 +242,13 @@ async def get_orchestration_pipeline(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.OrchestrationPipeline:
-    pipeline = await db.get(models.OrchestrationPipeline, id)
+    query = (
+        select(models.OrchestrationPipeline)
+        .filter(models.OrchestrationPipeline.id == id)
+        .options(selectinload(models.OrchestrationPipeline.orchestration_events))
+    )
+    pipeline = await db.execute(query)
+    pipeline = pipeline.scalars().first()
     if not pipeline:
         raise await _404(pipeline, id)
     if pipeline.user_id != user.id:  # type: ignore

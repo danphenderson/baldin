@@ -1580,11 +1580,11 @@ export interface components {
        */
       params?: Record<string, never> | null;
       /**
-       * Events
+       * Orchestration Events
        * @description Events in the pipeline
        * @default []
        */
-      events?: components["schemas"]["OrchestrationEventRead-Output"][];
+      orchestration_events?: components["schemas"]["OrchestrationEventRead-Output"][];
     };
     /** OrchestrationPipelineUpdate */
     OrchestrationPipelineUpdate: {

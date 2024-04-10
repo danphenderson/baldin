@@ -22,22 +22,6 @@ class Base(DeclarativeBase):
 
 
 # Data Orchestration models
-class OrchestrationPipeline(Base):
-    """
-    Model for ETL (Extract, Transform, Load) pipelines.
-    Contains name, description, source, destination, and parameters.
-    Linked to orchestration events via one-to-many relationship.
-    """
-
-    __tablename__ = "orchestration_pipelines"
-    name = Column(String)
-    description = Column(Text)
-    params = Column(JSON)
-    user_id = Column(UUID, ForeignKey("users.id"))
-    user = relationship("User", back_populates="orchestration_pipelines")
-    orchestration_events = relationship(
-        "OrchestrationEvent", back_populates="orchestration_pipeline"
-    )
 
 
 class OrchestrationEvent(Base):
@@ -56,6 +40,24 @@ class OrchestrationEvent(Base):
     pipeline_id = Column(UUID, ForeignKey("orchestration_pipelines.id"))
     orchestration_pipeline = relationship(
         "OrchestrationPipeline", back_populates="orchestration_events"
+    )
+
+
+class OrchestrationPipeline(Base):
+    """
+    Model for ETL (Extract, Transform, Load) pipelines.
+    Contains name, description, source, destination, and parameters.
+    Linked to orchestration events via one-to-many relationship.
+    """
+
+    __tablename__ = "orchestration_pipelines"
+    name = Column(String)
+    description = Column(Text)
+    params = Column(JSON)
+    user_id = Column(UUID, ForeignKey("users.id"))
+    user = relationship("User", back_populates="orchestration_pipelines")
+    orchestration_events = relationship(
+        "OrchestrationEvent", back_populates="orchestration_pipeline"
     )
 
 

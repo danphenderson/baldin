@@ -79,7 +79,7 @@ class BaseOrchestrationPipeline(BaseSchema):
 
 class OrchestrationPipelineRead(BaseOrchestrationPipeline, BaseRead):
     events: list["OrchestrationEventRead"] = Field(
-        [], description="Events in the pipeline"
+        [], description="Events in the pipeline", alias="orchestration_events"
     )
 
 
@@ -102,6 +102,14 @@ class BaseOrchestrationEvent(BaseSchema):
         None, description="Status of the event"
     )
     pipeline_id: UUID4 | None = Field(None, description="Pipeline ID")
+
+    @validator("source_uri", "destination_uri", pre=True)
+    def validate_uri(cls, v: Any) -> URI | None:
+        if isinstance(v, str):
+            return URI(**json.loads(v))
+        if isinstance(v, dict):
+            return URI(**v)
+        return v
 
 
 class OrchestrationEventRead(BaseOrchestrationEvent, BaseRead):

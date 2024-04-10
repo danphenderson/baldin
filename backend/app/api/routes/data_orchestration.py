@@ -1,16 +1,12 @@
 # app/api/routes/data_orchestration.py
-import json
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.encoders import jsonable_encoder
 from pydantic import UUID4
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import (  # noqa
     AsyncSession,
-    conf,
-    console_log,
     get_async_session,
     get_current_user,
     get_orchestration_event,
@@ -40,22 +36,6 @@ async def read_orch_pipelines(db: AsyncSession = Depends(get_async_session)):
 async def read_orch_pipeline(
     pipeline: schemas.OrchestrationPipelineRead = Depends(get_orchestration_pipeline),
 ):
-    # for event in pipeline.events:
-    #     # Parse source_uri and destination_uri from JSON string to dictionary
-    #     source_uri = json.loads(event.source_uri) if event.source_uri else None
-    #     destination_uri = (
-    #         json.loads(event.destination_uri) if event.destination_uri else None
-    #     )
-
-    #     event_data = jsonable_encoder(event)
-    #     # Update the event_data with parsed URIs
-    #     event_data.update(
-    #         {"source_uri": source_uri, "destination_uri": destination_uri}
-    #     )
-
-    #     processed_event = schemas.OrchestrationEventRead(**event_data)
-    #     pipeline.orchestration_events.remove(event)
-    #     pipeline.orchestration_events.append(processed_event)
     return pipeline
 
 
@@ -104,25 +84,7 @@ async def read_orch_events(db: AsyncSession = Depends(get_async_session)):
     result = rows.scalars().all()
     if not result:
         raise HTTPException(status_code=404, detail="No ETL events found")
-
-    processed_result = []
-    for event in result:
-        # Parse source_uri and destination_uri from JSON string to dictionary
-        source_uri = json.loads(event.source_uri) if event.source_uri else None
-        destination_uri = (
-            json.loads(event.destination_uri) if event.destination_uri else None
-        )
-
-        event_data = jsonable_encoder(event)
-        # Update the event_data with parsed URIs
-        event_data.update(
-            {"source_uri": source_uri, "destination_uri": destination_uri}
-        )
-
-        processed_event = schemas.OrchestrationEventRead(**event_data)
-        processed_result.append(processed_event)
-
-    return processed_result
+    return result
 
 
 @router.get(
@@ -144,23 +106,12 @@ async def create_orch_event(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    async with db as session:
-        # Find the pipeline and add the event to it before committing
-        pipeline = await get_orchestration_pipeline(event.pipeline_id, session, user)
-
-        console_log.warning(f"Event: {event}")
-        console_log.warning(f"Pipeline: {pipeline}")
-
-        event_model = models.OrchestrationEvent(**event.dict())
-
-        pipeline.orchestration_events
-        session.add(event_model)
-        session.add(pipeline)
-
-        await session.commit()
-        await session.refresh(event_model)
-        await session.refresh(pipeline)
-
+    # Check that the pipeline exists
+    pipeline = await db.get(models.OrchestrationPipeline, event.pipeline_id)  # noqa
+    event_model = models.OrchestrationEvent(**event.dict())
+    db.add(event_model)
+    await db.commit()
+    await db.refresh(event_model)
     return event_model
 
 
@@ -170,16 +121,12 @@ async def create_orch_event(
     response_model=schemas.OrchestrationEventRead,
 )
 async def update_orch_event(
-    id: UUID4,
-    event: schemas.OrchestrationEventUpdate,
+    payload: schemas.OrchestrationEventUpdate,
+    event: schemas.OrchestrationEventRead = Depends(get_orchestration_event),
     db: AsyncSession = Depends(get_async_session),
 ):
-    async with db as session:
-        existing_event = await session.get(models.OrchestrationEvent, id)
-        if not existing_event:
-            raise HTTPException(status_code=404, detail="Event not found")
-        for field, value in event:
-            setattr(existing_event, field, value)
-        await session.commit()
-        await session.refresh(existing_event)
-        return existing_event
+    for field, value in payload.dict(exclude_unset=True, exclude_defaults=True).items():
+        setattr(event, field, value)
+    await db.commit()
+    await db.refresh(event)
+    return event

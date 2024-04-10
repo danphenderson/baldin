@@ -17,8 +17,6 @@ PYPROJECT_CONTENT = toml_load(f"{PROJECT_DIR}/pyproject.toml")["project"]
 # OMP: Error #15: Initializing libomp.dylib, but found libomp.dylib already initialized.
 # OMP: Hint This means that multiple copies of the OpenMP runtime have been linked into the program. That is dangerous, since it can degrade performance or cause incorrect results. The best thing to do is to ensure that only a single OpenMP runtime is linked into the process, e.g. by avoiding static linking of the OpenMP runtime in any library. As an unsafe, unsupported, undocumented workaround you can set the environment variable KMP_DUPLICATE_LIB_OK=TRUE to allow the program to continue to execute, but that may cause crashes or silently produce incorrect results. For more information, please see http://openmp.llvm.org/
 
-environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-
 
 class _BaseSettings(BaseSettings):
     class Config:
@@ -136,7 +134,7 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
     See https://openai.com/ for more information.
     """
 
-    API_KEY: str = ""
+    API_KEY: str
     COMPLETION_MODEL: str = "gpt-4-0125-preview"
     DEFAULT_MODEL: str = "gpt-3.5-turbo"
 
@@ -144,7 +142,7 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
     def SUPPORTED_MODELS(self):
         """Get models according to environment secrets."""
         models = {}
-        if getenv("OPENAI_API_KEY", None):
+        if self.API_KEY:
             models["gpt-3.5-turbo"] = {
                 "chat_model": ChatOpenAI(model="gpt-3.5-turbo", temperature=0),
                 "description": "GPT-3.5 Turbo",
@@ -160,7 +158,8 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
     def get_model(self, name: str | None = None) -> BaseChatModel:
         """Get the model."""
         if name is None:
-            return self.SUPPORTED_MODELS[self.DEFAULT_MODEL]["chat_model"]
+            return self.SUPPORTED_MODELS[self.COMPLETION_MODEL]["chat_model"]
+
         else:
             supported_model_names = list(self.SUPPORTED_MODELS.keys())
             if name not in supported_model_names:
@@ -237,3 +236,6 @@ openai = get_openai_settings()
 linkedin = get_linkedin_settings()
 
 glassdoor = get_glassdoor_settings()
+
+environ["OPENAI_API_KEY"] = openai.API_KEY
+environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"

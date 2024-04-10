@@ -10,6 +10,8 @@ import json
 import requests
 from typer import Argument, Option, Typer
 
+app = Typer()
+
 
 class AutoCLI:
     # FIXME:
@@ -34,24 +36,21 @@ class AutoCLI:
 
         return command_function
 
-    def __init__(self, app_kwargs: dict = {}):
-        self.app = Typer(**app_kwargs)
-
-    def generate_cli_commands(self, api_spec: dict):
+    @classmethod
+    def generate_cli_commands(cls, app, api_spec: dict):
         for path, methods in api_spec["paths"].items():
             for method, operation in methods.items():
                 command_name = operation.get("operationId", f"{method}_{path}").replace(
                     "/", "_"
                 )
-                command_function = self.create_command_function(path, method, operation)
-                self.app.command(name=command_name)(command_function)
+                command_function = cls.create_command_function(path, method, operation)
+                app.command(name=command_name)(command_function)
 
 
 def main():
     api_spec = AutoCLI.load_api_spec()
-    cli = AutoCLI()
-    cli.generate_cli_commands(api_spec)
-    cli.app()
+    AutoCLI.generate_cli_commands(app, api_spec)
+    app()
 
 
 if __name__ == "__main__":

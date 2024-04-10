@@ -76,13 +76,17 @@ const LeadsPage: React.FC = () => {
   };
 
   const handleSaveLead = async (leadData: LeadCreate | LeadUpdate) => {
+    if (!token) {
+      setError('Authorization token is missing, unable to save lead');
+      return;
+    }
     setModalOpen(false);
     setLoading(true);
 
     try {
       const savedLead = selectedLead?.id
-        ? await updateLead(selectedLead.id, leadData as LeadUpdate)
-        : await createLead(leadData as LeadCreate);
+        ? await updateLead(token, selectedLead.id, leadData as LeadUpdate)
+        : await createLead(token, leadData as LeadCreate);
 
       if (savedLead) {
         await fetchLeads();  // Refresh the leads list

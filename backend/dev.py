@@ -10,12 +10,13 @@ API access to perform various tasks, e.g.
 - Generate code snippets
 - Generate synthetic seed data
 """
-from langchain_community.document_loaders import AsyncChromiumLoader, async_html
+from langchain_community.document_loaders import AsyncChromiumLoader, AsyncHtmlLoader
 from langchain_community.document_transformers import BeautifulSoupTransformer
 from typer import Argument, Typer
 
 from app.core.langchain import ChatPromptTemplate, llm, str_output_parser
 from app.logging import get_logger
+from app.utils import clean_text
 
 app = Typer()
 
@@ -63,9 +64,25 @@ def qa(question: str, context: str = "") -> str:
     return chain.invoke({"question": question})
 
 
-@app.command
-async def bs_search(query: str, url: str) -> str:
-    loader = AsyncChromiumLoader()
+async def bs_find(query: str, url: str) -> str:
+    async with AsyncHtmlLoader(url) as loader:
+        html = await loader.load()
+    soup = BeautifulSoupTransformer(html)
+    return soup.find(query) | str_output_parser
+
+
+async def find(query: str, url: str) -> str:
+    async with AsyncChromiumLoader(url) as loader:
+        html = await loader.load()
+    return html.find(query) | str_output_parser
+
+
+async def docs_codegen(problem, docs_url):
+    ...
+
+
+async def docs_qa(question, docs_url):
+    ...
 
 
 def main():

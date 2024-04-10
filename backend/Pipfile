@@ -45,6 +45,7 @@ typing-extensions = "*"
 faiss-cpu = "*"
 typer = "*"
 requests = "*"
+types-requests = "*"
 
 [dev-packages]
 ipython = "*"

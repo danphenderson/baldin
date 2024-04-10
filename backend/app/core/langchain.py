@@ -1,25 +1,12 @@
-# APP imports
-import json
-import os
-
+# Path: app.core.langchain.py
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
+from app.core import conf
 
-# Third party imports
-from langchain_openai import ChatOpenAI
-
-from app import models, schemas
-from app.core import conf, db
-
-# ENSURE THAT THE OPENAI_API_KEY IS SET and Define the model
-os.environ["OPENAI_API_KEY"] = conf.openai.API_KEY
-
-
-llm = ChatOpenAI(model="gpt-4")  # type: ignore
+llm = conf.openai.get_model()
 
 str_output_parser = StrOutputParser()
-
 
 
 def generate_cover_letter(profile, job, template) -> str:

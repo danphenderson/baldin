@@ -1,5 +1,5 @@
 # app/core/conf.py
-from os import getenv
+from os import environ, getenv
 from pathlib import Path
 from typing import Literal, Union
 
@@ -17,51 +17,7 @@ PYPROJECT_CONTENT = toml_load(f"{PROJECT_DIR}/pyproject.toml")["project"]
 # OMP: Error #15: Initializing libomp.dylib, but found libomp.dylib already initialized.
 # OMP: Hint This means that multiple copies of the OpenMP runtime have been linked into the program. That is dangerous, since it can degrade performance or cause incorrect results. The best thing to do is to ensure that only a single OpenMP runtime is linked into the process, e.g. by avoiding static linking of the OpenMP runtime in any library. As an unsafe, unsupported, undocumented workaround you can set the environment variable KMP_DUPLICATE_LIB_OK=TRUE to allow the program to continue to execute, but that may cause crashes or silently produce incorrect results. For more information, please see http://openmp.llvm.org/
 
-import os
-
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-
-
-def get_supported_models():
-    """Get models according to environment secrets."""
-    models = {}
-    if getenv("OPENAI_API_KEY", None):
-        models["gpt-3.5-turbo"] = {
-            "chat_model": ChatOpenAI(model="gpt-3.5-turbo", temperature=0),
-            "description": "GPT-3.5 Turbo",
-        }
-        if getenv("DISABLE_GPT4", "").lower() != "true":
-            models["gpt-4-0125-preview"] = {
-                "chat_model": ChatOpenAI(model="gpt-4-0125-preview", temperature=0),
-                "description": "GPT-4 0125 Preview",
-            }
-
-    return models
-
-
-def get_model(name: str | None = None) -> BaseChatModel:
-    """Get the model."""
-    SUPPORTED_MODELS = get_supported_models()
-    if name is None:
-        return SUPPORTED_MODELS["gpt-3.5-turbo"]["chat_model"]
-    else:
-        supported_model_names = list(SUPPORTED_MODELS.keys())
-        if name not in supported_model_names:
-            raise ValueError(
-                f"Model {name} not found. " f"Supported models: {supported_model_names}"
-            )
-        else:
-            return SUPPORTED_MODELS[name]["chat_model"]
-
-
-CHUNK_SIZES = {  # in tokens, defaults to int(4_096 * 0.8). Override here.
-    "gpt-4-0125-preview": int(128_000 * 0.8),
-}
-
-
-def get_chunk_size(name: str) -> int:
-    """Get the chunk size."""
-    return CHUNK_SIZES.get(name, int(4_096 * 0.8))
+environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 class _BaseSettings(BaseSettings):
@@ -181,15 +137,45 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
     """
 
     API_KEY: str = ""
-    COMPLETION_MODEL: str = "gpt-3.5-turbo"
+    COMPLETION_MODEL: str = "gpt-4-0125-preview"
     DEFAULT_MODEL: str = "gpt-3.5-turbo"
 
     @property
     def SUPPORTED_MODELS(self):
-        return get_supported_models()
+        """Get models according to environment secrets."""
+        models = {}
+        if getenv("OPENAI_API_KEY", None):
+            models["gpt-3.5-turbo"] = {
+                "chat_model": ChatOpenAI(model="gpt-3.5-turbo", temperature=0),
+                "description": "GPT-3.5 Turbo",
+            }
+            if getenv("DISABLE_GPT4", "").lower() != "true":
+                models["gpt-4-0125-preview"] = {
+                    "chat_model": ChatOpenAI(model="gpt-4-0125-preview", temperature=0),
+                    "description": "GPT-4 0125 Preview",
+                }
+
+        return models
 
     def get_model(self, name: str | None = None) -> BaseChatModel:
-        return get_model(name or self.DEFAULT_MODEL)
+        """Get the model."""
+        if name is None:
+            return self.SUPPORTED_MODELS[self.DEFAULT_MODEL]["chat_model"]
+        else:
+            supported_model_names = list(self.SUPPORTED_MODELS.keys())
+            if name not in supported_model_names:
+                raise ValueError(
+                    f"Model {name} not found. Supported models: {supported_model_names}"
+                )
+            else:
+                return self.SUPPORTED_MODELS[name]["chat_model"]
+
+    def get_chunk_size(self, name: str) -> int:
+        """Get the chunk size."""
+        CHUNK_SIZES = {  # in tokens, defaults to int(4_096 * 0.8). Override here.
+            "gpt-4-0125-preview": int(128_000 * 0.8),
+        }
+        return CHUNK_SIZES.get(name, int(4_096 * 0.8))
 
 
 class Linkedin(_BaseSettings, env_prefix="LINKEDIN_"):

@@ -9,30 +9,17 @@ Documentation is available at [https://baldin.readthedocs.io/en/latest/](https:/
 **Source Code**:  <a href="https://github.com/danphenderson/baldin" target="_blank">https://https://github.com/danphenderson/baldin</a>
 
 
-## 🚧 Features 🚧
+## 🚧 Features + Bugs 🚧
 
-Currently, the application is in its infancy. The following features are
-planned for the first release:
+Currently, the application is in its infancy. See open issues for a list of planned features and known bugs. If you find a bug, have a feature request, or simply a question, please file an issue.
 
-- [x] User authentication
-- [x] User registration
-- [x] User settings
-- [ ] ETL pipeline for job data
-- [ ] Job search
-- [ ] Job finder
-- [ ] Coverletter generator
-- [ ] Resume generators
-- [ ] Job application recommendation engine
-
-
-### Feature/Bug Request
-
-If you find a bug or have a feature request, please file an issue on the
-repository's [issue tracker](https://github.com/danphenderson/baldin/issues)
+[issue tracker](https://github.com/danphenderson/baldin/issues)
 
 # Contributing
 
-Contributions are welcome!
+Contributions are welcome! The frontend is built with React and the backend is built with FastAPI. The API is powered by a Postgres database.
+
+Currently the frontend of the application needs to get up to speed with the backend. The backend is in a good place to start building out the frontend.
 
 ### Getting Started
 
@@ -71,10 +58,10 @@ In the `frontend/` directory:
 
    - Start the development server: `npm start`
 
-### Development Network
+### Local Network
 
 Baldin: [API](http://127.0.0.1:8004) | [Frontend](http://localhost:3000/)
-
+2
 OpenAPI: [Swagger Documentation](http://127.0.0.1:8004/docs) | [(re)docs](http://127.0.0.1:8004/redocs)
 
 ### 5-steps to contributing
@@ -95,7 +82,7 @@ After finishing the above steps, you're ready to start contributing!
 
 ### Futher Considerations
 
-When modifying the api, generate the `frontend/schema.d.ts` using the openapi-typescript package:
+When modifying the API, generate the `frontend/schema.d.ts` using the openapi-typescript package:
 
 `npx openapi-typescript ./openapi.json -o ./schema.d.ts`
 

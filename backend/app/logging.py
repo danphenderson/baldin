@@ -65,4 +65,24 @@ def get_async_logger(
     return AsyncJSONFileLogger(name, str(filepath), backupcount, interval, encoding)
 
 
+def get_logger(name, file_name: str | None = None):
+    logger = logging.getLogger(name)
+    logger.setLevel(conf.settings.LOGGING_LEVEL)
+    formatter = logging.Formatter(
+        '{"levelname": "%(levelname)s", "message": "%(message)s", "asctime": "%(asctime)s", "process_id": "%(process)s", "thread_id": "%(thread)s"}'
+    )  # noqa: E501
+    handler = TimedRotatingFileHandler(
+        str(
+            Path(conf.settings.PUBLIC_ASSETS_DIR)
+            / f"{file_name or conf.settings.LOGGING_FILE_NAME}.log"
+        ),  # noqa
+        backupCount=5,
+        when="D",
+        encoding="utf-8",
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    return logger
+
+
 console_log = logging.getLogger("uvicorn")

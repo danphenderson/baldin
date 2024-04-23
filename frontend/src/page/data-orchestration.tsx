@@ -17,7 +17,7 @@ const DataOrchestrationPage: React.FC = () => {
   const [selectedPipeline, setSelectedPipeline] = useState<OrchestrationEventRead | undefined>(undefined);
   const actions = [
     { text: 'Erich Leads DataLake', action: (event: React.MouseEvent<HTMLDivElement>) => erichLeadDataLake() },
-    { text: 'Load Leads From DataLake', action: (event: React.MouseEvent<HTMLDivElement>) => loadLeadDatabase(token, event) },
+    { text: 'Load Leads From DataLake', action: (event: React.MouseEvent<HTMLDivElement>) => loadLeadDatabase(token || '', event) },
   ];
   useEffect(() => {
     if (token) {

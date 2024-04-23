@@ -15,7 +15,7 @@ from torch import ge
 
 from app import schemas
 from app.core import conf
-from app.core.conf import get_chunk_size, get_model, openai, settings
+from app.core.conf import openai, settings
 from app.logging import console_log
 from app.models import Extractor, ExtractorExample
 from app.utils import update_json_schema, validate_json_schema
@@ -139,9 +139,7 @@ async def extraction_runnable(
         getattr(extraction_request, "examples", None),
         schema["title"],
     )
-    model = get_model(
-        getattr(extraction_request, "llm_name", None) or conf.openai.DEFAULT_MODEL
-    )
+    model = openai.get_model(getattr(extraction_request, "llm_name", None))
     # N.B. method must be consistent with examples in _make_prompt_template
     runnable = (
         prompt | model.with_structured_output(schema=schema, method="function_calling")
@@ -161,7 +159,7 @@ async def extract_entire_document(
 
     examples = get_examples_from_extractor(extractor)
     text_splitter = TokenTextSplitter(
-        chunk_size=get_chunk_size(llm_name),
+        chunk_size=openai.get_chunk_size(llm_name),
         chunk_overlap=20,
         model_name=openai.DEFAULT_MODEL,
     )

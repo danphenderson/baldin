@@ -2,7 +2,17 @@
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    JSON,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -107,6 +117,33 @@ class Extractor(Base):
         return f"<Extractor(id={self.id}, description={self.description})>"
 
 
+leads_x_companies = Table(
+    "leads_x_companies",
+    Base.metadata,
+    Column("lead_id", UUID, ForeignKey("leads.id"), primary_key=True),
+    Column("company_id", UUID, ForeignKey("companies.id"), primary_key=True),
+)
+
+
+class Company(Base):
+    """
+    Represents a company.
+    Includes company name, industry, size, location, etc.
+    Linked to job leads through many-to-many relationship.
+    """
+
+    __tablename__ = "companies"
+    name = Column(String, nullable=False)
+    industry = Column(String)
+    size = Column(String)
+    location = Column(String)
+    description = Column(Text)
+
+    leads = relationship(
+        "Lead", secondary=leads_x_companies, back_populates="companies"
+    )
+
+
 class Lead(Base):
     """
     Represents a job lead.
@@ -117,7 +154,6 @@ class Lead(Base):
     __tablename__ = "leads"
     url = Column(String, unique=True, index=True)
     title = Column(String)
-    company = Column(String)
     description = Column(String)
     location = Column(String)
     salary = Column(String)
@@ -128,7 +164,11 @@ class Lead(Base):
     education_level = Column(String)
     notes = Column(Text)
     hiring_manager = Column(String)
+
     application = relationship("Application", back_populates="lead")
+    companies = relationship(
+        "Company", secondary=leads_x_companies, back_populates="leads"
+    )
 
 
 # End of system models
@@ -267,7 +307,7 @@ class CoverLetter(Base):
     """
     Represents a user's cover letter.
     Includes name, content, type.
-    Linked to users and job applications via many-to-one and many-to-many relationships.
+    Linked to users and job applications via many-to-one and many-to-many relationships, respectively.
     """
 
     __tablename__ = "cover_letters"

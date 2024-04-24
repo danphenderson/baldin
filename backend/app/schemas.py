@@ -233,9 +233,28 @@ class CertificateUpdate(BaseCertificate):
     pass
 
 
+class BaseCompany(BaseSchema):
+    name: str = Field(..., description="Company name")
+    industry: str | None = Field(None, description="Industry of the company")
+    size: str | None = Field(None, description="Size of the company")
+    location: str | None = Field(None, description="Location of the company")
+    description: str | None = Field(None, description="Description of the company")
+
+
+class CompanyRead(BaseCompany, BaseRead):
+    pass
+
+
+class CompanyCreate(BaseCompany):
+    pass
+
+
+class CompanyUpdate(BaseCompany):
+    pass
+
+
 class BaseLead(BaseSchema):
     title: str | None = Field(None, description="Job title")
-    company: str | None = Field(None, description="Company name")
     description: str | None = Field(None, description="Job description")
     location: str | None = Field(None, description="Job location")
     salary: str | None = Field(None, description="Salary range")
@@ -246,6 +265,9 @@ class BaseLead(BaseSchema):
     education_level: str | None = Field(None, description="Required education level")
     notes: str | None = Field(None, description="Additional notes")
     hiring_manager: str | None = Field(None, description="Hiring manager")
+    companies: list[CompanyRead] = Field(
+        [], description="List of companies associated with the lead"
+    )
 
 
 class LeadRead(BaseRead, BaseLead):

@@ -44,7 +44,7 @@ async def test_client():
 
 
 @pytest.fixture(scope="session")
-async def session():
+async def db():
     assert str(async_engine.url) == str(conf.settings.TEST_SQLALCHEMY_DATABASE_URI)
     await drop_and_create_db_and_tables()
     async with session_context() as session:
@@ -52,54 +52,52 @@ async def session():
 
 
 @pytest.fixture
-async def default_user(session: AsyncSession) -> User:
-    return await utils.create_db_user(default_user_email, default_user_hash, session)
+async def default_user(db: AsyncSession) -> User:
+    return await utils.create_db_user(default_user_email, default_user_hash, db)
 
 
 @pytest.fixture
-async def superuser_user(session: AsyncSession) -> User:
+async def superuser_user(db: AsyncSession) -> User:
     return await utils.create_db_user(
-        superuser_user_email, superuser_user_hash, session, is_superuser=True
+        superuser_user_email, superuser_user_hash, db, is_superuser=True
     )
 
 
 @pytest.fixture
-async def etl_event(session: AsyncSession) -> OrchestrationEvent:
-    return await utils.create_etl_event(session)
+async def etl_event(db: AsyncSession) -> OrchestrationEvent:
+    return await utils.create_etl_event(db)
 
 
 @pytest.fixture
-async def lead(session: AsyncSession) -> Lead:
-    return await utils.create_lead(session)
+async def lead(db: AsyncSession) -> Lead:
+    return await utils.create_lead(db)
 
 
 @pytest.fixture
-async def skill(session: AsyncSession, default_user: User) -> Skill:
-    return await utils.create_skill(session, default_user.id)
+async def skill(db: AsyncSession, default_user: User) -> Skill:
+    return await utils.create_skill(db, default_user.id)
 
 
 @pytest.fixture
-async def experience(session: AsyncSession, default_user: User) -> Experience:
-    return await utils.create_experience(session, default_user.id)
+async def experience(db: AsyncSession, default_user: User) -> Experience:
+    return await utils.create_experience(db, default_user.id)
 
 
 @pytest.fixture
-async def application(
-    session: AsyncSession, default_user: User, lead: Lead
-) -> Application:
-    return await utils.create_application(session, default_user.id, lead.id)
+async def application(db: AsyncSession, default_user: User, lead: Lead) -> Application:
+    return await utils.create_application(db, default_user.id, lead.id)
 
 
 @pytest.fixture
-async def contact(session: AsyncSession, default_user: User) -> Contact:
-    return await utils.create_contact(session, default_user.id)
+async def contact(db: AsyncSession, default_user: User) -> Contact:
+    return await utils.create_contact(db, default_user.id)
 
 
 @pytest.fixture
-async def resume(session: AsyncSession, default_user: User) -> Resume:
-    return await utils.create_resume(session, default_user.id)
+async def resume(db: AsyncSession, default_user: User) -> Resume:
+    return await utils.create_resume(db, default_user.id)
 
 
 @pytest.fixture
-async def cover_letter(session: AsyncSession, default_user: User) -> CoverLetter:
-    return await utils.create_cover_letter(session, default_user.id)
+async def cover_letter(db: AsyncSession, default_user: User) -> CoverLetter:
+    return await utils.create_cover_letter(db, default_user.id)

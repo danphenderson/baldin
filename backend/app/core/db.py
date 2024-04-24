@@ -1,4 +1,4 @@
-# app/core/db.py
+# Path: app/core/db.py
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -11,12 +11,13 @@ from app.models import Base, User
 
 # Determine the appropriate SQLAlchemy database URI based on the environment
 if conf.settings.ENVIRONMENT == "PYTEST":
-    sqlalchemy_database_uri = conf.settings.TEST_SQLALCHEMY_DATABASE_URI
+    sqlalchemy_database_uri = str(conf.settings.TEST_SQLALCHEMY_DATABASE_URI)
 else:
     sqlalchemy_database_uri = str(
         conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI
     )  # Use string conversion as a workaround
 
+print(f"SQLALCHEMY_DATABASE_URI: {sqlalchemy_database_uri}\n")
 # Create an asynchronous engine for SQLAlchemy
 async_engine = create_async_engine(sqlalchemy_database_uri, echo=False)
 

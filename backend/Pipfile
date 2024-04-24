@@ -8,7 +8,6 @@ fastapi = "*"
 uvicorn = "*"
 asyncpg = "*"
 fastapi-users = {extras = ["sqlalchemy"] }
-pytest = "*"
 httpx = "*"
 selenium = "*"
 openai = "*"
@@ -43,28 +42,27 @@ jsonschema = "*"
 langchain-community = "*"
 typing-extensions = "*"
 faiss-cpu = "*"
-typer = "*"
 requests = "*"
-types-requests = "*"
+
 
 [dev-packages]
 ipython = "*"
-coverage = "==6.2"
-pytest-asyncio = "*"
 mypy = "*"
 install = "*"
 types-aiofiles = "*"
 types-toml = "*"
 jupyter = "*"
-baldin = {file = "."}
+types-requests = "*"
+typer = "*"
+baldin = {editable = true, extras = ["tests", "docs"], path = "."}
 
 [scripts]
-test = "docker-compose exec web python -m pytest"
-testv = "docker-compose exec web python -m pytest -vv"
-psql = "docker-compose exec db psql -U postgres"
-ipython = "docker-compose exec web ipython"
-shell = "docker-compose exec web bash"
+test = "python -m pytest"
+testv = "python -m pytest -vv"
 api = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8004"
+build = "python setup.py sdist bdist_wheel"
+build-docs = "sphinx-build -b html docs/source docs"
+host-docs = "python -m http.server --directory docs"
 
 [requires]
 python_version = "3.11"

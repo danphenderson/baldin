@@ -36,7 +36,6 @@ class Settings(_BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     BACKEND_CORS_ORIGINS: Union[str, list[AnyHttpUrl]]
     LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
-    LOGGING_FILE_NAME: str = "api.log"
     PUBLIC_ASSETS_DIR: str = "public"
 
     # PROJECT NAME, VERSION AND DESCRIPTION
@@ -86,14 +85,29 @@ class Settings(_BaseSettings):
         return cors_origins
 
     @validator("DEFAULT_SQLALCHEMY_DATABASE_URI")
-    def _assemble_default_db_connection(cls, v: str, values: dict[str, str]) -> str:
-        return AnyUrl.build(
-            scheme="postgresql+asyncpg",
-            username=values["DEFAULT_DATABASE_USER"],
-            password=values["DEFAULT_DATABASE_PASSWORD"],
-            host=values["DEFAULT_DATABASE_HOSTNAME"],
-            port=values["DEFAULT_DATABASE_PORT"],  # type: ignore
-            path=f"{values['DEFAULT_DATABASE_DB']}",
+    def _assemble_default_db_connection(cls, v, values):
+        return str(
+            AnyUrl.build(
+                scheme="postgresql+asyncpg",
+                username=values["DEFAULT_DATABASE_USER"],
+                password=values["DEFAULT_DATABASE_PASSWORD"],
+                host=values["DEFAULT_DATABASE_HOSTNAME"],
+                port=values["DEFAULT_DATABASE_PORT"],
+                path=values["DEFAULT_DATABASE_DB"],
+            )
+        )
+
+    @validator("TEST_SQLALCHEMY_DATABASE_URI")
+    def _assemble_test_db_connection(cls, v, values):
+        return str(
+            AnyUrl.build(
+                scheme="postgresql+asyncpg",
+                username=values["TEST_DATABASE_USER"],
+                password=values["TEST_DATABASE_PASSWORD"],
+                host=values["TEST_DATABASE_HOSTNAME"],
+                port=int(values["TEST_DATABASE_PORT"]),
+                path=values["TEST_DATABASE_DB"],
+            )
         )
 
 

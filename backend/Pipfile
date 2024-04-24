@@ -46,6 +46,7 @@ faiss-cpu = "*"
 typer = "*"
 requests = "*"
 types-requests = "*"
+baldin = {file = ".", editable = true}
 
 [dev-packages]
 ipython = "*"

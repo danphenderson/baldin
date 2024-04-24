@@ -1,10 +1,16 @@
+# Path: app/tests/conftest.py
 import pytest
 from fastapi_users.password import PasswordHelper
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
+from app.core.db import (
+    async_engine,
+    drop_and_create_db_and_tables,
+    session_context,
+    sqlalchemy_database_uri,
+)
 from app.main import app
 from app.models import (
     Application,
@@ -29,19 +35,20 @@ superuser_user_hash = password_helper.hash("yennefer")
 
 @pytest.fixture(scope="session")
 async def test_client():
-    async with AsyncClient(app=app, base_url="http://doesnt.matter") as client:
+    assert conf.settings.ENVIRONMENT == "PYTEST"
+    assert conf.settings.TEST_SQLALCHEMY_DATABASE_URI == sqlalchemy_database_uri
+    async with AsyncClient(
+        app=app, base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1])
+    ) as client:
         yield client
 
 
 @pytest.fixture(scope="session")
 async def session():
-    assert conf.settings.ENVIRONMENT == "PYTEST"
-    assert str(async_engine.url) == conf.settings.TEST_SQLALCHEMY_DATABASE_URI
-
+    assert str(async_engine.url) == str(conf.settings.TEST_SQLALCHEMY_DATABASE_URI)
     await drop_and_create_db_and_tables()
-
     async with session_context() as session:
-        return session
+        yield session
 
 
 @pytest.fixture

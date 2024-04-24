@@ -1,4 +1,4 @@
-# app/core/db.py
+# Path: app/core/db.py
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 

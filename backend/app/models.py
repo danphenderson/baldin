@@ -1,4 +1,4 @@
-# app/models.py
+# Path: app/models.py
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID

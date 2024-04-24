@@ -1,3 +1,5 @@
+# Path: app/logging.py
+
 import asyncio
 import json
 import logging
@@ -59,11 +61,14 @@ def _get_logger_filepath(name: str) -> Path:
         filepath.parent.mkdir(parents=True, exist_ok=True)
     return filepath
 
+
 def get_async_logger(
     name, backupcount=None, interval="D", encoding="utf-8"
 ) -> AsyncJSONFileLogger:
     backupcount = backupcount or 5
-    return AsyncJSONFileLogger(name, _get_logger_filepath(name), backupcount, interval, encoding)
+    return AsyncJSONFileLogger(
+        name, _get_logger_filepath(name), backupcount, interval, encoding
+    )
 
 
 def get_logger(name: str) -> logging.Logger:

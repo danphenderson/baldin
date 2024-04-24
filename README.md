@@ -3,7 +3,7 @@
 Baldin helps navigate the modern job market.
 ------
 
-Documentation is available at [https://baldin.readthedocs.io/en/latest/](https://baldin.readthedocs.io/en/latest/)
+Documentation is available at [https://danphenderson.github.io/baldin/](https://danphenderson.github.io/baldin/)
 
 
 **Source Code**:  <a href="https://github.com/danphenderson/baldin" target="_blank">https://https://github.com/danphenderson/baldin</a>

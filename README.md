@@ -62,7 +62,7 @@ In the `frontend/` directory:
 
 Baldin: [API](http://127.0.0.1:8004) | [Frontend](http://localhost:3000/)
 2
-OpenAPI: [Swagger Documentation](http://127.0.0.1:8004/docs) | [(re)docs](http://127.0.0.1:8004/redocs)
+OpenAPI: [Swagger Documentation](http://127.0.0.1:8004/docs) | [(re)docs](http://127.0.0.1:8004/redoc)
 
 ### 5-steps to contributing
 

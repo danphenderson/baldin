@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>app.schemas &#8212; baldin 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d10597a4" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pydoctheme.css?v=8635fa60" />
+
+    <script src="../../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+
+    <script src="../../_static/sidebar.js"></script>
+
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <link rel="shortcut icon" type="image/png" href="../../_static/favicon.png" />
+    <meta name="viewport" content="width=device-width,initial-scale=0.8">
+
+
+
+  </head><body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="responsive-menu"><a href="#sidebar-anchor" title="Navigation">&#9776;</a></li>
+        <li><a href="../../index.html">baldin-0.1.0</a> &#187;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
+      </ul>
+    </div>
+
+        <div class="badge">
+            <a href="https://github.com/danphenderson/baldin/">Fork me on GitHub</a>
+            <img src="../../_static/right-red@2x.png">
+        </div>
+
+
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+
+  <h1>Source code for app.schemas</h1><div class="highlight"><pre>
+<span></span><span class="c1"># app/schemas.py</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">BytesIO</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>  <span class="c1"># TODO: Use Literal for performance improvement</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">TypeVar</span>
+
+<span class="kn">from</span> <span class="nn">fastapi_users</span> <span class="kn">import</span> <span class="n">schemas</span>
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">UUID4</span><span class="p">,</span> <span class="n">AnyHttpUrl</span>
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span> <span class="k">as</span> <span class="n">_BaseModel</span>
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">EmailStr</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">model_validator</span><span class="p">,</span> <span class="n">validator</span>
+<span class="kn">from</span> <span class="nn">PyPDF2</span> <span class="kn">import</span> <span class="n">PdfReader</span>
+
+<span class="kn">from</span> <span class="nn">app</span> <span class="kn">import</span> <span class="n">utils</span>
+
+
+<span class="c1"># Base Model</span>
+<div class="viewcode-block" id="BaseSchema">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseSchema">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseSchema</span><span class="p">(</span><span class="n">_BaseModel</span><span class="p">):</span>
+<div class="viewcode-block" id="BaseSchema.Config">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseSchema.Config">[docs]</a>
+    <span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+        <span class="n">from_attributes</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">protected_namespaces</span> <span class="o">=</span> <span class="p">()</span>  <span class="c1"># Setting protected namespaces to empty</span></div>
+</div>
+
+
+
+<span class="c1"># Types, properties, and shared models</span>
+
+
+<span class="n">BaseSchemaSubclass</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;BaseSchemaSubclass&quot;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">BaseSchema</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ContentType">
+<a class="viewcode-back" href="../../index.html#app.schemas.ContentType">[docs]</a>
+<span class="k">class</span> <span class="nc">ContentType</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+    <span class="n">CUSTOM</span> <span class="o">=</span> <span class="s2">&quot;custom&quot;</span>
+    <span class="n">GENERATED</span> <span class="o">=</span> <span class="s2">&quot;generated&quot;</span>
+    <span class="n">TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;template&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="OrchestrationEventStatusType">
+<a class="viewcode-back" href="../../index.html#app.schemas.OrchestrationEventStatusType">[docs]</a>
+<span class="k">class</span> <span class="nc">OrchestrationEventStatusType</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+    <span class="n">PENDING</span> <span class="o">=</span> <span class="s2">&quot;pending&quot;</span>
+    <span class="n">RUNNING</span> <span class="o">=</span> <span class="s2">&quot;running&quot;</span>
+    <span class="n">SUCCESS</span> <span class="o">=</span> <span class="s2">&quot;success&quot;</span>
+    <span class="n">FAILED</span> <span class="o">=</span> <span class="s2">&quot;failure&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="URIType">
+<a class="viewcode-back" href="../../index.html#app.schemas.URIType">[docs]</a>
+<span class="k">class</span> <span class="nc">URIType</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+    <span class="n">FILE</span> <span class="o">=</span> <span class="s2">&quot;filepath&quot;</span>
+    <span class="n">DATALAKE</span> <span class="o">=</span> <span class="s2">&quot;datalake&quot;</span>
+    <span class="n">DATABASE</span> <span class="o">=</span> <span class="s2">&quot;database&quot;</span>
+    <span class="n">API</span> <span class="o">=</span> <span class="s2">&quot;api&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="URI">
+<a class="viewcode-back" href="../../index.html#app.schemas.URI">[docs]</a>
+<span class="k">class</span> <span class="nc">URI</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="nb">type</span><span class="p">:</span> <span class="n">URIType</span>
+
+<div class="viewcode-block" id="URI.Config">
+<a class="viewcode-back" href="../../index.html#app.schemas.URI.Config">[docs]</a>
+    <span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+        <span class="n">json_encoders</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;URI&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">dict</span><span class="p">(),</span>
+        <span class="p">}</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="BaseRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseRead">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseRead</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="n">UUID4</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;The unique uuid4 record identifier.&quot;</span><span class="p">)</span>
+    <span class="n">created_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;The time the item was created&quot;</span><span class="p">)</span>
+    <span class="n">updated_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;The time the item was last updated&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="Pagination">
+<a class="viewcode-back" href="../../index.html#app.schemas.Pagination">[docs]</a>
+<span class="k">class</span> <span class="nc">Pagination</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">page</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The page number&quot;</span><span class="p">)</span>
+    <span class="n">page_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The number of items per page&quot;</span><span class="p">)</span>
+    <span class="n">request_count</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Request a query for total count&quot;</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># Model CRUD Schemas</span>
+<div class="viewcode-block" id="BaseOrchestrationPipeline">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseOrchestrationPipeline">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseOrchestrationPipeline</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Name of the pipeline&quot;</span><span class="p">)</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Description of the pipeline&quot;</span><span class="p">)</span>
+    <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Parameters for the pipeline&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="OrchestrationPipelineRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.OrchestrationPipelineRead">[docs]</a>
+<span class="k">class</span> <span class="nc">OrchestrationPipelineRead</span><span class="p">(</span><span class="n">BaseOrchestrationPipeline</span><span class="p">,</span> <span class="n">BaseRead</span><span class="p">):</span>
+    <span class="n">events</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="s2">&quot;OrchestrationEventRead&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="p">[],</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Events in the pipeline&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s2">&quot;orchestration_events&quot;</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="OrchestrationPipelineCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.OrchestrationPipelineCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">OrchestrationPipelineCreate</span><span class="p">(</span><span class="n">BaseOrchestrationPipeline</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="OrchestrationPipelineUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.OrchestrationPipelineUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">OrchestrationPipelineUpdate</span><span class="p">(</span><span class="n">BaseOrchestrationPipeline</span><span class="p">):</span>
+    <span class="n">events</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="s2">&quot;OrchestrationEventRead&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="p">[],</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Events in the pipeline&quot;</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="BaseOrchestrationEvent">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseOrchestrationEvent">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseOrchestrationEvent</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Name of the event&quot;</span><span class="p">)</span>
+    <span class="n">message</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Error message&quot;</span><span class="p">)</span>
+    <span class="n">source_uri</span><span class="p">:</span> <span class="n">URI</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Source of the pipeline&quot;</span><span class="p">)</span>
+    <span class="n">destination_uri</span><span class="p">:</span> <span class="n">URI</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Destination of the pipeline&quot;</span><span class="p">)</span>
+    <span class="n">status</span><span class="p">:</span> <span class="n">OrchestrationEventStatusType</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Status of the event&quot;</span>
+    <span class="p">)</span>
+    <span class="n">pipeline_id</span><span class="p">:</span> <span class="n">UUID4</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Pipeline ID&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="BaseOrchestrationEvent.validate_uri">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseOrchestrationEvent.validate_uri">[docs]</a>
+    <span class="nd">@validator</span><span class="p">(</span><span class="s2">&quot;source_uri&quot;</span><span class="p">,</span> <span class="s2">&quot;destination_uri&quot;</span><span class="p">,</span> <span class="n">pre</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">validate_uri</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">URI</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">URI</span><span class="p">(</span><span class="o">**</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">URI</span><span class="p">(</span><span class="o">**</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="OrchestrationEventRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.OrchestrationEventRead">[docs]</a>
+<span class="k">class</span> <span class="nc">OrchestrationEventRead</span><span class="p">(</span><span class="n">BaseOrchestrationEvent</span><span class="p">,</span> <span class="n">BaseRead</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="OrchestrationEventCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.OrchestrationEventCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">OrchestrationEventCreate</span><span class="p">(</span><span class="n">BaseOrchestrationEvent</span><span class="p">):</span>
+    <span class="n">pipeline_id</span><span class="p">:</span> <span class="n">UUID4</span></div>
+
+
+
+<div class="viewcode-block" id="OrchestrationEventUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.OrchestrationEventUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">OrchestrationEventUpdate</span><span class="p">(</span><span class="n">BaseOrchestrationEvent</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="ExtractorRequest">
+<a class="viewcode-back" href="../../index.html#app.schemas.ExtractorRequest">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtractorRequest</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">llm_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="s2">&quot;gpt-3.5-turbo&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Model name&quot;</span><span class="p">)</span>
+    <span class="n">examples</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="s2">&quot;ExtractorExampleRead&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="p">[],</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Extraction examples&quot;</span>
+    <span class="p">)</span>
+    <span class="n">instructions</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Extraction instruction&quot;</span><span class="p">)</span>
+    <span class="n">json_schema</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;JSON schema&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s2">&quot;schema&quot;</span><span class="p">)</span>
+    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Text to extract from&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ExtractorRequest.validate_schema">
+<a class="viewcode-back" href="../../index.html#app.schemas.ExtractorRequest.validate_schema">[docs]</a>
+    <span class="nd">@validator</span><span class="p">(</span><span class="s2">&quot;json_schema&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">validate_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate the schema.&quot;&quot;&quot;</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">validate_json_schema</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ExtractorResponse">
+<a class="viewcode-back" href="../../index.html#app.schemas.ExtractorResponse">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtractorResponse</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">data</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">([],</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Extracted data&quot;</span><span class="p">)</span>
+    <span class="n">content_too_long</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Content too long to extract&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="BaseSkill">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseSkill">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseSkill</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Name of the skill&quot;</span><span class="p">)</span>
+    <span class="n">category</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Category of the skill&quot;</span><span class="p">)</span>
+    <span class="n">yoe</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Years of Experience&quot;</span><span class="p">)</span>
+    <span class="n">subskills</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Sub-Skills&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="SkillRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.SkillRead">[docs]</a>
+<span class="k">class</span> <span class="nc">SkillRead</span><span class="p">(</span><span class="n">BaseRead</span><span class="p">,</span> <span class="n">BaseSkill</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="SkillCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.SkillCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">SkillCreate</span><span class="p">(</span><span class="n">BaseSkill</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="SkillUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.SkillUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">SkillUpdate</span><span class="p">(</span><span class="n">BaseSkill</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="BaseExperience">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseExperience">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseExperience</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Job title&quot;</span><span class="p">)</span>
+    <span class="n">company</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Company name&quot;</span><span class="p">)</span>
+    <span class="n">start_date</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Start date of the experience&quot;</span>
+    <span class="p">)</span>
+    <span class="n">end_date</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;End date of the experience&quot;</span><span class="p">)</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Description of the experience&quot;</span><span class="p">)</span>
+    <span class="n">location</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Location of the experience&quot;</span><span class="p">)</span>
+    <span class="n">projects</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Projects involved&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="ExperienceRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.ExperienceRead">[docs]</a>
+<span class="k">class</span> <span class="nc">ExperienceRead</span><span class="p">(</span><span class="n">BaseExperience</span><span class="p">,</span> <span class="n">BaseRead</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="ExperienceCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.ExperienceCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">ExperienceCreate</span><span class="p">(</span><span class="n">BaseExperience</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="ExperienceUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.ExperienceUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">ExperienceUpdate</span><span class="p">(</span><span class="n">BaseExperience</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="BaseEducation">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseEducation">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseEducation</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">university</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;University name&quot;</span><span class="p">)</span>
+    <span class="n">degree</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Degree name&quot;</span><span class="p">)</span>
+    <span class="n">gradePoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Grade point&quot;</span><span class="p">)</span>
+    <span class="n">activities</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Activities involved&quot;</span><span class="p">)</span>
+    <span class="n">achievements</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Achievements&quot;</span><span class="p">)</span>
+    <span class="n">start_date</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Start date of the education&quot;</span><span class="p">)</span>
+    <span class="n">end_date</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;End date of the education&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="EducationRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.EducationRead">[docs]</a>
+<span class="k">class</span> <span class="nc">EducationRead</span><span class="p">(</span><span class="n">BaseEducation</span><span class="p">,</span> <span class="n">BaseRead</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="EducationCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.EducationCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">EducationCreate</span><span class="p">(</span><span class="n">BaseEducation</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="EducationUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.EducationUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">EducationUpdate</span><span class="p">(</span><span class="n">BaseEducation</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="BaseCertificate">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseCertificate">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseCertificate</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Certificate title&quot;</span><span class="p">)</span>
+    <span class="n">issuer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Issuer of the certificate&quot;</span><span class="p">)</span>
+    <span class="n">expiration_date</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Expiration date of the certificate&quot;</span>
+    <span class="p">)</span>
+    <span class="n">issued_date</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Issued date of the certificate&quot;</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="CertificateRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.CertificateRead">[docs]</a>
+<span class="k">class</span> <span class="nc">CertificateRead</span><span class="p">(</span><span class="n">BaseCertificate</span><span class="p">,</span> <span class="n">BaseRead</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="CertificateCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.CertificateCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">CertificateCreate</span><span class="p">(</span><span class="n">BaseCertificate</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="CertificateUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.CertificateUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">CertificateUpdate</span><span class="p">(</span><span class="n">BaseCertificate</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="BaseLead">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseLead">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseLead</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Job title&quot;</span><span class="p">)</span>
+    <span class="n">company</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Company name&quot;</span><span class="p">)</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Job description&quot;</span><span class="p">)</span>
+    <span class="n">location</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Job location&quot;</span><span class="p">)</span>
+    <span class="n">salary</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Salary range&quot;</span><span class="p">)</span>
+    <span class="n">job_function</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Job function&quot;</span><span class="p">)</span>
+    <span class="n">industries</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Industries involved&quot;</span><span class="p">)</span>
+    <span class="n">employment_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Type of employment&quot;</span><span class="p">)</span>
+    <span class="n">seniority_level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Seniority level&quot;</span><span class="p">)</span>
+    <span class="n">education_level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Required education level&quot;</span><span class="p">)</span>
+    <span class="n">notes</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Additional notes&quot;</span><span class="p">)</span>
+    <span class="n">hiring_manager</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Hiring manager&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="LeadRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.LeadRead">[docs]</a>
+<span class="k">class</span> <span class="nc">LeadRead</span><span class="p">(</span><span class="n">BaseRead</span><span class="p">,</span> <span class="n">BaseLead</span><span class="p">):</span>
+    <span class="n">url</span><span class="p">:</span> <span class="n">AnyHttpUrl</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Job posting URL&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="LeadsPaginatedRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.LeadsPaginatedRead">[docs]</a>
+<span class="k">class</span> <span class="nc">LeadsPaginatedRead</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">leads</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">LeadRead</span><span class="p">]</span>
+    <span class="n">pagination</span><span class="p">:</span> <span class="n">Pagination</span>
+    <span class="n">total_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Total number of leads, if pagination requested&quot;</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="LeadCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.LeadCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">LeadCreate</span><span class="p">(</span><span class="n">BaseLead</span><span class="p">):</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span>
+
+<div class="viewcode-block" id="LeadCreate.clean_and_wrap_text_fields">
+<a class="viewcode-back" href="../../index.html#app.schemas.LeadCreate.clean_and_wrap_text_fields">[docs]</a>
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;after&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">clean_and_wrap_text_fields</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_fields_set</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">cleaned_value</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">clean_text</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">utils</span><span class="o">.</span><span class="n">wrap_text</span><span class="p">(</span><span class="n">cleaned_value</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="LeadUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.LeadUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">LeadUpdate</span><span class="p">(</span><span class="n">BaseLead</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="BaseContact">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseContact">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseContact</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">first_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;First name&quot;</span><span class="p">)</span>
+    <span class="n">last_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Last name&quot;</span><span class="p">)</span>
+    <span class="n">phone_number</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Phone number&quot;</span><span class="p">)</span>
+    <span class="n">email</span><span class="p">:</span> <span class="n">EmailStr</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Email address&quot;</span><span class="p">)</span>
+    <span class="n">time_zone</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Time zone&quot;</span><span class="p">)</span>
+    <span class="n">notes</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Additional notes&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="ContactRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.ContactRead">[docs]</a>
+<span class="k">class</span> <span class="nc">ContactRead</span><span class="p">(</span><span class="n">BaseRead</span><span class="p">,</span> <span class="n">BaseContact</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="ContactCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.ContactCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">ContactCreate</span><span class="p">(</span><span class="n">BaseContact</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="ContactUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.ContactUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">ContactUpdate</span><span class="p">(</span><span class="n">BaseContact</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="BaseResume">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseResume">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseResume</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Resume name&quot;</span><span class="p">)</span>
+    <span class="n">content</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Resume content&quot;</span><span class="p">)</span>
+    <span class="n">content_type</span><span class="p">:</span> <span class="n">ContentType</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Resume content type&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="ResumeRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.ResumeRead">[docs]</a>
+<span class="k">class</span> <span class="nc">ResumeRead</span><span class="p">(</span><span class="n">BaseRead</span><span class="p">,</span> <span class="n">BaseResume</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="ResumeCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.ResumeCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">ResumeCreate</span><span class="p">(</span><span class="n">BaseResume</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<div class="viewcode-block" id="ResumeCreate.from_pdf">
+<a class="viewcode-back" href="../../index.html#app.schemas.ResumeCreate.from_pdf">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">from_pdf</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ResumeRead</span><span class="p">:</span>
+        <span class="n">pdf_dict</span> <span class="o">=</span> <span class="k">await</span> <span class="n">utils</span><span class="o">.</span><span class="n">pdf_to_dict</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+        <span class="c1"># TODO: content may need to be a list of strings.</span>
+        <span class="c1"># This may only load the first page.</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">pdf_dict</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span> <span class="n">content</span><span class="o">=</span><span class="n">pdf_dict</span><span class="p">[</span><span class="s2">&quot;content&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>  <span class="c1"># type: ignore</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ResumeUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.ResumeUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">ResumeUpdate</span><span class="p">(</span><span class="n">BaseResume</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="BaseCoverLetter">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseCoverLetter">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseCoverLetter</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Cover letter name&quot;</span><span class="p">)</span>
+    <span class="n">content</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Cover letter content&quot;</span><span class="p">)</span>
+    <span class="n">content_type</span><span class="p">:</span> <span class="n">ContentType</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Cover letter content type&quot;</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="CoverLetterRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.CoverLetterRead">[docs]</a>
+<span class="k">class</span> <span class="nc">CoverLetterRead</span><span class="p">(</span><span class="n">BaseRead</span><span class="p">,</span> <span class="n">BaseCoverLetter</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="CoverLetterCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.CoverLetterCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">CoverLetterCreate</span><span class="p">(</span><span class="n">BaseCoverLetter</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<div class="viewcode-block" id="CoverLetterCreate.from_pdf">
+<a class="viewcode-back" href="../../index.html#app.schemas.CoverLetterCreate.from_pdf">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">from_pdf</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CoverLetterRead</span><span class="p">:</span>
+        <span class="n">pdf_dict</span> <span class="o">=</span> <span class="k">await</span> <span class="n">utils</span><span class="o">.</span><span class="n">pdf_to_dict</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+        <span class="c1"># TODO: content may need to be a list of strings.</span>
+        <span class="c1"># This may only load the first page.</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">pdf_dict</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span> <span class="n">content</span><span class="o">=</span><span class="n">pdf_dict</span><span class="p">[</span><span class="s2">&quot;content&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>  <span class="c1"># type: ignore</span></div>
+
+
+<div class="viewcode-block" id="CoverLetterCreate.from_bytes">
+<a class="viewcode-back" href="../../index.html#app.schemas.CoverLetterCreate.from_bytes">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_bytes</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="n">BytesIO</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CoverLetterRead</span><span class="p">:</span>
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">PdfReader</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+        <span class="n">text_content</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">page_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">reader</span><span class="o">.</span><span class="n">pages</span><span class="p">)):</span>
+            <span class="n">page</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">pages</span><span class="p">[</span><span class="n">page_num</span><span class="p">]</span>
+            <span class="n">text_content</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">page</span><span class="o">.</span><span class="n">or_text</span><span class="p">())</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="n">text_content</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">content_type</span><span class="o">=</span><span class="n">ContentType</span><span class="o">.</span><span class="n">GENERATED</span><span class="p">)</span>  <span class="c1"># type: ignore</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="CoverLetterUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.CoverLetterUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">CoverLetterUpdate</span><span class="p">(</span><span class="n">BaseCoverLetter</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="BaseUser">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseUser">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseUser</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">first_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;First name&quot;</span><span class="p">)</span>
+    <span class="n">last_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Last name&quot;</span><span class="p">)</span>
+    <span class="n">phone_number</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Phone number&quot;</span><span class="p">)</span>
+    <span class="n">address_line_1</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Address line 1&quot;</span><span class="p">)</span>
+    <span class="n">address_line_2</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Address line 2&quot;</span><span class="p">)</span>
+    <span class="n">city</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;City&quot;</span><span class="p">)</span>
+    <span class="n">state</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;State&quot;</span><span class="p">)</span>
+    <span class="n">zip_code</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Zip code&quot;</span><span class="p">)</span>
+    <span class="n">country</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Country&quot;</span><span class="p">)</span>
+    <span class="n">time_zone</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Time zone&quot;</span><span class="p">)</span>
+    <span class="n">avatar_uri</span><span class="p">:</span> <span class="n">URI</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Avatar URI&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="UserRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.UserRead">[docs]</a>
+<span class="k">class</span> <span class="nc">UserRead</span><span class="p">(</span><span class="n">schemas</span><span class="o">.</span><span class="n">BaseUser</span><span class="p">[</span><span class="n">UUID4</span><span class="p">],</span> <span class="n">BaseUser</span><span class="p">):</span>  <span class="c1"># type: ignore</span>
+    <span class="k">pass</span></div>
+
+
+
+<span class="c1"># Define a schema for the user profile that includes skills and experiences</span>
+<div class="viewcode-block" id="UserProfileRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.UserProfileRead">[docs]</a>
+<span class="k">class</span> <span class="nc">UserProfileRead</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">skills</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SkillRead</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">([],</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;User&#39;s skills&quot;</span><span class="p">)</span>
+    <span class="n">experiences</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ExperienceRead</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="p">[],</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;User&#39;s professional experiences&quot;</span>
+    <span class="p">)</span>
+    <span class="n">educations</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">EducationRead</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="p">[],</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;User&#39;s educational background&quot;</span>
+    <span class="p">)</span>
+    <span class="n">certificates</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">CertificateRead</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">([],</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;User&#39;s certificates&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="UserCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.UserCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">UserCreate</span><span class="p">(</span><span class="n">schemas</span><span class="o">.</span><span class="n">BaseUserCreate</span><span class="p">,</span> <span class="n">BaseUser</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="UserUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.UserUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">UserUpdate</span><span class="p">(</span><span class="n">schemas</span><span class="o">.</span><span class="n">BaseUserUpdate</span><span class="p">,</span> <span class="n">BaseUser</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="BaseExtractorExample">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseExtractorExample">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseExtractorExample</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">content</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Example content&quot;</span><span class="p">)</span>
+    <span class="n">output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Example output&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="ExtractorExampleRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.ExtractorExampleRead">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtractorExampleRead</span><span class="p">(</span><span class="n">BaseRead</span><span class="p">,</span> <span class="n">BaseExtractorExample</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="ExtractorExampleCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.ExtractorExampleCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtractorExampleCreate</span><span class="p">(</span><span class="n">BaseExtractorExample</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="ExtractorExampleUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.ExtractorExampleUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtractorExampleUpdate</span><span class="p">(</span><span class="n">BaseExtractorExample</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="BaseExtractor">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseExtractor">[docs]</a>
+<span class="k">class</span> <span class="nc">BaseExtractor</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Extractor name&quot;</span><span class="p">)</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Extractor description&quot;</span><span class="p">)</span>
+    <span class="n">json_schema</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;JSON schema&quot;</span><span class="p">)</span>
+    <span class="n">instruction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Extractor instruction&quot;</span><span class="p">)</span>
+    <span class="n">extractor_examples</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ExtractorExampleRead</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="p">[],</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Extractor examples&quot;</span>
+    <span class="p">)</span>
+
+<div class="viewcode-block" id="BaseExtractor.validate_schema">
+<a class="viewcode-back" href="../../index.html#app.schemas.BaseExtractor.validate_schema">[docs]</a>
+    <span class="nd">@validator</span><span class="p">(</span><span class="s2">&quot;json_schema&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">validate_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate the schema.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">v</span><span class="p">:</span>
+            <span class="n">utils</span><span class="o">.</span><span class="n">validate_json_schema</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ExtractorRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.ExtractorRead">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtractorRead</span><span class="p">(</span><span class="n">BaseRead</span><span class="p">,</span> <span class="n">BaseExtractor</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="ExtractorCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.ExtractorCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtractorCreate</span><span class="p">(</span><span class="n">BaseExtractor</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="ExtractorUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.ExtractorUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtractorUpdate</span><span class="p">(</span><span class="n">BaseExtractor</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="ApplicationRead">
+<a class="viewcode-back" href="../../index.html#app.schemas.ApplicationRead">[docs]</a>
+<span class="k">class</span> <span class="nc">ApplicationRead</span><span class="p">(</span><span class="n">BaseRead</span><span class="p">):</span>
+    <span class="n">lead_id</span><span class="p">:</span> <span class="n">UUID4</span>
+    <span class="n">user_id</span><span class="p">:</span> <span class="n">UUID4</span>
+    <span class="n">lead</span><span class="p">:</span> <span class="n">LeadRead</span>
+    <span class="n">user</span><span class="p">:</span> <span class="n">UserRead</span>
+    <span class="n">status</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Application status&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="ApplicationCreate">
+<a class="viewcode-back" href="../../index.html#app.schemas.ApplicationCreate">[docs]</a>
+<span class="k">class</span> <span class="nc">ApplicationCreate</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">lead_id</span><span class="p">:</span> <span class="n">UUID4</span>
+    <span class="n">status</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+
+<div class="viewcode-block" id="ApplicationUpdate">
+<a class="viewcode-back" href="../../index.html#app.schemas.ApplicationUpdate">[docs]</a>
+<span class="k">class</span> <span class="nc">ApplicationUpdate</span><span class="p">(</span><span class="n">BaseSchema</span><span class="p">):</span>
+    <span class="n">status</span><span class="p">:</span> <span class="nb">str</span></div>
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+    <a id="sidebar-anchor"></a>
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3><a href="../../index.html">Table Of Contents</a></h3>
+
+        </div>
+<div id="sidebarbutton" title="Collapse sidebar">
+<span>«</span>
+</div>
+
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+      </ul>
+    </div>
+
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2023, Daniel P. Henderson.
+      Last updated on Apr 24, 2024.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.3.7.
+    </div>
+  </body>
+</html>

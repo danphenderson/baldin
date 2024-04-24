@@ -10,8 +10,23 @@ services:
       - POSTGRES_DB=${DEFAULT_DATABASE_DB}
       - POSTGRES_USER=${DEFAULT_DATABASE_USER}
       - POSTGRES_PASSWORD=${DEFAULT_DATABASE_PASSWORD}
-      
+
     env_file:
       - .env
     volumes:
       - ./public/db:/var/lib/postgresql/data
+
+  test_db:
+    image: postgres:15
+    restart: unless-stopped
+    ports:
+      - "${TEST_DATABASE_PORT}:5432"
+    environment:
+      - POSTGRES_DB=${TEST_DATABASE_DB}
+      - POSTGRES_USER=${TEST_DATABASE_USER}
+      - POSTGRES_PASSWORD=${TEST_DATABASE_PASSWORD}
+
+    env_file:
+      - .env
+    volumes:
+      - ./public/test_db:/var/lib/postgresql/data

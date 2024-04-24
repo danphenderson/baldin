@@ -265,13 +265,13 @@ class BaseLead(BaseSchema):
     education_level: str | None = Field(None, description="Required education level")
     notes: str | None = Field(None, description="Additional notes")
     hiring_manager: str | None = Field(None, description="Hiring manager")
-    companies: list[CompanyRead] = Field(
-        [], description="List of companies associated with the lead"
-    )
 
 
 class LeadRead(BaseRead, BaseLead):
     url: AnyHttpUrl | str | None = Field(None, description="Job posting URL")
+    companies: list[CompanyRead] = Field(
+        [], description="List of companies associated with the lead"
+    )
 
 
 class LeadsPaginatedRead(BaseSchema):
@@ -284,6 +284,7 @@ class LeadsPaginatedRead(BaseSchema):
 
 class LeadCreate(BaseLead):
     url: str
+    company_ids: list[UUID4] = Field([], description="Company IDs")
 
     @model_validator(mode="after")
     def clean_and_wrap_text_fields(self) -> Any:
@@ -296,7 +297,7 @@ class LeadCreate(BaseLead):
 
 
 class LeadUpdate(BaseLead):
-    pass
+    company_ids: list[UUID4] = Field([], description="Company IDs")
 
 
 class BaseContact(BaseSchema):

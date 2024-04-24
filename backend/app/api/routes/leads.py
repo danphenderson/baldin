@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import UUID4
 from sqlalchemy import delete, func, select
+from sqlalchemy.orm import joinedload
 
 from app.api.deps import (
     AsyncSession,
@@ -171,19 +172,23 @@ async def create_lead(
         raise HTTPException(status_code=400, detail="Lead with this URL already exists")
 
     # Create a new lead if it doesn't exist
-    lead = models.Lead(**payload.dict(exclude={"companies"}))
+    lead = models.Lead(**payload.dict(exclude={"company_ids"}))
+
+    # If companies are provided, associate them with the lead
+    for company_id in payload.company_ids:
+        company = await db.get(models.Company, company_id)
+        if company:
+            lead.companies.append(company)
+
     db.add(lead)
     await db.commit()
-    await db.refresh(lead)
-
-    # Link companies to the new lead
-    if payload.companies:
-        for company_id in payload.companies:
-            company = await db.get(models.Company, company_id)
-            if company:
-                lead.companies.append(company)
-        await db.commit()
-        await db.refresh(lead)
+    # Retrieve the lead with companies eagerly loaded
+    lead = await db.execute(
+        select(models.Lead)
+        .where(models.Lead.id == lead.id)
+        .options(joinedload(models.Lead.companies))
+    )  # type: ignore
+    lead = lead.scalars().first()
 
     return lead
 
@@ -236,26 +241,31 @@ async def read_leads(
 
 @router.patch("/{id}", status_code=200, response_model=schemas.LeadRead)
 async def update_lead(
-    id: UUID4,
     payload: schemas.LeadUpdate,
+    lead: schemas.LeadRead = Depends(get_lead),
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    lead = await db.get(models.Lead, id)
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
-
-    # Update attributes
-    for var, value in payload.dict(exclude_unset=True).items():
-        setattr(lead, var, value)
-
-    # Update companies if provided
+    console_log.info(f"Updating lead {id} with data: {payload.dict()}")
     if "companies" in payload.dict():
+        console_log.info(f"Updating companies for lead {id}")
+
+    # Update the lead
+    for field, value in payload.dict(exclude_unset=True).items():
+        setattr(lead, field, value)
+
+    # Handle company associations
+    if payload.company_ids is not None:
+        # Clear existing companies and add new ones
         lead.companies = []
-        for company_id in payload.companies:
+        for company_id in payload.company_ids:
             company = await db.get(models.Company, company_id)
             if company:
                 lead.companies.append(company)
+            else:
+                console_log.info(
+                    f"Company ID {company_id} not found and will not be added."
+                )
 
     await db.commit()
     await db.refresh(lead)

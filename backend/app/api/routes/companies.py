@@ -1,8 +1,6 @@
 # Path: app/api/routes/companies.py
-import json
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import UUID4
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
@@ -80,11 +78,12 @@ async def get_company_leads(
     db: AsyncSession = Depends(get_async_session),
     user: models.User = Depends(get_current_user),
 ):
-    # Fetch leads associated with the company
+    # Fetch leads associated with the company using eager loading for companies
     result = await db.execute(
         select(models.Lead)
+        .options(joinedload(models.Lead.companies))
         .join(models.leads_x_companies)
-        .where(models.leads_x_companies.c.company_id == company.id)
+        .where(models.leads_x_companies.company_id == company.id)
     )
     leads = result.scalars().all()
     if not leads:

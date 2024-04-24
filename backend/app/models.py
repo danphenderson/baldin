@@ -2,17 +2,7 @@
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
-from sqlalchemy import (
-    JSON,
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    Table,
-    Text,
-    func,
-)
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -117,12 +107,11 @@ class Extractor(Base):
         return f"<Extractor(id={self.id}, description={self.description})>"
 
 
-leads_x_companies = Table(
-    "leads_x_companies",
-    Base.metadata,
-    Column("lead_id", UUID, ForeignKey("leads.id"), primary_key=True),
-    Column("company_id", UUID, ForeignKey("companies.id"), primary_key=True),
-)
+class LeadXCompany(Base):
+
+    __tablename__ = "leads_x_companies"
+    lead_id = Column(UUID, ForeignKey("leads.id"), primary_key=True)
+    company_id = Column(UUID, ForeignKey("companies.id"), primary_key=True)
 
 
 class Company(Base):
@@ -140,7 +129,7 @@ class Company(Base):
     description = Column(Text)
 
     leads = relationship(
-        "Lead", secondary=leads_x_companies, back_populates="companies"
+        "Lead", secondary="leads_x_companies", back_populates="companies"
     )
 
 
@@ -167,7 +156,7 @@ class Lead(Base):
 
     application = relationship("Application", back_populates="lead")
     companies = relationship(
-        "Company", secondary=leads_x_companies, back_populates="leads"
+        "Company", secondary="leads_x_companies", back_populates="leads"
     )
 
 

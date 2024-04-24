@@ -10,40 +10,70 @@ API access to perform various tasks, e.g.
 - Generate code snippets
 - Generate synthetic seed data
 """
+from pathlib import Path
+
 from langchain_community.document_loaders import AsyncChromiumLoader, AsyncHtmlLoader
 from langchain_community.document_transformers import BeautifulSoupTransformer
-from typer import Argument, Typer
+from rich import print
+from typer import Typer
 
 from app.core.langchain import ChatPromptTemplate, llm, str_output_parser
 from app.logging import get_logger
-from app.utils import clean_text
 
-app = Typer()
+app = Typer(help="Developer on the balden backend Python applications.")
 
 logger = get_logger("devcli", file_name="devcli")
 
 
 @app.command()
-def codegen(problem: str, language: str = "Python", context: str = "") -> str:
-    human_message = f"Hello, generate a code snippet in {language} for the following problem:\\n{problem}"
-    if context:
-        human_message += (
-            f"Generate a solution to the problem with this as your context\\n{context}"
-        )
+def code(problem: str, context: str = "", language: str = "Python") -> str:
+
+    # see if context is a module in app/
+    python_modles = Path("app").rglob("*.py")
+    context_msg = ""
+    for module in python_modles:
+        if context in str(module):
+            with open(module, "r") as f:
+                context_msg = f.read()
+            break
+
     generation_template = ChatPromptTemplate.from_messages(
         [
             (
                 "system",
-                "You are a helpful AI assistant software engineer that helps users generate code snippets for web development.",
+                "Hi, you are a helpful {language} backend web developer working on project baldin.",
             ),
             (
                 "user",
-                "Hello, generate a code snippet in {language} for the following problem:\\n {problem}",
+                "Using {language} best practices, you will assist as a co-pilot, generating code for project baldin.",
+            ),
+            (
+                "ai",
+                "Great, provide me with a problem and I will begin generating a solution.",
+            ),
+            ("user", "Problem:\\n\\n{problem}"),
+            (
+                "ai",
+                "Great, can you provide me with some context to help me generate a solution?",
+            ),
+            ("user", "Context:\\n\\n{context_msg}"),
+            (
+                "ai",
+                "Great, I will consider the problem and context and generate a solution. Please wait.",
+            ),
+            (
+                "user",
+                "Thank you, please provide me with an overview of your reasoning and the generated code.",
             ),
         ]
     )
+
     chain = generation_template | llm | str_output_parser
-    return chain.invoke({"language": language, "problem": problem})
+    res = chain.invoke(
+        {"language": language, "problem": problem, "context_msg": context_msg}
+    )
+    print(res)
+    return res
 
 
 @app.command()
@@ -85,9 +115,5 @@ async def docs_qa(question, docs_url):
     ...
 
 
-def main():
-    app()
-
-
 if __name__ == "__main__":
-    main()
+    app()

@@ -61,8 +61,8 @@ test = "python -m pytest"
 testv = "python -m pytest -vv"
 api = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8004"
 build = "python setup.py sdist bdist_wheel"
-build-docs = "sphinx-build -b html docs/source docs"
-host-docs = "python -m http.server --directory docs"
+build-docs = "sphinx-build -b html docs ../docs"
+host-docs = "python -m http.server --directory ../docs"
 
 [requires]
 python_version = "3.11"

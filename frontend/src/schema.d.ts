@@ -406,7 +406,7 @@ export interface components {
       text?: string | null;
       /**
        * Llm
-       * @default gpt-3.5-turbo
+       * @default gpt-4-0125-preview
        */
       llm?: string;
     };
@@ -509,6 +509,52 @@ export interface components {
        * @description Issued date of the certificate
        */
       issued_date?: string | null;
+    };
+    /** CompanyRead */
+    CompanyRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Name
+       * @description Company name
+       */
+      name: string;
+      /**
+       * Industry
+       * @description Industry of the company
+       */
+      industry?: string | null;
+      /**
+       * Size
+       * @description Size of the company
+       */
+      size?: string | null;
+      /**
+       * Location
+       * @description Location of the company
+       */
+      location?: string | null;
+      /**
+       * Description
+       * @description Description of the company
+       */
+      description?: string | null;
     };
     /**
      * ConfigurationResponse
@@ -1172,11 +1218,6 @@ export interface components {
        */
       title?: string | null;
       /**
-       * Company
-       * @description Company name
-       */
-      company?: string | null;
-      /**
        * Description
        * @description Job description
        */
@@ -1226,6 +1267,12 @@ export interface components {
        * @description Hiring manager
        */
       hiring_manager?: string | null;
+      /**
+       * Companies
+       * @description List of companies associated with the lead
+       * @default []
+       */
+      companies?: components["schemas"]["CompanyRead"][];
       /** Url */
       url: string;
     };
@@ -1237,11 +1284,6 @@ export interface components {
        */
       title?: string | null;
       /**
-       * Company
-       * @description Company name
-       */
-      company?: string | null;
-      /**
        * Description
        * @description Job description
        */
@@ -1291,6 +1333,12 @@ export interface components {
        * @description Hiring manager
        */
       hiring_manager?: string | null;
+      /**
+       * Companies
+       * @description List of companies associated with the lead
+       * @default []
+       */
+      companies?: components["schemas"]["CompanyRead"][];
       /**
        * Id
        * Format: uuid4
@@ -1323,11 +1371,6 @@ export interface components {
        */
       title?: string | null;
       /**
-       * Company
-       * @description Company name
-       */
-      company?: string | null;
-      /**
        * Description
        * @description Job description
        */
@@ -1377,6 +1420,12 @@ export interface components {
        * @description Hiring manager
        */
       hiring_manager?: string | null;
+      /**
+       * Companies
+       * @description List of companies associated with the lead
+       * @default []
+       */
+      companies?: components["schemas"]["CompanyRead"][];
     };
     /** LeadsPaginatedRead */
     LeadsPaginatedRead: {
@@ -2473,7 +2522,7 @@ export interface operations {
       /** @description Successful Response */
       201: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["LeadRead"];
         };
       };
       /** @description Validation Error */
@@ -2493,7 +2542,7 @@ export interface operations {
     };
     responses: {
       /** @description Successful Response */
-      202: {
+      200: {
         content: {
           "application/json": components["schemas"]["LeadRead"];
         };
@@ -2515,10 +2564,8 @@ export interface operations {
     };
     responses: {
       /** @description Successful Response */
-      202: {
-        content: {
-          "application/json": Record<string, never>;
-        };
+      204: {
+        content: never;
       };
       /** @description Validation Error */
       422: {

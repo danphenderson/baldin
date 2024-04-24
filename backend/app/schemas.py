@@ -234,7 +234,7 @@ class CertificateUpdate(BaseCertificate):
 
 
 class BaseCompany(BaseSchema):
-    name: str = Field(..., description="Company name")
+    name: str | None = Field(None, description="Company name")
     industry: str | None = Field(None, description="Industry of the company")
     size: str | None = Field(None, description="Size of the company")
     location: str | None = Field(None, description="Location of the company")

@@ -1,4 +1,4 @@
-# app/api/deps.py
+# Path: app/api/deps.py
 import json
 import uuid
 from datetime import datetime
@@ -27,10 +27,10 @@ from app.extractor.parsing import (
     parse_binary_input,
 )
 from app.extractor.retrieval import extract_from_content
-from app.logging import get_async_logger, console_log  # noqa
-
+from app.logging import console_log, get_async_logger  # noqa
 
 log = get_async_logger(__name__)
+
 
 async def _403(user_id: UUID4, obj: Any, obj_id: UUID4) -> HTTPException:
     await log.warning(
@@ -91,6 +91,16 @@ async def get_lead(
         raise await _404(lead, id)
     await log.info(f"get_lead: {lead}")
     return lead
+
+
+async def get_company_by_id(
+    id: UUID4, db: AsyncSession = Depends(get_async_session)
+) -> models.Company:
+    company = await db.get(models.Company, id)
+    if not company:
+        raise await _404(company, id)
+    await log.info(f"get_company_by_id: {company}")
+    return company
 
 
 async def get_orchestration_event(

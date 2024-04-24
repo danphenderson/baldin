@@ -1,4 +1,4 @@
-# app/api/routes/leads.py
+# Path: app/api/routes/leads.py
 
 import json
 from pathlib import Path
@@ -244,7 +244,7 @@ async def load_database(
 #     return orch_event
 
 
-@router.post("/", status_code=201, response_model=UUID4)
+@router.post("/", status_code=201, response_model=schemas.LeadRead)
 async def create_lead(
     payload: schemas.LeadCreate,
     db: AsyncSession = Depends(get_async_session),
@@ -261,15 +261,25 @@ async def create_lead(
         raise HTTPException(status_code=400, detail="Lead with this URL already exists")
 
     # Create a new lead if it doesn't exist
-    lead = models.Lead(**payload.dict())
+    lead = models.Lead(**payload.dict(exclude={"companies"}))
     db.add(lead)
     await db.commit()
     await db.refresh(lead)
-    return lead.id  # Consider returning the full lead object
+
+    # Link companies to the new lead
+    if payload.companies:
+        for company_id in payload.companies:
+            company = await db.get(models.Company, company_id)
+            if company:
+                lead.companies.append(company)
+        await db.commit()
+        await db.refresh(lead)
+
+    return lead
 
 
-@router.get("/{id}", status_code=202, response_model=schemas.LeadRead)
-async def read_lead(lead: schemas.LeadRead = Depends(get_lead)):
+@router.get("/{id}", status_code=200, response_model=schemas.LeadRead)
+async def read_lead(lead: models.Lead = Depends(get_lead)):
     return lead
 
 
@@ -311,14 +321,26 @@ async def read_leads(
 
 @router.patch("/{id}", status_code=200, response_model=schemas.LeadRead)
 async def update_lead(
+    id: UUID4,
     payload: schemas.LeadUpdate,
-    lead: schemas.LeadRead = Depends(get_lead),
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    # Update the lead's attributes
+    lead = await db.get(models.Lead, id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    # Update attributes
     for var, value in payload.dict(exclude_unset=True).items():
         setattr(lead, var, value)
+
+    # Update companies if provided
+    if "companies" in payload.dict():
+        lead.companies = []
+        for company_id in payload.companies:
+            company = await db.get(models.Company, company_id)
+            if company:
+                lead.companies.append(company)
 
     await db.commit()
     await db.refresh(lead)
@@ -339,9 +361,15 @@ async def purge_leads(
     return {"message": "All leads have been purged successfully"}
 
 
-@router.delete("/{id}", status_code=202, response_model=dict)
-async def delete_lead(id: UUID4, db: AsyncSession = Depends(get_async_session)):
+@router.delete("/{id}", status_code=204)
+async def delete_lead(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+):
     lead = await db.get(models.Lead, id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
     await db.delete(lead)
     await db.commit()
     return {"message": "Lead deleted successfully"}

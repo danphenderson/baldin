@@ -80,4 +80,13 @@ async def get_company_leads(
     db: AsyncSession = Depends(get_async_session),
     user: models.User = Depends(get_current_user),
 ):
-    ...
+    # Fetch leads associated with the company
+    result = await db.execute(
+        select(models.Lead)
+        .join(models.leads_x_companies)
+        .where(models.leads_x_companies.c.company_id == company.id)
+    )
+    leads = result.scalars().all()
+    if not leads:
+        raise HTTPException(status_code=404, detail="No leads found for the company")
+    return leads

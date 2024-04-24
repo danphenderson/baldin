@@ -27,10 +27,10 @@ from app.extractor.parsing import (
     parse_binary_input,
 )
 from app.extractor.retrieval import extract_from_content
-from app.logging import console_log, get_async_logger  # noqa
+from app.logging import get_async_logger, console_log  # noqa
+
 
 log = get_async_logger(__name__)
-
 
 async def _403(user_id: UUID4, obj: Any, obj_id: UUID4) -> HTTPException:
     await log.warning(
@@ -89,6 +89,7 @@ async def get_lead(
     lead = await db.get(models.Lead, id)
     if not lead:
         raise await _404(lead, id)
+    await log.info(f"get_lead: {lead}")
     return lead
 
 
@@ -96,10 +97,9 @@ async def get_orchestration_event(
     id: UUID4, db: AsyncSession = Depends(get_async_session)
 ) -> models.OrchestrationEvent:
     orch_event = await db.get(models.OrchestrationEvent, id)
-
     if not orch_event:
         raise await _404(orch_event, id)
-
+    await log.info(f"get_orchestration_event: {orch_event}")
     return orch_event
 
 
@@ -113,6 +113,7 @@ async def update_orchestration_event(
         setattr(event, var, value)
     await db.commit()
     await db.refresh(event)
+    await log.info(f"update_orchestration_event: {event}")
     return event
 
 
@@ -123,13 +124,12 @@ async def create_orchestration_event(
     # Seralize URIS to JSON stings (for database)
     setattr(payload, "source_uri", payload.source_uri.json())
     setattr(payload, "destination_uri", payload.destination_uri.json())
-
     # Create new event record in database
     event = models.OrchestrationEvent(**payload.__dict__)
     db.add(event)
     await db.commit()
     await db.refresh(event)
-
+    await log.info(f"create_orchestration_event: {event}")
     return event
 
 
@@ -143,6 +143,7 @@ async def get_skill(
         raise await _404(skill, id)
     if skill.user_id != user.id:  # type: ignore
         raise await _403(user.id, skill, id)
+    await log.info(f"get_skill: {skill}")
     return skill
 
 
@@ -156,6 +157,7 @@ async def get_experience(
         raise await _404(experience, id)
     if experience.user_id != user.id:  # type: ignore
         raise await _403(user.id, experience, id)
+    await log.info(f"get_experience: {experience}")
     return experience
 
 
@@ -169,6 +171,7 @@ async def get_resume(
         raise await _404(resume, id)
     if resume.user_id != user.id:  # type: ignore
         raise await _403(user.id, resume, id)
+    await log.info(f"get_resume: {resume}")
     return resume
 
 
@@ -182,6 +185,7 @@ async def get_contact(
         raise await _404(contact, id)
     if contact.user_id != user.id:  # type: ignore
         raise await _403(user.id, contact, id)
+    await log.info(f"get_contact: {contact}")
     return contact
 
 
@@ -195,6 +199,7 @@ async def get_cover_letter(
         raise await _404(cover_letter, id)
     if cover_letter.user_id != user.id:  # type: ignore
         raise await _403(user.id, cover_letter, id)
+    await log.info(f"get_cover_letter: {cover_letter}")
     return cover_letter
 
 
@@ -208,6 +213,7 @@ async def get_application(
         raise await _404(application, id)
     if application.user_id != user.id:  # type: ignore
         raise await _403(user.id, application, id)
+    await log.info(f"get_application: {application}")
     return application
 
 
@@ -221,6 +227,7 @@ async def get_education(
         raise await _404(education, id)
     if education.user_id != user.id:  # type: ignore
         raise await _403(user.id, education, id)
+    await log.info(f"get_education: {education}")
     return education
 
 
@@ -234,6 +241,7 @@ async def get_certificate(
         raise await _404(certificate, id)
     if certificate.user_id != user.id:  # type: ignore
         raise await _403(user.id, certificate, id)
+    await log.info(f"get_certificate: {certificate}")
     return certificate
 
 
@@ -253,6 +261,7 @@ async def get_orchestration_pipeline(
         raise await _404(pipeline, id)
     if pipeline.user_id != user.id:  # type: ignore
         raise await _403(user.id, pipeline, id)
+    await log.info(f"get_orchestration_pipeline: {pipeline}")
     return pipeline
 
 
@@ -272,6 +281,7 @@ async def get_extractor(
         raise await _404(extractor, id)
     if extractor.user_id != user.id:  # type: ignore
         raise await _403(user.id, extractor, id)
+    await log.info(f"get_extractor: {extractor}")
     return extractor
 
 
@@ -286,6 +296,7 @@ async def get_extractor_example(
             status_code=404, detail=f"Example with id {example_id} not found"
         )
     # Further checks for user access to this example can be performed here
+    await log.info(f"get_extractor_example: {example}")
     return example
 
 

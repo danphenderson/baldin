@@ -22,7 +22,7 @@ from app.logging import get_logger
 
 app = Typer(help="Developer on the balden backend Python applications.")
 
-logger = get_logger("devcli", file_name="devcli")
+logger = get_logger("devcli")
 
 
 @app.command()
@@ -31,11 +31,13 @@ def code(problem: str, context: str = "", language: str = "Python") -> str:
     # see if context is a module in app/
     python_modles = Path("app").rglob("*.py")
     context_msg = ""
+    context_list = context.split(',')
     for module in python_modles:
-        if context in str(module):
-            with open(module, "r") as f:
-                context_msg = f.read()
-            break
+        for context in context_list:
+            if context.strip() in str(module):
+                with open(module, "r") as f:
+                    context_msg += f.read()
+                break
 
     generation_template = ChatPromptTemplate.from_messages(
         [

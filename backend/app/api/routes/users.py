@@ -14,8 +14,6 @@ from app.api.deps import (
     get_async_session,
 )
 
-from app.logging import console_log as log
-
 router = fastapi_users.get_users_router(schemas.UserRead, schemas.UserUpdate)
 
 

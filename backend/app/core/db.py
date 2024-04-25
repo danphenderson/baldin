@@ -1,5 +1,6 @@
 # Path: app/core/db.py
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator
 
 from fastapi import Depends
@@ -94,3 +95,21 @@ async def get_user_db(session: AsyncSession = Depends(get_async_session)):
         SQLAlchemyUserDatabase: A user database instance for FastAPI-Users.
     """
     yield SQLAlchemyUserDatabase(session, User)
+
+
+async def fill_db_with_seeds():
+    """
+    Fill the database with seed data.
+
+    This function is used to populate the database with initial data, such as
+    default users, roles, permissions, etc.
+    """
+
+    # Use session_context() to create an asynchronous session
+    async with session_context() as session:
+        # Create a new user database instance
+        user_db = SQLAlchemyUserDatabase(session, User)
+        # Load seeds from environment public assets dir
+        seeds_dir = Path(conf.settings.PUBLIC_ASSETS_DIR) / "seeds"
+        # Load seed data from JSON files
+        ...

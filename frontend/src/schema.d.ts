@@ -298,10 +298,6 @@ export interface paths {
     /** Delete Extractor Example */
     delete: operations["delete_extractor_example_extractor__id__examples__example_id__delete"];
   };
-  "/ping": {
-    /** Pong */
-    get: operations["pong_ping_get"];
-  };
   "/": {
     /** Root */
     get: operations["root__get"];
@@ -422,6 +418,8 @@ export interface components {
       file?: string | null;
       /** Text */
       text?: string | null;
+      /** Url */
+      url?: string | null;
       /**
        * Llm
        * @default gpt-4-0125-preview
@@ -4214,17 +4212,6 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Pong */
-  pong_ping_get: {
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": unknown;
         };
       };
     };

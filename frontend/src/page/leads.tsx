@@ -176,7 +176,6 @@ const LeadsPage: React.FC = () => {
           onSave={handleSaveLead}
           initialData={selectedLead ? {
             title: selectedLead.title,
-            company: selectedLead.company,
             description: selectedLead.description,
             location: selectedLead.location,
             salary: selectedLead.salary,
@@ -203,7 +202,7 @@ const LeadsPage: React.FC = () => {
               <Stack>
                 {/* Actions to perform on the selected lead */}
                 {/* Display the selected lead's details */}
-                <Typography><strong>{selectedLead.title}, {selectedLead.company}, {selectedLead.employment_type} </strong></Typography>
+                <Typography><strong>{selectedLead.title}, {selectedLead.employment_type} </strong></Typography>
                 <Typography><strong>Location:</strong> {selectedLead.location}</Typography>
                 <Typography><strong>Salary:</strong> {selectedLead.salary}</Typography>
                 <Typography><strong>Job Function:</strong> {selectedLead.job_function}</Typography>

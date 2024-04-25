@@ -1,4 +1,4 @@
-# app/api/deps.py
+# Path: app/api/deps.py
 import json
 import uuid
 from datetime import datetime
@@ -8,7 +8,7 @@ from typing import Any, Sequence, Type
 from fastapi import BackgroundTasks, Depends, HTTPException, Query  # noqa
 from pydantic import UUID4
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app import models, schemas, utils  # noqa
 from app.core import conf  # noqa
@@ -27,10 +27,10 @@ from app.extractor.parsing import (
     parse_binary_input,
 )
 from app.extractor.retrieval import extract_from_content
-from app.logging import get_async_logger, console_log  # noqa
-
+from app.logging import console_log, get_async_logger  # noqa
 
 log = get_async_logger(__name__)
+
 
 async def _403(user_id: UUID4, obj: Any, obj_id: UUID4) -> HTTPException:
     await log.warning(
@@ -44,7 +44,7 @@ async def _403(user_id: UUID4, obj: Any, obj_id: UUID4) -> HTTPException:
 
 async def _404(obj: Any, id: UUID4 | None = None) -> HTTPException:
     msg = f"Object with {id} not found" if id else "Unable to find object"
-    await log.info(msg)
+    await log.warning(msg)
     raise HTTPException(status_code=404, detail=f"Object with id {id} not found")
 
 
@@ -86,11 +86,24 @@ async def get_pagination_params(
 async def get_lead(
     id: UUID4, db: AsyncSession = Depends(get_async_session)
 ) -> models.Lead:
-    lead = await db.get(models.Lead, id)
+    lead = await db.execute(
+        select(models.Lead)
+        .options(joinedload(models.Lead.companies))
+        .where(models.Lead.id == id)
+    )
     if not lead:
-        raise await _404(lead, id)
-    await log.info(f"get_lead: {lead}")
-    return lead
+        raise HTTPException(status_code=404, detail=f"Lead not found: {id}")
+    return lead.scalars().first()
+
+
+async def get_company_by_id(
+    id: UUID4, db: AsyncSession = Depends(get_async_session)
+) -> models.Company:
+    company = await db.get(models.Company, id)
+    if not company:
+        raise await _404(company, id)
+    await log.info(f"get_company_by_id: {company}")
+    return company
 
 
 async def get_orchestration_event(

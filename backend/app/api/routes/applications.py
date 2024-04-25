@@ -1,4 +1,4 @@
-# app/api/routes/applications.py
+# Path: app/api/routes/applications.py
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query

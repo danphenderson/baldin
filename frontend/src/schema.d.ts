@@ -79,6 +79,24 @@ export interface paths {
      */
     delete: operations["purge_leads_leads_purge_delete"];
   };
+  "/companies/{id}": {
+    /** Get Company */
+    get: operations["get_company_companies__id__get"];
+    /** Update Company */
+    put: operations["update_company_companies__id__put"];
+    /** Delete Company */
+    delete: operations["delete_company_companies__id__delete"];
+  };
+  "/companies/": {
+    /** Get Companies */
+    get: operations["get_companies_companies__get"];
+    /** Create Company */
+    post: operations["create_company_companies__post"];
+  };
+  "/companies/{id}/leads": {
+    /** Get Company Leads */
+    get: operations["get_company_leads_companies__id__leads_get"];
+  };
   "/data_orchestration/pipelines": {
     /** Read Orch Pipelines */
     get: operations["read_orch_pipelines_data_orchestration_pipelines_get"];
@@ -406,7 +424,7 @@ export interface components {
       text?: string | null;
       /**
        * Llm
-       * @default gpt-3.5-turbo
+       * @default gpt-4-0125-preview
        */
       llm?: string;
     };
@@ -509,6 +527,108 @@ export interface components {
        * @description Issued date of the certificate
        */
       issued_date?: string | null;
+    };
+    /** CompanyCreate */
+    CompanyCreate: {
+      /**
+       * Name
+       * @description Company name
+       */
+      name?: string | null;
+      /**
+       * Industry
+       * @description Industry of the company
+       */
+      industry?: string | null;
+      /**
+       * Size
+       * @description Size of the company
+       */
+      size?: string | null;
+      /**
+       * Location
+       * @description Location of the company
+       */
+      location?: string | null;
+      /**
+       * Description
+       * @description Description of the company
+       */
+      description?: string | null;
+    };
+    /** CompanyRead */
+    CompanyRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Name
+       * @description Company name
+       */
+      name?: string | null;
+      /**
+       * Industry
+       * @description Industry of the company
+       */
+      industry?: string | null;
+      /**
+       * Size
+       * @description Size of the company
+       */
+      size?: string | null;
+      /**
+       * Location
+       * @description Location of the company
+       */
+      location?: string | null;
+      /**
+       * Description
+       * @description Description of the company
+       */
+      description?: string | null;
+    };
+    /** CompanyUpdate */
+    CompanyUpdate: {
+      /**
+       * Name
+       * @description Company name
+       */
+      name?: string | null;
+      /**
+       * Industry
+       * @description Industry of the company
+       */
+      industry?: string | null;
+      /**
+       * Size
+       * @description Size of the company
+       */
+      size?: string | null;
+      /**
+       * Location
+       * @description Location of the company
+       */
+      location?: string | null;
+      /**
+       * Description
+       * @description Description of the company
+       */
+      description?: string | null;
     };
     /**
      * ConfigurationResponse
@@ -1172,11 +1292,6 @@ export interface components {
        */
       title?: string | null;
       /**
-       * Company
-       * @description Company name
-       */
-      company?: string | null;
-      /**
        * Description
        * @description Job description
        */
@@ -1228,6 +1343,12 @@ export interface components {
       hiring_manager?: string | null;
       /** Url */
       url: string;
+      /**
+       * Company Ids
+       * @description Company IDs
+       * @default []
+       */
+      company_ids?: string[];
     };
     /** LeadRead */
     LeadRead: {
@@ -1236,11 +1357,6 @@ export interface components {
        * @description Job title
        */
       title?: string | null;
-      /**
-       * Company
-       * @description Company name
-       */
-      company?: string | null;
       /**
        * Description
        * @description Job description
@@ -1314,6 +1430,12 @@ export interface components {
        * @description Job posting URL
        */
       url?: string | null;
+      /**
+       * Companies
+       * @description List of companies associated with the lead
+       * @default []
+       */
+      companies?: components["schemas"]["CompanyRead"][];
     };
     /** LeadUpdate */
     LeadUpdate: {
@@ -1322,11 +1444,6 @@ export interface components {
        * @description Job title
        */
       title?: string | null;
-      /**
-       * Company
-       * @description Company name
-       */
-      company?: string | null;
       /**
        * Description
        * @description Job description
@@ -1377,6 +1494,12 @@ export interface components {
        * @description Hiring manager
        */
       hiring_manager?: string | null;
+      /**
+       * Company Ids
+       * @description Company IDs
+       * @default []
+       */
+      company_ids?: string[];
     };
     /** LeadsPaginatedRead */
     LeadsPaginatedRead: {
@@ -2473,7 +2596,7 @@ export interface operations {
       /** @description Successful Response */
       201: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["LeadRead"];
         };
       };
       /** @description Validation Error */
@@ -2493,7 +2616,7 @@ export interface operations {
     };
     responses: {
       /** @description Successful Response */
-      202: {
+      200: {
         content: {
           "application/json": components["schemas"]["LeadRead"];
         };
@@ -2515,10 +2638,8 @@ export interface operations {
     };
     responses: {
       /** @description Successful Response */
-      202: {
-        content: {
-          "application/json": Record<string, never>;
-        };
+      204: {
+        content: never;
       };
       /** @description Validation Error */
       422: {
@@ -2565,6 +2686,130 @@ export interface operations {
       202: {
         content: {
           "application/json": Record<string, never>;
+        };
+      };
+    };
+  };
+  /** Get Company */
+  get_company_companies__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Company */
+  update_company_companies__id__put: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Company */
+  delete_company_companies__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Companies */
+  get_companies_companies__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"][];
+        };
+      };
+    };
+  };
+  /** Create Company */
+  create_company_companies__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Company Leads */
+  get_company_leads_companies__id__leads_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

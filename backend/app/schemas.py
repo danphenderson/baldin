@@ -233,9 +233,28 @@ class CertificateUpdate(BaseCertificate):
     pass
 
 
+class BaseCompany(BaseSchema):
+    name: str | None = Field(None, description="Company name")
+    industry: str | None = Field(None, description="Industry of the company")
+    size: str | None = Field(None, description="Size of the company")
+    location: str | None = Field(None, description="Location of the company")
+    description: str | None = Field(None, description="Description of the company")
+
+
+class CompanyRead(BaseCompany, BaseRead):
+    pass
+
+
+class CompanyCreate(BaseCompany):
+    pass
+
+
+class CompanyUpdate(BaseCompany):
+    pass
+
+
 class BaseLead(BaseSchema):
     title: str | None = Field(None, description="Job title")
-    company: str | None = Field(None, description="Company name")
     description: str | None = Field(None, description="Job description")
     location: str | None = Field(None, description="Job location")
     salary: str | None = Field(None, description="Salary range")
@@ -250,6 +269,9 @@ class BaseLead(BaseSchema):
 
 class LeadRead(BaseRead, BaseLead):
     url: AnyHttpUrl | str | None = Field(None, description="Job posting URL")
+    companies: list[CompanyRead] = Field(
+        [], description="List of companies associated with the lead"
+    )
 
 
 class LeadsPaginatedRead(BaseSchema):
@@ -262,6 +284,7 @@ class LeadsPaginatedRead(BaseSchema):
 
 class LeadCreate(BaseLead):
     url: str
+    company_ids: list[UUID4] = Field([], description="Company IDs")
 
     @model_validator(mode="after")
     def clean_and_wrap_text_fields(self) -> Any:
@@ -274,7 +297,7 @@ class LeadCreate(BaseLead):
 
 
 class LeadUpdate(BaseLead):
-    pass
+    company_ids: list[UUID4] = Field([], description="Company IDs")
 
 
 class BaseContact(BaseSchema):

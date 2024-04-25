@@ -13,7 +13,12 @@ from sqlalchemy.orm import joinedload, selectinload
 from app import models, schemas, utils  # noqa
 from app.core import conf  # noqa
 from app.core import security  # noqa
-from app.core.db import AsyncSession, get_async_session, session_context  # noqa
+from app.core.db import (  # noqa
+    AsyncSession,
+    DataBaseManager,
+    get_async_session,
+    session_context,
+)
 from app.core.langchain import (  # noqa
     extract_text_from_url,
     generate_cover_letter,
@@ -50,31 +55,6 @@ async def _404(obj: Any, id: UUID4 | None = None) -> HTTPException:
     msg = f"Object with {id} not found" if id else "Unable to find object"
     await log.warning(msg)
     raise HTTPException(status_code=404, detail=f"Object with id {id} not found")
-
-
-async def load_record_into_table(
-    create_schema: schemas.BaseSchema,
-    table_model: Type[models.Base],
-    db: AsyncSession = Depends(get_async_session),
-) -> None:
-    """
-    Inserts record into the table.
-    """
-    ...
-
-
-async def load_user_record_into_table(
-    user_id: UUID4,
-    create_schema: schemas.BaseSchema,
-    table_model: Type[models.Base],
-    db: AsyncSession = Depends(get_async_session),
-) -> None:
-    """
-    Inserts record into a table that has a foreign key to the user table.
-    """
-    # record_data = {**create_schema.dict(), "user_id": user_id}
-    # record = table_model(**record_data)
-    ...
 
 
 async def get_pagination_params(

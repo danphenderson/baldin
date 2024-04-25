@@ -10,6 +10,7 @@ from app.api.routes import (
     contacts,
     cover_letters,
     data_orchestration,
+    db_management,
     education,
     experiences,
     extractor,
@@ -40,6 +41,9 @@ api_router.include_router(
     fastapi_users.get_verify_router(schemas.UserRead),
     prefix="/auth",
     tags=["auth"],
+)
+api_router.include_router(
+    db_management.router, prefix="/db-management", tags=["db-management"]
 )
 api_router.include_router(
     users.router,

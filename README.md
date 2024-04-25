@@ -60,8 +60,8 @@ In the `frontend/` directory:
 
 ### Local Network
 
-Baldin: [API](http://127.0.0.1:8004) | [Frontend](http://localhost:3000/)
-2
+Baldin: [API](http://127.0.0.1:8004) | [Frontend](http://localhost:3000/) | [Admin](http://localhost:8004/admin)
+
 OpenAPI: [Swagger Documentation](http://127.0.0.1:8004/docs) | [(re)docs](http://127.0.0.1:8004/redocs)
 
 ### 5-steps to contributing

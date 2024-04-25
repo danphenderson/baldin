@@ -4,7 +4,7 @@ from typing import Literal, Sequence
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import UUID4, Field
+from pydantic import UUID4, AnyHttpUrl, Field
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 from typing_extensions import TypedDict
@@ -16,6 +16,7 @@ from app.api.deps import (
     console_log,
     extract_entire_document,
     extract_from_content,
+    extract_text_from_url,
     get_async_session,
     get_current_user,
     get_extractor,
@@ -162,10 +163,24 @@ async def run_extractor(
     mode: Literal["entire_document", "retrieval"] = Form("entire_document"),
     file: UploadFile | None = File(None),
     text: str | None = Form(None),
+    url: AnyHttpUrl | None = Form(None),
     llm: str = Form(conf.openai.COMPLETION_MODEL),
 ) -> schemas.ExtractorResponse:
-    if text is None and file is None:
-        raise HTTPException(status_code=422, detail="No text or file provided.")
+    if text is None and file is None and url is None:
+        raise HTTPException(
+            status_code=422,
+            detail="No text, file, or URL provided to perfrom extraction.",
+        )
+
+    if url:
+        text = await extract_text_from_url(str(url))
+
+    if text is None and file:
+        documents = parse_binary_input(file.file)  # type: ignore
+        text = "\n".join([document.page_content for document in documents])
+
+    if text is None:
+        raise HTTPException(status_code=422, detail="No text could be extracted.")
 
     extractor = (
         await db.execute(

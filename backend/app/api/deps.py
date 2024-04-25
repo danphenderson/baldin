@@ -14,7 +14,11 @@ from app import models, schemas, utils  # noqa
 from app.core import conf  # noqa
 from app.core import security  # noqa
 from app.core.db import AsyncSession, get_async_session, session_context  # noqa
-from app.core.langchain import generate_cover_letter, generate_resume  # noqa
+from app.core.langchain import (  # noqa
+    extract_text_from_url,
+    generate_cover_letter,
+    generate_resume,
+)
 from app.core.security import (  # noqa
     fastapi_users,
     get_current_superuser,

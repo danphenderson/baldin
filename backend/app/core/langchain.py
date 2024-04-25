@@ -1,4 +1,10 @@
 # Path: app.core.langchain.py
+
+"""
+Client for interacting with the Langchain API.
+"""
+from langchain_community.document_loaders import AsyncChromiumLoader
+from langchain_community.document_transformers import BeautifulSoupTransformer
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -8,6 +14,14 @@ from app.core import conf
 llm = conf.openai.get_model()
 
 str_output_parser = StrOutputParser()
+
+
+async def extract_text_from_url(url: str) -> str:
+    loader = AsyncChromiumLoader([url])
+    transformer = BeautifulSoupTransformer()
+    documents = await loader.aload()
+    documents_transformed = transformer.transform_documents(documents)
+    return documents_transformed[0].page_content
 
 
 def generate_cover_letter(profile, job, template) -> str:

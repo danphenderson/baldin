@@ -185,19 +185,37 @@ async def run_extractor(
     ).scalar()
 
     if pipeline is None:
-        pipeline = models.OrchestrationPipeline(name=extractor.name, user_id=user.id)
+        pipeline = models.OrchestrationPipeline(
+            name=extractor.name,
+            user_id=user.id,
+            description=extractor.description,
+            definition=extractor.json_schema,
+        )
         db.add(pipeline)
         await db.commit()
 
-    event = models.OrchestrationEvent(  # FIXME:
+    event = models.OrchestrationEvent(
         pipeline_id=pipeline.id,
         status="pending",
-        source_uri=json.dumps({"name": "default", "type": "datalake"}),  # Dummy values
+        source_uri=json.dumps(
+            {"name": "default", "type": "datalake"}
+        ),  # Example values
         destination_uri=json.dumps(
             {"name": "default", "type": "datalake"}
-        ),  # Dummy values
-        payload={},  # Add payload here
+        ),  # Example values
+        payload=json.dumps(
+            {
+                "mode": mode,
+                "llm": llm,
+                "text": text[:200]
+                if text
+                else None,  # FIXME: Add slicing to prevent very long text
+                "file": file.filename if file else None,
+            }
+        ),
+        environment=conf.settings.ENVIRONMENT,  # Ensure this is a dictionary
     )
+
     db.add(event)
     await db.commit()
 

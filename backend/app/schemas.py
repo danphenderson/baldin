@@ -100,9 +100,7 @@ class OrchestrationPipelineUpdate(BaseOrchestrationPipeline):
 class BaseOrchestrationEvent(BaseSchema):
     message: str | None = Field(None, description="Error message")
     payload: dict | None = Field(None, description="Payload of the triggering event")
-    environment: dict | None = Field(
-        None, description="Application environment setting"
-    )
+    environment: str | None = Field(None, description="Application environment setting")
     source_uri: URI | None = Field(None, description="Source of the pipeline")
     destination_uri: URI | None = Field(None, description="Destination of the pipeline")
     status: OrchestrationEventStatusType | None = Field(
@@ -120,7 +118,14 @@ class BaseOrchestrationEvent(BaseSchema):
 
 
 class OrchestrationEventRead(BaseOrchestrationEvent, BaseRead):
-    pass
+    @validator("payload", pre=True)
+    def load_json(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                raise ValueError("Payload must be a valid JSON")
+        return v
 
 
 class OrchestrationEventCreate(BaseOrchestrationEvent):

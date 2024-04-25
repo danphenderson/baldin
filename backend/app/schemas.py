@@ -74,7 +74,7 @@ class Pagination(BaseSchema):
 class BaseOrchestrationPipeline(BaseSchema):
     name: str | None = Field(None, description="Name of the pipeline")
     description: str | None = Field(None, description="Description of the pipeline")
-    params: dict | None = Field(None, description="Parameters for the pipeline")
+    definition: dict | None = Field(None, description="Parameters for the pipeline")
 
 
 class OrchestrationPipelineRead(BaseOrchestrationPipeline, BaseRead):
@@ -94,8 +94,11 @@ class OrchestrationPipelineUpdate(BaseOrchestrationPipeline):
 
 
 class BaseOrchestrationEvent(BaseSchema):
-    name: str | None = Field(None, description="Name of the event")
     message: str | None = Field(None, description="Error message")
+    payload: dict | None = Field(None, description="Payload of the triggering event")
+    environment: dict | None = Field(
+        None, description="Application environment setting"
+    )
     source_uri: URI | None = Field(None, description="Source of the pipeline")
     destination_uri: URI | None = Field(None, description="Destination of the pipeline")
     status: OrchestrationEventStatusType | None = Field(

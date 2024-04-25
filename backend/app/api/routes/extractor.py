@@ -1,5 +1,6 @@
 # app/api/routes/extractor.py
-from typing import Annotated, Literal, Sequence
+import json
+from typing import Literal, Sequence
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from langchain_core.prompts import ChatPromptTemplate
@@ -131,7 +132,7 @@ UPDATE_PROMPT = ChatPromptTemplate.from_messages(
 
 UPDATE_CHAIN = (
     UPDATE_PROMPT
-    | conf.openai.get_model().with_structured_output(
+    | conf.openai.get_model().with_structured_output(  # noqa: W503
         schema=ExtractorDefinition  # type: ignore
     )
 ).with_config({"run_name": "suggest_update"})
@@ -139,6 +140,8 @@ UPDATE_CHAIN = (
 
 @router.post("/suggest", response_model=ExtractorDefinition)
 async def suggest_extractor(suggest_extractor: SuggestExtractor) -> ExtractorDefinition:
+
+    # TODO: Have this take a bool query parameter signaling to create a new extractor
     """Suggest an extractor based on a description."""
     if suggest_extractor.json_schema:
         res = await UPDATE_CHAIN.ainvoke(
@@ -153,7 +156,7 @@ async def suggest_extractor(suggest_extractor: SuggestExtractor) -> ExtractorDef
 
 @router.post("/run", response_model=schemas.ExtractorResponse)
 async def run_extractor(
-    extractor_id: Annotated[UUID4, Form()],
+    extractor_id: UUID4 = Form(),
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
     mode: Literal["entire_document", "retrieval"] = Form("entire_document"),
@@ -173,32 +176,55 @@ async def run_extractor(
     if extractor is None:
         raise HTTPException(status_code=404, detail="Extractor not found for user.")
 
-    console_log.warning(f"Extractor schema before extraction: {extractor.json_schema}")
-    if extractor.json_schema is None:
-        raise HTTPException(status_code=500, detail="Extractor schema is not loaded.")
-
-    if text:
-        text_ = text
-    else:
-        documents = parse_binary_input(file.file)
-        # TODO: Add metadata like location from original file where
-        # the text was extracted from
-        text_ = "\n".join([document.page_content for document in documents])
-
-    if mode == "entire_document":
-        res = await extract_entire_document(text_, extractor, llm)
-    elif mode == "retrieval":
-        console_log.warning(f"Extracting from content: {text_}")
-        console_log.warning(f"Extractor schema: {extractor.json_schema}")
-        console_log.warning(f"LLM: {llm}")
-        res = await extract_from_content(text_, extractor, llm)
-    else:
-        raise ValueError(
-            f"Invalid mode {mode}. Expected one of 'entire_document', 'retrieval'."
+    pipeline = (
+        await db.execute(
+            select(models.OrchestrationPipeline).filter_by(
+                name=extractor.name, user_id=user.id
+            )
         )
-    console_log.warning(res)
-    if "content_to_long" not in res:
-        res["content_to_long"] = False
+    ).scalar()
+
+    if pipeline is None:
+        pipeline = models.OrchestrationPipeline(name=extractor.name, user_id=user.id)
+        db.add(pipeline)
+        await db.commit()
+
+    event = models.OrchestrationEvent(  # FIXME:
+        pipeline_id=pipeline.id,
+        status="pending",
+        source_uri=json.dumps({"name": "default", "type": "datalake"}),  # Dummy values
+        destination_uri=json.dumps(
+            {"name": "default", "type": "datalake"}
+        ),  # Dummy values
+        payload={},  # Add payload here
+    )
+    db.add(event)
+    await db.commit()
+
+    try:
+        if text:
+            text_ = text
+        else:
+            documents = parse_binary_input(file.file)  # type: ignore
+            text_ = "\n".join([document.page_content for document in documents])
+
+        if mode == "entire_document":
+            res = await extract_entire_document(text_, extractor, llm)
+        elif mode == "retrieval":
+            res = await extract_from_content(text_, extractor, llm)
+        else:
+            raise ValueError(
+                f"Invalid mode {mode}. Expected one of 'entire_document', 'retrieval'."
+            )
+
+        event.status = "success"
+        event.message = "Extraction completed successfully."
+    except Exception as e:
+        event.status = "failure"
+        event.message = f"Extraction failed: {str(e)}"
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        await db.commit()
 
     return schemas.ExtractorResponse(**res)
 

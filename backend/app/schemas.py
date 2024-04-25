@@ -57,6 +57,10 @@ class URI(BaseSchema):
             "URI": lambda v: v.dict(),
         }
 
+    @validator("type", pre=True)  # Not sure if pre=True is neccessary?
+    def validate_type(cls, v: str) -> URIType:
+        return URIType(v)
+
 
 class BaseRead(BaseSchema):
     id: UUID4 = Field(description="The unique uuid4 record identifier.")

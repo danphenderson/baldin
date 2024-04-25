@@ -47,7 +47,6 @@ const DataOrchestrationPage: React.FC = () => {
 
 
   const columns: GridColDef[] = [
-    { field: 'name', headerName: 'Job', width: 150 },
     { field: 'status', headerName: 'Status', width: 100 },
     {
       field: "source_uri",
@@ -61,6 +60,9 @@ const DataOrchestrationPage: React.FC = () => {
       width: 350,
       valueGetter: (params) => params.row.destination_uri.name,
     },
+    { field: 'payload', headerName: 'Payload', width: 150 },
+    { field: 'message', headerName: 'Message', width: 300 },
+
     // Add actions like edit, delete here if needed
   ];
 
@@ -84,10 +86,11 @@ const DataOrchestrationPage: React.FC = () => {
         {selectedPipeline && (
           <Stack spacing={2} sx={{ mt: 2 }}>
             <Typography variant="h4">Pipeline Details</Typography>
-            <Typography> Job Name: {selectedPipeline.name}</Typography>
             <Typography> Status: {selectedPipeline.status}</Typography>
             <Typography> Source URI: {selectedPipeline.source_uri?.name}</Typography>
             <Typography> Destination URI: {selectedPipeline.destination_uri?.name}</Typography>
+            <Typography> Payload: {selectedPipeline?.payload?.toString()}</Typography>
+            <Typography> Message: {selectedPipeline?.message}</Typography>
           </Stack>
         )}
         {error && <Typography color="error">{error}</Typography>}

@@ -57,6 +57,10 @@ class URI(BaseSchema):
             "URI": lambda v: v.dict(),
         }
 
+    @validator("type", pre=True)  # Not sure if pre=True is neccessary?
+    def validate_type(cls, v: str) -> URIType:
+        return URIType(v)
+
 
 class BaseRead(BaseSchema):
     id: UUID4 = Field(description="The unique uuid4 record identifier.")
@@ -74,7 +78,7 @@ class Pagination(BaseSchema):
 class BaseOrchestrationPipeline(BaseSchema):
     name: str | None = Field(None, description="Name of the pipeline")
     description: str | None = Field(None, description="Description of the pipeline")
-    params: dict | None = Field(None, description="Parameters for the pipeline")
+    definition: dict | None = Field(None, description="Parameters for the pipeline")
 
 
 class OrchestrationPipelineRead(BaseOrchestrationPipeline, BaseRead):
@@ -94,8 +98,9 @@ class OrchestrationPipelineUpdate(BaseOrchestrationPipeline):
 
 
 class BaseOrchestrationEvent(BaseSchema):
-    name: str | None = Field(None, description="Name of the event")
     message: str | None = Field(None, description="Error message")
+    payload: dict | None = Field(None, description="Payload of the triggering event")
+    environment: str | None = Field(None, description="Application environment setting")
     source_uri: URI | None = Field(None, description="Source of the pipeline")
     destination_uri: URI | None = Field(None, description="Destination of the pipeline")
     status: OrchestrationEventStatusType | None = Field(
@@ -113,7 +118,14 @@ class BaseOrchestrationEvent(BaseSchema):
 
 
 class OrchestrationEventRead(BaseOrchestrationEvent, BaseRead):
-    pass
+    @validator("payload", pre=True)
+    def load_json(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                raise ValueError("Payload must be a valid JSON")
+        return v
 
 
 class OrchestrationEventCreate(BaseOrchestrationEvent):

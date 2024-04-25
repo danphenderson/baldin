@@ -409,7 +409,7 @@ export interface components {
     Body_run_extractor_extractor_run_post: {
       /**
        * Extractor Id
-       * Format: uuid4
+       * Format: uuid
        */
       extractor_id: string;
       /**
@@ -1515,15 +1515,20 @@ export interface components {
     /** OrchestrationEventCreate */
     OrchestrationEventCreate: {
       /**
-       * Name
-       * @description Name of the event
-       */
-      name?: string | null;
-      /**
        * Message
        * @description Error message
        */
       message?: string | null;
+      /**
+       * Payload
+       * @description Payload of the triggering event
+       */
+      payload?: Record<string, never> | null;
+      /**
+       * Environment
+       * @description Application environment setting
+       */
+      environment?: string | null;
       /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
@@ -1557,15 +1562,20 @@ export interface components {
        */
       updated_at: string;
       /**
-       * Name
-       * @description Name of the event
-       */
-      name?: string | null;
-      /**
        * Message
        * @description Error message
        */
       message?: string | null;
+      /**
+       * Payload
+       * @description Payload of the triggering event
+       */
+      payload?: Record<string, never> | null;
+      /**
+       * Environment
+       * @description Application environment setting
+       */
+      environment?: string | null;
       /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
@@ -1599,15 +1609,20 @@ export interface components {
        */
       updated_at: string;
       /**
-       * Name
-       * @description Name of the event
-       */
-      name?: string | null;
-      /**
        * Message
        * @description Error message
        */
       message?: string | null;
+      /**
+       * Payload
+       * @description Payload of the triggering event
+       */
+      payload?: Record<string, never> | null;
+      /**
+       * Environment
+       * @description Application environment setting
+       */
+      environment?: string | null;
       /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
@@ -1628,15 +1643,20 @@ export interface components {
     /** OrchestrationEventUpdate */
     OrchestrationEventUpdate: {
       /**
-       * Name
-       * @description Name of the event
-       */
-      name?: string | null;
-      /**
        * Message
        * @description Error message
        */
       message?: string | null;
+      /**
+       * Payload
+       * @description Payload of the triggering event
+       */
+      payload?: Record<string, never> | null;
+      /**
+       * Environment
+       * @description Application environment setting
+       */
+      environment?: string | null;
       /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
@@ -1662,10 +1682,10 @@ export interface components {
        */
       description?: string | null;
       /**
-       * Params
+       * Definition
        * @description Parameters for the pipeline
        */
-      params?: Record<string, never> | null;
+      definition?: Record<string, never> | null;
     };
     /** OrchestrationPipelineRead */
     OrchestrationPipelineRead: {
@@ -1698,10 +1718,10 @@ export interface components {
        */
       description?: string | null;
       /**
-       * Params
+       * Definition
        * @description Parameters for the pipeline
        */
-      params?: Record<string, never> | null;
+      definition?: Record<string, never> | null;
       /**
        * Orchestration Events
        * @description Events in the pipeline
@@ -1722,10 +1742,10 @@ export interface components {
        */
       description?: string | null;
       /**
-       * Params
+       * Definition
        * @description Parameters for the pipeline
        */
-      params?: Record<string, never> | null;
+      definition?: Record<string, never> | null;
       /**
        * Events
        * @description Events in the pipeline

@@ -409,7 +409,7 @@ export interface components {
     Body_run_extractor_extractor_run_post: {
       /**
        * Extractor Id
-       * Format: uuid4
+       * Format: uuid
        */
       extractor_id: string;
       /**
@@ -1528,7 +1528,7 @@ export interface components {
        * Environment
        * @description Application environment setting
        */
-      environment?: Record<string, never> | null;
+      environment?: string | null;
       /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
@@ -1575,7 +1575,7 @@ export interface components {
        * Environment
        * @description Application environment setting
        */
-      environment?: Record<string, never> | null;
+      environment?: string | null;
       /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
@@ -1622,7 +1622,7 @@ export interface components {
        * Environment
        * @description Application environment setting
        */
-      environment?: Record<string, never> | null;
+      environment?: string | null;
       /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
@@ -1656,7 +1656,7 @@ export interface components {
        * Environment
        * @description Application environment setting
        */
-      environment?: Record<string, never> | null;
+      environment?: string | null;
       /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */

@@ -30,6 +30,9 @@ router: APIRouter = APIRouter()
 
 async def _load_leads_into_database(orch_event_id):
     async with session_context() as db:
+        console_log.warning(
+            f"Loading leads into database for orchestration event {orch_event_id}"
+        )
         # Get the orchestration event record
         event = await get_orchestration_event(orch_event_id, db)
         event_id = getattr(event, "id")
@@ -64,10 +67,13 @@ async def _load_leads_into_database(orch_event_id):
         ):
             try:
                 # Create a new lead if it doesn't exist
-                lead = models.Lead(**lead.dict())
+                console_log.warning(f"Adding lead: {lead.dict()}")
+                lead = models.Lead(**lead.dict(exclude={"company_ids"}))
+                console_log.warning(f"Lead added: {lead.id}")
                 db.add(lead)
                 await db.commit()
                 await db.refresh(lead)
+
             except Exception as e:
                 # Rollback on exception and update the orchestration event status to "failure" with error message
                 await db.rollback()
@@ -86,7 +92,8 @@ async def _load_leads_into_database(orch_event_id):
         event_dict = _update_event_dict(event_dict)
         await update_orchestration_event(
             event_id, schemas.OrchestrationEventUpdate(**event_dict), db
-        )
+        )  # FIXME: Event status not being set to success
+        console_log.warning(f"Leads successfully loaded for event ID: {orch_event_id}")
 
 
 @router.post(
@@ -100,6 +107,8 @@ async def load_database(
     """
     Loads the database with leads from the data lake.
     """
+    console_log.warning("Loading database with leads from the data lake.")
+
     # Determine URI location of the data lake and database from settings
     source_uri = schemas.URI(
         name=str(Path(str(conf.settings.DATALAKE_URI)) / "leads" / "leads.json"),
@@ -120,6 +129,8 @@ async def load_database(
     pipeline = pipeline.scalars().first()  # type: ignore
 
     if not pipeline:
+        console_log.warning("Pipeline not found, creating a new one.")
+
         pipeline = models.OrchestrationPipeline(
             name="load_database",
             description="Loads the database with leads from the data lake",
@@ -152,6 +163,8 @@ async def load_database(
         "destination_uri",
         json.loads(getattr(orch_event, "destination_uri")),
     )
+    console_log.warning(f"Orchestration event created with ID: {orch_event.id}")
+
     return orch_event
 
 

@@ -113,8 +113,6 @@ async def fill_db_with_seeds():
         seeds_dir = Path(conf.settings.PUBLIC_ASSETS_DIR) / "seeds"
         # Load seed data from JSON files
         ...
-    yield SQLAlchemyUserDatabase(session, models.User)
-
 
 class DataBaseManager:
     def __init__(self, session: AsyncSession):

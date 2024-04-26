@@ -1,19 +1,16 @@
+from asyncio import Future, ensure_future, get_event_loop, sleep
+from pathlib import Path
 from typing import Literal
 
+from aiofiles import open as aopen
 from bs4 import BeautifulSoup
 from playwright.async_api import Keyboard, Locator, async_playwright
 from playwright_stealth import stealth_async  # type: ignore
 
-from .logging import get_logger
+from app import schemas
+from app.logging import get_logger
 
 logger = get_logger(__name__)
-
-from asyncio import Future, ensure_future, get_event_loop, sleep
-from pathlib import Path
-
-from aiofiles import open as aopen
-
-from app import schemas
 
 
 class AsyncBaseModel(schemas.BaseSchema, extra="allow"):
@@ -60,11 +57,14 @@ class AsyncBaseModel(schemas.BaseSchema, extra="allow"):
 
 
 class Job(AsyncBaseModel, schemas.LeadCreate):
-    async def dump(self, file_path: str, indent: int = 4):  # Fix: Add the "indent" parameter to match the superclass signature
+    async def dump(
+        self, file_path: str, indent: int = 4
+    ):  # Fix: Add the "indent" parameter to match the superclass signature
         return await super().dump(
             file_path=file_path,
             indent=indent,
         )
+
 
 class Scrapper:
     def __init__(self):

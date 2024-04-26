@@ -3,10 +3,18 @@
 import asyncio
 import json
 import logging
+import sys
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 from app.core import conf
+
+if conf.settings.ENVIRONMENT == "DEV":
+    logging.basicConfig(
+        stream=sys.stdout,
+        format="%(name)s|%(levelname)s: %(message)s",
+        level=conf.settings.LOGGING_LEVEL,
+    )
 
 
 class AsyncJSONFileLogger:

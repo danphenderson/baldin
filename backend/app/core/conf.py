@@ -74,9 +74,6 @@ class Settings(_BaseSettings):
     FIRST_SUPERUSER_EMAIL: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
 
-    # DATALAKE SETTINGS
-    DATALAKE_URI: str = "public/seeds"
-
     # VALIDATORS
     @validator("BACKEND_CORS_ORIGINS")
     def _assemble_cors_origins(cls, cors_origins: Union[str, list[AnyHttpUrl]]):
@@ -110,35 +107,13 @@ class Settings(_BaseSettings):
             )
         )
 
-
-class Chrome(_BaseSettings, env_prefix="CHROME_"):
-    """
-    Configuration for a Google Chrome web driver.
-
-    See https://pypi.org/project/selenium/, `ChromeOptions` for more information.
-    """
-
-    DRIVER_PATH: str = ""
-    SHM_SIZE: str = "2g"
+    @property
+    def DATALAKE_PATH(self) -> Path:
+        return Path(self.PUBLIC_ASSETS_DIR) / "datalake"
 
     @property
-    def options(self) -> ChromeOptions:
-        options = ChromeOptions()
-        options.add_argument("--no-sandbox")  # Bypass OS security model
-        # options.add_argument("--headless")  # Run in headless mode
-        # options.add_argument("--disable-gpu")  # Disable GPU hardware acceleration
-        options.add_argument("--window-size=1420,1080")  # Set window size
-        options.add_argument("--ignore-certificate-errors")  # Ignore certificate errors
-        options.add_argument(
-            "--disable-dev-shm-usage"
-        )  # Overcome limited resource problems
-        # options.add_argument("--disable-extensions")  # Disable extensions
-        options.add_argument(
-            "--disable-web-security"
-        )  # Disable web security - use with caution
-        # options.add_argument("--incognito")  # Use incognito mode
-        # Add any other arguments you find necessary
-        return options
+    def SEEDS_PATH(self) -> Path:
+        return Path(self.PUBLIC_ASSETS_DIR) / "seeds"
 
 
 class OpenAI(_BaseSettings, env_prefix="OPENAI_"):

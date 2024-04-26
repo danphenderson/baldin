@@ -111,7 +111,7 @@ async def load_database(
 
     # Determine URI location of the data lake and database from settings
     source_uri = schemas.URI(
-        name=str(Path(str(conf.settings.DATALAKE_URI)) / "leads" / "leads.json"),
+        name=str(conf.settings.DATALAKE_PATH / "leads" / "leads.json"),
         type=schemas.URIType("datalake"),
     )
     destination_uri = schemas.URI(
@@ -147,7 +147,7 @@ async def load_database(
         destination_uri=destination_uri,
         status=schemas.OrchestrationEventStatusType("pending"),
         message=f"Triggered by pipeline {getattr(pipeline, 'name')}",
-        pipeline_id=getattr(pipeline, "id"),
+        pipeline_id=getattr(pipeline, "id"),  # type: ignore
     )
 
     # Post orchestration event and wait for model to be created
@@ -311,94 +311,3 @@ async def delete_lead(
     await db.delete(lead)
     await db.commit()
     return {"message": "Lead deleted successfully"}
-
-
-# async def _enrich_datalake(orch_event_id):
-#     """
-#     Enriches the leads in the database.
-
-#     FIXME - This is hacky
-#     """
-#     async with session_context() as db:
-#         # Get the orchestration event record
-#         event = await get_orchestration_event(orch_event_id, db)
-#         event_id = getattr(event, "id")
-
-#         # Update the orchestration event status to "running"
-#         setattr(event, "status", schemas.OrchestrationEventStatusType("running"))
-
-#         event = await update_orchestration_event(
-#             event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
-#         )
-
-#         # Unmarshal the source URI
-#         source_uri = schemas.URI.model_validate_json(getattr(event, "source_uri"))
-#         destination_uri = schemas.URI.model_validate_json(
-#             getattr(event, "destination_uri")
-#         )
-
-#         # Enrich the leads
-#         async for lead in utils.generate_pydantic_models_from_json(
-#             schemas.LeadCreate, source_uri.name
-#         ):
-#             try:
-#                 # Enrich lead
-#                 enriched_lead = await enrich.enrich_lead(lead)
-#                 # Dump the enriched lead to the data lake
-#                 await utils.dump_pydantic_model_to_json(
-#                     enriched_lead, Path(destination_uri.name) / "leads.json"
-#                 )
-
-#             except Exception as e:
-#                 # Update the orchestration event status to "failure" with error message
-#                 setattr(event, "error_message", str(e))
-#                 setattr(
-#                     event, "status", schemas.OrchestrationEventStatusType("failure")
-#                 )
-#                 event = await update_orchestration_event(
-#                     event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
-#                 )
-#                 raise e
-
-#         # Update the orchestration event status to "success"
-#         setattr(event, "status", schemas.OrchestrationEventStatusType("success"))
-#         event = await update_orchestration_event(
-#             event_id, schemas.OrchestrationEventUpdate(**event.__dict__), db
-#         )
-
-
-# @router.post(
-#     "/enrich_datalake", status_code=202, response_model=schemas.OrchestrationEventRead
-# )
-# async def enrich_datalake(
-#     background_tasks: BackgroundTasks,
-#     db: AsyncSession = Depends(get_async_session),
-# ):
-#     """
-#     Loads the datalake with enriched leads from the data lake.
-#     """
-#     # Determin URI location of the data lake and database from settings
-#     source_uri = schemas.URI(
-#         name=str(Path(conf.settings.DATALAKE_URI) / "leads"),
-#         type=schemas.URIType("datalake"),
-#     )
-#     destination_uri = schemas.URI(
-#         name=str(Path(source_uri.name) / "enriched"), type=schemas.URIType("datalake")
-#     )
-
-#     # Create an orchestration event
-#     payload = schemas.OrchestrationEventCreate(
-#         job_name="enrich_datalake",
-#         source_uri=source_uri,
-#         destination_uri=destination_uri,
-#         status=schemas.OrchestrationEventStatusType("pending"),
-#         error_message=None,
-#     )
-
-#     # Post orchestration event and wait for model to be created
-#     orch_event = await create_orchestration_event(payload, db)
-
-#     # Add the load_database_task to the background tasks
-#     background_tasks.add_task(_enrich_datalake, orch_event.id)
-
-#     return orch_event

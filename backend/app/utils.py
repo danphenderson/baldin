@@ -73,7 +73,7 @@ def extract_json(text: str) -> list[dict]:
 # Asynchronous utils
 
 
-async def generate_pydantic_models_from_json(
+async def generate_pydantic_models_from_docs_dir(
     model: Type[BaseModel], directory: str | Path
 ):
     """

@@ -495,3 +495,40 @@ class ApplicationCreate(BaseSchema):
 
 class ApplicationUpdate(BaseSchema):
     status: str
+
+
+table_read_map = {
+    "users": UserRead,
+    "skills": SkillRead,
+    "experiences": ExperienceRead,
+    "educations": EducationRead,
+    "certificates": CertificateRead,
+    "companies": CompanyRead,
+    "leads": LeadRead,
+    "contacts": ContactRead,
+    "resumes": ResumeRead,
+    "cover_letters": CoverLetterRead,
+    "orchestration_pipelines": OrchestrationPipelineRead,
+    "orchestration_events": OrchestrationEventRead,
+    "extractors": ExtractorRead,
+    "extractor_examples": ExtractorExampleRead,
+    "applications": ApplicationRead,
+}
+
+table_create_map = {
+    "users": UserCreate,
+    "skills": SkillCreate,
+    "experiences": ExperienceCreate,
+    "educations": EducationCreate,
+    "certificates": CertificateCreate,
+    "companies": CompanyCreate,
+    "leads": LeadCreate,
+    "contacts": ContactCreate,
+    "resumes": ResumeCreate,
+    "cover_letters": CoverLetterCreate,
+    "orchestration_pipelines": OrchestrationPipelineCreate,
+    "orchestration_events": OrchestrationEventCreate,
+    "extractors": ExtractorCreate,
+    "extractor_examples": ExtractorExampleCreate,
+    "applications": ApplicationCreate,
+}

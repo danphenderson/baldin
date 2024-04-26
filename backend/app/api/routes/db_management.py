@@ -41,7 +41,7 @@ async def seed_tables(
     return await db_manager.seed_tables()
 
 
-@router.post("/seed-table/{table_name}", response_model=schemas.BaseSchema)
+@router.post("/seed/{table_name}", response_model=str)
 async def seed_table(
     table_name: str,
     session: AsyncSession = Depends(get_async_session),

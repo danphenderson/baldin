@@ -62,7 +62,7 @@ async def _load_leads_into_database(orch_event_id):
         source_uri = schemas.URI.model_validate_json(event.source_uri)
 
         # Load the database
-        async for lead in utils.generate_pydantic_models_from_json(
+        async for lead in utils.generate_pydantic_models_from_docs_dir(
             schemas.LeadCreate, source_uri.name
         ):
             try:

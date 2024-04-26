@@ -1,7 +1,9 @@
 # Path: app/core/db.py
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator, Type
 
+import aiofiles
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -9,6 +11,7 @@ from sqlalchemy.sql import text
 
 from app import models, schemas
 from app.core import conf
+from app.logging import console_log
 
 # Determine the appropriate SQLAlchemy database URI based on the environment
 if conf.settings.ENVIRONMENT == "PYTEST":
@@ -114,6 +117,7 @@ async def fill_db_with_seeds():
         # Load seed data from JSON files
         ...
 
+
 class DataBaseManager:
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -138,7 +142,7 @@ class DataBaseManager:
 
     async def create_table_record(
         self,
-        create_schema: schemas.BaseSchema,
+        create_payload: schemas.BaseSchema,
         table_model: Type[models.Base],
         db: AsyncSession,
     ):
@@ -146,7 +150,7 @@ class DataBaseManager:
         Inserts record into the table based on the provided table model.
         """
         record = table_model(
-            **create_schema.dict()
+            **create_payload.dict()
         )  # Ensure table_model is a concrete model class
         db.add(record)
         await db.commit()
@@ -174,9 +178,29 @@ class DataBaseManager:
         # Update to seed all tables
         pass
 
-    async def seed_table(
-        self, table_name: str
-    ) -> schemas.BaseSchema:  # substype of BaseSchema
+    async def seed_table(self, table_name: str) -> str:  # substype of BaseSchema
         """Asynchronously seed a specific table with default data."""
-        # Update to seed a specific table
-        pass
+        seeds_path = (
+            Path(conf.settings.PUBLIC_ASSETS_DIR) / "seeds" / f"{table_name}.json"
+        )
+        table_model = models.table_models[table_name]
+        create_schema = schemas.table_create_map[table_name]
+
+        async with aiofiles.open(seeds_path, "r") as file:
+            seeds = await file.read()
+            console_log.warning(f"seeds: {seeds}")
+
+        create_payload: list = []
+
+        for doc in seeds:
+            try:
+                if isinstance(doc, dict):
+                    create_payload.append(create_schema(**doc))
+            except Exception as e:
+                console_log.error(f"Error seeding table {table_name}: {e}")
+                continue
+
+        if create_payload:
+            await self.create_table_records(create_payload, table_model, self.session)
+
+        return f"Seeded {table_name} table"

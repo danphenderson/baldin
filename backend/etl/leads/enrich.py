@@ -62,7 +62,9 @@ async def enrich_lead(lead) -> Job:
 
 
 async def enrich_leads():
-    async for lead in utils.generate_pydantic_models_from_json(Job, get_leads_dir()):
+    async for lead in utils.generate_pydantic_models_from_docs_dir(
+        Job, get_leads_dir()
+    ):
         # Enrich lead
         enriched_lead = await enrich_lead(lead)  # type: ignore
 

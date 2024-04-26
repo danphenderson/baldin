@@ -32,7 +32,7 @@ async def get_table_details(
     return await db_manager.get_table_details(table_name)
 
 
-@router.post("/seed", response_model=schemas.BaseSchema)
+@router.post("/seed", response_model=str)
 async def seed_tables(
     session: AsyncSession = Depends(get_async_session),
     _: models.User = Depends(get_current_superuser),

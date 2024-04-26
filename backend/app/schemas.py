@@ -296,7 +296,7 @@ class LeadsPaginatedRead(BaseSchema):
 
 class LeadCreate(BaseLead):
     url: str
-    company_ids: list[UUID4] = Field([], description="Company IDs")
+    company_ids: list[UUID4] | None = Field(None, description="Company IDs")
 
     @model_validator(mode="after")
     def clean_and_wrap_text_fields(self) -> Any:

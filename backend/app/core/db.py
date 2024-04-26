@@ -1,4 +1,6 @@
 # Path: app/core/db.py
+import asyncio
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator, Type
@@ -119,6 +121,10 @@ async def fill_db_with_seeds():
 
 
 class DataBaseManager:
+
+    seeds_dir: Path = Path(conf.settings.PUBLIC_ASSETS_DIR) / "seeds"
+    datalake_dir: Path = Path(conf.settings.PUBLIC_ASSETS_DIR) / "datalake"
+
     def __init__(self, session: AsyncSession):
         self.session = session
 
@@ -173,34 +179,44 @@ class DataBaseManager:
         await db.commit()
         return records
 
-    async def seed_tables(self) -> schemas.BaseSchema:  # substype of BaseSchema
-        """Asynchronously seed all tables with default data."""
-        # Update to seed all tables
-        pass
+    async def seed_tables(self) -> str:  # substype of BaseSchema
+        """Asynchronously seed all tables with public assets directory seed data."""
+        seed_files = self.seeds_dir.glob("*.json")
+        seed_tasks = [self.seed_table(seed_file.stem) for seed_file in seed_files]
+        await asyncio.gather(*seed_tasks, return_exceptions=True)
+        return "Seeded all tables"
 
-    async def seed_table(self, table_name: str) -> str:  # substype of BaseSchema
-        """Asynchronously seed a specific table with default data."""
-        seeds_path = (
-            Path(conf.settings.PUBLIC_ASSETS_DIR) / "seeds" / f"{table_name}.json"
-        )
+    async def seed_table(self, table_name: str) -> str:
+        seed_path = self.seeds_dir / f"{table_name}.json"
         table_model = models.table_models[table_name]
         create_schema = schemas.table_create_map[table_name]
+        create_payload = []
 
-        async with aiofiles.open(seeds_path, "r") as file:
-            seeds = await file.read()
-            console_log.warning(f"seeds: {seeds}")
+        async with aiofiles.open(seed_path, "r") as file:
+            seed_docs = await file.read()
+            try:
+                seed_data = json.loads(seed_docs)
+                console_log.warning(f"seeds: {seed_data}")
+            except json.JSONDecodeError as e:
+                console_log.error(f"Error decoding JSON for {table_name}: {e}")
+                return f"Failed to decode JSON for {table_name}"
 
-        create_payload: list = []
-
-        for doc in seeds:
+        for doc in seed_data:
             try:
                 if isinstance(doc, dict):
-                    create_payload.append(create_schema(**doc))
+                    # Adjust fields if necessary before creating schema instances
+                    adjusted_doc = {
+                        key: doc[key] for key in doc if hasattr(table_model, key)
+                    }
+                    create_payload.append(create_schema(**adjusted_doc))
             except Exception as e:
-                console_log.error(f"Error seeding table {table_name}: {e}")
+                console_log.error(f"Error processing document for {table_name}: {e}")
                 continue
 
         if create_payload:
-            await self.create_table_records(create_payload, table_model, self.session)
-
-        return f"Seeded {table_name} table"
+            created_records = await self.create_table_records(
+                create_payload, table_model, self.session
+            )
+            return f"Seeded {table_name} table with {len(created_records)} records"
+        else:
+            return f"No data to seed for {table_name}"

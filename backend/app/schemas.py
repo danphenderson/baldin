@@ -271,7 +271,6 @@ class BaseLead(BaseSchema):
     location: str | None = Field(None, description="Job location")
     salary: str | None = Field(None, description="Salary range")
     job_function: str | None = Field(None, description="Job function")
-    industries: str | None = Field(None, description="Industries involved")
     employment_type: str | None = Field(None, description="Type of employment")
     seniority_level: str | None = Field(None, description="Seniority level")
     education_level: str | None = Field(None, description="Required education level")

@@ -1326,11 +1326,6 @@ export interface components {
        */
       job_function?: string | null;
       /**
-       * Industries
-       * @description Industries involved
-       */
-      industries?: string | null;
-      /**
        * Employment Type
        * @description Type of employment
        */
@@ -1390,11 +1385,6 @@ export interface components {
        * @description Job function
        */
       job_function?: string | null;
-      /**
-       * Industries
-       * @description Industries involved
-       */
-      industries?: string | null;
       /**
        * Employment Type
        * @description Type of employment
@@ -1477,11 +1467,6 @@ export interface components {
        * @description Job function
        */
       job_function?: string | null;
-      /**
-       * Industries
-       * @description Industries involved
-       */
-      industries?: string | null;
       /**
        * Employment Type
        * @description Type of employment

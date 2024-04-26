@@ -1,4 +1,4 @@
-# app/core/conf.py
+# Path: app/core/conf.py
 from os import environ, getenv
 from pathlib import Path
 from typing import Literal, Union

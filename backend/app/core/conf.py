@@ -218,5 +218,6 @@ linkedin = get_linkedin_settings()
 
 glassdoor = get_glassdoor_settings()
 
+# FIXME: Clean up the following hacks.
 environ["OPENAI_API_KEY"] = openai.API_KEY
 environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"

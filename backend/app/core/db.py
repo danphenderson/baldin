@@ -151,3 +151,15 @@ class DataBaseManager:
         db.add_all(records)
         await db.commit()
         return records
+
+    async def seed_tables(self) -> schemas.BaseSchema:  # substype of BaseSchema
+        """Asynchronously seed all tables with default data."""
+        # Update to seed all tables
+        pass
+
+    async def seed_table(
+        self, table_name: str
+    ) -> schemas.BaseSchema:  # substype of BaseSchema
+        """Asynchronously seed a specific table with default data."""
+        # Update to seed a specific table
+        pass

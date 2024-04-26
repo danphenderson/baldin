@@ -7,6 +7,7 @@ from app.api.deps import (
     get_async_session,
     get_current_superuser,
     models,
+    schemas,
 )
 
 router = APIRouter()
@@ -29,3 +30,22 @@ async def get_table_details(
 ):
     db_manager = DataBaseManager(session)
     return await db_manager.get_table_details(table_name)
+
+
+@router.post("/seed", response_model=schemas.BaseSchema)
+async def seed_tables(
+    session: AsyncSession = Depends(get_async_session),
+    _: models.User = Depends(get_current_superuser),
+):
+    db_manager = DataBaseManager(session)
+    return await db_manager.seed_tables()
+
+
+@router.post("/seed-table/{table_name}", response_model=schemas.BaseSchema)
+async def seed_table(
+    table_name: str,
+    session: AsyncSession = Depends(get_async_session),
+    _: models.User = Depends(get_current_superuser),
+):
+    db_manager = DataBaseManager(session)
+    return await db_manager.seed_table(table_name)

@@ -82,8 +82,8 @@ async def get_company_leads(
     result = await db.execute(
         select(models.Lead)
         .options(joinedload(models.Lead.companies))
-        .join(models.leads_x_companies)
-        .where(models.leads_x_companies.company_id == company.id)
+        .join(models.LeadXCompany)
+        .where(models.LeadXCompany.company_id == company.id)
     )
     leads = result.scalars().all()
     if not leads:

@@ -1,9 +1,8 @@
 # Path: app/api/deps.py
-import json
 import uuid
 from datetime import datetime
 from pathlib import Path  # noqa
-from typing import Any, Sequence, Type
+from typing import Any, Sequence
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Query  # noqa
 from pydantic import UUID4
@@ -25,6 +24,7 @@ from app.core.langchain import (  # noqa
     generate_resume,
 )
 from app.core.security import (  # noqa
+    create_user,
     fastapi_users,
     get_current_superuser,
     get_current_user,

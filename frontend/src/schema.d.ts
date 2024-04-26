@@ -41,14 +41,6 @@ export interface paths {
     /** Get Table Details */
     get: operations["get_table_details_db_management_table_details__table_name__get"];
   };
-  "/db-management/seed": {
-    /** Seed Tables */
-    post: operations["seed_tables_db_management_seed_post"];
-  };
-  "/db-management/seed/{table_name}": {
-    /** Seed Table */
-    post: operations["seed_table_db_management_seed__table_name__post"];
-  };
   "/users/me": {
     /** Users:Current User */
     get: operations["users_current_user_users_me_get"];
@@ -66,6 +58,10 @@ export interface paths {
   "/users/me/profile": {
     /** Read Profile */
     get: operations["read_profile_users_me_profile_get"];
+  };
+  "/users/seed": {
+    /** Seed Users */
+    post: operations["seed_users_users_seed_post"];
   };
   "/leads/load_database": {
     /**
@@ -2428,39 +2424,6 @@ export interface operations {
       };
     };
   };
-  /** Seed Tables */
-  seed_tables_db_management_seed_post: {
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": string;
-        };
-      };
-    };
-  };
-  /** Seed Table */
-  seed_table_db_management_seed__table_name__post: {
-    parameters: {
-      path: {
-        table_name: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": string;
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Users:Current User */
   users_current_user_users_me_get: {
     responses: {
@@ -2626,6 +2589,17 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["UserProfileRead"];
+        };
+      };
+    };
+  };
+  /** Seed Users */
+  seed_users_users_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
         };
       };
     };

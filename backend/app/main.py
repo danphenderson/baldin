@@ -52,7 +52,7 @@ from app.schemas import (
 
 # Setup basic logging
 logging.basicConfig()
-logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+
 logger = get_async_logger(__name__)
 
 app = FastAPI(

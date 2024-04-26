@@ -26,3 +26,10 @@ repos:
       - id: flake8
         args: ['--ignore=E501']
         files: ^backend/
+  - repo: local
+    hooks:
+      - id: openapi-schema-update
+        name: Update OpenAPI and TypeScript schemas
+        entry: ./scripts/update_frontend_schemas.sh
+        language: script
+        files: backend/app/(schemas\.py|api/.*\.py)

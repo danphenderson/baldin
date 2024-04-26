@@ -148,7 +148,6 @@ class Lead(Base):
     location = Column(String)
     salary = Column(String)
     job_function = Column(String)
-    industries = Column(String, index=True)
     employment_type = Column(String)
     seniority_level = Column(String)
     education_level = Column(String)

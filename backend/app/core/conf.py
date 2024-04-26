@@ -7,7 +7,6 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 from pydantic import AnyHttpUrl, AnyUrl, EmailStr, validator
 from pydantic_settings import BaseSettings
-from selenium.webdriver.chrome.options import Options as ChromeOptions
 from toml import load as toml_load
 
 PROJECT_DIR = Path(__file__).parent.parent.parent
@@ -74,9 +73,6 @@ class Settings(_BaseSettings):
     FIRST_SUPERUSER_EMAIL: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
 
-    # DATALAKE SETTINGS
-    DATALAKE_URI: str = "public/seeds"
-
     # VALIDATORS
     @validator("BACKEND_CORS_ORIGINS")
     def _assemble_cors_origins(cls, cors_origins: Union[str, list[AnyHttpUrl]]):
@@ -110,35 +106,13 @@ class Settings(_BaseSettings):
             )
         )
 
-
-class Chrome(_BaseSettings, env_prefix="CHROME_"):
-    """
-    Configuration for a Google Chrome web driver.
-
-    See https://pypi.org/project/selenium/, `ChromeOptions` for more information.
-    """
-
-    DRIVER_PATH: str = ""
-    SHM_SIZE: str = "2g"
+    @property
+    def DATALAKE_PATH(self) -> Path:
+        return Path(self.PUBLIC_ASSETS_DIR) / "datalake"
 
     @property
-    def options(self) -> ChromeOptions:
-        options = ChromeOptions()
-        options.add_argument("--no-sandbox")  # Bypass OS security model
-        # options.add_argument("--headless")  # Run in headless mode
-        # options.add_argument("--disable-gpu")  # Disable GPU hardware acceleration
-        options.add_argument("--window-size=1420,1080")  # Set window size
-        options.add_argument("--ignore-certificate-errors")  # Ignore certificate errors
-        options.add_argument(
-            "--disable-dev-shm-usage"
-        )  # Overcome limited resource problems
-        # options.add_argument("--disable-extensions")  # Disable extensions
-        options.add_argument(
-            "--disable-web-security"
-        )  # Disable web security - use with caution
-        # options.add_argument("--incognito")  # Use incognito mode
-        # Add any other arguments you find necessary
-        return options
+    def SEEDS_PATH(self) -> Path:
+        return Path(self.PUBLIC_ASSETS_DIR) / "seeds"
 
 
 class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
@@ -218,11 +192,6 @@ def get_settings(**kwargs) -> Settings:
     return settings
 
 
-def get_chrome_settings(**kwargs) -> Chrome:
-    chrome = Chrome(**kwargs)
-    return chrome
-
-
 def get_openai_settings(**kwargs) -> OpenAI:
     import openai as _openai
 
@@ -243,13 +212,12 @@ def get_glassdoor_settings(**kwargs) -> Glassdoor:
 
 settings = get_settings()
 
-chrome = get_chrome_settings()
-
 openai = get_openai_settings()
 
 linkedin = get_linkedin_settings()
 
 glassdoor = get_glassdoor_settings()
 
+# FIXME: Clean up the following hacks.
 environ["OPENAI_API_KEY"] = openai.API_KEY
 environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"

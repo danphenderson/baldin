@@ -7,7 +7,6 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 from pydantic import AnyHttpUrl, AnyUrl, EmailStr, validator
 from pydantic_settings import BaseSettings
-from selenium.webdriver.chrome.options import Options as ChromeOptions
 from toml import load as toml_load
 
 PROJECT_DIR = Path(__file__).parent.parent.parent
@@ -193,11 +192,6 @@ def get_settings(**kwargs) -> Settings:
     return settings
 
 
-def get_chrome_settings(**kwargs) -> Chrome:
-    chrome = Chrome(**kwargs)
-    return chrome
-
-
 def get_openai_settings(**kwargs) -> OpenAI:
     import openai as _openai
 
@@ -217,8 +211,6 @@ def get_glassdoor_settings(**kwargs) -> Glassdoor:
 
 
 settings = get_settings()
-
-chrome = get_chrome_settings()
 
 openai = get_openai_settings()
 

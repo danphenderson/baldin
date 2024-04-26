@@ -102,24 +102,6 @@ async def get_user_db(session: AsyncSession = Depends(get_async_session)):
     yield SQLAlchemyUserDatabase(session, models.User)
 
 
-async def fill_db_with_seeds():
-    """
-    Fill the database with seed data.
-
-    This function is used to populate the database with initial data, such as
-    default users, roles, permissions, etc.
-    """
-
-    # Use session_context() to create an asynchronous session
-    async with session_context() as session:
-        # Create a new user database instance
-        user_db = SQLAlchemyUserDatabase(session, models.User)
-        # Load seeds from environment public assets dir
-        seeds_dir = Path(conf.settings.PUBLIC_ASSETS_DIR) / "seeds"
-        # Load seed data from JSON files
-        ...
-
-
 class DataBaseManager:
 
     seeds_dir: Path = Path(conf.settings.PUBLIC_ASSETS_DIR) / "seeds"

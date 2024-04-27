@@ -289,15 +289,13 @@ async def get_extractor_by_name(
 ) -> models.Extractor:
     query = (
         select(models.Extractor)
-        .filter(models.Extractor.name == name)
+        .where(models.Extractor.name == name, models.Extractor.user_id == user.id)
         .options(selectinload(models.Extractor.extractor_examples))
     )
-    extractor = await db.execute(query)
-    extractor = extractor.scalars().first()
+    result = await db.execute(query)
+    extractor = result.scalars().first()
     if not extractor:
         raise await _404(extractor, name)
-    if extractor.user_id != user.id:  # type: ignore
-        raise await _403(user.id, extractor, getattr(extractor, "name", name))
     await log.info(f"get_extractor: {extractor}")
     return extractor
 

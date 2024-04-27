@@ -96,7 +96,7 @@ class Extractor(Base):
     """
 
     __tablename__ = "extractors"
-    name = Column(String)
+    name = Column(String, index=True, nullable=False)
     description = Column(Text)
     json_schema = Column(JSONB)
     instruction = Column(Text)

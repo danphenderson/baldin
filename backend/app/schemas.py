@@ -6,7 +6,7 @@ from io import BytesIO
 from pathlib import Path  # TODO: Use Literal for performance improvement
 from typing import Any, Literal, Sequence, TypeVar
 
-from fastapi import Form, UploadFile
+from fastapi import UploadFile
 from fastapi_users import schemas
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
@@ -232,6 +232,13 @@ class BaseCertificate(BaseSchema):
     issued_date: datetime | None = Field(
         None, description="Issued date of the certificate"
     )
+
+    @validator("expiration_date", "issued_date", pre=True)
+    def parse_date(cls, value):
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=None) if value.tzinfo else value
 
 
 class CertificateRead(BaseCertificate, BaseRead):

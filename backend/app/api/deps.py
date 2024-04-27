@@ -243,6 +243,19 @@ async def get_certificate(
     return certificate
 
 
+async def create_certificate(
+    payload: schemas.CertificateCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Certificate:
+    certificate = models.Certificate(**payload.dict(), user_id=user.id)
+    db.add(certificate)
+    await db.commit()
+    await db.refresh(certificate)
+    await log.info(f"create_certificate: {certificate}")
+    return certificate
+
+
 async def get_orchestration_pipeline(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),
@@ -357,7 +370,7 @@ async def run_extractor(
         pipeline = await get_orchestration_pipeline_by_name(
             getattr(extractor, "name", ""), db, user
         )
-    except HTTPException as _:
+    except HTTPException as _:  # noqa
         # Create a new pipeline for this extractor
         pipeline = models.OrchestrationPipeline(
             name=extractor.name,

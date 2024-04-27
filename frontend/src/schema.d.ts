@@ -276,6 +276,10 @@ export interface paths {
     /** Delete User Certificate */
     delete: operations["delete_user_certificate_certificate__certificate_id__delete"];
   };
+  "/certificate/extract": {
+    /** Extract Certificates */
+    post: operations["extract_certificates_certificate_extract_post"];
+  };
   "/extractor/configurables": {
     /**
      * Get Configuration
@@ -1250,6 +1254,39 @@ export interface components {
        * @default false
        */
       content_too_long?: boolean;
+    };
+    /**
+     * ExtractorRun
+     * @description Request to run an extractor.
+     */
+    ExtractorRun: {
+      /**
+       * Mode
+       * @description Mode to run the extractor in. 'entire_document' extracts information from the entire document. 'retrieval' extracts information from a specific section of the document.
+       * @default entire_document
+       * @enum {string}
+       */
+      mode?: "entire_document" | "retrieval";
+      /**
+       * File
+       * @description A file to extract information from. If provided, the file will be processed and the text extracted.
+       */
+      file?: string | null;
+      /**
+       * Text
+       * @description Text to extract information from. If provided, the text will be processed and the information extracted.
+       */
+      text?: string | null;
+      /**
+       * Url
+       * @description A URL to extract information from. If provided, the URL will be processed and the information extracted.
+       */
+      url?: string | null;
+      /**
+       * Llm
+       * @description The language model to use for the extraction.
+       */
+      llm?: string | null;
     };
     /** ExtractorUpdate */
     ExtractorUpdate: {
@@ -4047,6 +4084,28 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["CertificateRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract Certificates */
+  extract_certificates_certificate_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"][];
         };
       };
       /** @description Validation Error */

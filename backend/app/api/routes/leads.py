@@ -355,16 +355,13 @@ async def extract_lead(
     )
 
     # Run the extraction
-    try:
-        result = await run_extractor(
-            schemas.ExtractorRead(**extractor.__dict__), payload, user, db
-        )
-    except Exception as e:
-        logger.error(f"Error running extractor: {e}")
-        raise HTTPException(status_code=500, detail="Error running extractor")
+    result = await run_extractor(
+        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+    )
 
     # Process and save the extracted data
     try:
+        # FIXME: Hack to remove company_ids
         company_ids = result.data[0].pop("company_ids", None)
         logger.warning("Company IDs: " + str(company_ids))
         logger.warning("result.data[0]: " + str(result.data[0]))

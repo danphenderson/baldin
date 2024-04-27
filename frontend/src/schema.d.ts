@@ -171,6 +171,10 @@ export interface paths {
     /** Delete User Experience */
     delete: operations["delete_user_experience_experiences__experience_id__delete"];
   };
+  "/experiences/extract": {
+    /** Extract User Experiences */
+    post: operations["extract_user_experiences_experiences_extract_post"];
+  };
   "/skills/": {
     /** Get Current User Skills */
     get: operations["get_current_user_skills_skills__get"];
@@ -3328,6 +3332,28 @@ export interface operations {
       /** @description Successful Response */
       204: {
         content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract User Experiences */
+  extract_user_experiences_experiences_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"][];
+        };
       };
       /** @description Validation Error */
       422: {

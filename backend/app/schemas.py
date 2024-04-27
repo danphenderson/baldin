@@ -188,6 +188,13 @@ class BaseExperience(BaseSchema):
     location: str | None = Field(None, description="Location of the experience")
     projects: str | None = Field(None, description="Projects involved")
 
+    @validator("start_date", "end_date", pre=True)
+    def parse_date(cls, value):
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=None) if value.tzinfo else value
+
 
 class ExperienceRead(BaseExperience, BaseRead):
     pass

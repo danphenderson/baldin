@@ -159,6 +159,19 @@ async def get_experience(
     return experience
 
 
+async def create_experience(
+    payload: schemas.ExperienceCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Experience:
+    experience = models.Experience(**payload.dict(), user_id=user.id)
+    db.add(experience)
+    await db.commit()
+    await db.refresh(experience)
+    await log.info(f"create_experience: {experience}")
+    return experience
+
+
 async def get_resume(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),

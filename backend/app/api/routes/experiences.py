@@ -1,15 +1,18 @@
 # app/api/routes/experiences.py
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import UUID4
 from sqlalchemy import select
 
 from app.api.deps import (
     AsyncSession,
+    create_experience,
+    create_extractor,
     get_async_session,
     get_current_user,
     get_experience,
+    get_extractor_by_name,
     models,
+    run_extractor,
     schemas,
 )
 
@@ -74,3 +77,39 @@ async def delete_user_experience(
     await db.delete(experience)
     await db.commit()
     return None
+
+
+@router.post("/extract", response_model=list[schemas.ExperienceRead])
+async def extract_user_experiences(
+    payload: schemas.ExtractorRun,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    try:
+        extractor = await get_extractor_by_name("experiences", db)
+    except HTTPException as e:
+        if e.status_code == 404:
+            extractor = await create_extractor(
+                schemas.ExtractorCreate(
+                    name="experiences",
+                    description="Experience data extractor",
+                    instruction="Extract experinces JSON data from a given context",
+                    json_schema=schemas.ExperienceCreate.model_json_schema(),
+                    extractor_examples=[],
+                ),
+                db=db,
+                user=user,
+            )
+        else:
+            raise e
+
+    # Run the extractor with the given payload
+    resp = await run_extractor(
+        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+    )
+
+    # Save the extracted experiences to the database
+    return [
+        await create_experience(schemas.ExperienceCreate(**experience), db, user)
+        for experience in resp.data
+    ]

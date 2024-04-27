@@ -2873,7 +2873,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": unknown;
+          "application/json": components["schemas"]["CompanyRead"];
         };
       };
       /** @description Validation Error */

@@ -134,12 +134,12 @@ async def create_orchestration_event(
 async def get_skill(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),
-    user: models.User = Depends(get_current_user),
+    user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Skill:
     skill = await db.get(models.Skill, id)
     if not skill:
         raise await _404(skill, id)
-    if skill.user_id != user.id:  # type: ignore
+    if skill.user_id != user.id:
         raise await _403(user.id, skill, id)
     await log.info(f"get_skill: {skill}")
     return skill
@@ -291,7 +291,7 @@ async def get_extractor(
 ) -> models.Extractor:
     query = (
         select(models.Extractor)
-        .filter(models.Extractor.id == id)
+        .where(models.Extractor.id == id)
         .options(selectinload(models.Extractor.extractor_examples))
     )
     extractor = await db.execute(query)
@@ -307,11 +307,10 @@ async def get_extractor(
 async def get_extractor_by_name(
     name: str,
     db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Extractor:
     query = (
         select(models.Extractor)
-        .where(models.Extractor.name == name, models.Extractor.user_id == user.id)
+        .where(models.Extractor.name == name)
         .options(selectinload(models.Extractor.extractor_examples))
     )
     result = await db.execute(query)
@@ -324,8 +323,8 @@ async def get_extractor_by_name(
 
 async def create_extractor(
     payload: schemas.ExtractorCreate,
+    user: schemas.UserRead,
     db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Extractor:
     extractor = models.Extractor(**payload.dict(), user_id=user.id)
     db.add(extractor)
@@ -338,8 +337,8 @@ async def create_extractor(
 async def run_extractor(
     extractor: schemas.ExtractorRead,
     payload: schemas.ExtractorRun,
+    user: schemas.UserRead,
     db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
 ) -> schemas.ExtractorResponse:
 
     await log.info(f"Running extractor {extractor.name} with payload {payload}")
@@ -358,13 +357,13 @@ async def run_extractor(
         pipeline = await get_orchestration_pipeline_by_name(
             getattr(extractor, "name", ""), db, user
         )
-    except HTTPException as e:
+    except HTTPException as _:
         # Create a new pipeline for this extractor
         pipeline = models.OrchestrationPipeline(
             name=extractor.name,
             description=f"Extraction orchestration pipeline for {extractor.name}",
+            definition=extractor.json_schema,
             user_id=user.id,
-            definition=extractor.model_dump(),
         )
         db.add(pipeline)
         await db.commit()

@@ -5,10 +5,14 @@ from sqlalchemy import select
 
 from app.api.deps import (
     AsyncSession,
+    create_contact,
+    create_extractor,
     get_async_session,
     get_contact,
     get_current_user,
+    get_extractor_by_name,
     models,
+    run_extractor,
     schemas,
 )
 
@@ -73,3 +77,37 @@ async def delete_user_contact(
     await db.delete(contact)
     await db.commit()
     return None
+
+
+@router.post("/extract", response_model=list[schemas.ContactRead])
+async def extract_contacts(
+    payload: schemas.ExtractorRun,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    try:
+        extractor = await get_extractor_by_name("contacts", db)
+    except HTTPException as e:
+        if e.status_code == 404:
+            extractor = await create_extractor(
+                schemas.ExtractorCreate(
+                    name="contacts",
+                    description="Contact data extractor",
+                    instruction="Extract contact JSON data from a given context",
+                    json_schema=schemas.ContactCreate.model_json_schema(),
+                    extractor_examples=[],
+                ),
+                db=db,
+                user=user,
+            )
+        else:
+            raise e
+
+    resp = await run_extractor(
+        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+    )
+
+    return [
+        await create_contact(schemas.ContactCreate(**contact), db=db, user=user)
+        for contact in resp.data
+    ]

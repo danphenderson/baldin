@@ -164,6 +164,14 @@ class BaseSkill(BaseSchema):
     yoe: int | None = Field(None, description="Years of Experience")
     subskills: str | None = Field(None, description="Sub-Skills")
 
+    @validator("yoe", pre=True)
+    def validate_yoe(cls, v) -> int:
+        if v:
+            v = int(v)
+            if v < 0:
+                raise ValueError("Years of experience must be a positive integer")
+        return v
+
 
 class SkillRead(BaseRead, BaseSkill):
     pass
@@ -216,6 +224,13 @@ class BaseEducation(BaseSchema):
     achievements: str | None = Field(None, description="Achievements")
     start_date: datetime | None = Field(None, description="Start date of the education")
     end_date: datetime | None = Field(None, description="End date of the education")
+
+    @validator("start_date", "end_date", pre=True)
+    def parse_date(cls, value):
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=None) if value.tzinfo else value
 
 
 class EducationRead(BaseEducation, BaseRead):

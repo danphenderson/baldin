@@ -145,6 +145,19 @@ async def get_skill(
     return skill
 
 
+async def create_skill(
+    payload: schemas.SkillCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Skill:
+    skill = models.Skill(**payload.dict(), user_id=user.id)
+    db.add(skill)
+    await db.commit()
+    await db.refresh(skill)
+    await log.info(f"create_skill: {skill}")
+    return skill
+
+
 async def get_experience(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),
@@ -200,6 +213,19 @@ async def get_contact(
     return contact
 
 
+async def create_contact(
+    payload: schemas.ContactCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Contact:
+    contact = models.Contact(**payload.dict(), user_id=user.id)
+    db.add(contact)
+    await db.commit()
+    await db.refresh(contact)
+    await log.info(f"create_contact: {contact}")
+    return contact
+
+
 async def get_cover_letter(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),
@@ -239,6 +265,19 @@ async def get_education(
     if education.user_id != user.id:  # type: ignore
         raise await _403(user.id, education, id)
     await log.info(f"get_education: {education}")
+    return education
+
+
+async def create_education(
+    payload: schemas.EducationCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Education:
+    education = models.Education(**payload.dict(), user_id=user.id)
+    db.add(education)
+    await db.commit()
+    await db.refresh(education)
+    await log.info(f"create_education: {education}")
     return education
 
 

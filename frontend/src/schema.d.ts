@@ -157,6 +157,10 @@ export interface paths {
     /** Delete User Contact */
     delete: operations["delete_user_contact_contacts__contact_id__delete"];
   };
+  "/contacts/extract": {
+    /** Extract Contacts */
+    post: operations["extract_contacts_contacts_extract_post"];
+  };
   "/experiences/": {
     /** Read Current User Experiences */
     get: operations["read_current_user_experiences_experiences__get"];
@@ -188,6 +192,10 @@ export interface paths {
     put: operations["update_user_skill_skills__skill_id__put"];
     /** Delete User Skill */
     delete: operations["delete_user_skill_skills__skill_id__delete"];
+  };
+  "/skills/extract": {
+    /** Extract User Skills */
+    post: operations["extract_user_skills_skills_extract_post"];
   };
   "/cover_letters/generate": {
     /** Generate User Cover Letter */
@@ -265,6 +273,10 @@ export interface paths {
     put: operations["update_user_education_education__education_id__put"];
     /** Delete User Education */
     delete: operations["delete_user_education_education__education_id__delete"];
+  };
+  "/education/extract": {
+    /** Extract Education */
+    post: operations["extract_education_education_extract_post"];
   };
   "/certificate/": {
     /** Read Current User Certificates */
@@ -3239,6 +3251,28 @@ export interface operations {
       };
     };
   };
+  /** Extract Contacts */
+  extract_contacts_contacts_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ContactRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Read Current User Experiences */
   read_current_user_experiences_experiences__get: {
     responses: {
@@ -3456,6 +3490,28 @@ export interface operations {
       /** @description Successful Response */
       204: {
         content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract User Skills */
+  extract_user_skills_skills_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"][];
+        };
       };
       /** @description Validation Error */
       422: {
@@ -4006,6 +4062,28 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract Education */
+  extract_education_education_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"][];
         };
       };
       /** @description Validation Error */

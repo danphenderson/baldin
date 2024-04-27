@@ -157,15 +157,18 @@ async def suggest_extractor(suggest_extractor: SuggestExtractor) -> ExtractorDef
 
 @router.post("/run", response_model=schemas.ExtractorResponse)
 async def run_extractor(
-    extractor_id: UUID4 = Form(),
+    extractor_run: schemas.ExtractorRun = Depends(schemas.ExtractorRun),
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
-    mode: Literal["entire_document", "retrieval"] = Form("entire_document"),
-    file: UploadFile | None = File(None),
-    text: str | None = Form(None),
-    url: AnyHttpUrl | None = Form(None),
-    llm: str = Form(conf.openai.COMPLETION_MODEL),
 ) -> schemas.ExtractorResponse:
+
+    text = extractor_run.text
+    mode = extractor_run.mode
+    llm = extractor_run.llm
+    file = extractor_run.file
+    url = extractor_run.url
+    extractor_id = extractor_run.extractor_id
+
     if text is None and file is None and url is None:
         raise HTTPException(
             status_code=422,

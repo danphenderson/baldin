@@ -4,8 +4,9 @@ from datetime import datetime
 from enum import Enum
 from io import BytesIO
 from pathlib import Path  # TODO: Use Literal for performance improvement
-from typing import Any, Sequence, TypeVar
+from typing import Any, Literal, Sequence, TypeVar
 
+from fastapi import Form, UploadFile
 from fastapi_users import schemas
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
@@ -479,6 +480,35 @@ class ExtractorUpdate(BaseExtractor):
     pass
 
 
+class ExtractorRun(BaseSchema):
+    """Request to run an extractor."""
+
+    extractor_id: UUID4 = Field(
+        ...,
+        description="The ID of the extractor to run.",
+    )
+    mode: Literal["entire_document", "retrieval"] = Field(
+        "entire_document",
+        description="Mode to run the extractor in. 'entire_document' extracts information from the entire document. 'retrieval' extracts information from a specific section of the document.",
+    )
+    file: UploadFile | None = Field(
+        None,
+        description="A file to extract information from. If provided, the file will be processed and the text extracted.",
+    )
+    text: str | None = Field(
+        None,
+        description="Text to extract information from. If provided, the text will be processed and the information extracted.",
+    )
+    url: AnyHttpUrl | None = Field(
+        None,
+        description="A URL to extract information from. If provided, the URL will be processed and the information extracted.",
+    )
+    llm: str | None = Field(
+        None,
+        description="The language model to use for the extraction.",
+    )
+
+
 class ApplicationRead(BaseRead):
     lead_id: UUID4
     user_id: UUID4
@@ -494,40 +524,3 @@ class ApplicationCreate(BaseSchema):
 
 class ApplicationUpdate(BaseSchema):
     status: str
-
-
-table_read_map = {
-    "users": UserRead,
-    "skills": SkillRead,
-    "experiences": ExperienceRead,
-    "educations": EducationRead,
-    "certificates": CertificateRead,
-    "companies": CompanyRead,
-    "leads": LeadRead,
-    "contacts": ContactRead,
-    "resumes": ResumeRead,
-    "cover_letters": CoverLetterRead,
-    "orchestration_pipelines": OrchestrationPipelineRead,
-    "orchestration_events": OrchestrationEventRead,
-    "extractors": ExtractorRead,
-    "extractor_examples": ExtractorExampleRead,
-    "applications": ApplicationRead,
-}
-
-table_create_map = {
-    "users": UserCreate,
-    "skills": SkillCreate,
-    "experiences": ExperienceCreate,
-    "educations": EducationCreate,
-    "certificates": CertificateCreate,
-    "companies": CompanyCreate,
-    "leads": LeadCreate,
-    "contacts": ContactCreate,
-    "resumes": ResumeCreate,
-    "cover_letters": CoverLetterCreate,
-    "orchestration_pipelines": OrchestrationPipelineCreate,
-    "orchestration_events": OrchestrationEventCreate,
-    "extractors": ExtractorCreate,
-    "extractor_examples": ExtractorExampleCreate,
-    "applications": ApplicationCreate,
-}

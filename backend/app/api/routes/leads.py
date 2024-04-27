@@ -12,18 +12,24 @@ from app.api.deps import (
     AsyncSession,
     conf,
     console_log,
+    create_extractor,
     create_orchestration_event,
     get_async_session,
     get_current_user,
+    get_extractor_by_name,
     get_lead,
     get_orchestration_event,
     get_pagination_params,
+    logging,
     models,
+    run_extractor,
     schemas,
     session_context,
     update_orchestration_event,
     utils,
 )
+
+logger = logging.get_logger(__name__)
 
 router: APIRouter = APIRouter()
 
@@ -311,3 +317,70 @@ async def delete_lead(
     await db.delete(lead)
     await db.commit()
     return {"message": "Lead deleted successfully"}
+
+
+@router.post("/extract", response_model=schemas.LeadRead)
+async def extract_lead(
+    extraction_url: str,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    logger.info(f"User {user.id} triggered lead extraction for {extraction_url}")
+    # Get extractor, create one if it doesn't exist
+    try:
+        extractor = await get_extractor_by_name("lead", db)
+    except HTTPException as e:
+        if e.status_code == 404:
+            extractor = await create_extractor(
+                schemas.ExtractorCreate(
+                    name="lead",
+                    description="Extract lead data from URL",
+                    instruction="Extract lead information from the given URL",
+                    json_schema=schemas.LeadCreate.model_json_schema(),  # Ensure this method is defined in your schema
+                    extractor_examples=[],  # Add some examples if possible
+                ),
+                user,
+                db,
+            )
+        else:
+            raise e
+
+    # Build the payload and run the extractor
+    payload = schemas.ExtractorRun(
+        mode="entire_document",
+        file=None,
+        text=None,
+        url=extraction_url,  # type: ignore
+        llm=None,
+    )
+
+    # Run the extraction
+    try:
+        result = await run_extractor(
+            schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+        )
+    except Exception as e:
+        logger.error(f"Error running extractor: {e}")
+        raise HTTPException(status_code=500, detail="Error running extractor")
+
+    # Process and save the extracted data
+    try:
+        company_ids = result.data[0].pop("company_ids", None)
+        logger.warning("Company IDs: " + str(company_ids))
+        logger.warning("result.data[0]: " + str(result.data[0]))
+        lead = models.Lead(**result.data[0])
+        db.add(lead)
+        await db.commit()
+        # Retrieve the lead with companies eagerly loaded
+        lead = await db.execute(
+            select(models.Lead)
+            .where(models.Lead.id == lead.id)
+            .options(joinedload(models.Lead.companies))
+        )  # type: ignore
+        lead = lead.scalars().first()
+    except Exception as e:
+        logger.error(f"Error saving lead to database: {e}")
+        logger.warning(f"Result was {result.data[0]}")
+        raise HTTPException(status_code=500, detail="Error saving lead to database")
+
+    return lead

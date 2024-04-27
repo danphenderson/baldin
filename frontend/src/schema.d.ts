@@ -91,6 +91,10 @@ export interface paths {
      */
     delete: operations["purge_leads_leads_purge_delete"];
   };
+  "/leads/extract": {
+    /** Extract Lead */
+    post: operations["extract_lead_leads_extract_post"];
+  };
   "/companies/{id}": {
     /** Get Company */
     get: operations["get_company_companies__id__get"];
@@ -2733,6 +2737,28 @@ export interface operations {
       202: {
         content: {
           "application/json": Record<string, never>;
+        };
+      };
+    };
+  };
+  /** Extract Lead */
+  extract_lead_leads_extract_post: {
+    parameters: {
+      query: {
+        extraction_url: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

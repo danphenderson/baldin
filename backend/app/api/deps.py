@@ -9,7 +9,7 @@ from pydantic import UUID4
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 
-from app import models, schemas, utils  # noqa
+from app import logging, models, schemas, utils  # noqa
 from app.core import conf  # noqa
 from app.core import security  # noqa
 from app.core.db import (  # noqa
@@ -29,29 +29,29 @@ from app.core.security import (  # noqa
     get_current_superuser,
     get_current_user,
 )
-from app.extractor.extraction_runnable import extract_entire_document
-from app.extractor.parsing import (
+from app.extractor.extraction_runnable import extract_entire_document  # noqa
+from app.extractor.parsing import (  # noqa
     MAX_FILE_SIZE_MB,
     SUPPORTED_MIMETYPES,
     parse_binary_input,
 )
-from app.extractor.retrieval import extract_from_content
+from app.extractor.retrieval import extract_from_content  # noqa
 from app.logging import console_log, get_async_logger  # noqa
 
 log = get_async_logger(__name__)
 
 
-async def _403(user_id: UUID4, obj: Any, obj_id: UUID4) -> HTTPException:
+async def _403(user_id: UUID4, obj: Any, id: UUID4 | str) -> HTTPException:
     await log.warning(
-        f"Unauthorized user {user_id} requested access to {obj} with id {obj_id}"
+        f"Unauthorized user {user_id} requested access to {obj} with id {id}"
     )
     raise HTTPException(
         status_code=403,
-        detail=f"User {user_id} is not authorized to access {obj} with {obj_id}",
+        detail=f"User {user_id} is not authorized to access {obj} with {id}",
     )
 
 
-async def _404(obj: Any, id: UUID4 | None = None) -> HTTPException:
+async def _404(obj: Any, id: UUID4 | str | None = None) -> HTTPException:
     msg = f"Object with {id} not found" if id else "Unable to find object"
     await log.warning(msg)
     raise HTTPException(status_code=404, detail=f"Object with id {id} not found")
@@ -279,6 +279,39 @@ async def get_extractor(
     if extractor.user_id != user.id:  # type: ignore
         raise await _403(user.id, extractor, id)
     await log.info(f"get_extractor: {extractor}")
+    return extractor
+
+
+async def get_extractor_by_name(
+    name: str,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Extractor:
+    query = (
+        select(models.Extractor)
+        .filter(models.Extractor.name == name)
+        .options(selectinload(models.Extractor.extractor_examples))
+    )
+    extractor = await db.execute(query)
+    extractor = extractor.scalars().first()
+    if not extractor:
+        raise await _404(extractor, name)
+    if extractor.user_id != user.id:  # type: ignore
+        raise await _403(user.id, extractor, getattr(extractor, "name", name))
+    await log.info(f"get_extractor: {extractor}")
+    return extractor
+
+
+async def create_extractor(
+    payload: schemas.ExtractorCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Extractor:
+    extractor = models.Extractor(**payload.dict(), user_id=user.id)
+    db.add(extractor)
+    await db.commit()
+    await db.refresh(extractor)
+    await log.info(f"create_extractor: {extractor}")
     return extractor
 
 

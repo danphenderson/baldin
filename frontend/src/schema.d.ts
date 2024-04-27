@@ -109,6 +109,10 @@ export interface paths {
     /** Get Company Leads */
     get: operations["get_company_leads_companies__id__leads_get"];
   };
+  "/companies/extract": {
+    /** Extract Company */
+    post: operations["extract_company_companies_extract_post"];
+  };
   "/data_orchestration/pipelines": {
     /** Read Orch Pipelines */
     get: operations["read_orch_pipelines_data_orchestration_pipelines_get"];
@@ -2864,6 +2868,29 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["LeadRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract Company */
+  extract_company_companies_extract_post: {
+    parameters: {
+      query: {
+        /** @description URL for data extraction */
+        extraction_url: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
         };
       };
       /** @description Validation Error */

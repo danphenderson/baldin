@@ -1,19 +1,23 @@
 # Path: app/api/routes/companies.py
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from app.api.deps import (
     AsyncSession,
+    create_extractor,
     get_async_session,
     get_company_by_id,
     get_current_user,
+    get_extractor_by_name,
+    logging,
     models,
     schemas,
 )
 
 router: APIRouter = APIRouter()
+
+logger = logging.get_logger(__name__)
 
 
 @router.get("/{id}", response_model=schemas.CompanyRead)
@@ -89,3 +93,30 @@ async def get_company_leads(
     if not leads:
         raise HTTPException(status_code=404, detail="No leads found for the company")
     return leads
+
+
+@router.post("/extract")
+async def extract_company(
+    extraction_url: str = Query(..., description="URL for data extraction"),
+    db: AsyncSession = Depends(get_async_session),
+    user: models.User = Depends(get_current_user),
+):
+    # Get extractor, create one if it doesn't exist
+    try:
+        extractor = await get_extractor_by_name("company", db)
+    except HTTPException as e:
+        if e.status_code == 404:
+            extractor = await create_extractor(
+                schemas.ExtractorCreate(
+                    name="company",
+                    description="Company data extraction",
+                    instruction="Extract company JSON data from a given context",
+                    json_schema=schemas.CompanyCreate.model_json_schema(),
+                    extractor_examples=[],
+                ),
+                db,
+            )
+        else:
+            raise e
+
+    # TODO: Run the extraction task

@@ -5,10 +5,14 @@ from sqlalchemy import select
 
 from app.api.deps import (
     AsyncSession,
+    create_extractor,
+    create_skill,
     get_async_session,
     get_current_user,
+    get_extractor_by_name,
     get_skill,
     models,
+    run_extractor,
     schemas,
 )
 
@@ -75,3 +79,37 @@ async def delete_user_skill(
     await db.delete(skill)
     await db.commit()
     return None
+
+
+@router.post("/extract", response_model=list[schemas.SkillRead])
+async def extract_user_skills(
+    payload: schemas.ExtractorRun,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    try:
+        extractor = await get_extractor_by_name("contacts", db)
+    except HTTPException as e:
+        if e.status_code == 404:
+            extractor = await create_extractor(
+                schemas.ExtractorCreate(
+                    name="skills",
+                    description="Skill data extractor",
+                    instruction="Extract skill JSON data from a given context",
+                    json_schema=schemas.SkillCreate.model_json_schema(),
+                    extractor_examples=[],
+                ),
+                db=db,
+                user=user,
+            )
+        else:
+            raise e
+
+    resp = await run_extractor(
+        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+    )
+
+    return [
+        await create_skill(schemas.SkillCreate(**skill), db=db, user=user)
+        for skill in resp.data
+    ]

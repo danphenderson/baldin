@@ -145,6 +145,19 @@ async def get_skill(
     return skill
 
 
+async def create_skill(
+    payload: schemas.SkillCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Skill:
+    skill = models.Skill(**payload.dict(), user_id=user.id)
+    db.add(skill)
+    await db.commit()
+    await db.refresh(skill)
+    await log.info(f"create_skill: {skill}")
+    return skill
+
+
 async def get_experience(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),
@@ -156,6 +169,19 @@ async def get_experience(
     if experience.user_id != user.id:  # type: ignore
         raise await _403(user.id, experience, id)
     await log.info(f"get_experience: {experience}")
+    return experience
+
+
+async def create_experience(
+    payload: schemas.ExperienceCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Experience:
+    experience = models.Experience(**payload.dict(), user_id=user.id)
+    db.add(experience)
+    await db.commit()
+    await db.refresh(experience)
+    await log.info(f"create_experience: {experience}")
     return experience
 
 
@@ -184,6 +210,19 @@ async def get_contact(
     if contact.user_id != user.id:  # type: ignore
         raise await _403(user.id, contact, id)
     await log.info(f"get_contact: {contact}")
+    return contact
+
+
+async def create_contact(
+    payload: schemas.ContactCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Contact:
+    contact = models.Contact(**payload.dict(), user_id=user.id)
+    db.add(contact)
+    await db.commit()
+    await db.refresh(contact)
+    await log.info(f"create_contact: {contact}")
     return contact
 
 
@@ -229,6 +268,19 @@ async def get_education(
     return education
 
 
+async def create_education(
+    payload: schemas.EducationCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Education:
+    education = models.Education(**payload.dict(), user_id=user.id)
+    db.add(education)
+    await db.commit()
+    await db.refresh(education)
+    await log.info(f"create_education: {education}")
+    return education
+
+
 async def get_certificate(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),
@@ -240,6 +292,19 @@ async def get_certificate(
     if certificate.user_id != user.id:  # type: ignore
         raise await _403(user.id, certificate, id)
     await log.info(f"get_certificate: {certificate}")
+    return certificate
+
+
+async def create_certificate(
+    payload: schemas.CertificateCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Certificate:
+    certificate = models.Certificate(**payload.dict(), user_id=user.id)
+    db.add(certificate)
+    await db.commit()
+    await db.refresh(certificate)
+    await log.info(f"create_certificate: {certificate}")
     return certificate
 
 
@@ -357,7 +422,7 @@ async def run_extractor(
         pipeline = await get_orchestration_pipeline_by_name(
             getattr(extractor, "name", ""), db, user
         )
-    except HTTPException as _:
+    except HTTPException as _:  # noqa
         # Create a new pipeline for this extractor
         pipeline = models.OrchestrationPipeline(
             name=extractor.name,

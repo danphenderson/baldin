@@ -5,10 +5,14 @@ from sqlalchemy import select
 
 from app.api.deps import (
     AsyncSession,
+    create_education,
+    create_extractor,
     get_async_session,
     get_current_user,
     get_education,
+    get_extractor_by_name,
     models,
+    run_extractor,
     schemas,
 )
 
@@ -72,3 +76,37 @@ async def delete_user_education(
     await db.delete(education)
     await db.commit()
     return education
+
+
+@router.post("/extract", response_model=list[schemas.EducationRead])
+async def extract_education(
+    payload: schemas.ExtractorRun,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    try:
+        extractor = await get_extractor_by_name("educations", db)
+    except HTTPException as e:
+        if e.status_code == 404:
+            extractor = await create_extractor(
+                schemas.ExtractorCreate(
+                    name="educations",
+                    description="Education data extractor",
+                    instruction="Extract education JSON data from a given context",
+                    json_schema=schemas.EducationCreate.model_json_schema(),
+                    extractor_examples=[],
+                ),
+                db=db,
+                user=user,
+            )
+        else:
+            raise e
+
+    resp = await run_extractor(
+        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+    )
+
+    return [
+        await create_education(schemas.EducationCreate(**contact), db=db, user=user)
+        for contact in resp.data
+    ]

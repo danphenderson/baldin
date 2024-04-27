@@ -91,6 +91,10 @@ export interface paths {
      */
     delete: operations["purge_leads_leads_purge_delete"];
   };
+  "/leads/extract": {
+    /** Extract Lead */
+    post: operations["extract_lead_leads_extract_post"];
+  };
   "/companies/{id}": {
     /** Get Company */
     get: operations["get_company_companies__id__get"];
@@ -153,6 +157,10 @@ export interface paths {
     /** Delete User Contact */
     delete: operations["delete_user_contact_contacts__contact_id__delete"];
   };
+  "/contacts/extract": {
+    /** Extract Contacts */
+    post: operations["extract_contacts_contacts_extract_post"];
+  };
   "/experiences/": {
     /** Read Current User Experiences */
     get: operations["read_current_user_experiences_experiences__get"];
@@ -167,6 +175,10 @@ export interface paths {
     /** Delete User Experience */
     delete: operations["delete_user_experience_experiences__experience_id__delete"];
   };
+  "/experiences/extract": {
+    /** Extract User Experiences */
+    post: operations["extract_user_experiences_experiences_extract_post"];
+  };
   "/skills/": {
     /** Get Current User Skills */
     get: operations["get_current_user_skills_skills__get"];
@@ -180,6 +192,10 @@ export interface paths {
     put: operations["update_user_skill_skills__skill_id__put"];
     /** Delete User Skill */
     delete: operations["delete_user_skill_skills__skill_id__delete"];
+  };
+  "/skills/extract": {
+    /** Extract User Skills */
+    post: operations["extract_user_skills_skills_extract_post"];
   };
   "/cover_letters/generate": {
     /** Generate User Cover Letter */
@@ -258,6 +274,10 @@ export interface paths {
     /** Delete User Education */
     delete: operations["delete_user_education_education__education_id__delete"];
   };
+  "/education/extract": {
+    /** Extract Education */
+    post: operations["extract_education_education_extract_post"];
+  };
   "/certificate/": {
     /** Read Current User Certificates */
     get: operations["read_current_user_certificates_certificate__get"];
@@ -271,6 +291,10 @@ export interface paths {
     put: operations["update_user_certificate_certificate__certificate_id__put"];
     /** Delete User Certificate */
     delete: operations["delete_user_certificate_certificate__certificate_id__delete"];
+  };
+  "/certificate/extract": {
+    /** Extract Certificates */
+    post: operations["extract_certificates_certificate_extract_post"];
   };
   "/extractor/configurables": {
     /**
@@ -1246,6 +1270,39 @@ export interface components {
        * @default false
        */
       content_too_long?: boolean;
+    };
+    /**
+     * ExtractorRun
+     * @description Request to run an extractor.
+     */
+    ExtractorRun: {
+      /**
+       * Mode
+       * @description Mode to run the extractor in. 'entire_document' extracts information from the entire document. 'retrieval' extracts information from a specific section of the document.
+       * @default entire_document
+       * @enum {string}
+       */
+      mode?: "entire_document" | "retrieval";
+      /**
+       * File
+       * @description A file to extract information from. If provided, the file will be processed and the text extracted.
+       */
+      file?: string | null;
+      /**
+       * Text
+       * @description Text to extract information from. If provided, the text will be processed and the information extracted.
+       */
+      text?: string | null;
+      /**
+       * Url
+       * @description A URL to extract information from. If provided, the URL will be processed and the information extracted.
+       */
+      url?: string | null;
+      /**
+       * Llm
+       * @description The language model to use for the extraction.
+       */
+      llm?: string | null;
     };
     /** ExtractorUpdate */
     ExtractorUpdate: {
@@ -2737,6 +2794,28 @@ export interface operations {
       };
     };
   };
+  /** Extract Lead */
+  extract_lead_leads_extract_post: {
+    parameters: {
+      query: {
+        extraction_url: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Get Company */
   get_company_companies__id__get: {
     parameters: {
@@ -3172,6 +3251,28 @@ export interface operations {
       };
     };
   };
+  /** Extract Contacts */
+  extract_contacts_contacts_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ContactRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Read Current User Experiences */
   read_current_user_experiences_experiences__get: {
     responses: {
@@ -3274,6 +3375,28 @@ export interface operations {
       };
     };
   };
+  /** Extract User Experiences */
+  extract_user_experiences_experiences_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Get Current User Skills */
   get_current_user_skills_skills__get: {
     responses: {
@@ -3367,6 +3490,28 @@ export interface operations {
       /** @description Successful Response */
       204: {
         content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract User Skills */
+  extract_user_skills_skills_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"][];
+        };
       };
       /** @description Validation Error */
       422: {
@@ -3927,6 +4072,28 @@ export interface operations {
       };
     };
   };
+  /** Extract Education */
+  extract_education_education_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Read Current User Certificates */
   read_current_user_certificates_certificate__get: {
     responses: {
@@ -4021,6 +4188,28 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["CertificateRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract Certificates */
+  extract_certificates_certificate_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"][];
         };
       };
       /** @description Validation Error */

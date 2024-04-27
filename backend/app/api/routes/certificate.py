@@ -5,12 +5,19 @@ from sqlalchemy import select
 
 from app.api.deps import (
     AsyncSession,
+    create_certificate,
+    create_extractor,
     get_async_session,
     get_certificate,
     get_current_user,
+    get_extractor_by_name,
+    logging,
     models,
+    run_extractor,
     schemas,
 )
+
+logger = logging.get_logger(__name__)
 
 router: APIRouter = APIRouter()
 
@@ -72,3 +79,39 @@ async def delete_user_certificate(
     await db.delete(certificate)
     await db.commit()
     return certificate
+
+
+@router.post("/extract", response_model=list[schemas.CertificateRead])
+async def extract_certificates(
+    payload: schemas.ExtractorRun,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    try:
+        extractor = await get_extractor_by_name("certificates", db)
+    except HTTPException as e:
+        if e.status_code == 404:
+            extractor = await create_extractor(
+                schemas.ExtractorCreate(
+                    name="certificates",
+                    description="Certificate data extractor",
+                    instruction="Extract certificates JSON data from a given context",
+                    json_schema=schemas.CertificateCreate.model_json_schema(),
+                    extractor_examples=[],
+                ),
+                db=db,
+                user=user,
+            )
+        else:
+            raise e
+
+    # Run the extractor with the given payload
+    resp = await run_extractor(
+        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+    )
+
+    # Save the extracted certificates to the database
+    return [
+        await create_certificate(schemas.CertificateCreate(**cert), db, user)
+        for cert in resp.data
+    ]

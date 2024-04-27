@@ -2,7 +2,7 @@
 import json
 from typing import Literal, Sequence
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import UUID4, AnyHttpUrl, Field
 from sqlalchemy import select
@@ -14,15 +14,12 @@ from app.api.deps import (
     SUPPORTED_MIMETYPES,
     AsyncSession,
     console_log,
-    extract_entire_document,
-    extract_from_content,
-    extract_text_from_url,
     get_async_session,
     get_current_user,
     get_extractor,
     get_extractor_example,
     models,
-    parse_binary_input,
+    run_extractor,
     schemas,
 )
 from app.core import conf
@@ -155,116 +152,6 @@ async def suggest_extractor(suggest_extractor: SuggestExtractor) -> ExtractorDef
     return res
 
 
-@router.post("/run", response_model=schemas.ExtractorResponse)
-async def run_extractor(
-    extractor_run: schemas.ExtractorRun = Depends(schemas.ExtractorRun),
-    db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
-) -> schemas.ExtractorResponse:
-
-    text = extractor_run.text
-    mode = extractor_run.mode
-    llm = extractor_run.llm
-    file = extractor_run.file
-    url = extractor_run.url
-    extractor_id = extractor_run.extractor_id
-
-    if text is None and file is None and url is None:
-        raise HTTPException(
-            status_code=422,
-            detail="No text, file, or URL provided to perfrom extraction.",
-        )
-
-    if url:
-        text = await extract_text_from_url(str(url))
-
-    if text is None and file:
-        documents = parse_binary_input(file.file)  # type: ignore
-        text = "\n".join([document.page_content for document in documents])
-
-    if text is None:
-        raise HTTPException(status_code=422, detail="No text could be extracted.")
-
-    extractor = (
-        await db.execute(
-            select(models.Extractor).filter_by(id=extractor_id, user_id=user.id)
-        )
-    ).scalar()
-
-    if extractor is None:
-        raise HTTPException(status_code=404, detail="Extractor not found for user.")
-
-    pipeline = (
-        await db.execute(
-            select(models.OrchestrationPipeline).filter_by(
-                name=extractor.name, user_id=user.id
-            )
-        )
-    ).scalar()
-
-    if pipeline is None:
-        pipeline = models.OrchestrationPipeline(
-            name=extractor.name,
-            user_id=user.id,
-            description=extractor.description,
-            definition=extractor.json_schema,
-        )
-        db.add(pipeline)
-        await db.commit()
-
-    event = models.OrchestrationEvent(
-        pipeline_id=pipeline.id,
-        status="pending",
-        source_uri=json.dumps(
-            {"name": "default", "type": "datalake"}
-        ),  # Example values
-        destination_uri=json.dumps(
-            {"name": "default", "type": "datalake"}
-        ),  # Example values
-        payload=json.dumps(
-            {
-                "mode": mode,
-                "llm": llm,
-                "text": text[:200]
-                if text
-                else None,  # FIXME: Add slicing to prevent very long text
-                "file": file.filename if file else None,
-            }
-        ),
-        environment=conf.settings.ENVIRONMENT,  # Ensure this is a dictionary
-    )
-
-    db.add(event)
-    await db.commit()
-
-    try:
-        if text:
-            text_ = text
-        else:
-            documents = parse_binary_input(file.file)  # type: ignore
-            text_ = "\n".join([document.page_content for document in documents])
-
-        if mode == "entire_document":
-            res = await extract_entire_document(text_, extractor, llm)
-        elif mode == "retrieval":
-            res = await extract_from_content(text_, extractor, llm)
-        else:
-            raise ValueError(
-                f"Invalid mode {mode}. Expected one of 'entire_document', 'retrieval'."
-            )
-
-        event.status = "success"
-        event.message = "Extraction completed successfully."
-    except Exception as e:
-        event.status = "failure"
-        event.message = f"Extraction failed: {str(e)}"
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        await db.commit()
-
-    return schemas.ExtractorResponse(**res)
-
-
 @router.get("/{id}", response_model=schemas.ExtractorRead)
 async def read_extractor(
     extractor: schemas.ExtractorRead = Depends(get_extractor),
@@ -363,3 +250,14 @@ async def delete_extractor_example(
 ) -> None:
     await db.delete(example)
     await db.commit()
+
+
+@router.post("/{id}/run", response_model=schemas.ExtractorResponse)
+async def extractor_runner(
+    extractor: schemas.ExtractorRead = Depends(get_extractor),
+    payload: schemas.ExtractorRun = Depends(schemas.ExtractorRun),
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> schemas.ExtractorResponse:
+    """Run an extractor on a given payload"""
+    return await run_extractor(extractor, payload, db, user)

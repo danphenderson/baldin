@@ -52,7 +52,7 @@ class OrchestrationPipeline(Base):
     """
 
     __tablename__ = "orchestration_pipelines"
-    name = Column(String)
+    name = Column(String, index=True, nullable=False)
     description = Column(Text)
     definition = Column(JSON)
     user_id = Column(UUID, ForeignKey("users.id"))

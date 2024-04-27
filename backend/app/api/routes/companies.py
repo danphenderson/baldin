@@ -1,5 +1,6 @@
 # Path: app/api/routes/companies.py
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import AnyHttpUrl
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
@@ -12,6 +13,7 @@ from app.api.deps import (
     get_extractor_by_name,
     logging,
     models,
+    run_extractor,
     schemas,
 )
 
@@ -99,7 +101,7 @@ async def get_company_leads(
 async def extract_company(
     extraction_url: str = Query(..., description="URL for data extraction"),
     db: AsyncSession = Depends(get_async_session),
-    user: models.User = Depends(get_current_user),
+    user: schemas.UserRead = Depends(get_current_user),
 ):
     # Get extractor, create one if it doesn't exist
     try:
@@ -119,4 +121,15 @@ async def extract_company(
         else:
             raise e
 
-    # TODO: Run the extraction task
+    # Buld the payload and run the extractor
+    payload = schemas.ExtractorRun(
+        mode="entire_document",
+        file=None,
+        text=None,
+        url=extraction_url,  # type: ignore
+        llm=None,
+    )
+    # A bit of a hack below to convert the extractor to a read schema
+    return await run_extractor(
+        schemas.ExtractorRead.from_orm(extractor), payload, db, user
+    )

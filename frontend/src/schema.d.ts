@@ -286,10 +286,6 @@ export interface paths {
      */
     post: operations["suggest_extractor_extractor_suggest_post"];
   };
-  "/extractor/run": {
-    /** Run Extractor */
-    post: operations["run_extractor_extractor_run_post"];
-  };
   "/extractor/{id}": {
     /** Read Extractor */
     get: operations["read_extractor_extractor__id__get"];
@@ -313,6 +309,13 @@ export interface paths {
   "/extractor/{id}/examples/{example_id}": {
     /** Delete Extractor Example */
     delete: operations["delete_extractor_example_extractor__id__examples__example_id__delete"];
+  };
+  "/extractor/{id}/run": {
+    /**
+     * Extractor Runner
+     * @description Run an extractor on a given payload
+     */
+    post: operations["extractor_runner_extractor__id__run_post"];
   };
   "/": {
     /** Root */
@@ -402,6 +405,11 @@ export interface components {
       /** Client Secret */
       client_secret?: string | null;
     };
+    /** Body_extractor_runner_extractor__id__run_post */
+    Body_extractor_runner_extractor__id__run_post: {
+      /** File */
+      file?: string | null;
+    };
     /** Body_reset_forgot_password_auth_forgot_password_post */
     Body_reset_forgot_password_auth_forgot_password_post: {
       /**
@@ -416,31 +424,6 @@ export interface components {
       token: string;
       /** Password */
       password: string;
-    };
-    /** Body_run_extractor_extractor_run_post */
-    Body_run_extractor_extractor_run_post: {
-      /**
-       * Extractor Id
-       * Format: uuid
-       */
-      extractor_id: string;
-      /**
-       * Mode
-       * @default entire_document
-       * @enum {string}
-       */
-      mode?: "entire_document" | "retrieval";
-      /** File */
-      file?: string | null;
-      /** Text */
-      text?: string | null;
-      /** Url */
-      url?: string | null;
-      /**
-       * Llm
-       * @default gpt-4-0125-preview
-       */
-      llm?: string;
     };
     /** Body_verify_request_token_auth_request_verify_token_post */
     Body_verify_request_token_auth_request_verify_token_post: {
@@ -4087,28 +4070,6 @@ export interface operations {
       };
     };
   };
-  /** Run Extractor */
-  run_extractor_extractor_run_post: {
-    requestBody: {
-      content: {
-        "multipart/form-data": components["schemas"]["Body_run_extractor_extractor_run_post"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ExtractorResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Read Extractor */
   read_extractor_extractor__id__get: {
     parameters: {
@@ -4276,6 +4237,42 @@ export interface operations {
       /** @description Successful Response */
       204: {
         content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Extractor Runner
+   * @description Run an extractor on a given payload
+   */
+  extractor_runner_extractor__id__run_post: {
+    parameters: {
+      query?: {
+        mode?: "entire_document" | "retrieval";
+        text?: string | null;
+        url?: string | null;
+        llm?: string | null;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_extractor_runner_extractor__id__run_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorResponse"];
+        };
       };
       /** @description Validation Error */
       422: {

@@ -483,10 +483,6 @@ class ExtractorUpdate(BaseExtractor):
 class ExtractorRun(BaseSchema):
     """Request to run an extractor."""
 
-    extractor_id: UUID4 = Field(
-        ...,
-        description="The ID of the extractor to run.",
-    )
     mode: Literal["entire_document", "retrieval"] = Field(
         "entire_document",
         description="Mode to run the extractor in. 'entire_document' extracts information from the entire document. 'retrieval' extracts information from a specific section of the document.",

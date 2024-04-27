@@ -14,8 +14,7 @@ from app.extractor.extraction_runnable import (
     get_examples_from_extractor,
 )
 from app.logging import console_log
-from app.models import Extractor
-from app.schemas import ExtractorRequest, ExtractorResponse
+from app.schemas import ExtractorRead, ExtractorRequest, ExtractorResponse
 
 
 def _make_extract_requests(input_dict: dict[str, Any]) -> list[ExtractorRequest]:
@@ -25,7 +24,7 @@ def _make_extract_requests(input_dict: dict[str, Any]) -> list[ExtractorRequest]
 
 async def extract_from_content(
     content: str,
-    extractor: Extractor,
+    extractor: ExtractorRead,
     llm_name: str,
     *,
     text_splitter_kwargs: Optional[dict[str, Any]] = None,

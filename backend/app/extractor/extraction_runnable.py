@@ -108,7 +108,9 @@ def deduplicate(
     }
 
 
-def get_examples_from_extractor(extractor: Extractor) -> list[dict[str, Any]]:
+def get_examples_from_extractor(
+    extractor: schemas.ExtractorRead,
+) -> list[dict[str, Any]]:
     """Get examples from an extractor."""
     return [
         _cast_example_to_dict(example) for example in getattr(extractor, "examples", [])
@@ -150,7 +152,7 @@ async def extraction_runnable(
 
 async def extract_entire_document(
     content: str,
-    extractor: Extractor,
+    extractor: schemas.ExtractorRead,
     llm_name: str,
 ) -> schemas.ExtractorResponse:
     """Extract from entire document."""

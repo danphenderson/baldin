@@ -1,19 +1,15 @@
 # Path: app/core/db.py
-import asyncio
-import json
-from contextlib import asynccontextmanager
-from pathlib import Path
-from typing import AsyncGenerator, Type
 
-import aiofiles
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.sql import text
 
-from app import models, schemas
+from app import models
 from app.core import conf
-from app.logging import console_log
 
 # Determine the appropriate SQLAlchemy database URI based on the environment
 if conf.settings.ENVIRONMENT == "PYTEST":
@@ -103,10 +99,6 @@ async def get_user_db(session: AsyncSession = Depends(get_async_session)):
 
 
 class DataBaseManager:
-
-    seeds_dir: Path = Path(conf.settings.PUBLIC_ASSETS_DIR) / "seeds"
-    datalake_dir: Path = Path(conf.settings.PUBLIC_ASSETS_DIR) / "datalake"
-
     def __init__(self, session: AsyncSession):
         self.session = session
 
@@ -127,78 +119,3 @@ class DataBaseManager:
         result = await self.session.execute(query, {"table_name": table_name})
         # Same here, ensure to access results correctly
         return {row.column_name: row.data_type for row in result.mappings().all()}
-
-    async def create_table_record(
-        self,
-        create_payload: schemas.BaseSchema,
-        table_model: Type[models.Base],
-        db: AsyncSession,
-    ):
-        """
-        Inserts record into the table based on the provided table model.
-        """
-        record = table_model(
-            **create_payload.dict()
-        )  # Ensure table_model is a concrete model class
-        db.add(record)
-        await db.commit()
-        await db.refresh(record)
-        return record
-
-    async def create_table_records(
-        self,
-        create_schemas: list[schemas.BaseSchema],
-        table_model: Type[models.Base],
-        db: AsyncSession,
-    ):
-        """
-        Inserts multiple records into the table based on the provided table model.
-        """
-        records = [
-            table_model(**create_schema.dict()) for create_schema in create_schemas
-        ]
-        db.add_all(records)
-        await db.commit()
-        return records
-
-    async def seed_tables(self) -> str:  # substype of BaseSchema
-        """Asynchronously seed all tables with public assets directory seed data."""
-        seed_files = self.seeds_dir.glob("*.json")
-        seed_tasks = [self.seed_table(seed_file.stem) for seed_file in seed_files]
-        await asyncio.gather(*seed_tasks, return_exceptions=True)
-        return "Seeded all tables"
-
-    async def seed_table(self, table_name: str) -> str:
-        seed_path = self.seeds_dir / f"{table_name}.json"
-        table_model = models.table_models[table_name]
-        create_schema = schemas.table_create_map[table_name]
-        create_payload = []
-
-        async with aiofiles.open(seed_path, "r") as file:
-            seed_docs = await file.read()
-            try:
-                seed_data = json.loads(seed_docs)
-                console_log.warning(f"seeds: {seed_data}")
-            except json.JSONDecodeError as e:
-                console_log.error(f"Error decoding JSON for {table_name}: {e}")
-                return f"Failed to decode JSON for {table_name}"
-
-        for doc in seed_data:
-            try:
-                if isinstance(doc, dict):
-                    # Adjust fields if necessary before creating schema instances
-                    adjusted_doc = {
-                        key: doc[key] for key in doc if hasattr(table_model, key)
-                    }
-                    create_payload.append(create_schema(**adjusted_doc))
-            except Exception as e:
-                console_log.error(f"Error processing document for {table_name}: {e}")
-                continue
-
-        if create_payload:
-            created_records = await self.create_table_records(
-                create_payload, table_model, self.session
-            )
-            return f"Seeded {table_name} table with {len(created_records)} records"
-        else:
-            return f"No data to seed for {table_name}"

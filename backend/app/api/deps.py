@@ -3,14 +3,14 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path  # noqa
-from typing import Any, Sequence, Type
+from typing import Any, Sequence
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Query  # noqa
 from pydantic import UUID4
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 
-from app import models, schemas, utils  # noqa
+from app import logging, models, schemas, utils  # noqa
 from app.core import conf  # noqa
 from app.core import security  # noqa
 from app.core.db import (  # noqa
@@ -25,33 +25,34 @@ from app.core.langchain import (  # noqa
     generate_resume,
 )
 from app.core.security import (  # noqa
+    create_user,
     fastapi_users,
     get_current_superuser,
     get_current_user,
 )
-from app.extractor.extraction_runnable import extract_entire_document
-from app.extractor.parsing import (
+from app.extractor.extraction_runnable import extract_entire_document  # noqa
+from app.extractor.parsing import (  # noqa
     MAX_FILE_SIZE_MB,
     SUPPORTED_MIMETYPES,
     parse_binary_input,
 )
-from app.extractor.retrieval import extract_from_content
+from app.extractor.retrieval import extract_from_content  # noqa
 from app.logging import console_log, get_async_logger  # noqa
 
 log = get_async_logger(__name__)
 
 
-async def _403(user_id: UUID4, obj: Any, obj_id: UUID4) -> HTTPException:
+async def _403(user_id: UUID4, obj: Any, id: UUID4 | str) -> HTTPException:
     await log.warning(
-        f"Unauthorized user {user_id} requested access to {obj} with id {obj_id}"
+        f"Unauthorized user {user_id} requested access to {obj} with id {id}"
     )
     raise HTTPException(
         status_code=403,
-        detail=f"User {user_id} is not authorized to access {obj} with {obj_id}",
+        detail=f"User {user_id} is not authorized to access {obj} with {id}",
     )
 
 
-async def _404(obj: Any, id: UUID4 | None = None) -> HTTPException:
+async def _404(obj: Any, id: UUID4 | str | None = None) -> HTTPException:
     msg = f"Object with {id} not found" if id else "Unable to find object"
     await log.warning(msg)
     raise HTTPException(status_code=404, detail=f"Object with id {id} not found")
@@ -133,12 +134,12 @@ async def create_orchestration_event(
 async def get_skill(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),
-    user: models.User = Depends(get_current_user),
+    user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Skill:
     skill = await db.get(models.Skill, id)
     if not skill:
         raise await _404(skill, id)
-    if skill.user_id != user.id:  # type: ignore
+    if skill.user_id != user.id:
         raise await _403(user.id, skill, id)
     await log.info(f"get_skill: {skill}")
     return skill
@@ -259,6 +260,27 @@ async def get_orchestration_pipeline(
     if pipeline.user_id != user.id:  # type: ignore
         raise await _403(user.id, pipeline, id)
     await log.info(f"get_orchestration_pipeline: {pipeline}")
+    return pipeline  # type: ignore
+
+
+async def get_orchestration_pipeline_by_name(
+    name: str,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.OrchestrationPipeline:
+    query = (
+        select(models.OrchestrationPipeline)
+        .where(
+            models.OrchestrationPipeline.name == name,
+            models.OrchestrationPipeline.user_id == user.id,
+        )
+        .options(selectinload(models.OrchestrationPipeline.orchestration_events))
+    )
+    result = await db.execute(query)
+    pipeline = result.scalars().first()
+    if not pipeline:
+        raise await _404(pipeline, name)
+    await log.info(f"get_orchestration_pipeline: {pipeline}")
     return pipeline
 
 
@@ -269,7 +291,7 @@ async def get_extractor(
 ) -> models.Extractor:
     query = (
         select(models.Extractor)
-        .filter(models.Extractor.id == id)
+        .where(models.Extractor.id == id)
         .options(selectinload(models.Extractor.extractor_examples))
     )
     extractor = await db.execute(query)
@@ -280,6 +302,120 @@ async def get_extractor(
         raise await _403(user.id, extractor, id)
     await log.info(f"get_extractor: {extractor}")
     return extractor
+
+
+async def get_extractor_by_name(
+    name: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.Extractor:
+    query = (
+        select(models.Extractor)
+        .where(models.Extractor.name == name)
+        .options(selectinload(models.Extractor.extractor_examples))
+    )
+    result = await db.execute(query)
+    extractor = result.scalars().first()
+    if not extractor:
+        raise await _404(extractor, name)
+    await log.info(f"get_extractor: {extractor}")
+    return extractor
+
+
+async def create_extractor(
+    payload: schemas.ExtractorCreate,
+    user: schemas.UserRead,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.Extractor:
+    extractor = models.Extractor(**payload.dict(), user_id=user.id)
+    db.add(extractor)
+    await db.commit()
+    await db.refresh(extractor)
+    await log.info(f"create_extractor: {extractor}")
+    return extractor
+
+
+async def run_extractor(
+    extractor: schemas.ExtractorRead,
+    payload: schemas.ExtractorRun,
+    user: schemas.UserRead,
+    db: AsyncSession = Depends(get_async_session),
+) -> schemas.ExtractorResponse:
+
+    await log.info(f"Running extractor {extractor.name} with payload {payload}")
+
+    # Load text to run extraction on
+    if payload.text:
+        pass
+    elif payload.url:
+        text = await extract_text_from_url(str(payload.url))
+    elif payload.file:
+        documents = parse_binary_input(payload.file.file)  # type: ignore
+        text = "\n".join([document.page_content for document in documents])
+
+    # Check if there is an orchestration pipeline registered for this extractor
+    try:
+        pipeline = await get_orchestration_pipeline_by_name(
+            getattr(extractor, "name", ""), db, user
+        )
+    except HTTPException as _:
+        # Create a new pipeline for this extractor
+        pipeline = models.OrchestrationPipeline(
+            name=extractor.name,
+            description=f"Extraction orchestration pipeline for {extractor.name}",
+            definition=extractor.json_schema,
+            user_id=user.id,
+        )
+        db.add(pipeline)
+        await db.commit()
+        await db.refresh(pipeline)
+
+    # Create a new event for this extraction run
+    event = models.OrchestrationEvent(
+        pipeline_id=pipeline.id,
+        status="pending",
+        source_uri=json.dumps(
+            {"name": "default", "type": "datalake"}
+        ),  # Example values
+        destination_uri=json.dumps(
+            {"name": "default", "type": "datalake"}
+        ),  # Example values
+        payload=json.dumps(
+            {
+                "mode": payload.mode,
+                "llm": payload.llm,
+                "text": text[:200]
+                if text
+                else None,  # FIXME: Add slicing to prevent very long text
+                "file": payload.file.filename if payload.file else None,
+            }
+        ),
+        environment=conf.settings.ENVIRONMENT,  # Ensure this is a dictionary
+    )
+    db.add(event)
+    await db.commit()
+
+    # Run the extraction event, TODO, cleanup
+    try:
+        llm = payload.llm or conf.openai.COMPLETION_MODEL
+        if payload.mode == "entire_document":
+            res = await extract_entire_document(text, extractor, llm)
+        elif payload.mode == "retrieval":
+            res = await extract_from_content(text, extractor, llm)
+        else:
+            raise ValueError(
+                f"Invalid mode {payload.mode}. Expected one of 'entire_document', 'retrieval'."
+            )
+        event.status = "success"
+        event.message = "Extraction completed successfully."
+    except Exception as e:
+        event.status = "failure"
+        event.message = f"Extraction failed: {str(e)}"
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        await db.refresh(event)
+        await db.commit()
+
+    return schemas.ExtractorResponse(**res)
 
 
 async def get_extractor_example(

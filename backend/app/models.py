@@ -52,7 +52,7 @@ class OrchestrationPipeline(Base):
     """
 
     __tablename__ = "orchestration_pipelines"
-    name = Column(String)
+    name = Column(String, index=True, nullable=False)
     description = Column(Text)
     definition = Column(JSON)
     user_id = Column(UUID, ForeignKey("users.id"))
@@ -96,7 +96,7 @@ class Extractor(Base):
     """
 
     __tablename__ = "extractors"
-    name = Column(String)
+    name = Column(String, index=True, nullable=False)
     description = Column(Text)
     json_schema = Column(JSONB)
     instruction = Column(Text)
@@ -352,26 +352,3 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     orchestration_pipelines = relationship(
         "OrchestrationPipeline", back_populates="user"
     )
-
-
-# Table Models Mapp
-table_models = {
-    "users": User,
-    "applications": Application,
-    "contacts": Contact,
-    "user_skills": Skill,
-    "user_experiences": Experience,
-    "user_education": Education,
-    "user_certificates": Certificate,
-    "resumes": Resume,
-    "cover_letters": CoverLetter,
-    "extractors": Extractor,
-    "extractor_examples": ExtractorExample,
-    "leads": Lead,
-    "companies": Company,
-    "leads_x_companies": LeadXCompany,
-    "orchestration_pipelines": OrchestrationPipeline,
-    "orchestration_events": OrchestrationEvent,
-    "resumes_x_applications": ResumeXApplication,
-    "cover_letters_x_applications": CoverLetterXApplication,
-}

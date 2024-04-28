@@ -1,5 +1,7 @@
 # Path: app/api/routes/admin.py
-from fastapi import HTTPException, Request
+from venv import logger
+
+from fastapi import Depends, HTTPException, Request
 from starlette.responses import Response
 from starlette.status import HTTP_401_UNAUTHORIZED
 from starlette_admin.auth import AdminConfig, AdminUser, AuthProvider
@@ -10,37 +12,43 @@ from starlette_admin.views import DropDown, Link
 from app import models, schemas
 from app.core.db import async_engine
 from app.core.security import get_current_user
+from app.logging import console_log as log
+from app.logging import get_logger
 
+# log = get_logger(__name__)
 
 # Auth setup
 class AdminAuthProvider(AuthProvider):
     async def is_authenticated(self, request: Request) -> bool:
         """
-        Check if a user is authenticated for admin access using the JWT strategy.
+        Check if a user is authenticated for admin access using JWT.
         """
-        user = await get_current_user()
-        if user:
-            request.state.user = user
-            return True
         return False
 
     def get_admin_user(self, request: Request) -> AdminUser:
         """
         Retrieve the current admin user details.
         """
-        user = request.state.user
-        return AdminUser(
-            username=user.email, photo_url=None
-        )  # Adapt as needed for your user model
+        log.info("Getting admin user")
+        log.warning(f"form: {request._form}")
+        username = request._form.__dict__.get("username", "No user")
+        log.warning(f"Request state: {username}")
+
+        return AdminUser(username=username, photo_url=None)
 
     def get_admin_config(self, request: Request) -> AdminConfig:
         """
-        Configure admin panel based on the authenticated user.
+        Configure the admin panel based on the authenticated user.
         """
-        user = request.state.user
-        return AdminConfig(
-            app_title=f"Admin Panel - {user.email}"
-        )  # Customize the title
+        return AdminConfig(app_title=f"Admin")
+
+    async def logout(self, request: Request, response: Response) -> Response:
+        """
+        Clear session or token on logout. Might be handled by frontend or via a specific API endpoint.
+        """
+        # JWT doesn't maintain session state, so this is typically no-op for JWT-based auth
+        response.delete_cookie("auth_cookie")
+        return response
 
     async def login(
         self,
@@ -58,13 +66,6 @@ class AdminAuthProvider(AuthProvider):
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED, detail="Please use JWT to log in."
         )
-
-    async def logout(self, request: Request, response: Response) -> Response:
-        """
-        Clear session or token on logout. Might be handled by frontend or via a specific API endpoint.
-        """
-        # Since we use JWT, typically the frontend would just discard the token.
-        return response
 
 
 # Admin setup

@@ -52,7 +52,7 @@ export const getLead = async (token: string, id: string): Promise<LeadRead> => {
 
 export const createLead = async (token: string, lead: LeadCreate): Promise<LeadRead> => {
   const requestOptions = createRequestOptions(token, "POST", lead);
-  return fetchAPI(BASE_URL, requestOptions);
+  return fetchAPI(`${BASE_URL}/`, requestOptions);
 };
 
 export const updateLead = async (token: string, id: string, lead: LeadUpdate): Promise<LeadRead> => {

@@ -53,7 +53,7 @@ async def create_job_lead(
     lead = models.Lead(**payload.dict(exclude={"company_ids"}))
 
     # If companies are provided, associate them with the lead
-    for company_id in payload.company_ids:
+    for company_id in getattr(payload, "company_ids") or []:
         company = await db.get(models.Company, company_id)
         if company:
             lead.companies.append(company)

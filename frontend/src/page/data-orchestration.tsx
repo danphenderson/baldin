@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, CircularProgress, List, ListItem, ListItemText, Stack, Typography } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getOrchestrationEvents, OrchestrationEventRead } from '../service/data-orchestration';
-import { erichLeadDataLake, loadLeadDatabase } from '../service/leads';
+import { seedLeads } from '../service/leads';
 import { useContext } from 'react';
 import { UserContext } from '../context/user-context';
 
@@ -16,8 +16,7 @@ const DataOrchestrationPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPipeline, setSelectedPipeline] = useState<OrchestrationEventRead | undefined>(undefined);
   const actions = [
-    { text: 'Erich Leads DataLake', action: (event: React.MouseEvent<HTMLDivElement>) => erichLeadDataLake() },
-    { text: 'Load Leads From DataLake', action: (event: React.MouseEvent<HTMLDivElement>) => loadLeadDatabase(token || '', event) },
+    { text: 'Seed Database', action: () => seedLeads(token || '') },
   ];
   useEffect(() => {
     if (token) {
@@ -47,7 +46,11 @@ const DataOrchestrationPage: React.FC = () => {
 
 
   const columns: GridColDef[] = [
-    { field: 'status', headerName: 'Status', width: 100 },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 100
+    },
     {
       field: "source_uri",
       headerName: "Source URI",
@@ -60,9 +63,16 @@ const DataOrchestrationPage: React.FC = () => {
       width: 350,
       valueGetter: (params) => params.row.destination_uri.name,
     },
-    { field: 'payload', headerName: 'Payload', width: 150 },
-    { field: 'message', headerName: 'Message', width: 300 },
-
+    { field: 'payload',
+      headerName: 'Payload',
+      width: 100,
+      valueGetter: (params) => JSON.stringify(params.row.payload),
+    },
+    {
+      field: 'message',
+      headerName: 'Message',
+      width: 300
+    },
     // Add actions like edit, delete here if needed
   ];
 
@@ -70,7 +80,7 @@ const DataOrchestrationPage: React.FC = () => {
       <Box>
         <List>
           {actions.map((item, index) => (
-            <ListItem button key={index} onClick={async (event) => await item.action(event)}>
+            <ListItem button key={index} onClick={async (event) => await item.action()}>
               <ListItemText primary={item.text} />
             </ListItem>
           ))}
@@ -89,7 +99,9 @@ const DataOrchestrationPage: React.FC = () => {
             <Typography> Status: {selectedPipeline.status}</Typography>
             <Typography> Source URI: {selectedPipeline.source_uri?.name}</Typography>
             <Typography> Destination URI: {selectedPipeline.destination_uri?.name}</Typography>
-            <Typography> Payload: {selectedPipeline?.payload?.toString()}</Typography>
+            <Typography>
+              Payload: {selectedPipeline?.payload ? JSON.stringify(selectedPipeline.payload, null, 2) : 'No payload'}
+            </Typography>
             <Typography> Message: {selectedPipeline?.message}</Typography>
           </Stack>
         )}

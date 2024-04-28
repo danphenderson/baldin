@@ -65,12 +65,14 @@ export const deleteLead = async (token: string, id: string): Promise<void> => {
   return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
 };
 
-export const loadLeadDatabase = async (token: string, params: any): Promise<OrchestrationEventRead> => {
-  const requestOptions = createRequestOptions(token, "POST", params);
-  return fetchAPI(`${BASE_URL}/load_database`, requestOptions);
+export const getLeadOrchestrationEvents = async (token: string, id: string): Promise<OrchestrationEventRead[]> => {
+  const requestOptions = createRequestOptions(token, "GET");
+  return fetchAPI(`${BASE_URL}/${id}/orchestration_events`, requestOptions);
+};
+
+export const seedLeads = async (token: string): Promise<void> => {
+  const requestOptions = createRequestOptions(token, "POST");
+  return fetchAPI(`${BASE_URL}/seed`, requestOptions);
 }
 
-export const erichLeadDataLake = async (): Promise<OrchestrationEventRead> => {
-  const requestOptions = createRequestOptions(null, "POST");
-  return fetchAPI(`${BASE_URL}/enrich_data_lake`, requestOptions);
-}
+// export const extractLeads =

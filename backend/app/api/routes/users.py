@@ -100,4 +100,7 @@ async def seed_users(
         setattr(event, "message", str(e))
         await db.commit()
         raise e
+    setattr(event, "status", schemas.OrchestrationEventStatusType.SUCCESS)
+    await db.commit()
+    log.info(f"Seeded Users table with {len(users)} records.")
     return f"Seeded Users table with {len(users)} records."

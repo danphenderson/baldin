@@ -81,6 +81,23 @@ async def get_lead(
     return lead.scalars().first()
 
 
+async def create_lead(
+    payload: schemas.LeadCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Lead:
+    lead = models.Lead(**payload.dict(exclude={"company_ids"}))
+    if payload.company_ids:
+        lead.companies = [
+            await db.get(models.Company, company_id)
+            for company_id in payload.company_ids
+        ]
+    db.add(lead)
+    await db.commit()
+    await db.refresh(lead)
+    return lead
+
+
 async def get_company_by_id(
     id: UUID4, db: AsyncSession = Depends(get_async_session)
 ) -> models.Company:

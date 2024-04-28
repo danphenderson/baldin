@@ -63,18 +63,11 @@ export interface paths {
     /** Seed Users */
     post: operations["seed_users_users_seed_post"];
   };
-  "/leads/load_database": {
-    /**
-     * Load Database
-     * @description Loads the database with leads from the data lake.
-     */
-    post: operations["load_database_leads_load_database_post"];
-  };
   "/leads/": {
     /** Read Leads */
     get: operations["read_leads_leads__get"];
-    /** Create Lead */
-    post: operations["create_lead_leads__post"];
+    /** Create Job Lead */
+    post: operations["create_job_lead_leads__post"];
   };
   "/leads/{id}": {
     /** Read Lead */
@@ -94,6 +87,10 @@ export interface paths {
   "/leads/extract": {
     /** Extract Lead */
     post: operations["extract_lead_leads_extract_post"];
+  };
+  "/leads/seed": {
+    /** Seed Leads */
+    post: operations["seed_leads_leads_seed_post"];
   };
   "/companies/{id}": {
     /** Get Company */
@@ -2648,20 +2645,6 @@ export interface operations {
       };
     };
   };
-  /**
-   * Load Database
-   * @description Loads the database with leads from the data lake.
-   */
-  load_database_leads_load_database_post: {
-    responses: {
-      /** @description Successful Response */
-      202: {
-        content: {
-          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
-        };
-      };
-    };
-  };
   /** Read Leads */
   read_leads_leads__get: {
     parameters: {
@@ -2689,8 +2672,8 @@ export interface operations {
       };
     };
   };
-  /** Create Lead */
-  create_lead_leads__post: {
+  /** Create Job Lead */
+  create_job_lead_leads__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["LeadCreate"];
@@ -2812,6 +2795,17 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Leads */
+  seed_leads_leads_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
         };
       };
     };

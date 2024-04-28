@@ -53,7 +53,10 @@ async def create_application(
     result = await db.execute(
         select(models.Application)
         .options(
-            joinedload(models.Application.lead), joinedload(models.Application.user)
+            joinedload(models.Application.lead).options(
+                joinedload(models.Lead.companies)
+            ),
+            joinedload(models.Application.user),
         )
         .where(models.Application.id == application.id)
     )

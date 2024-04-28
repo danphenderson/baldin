@@ -13,7 +13,7 @@ if conf.settings.ENVIRONMENT == "DEV":
     logging.basicConfig(
         stream=sys.stdout,
         format="%(name)s|%(levelname)s: %(message)s",
-        level="WARNING",
+        level="ERROR",
     )
 
 

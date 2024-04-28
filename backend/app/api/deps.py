@@ -349,6 +349,19 @@ async def get_orchestration_pipeline_by_name(
     return pipeline
 
 
+async def create_orchestration_pipeline(
+    payload: schemas.OrchestrationPipelineCreate,
+    user: schemas.UserRead,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.OrchestrationPipeline:
+    pipeline = models.OrchestrationPipeline(**payload.dict(), user_id=user.id)
+    db.add(pipeline)
+    await db.commit()
+    await db.refresh(pipeline)
+    await log.info(f"create_orchestration_pipeline: {pipeline}")
+    return pipeline
+
+
 async def get_extractor(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),

@@ -83,7 +83,10 @@ async def seed_users(
             status=schemas.OrchestrationEventStatusType.PENDING,
             payload={},
             source_uri=schemas.URI(name=str(seed_path), type=schemas.URIType.FILE),
-            destination_uri=schemas.URI(name="users", type=schemas.URIType.DATABASE),
+            destination_uri=schemas.URI(
+                name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#users",
+                type=schemas.URIType.DATABASE,
+            ),
         ),
         db=db,
     )

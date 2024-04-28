@@ -236,6 +236,8 @@ export interface paths {
     post: operations["create_application_applications__post"];
   };
   "/applications/{id}": {
+    /** Get Application By Id */
+    get: operations["get_application_by_id_applications__id__get"];
     /** Delete Application */
     delete: operations["delete_application_applications__id__delete"];
     /** Update Application */
@@ -3779,6 +3781,28 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       201: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Application By Id */
+  get_application_by_id_applications__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
         content: {
           "application/json": components["schemas"]["ApplicationRead"];
         };

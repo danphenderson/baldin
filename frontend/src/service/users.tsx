@@ -47,3 +47,14 @@ export const getUserProfile = async (token: string): Promise<UserProfile> => {
   const requestOptions = createRequestOptions(token, "GET");
   return await fetchApi(`${BASE_URL}/profile`, requestOptions);
 }
+
+// super-user only
+export const getUsers = async (token: string): Promise<UserRead[]> => {
+  const requestOptions = createRequestOptions(token, "GET");
+  return await fetchApi("/users", requestOptions);
+};
+
+export const seedUsers = async (token: string): Promise<void> => {
+  const requestOptions = createRequestOptions(token, "POST");
+  return await fetchApi("/users/seed", requestOptions);
+}

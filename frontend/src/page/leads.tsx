@@ -180,7 +180,6 @@ const LeadsPage: React.FC = () => {
             location: selectedLead.location,
             salary: selectedLead.salary,
             job_function: selectedLead.job_function,
-            industries: selectedLead.industries,
             employment_type: selectedLead.employment_type,
             seniority_level: selectedLead.seniority_level,
             notes: selectedLead.notes,
@@ -206,7 +205,6 @@ const LeadsPage: React.FC = () => {
                 <Typography><strong>Location:</strong> {selectedLead.location}</Typography>
                 <Typography><strong>Salary:</strong> {selectedLead.salary}</Typography>
                 <Typography><strong>Job Function:</strong> {selectedLead.job_function}</Typography>
-                <Typography><strong>Industries:</strong> {selectedLead.industries}</Typography>
                 <Typography><strong>Seniority Level:</strong> {selectedLead.seniority_level}</Typography>
                 <Typography><strong>Notes:</strong> {selectedLead.notes}</Typography>
                 <Typography><strong>Description:</strong>{selectedLead.description}</Typography>

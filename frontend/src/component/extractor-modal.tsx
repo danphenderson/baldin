@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
-import { ExtractorRun, ExtractorCreate, ExtractorExampleRead, ExtractorExmpleCreate, ExtractorResponse, ExtractorUpdate, runExtractor, createExtractor, createExtractorExample } from '../service/extractor';  // Adjust import path as necessary
+import { ExtractorRun, ExtractorCreate, ExtractorExampleRead, ExtractorExmpleCreate, ExtractorResponse, ExtractorUpdate, runExtractor, createExtractor, createExtractorExample, getExtractorExamples, deleteExtractorExample} from '../service/extractor';  // Adjust import path as necessary
 import  FilePicker  from '../component/common/file-picker';
 import { useContext } from 'react';
 import { UserContext } from '../context/user-context';
@@ -19,7 +19,15 @@ interface ExtractorCreateModalProps {
   onClose: () => void;
 }
 
-const ExtractRunModal: React.FC<ExtractRunnerModalProps> = ({ open, onClose, onSave, initialData, extractorId }) => {
+
+interface ExampleCreateModalProps {
+  extractorId: string;
+  open: boolean;
+  onSave: (data: ExtractorExmpleCreate) => void;
+  onClose: () => void;
+}
+
+export const ExtractRunModal: React.FC<ExtractRunnerModalProps> = ({ open, onClose, onSave, initialData, extractorId }) => {
   const defaultData: ExtractorRun = {
     mode: 'entire_document',
     file: '',
@@ -96,7 +104,7 @@ const ExtractRunModal: React.FC<ExtractRunnerModalProps> = ({ open, onClose, onS
   );
 };
 
-const ExtractorCreateModal: React.FC<ExtractorCreateModalProps> = ({ open, onClose, onSave }) => {
+export const ExtractorCreateModal: React.FC<ExtractorCreateModalProps> = ({ open, onClose, onSave }) => {
   { /* Add support for suggesting extractors */}
   const defaultData: ExtractorCreate = {
     name: '',
@@ -152,5 +160,46 @@ const ExtractorCreateModal: React.FC<ExtractorCreateModalProps> = ({ open, onClo
   );
 }
 
-export default ExtractRunModal; // Default export
-export { ExtractorCreateModal }; // Named export
+
+export const ExampleCreateModal: React.FC<ExampleCreateModalProps> = ({ open, extractorId, onClose, onSave }) => {
+  const defaultData: ExtractorExmpleCreate = {
+    content: '', output: ''
+  };
+  const [data, setData] = useState<ExtractorExmpleCreate>(defaultData);
+  const { token } = useContext(UserContext);
+
+  const handleSave = async () => {
+    try {
+      const result = await createExtractorExample(token || '', extractorId, data);
+      onSave(result);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>Add Examples</DialogTitle>
+      <DialogContent>
+        <TextField
+          label="Example Input"
+          value={data.content}
+          onChange={(e) => setData({ ...data, content: e.target.value })}
+          fullWidth
+        />
+        <TextField
+          label="Expected Output"
+          value={data.output}
+          onChange={(e) => setData({ ...data, output: e.target.value })}
+          fullWidth
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleSave}>Create</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+
+export default ExtractRunModal;

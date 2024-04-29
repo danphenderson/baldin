@@ -15,7 +15,7 @@ const menuItems = [
   { text: 'Leads', path: '/leads' },
   { text: 'Applications', path: '/applications' },
   { text: 'Data Orchestration', path: '/data-orchestration' },
-  { text: 'Extractors', path: '/extractors' },
+  { text: 'Extractors', path: '/extractor' },
 ];
 
 const Header: React.FC<{ title?: string }> = ({ title }) => {

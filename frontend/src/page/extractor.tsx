@@ -7,7 +7,7 @@ import { ExtractorRead, getExtractors } from '../service/extractor';
 
 // Importing in another component
 import ExtractRunModal from '../component/extractor-modal';
-import { ExtractorCreateModal } from '../component/extractor-modal';
+import { ExtractorCreateModal, ExampleCreateModal } from '../component/extractor-modal';
 
 const ExtractorPage: React.FC = () => {
   const { token } = useContext(UserContext);
@@ -84,7 +84,7 @@ const ExtractorPage: React.FC = () => {
               <Typography variant="body1">Name: {selectedExtractor.name}</Typography>
               <Typography variant="body1">Description: {selectedExtractor.description}</Typography>
               <Typography variant="body1">Instruction: {selectedExtractor.instruction}</Typography>
-              <Typography variant="body1">Examples: {selectedExtractor.extractor_examples?.toString()}</Typography>
+              <Typography variant="body1">Examples: {JSON.stringify(selectedExtractor.extractor_examples)}</Typography>
               <Typography variant="body1">Target Schema: {JSON.stringify(selectedExtractor.json_schema)}</Typography>
               <Button variant="contained" color="primary" onClick={() => setExtractRunnerOpen(true)}>Run Extractor</Button>
               <ExtractRunModal
@@ -92,7 +92,14 @@ const ExtractorPage: React.FC = () => {
                 onClose={() => setExtractRunnerOpen(false)}
                 extractorId={selectedExtractor.id}
                 onSave={() => console.log('Run extractor')}
-              /> // TODO: Update backend to have this run as a background task
+              />
+              <Button variant="contained" color="primary" onClick={() => setCreateExtractorExampleOpen(true)}>Create Example</Button>
+              <ExampleCreateModal
+                open={createExtractorExampleOpen}
+                extractorId={selectedExtractor.id}
+                onClose={() => setCreateExtractorExampleOpen(false)}
+                onSave={() => fetchExtractors()}
+              />
             </Stack>
           )}
 

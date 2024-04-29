@@ -23,10 +23,9 @@ import EducationModal from '../component/education-modal';
 import ContactModal from '../component/contacts-modal';
 import CoverLetterModal from '../component/cover-letters-modal';
 import ResumeModal from '../component/resumes-modal';
+import ErrorMessage from '../component/common/error-message';
 
 const UserProfilePage = () => {
-
-
   const {user, token, setUser } = useContext(UserContext);
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +35,6 @@ const UserProfilePage = () => {
 
   // User State
   const [userDetails, setUserDetails] = useState<UserUpdate>(user || {} as UserUpdate);
-
 
 
   /// Load Data
@@ -116,10 +114,11 @@ const UserProfilePage = () => {
             // Now TypeScript knows skillData.id is a string
             await updateSkill(token, skillData.id, skillData);
         } else {
-            await createSkill(token, skillData);
+          // Create skill and add to state
+          const newSkill = await createSkill(token, skillData);
+          skills.push(newSkill);
         }
         setSkillsModalOpen(false);
-        fetchUserData();  // Refresh the list after saving
     } catch (error) {
         console.error('Failed to save skill data', error);
     }
@@ -545,17 +544,18 @@ const UserProfilePage = () => {
               <Typography variant="h6">Skills</Typography>
           </AccordionSummary>
           <AccordionDetails>
-              <Button onClick={() => handleOpenSkillsModal()} variant="contained" color="primary">
+            <>
+            <Button onClick={() => handleOpenSkillsModal()} variant="contained" color="primary">
                   Add Skill
               </Button>
-              <div style={{ height: 400, width: '100%' }}>
+              <Box style={{ height: 400, width: '100%' }}>
                   <DataGrid
                     rows={skills}
                     columns={skillsColumns}
                     onRowDoubleClick={(params) => handleOpenSkillsModal(params.row)}
                     onRowClick={(params) => setSelectedSkill(params.row as SkillRead)}
                   />
-              </div>
+              </Box>
               <SkillsModal
                   open={skillsModalOpen}
                   onClose={() => setSkillsModalOpen(false)}
@@ -574,6 +574,7 @@ const UserProfilePage = () => {
                 </Box>
               )
               }
+            </>
           </AccordionDetails>
         </Accordion>
 
@@ -586,14 +587,14 @@ const UserProfilePage = () => {
               <Button onClick={() => handleOpenExperienceModal()} variant="contained" color="primary">
                   Add Experience
               </Button>
-              <div style={{ height: 400, width: '100%' }}>
+              <Box style={{ height: 400, width: '100%' }}>
                   <DataGrid
                     rows={experiences}
                     columns={experienceColumns}
                     onRowDoubleClick={(params) => handleOpenExperienceModal(params.row)}
                     onRowClick={(params) => setSelectedExperience(params.row as ExperienceRead)}
                   />
-              </div>
+              </Box>
               <ExperiencesModal
                 open={experienceModalOpen}
                 onClose={() => setExperienceModalOpen(false)}
@@ -627,14 +628,14 @@ const UserProfilePage = () => {
               <Button onClick={() => handleOpenEducationModal()} variant="contained" color="primary">
                   Add Education
               </Button>
-              <div style={{ height: 400, width: '100%' }}>
+              <Box style={{ height: 400, width: '100%' }}>
                   <DataGrid
                     rows={educations}
                     columns={educationColumns}
                     onRowDoubleClick={(params) => handleOpenEducationModal(params.row)}
                     onRowClick={(params) => setSelectedEducation(params.row as EducationRead)}
                   />
-              </div>
+              </Box>
               <EducationModal
                 open={educationModalOpen}
                 onClose={() => setEducationModalOpen(false)}
@@ -667,14 +668,14 @@ const UserProfilePage = () => {
               <Button onClick={() => handleOpenCertificateModal()} variant="contained" color="primary">
                   Add Certificate
               </Button>
-              <div style={{ height: 400, width: '100%' }}>
+              <Box style={{ height: 400, width: '100%' }}>
                   <DataGrid
                     rows={certificates}
                     columns={certificateColumns}
                     onRowDoubleClick={(params) => handleOpenCertificateModal(params.row)}
                     onRowClick={(params) => setSelectedCertificate(params.row as CertificateRead)}
                   />
-              </div>
+              </Box>
               <CertificateModal
                 open={certificateModalOpen}
                 onClose={() => setCertificateModalOpen(false)}
@@ -705,14 +706,14 @@ const UserProfilePage = () => {
               <Button onClick={() => handleOpenContactModal()} variant="contained" color="primary">
                   Add Contact
               </Button>
-              <div style={{ height: 400, width: '100%' }}>
+              <Box style={{ height: 400, width: '100%' }}>
                   <DataGrid
                     rows={contacts}
                     columns={contactsColumns}
                     onRowDoubleClick={(params) => handleOpenContactModal(params.row)}
                     onRowClick={(params) => setSelectedContact(params.row as ContactRead)}
                   />
-              </div>
+              </Box>
               <ContactModal
                 open={contactModalOpen}
                 onClose={() => setContactModalOpen(false)}
@@ -748,14 +749,14 @@ const UserProfilePage = () => {
               <Button onClick={() => handleOpenCoverLetterModal()} variant="contained" color="primary">
                   Add Cover Letter Template
               </Button>
-              <div style={{ height: 400, width: '100%' }}>
+              <Box style={{ height: 400, width: '100%' }}>
                   <DataGrid
                     rows={coverLetterTemplates}
                     columns={coverLetterColumns}
                     onRowClick={(params) => setSelectedCoverLetter(params.row as CoverLetterRead)}
                     onRowDoubleClick={(params) => handleOpenCoverLetterModal(params.row)}
                   />
-              </div>
+              </Box>
               <CoverLetterModal
                 open={coverLetterModalOpen}
                 onClose={() => setCoverLetterModalOpen(false)}
@@ -786,14 +787,14 @@ const UserProfilePage = () => {
               <Button onClick={() => handleOpenResumeModal()} variant="contained" color="primary">
                   Add Resume Template
               </Button>
-              <div style={{ height: 400, width: '100%' }}>
+              <Box style={{ height: 400, width: '100%' }}>
                   <DataGrid
                     rows={resumeTemplates}
                     columns={resumeColumns}
                     onRowDoubleClick={(params) => handleOpenResumeModal(params.row)}
                     onRowClick={(params) => setSelectedResume(params.row as ResumeRead)}
                   />
-              </div>
+              </Box>
               <ResumeModal
                 open={resumeModalOpen}
                 onClose={() => setResumeModalOpen(false)}
@@ -820,7 +821,7 @@ const UserProfilePage = () => {
 
 
       {/* Error Handeling */}
-      {error && <Typography color="error">{error}</Typography>}
+      {error && <ErrorMessage message={error} />}
       {message && <Snackbar open={Boolean(message)} autoHideDuration={6000} message={message} />}
     </Stack>
   );

@@ -172,6 +172,7 @@ export const ExampleCreateModal: React.FC<ExampleCreateModalProps> = ({ open, ex
     try {
       const result = await createExtractorExample(token || '', extractorId, data);
       onSave(result);
+      onClose();
     } catch (error) {
       console.error(error);
     }

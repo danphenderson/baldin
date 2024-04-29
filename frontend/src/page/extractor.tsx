@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { DataGrid, GridColDef  } from '@mui/x-data-grid';
-import { Stack, Typography, Button, Box, Snackbar, Alert, CircularProgress } from '@mui/material';
+import { Stack, Typography, Button, Box, Snackbar, Alert, CircularProgress, Drawer } from '@mui/material';
 import { UserContext } from '../context/user-context';
 
 import { ExtractorRead, getExtractors } from '../service/extractor';
@@ -8,16 +8,22 @@ import { ExtractorRead, getExtractors } from '../service/extractor';
 // Importing in another component
 import ExtractRunModal from '../component/extractor-modal';
 import { ExtractorCreateModal, ExampleCreateModal } from '../component/extractor-modal';
+import RichJsonDisplay from '../component/common/json-modal';
 
 const ExtractorPage: React.FC = () => {
   const { token } = useContext(UserContext);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [createExtractorExampleOpen, setCreateExtractorExampleOpen] = useState(false);
+  const [extractorCreateModalOpen, setCreateExtractorOpen] = useState(false);
   const [extractors, setExtractors] = useState<ExtractorRead[]>([]);
   const [selectedExtractor, setSelectedExtractor] = useState<ExtractorRead | null>(null);
+  // State that requires a selectedExtractor
   const [extractRunnerOpen, setExtractRunnerOpen] = useState(false);
-  const [extractorCreateModalOpen, setCreateExtractorOpen] = useState(false);
+  const [createExtractorExampleOpen, setCreateExtractorExampleOpen] = useState(false);
+  const [extractorExampleDisplayOpen, setExtractorExampleDisplayOpen] = useState(false);
+  const toggleExtractorExampleDisplay = () => setExtractorExampleDisplayOpen(!extractorExampleDisplayOpen);
+  const [extractorJsonSchemaDisplayOpen, setExtractorJsonSchemaDisplayOpen] = useState(false);
+  const toggleExtractorJsonSchemaDisplay = () => setExtractorJsonSchemaDisplayOpen(!extractorJsonSchemaDisplayOpen);
 
   const fetchExtractors = async () => {
     setLoading(true);
@@ -45,14 +51,14 @@ const ExtractorPage: React.FC = () => {
   }, []);
 
   const columns: GridColDef[] = [
-    { field: 'Extractor', headerName: 'Name', width: 200 },
+    { field: 'name', headerName: 'Name', width: 200 },
     { field: 'description', headerName: 'Description', width: 300 },
     { field: 'instruction', headerName: 'Instruction', width: 300 },
   ];
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h4">Extractors</Typography>
+      <Typography variant="h4">Extractor Management</Typography>
       {loading ? (
         <>
           <CircularProgress/>
@@ -68,7 +74,6 @@ const ExtractorPage: React.FC = () => {
               onSave={() => fetchExtractors()}
             />
           )}
-          <Typography variant="body1">Select an extractor to view details</Typography>
           <DataGrid
             rows={extractors}
             columns={columns}
@@ -79,13 +84,9 @@ const ExtractorPage: React.FC = () => {
           {/* TODO: rows are selectable, but do not allow edits in the table */}
           {selectedExtractor && (
             <Stack spacing={2}>
-              <Typography variant="h5">Selected Extractor</Typography>
-              <Typography variant="body1">ID: {selectedExtractor.id}</Typography>
-              <Typography variant="body1">Name: {selectedExtractor.name}</Typography>
-              <Typography variant="body1">Description: {selectedExtractor.description}</Typography>
-              <Typography variant="body1">Instruction: {selectedExtractor.instruction}</Typography>
-              <Typography variant="body1">Examples: {JSON.stringify(selectedExtractor.extractor_examples)}</Typography>
-              <Typography variant="body1">Target Schema: {JSON.stringify(selectedExtractor.json_schema)}</Typography>
+
+            {/* Run Extractor */}
+             <Stack spacing={2}>
               <Button variant="contained" color="primary" onClick={() => setExtractRunnerOpen(true)}>Run Extractor</Button>
               <ExtractRunModal
                 open={extractRunnerOpen}
@@ -93,18 +94,45 @@ const ExtractorPage: React.FC = () => {
                 extractorId={selectedExtractor.id}
                 onSave={() => console.log('Run extractor')}
               />
-              <Button variant="contained" color="primary" onClick={() => setCreateExtractorExampleOpen(true)}>Create Example</Button>
-              <ExampleCreateModal
-                open={createExtractorExampleOpen}
-                extractorId={selectedExtractor.id}
-                onClose={() => setCreateExtractorExampleOpen(false)}
-                onSave={() => fetchExtractors()}
-              />
+              </Stack>
+
+              {/* Selected Extractor Details */}
+              <Typography variant="h5">Extractor Details</Typography>
+              <Typography variant="body1">ID: {selectedExtractor.id}</Typography>
+              <Typography variant="body1">Name: {selectedExtractor.name}</Typography>
+              <Typography variant="body1">Description: {selectedExtractor.description}</Typography>
+              <Typography variant="body1">Instruction: {selectedExtractor.instruction}</Typography>
+
+              {/* Display Examples */}
+              <Stack spacing={2}>
+                <Typography variant="h6">Examples</Typography>
+                <RichJsonDisplay jsonString={JSON.stringify(selectedExtractor.extractor_examples)} />
+              </Stack>
+
+              {/* Create Example */}
+              <Stack spacing={2}>
+                <Button variant="contained" color="primary" onClick={() => setCreateExtractorExampleOpen(true)}>Create Example</Button>
+                  <ExampleCreateModal
+                    open={createExtractorExampleOpen}
+                    extractorId={selectedExtractor.id}
+                    onClose={() => setCreateExtractorExampleOpen(false)}
+                    onSave={() => {
+                      fetchExtractors(); // Or any other logic you intended to run after saving
+                      setCreateExtractorExampleOpen(false); // Ensure the modal is closed here as well
+                    }}
+                  />
+              </Stack>
+
+              {/* Display Json Schema */}
+              <Stack spacing={2}>
+                <Typography variant="h6">Json Schema</Typography>
+                <RichJsonDisplay jsonString={JSON.stringify(selectedExtractor.json_schema)} />
+              </Stack>
             </Stack>
           )}
-
         </Stack>
       )}
+
       {error && (
         <Snackbar open autoHideDuration={6000}>
           <Alert severity="error">{error}</Alert>

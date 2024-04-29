@@ -548,10 +548,10 @@ const UserProfilePage = () => {
             <>
               <Stack spacing={2}>
                 <Button onClick={() => handleOpenSkillsModal()} variant="contained" color="primary">
-                  Add Skill
+                  Add
                 </Button>
                 <Button variant="contained" color="primary" onClick={() => setExtractRunnerOpen(true)}>
-                  Extract Skills
+                  Extract
                 </Button>
                 <SkillsExtractModal
                   open={extractRunnerOpen}

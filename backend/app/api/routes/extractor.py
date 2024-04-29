@@ -1,6 +1,5 @@
 # app/api/routes/extractor.py
-import json
-from typing import Literal, Sequence
+from typing import Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from langchain_core.prompts import ChatPromptTemplate
@@ -260,4 +259,4 @@ async def extractor_runner(
     user: schemas.UserRead = Depends(get_current_user),
 ) -> schemas.ExtractorResponse:
     """Run an extractor on a given payload"""
-    return await run_extractor(extractor, payload, db, user)
+    return await run_extractor(extractor, payload, user, db)

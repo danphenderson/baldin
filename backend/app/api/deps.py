@@ -438,14 +438,21 @@ async def run_extractor(
 
     await log.info(f"Running extractor {extractor.name} with payload {payload}")
 
+    text = payload.text
     # Load text to run extraction on
-    if payload.text:
+    if text:
         pass
     elif payload.url:
         text = await extract_text_from_url(str(payload.url))
     elif payload.file:
         documents = parse_binary_input(payload.file.file)  # type: ignore
         text = "\n".join([document.page_content for document in documents])
+
+    if not text:
+        raise HTTPException(
+            status_code=400,
+            detail="No text to run extraction on. Provide either text, url or file.",
+        )
 
     # Check if there is an orchestration pipeline registered for this extractor
     try:

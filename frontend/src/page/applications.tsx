@@ -230,7 +230,6 @@ const ApplicationsPage: React.FC = () => {
             Update
           </Button>
         </Stack>
-
       </Stack>
       )}
       {error && <Typography color="error">{error}</Typography>}

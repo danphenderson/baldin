@@ -37,7 +37,7 @@ export const listTables = async (token: string): Promise<string[]> => {
   return await fetchApi(`${BASE_URL}/list-tables`, requestOptions);
 }
 
-export const tableDetails = async (token: string, tableName: string): Promise<components['schemas']['TableDetails']> => {
+export const tableDetails = async (token: string, tableName: string): Promise<any> => {
   const requestOptions = createRequestOptions(token, "GET");
   return await fetchApi(`${BASE_URL}/table-details/${tableName}`, requestOptions);
 }

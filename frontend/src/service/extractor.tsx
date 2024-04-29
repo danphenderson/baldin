@@ -33,7 +33,7 @@ const createRequestOptions = (token: string, method: string, body?: any, isFormD
     headers.delete("Content-Type");
     if (body) {
       for (const [key, value] of Object.entries(body)) {
-        formData.append(key, value);
+        formData.append(key, value as string);
       }
     }
     return {

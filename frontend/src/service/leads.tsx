@@ -19,7 +19,7 @@ const createRequestOptions = (token: string | null, method: string, body?: any):
   if (!token) {
     throw new Error("Authorization token is required");
   }
-  return {
+  let options: RequestInit = {
     method: method,
     headers: {
       "Content-Type": "application/json",
@@ -27,6 +27,8 @@ const createRequestOptions = (token: string | null, method: string, body?: any):
     },
     body: body ? JSON.stringify(body) : null,
   };
+  console.log("Making request %s", options);
+  return options;
 };
 
 

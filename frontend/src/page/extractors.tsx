@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { DataGrid, GridColDef, GridPaginationModel  } from '@mui/x-data-grid';
+import { DataGrid, GridColDef  } from '@mui/x-data-grid';
 import { Stack, Typography, Button, Box, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { UserContext } from '../context/user-context';
 
 import { ExtractorRead, getExtractors } from '../service/extractor';
 
 // Importing in another component
-import ExtractRunnerModal from '../component/extractor-modal';
+import ExtractRunModal from '../component/extractor-modal';
 import { ExtractorCreateModal } from '../component/extractor-modal';
 
 const ExtractorPage: React.FC = () => {
@@ -45,9 +45,9 @@ const ExtractorPage: React.FC = () => {
   }, []);
 
   const columns: GridColDef[] = [
-    { field: 'id', headerName: 'ID', width: 100 },
-    { field: 'name', headerName: 'Name', width: 200 },
+    { field: 'Extractor', headerName: 'Name', width: 200 },
     { field: 'description', headerName: 'Description', width: 300 },
+    { field: 'instruction', headerName: 'Instruction', width: 300 },
   ];
 
   return (
@@ -87,13 +87,12 @@ const ExtractorPage: React.FC = () => {
               <Typography variant="body1">Examples: {selectedExtractor.extractor_examples?.toString()}</Typography>
               <Typography variant="body1">Target Schema: {JSON.stringify(selectedExtractor.json_schema)}</Typography>
               <Button variant="contained" color="primary" onClick={() => setExtractRunnerOpen(true)}>Run Extractor</Button>
-              <ExtractRunnerModal
+              <ExtractRunModal
                 open={extractRunnerOpen}
                 onClose={() => setExtractRunnerOpen(false)}
                 extractorId={selectedExtractor.id}
                 onSave={() => console.log('Run extractor')}
-              />
-              // TODO: Add actions for adding extractor examples
+              /> // TODO: Update backend to have this run as a background task
             </Stack>
           )}
 

@@ -19,7 +19,7 @@ interface ExtractorCreateModalProps {
   onClose: () => void;
 }
 
-const ExtractRunnerModal: React.FC<ExtractRunnerModalProps> = ({ open, onClose, onSave, initialData, extractorId }) => {
+const ExtractRunModal: React.FC<ExtractRunnerModalProps> = ({ open, onClose, onSave, initialData, extractorId }) => {
   const defaultData: ExtractorRun = {
     mode: 'entire_document',
     file: '',
@@ -152,5 +152,5 @@ const ExtractorCreateModal: React.FC<ExtractorCreateModalProps> = ({ open, onClo
   );
 }
 
-export default ExtractRunnerModal; // Default export
+export default ExtractRunModal; // Default export
 export { ExtractorCreateModal }; // Named export

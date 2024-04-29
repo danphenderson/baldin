@@ -12,7 +12,7 @@ import LeadsPage from '../page/leads';
 import DataOrchestrationPage from '../page/data-orchestration';
 import ApplicationsPage from '../page/applications';
 import UserTermsPage from '../page/user-terms';
-import ExtractorPage from '../page/extractor';
+import ExtractorPage from '../page/extractors';
 
 const AppRoutes: React.FC = () => {
   return (

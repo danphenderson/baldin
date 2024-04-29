@@ -8,7 +8,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { UserContext } from '../context/user-context';
 import { getUser, getUserProfile, updateUser, UserUpdate } from '../service/users';
 import { getExperiences, createExperience, updateExperience, ExperienceRead, ExperienceCreate, ExperienceUpdate } from '../service/experiences';
-import { getSkills, createSkill, updateSkill, SkillRead, SkillCreate, SkillUpdate } from '../service/skills';
+import { getSkills, createSkill, updateSkill, SkillRead, SkillCreate, SkillUpdate, extractSkill } from '../service/skills';
 import { getEducations, createEducation, updateEducation, EducationRead, EducationCreate, EducationUpdate } from '../service/education';
 import { getCertificates, createCertificate, updateCertificate, CertificateRead, CertificateCreate, CertificateUpdate } from '../service/certificates';
 import { getContacts, createContact, updateContact, ContactRead, ContactCreate, ContactUpdate } from '../service/contacts';
@@ -16,7 +16,7 @@ import { getCoverLetterTemplates, updateCoverLetterTemplate, createCoverLetterTe
 import { getResumeTemplates, updateResumeTemplate, createResumeTemplate, ResumeRead, ResumeCreate, ResumeUpdate } from '../service/resumes';
 
 // Modals
-import SkillsModal from '../component/skills-modal';
+import SkillsModal, { SkillsExtractModal } from '../component/skills-modal';
 import ExperiencesModal from '../component/experiences-modal';
 import CertificateModal from '../component/certificate-modal';
 import EducationModal from '../component/education-modal';
@@ -31,6 +31,7 @@ const UserProfilePage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [extractRunnerOpen, setExtractRunnerOpen] = useState(false);
 
 
   // User State
@@ -545,9 +546,19 @@ const UserProfilePage = () => {
           </AccordionSummary>
           <AccordionDetails>
             <>
-            <Button onClick={() => handleOpenSkillsModal()} variant="contained" color="primary">
+              <Stack spacing={2}>
+                <Button onClick={() => handleOpenSkillsModal()} variant="contained" color="primary">
                   Add Skill
-              </Button>
+                </Button>
+                <Button variant="contained" color="primary" onClick={() => setExtractRunnerOpen(true)}>
+                  Extract Skills
+                </Button>
+                <SkillsExtractModal
+                  open={extractRunnerOpen}
+                  onClose={() => setExtractRunnerOpen(false)}
+                  onSave={() => console.log('Run skill extractor')}
+                />
+              </Stack>
               <Box style={{ height: 400, width: '100%' }}>
                   <DataGrid
                     rows={skills}

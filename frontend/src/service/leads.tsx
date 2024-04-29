@@ -11,24 +11,42 @@ export type LeadsPaginatedRead = components['schemas']['LeadsPaginatedRead'];
 // types that are exported from other services
 type OrchestrationEventRead = components['schemas']['OrchestrationEventRead-Output'];
 
-
 const BASE_URL = "/leads"; // Can be moved to a config file or environment variable
 
 
-const createRequestOptions = (token: string | null, method: string, body?: any): RequestInit => {
+const createRequestOptions = (token: string | null, method: string, body?: any, isFormData?: boolean): RequestInit => {
   if (!token) {
+    console.log("Authorization token is required")
     throw new Error("Authorization token is required");
   }
-  let options: RequestInit = {
-    method: method,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: body ? JSON.stringify(body) : null,
-  };
-  console.log("Making request %s", options);
-  return options;
+
+  let headers = new Headers({
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json"
+  });
+
+  if (isFormData) {
+    // For file uploads, let the browser set 'Content-Type' to 'multipart/form-data' with the correct boundary.
+    // Also, the body should be a FormData object & not a JSON string.
+    const formData = new FormData();
+    headers.delete("Content-Type");
+    if (body) {
+      for (const [key, value] of Object.entries(body)) {
+        formData.append(key, value as string);
+      }
+    }
+    return {
+      method: method,
+      headers: headers,
+      body: formData,
+    };
+  } else {
+    return {
+      method: method,
+      headers: headers,
+      body: body ? JSON.stringify(body) : null,
+    };
+  }
 };
 
 
@@ -77,4 +95,8 @@ export const seedLeads = async (token: string): Promise<void> => {
   return fetchAPI(`${BASE_URL}/seed`, requestOptions);
 }
 
-// export const extractLeads =
+export const extractLead = async (token: string, extraction_url: string): Promise<LeadRead> => {
+  // extraction_url is a query parameter that is passed to the backend to extract the lead
+  const requestOptions = createRequestOptions(token, "POST");
+  return fetchAPI(`${BASE_URL}/extract?extraction_url=${extraction_url}`, requestOptions);
+}

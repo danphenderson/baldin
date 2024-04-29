@@ -19,8 +19,6 @@ const createRequestOptions = (token: string, method: string, body?: any, isFormD
     throw new Error("Authorization token is required");
   }
 
-  console.log('Using token:', token);
-
   let headers = new Headers({
     "Authorization": `Bearer ${token}`,
     "Content-Type": "application/json"

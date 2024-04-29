@@ -3,8 +3,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
+from app.api.deps import AsyncSession
+from app.api.deps import console_log as log
 from app.api.deps import (
-    AsyncSession,
     create_extractor,
     create_skill,
     get_async_session,
@@ -87,10 +88,12 @@ async def extract_user_skills(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    log.info(f"Skills run extraction request: {payload.dict()}")
     try:
-        extractor = await get_extractor_by_name("contacts", db)
+        extractor = await get_extractor_by_name("skills", db)
     except HTTPException as e:
         if e.status_code == 404:
+            log.warning("No skills extractor found, creating a new one")
             extractor = await create_extractor(
                 schemas.ExtractorCreate(
                     name="skills",
@@ -108,6 +111,8 @@ async def extract_user_skills(
     resp = await run_extractor(
         schemas.ExtractorRead(**extractor.__dict__), payload, user, db
     )
+
+    log.info(f"Skills extraction response: {resp.dict()}")
 
     return [
         await create_skill(schemas.SkillCreate(**skill), db=db, user=user)

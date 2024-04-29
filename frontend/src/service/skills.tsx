@@ -83,6 +83,8 @@ export const deleteSkill = async (token: string, id: string): Promise<void> => {
 }
 
 export const extractSkill = async (token: string, data: ExtractorRun): Promise<ExtractorRun> => {
-  const requestOptions = createRequestOptions(token, "POST", data, true);
+  const isFileUpload = data.file ? true : false;
+  console.log("isFileUpload", isFileUpload);
+  const requestOptions = createRequestOptions(token, "POST", data, isFileUpload);
   return fetchAPI(`${BASE_URL}extract`, requestOptions);
 }

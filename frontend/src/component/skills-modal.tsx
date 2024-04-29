@@ -92,9 +92,9 @@ const SkillsModal: React.FC<SkillsModalProps> = ({ open, onClose, onSave, initia
 const SkillsExtractModal: React.FC<SkillsExtractModalProps> = ({ open, onClose, onSave, initialData }) => {
   const defaultData: ExtractorRun = {
     mode: 'entire_document',
-    file: '',
-    text: '',
-    url: '',
+    file: null,
+    text: null,
+    url: null,
     llm: '',
   };
   const [data, setData] = useState<ExtractorRun>({ ...defaultData, ...initialData});

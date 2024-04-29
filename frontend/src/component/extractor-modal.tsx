@@ -19,7 +19,6 @@ interface ExtractorCreateModalProps {
   onClose: () => void;
 }
 
-
 interface ExampleCreateModalProps {
   extractorId: string;
   open: boolean;
@@ -30,9 +29,9 @@ interface ExampleCreateModalProps {
 export const ExtractRunModal: React.FC<ExtractRunnerModalProps> = ({ open, onClose, onSave, initialData, extractorId }) => {
   const defaultData: ExtractorRun = {
     mode: 'entire_document',
-    file: '',
-    text: '',
-    url: '',
+    file: null,
+    text: null,
+    url: null,
     llm: '',
   };
   const [data, setData] = useState<ExtractorRun>({ ...defaultData, ...initialData});

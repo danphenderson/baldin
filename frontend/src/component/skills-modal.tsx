@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
 import { SkillRead, SkillCreate, SkillUpdate, extractSkill  } from '../service/skills';  // Adjust the import path as necessary
 import { ExtractorRun } from '../service/extractor';  // Adjust the import path as necessary
+import  FilePicker  from '../component/common/file-picker';
 import { useContext } from 'react';
 import { UserContext } from '../context/user-context';
 
@@ -125,6 +126,15 @@ const SkillsExtractModal: React.FC<SkillsExtractModalProps> = ({ open, onClose, 
     <Dialog open={open} onClose={onClose}>
       <DialogTitle>Run Extractor</DialogTitle>
       <DialogContent>
+        <FilePicker
+          value={data.file ? [new File([], data.file)] : []}
+          label="File"
+          multiple={false}
+          disabled={false}
+          name="fileUpload"
+          isRequired={true}
+          onChange={handleFileSelection}
+        />
         <TextField
           label="File"
           value={data.file}

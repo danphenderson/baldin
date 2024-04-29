@@ -20,6 +20,44 @@ from app.api.deps import (
 router: APIRouter = APIRouter()
 
 
+@router.post("/extract", response_model=list[schemas.SkillRead])
+async def extract_user_skills(
+    payload: schemas.ExtractorRun = Depends(),
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    log.info(f"Skills run extraction request: {payload.dict()}")
+    try:
+        extractor = await get_extractor_by_name("skills", db)
+    except HTTPException as e:
+        if e.status_code == 404:
+            log.warning("No skills extractor found, creating a new one")
+            extractor = await create_extractor(
+                schemas.ExtractorCreate(
+                    name="skills",
+                    description="Skill data extractor",
+                    instruction="Extract skill JSON data from a given context",
+                    json_schema=schemas.SkillCreate.model_json_schema(),
+                    extractor_examples=[],
+                ),
+                db=db,
+                user=user,
+            )
+        else:
+            raise e
+
+    resp = await run_extractor(
+        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+    )
+
+    log.info(f"Skills extraction response: {resp.dict()}")
+
+    return [
+        await create_skill(schemas.SkillCreate(**skill), db=db, user=user)
+        for skill in resp.data
+    ]
+
+
 @router.get("/", response_model=list[schemas.SkillRead])
 async def get_current_user_skills(
     user: schemas.UserRead = Depends(get_current_user),
@@ -80,41 +118,3 @@ async def delete_user_skill(
     await db.delete(skill)
     await db.commit()
     return None
-
-
-@router.post("/extract", response_model=list[schemas.SkillRead])
-async def extract_user_skills(
-    payload: schemas.ExtractorRun,
-    user: schemas.UserRead = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    log.info(f"Skills run extraction request: {payload.dict()}")
-    try:
-        extractor = await get_extractor_by_name("skills", db)
-    except HTTPException as e:
-        if e.status_code == 404:
-            log.warning("No skills extractor found, creating a new one")
-            extractor = await create_extractor(
-                schemas.ExtractorCreate(
-                    name="skills",
-                    description="Skill data extractor",
-                    instruction="Extract skill JSON data from a given context",
-                    json_schema=schemas.SkillCreate.model_json_schema(),
-                    extractor_examples=[],
-                ),
-                db=db,
-                user=user,
-            )
-        else:
-            raise e
-
-    resp = await run_extractor(
-        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
-    )
-
-    log.info(f"Skills extraction response: {resp.dict()}")
-
-    return [
-        await create_skill(schemas.SkillCreate(**skill), db=db, user=user)
-        for skill in resp.data
-    ]

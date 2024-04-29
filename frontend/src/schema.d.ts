@@ -176,6 +176,10 @@ export interface paths {
     /** Extract User Experiences */
     post: operations["extract_user_experiences_experiences_extract_post"];
   };
+  "/skills/extract": {
+    /** Extract User Skills */
+    post: operations["extract_user_skills_skills_extract_post"];
+  };
   "/skills/": {
     /** Get Current User Skills */
     get: operations["get_current_user_skills_skills__get"];
@@ -189,10 +193,6 @@ export interface paths {
     put: operations["update_user_skill_skills__skill_id__put"];
     /** Delete User Skill */
     delete: operations["delete_user_skill_skills__skill_id__delete"];
-  };
-  "/skills/extract": {
-    /** Extract User Skills */
-    post: operations["extract_user_skills_skills_extract_post"];
   };
   "/cover_letters/generate": {
     /** Generate User Cover Letter */
@@ -427,6 +427,11 @@ export interface components {
       client_id?: string | null;
       /** Client Secret */
       client_secret?: string | null;
+    };
+    /** Body_extract_user_skills_skills_extract_post */
+    Body_extract_user_skills_skills_extract_post: {
+      /** File */
+      file?: string | null;
     };
     /** Body_extractor_runner_extractor__id__run_post */
     Body_extractor_runner_extractor__id__run_post: {
@@ -3393,6 +3398,36 @@ export interface operations {
       };
     };
   };
+  /** Extract User Skills */
+  extract_user_skills_skills_extract_post: {
+    parameters: {
+      query?: {
+        mode?: "entire_document" | "retrieval";
+        text?: string | null;
+        url?: string | null;
+        llm?: string | null;
+      };
+    };
+    requestBody?: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_extract_user_skills_skills_extract_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Get Current User Skills */
   get_current_user_skills_skills__get: {
     responses: {
@@ -3486,28 +3521,6 @@ export interface operations {
       /** @description Successful Response */
       204: {
         content: never;
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Extract User Skills */
-  extract_user_skills_skills_extract_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ExtractorRun"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["SkillRead"][];
-        };
       };
       /** @description Validation Error */
       422: {

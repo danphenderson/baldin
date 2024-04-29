@@ -5,7 +5,7 @@ import  FilePicker  from '../component/common/file-picker';
 import { useContext } from 'react';
 import { UserContext } from '../context/user-context';
 
-interface ExtractRunnerModalProps {
+interface ExtractRunModalProps {
   open: boolean;
   onSave: (data: any) => void;
   initialData?: ExtractorRun;
@@ -26,7 +26,7 @@ interface ExampleCreateModalProps {
   onClose: () => void;
 }
 
-export const ExtractRunModal: React.FC<ExtractRunnerModalProps> = ({ open, onClose, onSave, initialData, extractorId }) => {
+export const ExtractRunModal: React.FC<ExtractRunModalProps> = ({ open, onClose, onSave, initialData, extractorId }) => {
   const defaultData: ExtractorRun = {
     mode: 'entire_document',
     file: null,

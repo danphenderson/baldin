@@ -13,13 +13,6 @@ interface SkillsModalProps {
   initialData?: SkillRead;
 }
 
-interface SkillsExtractModalProps {
-  open: boolean;
-  onClose: () => void;
-  onSave: (data: ExtractorRun) => void;
-  initialData?: ExtractorRun;
-}
-
 const SkillsModal: React.FC<SkillsModalProps> = ({ open, onClose, onSave, initialData }) => {
   const defaultSkillData: SkillCreate | SkillUpdate = {
     category: '',
@@ -90,6 +83,13 @@ const SkillsModal: React.FC<SkillsModalProps> = ({ open, onClose, onSave, initia
 };
 
 
+interface SkillsExtractModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (data: ExtractorRun) => void;
+  initialData?: ExtractorRun;
+}
+
 const SkillsExtractModal: React.FC<SkillsExtractModalProps> = ({ open, onClose, onSave, initialData }) => {
   const defaultData: ExtractorRun = {
     mode: 'entire_document',
@@ -116,11 +116,11 @@ const SkillsExtractModal: React.FC<SkillsExtractModalProps> = ({ open, onClose, 
 
   const handleFileSelection = (files: FileList | null) => {
     if (files && files.length > 0) {
-      setData({ ...data, file: files[0].name });
-      console.log("File selected")
-      console.log(files[0]);
+      setData({ ...data, file: files[0] });  // Store the file object directly
+      console.log("File selected", files[0]);
     }
   };
+
 
   return (
     <Dialog open={open} onClose={onClose}>

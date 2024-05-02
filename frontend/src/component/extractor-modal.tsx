@@ -52,7 +52,7 @@ export const ExtractRunModal: React.FC<ExtractRunModalProps> = ({ open, onClose,
 
   const handleFileSelection = (files: FileList | null) => {
     if (files && files.length > 0) {
-      setData({ ...data, file: files[0].name });
+      setData({ ...data, file: files[0]});
       console.log("File selected")
       console.log(files[0]);
     }
@@ -63,7 +63,7 @@ export const ExtractRunModal: React.FC<ExtractRunModalProps> = ({ open, onClose,
       <DialogTitle>Run Extractor</DialogTitle>
       <DialogContent>
         <FilePicker
-          value={data.file ? [new File([], data.file)] : []}
+          value={data.file ? [new File([], data.file.name)] : []}
           label="File"
           multiple={false}
           disabled={false}
@@ -74,7 +74,7 @@ export const ExtractRunModal: React.FC<ExtractRunModalProps> = ({ open, onClose,
         <TextField
           label="File"
           value={data.file}
-          onChange={(e) => setData({ ...data, file: e.target.value })}
+          onChange={(e) => setData({ ...data, file: (e.target as HTMLInputElement).files?.[0] || null })}
           fullWidth
         />
         <TextField

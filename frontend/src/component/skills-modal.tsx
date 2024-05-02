@@ -127,19 +127,13 @@ const SkillsExtractModal: React.FC<SkillsExtractModalProps> = ({ open, onClose, 
       <DialogTitle>Run Extractor</DialogTitle>
       <DialogContent>
         <FilePicker
-          value={data.file ? [new File([], data.file)] : []}
+          value={data.file ? [new File([], data.file.name)] : []}
           label="File"
           multiple={false}
           disabled={false}
           name="fileUpload"
           isRequired={true}
           onChange={handleFileSelection}
-        />
-        <TextField
-          label="File"
-          value={data.file}
-          onChange={(e) => setData({ ...data, file: e.target.value })}
-          fullWidth
         />
         <TextField
           label="Text"

@@ -3,8 +3,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
+from app.api.deps import AsyncSession
+from app.api.deps import console_log as log
 from app.api.deps import (
-    AsyncSession,
     create_experience,
     create_extractor,
     get_async_session,
@@ -42,6 +43,7 @@ async def create_user_experience(
     db: AsyncSession = Depends(get_async_session),
 ):
     experience = models.Experience(**payload.dict(), user_id=user.id)
+    log.info(f"Creating experience: {experience.__dict__}")
     db.add(experience)
     await db.commit()
     await db.refresh(experience)

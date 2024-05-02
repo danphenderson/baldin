@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { DataGrid, GridColDef, GridPaginationModel  } from '@mui/x-data-grid';
-import { Stack, Typography, Button, Box, Snackbar, Alert } from '@mui/material';
+import { Stack, Typography, Button, Box, Snackbar, Alert, TextField } from '@mui/material';
 import LeadModal from '../component/lead-modal';
 import { createApplication, ApplicationCreate } from '../service/applications';
 import { UserContext } from '../context/user-context';
 
 
-import { LeadRead, LeadsPaginatedRead, LeadCreate, LeadUpdate, getLeads, createLead, updateLead  } from '../service/leads';
+import { LeadRead, LeadsPaginatedRead, LeadCreate, LeadUpdate, getLeads, createLead, updateLead, extractLead  } from '../service/leads';
 
 
 const LeadsPage: React.FC = () => {
   const { token } = useContext(UserContext);
   const [leads, setLeads] = useState<LeadRead[]>([]);
+  const [extractUrl, setExtractUrl] = useState('');  // State for handling the extraction URL
   const [loading, setLoading] = useState(false);
   const [totalLeads, setTotalLeads] = useState(0);
   const [selectedLead, setSelectedLead] = useState<LeadRead | null>(null);
@@ -57,6 +58,22 @@ const LeadsPage: React.FC = () => {
       page: model.page + 1, // GridPaginationModel's page index starts at 0, so add 1 for your API
     });
   };
+
+  const handleExtractLead = async () => {
+    if (!token) {
+      setError('Authorization token is missing, unable to extract lead');
+      return;
+    }
+    try {
+      const extractedLead = await extractLead(token, extractUrl);
+      setLeads([...leads, extractedLead]);  // Optionally add to local state
+      setExtractUrl('');  // Clear input after extraction
+    } catch (error) {
+      setError('Failed to extract lead from URL');
+      console.error(error);
+    }
+  };
+
 
   const handleEditLead = (id: string) => {
     const lead = leads.find(l => l.id === id);
@@ -140,6 +157,24 @@ const LeadsPage: React.FC = () => {
 
   return (
     <Stack spacing={16}>
+      <Stack sx={{ p: 2 }}>
+        <TextField
+          label="Extract Lead URL"
+          variant="outlined"
+          value={extractUrl}
+          onChange={(e) => setExtractUrl(e.target.value)}
+          fullWidth
+          sx={{ mb: 2 }}
+        />
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleExtractLead}
+          disabled={!extractUrl}
+        >
+          Extract Lead
+        </Button>
+      </Stack>
       <Box sx={{ p: 2 }}>
         <DataGrid
           rows={leads}
@@ -166,9 +201,9 @@ const LeadsPage: React.FC = () => {
           <Button variant="contained" onClick={handleAddLead} sx={{ mb: 2 }}>
             Add
           </Button>
-          <Button variant="contained" onClick={fetchLeads} sx={{ mb: 2 }}>
-            Extract
-          </Button>
+
+          {/* TODO: Implement Extract Lead, which takes a URL as an input */}
+
         </Stack>
         <LeadModal
           open={modalOpen}
@@ -180,7 +215,6 @@ const LeadsPage: React.FC = () => {
             location: selectedLead.location,
             salary: selectedLead.salary,
             job_function: selectedLead.job_function,
-            industries: selectedLead.industries,
             employment_type: selectedLead.employment_type,
             seniority_level: selectedLead.seniority_level,
             notes: selectedLead.notes,
@@ -206,7 +240,6 @@ const LeadsPage: React.FC = () => {
                 <Typography><strong>Location:</strong> {selectedLead.location}</Typography>
                 <Typography><strong>Salary:</strong> {selectedLead.salary}</Typography>
                 <Typography><strong>Job Function:</strong> {selectedLead.job_function}</Typography>
-                <Typography><strong>Industries:</strong> {selectedLead.industries}</Typography>
                 <Typography><strong>Seniority Level:</strong> {selectedLead.seniority_level}</Typography>
                 <Typography><strong>Notes:</strong> {selectedLead.notes}</Typography>
                 <Typography><strong>Description:</strong>{selectedLead.description}</Typography>

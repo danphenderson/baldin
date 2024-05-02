@@ -13,6 +13,7 @@ import {
 } from '../service/applications';
 import { GridExpandMoreIcon } from '@mui/x-data-grid';
 import { CoverLetterRead, CoverLetterCreate, CoverLetterUpdate, updateCoverLetter, createCoverLetter } from '../service/cover-letters';
+import ErrorMessage from '../component/common/error-message';
 
 const ApplicationsPage: React.FC = () => {
   const { token } = useContext(UserContext);
@@ -230,10 +231,9 @@ const ApplicationsPage: React.FC = () => {
             Update
           </Button>
         </Stack>
-
       </Stack>
       )}
-      {error && <Typography color="error">{error}</Typography>}
+      {error && <ErrorMessage message={error} />}
     </Box>
   );
 };

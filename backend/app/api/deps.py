@@ -81,6 +81,23 @@ async def get_lead(
     return lead.scalars().first()
 
 
+async def create_lead(
+    payload: schemas.LeadCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Lead:
+    lead = models.Lead(**payload.dict(exclude={"company_ids"}))
+    if payload.company_ids:
+        lead.companies = [
+            await db.get(models.Company, company_id)
+            for company_id in payload.company_ids
+        ]
+    db.add(lead)
+    await db.commit()
+    await db.refresh(lead)
+    return lead
+
+
 async def get_company_by_id(
     id: UUID4, db: AsyncSession = Depends(get_async_session)
 ) -> models.Company:
@@ -349,6 +366,19 @@ async def get_orchestration_pipeline_by_name(
     return pipeline
 
 
+async def create_orchestration_pipeline(
+    payload: schemas.OrchestrationPipelineCreate,
+    user: schemas.UserRead,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.OrchestrationPipeline:
+    pipeline = models.OrchestrationPipeline(**payload.dict(), user_id=user.id)
+    db.add(pipeline)
+    await db.commit()
+    await db.refresh(pipeline)
+    await log.info(f"create_orchestration_pipeline: {pipeline}")
+    return pipeline
+
+
 async def get_extractor(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),
@@ -408,14 +438,21 @@ async def run_extractor(
 
     await log.info(f"Running extractor {extractor.name} with payload {payload}")
 
+    text = payload.text
     # Load text to run extraction on
-    if payload.text:
+    if text:
         pass
     elif payload.url:
         text = await extract_text_from_url(str(payload.url))
     elif payload.file:
         documents = parse_binary_input(payload.file.file)  # type: ignore
         text = "\n".join([document.page_content for document in documents])
+
+    if not text:
+        raise HTTPException(
+            status_code=400,
+            detail="No text to run extraction on. Provide either text, url or file.",
+        )
 
     # Check if there is an orchestration pipeline registered for this extractor
     try:

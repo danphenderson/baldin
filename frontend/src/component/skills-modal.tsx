@@ -1,12 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
-import { SkillRead, SkillCreate, SkillUpdate } from '../service/skills';  // Adjust the import path as necessary
+import { SkillRead, SkillCreate, SkillUpdate, extractSkill  } from '../service/skills';  // Adjust the import path as necessary
+import { ExtractorRun } from '../service/extractor';  // Adjust the import path as necessary
+import  FilePicker  from '../component/common/file-picker';
+import { useContext } from 'react';
+import { UserContext } from '../context/user-context';
 
 interface SkillsModalProps {
   open: boolean;
   onClose: () => void;
   onSave: (skill: SkillCreate | SkillUpdate) => void;
   initialData?: SkillRead;
+}
+
+interface SkillsExtractModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (data: ExtractorRun) => void;
+  initialData?: ExtractorRun;
 }
 
 const SkillsModal: React.FC<SkillsModalProps> = ({ open, onClose, onSave, initialData }) => {
@@ -77,5 +88,86 @@ const SkillsModal: React.FC<SkillsModalProps> = ({ open, onClose, onSave, initia
     </Dialog>
   );
 };
+
+
+const SkillsExtractModal: React.FC<SkillsExtractModalProps> = ({ open, onClose, onSave, initialData }) => {
+  const defaultData: ExtractorRun = {
+    mode: 'entire_document',
+    file: null,
+    text: null,
+    url: null,
+    llm: '',
+  };
+  const [data, setData] = useState<ExtractorRun>({ ...defaultData, ...initialData});
+  const { token } = useContext(UserContext);
+
+  useEffect(() => {
+    setData({ ...defaultData, ...initialData });
+  }, [initialData]);
+
+  const handleSave = async () => {
+    try {
+      const result = await extractSkill(token || '', data as ExtractorRun);
+      onSave(result);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleFileSelection = (files: FileList | null) => {
+    if (files && files.length > 0) {
+      setData({ ...data, file: files[0].name });
+      console.log("File selected")
+      console.log(files[0]);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>Run Extractor</DialogTitle>
+      <DialogContent>
+        <FilePicker
+          value={data.file ? [new File([], data.file)] : []}
+          label="File"
+          multiple={false}
+          disabled={false}
+          name="fileUpload"
+          isRequired={true}
+          onChange={handleFileSelection}
+        />
+        <TextField
+          label="File"
+          value={data.file}
+          onChange={(e) => setData({ ...data, file: e.target.value })}
+          fullWidth
+        />
+        <TextField
+          label="Text"
+          value={data.text}
+          onChange={(e) => setData({ ...data, text: e.target.value })}
+          fullWidth
+        />
+        <TextField
+          label="URL"
+          value={data.url}
+          onChange={(e) => setData({ ...data, url: e.target.value })}
+          fullWidth
+        />
+        <TextField
+          label="LLM"
+          value={data.llm}
+          onChange={(e) => setData({ ...data, llm: e.target.value })}
+          fullWidth
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={handleSave} color="primary">Save</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+export { SkillsExtractModal };
 
 export default SkillsModal;

@@ -12,6 +12,7 @@ import LeadsPage from '../page/leads';
 import DataOrchestrationPage from '../page/data-orchestration';
 import ApplicationsPage from '../page/applications';
 import UserTermsPage from '../page/user-terms';
+import ExtractorPage from '../page/extractor';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -24,6 +25,7 @@ const AppRoutes: React.FC = () => {
                 <Route path="/applications" element={<ApplicationsPage />} />
                 <Route path="/data-orchestration" element={<DataOrchestrationPage />} />
                 <Route path="/profile" element={<UserProfilePage />} />
+                <Route path="/extractor" element={<ExtractorPage />} />
                 <Route path="*" element={<ErrorPage />} />
                 {/* More user routes can be added here */}
             </Route>

@@ -53,7 +53,10 @@ async def create_application(
     result = await db.execute(
         select(models.Application)
         .options(
-            joinedload(models.Application.lead), joinedload(models.Application.user)
+            joinedload(models.Application.lead).options(
+                joinedload(models.Lead.companies)
+            ),
+            joinedload(models.Application.user),
         )
         .where(models.Application.id == application.id)
     )
@@ -72,34 +75,19 @@ async def get_applications(
         select(models.Application)
         .where(models.Application.user_id == user.id)  # Filter by current user's ID
         .options(
-            joinedload(models.Application.lead), joinedload(models.Application.user)
+            joinedload(models.Application.lead).options(
+                joinedload(models.Lead.companies)
+            ),
+            joinedload(models.Application.user),
         )
     )
-    applications = result.scalars().all()
+    # Ensure that unique rows are considered to avoid duplicates due to joinedload
+    applications = result.scalars().unique().all()
 
     if not applications:
         raise HTTPException(
             status_code=404, detail="No applications found for the current user"
         )
-
-    # # Eagerly load related objects (cover_letters and resumes) for serialization
-    # for application in applications:
-    #     result = await db.execute(
-    #         select(models.Resume)
-    #         .join(models.ResumeXApplication)
-    #         .where(models.ResumeXApplication.application_id == application.id)
-    #     )
-    #     resumes = result.scalars().all()
-    #     application.resumes = resumes
-
-    #     result = await db.execute(
-    #         select(models.CoverLetter)
-    #         .join(models.CoverLetterXApplication)
-    #         .where(models.CoverLetterXApplication.application_id == application.id)
-    #     )
-    #     cover_letters = result.scalars().all()
-    #     application.cover_letters = cover_letters
-
     return applications
 
 
@@ -284,7 +272,7 @@ async def generate_cover_letter_for_application(
     id: UUID4,
     template_id: str
     | None = Query(None, description="Template ID for cover letter generation"),
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSession = Depends(get_async_session),  # noqa
     user: schemas.UserRead = Depends(get_current_user),
 ):
 
@@ -355,3 +343,28 @@ async def generate_cover_letter_for_application(
     db.add(association)
     await db.commit()
     return cover_letter
+
+
+@router.get("/{id}", response_model=schemas.ApplicationRead)
+async def get_application_by_id(
+    application: schemas.ApplicationRead = Depends(get_application),
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    # Fetch user and lead details for the application
+    result = await db.execute(
+        select(models.Application)
+        .options(
+            joinedload(models.Application.lead).options(
+                joinedload(models.Lead.companies)
+            ),
+            joinedload(models.Application.user),
+        )
+        .where(models.Application.id == application.id)
+    )
+
+    application = result.scalars().first()  # type: ignore
+
+    # Fetch company details for the application
+
+    return application

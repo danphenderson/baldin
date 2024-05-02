@@ -19,7 +19,6 @@ const LeadModal: React.FC<LeadModalProps> = ({ open, onClose, onSave, initialDat
     location: '',
     salary: '',
     job_function: '',
-    industries: '',
     employment_type: '',
     seniority_level: '',
     notes: '',

@@ -1,32 +1,31 @@
 # Path: app/api/routes/leads.py
 
 import json
-from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from aiofiles import open as aopen
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import UUID4
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import joinedload
 
+from app.api.deps import AsyncSession, conf
+from app.api.deps import console_log
+from app.api.deps import console_log as log
 from app.api.deps import (
-    AsyncSession,
-    conf,
-    console_log,
     create_extractor,
+    create_lead,
     create_orchestration_event,
+    create_orchestration_pipeline,
     get_async_session,
     get_current_user,
     get_extractor_by_name,
     get_lead,
-    get_orchestration_event,
+    get_orchestration_pipeline_by_name,
     get_pagination_params,
     logging,
     models,
     run_extractor,
     schemas,
-    session_context,
-    update_orchestration_event,
-    utils,
 )
 
 logger = logging.get_logger(__name__)
@@ -34,148 +33,8 @@ logger = logging.get_logger(__name__)
 router: APIRouter = APIRouter()
 
 
-async def _load_leads_into_database(orch_event_id):
-    async with session_context() as db:
-        console_log.warning(
-            f"Loading leads into database for orchestration event {orch_event_id}"
-        )
-        # Get the orchestration event record
-        event = await get_orchestration_event(orch_event_id, db)
-        event_id = getattr(event, "id")
-
-        # Update the orchestration event status to "running"
-        event_dict = event.__dict__
-        event_dict["status"] = schemas.OrchestrationEventStatusType("running").value
-
-        def _update_event_dict(event_dict):
-            # Correctly parse source_uri and destination_uri before updating
-            if isinstance(event_dict.get("source_uri"), str):
-                event_dict["source_uri"] = json.loads(event_dict["source_uri"])
-            if isinstance(event_dict.get("destination_uri"), str):
-                event_dict["destination_uri"] = json.loads(
-                    event_dict["destination_uri"]
-                )
-            return event_dict
-
-        event_dict = _update_event_dict(event_dict)
-
-        # Update the event
-        event = await update_orchestration_event(
-            event_id, schemas.OrchestrationEventUpdate(**event_dict), db
-        )
-
-        # Unmarshal the source URI
-        source_uri = schemas.URI.model_validate_json(event.source_uri)
-
-        # Load the database
-        async for lead in utils.generate_pydantic_models_from_docs_dir(
-            schemas.LeadCreate, source_uri.name
-        ):
-            try:
-                # Create a new lead if it doesn't exist
-                console_log.warning(f"Adding lead: {lead.dict()}")
-                lead = models.Lead(**lead.dict(exclude={"company_ids"}))
-                console_log.warning(f"Lead added: {lead.id}")
-                db.add(lead)
-                await db.commit()
-                await db.refresh(lead)
-
-            except Exception as e:
-                # Rollback on exception and update the orchestration event status to "failure" with error message
-                await db.rollback()
-                event_dict["error_message"] = str(e)
-                event_dict["status"] = schemas.OrchestrationEventStatusType(
-                    "failure"
-                ).value
-                await update_orchestration_event(
-                    event_id, schemas.OrchestrationEventUpdate(**event_dict), db
-                )
-                raise HTTPException(status_code=500, detail=str(e))
-
-        # Update the orchestration event status to "success"
-        event_dict["status"] = schemas.OrchestrationEventStatusType("success").value
-
-        event_dict = _update_event_dict(event_dict)
-        await update_orchestration_event(
-            event_id, schemas.OrchestrationEventUpdate(**event_dict), db
-        )  # FIXME: Event status not being set to success
-        console_log.warning(f"Leads successfully loaded for event ID: {orch_event_id}")
-
-
-@router.post(
-    "/load_database", status_code=202, response_model=schemas.OrchestrationEventRead
-)
-async def load_database(
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
-):
-    """
-    Loads the database with leads from the data lake.
-    """
-    console_log.warning("Loading database with leads from the data lake.")
-
-    # Determine URI location of the data lake and database from settings
-    source_uri = schemas.URI(
-        name=str(conf.settings.DATALAKE_PATH / "leads" / "leads.json"),
-        type=schemas.URIType("datalake"),
-    )
-    destination_uri = schemas.URI(
-        name=str(Path(str(conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI)) / "leads"),
-        type=schemas.URIType("database"),
-    )
-
-    # Get orchestration pipeline record, if it doesn't exist, create it
-    pipeline = await db.execute(
-        select(models.OrchestrationPipeline).where(
-            models.OrchestrationPipeline.name == "load_database"
-        )
-    )
-
-    pipeline = pipeline.scalars().first()  # type: ignore
-
-    if not pipeline:
-        console_log.warning("Pipeline not found, creating a new one.")
-
-        pipeline = models.OrchestrationPipeline(
-            name="load_database",
-            description="Loads the database with leads from the data lake",
-            user_id=user.id,  # type: ignore
-        )
-        db.add(pipeline)
-        await db.commit()
-        await db.refresh(pipeline)
-
-    # Create an orchestration event
-    payload = schemas.OrchestrationEventCreate(
-        name="load_database",
-        source_uri=source_uri,
-        destination_uri=destination_uri,
-        status=schemas.OrchestrationEventStatusType("pending"),
-        message=f"Triggered by pipeline {getattr(pipeline, 'name')}",
-        pipeline_id=getattr(pipeline, "id"),  # type: ignore
-    )
-
-    # Post orchestration event and wait for model to be created
-    orch_event = await create_orchestration_event(payload, db)
-
-    # Add the load_database_task to the background tasks
-    background_tasks.add_task(_load_leads_into_database, orch_event.id)
-
-    # Deserialize into URI object
-    setattr(orch_event, "source_uri", json.loads(getattr(orch_event, "source_uri")))
-    setattr(
-        orch_event,
-        "destination_uri",
-        json.loads(getattr(orch_event, "destination_uri")),
-    )
-    console_log.warning(f"Orchestration event created with ID: {orch_event.id}")
-
-    return orch_event
-
-
 @router.post("/", status_code=201, response_model=schemas.LeadRead)
-async def create_lead(
+async def create_job_lead(
     payload: schemas.LeadCreate,
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
@@ -194,7 +53,7 @@ async def create_lead(
     lead = models.Lead(**payload.dict(exclude={"company_ids"}))
 
     # If companies are provided, associate them with the lead
-    for company_id in payload.company_ids:
+    for company_id in getattr(payload, "company_ids") or []:
         company = await db.get(models.Company, company_id)
         if company:
             lead.companies.append(company)
@@ -381,3 +240,67 @@ async def extract_lead(
         raise HTTPException(status_code=500, detail="Error saving lead to database")
 
     return lead
+
+
+@router.post("/seed")
+async def seed_leads(
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    seed_path = conf.settings.SEEDS_PATH / "leads.json"
+    logger.info(f"Seeding Leads table with initial data from {seed_path}")
+    # fetch orchestration pipeline, create a new one if not found
+    try:
+        pipeline = await get_orchestration_pipeline_by_name("seed_leads", db, user)
+    except HTTPException as e:
+        if e.status_code == 404:
+            logger.warning("Seed Leads pipeline not found, creating a new one")
+            pipeline = await create_orchestration_pipeline(
+                schemas.OrchestrationPipelineCreate(
+                    name="seed_leads",
+                    description="Seed Leads table with initial data",
+                    definition={"action": "Insert initial data into Leads table"},
+                ),
+                user,
+                db,
+            )
+
+    # create_orchestration_event
+    event = await create_orchestration_event(
+        schemas.OrchestrationEventCreate(
+            message="Seeding Leads table with initial data",
+            environment=conf.settings.ENVIRONMENT,
+            pipeline_id=pipeline.id,  # type: ignore
+            status=schemas.OrchestrationEventStatusType.PENDING,
+            payload={},
+            source_uri=schemas.URI(name=str(seed_path), type=schemas.URIType.FILE),
+            destination_uri=schemas.URI(
+                name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#leads",
+                type=schemas.URIType.DATABASE,
+            ),
+        ),
+        db=db,
+    )
+
+    # Run the orchestration event (TODO: Move this to a background task)
+    try:
+        async with aopen(seed_path, "r") as f:
+            seed_data = json.loads(await f.read())
+            log.info(f"Seeding Leads table with {len(seed_data)} records")
+        for lead_data in seed_data:
+            await create_lead(
+                schemas.LeadCreate(**lead_data),
+                db=db,
+                user=user,
+            )
+    except Exception as e:
+        log.exception(f"Error seeding Leads table: {e}")
+        setattr(event, "status", schemas.OrchestrationEventStatusType.FAILED)
+        setattr(event, "message", str(e))
+        await db.commit()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    setattr(event, "status", schemas.OrchestrationEventStatusType.SUCCESS)
+    await db.commit()
+
+    return {"message": "Leads table seeded successfully"}

@@ -63,18 +63,11 @@ export interface paths {
     /** Seed Users */
     post: operations["seed_users_users_seed_post"];
   };
-  "/leads/load_database": {
-    /**
-     * Load Database
-     * @description Loads the database with leads from the data lake.
-     */
-    post: operations["load_database_leads_load_database_post"];
-  };
   "/leads/": {
     /** Read Leads */
     get: operations["read_leads_leads__get"];
-    /** Create Lead */
-    post: operations["create_lead_leads__post"];
+    /** Create Job Lead */
+    post: operations["create_job_lead_leads__post"];
   };
   "/leads/{id}": {
     /** Read Lead */
@@ -94,6 +87,10 @@ export interface paths {
   "/leads/extract": {
     /** Extract Lead */
     post: operations["extract_lead_leads_extract_post"];
+  };
+  "/leads/seed": {
+    /** Seed Leads */
+    post: operations["seed_leads_leads_seed_post"];
   };
   "/companies/{id}": {
     /** Get Company */
@@ -179,6 +176,10 @@ export interface paths {
     /** Extract User Experiences */
     post: operations["extract_user_experiences_experiences_extract_post"];
   };
+  "/skills/extract": {
+    /** Extract User Skills */
+    post: operations["extract_user_skills_skills_extract_post"];
+  };
   "/skills/": {
     /** Get Current User Skills */
     get: operations["get_current_user_skills_skills__get"];
@@ -192,10 +193,6 @@ export interface paths {
     put: operations["update_user_skill_skills__skill_id__put"];
     /** Delete User Skill */
     delete: operations["delete_user_skill_skills__skill_id__delete"];
-  };
-  "/skills/extract": {
-    /** Extract User Skills */
-    post: operations["extract_user_skills_skills_extract_post"];
   };
   "/cover_letters/generate": {
     /** Generate User Cover Letter */
@@ -239,6 +236,8 @@ export interface paths {
     post: operations["create_application_applications__post"];
   };
   "/applications/{id}": {
+    /** Get Application By Id */
+    get: operations["get_application_by_id_applications__id__get"];
     /** Delete Application */
     delete: operations["delete_application_applications__id__delete"];
     /** Update Application */
@@ -428,6 +427,11 @@ export interface components {
       client_id?: string | null;
       /** Client Secret */
       client_secret?: string | null;
+    };
+    /** Body_extract_user_skills_skills_extract_post */
+    Body_extract_user_skills_skills_extract_post: {
+      /** File */
+      file?: string | null;
     };
     /** Body_extractor_runner_extractor__id__run_post */
     Body_extractor_runner_extractor__id__run_post: {
@@ -2648,20 +2652,6 @@ export interface operations {
       };
     };
   };
-  /**
-   * Load Database
-   * @description Loads the database with leads from the data lake.
-   */
-  load_database_leads_load_database_post: {
-    responses: {
-      /** @description Successful Response */
-      202: {
-        content: {
-          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
-        };
-      };
-    };
-  };
   /** Read Leads */
   read_leads_leads__get: {
     parameters: {
@@ -2689,8 +2679,8 @@ export interface operations {
       };
     };
   };
-  /** Create Lead */
-  create_lead_leads__post: {
+  /** Create Job Lead */
+  create_job_lead_leads__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["LeadCreate"];
@@ -2812,6 +2802,17 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Leads */
+  seed_leads_leads_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
         };
       };
     };
@@ -3397,6 +3398,36 @@ export interface operations {
       };
     };
   };
+  /** Extract User Skills */
+  extract_user_skills_skills_extract_post: {
+    parameters: {
+      query?: {
+        mode?: "entire_document" | "retrieval";
+        text?: string | null;
+        url?: string | null;
+        llm?: string | null;
+      };
+    };
+    requestBody?: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_extract_user_skills_skills_extract_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Get Current User Skills */
   get_current_user_skills_skills__get: {
     responses: {
@@ -3490,28 +3521,6 @@ export interface operations {
       /** @description Successful Response */
       204: {
         content: never;
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Extract User Skills */
-  extract_user_skills_skills_extract_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ExtractorRun"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["SkillRead"][];
-        };
       };
       /** @description Validation Error */
       422: {
@@ -3785,6 +3794,28 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       201: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Application By Id */
+  get_application_by_id_applications__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
         content: {
           "application/json": components["schemas"]["ApplicationRead"];
         };

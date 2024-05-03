@@ -3417,7 +3417,9 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["SkillRead"][];
+          "application/json": {
+            [key: string]: string;
+          };
         };
       };
       /** @description Validation Error */

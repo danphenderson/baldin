@@ -1,10 +1,20 @@
+# Path: app/logging.py
+
 import asyncio
 import json
 import logging
+import sys
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 from app.core import conf
+
+if conf.settings.ENVIRONMENT == "DEV":
+    logging.basicConfig(
+        stream=sys.stdout,
+        format="%(name)s|%(levelname)s: %(message)s",
+        level="ERROR",
+    )
 
 
 class AsyncJSONFileLogger:
@@ -59,11 +69,14 @@ def _get_logger_filepath(name: str) -> Path:
         filepath.parent.mkdir(parents=True, exist_ok=True)
     return filepath
 
+
 def get_async_logger(
     name, backupcount=None, interval="D", encoding="utf-8"
 ) -> AsyncJSONFileLogger:
     backupcount = backupcount or 5
-    return AsyncJSONFileLogger(name, _get_logger_filepath(name), backupcount, interval, encoding)
+    return AsyncJSONFileLogger(
+        name, _get_logger_filepath(name), backupcount, interval, encoding
+    )
 
 
 def get_logger(name: str) -> logging.Logger:

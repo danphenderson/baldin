@@ -1,4 +1,4 @@
-# app/core/conf.py
+# Path: app/core/conf.py
 from os import environ, getenv
 from pathlib import Path
 from typing import Literal, Union
@@ -7,7 +7,6 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 from pydantic import AnyHttpUrl, AnyUrl, EmailStr, validator
 from pydantic_settings import BaseSettings
-from selenium.webdriver.chrome.options import Options as ChromeOptions
 from toml import load as toml_load
 
 PROJECT_DIR = Path(__file__).parent.parent.parent
@@ -36,7 +35,6 @@ class Settings(_BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     BACKEND_CORS_ORIGINS: Union[str, list[AnyHttpUrl]]
     LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
-    LOGGING_FILE_NAME: str = "api.log"
     PUBLIC_ASSETS_DIR: str = "public"
 
     # PROJECT NAME, VERSION AND DESCRIPTION
@@ -75,9 +73,6 @@ class Settings(_BaseSettings):
     FIRST_SUPERUSER_EMAIL: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
 
-    # DATALAKE SETTINGS
-    DATALAKE_URI: str = "public/seeds"
-
     # VALIDATORS
     @validator("BACKEND_CORS_ORIGINS")
     def _assemble_cors_origins(cls, cors_origins: Union[str, list[AnyHttpUrl]]):
@@ -86,45 +81,38 @@ class Settings(_BaseSettings):
         return cors_origins
 
     @validator("DEFAULT_SQLALCHEMY_DATABASE_URI")
-    def _assemble_default_db_connection(cls, v: str, values: dict[str, str]) -> str:
-        return AnyUrl.build(
-            scheme="postgresql+asyncpg",
-            username=values["DEFAULT_DATABASE_USER"],
-            password=values["DEFAULT_DATABASE_PASSWORD"],
-            host=values["DEFAULT_DATABASE_HOSTNAME"],
-            port=values["DEFAULT_DATABASE_PORT"],  # type: ignore
-            path=f"{values['DEFAULT_DATABASE_DB']}",
+    def _assemble_default_db_connection(cls, v, values):
+        return str(
+            AnyUrl.build(
+                scheme="postgresql+asyncpg",
+                username=values["DEFAULT_DATABASE_USER"],
+                password=values["DEFAULT_DATABASE_PASSWORD"],
+                host=values["DEFAULT_DATABASE_HOSTNAME"],
+                port=values["DEFAULT_DATABASE_PORT"],
+                path=values["DEFAULT_DATABASE_DB"],
+            )
         )
 
-
-class Chrome(_BaseSettings, env_prefix="CHROME_"):
-    """
-    Configuration for a Google Chrome web driver.
-
-    See https://pypi.org/project/selenium/, `ChromeOptions` for more information.
-    """
-
-    DRIVER_PATH: str = ""
-    SHM_SIZE: str = "2g"
+    @validator("TEST_SQLALCHEMY_DATABASE_URI")
+    def _assemble_test_db_connection(cls, v, values):
+        return str(
+            AnyUrl.build(
+                scheme="postgresql+asyncpg",
+                username=values["TEST_DATABASE_USER"],
+                password=values["TEST_DATABASE_PASSWORD"],
+                host=values["TEST_DATABASE_HOSTNAME"],
+                port=int(values["TEST_DATABASE_PORT"]),
+                path=values["TEST_DATABASE_DB"],
+            )
+        )
 
     @property
-    def options(self) -> ChromeOptions:
-        options = ChromeOptions()
-        options.add_argument("--no-sandbox")  # Bypass OS security model
-        # options.add_argument("--headless")  # Run in headless mode
-        # options.add_argument("--disable-gpu")  # Disable GPU hardware acceleration
-        options.add_argument("--window-size=1420,1080")  # Set window size
-        options.add_argument("--ignore-certificate-errors")  # Ignore certificate errors
-        options.add_argument(
-            "--disable-dev-shm-usage"
-        )  # Overcome limited resource problems
-        # options.add_argument("--disable-extensions")  # Disable extensions
-        options.add_argument(
-            "--disable-web-security"
-        )  # Disable web security - use with caution
-        # options.add_argument("--incognito")  # Use incognito mode
-        # Add any other arguments you find necessary
-        return options
+    def DATALAKE_PATH(self) -> Path:
+        return Path(self.PUBLIC_ASSETS_DIR) / "datalake"
+
+    @property
+    def SEEDS_PATH(self) -> Path:
+        return Path(self.PUBLIC_ASSETS_DIR) / "seeds"
 
 
 class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
@@ -204,11 +192,6 @@ def get_settings(**kwargs) -> Settings:
     return settings
 
 
-def get_chrome_settings(**kwargs) -> Chrome:
-    chrome = Chrome(**kwargs)
-    return chrome
-
-
 def get_openai_settings(**kwargs) -> OpenAI:
     import openai as _openai
 
@@ -229,13 +212,12 @@ def get_glassdoor_settings(**kwargs) -> Glassdoor:
 
 settings = get_settings()
 
-chrome = get_chrome_settings()
-
 openai = get_openai_settings()
 
 linkedin = get_linkedin_settings()
 
 glassdoor = get_glassdoor_settings()
 
+# FIXME: Clean up the following hacks.
 environ["OPENAI_API_KEY"] = openai.API_KEY
 environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"

@@ -7,9 +7,10 @@ import ThemeProvider from './theme/theme-provider';
 import reportWebVitals from './report-web-vitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-
+const logVitals = (vitals: any) => console.log(vitals);
 root.render(
-  <React.StrictMode>
+  // Strict mode being to disabled to ensure log statements aren't cleared from the console
+  // <React.StrictMode>
     <ThemeProvider>
       <UserProvider>
         <BrowserRouter>
@@ -17,6 +18,6 @@ root.render(
         </BrowserRouter>
       </UserProvider>
     </ThemeProvider>
-  </React.StrictMode>
+  // </React.StrictMode>
 );
-reportWebVitals(console.log);
+reportWebVitals(logVitals);

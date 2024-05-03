@@ -3,7 +3,7 @@
 Baldin helps navigate the modern job market.
 ------
 
-Documentation is available at [https://baldin.readthedocs.io/en/latest/](https://baldin.readthedocs.io/en/latest/)
+Documentation is available at [https://danphenderson.github.io/baldin/](https://danphenderson.github.io/baldin/)
 
 
 **Source Code**:  <a href="https://github.com/danphenderson/baldin" target="_blank">https://https://github.com/danphenderson/baldin</a>
@@ -62,7 +62,8 @@ In the `frontend/` directory:
 
 Baldin: [API](http://127.0.0.1:8004) | [Frontend](http://localhost:3000/)
 2
-OpenAPI: [Swagger Documentation](http://127.0.0.1:8004/docs) | [(re)docs](http://127.0.0.1:8004/redoc)
+OpenAPI: [Swagger Documentation](http://127.0.0.1:8004/docs) | [(re)docs](http://127.0.0.1:8004/redocs)
+Baldin: [API](http://127.0.0.1:8004) | [Frontend](http://localhost:3000/) | [Admin](http://localhost:8004/admin)
 
 ### 5-steps to contributing
 

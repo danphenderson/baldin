@@ -1,6 +1,6 @@
-from .base import Scrapper
-from .conf import settings
-from .logging import get_logger
+from app.core import conf
+from app.logging import get_logger
+from etl.base import Scrapper
 
 logger = get_logger(__name__)
 

@@ -1,4 +1,4 @@
-# app/models.py
+# Path: app/models.py
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
@@ -27,14 +27,15 @@ class Base(DeclarativeBase):
 class OrchestrationEvent(Base):
     """
     Model for orchestration events.
-    Contains job name, status, message, and reference to the pipeline.
+    Contains orchestration pipeline event status, message, and reference to the pipeline.
     Useful for tracking the status of ETL jobs.
     """
 
     __tablename__ = "orchestration_events"
-    name = Column(String)
     status = Column(String, default="pending")  # running, success, failure
     message = Column(Text)
+    payload = Column(JSON)
+    environment = Column(String)
     source_uri = Column(JSON)
     destination_uri = Column(JSON)
     pipeline_id = Column(UUID, ForeignKey("orchestration_pipelines.id"))
@@ -51,9 +52,9 @@ class OrchestrationPipeline(Base):
     """
 
     __tablename__ = "orchestration_pipelines"
-    name = Column(String)
+    name = Column(String, index=True, nullable=False)
     description = Column(Text)
-    params = Column(JSON)
+    definition = Column(JSON)
     user_id = Column(UUID, ForeignKey("users.id"))
     user = relationship("User", back_populates="orchestration_pipelines")
     orchestration_events = relationship(
@@ -95,7 +96,7 @@ class Extractor(Base):
     """
 
     __tablename__ = "extractors"
-    name = Column(String)
+    name = Column(String, index=True, nullable=False)
     description = Column(Text)
     json_schema = Column(JSONB)
     instruction = Column(Text)
@@ -105,6 +106,32 @@ class Extractor(Base):
 
     def __repr__(self) -> str:
         return f"<Extractor(id={self.id}, description={self.description})>"
+
+
+class LeadXCompany(Base):
+
+    __tablename__ = "leads_x_companies"
+    lead_id = Column(UUID, ForeignKey("leads.id"), primary_key=True)
+    company_id = Column(UUID, ForeignKey("companies.id"), primary_key=True)
+
+
+class Company(Base):
+    """
+    Represents a company.
+    Includes company name, industry, size, location, etc.
+    Linked to job leads through many-to-many relationship.
+    """
+
+    __tablename__ = "companies"
+    name = Column(String, nullable=False)
+    industry = Column(String)
+    size = Column(String)
+    location = Column(String)
+    description = Column(Text)
+
+    leads = relationship(
+        "Lead", secondary="leads_x_companies", back_populates="companies"
+    )
 
 
 class Lead(Base):
@@ -117,18 +144,20 @@ class Lead(Base):
     __tablename__ = "leads"
     url = Column(String, unique=True, index=True)
     title = Column(String)
-    company = Column(String)
     description = Column(String)
     location = Column(String)
     salary = Column(String)
     job_function = Column(String)
-    industries = Column(String, index=True)
     employment_type = Column(String)
     seniority_level = Column(String)
     education_level = Column(String)
     notes = Column(Text)
     hiring_manager = Column(String)
+
     application = relationship("Application", back_populates="lead")
+    companies = relationship(
+        "Company", secondary="leads_x_companies", back_populates="leads"
+    )
 
 
 # End of system models
@@ -267,7 +296,7 @@ class CoverLetter(Base):
     """
     Represents a user's cover letter.
     Includes name, content, type.
-    Linked to users and job applications via many-to-one and many-to-many relationships.
+    Linked to users and job applications via many-to-one and many-to-many relationships, respectively.
     """
 
     __tablename__ = "cover_letters"

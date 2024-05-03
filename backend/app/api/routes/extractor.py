@@ -1,9 +1,9 @@
 # app/api/routes/extractor.py
-from typing import Annotated, Literal, Sequence
+from typing import Sequence
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import UUID4, Field
+from pydantic import UUID4, AnyHttpUrl, Field
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 from typing_extensions import TypedDict
@@ -13,14 +13,12 @@ from app.api.deps import (
     SUPPORTED_MIMETYPES,
     AsyncSession,
     console_log,
-    extract_entire_document,
-    extract_from_content,
     get_async_session,
     get_current_user,
     get_extractor,
     get_extractor_example,
     models,
-    parse_binary_input,
+    run_extractor,
     schemas,
 )
 from app.core import conf
@@ -131,7 +129,7 @@ UPDATE_PROMPT = ChatPromptTemplate.from_messages(
 
 UPDATE_CHAIN = (
     UPDATE_PROMPT
-    | conf.openai.get_model().with_structured_output(
+    | conf.openai.get_model().with_structured_output(  # noqa: W503
         schema=ExtractorDefinition  # type: ignore
     )
 ).with_config({"run_name": "suggest_update"})
@@ -139,6 +137,8 @@ UPDATE_CHAIN = (
 
 @router.post("/suggest", response_model=ExtractorDefinition)
 async def suggest_extractor(suggest_extractor: SuggestExtractor) -> ExtractorDefinition:
+
+    # TODO: Have this take a bool query parameter signaling to create a new extractor
     """Suggest an extractor based on a description."""
     if suggest_extractor.json_schema:
         res = await UPDATE_CHAIN.ainvoke(
@@ -149,58 +149,6 @@ async def suggest_extractor(suggest_extractor: SuggestExtractor) -> ExtractorDef
 
     console_log.warning(f"Suggested extractor: {res}")
     return res
-
-
-@router.post("/run", response_model=schemas.ExtractorResponse)
-async def run_extractor(
-    extractor_id: Annotated[UUID4, Form()],
-    db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
-    mode: Literal["entire_document", "retrieval"] = Form("entire_document"),
-    file: UploadFile | None = File(None),
-    text: str | None = Form(None),
-    llm: str = Form(conf.openai.COMPLETION_MODEL),
-) -> schemas.ExtractorResponse:
-    if text is None and file is None:
-        raise HTTPException(status_code=422, detail="No text or file provided.")
-
-    extractor = (
-        await db.execute(
-            select(models.Extractor).filter_by(id=extractor_id, user_id=user.id)
-        )
-    ).scalar()
-
-    if extractor is None:
-        raise HTTPException(status_code=404, detail="Extractor not found for user.")
-
-    console_log.warning(f"Extractor schema before extraction: {extractor.json_schema}")
-    if extractor.json_schema is None:
-        raise HTTPException(status_code=500, detail="Extractor schema is not loaded.")
-
-    if text:
-        text_ = text
-    else:
-        documents = parse_binary_input(file.file)
-        # TODO: Add metadata like location from original file where
-        # the text was extracted from
-        text_ = "\n".join([document.page_content for document in documents])
-
-    if mode == "entire_document":
-        res = await extract_entire_document(text_, extractor, llm)
-    elif mode == "retrieval":
-        console_log.warning(f"Extracting from content: {text_}")
-        console_log.warning(f"Extractor schema: {extractor.json_schema}")
-        console_log.warning(f"LLM: {llm}")
-        res = await extract_from_content(text_, extractor, llm)
-    else:
-        raise ValueError(
-            f"Invalid mode {mode}. Expected one of 'entire_document', 'retrieval'."
-        )
-    console_log.warning(res)
-    if "content_to_long" not in res:
-        res["content_to_long"] = False
-
-    return schemas.ExtractorResponse(**res)
 
 
 @router.get("/{id}", response_model=schemas.ExtractorRead)
@@ -301,3 +249,14 @@ async def delete_extractor_example(
 ) -> None:
     await db.delete(example)
     await db.commit()
+
+
+@router.post("/{id}/run", response_model=schemas.ExtractorResponse)
+async def extractor_runner(
+    extractor: schemas.ExtractorRead = Depends(get_extractor),
+    payload: schemas.ExtractorRun = Depends(schemas.ExtractorRun),
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> schemas.ExtractorResponse:
+    """Run an extractor on a given payload"""
+    return await run_extractor(extractor, payload, user, db)

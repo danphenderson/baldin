@@ -33,6 +33,14 @@ export interface paths {
     /** Verify:Verify */
     post: operations["verify_verify_auth_verify_post"];
   };
+  "/db-management/list-tables": {
+    /** List Tables */
+    get: operations["list_tables_db_management_list_tables_get"];
+  };
+  "/db-management/table-details/{table_name}": {
+    /** Get Table Details */
+    get: operations["get_table_details_db_management_table_details__table_name__get"];
+  };
   "/users/me": {
     /** Users:Current User */
     get: operations["users_current_user_users_me_get"];
@@ -51,18 +59,15 @@ export interface paths {
     /** Read Profile */
     get: operations["read_profile_users_me_profile_get"];
   };
-  "/leads/load_database": {
-    /**
-     * Load Database
-     * @description Loads the database with leads from the data lake.
-     */
-    post: operations["load_database_leads_load_database_post"];
+  "/users/seed": {
+    /** Seed Users */
+    post: operations["seed_users_users_seed_post"];
   };
   "/leads/": {
     /** Read Leads */
     get: operations["read_leads_leads__get"];
-    /** Create Lead */
-    post: operations["create_lead_leads__post"];
+    /** Create Job Lead */
+    post: operations["create_job_lead_leads__post"];
   };
   "/leads/{id}": {
     /** Read Lead */
@@ -78,6 +83,36 @@ export interface paths {
      * @description Drops all leads records in the table.
      */
     delete: operations["purge_leads_leads_purge_delete"];
+  };
+  "/leads/extract": {
+    /** Extract Lead */
+    post: operations["extract_lead_leads_extract_post"];
+  };
+  "/leads/seed": {
+    /** Seed Leads */
+    post: operations["seed_leads_leads_seed_post"];
+  };
+  "/companies/{id}": {
+    /** Get Company */
+    get: operations["get_company_companies__id__get"];
+    /** Update Company */
+    put: operations["update_company_companies__id__put"];
+    /** Delete Company */
+    delete: operations["delete_company_companies__id__delete"];
+  };
+  "/companies/": {
+    /** Get Companies */
+    get: operations["get_companies_companies__get"];
+    /** Create Company */
+    post: operations["create_company_companies__post"];
+  };
+  "/companies/{id}/leads": {
+    /** Get Company Leads */
+    get: operations["get_company_leads_companies__id__leads_get"];
+  };
+  "/companies/extract": {
+    /** Extract Company */
+    post: operations["extract_company_companies_extract_post"];
   };
   "/data_orchestration/pipelines": {
     /** Read Orch Pipelines */
@@ -119,6 +154,10 @@ export interface paths {
     /** Delete User Contact */
     delete: operations["delete_user_contact_contacts__contact_id__delete"];
   };
+  "/contacts/extract": {
+    /** Extract Contacts */
+    post: operations["extract_contacts_contacts_extract_post"];
+  };
   "/experiences/": {
     /** Read Current User Experiences */
     get: operations["read_current_user_experiences_experiences__get"];
@@ -132,6 +171,14 @@ export interface paths {
     put: operations["update_user_experience_experiences__experience_id__put"];
     /** Delete User Experience */
     delete: operations["delete_user_experience_experiences__experience_id__delete"];
+  };
+  "/experiences/extract": {
+    /** Extract User Experiences */
+    post: operations["extract_user_experiences_experiences_extract_post"];
+  };
+  "/skills/extract": {
+    /** Extract User Skills */
+    post: operations["extract_user_skills_skills_extract_post"];
   };
   "/skills/": {
     /** Get Current User Skills */
@@ -189,6 +236,8 @@ export interface paths {
     post: operations["create_application_applications__post"];
   };
   "/applications/{id}": {
+    /** Get Application By Id */
+    get: operations["get_application_by_id_applications__id__get"];
     /** Delete Application */
     delete: operations["delete_application_applications__id__delete"];
     /** Update Application */
@@ -224,6 +273,10 @@ export interface paths {
     /** Delete User Education */
     delete: operations["delete_user_education_education__education_id__delete"];
   };
+  "/education/extract": {
+    /** Extract Education */
+    post: operations["extract_education_education_extract_post"];
+  };
   "/certificate/": {
     /** Read Current User Certificates */
     get: operations["read_current_user_certificates_certificate__get"];
@@ -238,6 +291,10 @@ export interface paths {
     /** Delete User Certificate */
     delete: operations["delete_user_certificate_certificate__certificate_id__delete"];
   };
+  "/certificate/extract": {
+    /** Extract Certificates */
+    post: operations["extract_certificates_certificate_extract_post"];
+  };
   "/extractor/configurables": {
     /**
      * Get Configuration
@@ -251,10 +308,6 @@ export interface paths {
      * @description Suggest an extractor based on a description.
      */
     post: operations["suggest_extractor_extractor_suggest_post"];
-  };
-  "/extractor/run": {
-    /** Run Extractor */
-    post: operations["run_extractor_extractor_run_post"];
   };
   "/extractor/{id}": {
     /** Read Extractor */
@@ -280,9 +333,12 @@ export interface paths {
     /** Delete Extractor Example */
     delete: operations["delete_extractor_example_extractor__id__examples__example_id__delete"];
   };
-  "/ping": {
-    /** Pong */
-    get: operations["pong_ping_get"];
+  "/extractor/{id}/run": {
+    /**
+     * Extractor Runner
+     * @description Run an extractor on a given payload
+     */
+    post: operations["extractor_runner_extractor__id__run_post"];
   };
   "/": {
     /** Root */
@@ -372,6 +428,16 @@ export interface components {
       /** Client Secret */
       client_secret?: string | null;
     };
+    /** Body_extract_user_skills_skills_extract_post */
+    Body_extract_user_skills_skills_extract_post: {
+      /** File */
+      file?: string | null;
+    };
+    /** Body_extractor_runner_extractor__id__run_post */
+    Body_extractor_runner_extractor__id__run_post: {
+      /** File */
+      file?: string | null;
+    };
     /** Body_reset_forgot_password_auth_forgot_password_post */
     Body_reset_forgot_password_auth_forgot_password_post: {
       /**
@@ -386,29 +452,6 @@ export interface components {
       token: string;
       /** Password */
       password: string;
-    };
-    /** Body_run_extractor_extractor_run_post */
-    Body_run_extractor_extractor_run_post: {
-      /**
-       * Extractor Id
-       * Format: uuid4
-       */
-      extractor_id: string;
-      /**
-       * Mode
-       * @default entire_document
-       * @enum {string}
-       */
-      mode?: "entire_document" | "retrieval";
-      /** File */
-      file?: string | null;
-      /** Text */
-      text?: string | null;
-      /**
-       * Llm
-       * @default gpt-3.5-turbo
-       */
-      llm?: string;
     };
     /** Body_verify_request_token_auth_request_verify_token_post */
     Body_verify_request_token_auth_request_verify_token_post: {
@@ -509,6 +552,108 @@ export interface components {
        * @description Issued date of the certificate
        */
       issued_date?: string | null;
+    };
+    /** CompanyCreate */
+    CompanyCreate: {
+      /**
+       * Name
+       * @description Company name
+       */
+      name?: string | null;
+      /**
+       * Industry
+       * @description Industry of the company
+       */
+      industry?: string | null;
+      /**
+       * Size
+       * @description Size of the company
+       */
+      size?: string | null;
+      /**
+       * Location
+       * @description Location of the company
+       */
+      location?: string | null;
+      /**
+       * Description
+       * @description Description of the company
+       */
+      description?: string | null;
+    };
+    /** CompanyRead */
+    CompanyRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Name
+       * @description Company name
+       */
+      name?: string | null;
+      /**
+       * Industry
+       * @description Industry of the company
+       */
+      industry?: string | null;
+      /**
+       * Size
+       * @description Size of the company
+       */
+      size?: string | null;
+      /**
+       * Location
+       * @description Location of the company
+       */
+      location?: string | null;
+      /**
+       * Description
+       * @description Description of the company
+       */
+      description?: string | null;
+    };
+    /** CompanyUpdate */
+    CompanyUpdate: {
+      /**
+       * Name
+       * @description Company name
+       */
+      name?: string | null;
+      /**
+       * Industry
+       * @description Industry of the company
+       */
+      industry?: string | null;
+      /**
+       * Size
+       * @description Size of the company
+       */
+      size?: string | null;
+      /**
+       * Location
+       * @description Location of the company
+       */
+      location?: string | null;
+      /**
+       * Description
+       * @description Description of the company
+       */
+      description?: string | null;
     };
     /**
      * ConfigurationResponse
@@ -1130,6 +1275,39 @@ export interface components {
        */
       content_too_long?: boolean;
     };
+    /**
+     * ExtractorRun
+     * @description Request to run an extractor.
+     */
+    ExtractorRun: {
+      /**
+       * Mode
+       * @description Mode to run the extractor in. 'entire_document' extracts information from the entire document. 'retrieval' extracts information from a specific section of the document.
+       * @default entire_document
+       * @enum {string}
+       */
+      mode?: "entire_document" | "retrieval";
+      /**
+       * File
+       * @description A file to extract information from. If provided, the file will be processed and the text extracted.
+       */
+      file?: File | null;
+      /**
+       * Text
+       * @description Text to extract information from. If provided, the text will be processed and the information extracted.
+       */
+      text?: string | null;
+      /**
+       * Url
+       * @description A URL to extract information from. If provided, the URL will be processed and the information extracted.
+       */
+      url?: string | null;
+      /**
+       * Llm
+       * @description The language model to use for the extraction.
+       */
+      llm?: string | null;
+    };
     /** ExtractorUpdate */
     ExtractorUpdate: {
       /**
@@ -1172,11 +1350,6 @@ export interface components {
        */
       title?: string | null;
       /**
-       * Company
-       * @description Company name
-       */
-      company?: string | null;
-      /**
        * Description
        * @description Job description
        */
@@ -1196,11 +1369,6 @@ export interface components {
        * @description Job function
        */
       job_function?: string | null;
-      /**
-       * Industries
-       * @description Industries involved
-       */
-      industries?: string | null;
       /**
        * Employment Type
        * @description Type of employment
@@ -1228,6 +1396,11 @@ export interface components {
       hiring_manager?: string | null;
       /** Url */
       url: string;
+      /**
+       * Company Ids
+       * @description Company IDs
+       */
+      company_ids?: string[] | null;
     };
     /** LeadRead */
     LeadRead: {
@@ -1236,11 +1409,6 @@ export interface components {
        * @description Job title
        */
       title?: string | null;
-      /**
-       * Company
-       * @description Company name
-       */
-      company?: string | null;
       /**
        * Description
        * @description Job description
@@ -1261,11 +1429,6 @@ export interface components {
        * @description Job function
        */
       job_function?: string | null;
-      /**
-       * Industries
-       * @description Industries involved
-       */
-      industries?: string | null;
       /**
        * Employment Type
        * @description Type of employment
@@ -1314,6 +1477,12 @@ export interface components {
        * @description Job posting URL
        */
       url?: string | null;
+      /**
+       * Companies
+       * @description List of companies associated with the lead
+       * @default []
+       */
+      companies?: components["schemas"]["CompanyRead"][];
     };
     /** LeadUpdate */
     LeadUpdate: {
@@ -1322,11 +1491,6 @@ export interface components {
        * @description Job title
        */
       title?: string | null;
-      /**
-       * Company
-       * @description Company name
-       */
-      company?: string | null;
       /**
        * Description
        * @description Job description
@@ -1347,11 +1511,6 @@ export interface components {
        * @description Job function
        */
       job_function?: string | null;
-      /**
-       * Industries
-       * @description Industries involved
-       */
-      industries?: string | null;
       /**
        * Employment Type
        * @description Type of employment
@@ -1377,6 +1536,12 @@ export interface components {
        * @description Hiring manager
        */
       hiring_manager?: string | null;
+      /**
+       * Company Ids
+       * @description Company IDs
+       * @default []
+       */
+      company_ids?: string[];
     };
     /** LeadsPaginatedRead */
     LeadsPaginatedRead: {
@@ -1392,15 +1557,20 @@ export interface components {
     /** OrchestrationEventCreate */
     OrchestrationEventCreate: {
       /**
-       * Name
-       * @description Name of the event
-       */
-      name?: string | null;
-      /**
        * Message
        * @description Error message
        */
       message?: string | null;
+      /**
+       * Payload
+       * @description Payload of the triggering event
+       */
+      payload?: Record<string, never> | null;
+      /**
+       * Environment
+       * @description Application environment setting
+       */
+      environment?: string | null;
       /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
@@ -1434,15 +1604,20 @@ export interface components {
        */
       updated_at: string;
       /**
-       * Name
-       * @description Name of the event
-       */
-      name?: string | null;
-      /**
        * Message
        * @description Error message
        */
       message?: string | null;
+      /**
+       * Payload
+       * @description Payload of the triggering event
+       */
+      payload?: Record<string, never> | null;
+      /**
+       * Environment
+       * @description Application environment setting
+       */
+      environment?: string | null;
       /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
@@ -1476,15 +1651,20 @@ export interface components {
        */
       updated_at: string;
       /**
-       * Name
-       * @description Name of the event
-       */
-      name?: string | null;
-      /**
        * Message
        * @description Error message
        */
       message?: string | null;
+      /**
+       * Payload
+       * @description Payload of the triggering event
+       */
+      payload?: Record<string, never> | null;
+      /**
+       * Environment
+       * @description Application environment setting
+       */
+      environment?: string | null;
       /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
@@ -1505,15 +1685,20 @@ export interface components {
     /** OrchestrationEventUpdate */
     OrchestrationEventUpdate: {
       /**
-       * Name
-       * @description Name of the event
-       */
-      name?: string | null;
-      /**
        * Message
        * @description Error message
        */
       message?: string | null;
+      /**
+       * Payload
+       * @description Payload of the triggering event
+       */
+      payload?: Record<string, never> | null;
+      /**
+       * Environment
+       * @description Application environment setting
+       */
+      environment?: string | null;
       /** @description Source of the pipeline */
       source_uri?: components["schemas"]["URI"] | null;
       /** @description Destination of the pipeline */
@@ -1539,10 +1724,10 @@ export interface components {
        */
       description?: string | null;
       /**
-       * Params
+       * Definition
        * @description Parameters for the pipeline
        */
-      params?: Record<string, never> | null;
+      definition?: Record<string, never> | null;
     };
     /** OrchestrationPipelineRead */
     OrchestrationPipelineRead: {
@@ -1575,10 +1760,10 @@ export interface components {
        */
       description?: string | null;
       /**
-       * Params
+       * Definition
        * @description Parameters for the pipeline
        */
-      params?: Record<string, never> | null;
+      definition?: Record<string, never> | null;
       /**
        * Orchestration Events
        * @description Events in the pipeline
@@ -1599,10 +1784,10 @@ export interface components {
        */
       description?: string | null;
       /**
-       * Params
+       * Definition
        * @description Parameters for the pipeline
        */
-      params?: Record<string, never> | null;
+      definition?: Record<string, never> | null;
       /**
        * Events
        * @description Events in the pipeline
@@ -2252,6 +2437,41 @@ export interface operations {
       };
     };
   };
+  /** List Tables */
+  list_tables_db_management_list_tables_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string[];
+        };
+      };
+    };
+  };
+  /** Get Table Details */
+  get_table_details_db_management_table_details__table_name__get: {
+    parameters: {
+      path: {
+        table_name: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: string;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Users:Current User */
   users_current_user_users_me_get: {
     responses: {
@@ -2421,16 +2641,13 @@ export interface operations {
       };
     };
   };
-  /**
-   * Load Database
-   * @description Loads the database with leads from the data lake.
-   */
-  load_database_leads_load_database_post: {
+  /** Seed Users */
+  seed_users_users_seed_post: {
     responses: {
       /** @description Successful Response */
-      202: {
+      200: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+          "application/json": string;
         };
       };
     };
@@ -2462,8 +2679,8 @@ export interface operations {
       };
     };
   };
-  /** Create Lead */
-  create_lead_leads__post: {
+  /** Create Job Lead */
+  create_job_lead_leads__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["LeadCreate"];
@@ -2473,7 +2690,7 @@ export interface operations {
       /** @description Successful Response */
       201: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["LeadRead"];
         };
       };
       /** @description Validation Error */
@@ -2493,7 +2710,7 @@ export interface operations {
     };
     responses: {
       /** @description Successful Response */
-      202: {
+      200: {
         content: {
           "application/json": components["schemas"]["LeadRead"];
         };
@@ -2515,10 +2732,8 @@ export interface operations {
     };
     responses: {
       /** @description Successful Response */
-      202: {
-        content: {
-          "application/json": Record<string, never>;
-        };
+      204: {
+        content: never;
       };
       /** @description Validation Error */
       422: {
@@ -2565,6 +2780,186 @@ export interface operations {
       202: {
         content: {
           "application/json": Record<string, never>;
+        };
+      };
+    };
+  };
+  /** Extract Lead */
+  extract_lead_leads_extract_post: {
+    parameters: {
+      query: {
+        extraction_url: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Leads */
+  seed_leads_leads_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
+  /** Get Company */
+  get_company_companies__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Company */
+  update_company_companies__id__put: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Company */
+  delete_company_companies__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Companies */
+  get_companies_companies__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"][];
+        };
+      };
+    };
+  };
+  /** Create Company */
+  create_company_companies__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Company Leads */
+  get_company_leads_companies__id__leads_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract Company */
+  extract_company_companies_extract_post: {
+    parameters: {
+      query: {
+        /** @description URL for data extraction */
+        extraction_url: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -2857,6 +3252,28 @@ export interface operations {
       };
     };
   };
+  /** Extract Contacts */
+  extract_contacts_contacts_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ContactRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Read Current User Experiences */
   read_current_user_experiences_experiences__get: {
     responses: {
@@ -2950,6 +3367,58 @@ export interface operations {
       /** @description Successful Response */
       204: {
         content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract User Experiences */
+  extract_user_experiences_experiences_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract User Skills */
+  extract_user_skills_skills_extract_post: {
+    parameters: {
+      query?: {
+        mode?: "entire_document" | "retrieval";
+        text?: string | null;
+        url?: string | null;
+        llm?: string | null;
+      };
+    };
+    requestBody?: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_extract_user_skills_skills_extract_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"][];
+        };
       };
       /** @description Validation Error */
       422: {
@@ -3337,6 +3806,28 @@ export interface operations {
       };
     };
   };
+  /** Get Application By Id */
+  get_application_by_id_applications__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Delete Application */
   delete_application_applications__id__delete: {
     parameters: {
@@ -3612,6 +4103,28 @@ export interface operations {
       };
     };
   };
+  /** Extract Education */
+  extract_education_education_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Read Current User Certificates */
   read_current_user_certificates_certificate__get: {
     responses: {
@@ -3716,6 +4229,28 @@ export interface operations {
       };
     };
   };
+  /** Extract Certificates */
+  extract_certificates_certificate_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /**
    * Get Configuration
    * @description Endpoint to show server configuration.
@@ -3745,28 +4280,6 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["ExtractorDefinition"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Run Extractor */
-  run_extractor_extractor_run_post: {
-    requestBody: {
-      content: {
-        "multipart/form-data": components["schemas"]["Body_run_extractor_extractor_run_post"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ExtractorResponse"];
         };
       };
       /** @description Validation Error */
@@ -3953,13 +4466,38 @@ export interface operations {
       };
     };
   };
-  /** Pong */
-  pong_ping_get: {
+  /**
+   * Extractor Runner
+   * @description Run an extractor on a given payload
+   */
+  extractor_runner_extractor__id__run_post: {
+    parameters: {
+      query?: {
+        mode?: "entire_document" | "retrieval";
+        text?: string | null;
+        url?: string | null;
+        llm?: string | null;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_extractor_runner_extractor__id__run_post"];
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": unknown;
+          "application/json": components["schemas"]["ExtractorResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

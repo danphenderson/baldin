@@ -1,4 +1,4 @@
-# app/core/security.py
+# Path: app/core/security.py
 """
 You can have several authentication methods, e.g. a cookie
 authentication for browser-based queries and a JWT token authentication for pure API queries.
@@ -88,24 +88,21 @@ get_user_db_context = contextlib.asynccontextmanager(get_user_db)
 get_user_manager_context = contextlib.asynccontextmanager(get_user_manager)
 
 
-async def create_user(email: str, password: str, is_superuser: bool = False):
+async def create_user(schema: schemas.UserCreate):
     try:
         async with get_async_session_context() as session:
             async with get_user_db_context(session) as user_db:
                 async with get_user_manager_context(user_db) as user_manager:
-                    user = await user_manager.create(
-                        schemas.UserCreate(
-                            email=email, password=password, is_superuser=is_superuser  # type: ignore
-                        )
-                    )
+                    user = await user_manager.create(schema)
                     console_log.info(f"User created {user}")
     except UserAlreadyExists:
-        console_log.info(f"User {email} already exists")
+        console_log.info(f"User already exists for {schema}")
 
 
 async def create_default_superuser():
-    await create_user(
+    default_superuser_payload = schemas.UserCreate(
         email=conf.settings.FIRST_SUPERUSER_EMAIL,
         password=conf.settings.FIRST_SUPERUSER_PASSWORD,
-        is_superuser=True,
+        is_superuser=True,  # type: ignore
     )
+    await create_user(default_superuser_payload)

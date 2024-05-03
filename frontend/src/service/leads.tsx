@@ -11,22 +11,42 @@ export type LeadsPaginatedRead = components['schemas']['LeadsPaginatedRead'];
 // types that are exported from other services
 type OrchestrationEventRead = components['schemas']['OrchestrationEventRead-Output'];
 
-
 const BASE_URL = "/leads"; // Can be moved to a config file or environment variable
 
 
-const createRequestOptions = (token: string | null, method: string, body?: any): RequestInit => {
+const createRequestOptions = (token: string | null, method: string, body?: any, isFormData?: boolean): RequestInit => {
   if (!token) {
+    console.log("Authorization token is required")
     throw new Error("Authorization token is required");
   }
-  return {
-    method: method,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: body ? JSON.stringify(body) : null,
-  };
+
+  let headers = new Headers({
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json"
+  });
+
+  if (isFormData) {
+    // For file uploads, let the browser set 'Content-Type' to 'multipart/form-data' with the correct boundary.
+    // Also, the body should be a FormData object & not a JSON string.
+    const formData = new FormData();
+    headers.delete("Content-Type");
+    if (body) {
+      for (const [key, value] of Object.entries(body)) {
+        formData.append(key, value as string);
+      }
+    }
+    return {
+      method: method,
+      headers: headers,
+      body: formData,
+    };
+  } else {
+    return {
+      method: method,
+      headers: headers,
+      body: body ? JSON.stringify(body) : null,
+    };
+  }
 };
 
 
@@ -52,7 +72,7 @@ export const getLead = async (token: string, id: string): Promise<LeadRead> => {
 
 export const createLead = async (token: string, lead: LeadCreate): Promise<LeadRead> => {
   const requestOptions = createRequestOptions(token, "POST", lead);
-  return fetchAPI(BASE_URL, requestOptions);
+  return fetchAPI(`${BASE_URL}/`, requestOptions);
 };
 
 export const updateLead = async (token: string, id: string, lead: LeadUpdate): Promise<LeadRead> => {
@@ -65,12 +85,18 @@ export const deleteLead = async (token: string, id: string): Promise<void> => {
   return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
 };
 
-export const loadLeadDatabase = async (token: string, params: any): Promise<OrchestrationEventRead> => {
-  const requestOptions = createRequestOptions(token, "POST", params);
-  return fetchAPI(`${BASE_URL}/load_database`, requestOptions);
+export const getLeadOrchestrationEvents = async (token: string, id: string): Promise<OrchestrationEventRead[]> => {
+  const requestOptions = createRequestOptions(token, "GET");
+  return fetchAPI(`${BASE_URL}/${id}/orchestration_events`, requestOptions);
+};
+
+export const seedLeads = async (token: string): Promise<void> => {
+  const requestOptions = createRequestOptions(token, "POST");
+  return fetchAPI(`${BASE_URL}/seed`, requestOptions);
 }
 
-export const erichLeadDataLake = async (): Promise<OrchestrationEventRead> => {
-  const requestOptions = createRequestOptions(null, "POST");
-  return fetchAPI(`${BASE_URL}/enrich_data_lake`, requestOptions);
+export const extractLead = async (token: string, extraction_url: string): Promise<LeadRead> => {
+  // extraction_url is a query parameter that is passed to the backend to extract the lead
+  const requestOptions = createRequestOptions(token, "POST");
+  return fetchAPI(`${BASE_URL}/extract?extraction_url=${extraction_url}`, requestOptions);
 }

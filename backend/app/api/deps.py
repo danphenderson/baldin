@@ -1,76 +1,61 @@
-# app/api/deps.py
+# Path: app/api/deps.py
 import json
 import uuid
 from datetime import datetime
 from pathlib import Path  # noqa
-from typing import Any, Sequence, Type
+from typing import Any, Sequence
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Query  # noqa
 from pydantic import UUID4
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
-from app import models, schemas, utils  # noqa
+from app import logging, models, schemas, utils  # noqa
 from app.core import conf  # noqa
 from app.core import security  # noqa
-from app.core.db import AsyncSession, get_async_session, session_context  # noqa
-from app.core.langchain import generate_cover_letter, generate_resume  # noqa
+from app.core.db import (  # noqa
+    AsyncSession,
+    DataBaseManager,
+    get_async_session,
+    session_context,
+)
+from app.core.langchain import (  # noqa
+    extract_text_from_url,
+    generate_cover_letter,
+    generate_resume,
+)
 from app.core.security import (  # noqa
+    create_user,
     fastapi_users,
     get_current_superuser,
     get_current_user,
 )
-from app.extractor.extraction_runnable import extract_entire_document
-from app.extractor.parsing import (
+from app.extractor.extraction_runnable import extract_entire_document  # noqa
+from app.extractor.parsing import (  # noqa
     MAX_FILE_SIZE_MB,
     SUPPORTED_MIMETYPES,
     parse_binary_input,
 )
-from app.extractor.retrieval import extract_from_content
-from app.logging import get_async_logger, console_log  # noqa
-
+from app.extractor.retrieval import extract_from_content  # noqa
+from app.logging import console_log, get_async_logger  # noqa
 
 log = get_async_logger(__name__)
 
-async def _403(user_id: UUID4, obj: Any, obj_id: UUID4) -> HTTPException:
+
+async def _403(user_id: UUID4, obj: Any, id: UUID4 | str) -> HTTPException:
     await log.warning(
-        f"Unauthorized user {user_id} requested access to {obj} with id {obj_id}"
+        f"Unauthorized user {user_id} requested access to {obj} with id {id}"
     )
     raise HTTPException(
         status_code=403,
-        detail=f"User {user_id} is not authorized to access {obj} with {obj_id}",
+        detail=f"User {user_id} is not authorized to access {obj} with {id}",
     )
 
 
-async def _404(obj: Any, id: UUID4 | None = None) -> HTTPException:
+async def _404(obj: Any, id: UUID4 | str | None = None) -> HTTPException:
     msg = f"Object with {id} not found" if id else "Unable to find object"
-    await log.info(msg)
+    await log.warning(msg)
     raise HTTPException(status_code=404, detail=f"Object with id {id} not found")
-
-
-async def load_record_into_table(
-    create_schema: schemas.BaseSchema,
-    table_model: Type[models.Base],
-    db: AsyncSession = Depends(get_async_session),
-) -> None:
-    """
-    Inserts record into the table.
-    """
-    ...
-
-
-async def load_user_record_into_table(
-    user_id: UUID4,
-    create_schema: schemas.BaseSchema,
-    table_model: Type[models.Base],
-    db: AsyncSession = Depends(get_async_session),
-) -> None:
-    """
-    Inserts record into a table that has a foreign key to the user table.
-    """
-    # record_data = {**create_schema.dict(), "user_id": user_id}
-    # record = table_model(**record_data)
-    ...
 
 
 async def get_pagination_params(
@@ -86,11 +71,41 @@ async def get_pagination_params(
 async def get_lead(
     id: UUID4, db: AsyncSession = Depends(get_async_session)
 ) -> models.Lead:
-    lead = await db.get(models.Lead, id)
+    lead = await db.execute(
+        select(models.Lead)
+        .options(joinedload(models.Lead.companies))
+        .where(models.Lead.id == id)
+    )
     if not lead:
-        raise await _404(lead, id)
-    await log.info(f"get_lead: {lead}")
+        raise HTTPException(status_code=404, detail=f"Lead not found: {id}")
+    return lead.scalars().first()
+
+
+async def create_lead(
+    payload: schemas.LeadCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Lead:
+    lead = models.Lead(**payload.dict(exclude={"company_ids"}))
+    if payload.company_ids:
+        lead.companies = [
+            await db.get(models.Company, company_id)
+            for company_id in payload.company_ids
+        ]
+    db.add(lead)
+    await db.commit()
+    await db.refresh(lead)
     return lead
+
+
+async def get_company_by_id(
+    id: UUID4, db: AsyncSession = Depends(get_async_session)
+) -> models.Company:
+    company = await db.get(models.Company, id)
+    if not company:
+        raise await _404(company, id)
+    await log.info(f"get_company_by_id: {company}")
+    return company
 
 
 async def get_orchestration_event(
@@ -136,14 +151,27 @@ async def create_orchestration_event(
 async def get_skill(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),
-    user: models.User = Depends(get_current_user),
+    user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Skill:
     skill = await db.get(models.Skill, id)
     if not skill:
         raise await _404(skill, id)
-    if skill.user_id != user.id:  # type: ignore
+    if skill.user_id != user.id:
         raise await _403(user.id, skill, id)
     await log.info(f"get_skill: {skill}")
+    return skill
+
+
+async def create_skill(
+    payload: schemas.SkillCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Skill:
+    skill = models.Skill(**payload.dict(), user_id=user.id)
+    db.add(skill)
+    await db.commit()
+    await db.refresh(skill)
+    await log.info(f"create_skill: {skill}")
     return skill
 
 
@@ -158,6 +186,19 @@ async def get_experience(
     if experience.user_id != user.id:  # type: ignore
         raise await _403(user.id, experience, id)
     await log.info(f"get_experience: {experience}")
+    return experience
+
+
+async def create_experience(
+    payload: schemas.ExperienceCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Experience:
+    experience = models.Experience(**payload.dict(), user_id=user.id)
+    db.add(experience)
+    await db.commit()
+    await db.refresh(experience)
+    await log.info(f"create_experience: {experience}")
     return experience
 
 
@@ -186,6 +227,19 @@ async def get_contact(
     if contact.user_id != user.id:  # type: ignore
         raise await _403(user.id, contact, id)
     await log.info(f"get_contact: {contact}")
+    return contact
+
+
+async def create_contact(
+    payload: schemas.ContactCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Contact:
+    contact = models.Contact(**payload.dict(), user_id=user.id)
+    db.add(contact)
+    await db.commit()
+    await db.refresh(contact)
+    await log.info(f"create_contact: {contact}")
     return contact
 
 
@@ -231,6 +285,19 @@ async def get_education(
     return education
 
 
+async def create_education(
+    payload: schemas.EducationCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Education:
+    education = models.Education(**payload.dict(), user_id=user.id)
+    db.add(education)
+    await db.commit()
+    await db.refresh(education)
+    await log.info(f"create_education: {education}")
+    return education
+
+
 async def get_certificate(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),
@@ -242,6 +309,19 @@ async def get_certificate(
     if certificate.user_id != user.id:  # type: ignore
         raise await _403(user.id, certificate, id)
     await log.info(f"get_certificate: {certificate}")
+    return certificate
+
+
+async def create_certificate(
+    payload: schemas.CertificateCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Certificate:
+    certificate = models.Certificate(**payload.dict(), user_id=user.id)
+    db.add(certificate)
+    await db.commit()
+    await db.refresh(certificate)
+    await log.info(f"create_certificate: {certificate}")
     return certificate
 
 
@@ -262,6 +342,40 @@ async def get_orchestration_pipeline(
     if pipeline.user_id != user.id:  # type: ignore
         raise await _403(user.id, pipeline, id)
     await log.info(f"get_orchestration_pipeline: {pipeline}")
+    return pipeline  # type: ignore
+
+
+async def get_orchestration_pipeline_by_name(
+    name: str,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.OrchestrationPipeline:
+    query = (
+        select(models.OrchestrationPipeline)
+        .where(
+            models.OrchestrationPipeline.name == name,
+            models.OrchestrationPipeline.user_id == user.id,
+        )
+        .options(selectinload(models.OrchestrationPipeline.orchestration_events))
+    )
+    result = await db.execute(query)
+    pipeline = result.scalars().first()
+    if not pipeline:
+        raise await _404(pipeline, name)
+    await log.info(f"get_orchestration_pipeline: {pipeline}")
+    return pipeline
+
+
+async def create_orchestration_pipeline(
+    payload: schemas.OrchestrationPipelineCreate,
+    user: schemas.UserRead,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.OrchestrationPipeline:
+    pipeline = models.OrchestrationPipeline(**payload.dict(), user_id=user.id)
+    db.add(pipeline)
+    await db.commit()
+    await db.refresh(pipeline)
+    await log.info(f"create_orchestration_pipeline: {pipeline}")
     return pipeline
 
 
@@ -272,7 +386,7 @@ async def get_extractor(
 ) -> models.Extractor:
     query = (
         select(models.Extractor)
-        .filter(models.Extractor.id == id)
+        .where(models.Extractor.id == id)
         .options(selectinload(models.Extractor.extractor_examples))
     )
     extractor = await db.execute(query)
@@ -283,6 +397,127 @@ async def get_extractor(
         raise await _403(user.id, extractor, id)
     await log.info(f"get_extractor: {extractor}")
     return extractor
+
+
+async def get_extractor_by_name(
+    name: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.Extractor:
+    query = (
+        select(models.Extractor)
+        .where(models.Extractor.name == name)
+        .options(selectinload(models.Extractor.extractor_examples))
+    )
+    result = await db.execute(query)
+    extractor = result.scalars().first()
+    if not extractor:
+        raise await _404(extractor, name)
+    await log.info(f"get_extractor: {extractor}")
+    return extractor
+
+
+async def create_extractor(
+    payload: schemas.ExtractorCreate,
+    user: schemas.UserRead,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.Extractor:
+    extractor = models.Extractor(**payload.dict(), user_id=user.id)
+    db.add(extractor)
+    await db.commit()
+    await db.refresh(extractor)
+    await log.info(f"create_extractor: {extractor}")
+    return extractor
+
+
+async def run_extractor(
+    extractor: schemas.ExtractorRead,
+    payload: schemas.ExtractorRun,
+    user: schemas.UserRead,
+    db: AsyncSession = Depends(get_async_session),
+) -> schemas.ExtractorResponse:
+
+    await log.info(f"Running extractor {extractor.name} with payload {payload}")
+
+    text = payload.text
+    # Load text to run extraction on
+    if text:
+        pass
+    elif payload.url:
+        text = await extract_text_from_url(str(payload.url))
+    elif payload.file:
+        documents = parse_binary_input(payload.file.file)  # type: ignore
+        text = "\n".join([document.page_content for document in documents])
+
+    if not text:
+        raise HTTPException(
+            status_code=400,
+            detail="No text to run extraction on. Provide either text, url or file.",
+        )
+
+    # Check if there is an orchestration pipeline registered for this extractor
+    try:
+        pipeline = await get_orchestration_pipeline_by_name(
+            getattr(extractor, "name", ""), db, user
+        )
+    except HTTPException as _:  # noqa
+        # Create a new pipeline for this extractor
+        pipeline = models.OrchestrationPipeline(
+            name=extractor.name,
+            description=f"Extraction orchestration pipeline for {extractor.name}",
+            definition=extractor.json_schema,
+            user_id=user.id,
+        )
+        db.add(pipeline)
+        await db.commit()
+        await db.refresh(pipeline)
+
+    # Create a new event for this extraction run
+    event = models.OrchestrationEvent(
+        pipeline_id=pipeline.id,
+        status="pending",
+        source_uri=json.dumps(
+            {"name": "default", "type": "datalake"}
+        ),  # Example values
+        destination_uri=json.dumps(
+            {"name": "default", "type": "datalake"}
+        ),  # Example values
+        payload=json.dumps(
+            {
+                "mode": payload.mode,
+                "llm": payload.llm,
+                "text": text[:200]
+                if text
+                else None,  # FIXME: Add slicing to prevent very long text
+                "file": payload.file.filename if payload.file else None,
+            }
+        ),
+        environment=conf.settings.ENVIRONMENT,  # Ensure this is a dictionary
+    )
+    db.add(event)
+    await db.commit()
+
+    # Run the extraction event, TODO, cleanup
+    try:
+        llm = payload.llm or conf.openai.COMPLETION_MODEL
+        if payload.mode == "entire_document":
+            res = await extract_entire_document(text, extractor, llm)
+        elif payload.mode == "retrieval":
+            res = await extract_from_content(text, extractor, llm)
+        else:
+            raise ValueError(
+                f"Invalid mode {payload.mode}. Expected one of 'entire_document', 'retrieval'."
+            )
+        event.status = "success"
+        event.message = "Extraction completed successfully."
+    except Exception as e:
+        event.status = "failure"
+        event.message = f"Extraction failed: {str(e)}"
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        await db.refresh(event)
+        await db.commit()
+
+    return schemas.ExtractorResponse(**res)
 
 
 async def get_extractor_example(

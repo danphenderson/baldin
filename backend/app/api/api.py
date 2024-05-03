@@ -6,9 +6,11 @@ from app.api.deps import fastapi_users, schemas, security
 from app.api.routes import (
     applications,
     certificate,
+    companies,
     contacts,
     cover_letters,
     data_orchestration,
+    db_management,
     education,
     experiences,
     extractor,
@@ -41,6 +43,9 @@ api_router.include_router(
     tags=["auth"],
 )
 api_router.include_router(
+    db_management.router, prefix="/db-management", tags=["db-management"]
+)
+api_router.include_router(
     users.router,
     prefix="/users",
     tags=["users"],
@@ -49,6 +54,11 @@ api_router.include_router(
     leads.router,
     prefix="/leads",
     tags=["leads"],
+)
+api_router.include_router(
+    companies.router,
+    prefix="/companies",
+    tags=["companies"],
 )
 api_router.include_router(
     data_orchestration.router,

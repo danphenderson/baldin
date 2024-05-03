@@ -1291,7 +1291,7 @@ export interface components {
        * File
        * @description A file to extract information from. If provided, the file will be processed and the text extracted.
        */
-      file?: File | null;
+      file?: string | null;
       /**
        * Text
        * @description Text to extract information from. If provided, the text will be processed and the information extracted.
@@ -3417,7 +3417,9 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["SkillRead"][];
+          "application/json": {
+            [key: string]: string;
+          };
         };
       };
       /** @description Validation Error */

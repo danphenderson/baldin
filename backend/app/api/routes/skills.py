@@ -1,6 +1,7 @@
 # app/api/routes/skills.py
+from asyncio import gather
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import select
 
 from app.api.deps import AsyncSession
@@ -20,13 +21,36 @@ from app.api.deps import (
 router: APIRouter = APIRouter()
 
 
-@router.post("/extract", response_model=list[schemas.SkillRead])
+async def extract_user_skills_task(
+    extractor: models.Extractor,
+    payload: schemas.ExtractorRun,
+    user: schemas.UserRead,
+    db: AsyncSession,
+) -> dict[str, str]:
+
+    resp = await run_extractor(
+        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+    )
+
+    # Collect the extracted skills asynchronously in parallel
+    await gather(
+        *[
+            create_skill(schemas.SkillCreate(**skill), db=db, user=user)
+            for skill in getattr(resp, "data", [])
+        ]
+    )
+    return {"message": "Skills extraction task completed"}
+
+
+@router.post("/extract", response_model=dict[str, str])
 async def extract_user_skills(
+    background_tasks: BackgroundTasks,
     payload: schemas.ExtractorRun = Depends(),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     log.info(f"Skills run extraction request: {payload.dict()}")
+
     try:
         extractor = await get_extractor_by_name("skills", db)
     except HTTPException as e:
@@ -46,16 +70,9 @@ async def extract_user_skills(
         else:
             raise e
 
-    resp = await run_extractor(
-        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
-    )
+    background_tasks.add_task(extract_user_skills_task, extractor, payload, user, db)
 
-    log.info(f"Skills extraction response: {resp.dict()}")
-
-    return [
-        await create_skill(schemas.SkillCreate(**skill), db=db, user=user)
-        for skill in resp.data
-    ]
+    return {"message": "Skills extraction task started"}
 
 
 @router.get("/", response_model=list[schemas.SkillRead])

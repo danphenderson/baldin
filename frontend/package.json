@@ -27,8 +27,7 @@
     "react-scripts": "^3.0.1",
     "styled-components": "^5.3.11",
     "typescript": "^4.9.5",
-    "web-vitals": "^2.1.4",
-    "react-json-view": "^1.21.3"
+    "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "node --openssl-legacy-provider node_modules/react-scripts/scripts/start.js",

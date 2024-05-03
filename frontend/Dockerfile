@@ -8,7 +8,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install npm dependencies
-RUN npm install
+RUN npm install && npm install --force-legacy-deps react-json-view
 
 # Copy the frontend source code into the container
 COPY . .

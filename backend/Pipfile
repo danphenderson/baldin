@@ -58,13 +58,12 @@ typer = "*"
 baldin = {editable = true, extras = ["tests", "docs"], path = "."}
 
 [scripts]
-test = "python -m pytest"
-testv = "python -m pytest -vv"
+test = "docker-compose exec web python -m pytest"
+testv = "docker-compose exec web python -m pytest -vv"
 psql = 'docker-compose exec db psql -U "$DEFAULT_DATABASE_USER" -d "$DEFAULT_DATABASE_DB"'
-api = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8004"
-build = "python setup.py sdist bdist_wheel"
-build-docs = "sphinx-build -b html docs ../docs"
-host-docs = "python -m http.server --directory ../docs"
+build = "docker-compose exec web python setup.py sdist bdist_wheel"
+build-docs = "docker-compose exec web sphinx-build -b html docs ../docs"
+host-docs = "docker-compose exec web python -m http.server --directory ../docs"
 
 [requires]
 python_version = "3.11"

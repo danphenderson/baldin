@@ -52,6 +52,12 @@ const ApplicationsPage: React.FC = () => {
   };
 
 
+  const handleCoverLetterClick = async (params: GridRowModel) => {
+    setSelectedCoverLetter(params.row as CoverLetterRead);
+    fetchApplicationCoverLetters(params.row.id.toString())
+  }
+
+
   const fetchApplicationCoverLetters = async (applicationId: string) => {
     if (!token) {
       setError('Authorization token is missing');
@@ -200,8 +206,20 @@ const ApplicationsPage: React.FC = () => {
               rows={applicationCoverLetters}
               columns={coverLetterColumns}
               autoHeight
+              onRowClick={handleCoverLetterClick}
             />
+            {selectedCoverLetter && (
+                // Display cover letter contentent
+                <Stack spacing={2} sx={{ mt: 2}}>
+                  <Typography variant="h6" sx={{ mt: 2 }}>Cover Letter Details</Typography>
+                  <Typography> <strong>Cover-Letter Type:</strong> {selectedCoverLetter.content_type}</Typography>
+                  {/* TODO: This should be a nice pdf rich display view, e.g. see RichJsonDisplay common component */}
+                  <Typography> <strong>Content:</strong> {selectedCoverLetter.content}</Typography>
+                </Stack>
+             )}
+
             <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+
               <Button
                 variant="contained"
                 onClick={handleGenerateCoverLetter}

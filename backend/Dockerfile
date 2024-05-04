@@ -23,4 +23,6 @@ COPY . .
 
 # Install project dependencies from Pipfile.lock (ensuring reproducibility)
 # Generate Pipfile.lock if it doesn't exist
-RUN pipenv install --dev --system --deploy --ignore-pipfile --pre
+RUN pipenv install --dev --system --deploy --ignore-pipfile --pre \
+    && playwright install \
+    && playwright install-deps

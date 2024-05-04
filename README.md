@@ -38,36 +38,23 @@ Fork the [repository](https://github.com/danphenderson) (look for the "Fork" but
 Then clone your fork locally: `git clone git@github.com:YOURGITHUBNAME/baldin.git`
 
 
+### Local Network
+
+Baldin: [API](http://127.0.0.1:8004) | [Frontend](http://localhost:3000/) | [Admin](http://localhost:8004/admin)
+
+OpenAPI Documentation: [Swagger](http://127.0.0.1:8004/docs) | [(Re)docs](http://127.0.0.1:8004/redocs)
+
+
 ### Building and Running
 
 After cloning your forked version of the repository, spin up the development stack with the following steps:
 
-In the `backend/` directory:
-
-   - Build your Python virtual-environment with [pipenv](https://pipenv.pypa.io/en/latest/): `pipenv install --dev .`
-
-   - Using the `.env.example` file, create a .env file in the `backend/` directory.
-
-   - Using docker-compose spin up the Postgres database: `docker-compose up --build`
-
-   - Now The API is now ready to run: `pipenv run api`
-
-In the `frontend/` directory:
-
-   - Install the dependencies: `npm install`
-
-   - Start the development server: `npm start`
-
-### Local Network
-
-Baldin: [API](http://127.0.0.1:8004) | [Frontend](http://localhost:3000/)
-2
-OpenAPI: [Swagger Documentation](http://127.0.0.1:8004/docs) | [(re)docs](http://127.0.0.1:8004/redocs)
-Baldin: [API](http://127.0.0.1:8004) | [Frontend](http://localhost:3000/) | [Admin](http://localhost:8004/admin)
+1. Use `backend/.env.example` to create `backend/.env` with a valid `OPEN_API_KEY`
+2. In the root of the reposity run `docker-compose up --build`
 
 ### 5-steps to contributing
 
-After finishing the above steps, you're ready to start contributing!
+After running Baldin locally, you're ready to start contributing!
 
 1. Create a branch for your changes: `git checkout -b <issue-number>-branch-name`
 
@@ -81,15 +68,13 @@ After finishing the above steps, you're ready to start contributing!
 
 5. Wait for your changes to be reviewed and merged!
 
+*Note*: before committing changes for the first time, run  `pre-commit install` in the root of the repository.
+
 ### Futher Considerations
 
-When modifying the API, generate the `frontend/schema.d.ts` using the openapi-typescript package:
+- Commiting modifications to the API endpoints and schemas trigger  `scripts/fronted_update_schemas.sh` hook to update `openapi.json` and `frontend/src/schemas.d.ts`.
 
-`npx openapi-typescript ./openapi.json -o ./schema.d.ts`
-
-Where `openapi.json` is the latest OpenAPI specification for the API.
-
-**Generating new API Key**: `openssl rand -base64 32`
+- Generating new API Keys: `openssl rand -base64 32`
 
 ## License
 This project is licensed under the terms of the [MIT license](/LICENSE).

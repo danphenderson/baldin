@@ -173,7 +173,9 @@ class Linkedin(_BaseSettings, env_prefix="LINKEDIN_"):
     USERNAME: str = ""
     PASSWORD: str = ""
 
-    search_endpoint: str = "https://www.linkedin.com/jobs/search/?currentJobId=3761064348&keywords=data%20engineer&origin=JOBS_HOME_SEARCH_BUTTON&refresh=true"
+    search_endpoint: str = (
+        "https://www.linkedin.com/jobs/search/?currentJobId=3887133600"
+    )
     profile_endpoint: str = "https://www.linkedin.com/in/daniel-henderson-6a9485bb/"
     login_endpoint: str = "https://www.linkedin.com/login"
 

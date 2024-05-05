@@ -1993,7 +1993,7 @@ export interface components {
      * URIType
      * @enum {string}
      */
-    URIType: "filepath" | "datalake" | "database" | "api";
+    URIType: "filepath" | "datalake" | "database" | "api" | "url";
     /** UserCreate */
     UserCreate: {
       /**

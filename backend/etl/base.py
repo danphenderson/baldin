@@ -66,12 +66,13 @@ class Job(AsyncBaseModel, schemas.LeadCreate):
         )
 
 
-class Scrapper:
+class Scrapper(AsyncBaseModel):
     def __init__(self):
         self._playwright = None
         self.context = None
         self.browser = None
         self.page = None
+        super().__init__()
 
     async def start(self, headless: bool = False):
         logger.info("Starting Chromium Browser")

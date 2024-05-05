@@ -47,6 +47,7 @@ class URIType(str, Enum):
     DATALAKE = "datalake"
     DATABASE = "database"
     API = "api"
+    URL = "url"
 
 
 class URI(BaseSchema):

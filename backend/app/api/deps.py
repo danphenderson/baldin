@@ -3,6 +3,7 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path  # noqa
+from sre_constants import SUCCESS
 from typing import Any, Sequence
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Query  # noqa
@@ -37,7 +38,7 @@ from app.extractor.parsing import (  # noqa
     parse_binary_input,
 )
 from app.extractor.retrieval import extract_from_content  # noqa
-from app.logging import console_log, get_async_logger  # noqa
+from app.logging import console_log, get_async_logger
 
 log = get_async_logger(__name__)
 
@@ -438,22 +439,6 @@ async def run_extractor(
 
     await log.info(f"Running extractor {extractor.name} with payload {payload}")
 
-    text = payload.text
-    # Load text to run extraction on
-    if text:
-        pass
-    elif payload.url:
-        text = await extract_text_from_url(str(payload.url))
-    elif payload.file:
-        documents = parse_binary_input(payload.file.file)  # type: ignore
-        text = "\n".join([document.page_content for document in documents])
-
-    if not text:
-        raise HTTPException(
-            status_code=400,
-            detail="No text to run extraction on. Provide either text, url or file.",
-        )
-
     # Check if there is an orchestration pipeline registered for this extractor
     try:
         pipeline = await get_orchestration_pipeline_by_name(
@@ -471,31 +456,50 @@ async def run_extractor(
         await db.commit()
         await db.refresh(pipeline)
 
+    # Load text to run extraction on
+    text = payload.text
+    if text:
+        pass
+    elif payload.url:
+        text = await extract_text_from_url(str(payload.url))
+    elif payload.file:
+        documents = parse_binary_input(payload.file.file)  # type: ignore
+        text = "\n".join([document.page_content for document in documents])
+
+    if not text:
+        raise HTTPException(
+            status_code=400,
+            detail="No text to run extraction on. Provide either text, url or file.",
+        )
+
     # Create a new event for this extraction run
-    event = models.OrchestrationEvent(
-        pipeline_id=pipeline.id,
-        status="pending",
-        source_uri=json.dumps(
-            {"name": "default", "type": "datalake"}
-        ),  # Example values
-        destination_uri=json.dumps(
-            {"name": "default", "type": "datalake"}
-        ),  # Example values
-        payload=json.dumps(
-            {
+    source_uri_name = str(payload.url) or str(payload.file)
+    source_uri_type = (
+        schemas.URIType.URL if "http" in source_uri_name else schemas.URIType.FILE
+    )
+    event = await create_orchestration_event(
+        schemas.OrchestrationEventCreate(
+            message=f"Running extractor {extractor.name} with payload {payload}",
+            payload={
                 "mode": payload.mode,
                 "llm": payload.llm,
                 "text": text[:200]
                 if text
                 else None,  # FIXME: Add slicing to prevent very long text
                 "file": payload.file.filename if payload.file else None,
-            }
+            },
+            # type: ignore
+            environment=conf.settings.ENVIRONMENT,
+            source_uri=schemas.URI(name=source_uri_name, type=source_uri_type),
+            destination_uri=schemas.URI(
+                name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#leads",
+                type=schemas.URIType.DATABASE,
+            ),
+            status=schemas.OrchestrationEventStatusType.RUNNING,
+            pipeline_id=pipeline.id,  # type: ignore
         ),
-        environment=conf.settings.ENVIRONMENT,  # Ensure this is a dictionary
+        db=db,
     )
-    db.add(event)
-    await db.commit()
-
     # Run the extraction event, TODO, cleanup
     try:
         llm = payload.llm or conf.openai.COMPLETION_MODEL
@@ -507,16 +511,15 @@ async def run_extractor(
             raise ValueError(
                 f"Invalid mode {payload.mode}. Expected one of 'entire_document', 'retrieval'."
             )
-        event.status = "success"
-        event.message = "Extraction completed successfully."
     except Exception as e:
-        event.status = "failure"
-        event.message = f"Extraction failed: {str(e)}"
+        await update_orchestration_event(
+            event.id, payload=schemas.OrchestrationEventUpdate(message=f"Failure to extract orchestration event: {e.with_traceback()}", status=schemas.OrchestrationEventStatusType.FAILED), db=db  # type: ignore
+        )
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        await db.refresh(event)
-        await db.commit()
 
+    await update_orchestration_event(
+        event.id, payload=schemas.OrchestrationEventUpdate(message=f"Success! Extracted res: {res}", status=schemas.OrchestrationEventStatusType.SUCCESS), db=db  # type: ignore
+    )
     return schemas.ExtractorResponse(**res)
 
 

@@ -192,8 +192,9 @@ const ApplicationsPage: React.FC = () => {
         />
       )}
       {selectedApplication && (
-      <Stack spacing={2} sx={{ mt: 2 }}>
-        <Typography variant="h4">Application Details</Typography>
+      <>
+      <Typography variant="h4">Application Details</Typography>
+      <Stack sx={{ mt: 2 }} spacing={2}>
         <Typography>ID: {selectedApplication.id}</Typography>
         <Typography>Lead Title: {selectedApplication.lead.title}</Typography>
         <Typography>Status: {selectedApplication.status}</Typography>
@@ -219,7 +220,6 @@ const ApplicationsPage: React.FC = () => {
              )}
 
             <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-
               <Button
                 variant="contained"
                 onClick={handleGenerateCoverLetter}
@@ -250,6 +250,7 @@ const ApplicationsPage: React.FC = () => {
           </Button>
         </Stack>
       </Stack>
+      </>
       )}
       {error && <ErrorMessage message={error} />}
     </Box>

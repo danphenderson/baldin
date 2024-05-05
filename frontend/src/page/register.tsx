@@ -3,9 +3,9 @@ import SignUp from '../component/auth/signup';
 
 const RegistrationPage: React.FC = () => {
   return (
-    <div>
+    <>
       <SignUp />
-    </div>
+    </>
   );
 }
 

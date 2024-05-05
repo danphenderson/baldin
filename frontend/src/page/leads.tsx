@@ -156,8 +156,9 @@ const LeadsPage: React.FC = () => {
   ];
 
   return (
-    <Stack spacing={16}>
-      <Stack sx={{ p: 2 }}>
+    <Stack spacing={8}>
+      <Typography variant="h4">Leads Management</Typography>
+      <Stack>
         <TextField
           label="Extract Lead URL"
           variant="outlined"

@@ -1,14 +1,10 @@
 [
     {
       "title": "AWS Certified Solutions Architect – Associate",
-      "issuer": "Amazon Web Services",
-      "issued_date": "Feburary 5th, 2024",
-      "expiration_date": "Feburary 5th, 2024"
+      "issuer": "Amazon Web Services"
     },
     {
       "title": "AWS Cloud Practitioner",
-      "issuer": "Amazon Web Services",
-      "issued_date": "January 19th, 2024",
-      "expiration_date": "January 19th, 2027"
+      "issuer": "Amazon Web Services"
     }
 ]

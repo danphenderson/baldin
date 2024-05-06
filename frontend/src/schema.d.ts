@@ -176,6 +176,10 @@ export interface paths {
     /** Extract User Experiences */
     post: operations["extract_user_experiences_experiences_extract_post"];
   };
+  "/experiences/seed": {
+    /** Seed Experiences */
+    post: operations["seed_experiences_experiences_seed_post"];
+  };
   "/skills/extract": {
     /** Extract User Skills */
     post: operations["extract_user_skills_skills_extract_post"];
@@ -193,6 +197,10 @@ export interface paths {
     put: operations["update_user_skill_skills__skill_id__put"];
     /** Delete User Skill */
     delete: operations["delete_user_skill_skills__skill_id__delete"];
+  };
+  "/skills/seed": {
+    /** Seed Skills */
+    post: operations["seed_skills_skills_seed_post"];
   };
   "/cover_letters/generate": {
     /** Generate User Cover Letter */
@@ -277,6 +285,10 @@ export interface paths {
     /** Extract Education */
     post: operations["extract_education_education_extract_post"];
   };
+  "/education/seed": {
+    /** Seed Education */
+    post: operations["seed_education_education_seed_post"];
+  };
   "/certificate/": {
     /** Read Current User Certificates */
     get: operations["read_current_user_certificates_certificate__get"];
@@ -294,6 +306,10 @@ export interface paths {
   "/certificate/extract": {
     /** Extract Certificates */
     post: operations["extract_certificates_certificate_extract_post"];
+  };
+  "/certificate/seed": {
+    /** Seed Certificates */
+    post: operations["seed_certificates_certificate_seed_post"];
   };
   "/extractor/configurables": {
     /**
@@ -3398,6 +3414,17 @@ export interface operations {
       };
     };
   };
+  /** Seed Experiences */
+  seed_experiences_experiences_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
+        };
+      };
+    };
+  };
   /** Extract User Skills */
   extract_user_skills_skills_extract_post: {
     parameters: {
@@ -3528,6 +3555,17 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Skills */
+  seed_skills_skills_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
         };
       };
     };
@@ -4127,6 +4165,17 @@ export interface operations {
       };
     };
   };
+  /** Seed Education */
+  seed_education_education_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
+        };
+      };
+    };
+  };
   /** Read Current User Certificates */
   read_current_user_certificates_certificate__get: {
     responses: {
@@ -4249,6 +4298,17 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Certificates */
+  seed_certificates_certificate_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
         };
       };
     };

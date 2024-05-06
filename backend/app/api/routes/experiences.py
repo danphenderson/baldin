@@ -1,17 +1,22 @@
 # app/api/routes/experiences.py
+import json
 
+from aiofiles import open as aopen
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
-from app.api.deps import AsyncSession
+from app.api.deps import AsyncSession, conf
 from app.api.deps import console_log as log
 from app.api.deps import (
     create_experience,
     create_extractor,
+    create_orchestration_event,
+    create_orchestration_pipeline,
     get_async_session,
     get_current_user,
     get_experience,
     get_extractor_by_name,
+    get_orchestration_pipeline_by_name,
     models,
     run_extractor,
     schemas,
@@ -115,3 +120,71 @@ async def extract_user_experiences(
         await create_experience(schemas.ExperienceCreate(**experience), db, user)
         for experience in resp.data
     ]
+
+
+@router.post("/seed", response_model=str)
+async def seed_experiences(
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> str:
+    seed_path = conf.settings.SEEDS_PATH / "experiences.json"
+    log.info(f"Seeding Experiences table with initial data from {seed_path}")
+
+    # Fetch or create an orchestration pipeline
+    try:
+        pipeline = await get_orchestration_pipeline_by_name(
+            "seed_experiences", db, user
+        )
+    except HTTPException as e:
+        if e.status_code == 404:
+            log.warning("Seed Experiences pipeline not found, creating a new one")
+            pipeline = await create_orchestration_pipeline(
+                schemas.OrchestrationPipelineCreate(
+                    name="seed_experiences",
+                    description="Seed Experiences table with initial data",
+                    definition={"action": "Insert initial data into Experiences table"},
+                ),
+                user,
+                db,
+            )
+        else:
+            raise e
+
+    # Create an orchestration event
+    event = await create_orchestration_event(
+        schemas.OrchestrationEventCreate(
+            message="Seeding Experiences table with initial data",
+            environment=conf.settings.ENVIRONMENT,
+            pipeline_id=pipeline.id,
+            status=schemas.OrchestrationEventStatusType.PENDING,
+            payload={},
+            source_uri=schemas.URI(name=str(seed_path), type=schemas.URIType.FILE),
+            destination_uri=schemas.URI(
+                name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#experiences",
+                type=schemas.URIType.DATABASE,
+            ),
+        ),
+        db=db,
+    )
+
+    # Run the orchestration event
+    try:
+        async with aopen(seed_path, "r") as f:
+            experience_data = json.loads(await f.read())
+        for experience_entry in experience_data:
+            await create_experience(
+                schemas.ExperienceCreate(**experience_entry),
+                db=db,
+                user=user,
+            )
+    except Exception as e:
+        log.error(f"Error seeding Experiences table: {e}")
+        setattr(event, "status", schemas.OrchestrationEventStatusType.FAILED)
+        setattr(event, "message", str(e))
+        await db.commit()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    setattr(event, "status", schemas.OrchestrationEventStatusType.SUCCESS)
+    await db.commit()
+    log.info(f"Seeded Experiences table with {len(experience_data)} records.")
+    return f"Seeded Experiences table with {len(experience_data)} records."

@@ -12,6 +12,7 @@ from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, model_validator, validator
 from PyPDF2 import PdfReader
+from sympy import N
 
 from app import utils
 
@@ -239,7 +240,13 @@ class EducationRead(BaseEducation, BaseRead):
 
 
 class EducationCreate(BaseEducation):
-    pass
+    @validator("achievements", "activities", pre=True)
+    def parse_achievements(cls, value):
+        if not value:
+            return
+        elif isinstance(value, list):
+            value = ", ".join(value)
+        return utils.wrap_text(value)
 
 
 class EducationUpdate(BaseEducation):

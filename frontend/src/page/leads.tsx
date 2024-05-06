@@ -169,7 +169,7 @@ const LeadsPage: React.FC = () => {
   return (
     <Stack spacing={8}>
       {/* Page Title */}
-      <Typography variant="h4">Leads Management</Typography>
+      <Typography variant="h4">Lead Management</Typography>
       {/* Handle Alert State */}
       {loading ? <MessageAlert severity={loadingSeverity} message={loadingMessage}/> : null}
       <Stack>

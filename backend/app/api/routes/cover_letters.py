@@ -1,10 +1,16 @@
 # app/api/routes/cover_letters.py
+from io import BytesIO
 import json
+import pdfkit
+
 from asyncio import gather
 from datetime import datetime
-
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph
 from aiofiles import open as aopen
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import UUID4
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
@@ -29,6 +35,42 @@ from app.api.deps import (
 from app.logging import console_log as log
 
 router: APIRouter = APIRouter()
+
+
+
+@router.get("/{cover_letter_id}/download", response_class=FileResponse)
+async def download_cover_letter(
+    cover_letter_id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    log.info(f"Downloading cover letter {cover_letter_id} for user {user.id}")
+
+    # Fetch the cover letter by ID
+    cover_letter = await get_cover_letter(cover_letter_id, db, user)
+
+    # Create a PDF buffer
+    pdf_buffer = BytesIO()
+    doc = SimpleDocTemplate(pdf_buffer, pagesize=letter,
+                            rightMargin=72, leftMargin=72,
+                            topMargin=72, bottomMargin=18)
+    styles = getSampleStyleSheet()
+
+    # Prepare document
+    flowables = []
+    flowables.append(Paragraph(cover_letter.content, styles['BodyText']))
+
+    # Build the PDF
+    doc.build(flowables)
+
+    # Move the buffer cursor to the beginning
+    pdf_buffer.seek(0)
+
+    # Create a StreamingResponse that streams the PDF file
+    response = StreamingResponse(pdf_buffer, media_type='application/pdf')
+    response.headers['Content-Disposition'] = f'attachment; filename="{cover_letter.name}.pdf"'
+
+    return response
 
 
 @router.post("/generate", response_model=schemas.CoverLetterRead)
@@ -226,3 +268,4 @@ async def seed_cover_letters(
     await db.commit()
     log.info(f"Seeded Cover Letters table with {len(cover_letters_data)} records.")
     return f"Seeded Cover Letters table with {len(cover_letters_data)} records."
+

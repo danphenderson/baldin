@@ -45,6 +45,8 @@ faiss-cpu = "*"
 requests = "*"
 starlette-admin = "*"
 python-magic = "*"
+pdfkit = "*"
+reportlab = "*"
 
 [dev-packages]
 ipython = "*"

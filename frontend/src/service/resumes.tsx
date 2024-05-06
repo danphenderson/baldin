@@ -84,3 +84,8 @@ export const getResumeTemplate = async (token: string, id: string): Promise<Resu
   const requestOptions = createRequestOptions(token, "GET");
   return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
 }
+
+export const seedResumes = async (token: string): Promise<ResumeRead[]> => {
+  const requestOptions = createRequestOptions(token, "POST");
+  return fetchAPI(`${BASE_URL}/seed`, requestOptions);
+}

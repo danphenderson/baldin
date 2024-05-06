@@ -89,3 +89,8 @@ export const deleteCoverLetterTemplate = async (token: string, id: string): Prom
   const requestOptions = createRequestOptions(token, "DELETE");
   return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
 }
+
+export const seedCoverLetters = async (token: string): Promise<CoverLetterRead[]> => {
+  const requestOptions = createRequestOptions(token, "POST");
+  return fetchAPI(`${BASE_URL}/seed`, requestOptions);
+}

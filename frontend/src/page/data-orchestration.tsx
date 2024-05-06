@@ -13,7 +13,8 @@ import { seedEducations } from '../service/education';
 import { seedExperiences } from '../service/experiences';
 import { seedContacts } from '../service/contacts';
 import { seedSkills } from '../service/skills';
-
+import { seedResumes } from '../service/resumes';
+import { seedCoverLetters } from '../service/cover-letters';
 
 const DataOrchestrationPage: React.FC = () => {
 
@@ -31,6 +32,8 @@ const DataOrchestrationPage: React.FC = () => {
     { text: 'Seed Experience', action: () => seedExperiences(token || '')},
     { text: 'Seed Contacts', action: () => seedContacts(token || '')},
     { text: 'Seed Skills', action: () => seedSkills(token || '')},
+    { text: 'Seed Resumes', action: () => seedResumes(token || '')},
+    { text: 'Seed Cover Letters', action: () => seedCoverLetters(token || '')},
     { text: 'Refresh', action: () => fetchState()},
     { text: 'Seed All', action: () => {
       seedLeads(token || '');
@@ -40,6 +43,8 @@ const DataOrchestrationPage: React.FC = () => {
       seedExperiences(token || '');
       seedContacts(token || '');
       seedSkills(token || '');
+      seedResumes(token || '');
+      seedCoverLetters(token || '');
       fetchState();
     }},
   ];

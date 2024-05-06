@@ -1319,7 +1319,7 @@ export interface components {
        * File
        * @description A file to extract information from. If provided, the file will be processed and the text extracted.
        */
-      file?: string | null;
+      file?: File | null;
       /**
        * Text
        * @description Text to extract information from. If provided, the text will be processed and the information extracted.

@@ -1,4 +1,4 @@
-version: '3.9'  # Ensure this version supports all features you use
+version: '3.9'
 
 services:
   db:
@@ -12,6 +12,11 @@ services:
       POSTGRES_PASSWORD: GpZODNAOLkEPucEpcqXrcDqNNLGpYJxXwhuJdcLvVMgkrHkULP
     volumes:
       - ./backend/public/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U xpHMVyxenH -d db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   test_db:
     image: postgres:15
@@ -24,6 +29,11 @@ services:
       POSTGRES_PASSWORD: FliGUljTeFPZFdNBBbvQyJblNUaucMnsYgXtmEJHYVlXyliKyq
     volumes:
       - ./backend/public/test_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d test_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   web:
     build: ./backend
@@ -33,8 +43,10 @@ services:
     ports:
       - 8004:8000
     depends_on:
-      - db
-      - test_db
+      db:
+        condition: service_healthy
+      test_db:
+        condition: service_healthy
 
   frontend:
     build: ./frontend

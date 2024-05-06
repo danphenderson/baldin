@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { DataGrid, GridColDef, GridPaginationModel  } from '@mui/x-data-grid';
-import { Stack, Typography, Button, Box, Snackbar, Alert, TextField } from '@mui/material';
+import { Stack, Typography, Button, Box, Snackbar, Alert, TextField, CircularProgress } from '@mui/material';
 import LeadModal from '../component/lead-modal';
 import { createApplication, ApplicationCreate } from '../service/applications';
 import { UserContext } from '../context/user-context';
 
 
 import { LeadRead, LeadsPaginatedRead, LeadCreate, LeadUpdate, getLeads, createLead, updateLead, extractLead  } from '../service/leads';
+import MessageAlert from '../component/common/alert';
 
 
 const LeadsPage: React.FC = () => {
@@ -14,6 +15,8 @@ const LeadsPage: React.FC = () => {
   const [leads, setLeads] = useState<LeadRead[]>([]);
   const [extractUrl, setExtractUrl] = useState('');  // State for handling the extraction URL
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState<string>('');
+  const [loadingSeverity, setLoadingSeverity] = useState<'info' | 'success' | 'warning' | 'error'>('info');
   const [totalLeads, setTotalLeads] = useState(0);
   const [selectedLead, setSelectedLead] = useState<LeadRead | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -23,14 +26,19 @@ const LeadsPage: React.FC = () => {
     page: 1,
   });
 
+  const load = (loading: boolean, message: string, severity: 'info' | 'success' | 'warning' | 'error') => {
+    setLoading(loading);
+    setLoadingMessage(message);
+    setLoadingSeverity(severity);
+  };
+
   const fetchLeads = async () => {
-    setLoading(true);
+    load(true, 'Fetching leads', 'info');
     try {
       if (!token) {
         throw new Error('Authentication token is missing');
       }
       const data = await getLeads(token, paginationModel);
-
       if (!data) {
         console.error('Failed to fetch leads');
         setError('Failed to load leads');
@@ -44,9 +52,8 @@ const LeadsPage: React.FC = () => {
       console.error('Failed to fetch leads:', error);
       setError(typeof error === 'string' ? error : 'Failed to load leads');
     }
-    setLoading(false);
+    load(false, '', 'info')
   };
-
 
   useEffect(() => {
     fetchLeads();
@@ -64,6 +71,7 @@ const LeadsPage: React.FC = () => {
       setError('Authorization token is missing, unable to extract lead');
       return;
     }
+    load(true, 'Extracting lead', 'info')
     try {
       const extractedLead = await extractLead(token, extractUrl);
       setLeads([...leads, extractedLead]);  // Optionally add to local state
@@ -72,6 +80,8 @@ const LeadsPage: React.FC = () => {
       setError('Failed to extract lead from URL');
       console.error(error);
     }
+    setLoading(false);
+    load(false, '', 'info');
   };
 
 
@@ -98,13 +108,11 @@ const LeadsPage: React.FC = () => {
       return;
     }
     setModalOpen(false);
-    setLoading(true);
-
+    load(true, 'Saving lead', 'info')
     try {
       const savedLead = selectedLead?.id
         ? await updateLead(token, selectedLead.id, leadData as LeadUpdate)
         : await createLead(token, leadData as LeadCreate);
-
       if (savedLead) {
         await fetchLeads();  // Refresh the leads list
       } else {
@@ -113,7 +121,7 @@ const LeadsPage: React.FC = () => {
     } catch (error) {
       setError('Error saving lead');
     }
-    setLoading(false);
+    load(false, '', 'info');
   };
 
   const handleCloseSnackbar = () => {
@@ -129,6 +137,7 @@ const LeadsPage: React.FC = () => {
       setError('Authorization token is missing, unable to create application for lead with id: ' + id);
       return;
     }
+    load(true, 'Creating application', 'info');
     try {
       const applicationData: ApplicationCreate = {
         lead_id: id, // Assuming 'id' is the lead_id for the application
@@ -137,6 +146,8 @@ const LeadsPage: React.FC = () => {
       await createApplication(token, applicationData);
     } catch (error) {
       setError('Failed to create application for lead with id: ' + id);
+    } finally {
+      load(false, '', 'info');
     }
   };
 
@@ -151,13 +162,16 @@ const LeadsPage: React.FC = () => {
     { field: 'salary', headerName: 'Salary', width: 130 },
     { field: 'job_function', headerName: 'Job Function', width: 150 },
     { field: 'industries', headerName: 'Industries', width: 150 },
-    // { field: 'notes', headerName: 'Notes', width: 200 },
-    // { field: 'url', headerName: 'URL', width: 200 },
+    //{ field: 'notes', headerName: 'Notes', width: 200 },
+    //{ field: 'url', headerName: 'URL', width: 200 },
   ];
 
   return (
     <Stack spacing={8}>
+      {/* Page Title */}
       <Typography variant="h4">Leads Management</Typography>
+      {/* Handle Alert State */}
+      {loading ? <MessageAlert severity={loadingSeverity} message={loadingMessage}/> : null}
       <Stack>
         <TextField
           label="Extract Lead URL"

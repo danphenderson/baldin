@@ -614,7 +614,7 @@ const UserProfilePage = () => {
               />
               {selectedExperience && (
                 <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-                  <Typography variant="h6">Details</Typography>
+                  <Typography variant="h6">Lead Details</Typography>
                   <Stack spacing={2}>
                     <Typography><strong>Title:</strong> {selectedExperience.title}</Typography>
                     <Typography><strong>Company:</strong> {selectedExperience.company}</Typography>

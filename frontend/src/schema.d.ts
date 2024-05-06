@@ -232,6 +232,10 @@ export interface paths {
     /** Seed Cover Letters */
     post: operations["seed_cover_letters_cover_letters_seed_post"];
   };
+  "/resumes/{resume_id}/download": {
+    /** Download Resume */
+    get: operations["download_resume_resumes__resume_id__download_get"];
+  };
   "/resumes/": {
     /** Get Current User Resumes */
     get: operations["get_current_user_resumes_resumes__get"];
@@ -1323,7 +1327,7 @@ export interface components {
        * File
        * @description A file to extract information from. If provided, the file will be processed and the text extracted.
        */
-      file?: string | null;
+      file?: File | null;
       /**
        * Text
        * @description Text to extract information from. If provided, the text will be processed and the information extracted.
@@ -3607,7 +3611,7 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       200: {
-        content: never;
+        "application/pdf": File;
       };
       /** @description Validation Error */
       422: {
@@ -3762,6 +3766,26 @@ export interface operations {
       200: {
         content: {
           "application/json": string;
+        };
+      };
+    };
+  };
+  /** Download Resume */
+  download_resume_resumes__resume_id__download_get: {
+    parameters: {
+      path: {
+        resume_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        "application/pdf": File;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

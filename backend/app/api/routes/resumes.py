@@ -2,10 +2,16 @@
 import json
 from asyncio import gather
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 
 from aiofiles import open as aopen
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi.responses import FileResponse, StreamingResponse
+from pydantic import UUID4
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy import select
 
 from app.api.deps import AsyncSession, conf
@@ -28,68 +34,63 @@ from app.api.deps import (
 
 router: APIRouter = APIRouter()
 
-# async def _load_resumes_into_database(orch_event_id, user_id):
-#     async with session_context() as db:
-#         try:
-#             # get orchestration event and update its status
-#             event = await get_orchestration_event(orch_event_id, db)
-#             setattr(event, "status", "running")
-#             await db.commit()
 
-#             # get all resumes from the unmarshaled source_uri in the orchestration event
-#             source_uri = schemas.URI.model_validate_json(getattr(event, "source_uri"))
+@router.get("/{resume_id}/download", response_class=FileResponse)
+async def download_resume(
+    resume_id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    log.info(f"Downloading cover letter {resume_id} for user {user.id}")
 
-#             for filepath in utils.generate_resourouces(source_uri.name):
-#                 resume = await schemas.ResumeCreate.from_pdf(filepath)
-#                 resume_model = models.Resume(**resume.dict(), user_id=user_id)
-#                 db.add(resume_model)
-#                 await db.commit()
-#                 await db.refresh(resume_model)
+    # Fetch the cover letter by ID
+    resume = await get_resume(resume_id, db, user)
 
-#             # update orchestration event status to success
-#             setattr(event, "status", "success")
-#             await db.commit()
+    # Create a PDF buffer
+    pdf_buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        pdf_buffer,
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72,
+    )
 
-#         except Exception as e:
-#             # handle exceptions, log errors, and set the event status to failure
-#             await db.rollback()  # rollback the transaction in case of an error
-#             setattr(event, "status", "failure")
-#             setattr(event, "error_message", str(e))
-#             await db.commit()  # commit the status update
-#             raise HTTPException(status_code=500, detail=str(e))
+    # Create a custom style to ensure single spacing and new-line preservation
+    resume_style = ParagraphStyle(
+        name="Custom",
+        fontName="Helvetica",
+        fontSize=12,
+        leading=14,
+        spaceAfter=0,
+        spaceBefore=0,
+        leftIndent=0,
+        rightIndent=0,
+        firstLineIndent=0,
+        alignment=0,
+    )
 
+    # Prepare document with custom style
+    flowables = []
+    resume_content = resume.content.replace(
+        "\n", "<br />"
+    )  # Replace new lines with HTML break
+    flowables.append(Paragraph(resume_content, resume_style))
 
-# @router.post("/load_database", status_code=201)
-# async def load_database(
-#     background_tasks: BackgroundTasks,
-#     user=Depends(get_current_user),
-#     db: AsyncSession = Depends(get_async_session),
-# ):
-#     source_uri = schemas.URI(
-#         name=str(Path(conf.settings.DATALAKE_URI) / "resumes"),
-#         type=schemas.URIType.DATALAKE,
-#     )
+    # Build the PDF
+    doc.build(flowables)
 
-#     destination_uri = schemas.URI(
-#         name=str(Path(str(conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI)) / "resumes"),
-#         type=schemas.URIType.DATABASE,
-#     )
+    # Move the buffer cursor to the beginning
+    pdf_buffer.seek(0)
 
-#     # create orchestration event
-#     payload = schemas.OrchestrationEventCreate(
-#         job_name="load_database",
-#         source_uri=source_uri,
-#         destination_uri=destination_uri,
-#         status=schemas.OrchestrationEventStatusType.PENDING,
-#         error_message=None,
-#     )
+    # Create a StreamingResponse that streams the PDF file
+    response = StreamingResponse(pdf_buffer, media_type="application/pdf")
+    response.headers[
+        "Content-Disposition"
+    ] = f'attachment; filename="{resume.name}.pdf"'
 
-#     event = await create_orchestration_event(payload, db)
-
-#     # load resumes into database as a background task
-#     background_tasks.add_task(_load_resumes_into_database, event.id, user.id)
-
-#     return events
+    return response
 
 
 @router.get("/", response_model=list[schemas.ResumeRead])

@@ -1,17 +1,16 @@
 # app/api/routes/cover_letters.py
-from io import BytesIO
 import json
-import pdfkit
-
 from asyncio import gather
 from datetime import datetime
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph
+from io import BytesIO
+
 from aiofiles import open as aopen
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import UUID4
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
@@ -37,7 +36,6 @@ from app.logging import console_log as log
 router: APIRouter = APIRouter()
 
 
-
 @router.get("/{cover_letter_id}/download", response_class=FileResponse)
 async def download_cover_letter(
     cover_letter_id: UUID4,
@@ -51,14 +49,35 @@ async def download_cover_letter(
 
     # Create a PDF buffer
     pdf_buffer = BytesIO()
-    doc = SimpleDocTemplate(pdf_buffer, pagesize=letter,
-                            rightMargin=72, leftMargin=72,
-                            topMargin=72, bottomMargin=18)
-    styles = getSampleStyleSheet()
+    doc = SimpleDocTemplate(
+        pdf_buffer,
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72,
+    )
 
-    # Prepare document
+    # Create a custom style to ensure single spacing and new-line preservation
+    custom_style = ParagraphStyle(
+        name="Custom",
+        fontName="Helvetica",
+        fontSize=12,
+        leading=14,
+        spaceAfter=0,
+        spaceBefore=0,
+        leftIndent=0,
+        rightIndent=0,
+        firstLineIndent=0,
+        alignment=0,
+    )
+
+    # Prepare document with custom style
     flowables = []
-    flowables.append(Paragraph(cover_letter.content, styles['BodyText']))
+    cover_letter_content = cover_letter.content.replace(
+        "\n", "<br />"
+    )  # Replace new lines with HTML break
+    flowables.append(Paragraph(cover_letter_content, custom_style))
 
     # Build the PDF
     doc.build(flowables)
@@ -67,8 +86,10 @@ async def download_cover_letter(
     pdf_buffer.seek(0)
 
     # Create a StreamingResponse that streams the PDF file
-    response = StreamingResponse(pdf_buffer, media_type='application/pdf')
-    response.headers['Content-Disposition'] = f'attachment; filename="{cover_letter.name}.pdf"'
+    response = StreamingResponse(pdf_buffer, media_type="application/pdf")
+    response.headers[
+        "Content-Disposition"
+    ] = f'attachment; filename="{cover_letter.name}.pdf"'
 
     return response
 
@@ -268,4 +289,3 @@ async def seed_cover_letters(
     await db.commit()
     log.info(f"Seeded Cover Letters table with {len(cover_letters_data)} records.")
     return f"Seeded Cover Letters table with {len(cover_letters_data)} records."
-

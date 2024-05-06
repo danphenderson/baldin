@@ -206,6 +206,10 @@ export interface paths {
     /** Seed Skills */
     post: operations["seed_skills_skills_seed_post"];
   };
+  "/cover_letters/{cover_letter_id}/download": {
+    /** Download Cover Letter */
+    get: operations["download_cover_letter_cover_letters__cover_letter_id__download_get"];
+  };
   "/cover_letters/generate": {
     /** Generate User Cover Letter */
     post: operations["generate_user_cover_letter_cover_letters_generate_post"];
@@ -1319,7 +1323,7 @@ export interface components {
        * File
        * @description A file to extract information from. If provided, the file will be processed and the text extracted.
        */
-      file?: File | null;
+      file?: string | null;
       /**
        * Text
        * @description Text to extract information from. If provided, the text will be processed and the information extracted.
@@ -3589,6 +3593,26 @@ export interface operations {
       200: {
         content: {
           "application/json": string;
+        };
+      };
+    };
+  };
+  /** Download Cover Letter */
+  download_cover_letter_cover_letters__cover_letter_id__download_get: {
+    parameters: {
+      path: {
+        cover_letter_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

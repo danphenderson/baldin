@@ -155,7 +155,7 @@ async def seed_experiences(
         schemas.OrchestrationEventCreate(
             message="Seeding Experiences table with initial data",
             environment=conf.settings.ENVIRONMENT,
-            pipeline_id=pipeline.id,
+            pipeline_id=pipeline.id, # type: ignore
             status=schemas.OrchestrationEventStatusType.PENDING,
             payload={},
             source_uri=schemas.URI(name=str(seed_path), type=schemas.URIType.FILE),

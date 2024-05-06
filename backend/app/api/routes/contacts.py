@@ -174,7 +174,7 @@ async def seed_contacts(
         await db.commit()
         return f"Error seeding Contacts table: {e}"
 
-    setattr(event, "status", "completed")
+    setattr(event, "status", "success")
     await db.commit()
     log.info(f"Contacts table seeded successfully with {len(data)} records")
     return f"Contacts table seeded successfully with {len(data)} records"

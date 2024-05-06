@@ -211,8 +211,13 @@ class ExperienceRead(BaseExperience, BaseRead):
 
 
 class ExperienceCreate(BaseExperience):
-    pass
-
+    @validator("projects", pre=True)
+    def parse_projects(cls, value):
+        if not value:
+            return
+        elif isinstance(value, list):
+            value = ", ".join(value)
+        return utils.wrap_text(value)
 
 class ExperienceUpdate(BaseExperience):
     pass

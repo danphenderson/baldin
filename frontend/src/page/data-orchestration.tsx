@@ -11,7 +11,8 @@ import { seedUsers } from '../service/users';
 import { seedCertificates } from '../service/certificates';
 import { seedEducations } from '../service/education';
 import { seedExperiences } from '../service/experiences';
-
+import { seedContacts } from '../service/contacts';
+import { text } from 'stream/consumers';
 
 
 const DataOrchestrationPage: React.FC = () => {
@@ -28,6 +29,17 @@ const DataOrchestrationPage: React.FC = () => {
     { text: 'Seed Certificates', action: () => seedCertificates(token || '')},
     { text: 'Seed Educations', action: () => seedEducations(token || '')},
     { text: 'Seed Experience', action: () => seedExperiences(token || '')},
+    { text: 'Seed Contacts', action: () => seedContacts(token || '')},
+    { text: 'Refresh', action: () => fetchState()},
+    { text: 'Seed All', action: () => {
+      seedLeads(token || '');
+      seedUsers(token || '');
+      seedCertificates(token || '');
+      seedEducations(token || '');
+      seedExperiences(token || '');
+      seedContacts(token || '');
+      fetchState();
+    }},
   ];
 
   useEffect(() => {

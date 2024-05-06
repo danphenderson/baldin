@@ -58,4 +58,9 @@ export const deleteContact = async (token: string, id: string): Promise<void> =>
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
 }
 
+export const seedContacts = async (token: string): Promise<void> => {
+  const requestOptions = createRequestOptions(token, "POST");
+  return fetchAPI(`${BASE_URL}seed`, requestOptions);
+}
+
 // Path: frontend/src/services/skills.tsx

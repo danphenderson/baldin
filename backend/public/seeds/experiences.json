@@ -7,12 +7,12 @@
         "startDate": "April 2022",
         "endDate": "December 2023",
         "description": "Led software development and research of cloud warehousing and ingestion solutions for Lucerna's healthcare data platform. Responsibilities included architectural design, releases, and deployments of the platform's data-engine software assets, ensuring the security and integrity of our clients' data lake.",
-        "projects": "[
-            'Built backend service to administer a platform's data lake, such as replicating, repartitioning, and casting datatypes, to drive versioning in the platform's Data Catalog Designer application by abstracting data lake CRUD operations to ensure data integrity/consistency throughout our systems.",
-            'Centralized Infrastructure deployment plane by creating a standard cloud development kit, an internal python library of common constructs, CloudFormation Templates, and Amazon CDK Stacks with a CLI to bootstrap, deploy and destroy infrastructure and resources in a platform's AWS environment.",
-            'Utilized EC2 instance fleets and transient EMR workloads to cut cloud compute costs by abstracting a cluster's autoscaling, configuration/bootstrapping, provisioning, security, and networking concerns into a common library.",
-            Designed and developed our Consumer Profile Service graph solution using Amazon Neptune and Apache Gremlin to drive consumer acquisition and engagement insights for omnichannel marketing campaigns."
-        ]"
+        "projects": [
+            "Built backend service to administer a platform's data lake, such as replicating, repartitioning, and casting datatypes, to drive versioning in the platform's Data Catalog Designer application by abstracting data lake CRUD operations to ensure data integrity/consistency throughout our systems.",
+            "Centralized Infrastructure deployment plane by creating a standard cloud development kit, an internal python library of common constructs, CloudFormation Templates, and Amazon CDK Stacks with a CLI to bootstrap, deploy and destroy infrastructure and resources in a platform's AWS environment.",
+            "Utilized EC2 instance fleets and transient EMR workloads to cut cloud compute costs by abstracting a cluster's autoscaling, configuration/bootstrapping, provisioning, security, and networking concerns into a common library.",
+            "Designed and developed our Consumer Profile Service graph solution using Amazon Neptune and Apache Gremlin to drive consumer acquisition and engagement insights for omnichannel marketing campaigns."
+        ]
     },
     {
         "company": "Lucerna Health",

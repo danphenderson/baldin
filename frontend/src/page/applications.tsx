@@ -188,13 +188,13 @@ const ApplicationsPage: React.FC = () => {
           <Typography>Lead Title: {selectedApplication.lead.title}</Typography>
           <Typography>Status: {selectedApplication.status}</Typography>
 
-          {/* Cover Letters Accordian */}
+          {/* Cover Letter Accordian */}
           <Accordion>
             <AccordionSummary expandIcon={<GridExpandMoreIcon />}>
               <Typography variant="h6" sx={{ mt: 2 }}>Cover Letters</Typography>
             </AccordionSummary>
-            <AccordionDetails>
 
+            <AccordionDetails>
               {/* List of cover letters */}
               <DataGrid
                 rows={applicationCoverLetters}
@@ -211,7 +211,11 @@ const ApplicationsPage: React.FC = () => {
                     <Typography> <strong>Type</strong> {selectedCoverLetter.content_type}</Typography>
                     <Typography> <strong>Content</strong></Typography>
                     <ContentDisplay formatted_string={selectedCoverLetter.content || ''} />
-                    <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                  </Stack>
+               )}
+
+              {/* Cover Letter Actions: Generate, Download, Edit, etc */}
+              <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
                       <Button
                         variant="contained"
                         onClick={handleGenerateCoverLetter}
@@ -224,11 +228,11 @@ const ApplicationsPage: React.FC = () => {
                       >
                         Download PDF (Todo)
                       </Button>
-                    </Stack>
-                  </Stack>
-               )}
+              </Stack>
             </AccordionDetails>
           </Accordion>
+
+          {/* Application Actions: Delete, Update */}
           <Stack direction="row" spacing={2}>
             <Button
               variant="contained"

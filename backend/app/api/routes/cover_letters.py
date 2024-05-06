@@ -1,20 +1,28 @@
 # app/api/routes/cover_letters.py
-
-
+import json
+from asyncio import gather
 from datetime import datetime
 
+from aiofiles import open as aopen
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import UUID4
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
+from app.api.deps import AsyncSession, conf
+from app.api.deps import console_log as log
 from app.api.deps import (
-    AsyncSession,
+    create_cover_letter,
+    create_extractor,
+    create_orchestration_event,
+    create_orchestration_pipeline,
     generate_cover_letter,
     get_async_session,
     get_cover_letter,
     get_current_user,
     get_lead,
+    get_orchestration_pipeline_by_name,
+    model_to_dict,
     models,
     schemas,
 )
@@ -42,7 +50,7 @@ async def generate_user_cover_letter(
         .options(
             joinedload(models.User.education),
             joinedload(models.User.certificates),
-            joinedload(models.User.skills),
+            joinedload(models.User.cover_letters),
             joinedload(models.User.experiences),
         )
         .filter(models.User.id == user.id)  # type: ignore
@@ -148,3 +156,73 @@ async def delete_user_cover_letter(
     await db.delete(cover_letter)
     await db.commit()
     return
+
+
+@router.post("/seed", response_model=str)
+async def seed_cover_letters(
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> str:
+    seed_path = conf.settings.SEEDS_PATH / "cover-letters.json"
+    log.info(f"Seeding Cover Letters table with initial data from {seed_path}")
+
+    # Fetch orchestration pipeline, create a new one if not found
+    try:
+        pipeline = await get_orchestration_pipeline_by_name(
+            "seed_cover_letters", db, user
+        )
+    except HTTPException as e:
+        if e.status_code == 404:
+            log.warning("Seed Cover Letters pipeline not found, creating a new one")
+            pipeline = await create_orchestration_pipeline(
+                schemas.OrchestrationPipelineCreate(
+                    name="seed_cover_letters",
+                    description="Seed Cover Letters table with initial data",
+                    definition={
+                        "action": "Insert initial data into Cover Letters table"
+                    },
+                ),
+                user,
+                db,
+            )
+        else:
+            raise e
+
+    # Create orchestration event
+    event = await create_orchestration_event(
+        schemas.OrchestrationEventCreate(
+            message="Seeding Cover Letters table with initial data",
+            environment=conf.settings.ENVIRONMENT,
+            pipeline_id=pipeline.id,
+            status=schemas.OrchestrationEventStatusType.PENDING,
+            payload={},
+            source_uri=schemas.URI(name=str(seed_path), type=schemas.URIType.FILE),
+            destination_uri=schemas.URI(
+                name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#cover_letters",
+                type=schemas.URIType.DATABASE,
+            ),
+        ),
+        db=db,
+    )
+
+    # Run the orchestration event
+    try:
+        async with aopen(seed_path, "r") as f:
+            cover_letters_data = json.loads(await f.read())
+        for cover_letter in cover_letters_data:
+            await create_cover_letter(
+                schemas.CoverLetterCreate(**cover_letter),
+                db=db,
+                user=user,
+            )
+    except Exception as e:
+        log.error(f"Error seeding Cover Letters table: {e}")
+        setattr(event, "status", schemas.OrchestrationEventStatusType.FAILED)
+        setattr(event, "message", str(e))
+        await db.commit()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    setattr(event, "status", schemas.OrchestrationEventStatusType.SUCCESS)
+    await db.commit()
+    log.info(f"Seeded Cover Letters table with {len(cover_letters_data)} records.")
+    return f"Seeded Cover Letters table with {len(cover_letters_data)} records."

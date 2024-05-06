@@ -176,6 +176,32 @@ async def create_skill(
     return skill
 
 
+async def create_cover_letter(
+    payload: schemas.CoverLetterCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.CoverLetter:
+    cover_letter = models.CoverLetter(**payload.dict(), user_id=user.id)
+    db.add(cover_letter)
+    await db.commit()
+    await db.refresh(cover_letter)
+    await log.info(f"create_cover_letter: {cover_letter}")
+    return cover_letter
+
+
+async def create_resume(
+    payload: schemas.ResumeCreate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Resume:
+    resume = models.Resume(**payload.dict(), user_id=user.id)
+    db.add(resume)
+    await db.commit()
+    await db.refresh(resume)
+    await log.info(f"create_resume: {resume}")
+    return resume
+
+
 async def get_experience(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),

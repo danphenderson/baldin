@@ -224,6 +224,10 @@ export interface paths {
     /** Update User Cover Letter */
     patch: operations["update_user_cover_letter_cover_letters__cover_letter_id__patch"];
   };
+  "/cover_letters/seed": {
+    /** Seed Cover Letters */
+    post: operations["seed_cover_letters_cover_letters_seed_post"];
+  };
   "/resumes/": {
     /** Get Current User Resumes */
     get: operations["get_current_user_resumes_resumes__get"];
@@ -237,6 +241,10 @@ export interface paths {
     delete: operations["delete_user_resume_resumes__resume_id__delete"];
     /** Update User Resume */
     patch: operations["update_user_resume_resumes__resume_id__patch"];
+  };
+  "/resumes/seed": {
+    /** Seed Resumes */
+    post: operations["seed_resumes_resumes_seed_post"];
   };
   "/applications/": {
     /**
@@ -3723,6 +3731,17 @@ export interface operations {
       };
     };
   };
+  /** Seed Cover Letters */
+  seed_cover_letters_cover_letters_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
+        };
+      };
+    };
+  };
   /** Get Current User Resumes */
   get_current_user_resumes_resumes__get: {
     responses: {
@@ -3821,6 +3840,17 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Resumes */
+  seed_resumes_resumes_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
         };
       };
     };

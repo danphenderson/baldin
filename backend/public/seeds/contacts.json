@@ -1,0 +1,42 @@
+[
+    {
+      "first_name": "Emily",
+      "last_name": "Turner",
+      "phone_number": "2025550129",
+      "email": "emily.turner@example.com",
+      "time_zone": "America/New_York",
+      "notes": "Met at tech conference 2024, interested in software development."
+    },
+    {
+      "first_name": "Carlos",
+      "last_name": "Ramirez",
+      "phone_number": "3035550198",
+      "email": "carlos.ramirez@example.com",
+      "time_zone": "America/Denver",
+      "notes": "Business partner from startup event. Focus on sustainable technologies."
+    },
+    {
+      "first_name": "Ayesha",
+      "last_name": "Khan",
+      "phone_number": "3125550187",
+      "email": "ayesha.khan@example.com",
+      "time_zone": "America/Chicago",
+      "notes": "Colleague from previous job, expert in data analytics."
+    },
+    {
+      "first_name": "Lucas",
+      "last_name": "Moreau",
+      "phone_number": "4155550168",
+      "email": "lucas.moreau@example.com",
+      "time_zone": "America/Los_Angeles",
+      "notes": "Entrepreneur in renewable energy sector, met at environmental summit."
+    },
+    {
+      "first_name": "Sophia",
+      "last_name": "Lee",
+      "phone_number": "2125550131",
+      "email": "sophia.lee@example.com",
+      "time_zone": "America/New_York",
+      "notes": "Investor in tech startups, interested in AI technologies."
+    }
+  ]

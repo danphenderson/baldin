@@ -158,6 +158,10 @@ export interface paths {
     /** Extract Contacts */
     post: operations["extract_contacts_contacts_extract_post"];
   };
+  "/contacts/seed": {
+    /** Seed Contacts */
+    post: operations["seed_contacts_contacts_seed_post"];
+  };
   "/experiences/": {
     /** Read Current User Experiences */
     get: operations["read_current_user_experiences_experiences__get"];
@@ -3286,6 +3290,17 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Contacts */
+  seed_contacts_contacts_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
         };
       };
     };

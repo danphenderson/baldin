@@ -196,7 +196,7 @@ const UserProfilePage = () => {
 
   // Education State
   const [educationModalOpen, setEducationModalOpen] = useState(false);
-  const [educations, setEducations] = useState<EducationRead[]>([]);
+  const [education, setEducations] = useState<EducationRead[]>([]);
   const [selectedEducation, setSelectedEducation] = useState<EducationRead | undefined>(undefined);
 
   const handleOpenEducationModal = (education?: EducationRead) => {
@@ -641,7 +641,7 @@ const UserProfilePage = () => {
               </Button>
               <Box style={{ height: 400, width: '100%' }}>
                   <DataGrid
-                    rows={educations}
+                    rows={education}
                     columns={educationColumns}
                     onRowDoubleClick={(params) => handleOpenEducationModal(params.row)}
                     onRowClick={(params) => setSelectedEducation(params.row as EducationRead)}

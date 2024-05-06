@@ -92,12 +92,12 @@ async def extract_education(
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
-        extractor = await get_extractor_by_name("educations", db)
+        extractor = await get_extractor_by_name("education", db)
     except HTTPException as e:
         if e.status_code == 404:
             extractor = await create_extractor(
                 schemas.ExtractorCreate(
-                    name="educations",
+                    name="education",
                     description="Education data extractor",
                     instruction="Extract education JSON data from a given context",
                     json_schema=schemas.EducationCreate.model_json_schema(),

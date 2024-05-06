@@ -44,6 +44,8 @@ async def read_profile(
     )  # type: ignore
     user_with_details = result.scalars().first()
 
+    log.warning(f"User with skills: {user_with_details.__dict__['skills']}")
+
     if not user_with_details:
         raise HTTPException(status_code=404, detail="User not found")
 

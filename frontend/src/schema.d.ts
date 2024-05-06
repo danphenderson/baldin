@@ -1319,7 +1319,7 @@ export interface components {
        * File
        * @description A file to extract information from. If provided, the file will be processed and the text extracted.
        */
-      file?: File | null;
+      file?: string | null;
       /**
        * Text
        * @description Text to extract information from. If provided, the text will be processed and the information extracted.
@@ -2114,11 +2114,11 @@ export interface components {
        */
       experiences?: components["schemas"]["ExperienceRead"][];
       /**
-       * Educations
+       * Education
        * @description User's educational background
        * @default []
        */
-      educations?: components["schemas"]["EducationRead"][];
+      education?: components["schemas"]["EducationRead"][];
       /**
        * Certificates
        * @description User's certificates

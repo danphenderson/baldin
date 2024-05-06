@@ -12,7 +12,6 @@ from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, model_validator, validator
 from PyPDF2 import PdfReader
-from sympy import N
 
 from app import utils
 
@@ -218,6 +217,7 @@ class ExperienceCreate(BaseExperience):
         elif isinstance(value, list):
             value = ", ".join(value)
         return utils.wrap_text(value)
+
 
 class ExperienceUpdate(BaseExperience):
     pass
@@ -460,7 +460,7 @@ class UserProfileRead(BaseSchema):
     experiences: list[ExperienceRead] = Field(
         [], description="User's professional experiences"
     )
-    educations: list[EducationRead] = Field(
+    education: list[EducationRead] = Field(
         [], description="User's educational background"
     )
     certificates: list[CertificateRead] = Field([], description="User's certificates")

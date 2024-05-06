@@ -24,26 +24,30 @@ import ContactModal from '../component/contacts-modal';
 import CoverLetterModal from '../component/cover-letters-modal';
 import ResumeModal from '../component/resumes-modal';
 import ErrorMessage from '../component/common/error-message';
+import MessageAlert from '../component/common/alert';
 
 const UserProfilePage = () => {
   const {user, token, setUser } = useContext(UserContext);
   const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [extractRunnerOpen, setExtractRunnerOpen] = useState(false);
 
-
   // User State
   const [userDetails, setUserDetails] = useState<UserUpdate>(user || {} as UserUpdate);
 
+  const load = (loading: boolean, message: string) => {
+    setLoading(loading);
+    setMessage(message);
+  };
 
   /// Load Data
   const fetchUserData = async () => {
     if (!token) return;
 
     try {
-        setIsLoading(true);
+        load(true, 'Fetching user data');
         setUserDetails(await getUser(token));
         setExperiences(await getExperiences(token));
         setSkills(await getSkills(token));
@@ -53,7 +57,7 @@ const UserProfilePage = () => {
     } catch (error) {
         setError('Failed to fetch user data');
     } finally {
-        setIsLoading(false);
+        load(false, '');
     }
   };
 
@@ -448,7 +452,7 @@ const UserProfilePage = () => {
 
 
   // User Details
-  const UserDetails = ({ userDetails, isLoading, setOpen }: { userDetails: any, isLoading: boolean, setOpen: React.Dispatch<React.SetStateAction<boolean>> }) => {
+  const UserDetails = ({ userDetails, loading, setOpen }: { userDetails: any, loading: boolean, setOpen: React.Dispatch<React.SetStateAction<boolean>> }) => {
     const formatKey = (key: string) => key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
     const nameFields = ['first_name', 'last_name'];
@@ -459,7 +463,7 @@ const UserProfilePage = () => {
       <Card>
         <CardContent>
           <Grid container spacing={2} alignItems="center">
-            {isLoading ? (
+            {loading ? (
               <Grid item xs={12}>
                 <CircularProgress />
               </Grid>
@@ -505,8 +509,14 @@ const UserProfilePage = () => {
 
   return (
     <Stack spacing={8}>
-      {/* Header: Base User */}
-      {userDetails && <UserDetails userDetails={userDetails} isLoading={isLoading} setOpen={setOpen} />}
+      {/* Page Title */}
+      <Typography variant="h4">User Profile</Typography>
+
+      {/* Handle Alert State */}
+      {loading ? <MessageAlert severity="info" message={message}/> : null}
+
+      {/* Base User Details */}
+      {userDetails && <UserDetails userDetails={userDetails} loading={loading} setOpen={setOpen} />}
       <Dialog open={open} onClose={handleClose} fullWidth>
           <DialogTitle>Edit User Information</DialogTitle>
           <DialogContent>
@@ -538,7 +548,6 @@ const UserProfilePage = () => {
 
       {/* User Profile Details */}
       <Stack>
-        <Typography variant="h4" align='center'>Personal Background</Typography>
         {/* Skills */}
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-skills-content" id="panel-skills-header">

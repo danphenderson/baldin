@@ -66,6 +66,20 @@ const ApplicationsPage: React.FC = () => {
     fetchApplicationCoverLetters(params.row.id.toString())
   }
 
+  const handleCoverLetterDownload = async () => {
+    if (!selectedCoverLetter) {
+      setError('Cover letter is missing');
+      return;
+    }
+    load(true, 'Downloading Cover Letter')
+    try {
+      await downloadCoverLetter(token || '', selectedCoverLetter.id);
+    } catch (error) {
+      setError(`Failed to download cover letter: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      load(false, '')
+    }
+  }
 
   const fetchApplicationCoverLetters = async (applicationId: string) => {
     if (!token) {
@@ -211,24 +225,14 @@ const ApplicationsPage: React.FC = () => {
                     <Typography> <strong>Type</strong> {selectedCoverLetter.content_type}</Typography>
                     <Typography> <strong>Content</strong></Typography>
                     <ContentDisplay formatted_string={selectedCoverLetter.content || ''} />
+                    <Button variant="contained" onClick={handleCoverLetterDownload}>
+                        Download PDF
+                    </Button>
                   </Stack>
                )}
-
-              {/* Cover Letter Actions: Generate, Download, Edit, etc */}
-              <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-                      <Button
-                        variant="contained"
-                        onClick={handleGenerateCoverLetter}
-                      >
-                        Generate Cover Letter
-                      </Button>
-                      <Button
-                        variant="contained"
-                        onClick={() => downloadCoverLetter(token || '', selectedCoverLetter?.id || '')}
-                      >
-                        Download PDF (Todo)
-                      </Button>
-              </Stack>
+              <Button variant="contained" onClick={handleGenerateCoverLetter}>
+                Generate Cover Letter
+              </Button>
             </AccordionDetails>
           </Accordion>
 

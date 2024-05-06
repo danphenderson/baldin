@@ -57,3 +57,8 @@ export const deleteEducation = async (token: string, id: string): Promise<void> 
   const requestOptions = createRequestOptions(token, "DELETE");
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
 }
+
+export const seedEducations = async (token: string): Promise<void> => {
+  const requestOptions = createRequestOptions(token, "POST");
+  return fetchAPI(`${BASE_URL}seed`, requestOptions);
+}

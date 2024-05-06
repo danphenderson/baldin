@@ -8,6 +8,9 @@ import { UserContext } from '../context/user-context';
 import MessageAlert from '../component/common/alert';
 import RichJsonDisplay from '../component/common/json-modal';
 import { seedUsers } from '../service/users';
+import { seedCertificates } from '../service/certificates';
+import { seedEducations } from '../service/education';
+import { seedExperiences } from '../service/experiences';
 
 
 
@@ -20,12 +23,11 @@ const DataOrchestrationPage: React.FC = () => {
   const [selectedPipeline, setSelectedPipeline] = useState<OrchestrationEventRead | undefined>(undefined);
 
   const actions = [
-    { text: 'Seed Database', action: () => {
-      seedLeads(token || '')
-      seedUsers(token || '')
-      //TODO: Add more seed functions here
-    }
-    },
+    { text: 'Seed Leads', action: () => seedLeads(token || '')},
+    { text: 'Seed Users', action: () => seedUsers(token || '')},
+    { text: 'Seed Certificates', action: () => seedCertificates(token || '')},
+    { text: 'Seed Educations', action: () => seedEducations(token || '')},
+    { text: 'Seed Experience', action: () => seedExperiences(token || '')},
   ];
 
   useEffect(() => {
@@ -90,7 +92,7 @@ const DataOrchestrationPage: React.FC = () => {
     <Stack spacing={8}>
       {/* Page Title */}
       <Typography variant="h4">Data Orchestration</Typography>
-        <Stack>
+        <Stack spacing={2}>
           {actions.map((item, index) => (
             <Button key={index} variant="contained" color="primary" onClick={item.action}>{item.text}</Button>
           ))}

@@ -60,3 +60,8 @@ export const deleteExperience = async (token: string, id: string): Promise<void>
   const requestOptions = createRequestOptions(token, "DELETE");
   return fetchAPI(`${BASE_URL}${id}`, requestOptions);
 }
+
+export const seedExperiences = async (token: string): Promise<void> => {
+  const requestOptions = createRequestOptions(token, "POST");
+  return fetchAPI(`${BASE_URL}seed`, requestOptions);
+}

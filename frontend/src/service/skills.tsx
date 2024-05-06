@@ -88,3 +88,8 @@ export const extractSkill = async (token: string, data: ExtractorRun): Promise<E
   const requestOptions = createRequestOptions(token, "POST", data, isFileUpload);
   return fetchAPI(`${BASE_URL}extract`, requestOptions);
 }
+
+export const seedSkills = async (token: string): Promise<void> => {
+  const requestOptions = createRequestOptions(token, "POST");
+  return fetchAPI(`${BASE_URL}seed`, requestOptions);
+}

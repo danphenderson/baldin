@@ -8,11 +8,9 @@ interface ContentDisplayProps {
 const ContentDisplay: React.FC<ContentDisplayProps> = ({ formatted_string }) => {
   // Optionally, handle the conversion of the string to a Blob URL if necessary
   return (
-    <Paper elevation={3} style={{ maxHeight: '500px', overflow: 'auto' }}>
-      <Box p={2}>
-        <Typography variant="body1">
+    <Paper>
+      <Box component="pre" style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
           {formatted_string}
-        </Typography>
       </Box>
     </Paper>
   );

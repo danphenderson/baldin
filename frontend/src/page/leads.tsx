@@ -244,9 +244,9 @@ const LeadsPage: React.FC = () => {
             </Alert>
           </Snackbar>
         )}
-        <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 800, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
+
           {selectedLead && (
-              <>
+              <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 800, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
               <Button onClick={() => handleEditLead(selectedLead.id)}>Edit</Button><Button onClick={() => handleApply(selectedLead.id)}>Apply</Button>
               <Stack>
                 {/* Actions to perform on the selected lead */}
@@ -260,9 +260,9 @@ const LeadsPage: React.FC = () => {
                 <Typography><strong>Description:</strong>{selectedLead.description}</Typography>
                 <Typography><strong>ID:</strong> {selectedLead.id}</Typography>
                 <Typography><strong>URL:</strong> {selectedLead.url}</Typography>
-              </Stack></>
+              </Stack>
+              </Box>
           )}
-        </Box>
       </Box>
     </Stack>
   );

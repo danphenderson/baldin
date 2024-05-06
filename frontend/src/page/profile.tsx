@@ -25,6 +25,7 @@ import CoverLetterModal from '../component/cover-letters-modal';
 import ResumeModal from '../component/resumes-modal';
 import ErrorMessage from '../component/common/error-message';
 import MessageAlert from '../component/common/alert';
+import ContentDisplay from '../component/common/content-modal';
 
 const UserProfilePage = () => {
   const {user, token, setUser } = useContext(UserContext);
@@ -783,14 +784,14 @@ const UserProfilePage = () => {
                 onSave={handleSaveCoverLetter}
                 initialData={selectedCoverLetter}
               />
+
+              {/* Display Selected Cover Letter Details */}
               {selectedCoverLetter && (
                 <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-                  <Typography variant="h6">Details</Typography>
                   <Stack spacing={2}>
-                    <Typography><strong> {selectedCoverLetter.name} </strong></Typography>
-                    <Typography><strong> {selectedCoverLetter.content} </strong> </Typography>
+                    <Typography variant="h6">Cover Letter: {selectedCoverLetter.name} </Typography>
+                    <ContentDisplay formatted_string={selectedCoverLetter.content ?? ''} />
                     <Button onClick={() => alert('Create Cover Letter functionality not implemented')}>Generate Cover Letter</Button>
-                    <Button onClick={() => alert('Create Resume functionality not implemented')}>Generate Resume</Button>
                   </Stack>
                 </Box>
               )
@@ -821,13 +822,13 @@ const UserProfilePage = () => {
                 onSave={handleSaveResume}
                 initialData={selectedResume}
               />
+
+              {/* Display Selected Resume Details */}
               {selectedResume && (
                 <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-                  <Typography variant="h6">Details</Typography>
                   <Stack spacing={2}>
-                    <Typography><strong>Title:</strong> {selectedResume.name}</Typography>
-                    <Typography><strong>Content:</strong> {selectedResume.content}</Typography>
-                    <Button onClick={() => alert('Create Cover Letter functionality not implemented')}>Generate Cover Letter</Button>
+                    <Typography variant="h6">Resume: {selectedResume.name} </Typography>
+                    <ContentDisplay formatted_string={selectedResume.content ?? ''} />
                     <Button onClick={() => alert('Create Resume functionality not implemented')}>Generate Resume</Button>
                   </Stack>
                 </Box>
@@ -835,11 +836,7 @@ const UserProfilePage = () => {
               }
           </AccordionDetails>
         </Accordion>
-
       </Stack>
-
-
-
       {/* Error Handeling */}
       {error && <ErrorMessage message={error} />}
       {message && <Snackbar open={Boolean(message)} autoHideDuration={6000} message={message} />}

@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Box, CircularProgress, List, ListItem, ListItemText, Stack, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, List, ListItem, ListItemText, Stack, Typography } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { getOrchestrationEvents, OrchestrationEventRead } from '../service/data-orchestration';
 import { seedLeads } from '../service/leads';
 import { useContext } from 'react';
 import { UserContext } from '../context/user-context';
+import MessageAlert from '../component/common/alert';
+import RichJsonDisplay from '../component/common/json-modal';
+import { seedUsers } from '../service/users';
 
 
 
@@ -13,11 +16,18 @@ const DataOrchestrationPage: React.FC = () => {
   const { token } = useContext(UserContext);
   const [error, setError] = useState('');
   const [pipelines, setPipelines] = useState<OrchestrationEventRead[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setIsLoading] = useState(false);
   const [selectedPipeline, setSelectedPipeline] = useState<OrchestrationEventRead | undefined>(undefined);
+
   const actions = [
-    { text: 'Seed Database', action: () => seedLeads(token || '') },
+    { text: 'Seed Database', action: () => {
+      seedLeads(token || '')
+      seedUsers(token || '')
+      //TODO: Add more seed functions here
+    }
+    },
   ];
+
   useEffect(() => {
     if (token) {
         fetchState();
@@ -77,15 +87,15 @@ const DataOrchestrationPage: React.FC = () => {
   ];
 
   return (
-      <Box>
-        <List>
+    <Stack spacing={8}>
+      {/* Page Title */}
+      <Typography variant="h4">Data Orchestration</Typography>
+        <Stack>
           {actions.map((item, index) => (
-            <ListItem button key={index} onClick={async (event) => await item.action()}>
-              <ListItemText primary={item.text} />
-            </ListItem>
+            <Button key={index} variant="contained" color="primary" onClick={item.action}>{item.text}</Button>
           ))}
-        </List>
-        {isLoading ? <CircularProgress/> : (
+        </Stack>
+        {loading ? <MessageAlert severity='info' message='Loading Page'/> : (
           <DataGrid
             rows={pipelines}
             columns={columns}
@@ -94,19 +104,20 @@ const DataOrchestrationPage: React.FC = () => {
           />
         )}
         {selectedPipeline && (
-          <Stack spacing={2} sx={{ mt: 2 }}>
-            <Typography variant="h4">Pipeline Details</Typography>
-            <Typography> Status: {selectedPipeline.status}</Typography>
-            <Typography> Source URI: {selectedPipeline.source_uri?.name}</Typography>
-            <Typography> Destination URI: {selectedPipeline.destination_uri?.name}</Typography>
+          <Stack spacing={2}>
+            <Typography variant="h6">Pipeline Details</Typography>
+            <Typography> <strong>Status:</strong> {selectedPipeline.status}</Typography>
+            <Typography> <strong>Source URI:</strong> {selectedPipeline.source_uri?.name}</Typography>
+            <Typography> <strong>Destination URI</strong> {selectedPipeline.destination_uri?.name}</Typography>
             <Typography>
-              Payload: {selectedPipeline?.payload ? JSON.stringify(selectedPipeline.payload, null, 2) : 'No payload'}
+              <strong>Payload</strong>
             </Typography>
+            {selectedPipeline?.payload ? <RichJsonDisplay jsonString={JSON.stringify(selectedPipeline.payload, null, 2)}/> : 'No payload'}
             <Typography> Message: {selectedPipeline?.message}</Typography>
           </Stack>
         )}
-        {error && <Typography color="error">{error}</Typography>}
-      </Box>
+      {error && <Typography color="error">{error}</Typography>}
+    </Stack>
   );
 };
 

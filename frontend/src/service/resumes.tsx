@@ -89,3 +89,7 @@ export const seedResumes = async (token: string): Promise<ResumeRead[]> => {
   const requestOptions = createRequestOptions(token, "POST");
   return fetchAPI(`${BASE_URL}/seed`, requestOptions);
 }
+
+export const downloadResume = async (token: string, id: string): Promise<void> => {
+  const requestOptions = createRequestOptions(token, "GET");
+}

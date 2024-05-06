@@ -12,7 +12,7 @@ import {
   generatecoverLetter,
 } from '../service/applications';
 import { GridExpandMoreIcon } from '@mui/x-data-grid';
-import { CoverLetterRead, CoverLetterCreate, CoverLetterUpdate, updateCoverLetter, createCoverLetter } from '../service/cover-letters';
+import { CoverLetterRead, CoverLetterCreate, CoverLetterUpdate, updateCoverLetter, createCoverLetter, downloadCoverLetter } from '../service/cover-letters';
 import ErrorMessage from '../component/common/error-message';
 import ContentDisplay from '../component/common/content-modal';
 import MessageAlert from '../component/common/alert';
@@ -224,7 +224,7 @@ const ApplicationsPage: React.FC = () => {
                       </Button>
                       <Button
                         variant="contained"
-                        onClick={() => setSelectedCoverLetter(undefined)}
+                        onClick={() => downloadCoverLetter(token || '', selectedCoverLetter?.id || '')}
                       >
                         Download PDF (Todo)
                       </Button>

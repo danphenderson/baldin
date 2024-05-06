@@ -31,7 +31,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "node node_modules/react-scripts/scripts/start.js",
+    "start": "node --openssl-legacy-provider node_modules/react-scripts/scripts/start.js",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
@@ -55,7 +55,7 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://web:8000/",
+  "proxy": "http://localhost:8000/",
   "devDependencies": {
     "eslint-plugin-react": "^7.32.2",
     "openapi-typescript": "^6.7.2"

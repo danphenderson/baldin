@@ -94,3 +94,21 @@ export const seedCoverLetters = async (token: string): Promise<CoverLetterRead[]
   const requestOptions = createRequestOptions(token, "POST");
   return fetchAPI(`${BASE_URL}/seed`, requestOptions);
 }
+
+export const downloadCoverLetter = async (token: string, id: string): Promise<void> => {
+  console.log('Downloading cover letter');
+  const requestOptions = createRequestOptions(token, "GET");
+  const response = await fetch(`${BASE_URL}/${id}/download`, requestOptions);
+  if (!response.ok) {
+    throw new Error('Failed to download cover letter');
+  }
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = response.headers.get("content-disposition")?.split('filename=')[1].replaceAll('"', '') || 'download.pdf';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url); // Clean up the URL object
+};

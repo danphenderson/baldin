@@ -60,6 +60,7 @@ typer = "*"
 baldin = {editable = true, extras = ["tests", "docs"], path = "."}
 
 [scripts]
+api = "uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000"
 test = "docker-compose exec web python -m pytest"
 testv = "docker-compose exec web python -m pytest -vv"
 psql = 'docker-compose exec db psql -U "$DEFAULT_DATABASE_USER" -d "$DEFAULT_DATABASE_DB"'

@@ -11,7 +11,7 @@ export type LeadsPaginatedRead = components['schemas']['LeadsPaginatedRead'];
 // types that are exported from other services
 type OrchestrationEventRead = components['schemas']['OrchestrationEventRead-Output'];
 
-const BASE_URL = "/leads"; // Can be moved to a config file or environment variable
+const BASE_URL = `${process.env.REACT_APP_API_URL}/leads`; // Can be moved to a config file or environment variable
 
 
 const createRequestOptions = (token: string | null, method: string, body?: any, isFormData?: boolean): RequestInit => {

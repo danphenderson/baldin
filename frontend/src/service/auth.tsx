@@ -2,7 +2,8 @@
 
 import { components } from '../schema';
 
-const BASE_URL = "/auth"; // Can be moved to a config file
+const BASE_URL = `${process.env.REACT_APP_API_URL}/auth`; // Can be moved to a config file
+
 const JSON_HEADERS = {"Content-Type": "application/json"};
 
 const fetchApi = async (url: string, options: RequestInit): Promise<Response> => {

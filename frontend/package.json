@@ -55,9 +55,10 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:8000/",
   "devDependencies": {
+    "@types/http-proxy-middleware": "^1.0.0",
     "eslint-plugin-react": "^7.32.2",
+    "http-proxy-middleware": "^3.0.0",
     "openapi-typescript": "^6.7.2"
   }
 }

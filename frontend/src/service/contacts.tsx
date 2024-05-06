@@ -7,7 +7,7 @@ export type ContactUpdate = components['schemas']['ContactUpdate'];
 
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = '/contacts/';
+const BASE_URL = `${process.env.REACT_APP_API_URL}/contacts/`;
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
   if (!token) {

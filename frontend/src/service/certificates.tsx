@@ -7,7 +7,7 @@ export type CertificateCreate = components['schemas']['CertificateCreate'];
 export type CertificateUpdate = components['schemas']['CertificateUpdate'];
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = '/certificate/';
+const BASE_URL = `${process.env.REACT_APP_API_URL}/certificate/`;
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
   if (!token) {

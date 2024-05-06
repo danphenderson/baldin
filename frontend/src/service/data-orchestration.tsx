@@ -11,7 +11,7 @@ export type OrchestrationPipelineCreate = components['schemas']['OrchestrationPi
 export type OrchestrationPipelineUpdate = components['schemas']['OrchestrationPipelineUpdate'];
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = `/data_orchestration`;
+const BASE_URL = `${process.env.REACT_APP_API_URL}/data_orchestration`;
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
   if (!token) {

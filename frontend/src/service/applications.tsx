@@ -11,7 +11,7 @@ type ResumeRead = components['schemas']['ResumeRead'];
 type CoverLetterRead = components['schemas']['CoverLetterRead'];
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = '/applications/';
+const BASE_URL = `${process.env.REACT_APP_API_URL}/applications/`;
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
   if (!token) {

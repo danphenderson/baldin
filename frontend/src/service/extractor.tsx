@@ -10,7 +10,7 @@ export type ExtractorUpdate = components['schemas']['ExtractorUpdate'];
 export type ExtractorExmpleCreate = components['schemas']['ExtractorExampleCreate'];
 export type ExtractorExampleRead = components['schemas']['ExtractorExampleRead'];
 
-const BASE_URL = '/extractor';
+const BASE_URL = `${process.env.REACT_APP_API_URL}/extractor`;
 
 
 const createRequestOptions = (token: string, method: string, body?: any, isFormData?: boolean): RequestInit => {

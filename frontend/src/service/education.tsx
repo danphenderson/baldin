@@ -7,7 +7,7 @@ export type EducationCreate = components['schemas']['EducationCreate'];
 export type EducationUpdate = components['schemas']['EducationUpdate'];
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = '/education/';
+const BASE_URL = `${process.env.REACT_APP_API_URL}/education/`;
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
   if (!token) {

@@ -7,7 +7,7 @@ export type ResumeUpdate = components['schemas']['ResumeUpdate'];
 export type ResumeCreate = components['schemas']['ResumeCreate'];
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = '/resumes';
+const BASE_URL = `${process.env.REACT_APP_API_URL}/resumes`;
 
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {

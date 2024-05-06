@@ -5,7 +5,7 @@ import { components } from '../schema';
 
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = "/db-management";
+const BASE_URL = `${process.env.REACT_APP_API_URL}/db-management`;
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
   if (!token) {

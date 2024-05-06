@@ -7,7 +7,7 @@ export type UserUpdate = components['schemas']['UserUpdate'];
 export type UserProfile = components['schemas']['UserProfileRead'];
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = "/users/me";
+const BASE_URL = `${process.env.REACT_APP_API_URL}/users/me`;
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
   if (!token) {

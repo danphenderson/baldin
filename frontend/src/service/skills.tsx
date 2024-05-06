@@ -9,7 +9,7 @@ export type SkillUpdate = components['schemas']['SkillUpdate'];
 type ExtractorRun = components['schemas']['ExtractorRun'];
 
 // TODO - pull this from the environment schema.d.ts
-const BASE_URL = '/skills/';
+const BASE_URL = `${process.env.REACT_APP_API_URL}/skills/`;
 
 
 const createRequestOptions = (token: string, method: string, body?: any, isFormData?: boolean): RequestInit => {

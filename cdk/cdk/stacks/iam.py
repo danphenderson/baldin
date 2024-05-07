@@ -3,7 +3,6 @@ import json
 from aws_cdk import (
     Stack,
     aws_iam as iam,
-    CfnOutput,
     aws_secretsmanager as secretsmanager
 )
 from constructs import Construct

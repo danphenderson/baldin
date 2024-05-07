@@ -33,8 +33,8 @@ class BaldinAPIStack(Stack):
             "BaldinAPIContainer",
             # Use an image from ECR
             image=ecs.ContainerImage.from_ecr_repository(
-                ecr.Repository.from_repository_name(self, "BaldinAPIRepo", settings.BALDIN_API_REPO_NAME),
-                settings.BALDIN_API_IMAGE_TAG
+                ecr.Repository.from_repository_name(self, "BaldinAPIRepo", "baldin-api-repository"),
+                "latest"
             ),
             memory_limit_mib=512,
             cpu=256,

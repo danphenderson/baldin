@@ -7,6 +7,7 @@ from aws_cdk import (
 
 from constructs import Construct
 
+from conf import settings
 class BaldinAPIStack(Stack):
     def __init__(self, scope: Construct, id: str, vpc, **kwargs) -> None:
         kwargs["stack_name"] = "BaldinAPIStack"
@@ -24,18 +25,15 @@ class BaldinAPIStack(Stack):
 
         # Define task definition with a single container
         self.task_definition = ecs.FargateTaskDefinition(
-            self, "TaskDef"
+            self, "BaldinAPITaskDef"
         )
+
         self.container = self.task_definition.add_container(
-            "webContainer",
-            image=ecs.ContainerImage.from_asset("path/to/your/Dockerfile"),
+            "BaldinAPIContainer",
+            image=ecs.ContainerImage.from_asset(settings.BALDIN_API_IMAGE_FILE),
             memory_limit_mib=512,
             cpu=256,
-            environment={
-                "POSTGRES_USER": "yourUser",
-                "POSTGRES_PASSWORD": "yourPassword",
-                "POSTGRES_DB": "yourDatabase"
-            }
+            environment={k: v for k, v in settings.BALDIN_API_IMAGE_ENV.items() if v is not None} # or just # type: ignore this line
         )
         self.container.add_port_mappings(
             ecs.PortMapping(container_port=8000)
@@ -43,7 +41,7 @@ class BaldinAPIStack(Stack):
 
         # Create a Fargate Service
         self.service = ecs_patterns.ApplicationLoadBalancedFargateService(
-            self, "Service",
+            self, "BaldinAPIFargateService",
             cluster=self.cluster,
             task_definition=self.task_definition,
             desired_count=2,  # Number of tasks
@@ -53,6 +51,6 @@ class BaldinAPIStack(Stack):
 
         # Output the DNS where the service can be accessed
         CfnOutput(
-            self, "LoadBalancerDNS",
+            self, "BaldinAPILoadBalancerDNS",
             value=self.service.load_balancer.load_balancer_dns_name
         )

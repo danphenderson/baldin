@@ -4,6 +4,7 @@ from pathlib import Path
 from pydantic_settings import BaseSettings
 from toml import load as toml_load
 from os import getenv
+from dotenv.main import DotEnv
 
 PROJECT_DIR = Path(__file__).parent.parent
 PYPROJECT_CONTENT = toml_load(f"{PROJECT_DIR}/pyproject.toml")["project"]
@@ -31,8 +32,8 @@ class Settings(_BaseSettings):
     DESCRIPTION: str = PYPROJECT_CONTENT["description"]
 
     # BALDIN SETTINGS
-    ETL_IMAGE_URI: str = getenv("ETL_IMAGE_URI", "baldin/etl:latest")
-    API_IMAGE_URI: str = getenv("API_IMAGE_URI", "baldin/api:latest")
+    BALDIN_API_IMAGE_FILE: str = str(PROJECT_DIR.parent / "backend" )
+    BALDIN_API_IMAGE_ENV_FILE: str = str(PROJECT_DIR.parent / "backend" / ".env")
 
     # AWS SETTINGS
     AWS_REGION: str
@@ -46,6 +47,11 @@ class Settings(_BaseSettings):
     @property
     def PUBLIC_STATIC_ASSETS_BUCKET_NAME(self):
         return f"baldin-public-static-assets-{self.AWS_ACCOUNT}"
+
+
+    @property
+    def BALDIN_API_IMAGE_ENV(self):
+        return DotEnv(self.BALDIN_API_IMAGE_ENV_FILE).dict()
 
 
     class Config:

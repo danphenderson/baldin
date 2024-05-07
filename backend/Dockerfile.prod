@@ -22,7 +22,6 @@ RUN apt-get update \
 COPY Pipfile Pipfile.lock ./
 RUN pipenv install --system --deploy --ignore-pipfile
 
-# optional for web testing with playwright
 RUN playwright install && playwright install-deps
 
 COPY . .
@@ -31,4 +30,4 @@ RUN chown -R app:app /home/app/web
 
 USER app
 
-#CMD gunicorn --bind 0.0.0.0:${PORT:-8000} app.main:app -k uvicorn.workers.UvicornWorker
+# CMD uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000

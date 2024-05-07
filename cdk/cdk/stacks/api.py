@@ -3,7 +3,8 @@ from aws_cdk import (
     Stack,
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
-    aws_logs as logs
+    aws_logs as logs,
+    aws_ecr as ecr
 )
 
 from constructs import Construct
@@ -11,8 +12,6 @@ from constructs import Construct
 from conf import settings
 class BaldinAPIStack(Stack):
     def __init__(self, scope: Construct, id: str, vpc, **kwargs) -> None:
-        kwargs["stack_name"] = "BaldinAPIStack"
-        kwargs["description"] = "Baldin API Stack with ECS and Fargate"
         super().__init__(scope, id, **kwargs)
 
         # Assume VPC is passed from another stack or defined here
@@ -32,13 +31,17 @@ class BaldinAPIStack(Stack):
         # Setup CloudWatch Logs
         self.container = self.task_definition.add_container(
             "BaldinAPIContainer",
-            image=ecs.ContainerImage.from_asset(settings.BALDIN_API_IMAGE_FILE),
+            # Use an image from ECR
+            image=ecs.ContainerImage.from_ecr_repository(
+                ecr.Repository.from_repository_name(self, "BaldinAPIRepo", settings.BALDIN_API_REPO_NAME),
+                settings.BALDIN_API_IMAGE_TAG
+            ),
             memory_limit_mib=512,
             cpu=256,
-            environment={k: v for k, v in settings.BALDIN_API_IMAGE_ENV.items() if v is not None}, # or just # type: ignore this line,
+            environment={k: v for k, v in settings.BALDIN_API_IMAGE_ENV.items() if v is not None},
             logging=ecs.LogDrivers.aws_logs(
                 stream_prefix="BaldinAPI",
-                log_retention=logs.RetentionDays.ONE_MONTH  # You can adjust the retention period
+                log_retention=logs.RetentionDays.ONE_MONTH
             ),
         )
 
@@ -51,7 +54,7 @@ class BaldinAPIStack(Stack):
             self, "BaldinAPIFargateService",
             cluster=self.cluster,
             task_definition=self.task_definition,
-            desired_count=2,  # Number of tasks
+            desired_count=2,
             listener_port=80,
             public_load_balancer=True
         )

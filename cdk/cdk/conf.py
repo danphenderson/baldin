@@ -38,10 +38,14 @@ class Settings(_BaseSettings):
     AWS_REGION: str
     AWS_ACCOUNT: str
 
-    # S3 SETTINGS
-    S3_PUBLIC_STATIC_ASSETS_BUCKET: str = "baldin-public-assets"
-    S3_DATA_LAKE_BUCKET: str = "baldin-data-lake"
+    # DERIVED SETTINGS
+    @property
+    def DATALAKE_BUCKET_NAME(self):
+        return f"baldin-data-lake-{self.AWS_ACCOUNT}"
 
+    @property
+    def PUBLIC_STATIC_ASSETS_BUCKET_NAME(self):
+        return f"baldin-public-static-assets-{self.AWS_ACCOUNT}"
 
 
     class Config:

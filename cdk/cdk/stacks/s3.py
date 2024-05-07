@@ -17,7 +17,7 @@ class S3Stack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
             encryption=s3.BucketEncryption.S3_MANAGED,
             block_public_access=s3.BlockPublicAccess(block_public_acls=False, block_public_policy=False, ignore_public_acls=False, restrict_public_buckets=False),  # Correctly configured for public read access
-            bucket_name=f"{settings.S3_PUBLIC_STATIC_ASSETS_BUCKET}-{settings.AWS_ACCOUNT}",
+            bucket_name=settings.PUBLIC_STATIC_ASSETS_BUCKET_NAME,
             public_read_access=True
         )
         # Export the bucket name as a stack output
@@ -29,7 +29,7 @@ class S3Stack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
             encryption=s3.BucketEncryption.S3_MANAGED,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
-            bucket_name=f"{settings.S3_DATA_LAKE_BUCKET}-{settings.AWS_ACCOUNT}",
+            bucket_name=settings.DATALAKE_BUCKET_NAME,
             lifecycle_rules=[
                 s3.LifecycleRule(
                     enabled=True,

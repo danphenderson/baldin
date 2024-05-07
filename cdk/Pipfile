@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+aws-cdk-lib = "==2.89.0"
+constructs = "<11.0.0,>=10.0.0"
+pytest = "==6.2.5"
+pydantic-settings = "*"
+python-dotenv = "*"
+pydantic = {extras = ["email"], version = "*"}
+boto3 = "*"
+
+[dev-packages]
+ipython = "*"
+cloudformation = {editable = true, path = "."}
+
+[requires]
+python_version = "3.11"

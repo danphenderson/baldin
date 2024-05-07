@@ -39,7 +39,10 @@ services:
     build:
       context: ./backend
       dockerfile: ./Dockerfile.prod
-    command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000
+    # command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000
+    command: gunicorn --bind 0.0.0.0:8000 app.main:app -k uvicorn.workers.UvicornWorker --log-level debug
+    env_file:
+      - ./backend/.env.prod
     volumes:
       - ./backend:/usr/src/app
     ports:

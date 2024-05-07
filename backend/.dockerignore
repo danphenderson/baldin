@@ -3,3 +3,4 @@ Dockerfile
 Dockerfile.prod
 .venv
 public/db
+.env*

@@ -61,8 +61,3 @@ class BaldinIAMStack(Stack):
                 generate_string_key="secretAccessKey"
             )
         )
-
-
-        # Output the access key and secret key to be added to GitHub secrets
-        # CfnOutput(self, "AccessKeyId", value=access_key.access_key_id)
-        # CfnOutput(self, "SecretAccessKey", value=access_key.secret_access_key.to_string())

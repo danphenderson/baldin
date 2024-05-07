@@ -28,7 +28,7 @@ def build_and_push_docker_image(repository_name: str, build_path: Path, image_ta
     print(f"Logged in to ECR at {proxy_endpoint}")
 
     # Build the Docker image
-    build_command = f"docker build -t {repository_name}:{image_tag} -f {str(build_path / 'Dockerfile')} {build_path}"
+    build_command = f"docker build -t {repository_name}:{image_tag} -f {str(build_path / 'Dockerfile.prod')} {build_path}"
     subprocess.run(build_command, shell=True, check=True)
     print(f"Image built with tag {image_tag}")
 

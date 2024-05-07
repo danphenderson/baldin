@@ -13,6 +13,11 @@ from conf import settings
 from utils import build_and_push_docker_image
 
 def build_and_push_image(image_tag: str):
+    """
+    TODO: Figure out why this function isn't reporting progress to the console.
+
+    It takes for ever to run and doesn't show any output until it's done.
+    """
     # Build and push the Docker image to ECR
     repository_name = "baldin-api-repository"
     build_and_push_docker_image(repository_name, settings.BALDIN_API_PATH, image_tag)

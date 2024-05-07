@@ -32,9 +32,8 @@ class Settings(_BaseSettings):
     DESCRIPTION: str = PYPROJECT_CONTENT["description"]
 
     # BALDIN SETTINGS
-    BALDIN_API_PATH: Path = PROJECT_DIR / "backend"
-    BALDIN_API_IMAGE_FILE: str = str(PROJECT_DIR.parent / "backend" )
-    BALDIN_API_IMAGE_ENV_FILE: str = str(PROJECT_DIR.parent / "backend" / ".env")
+    BALDIN_API_PATH: Path = PROJECT_DIR.parent / "backend"
+    BALDIN_API_ENV_PATH: str = str(PROJECT_DIR.parent / "backend" / ".env.prod")
 
     # AWS SETTINGS
     AWS_REGION: str
@@ -52,7 +51,7 @@ class Settings(_BaseSettings):
 
     @property
     def BALDIN_API_IMAGE_ENV(self):
-        return DotEnv(self.BALDIN_API_IMAGE_ENV_FILE).dict()
+        return DotEnv(self.BALDIN_API_ENV_PATH).dict()
 
 
     class Config:

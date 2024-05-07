@@ -1,0 +1,22 @@
+[
+    {
+        "name": "Python",
+        "category": "Programming Languages",
+        "yoe": "10"
+    },
+    {
+        "name": "PySpark",
+        "category":"Programming Frameworks",
+        "yoe": "2"
+    },
+    {
+        "name": "AWS",
+        "category":"Cloud Services",
+        "yoe": "3"
+    },
+    {
+        "name": "Julia",
+        "category":"Programming Languages",
+        "yoe": "2"
+    }
+]

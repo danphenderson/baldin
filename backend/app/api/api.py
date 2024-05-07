@@ -5,14 +5,19 @@ from fastapi import APIRouter
 from app.api.deps import fastapi_users, schemas, security
 from app.api.routes import (
     applications,
+    certificate,
+    companies,
     contacts,
     cover_letters,
     data_orchestration,
+    db_management,
+    education,
     experiences,
+    extractor,
     leads,
     resumes,
-    services,
     skills,
+    users,
 )
 
 api_router: APIRouter = APIRouter()
@@ -38,7 +43,10 @@ api_router.include_router(
     tags=["auth"],
 )
 api_router.include_router(
-    fastapi_users.get_users_router(schemas.UserRead, schemas.UserUpdate),
+    db_management.router, prefix="/db-management", tags=["db-management"]
+)
+api_router.include_router(
+    users.router,
     prefix="/users",
     tags=["users"],
 )
@@ -48,14 +56,14 @@ api_router.include_router(
     tags=["leads"],
 )
 api_router.include_router(
+    companies.router,
+    prefix="/companies",
+    tags=["companies"],
+)
+api_router.include_router(
     data_orchestration.router,
     prefix="/data_orchestration",
     tags=["data_orchestration"],
-)
-api_router.include_router(
-    services.router,
-    prefix="/services",
-    tags=["services"],
 )
 api_router.include_router(
     contacts.router,
@@ -86,4 +94,19 @@ api_router.include_router(
     applications.router,
     prefix="/applications",
     tags=["applications"],
+)
+api_router.include_router(
+    education.router,
+    prefix="/education",
+    tags=["education"],
+)
+api_router.include_router(
+    certificate.router,
+    prefix="/certificate",
+    tags=["certificate"],
+)
+api_router.include_router(
+    extractor.router,
+    prefix="/extractor",
+    tags=["extractor"],
 )

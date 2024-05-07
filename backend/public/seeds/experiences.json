@@ -1,0 +1,50 @@
+
+[
+    {
+        "company": "Lucerna Health",
+        "industry": "HealthTech",
+        "title": "Data Pipeline Engineer | Full Time",
+        "startDate": "April 2022",
+        "endDate": "December 2023",
+        "description": "Led software development and research of cloud warehousing and ingestion solutions for Lucerna's healthcare data platform. Responsibilities included architectural design, releases, and deployments of the platform's data-engine software assets, ensuring the security and integrity of our clients' data lake.",
+        "projects": [
+            "Built backend service to administer a platform's data lake, such as replicating, repartitioning, and casting datatypes, to drive versioning in the platform's Data Catalog Designer application by abstracting data lake CRUD operations to ensure data integrity/consistency throughout our systems.",
+            "Centralized Infrastructure deployment plane by creating a standard cloud development kit, an internal python library of common constructs, CloudFormation Templates, and Amazon CDK Stacks with a CLI to bootstrap, deploy and destroy infrastructure and resources in a platform's AWS environment.",
+            "Utilized EC2 instance fleets and transient EMR workloads to cut cloud compute costs by abstracting a cluster's autoscaling, configuration/bootstrapping, provisioning, security, and networking concerns into a common library.",
+            "Designed and developed our Consumer Profile Service graph solution using Amazon Neptune and Apache Gremlin to drive consumer acquisition and engagement insights for omnichannel marketing campaigns."
+        ]
+    },
+    {
+        "company": "Lucerna Health",
+        "industry": "HealthTech",
+        "title": "Data Scientist | Contract",
+        "startDate": "November 2021",
+        "endDate": "April 2022",
+        "description": "ML feature development, operations, and assisted three restricted-offshore developers by rapidly resolving blockers, e.g. infrastructure deployments, code reviews, ETL services, and QA testing to accelerate their productivity.",
+        "projects": [
+            "Built analytics pipeline and dashboard to meet data governance auditory requirements for the HiTrust certification of the organization's multi-tenant cloud architecture.",
+            "Introduced standard version control safeguards for our data-science department production assets and automated their deployment using AWS CDK and Bitbucket pipelines.",
+            "Collaborated on an ML hook into the platform's ingestion pipeline to detect record duplicates during batch ingestion; using the python dedupe library, I built an asynchronous interface around the human-augmented training of the model."
+        ]
+    },
+    {
+        "company": "Michigan Technological University",
+        "industry": "Higher Education",
+        "title": "Researcher | Internship",
+        "startDate": "November 2021",
+        "endDate": "April 2022",
+        "description": "Responsibilities included co-authoring and performing the numerical experiment for submission to SIAM’s 2022 conference on Parallel Processing for Scientific Computing of publication: 2022, Azzam J, Henderson D, Ong BW and Struthers AA, Quasi-Newton Optimization with Hessian Samples.",
+        "projects": [
+            "Built BlockOpt.jl, an optim-style interface built on top of ForwardDiff.jl and TRS.jl Julia packages implementing Algorithm 7.1 in publication.",
+            "Built UncNLPrograms.jl, a library containing a subset of high-dimensional, nonlinear, and unconstrained optimization problems from the CUTEst set implemented in native Julia to test solvers using Automatic/Algorithmic Differentiation."
+        ]
+    },
+    {
+        "company": "Michigan Technological University",
+        "industry": "Higher Education",
+        "title": "Mathematics Tutor | Part Time",
+        "startDate": "November 2021",
+        "endDate": "April 2022",
+        "description": "Provided weekly tutoring services to NCAA student-athletes in multivariable, integral and differential calculus, ordinary differential equations, and linear algebra."
+    }
+]

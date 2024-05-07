@@ -27,7 +27,6 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11"
 ]
-dependencies = []
 
 [tool.coverage.paths]
 source = ["app", "etl"]
@@ -36,7 +35,6 @@ source = ["app", "etl"]
 branch = true
 source = [
     "app",
-    "tests",
     "etl",
 ]
 parallel = false
@@ -44,6 +42,42 @@ parallel = false
 [tool.coverage.report]
 show_missing = true
 precision = 2
+
+[project.optional-dependencies]
+tests = [
+    "coverage[toml]",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov"
+]
+
+docs = [
+    "sphinx",
+    "sphinx-py3doc-enhanced-theme",
+    "sphinx-autodoc-typehints",
+    "sphinxcontrib-asyncio",
+    "sphinxcontrib-napoleon",
+    "sphinxcontrib-trio",
+    "sphinx-autodoc-typehints",
+    "sphinx-autodoc-annotation",
+    "sphinx-autodoc-typehints",
+    "sphinx-autodoc-annotation",
+    "sphinx-autodoc-typehints",
+    "sphinx-autodoc-annotation",
+    "sphinx-autodoc-typehints",
+    "sphinx-autodoc-annotation",
+    "sphinx-autodoc-typehints",
+    "sphinx-autodoc-annotation",
+    "sphinx-autodoc-typehints",
+    "sphinx-autodoc-annotation",
+    "sphinx-autodoc-typehints",
+    "sphinx-autodoc-annotation",
+    "sphinx-autodoc-typehints",
+    "sphinx-autodoc-annotation",
+    "sphinx-autodoc-typehints",
+    "sphinx-autodoc-annotation",
+]
+
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -54,8 +88,10 @@ norecursedirs = [
     "build",
 ]
 testpaths = [
-    "app/tests"
+    "app/tests",
+    "etl/tests",
 ]
+asyncio-mode = "auto"
 
 [tool.isort]
 profile = "black"
@@ -65,3 +101,6 @@ python_version = "3.11"
 warn_unused_configs = true
 warn_unused_ignores = true
 files = ["app", "etl"]
+plugins = [
+    "sqlmypy",
+]

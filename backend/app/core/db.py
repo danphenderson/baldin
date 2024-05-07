@@ -1,22 +1,25 @@
-# app/core/db.py
+# Path: app/core/db.py
+
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.sql import text
 
+from app import models
 from app.core import conf
-from app.models import Base, User
 
 # Determine the appropriate SQLAlchemy database URI based on the environment
 if conf.settings.ENVIRONMENT == "PYTEST":
-    sqlalchemy_database_uri = conf.settings.TEST_SQLALCHEMY_DATABASE_URI
+    sqlalchemy_database_uri = str(conf.settings.TEST_SQLALCHEMY_DATABASE_URI)
 else:
     sqlalchemy_database_uri = str(
         conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI
     )  # Use string conversion as a workaround
 
+print(f"SQLALCHEMY_DATABASE_URI: {sqlalchemy_database_uri}\n")
 # Create an asynchronous engine for SQLAlchemy
 async_engine = create_async_engine(sqlalchemy_database_uri, echo=False)
 
@@ -32,7 +35,7 @@ async def create_db_and_tables() -> None:
     that the database schema is set up correctly.
     """
     async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(models.Base.metadata.create_all)
 
 
 async def drop_and_create_db_and_tables():
@@ -45,8 +48,8 @@ async def drop_and_create_db_and_tables():
     # TODO: This function should be removed once we have alembic migrations in place.
     """
     async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(models.Base.metadata.drop_all)
+        await conn.run_sync(models.Base.metadata.create_all)
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
@@ -92,4 +95,27 @@ async def get_user_db(session: AsyncSession = Depends(get_async_session)):
     Yields:
         SQLAlchemyUserDatabase: A user database instance for FastAPI-Users.
     """
-    yield SQLAlchemyUserDatabase(session, User)
+    yield SQLAlchemyUserDatabase(session, models.User)
+
+
+class DataBaseManager:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def list_tables(self):
+        """Asynchronously list all tables in the database."""
+        query = text(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+        )
+        result = await self.session.execute(query)
+        # Update to handle result set correctly
+        return [row.table_name for row in result.mappings().all()]
+
+    async def get_table_details(self, table_name: str):
+        """Asynchronously get details of a specific table such as columns and types."""
+        query = text(
+            "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = :table_name"
+        )
+        result = await self.session.execute(query, {"table_name": table_name})
+        # Same here, ensure to access results correctly
+        return {row.column_name: row.data_type for row in result.mappings().all()}

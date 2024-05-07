@@ -1,3 +1,5 @@
+// Path: frontend/src/component/application-modal.tsx
+
 import React, { useState, useEffect } from 'react';
 import { components } from '../schema.d';
 import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
@@ -16,7 +18,7 @@ interface ApplicationCreateProps {
 const ApplicationCreateModal: React.FC<ApplicationCreateProps> = ({ open, onClose, onSave, initialData }) => {
   const defaultApplicationData: ApplicationCreate = {
     lead_id: '',
-
+    status: '',
   };
 
   const [applicationData, setApplicationData] = useState<ApplicationCreate>(defaultApplicationData);

@@ -1,0 +1,59 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: db
+      POSTGRES_USER: xpHMVyxenH
+      POSTGRES_PASSWORD: GpZODNAOLkEPucEpcqXrcDqNNLGpYJxXwhuJdcLvVMgkrHkULP
+    volumes:
+      - ./backend/public/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U xpHMVyxenH -d db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  test_db:
+    image: postgres:15
+    restart: unless-stopped
+    ports:
+      - "5431:5432"
+    environment:
+      POSTGRES_DB: test_db
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: FliGUljTeFPZFdNBBbvQyJblNUaucMnsYgXtmEJHYVlXyliKyq
+    volumes:
+      - ./backend/public/test_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d test_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # web:
+  #   build: ./backend
+  #   command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000
+  #   volumes:
+  #     - ./backend:/usr/src/app
+  #   ports:
+  #     - 8004:8000
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     test_db:
+  #       condition: service_healthy
+
+  # frontend:
+  #   build: ./frontend
+  #   command: npm start
+  #   volumes:
+  #     - ./frontend:/usr/src/app
+  #   ports:
+  #     - 3000:3000
+  #   depends_on:
+  #     - web

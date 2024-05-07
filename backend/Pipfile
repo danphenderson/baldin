@@ -7,8 +7,7 @@ name = "pypi"
 fastapi = "*"
 uvicorn = "*"
 asyncpg = "*"
-fastapi-users = {extras = ["sqlalchemy"], version = "*"}
-pytest = "*"
+fastapi-users = {extras = ["sqlalchemy"] }
 httpx = "*"
 selenium = "*"
 openai = "*"
@@ -25,29 +24,49 @@ python-dotenv = "*"
 toml = "*"
 sqlalchemy = "*"
 pydantic-settings = "*"
-pydantic = {extras = ["email"], version = "*"}
+pydantic = {extras = ["email"] }
 install = "*"
 types-beautifulsoup4 = "*"
 pypdf2 = "*"
 playwright = "*"
+llama-index = "*"
+langchain = "*"
+transformers = "*"
+accelerate = "*"
+llama-index-llms-openai = "*"
+jsonpath-ng = "*"
+langchain-openai = "*"
+playwright-stealth = "*"
+rich = "*"
+jsonschema = "*"
+langchain-community = "*"
+typing-extensions = "*"
+faiss-cpu = "*"
+requests = "*"
+starlette-admin = "*"
+python-magic = "*"
+pdfkit = "*"
+reportlab = "*"
 
 [dev-packages]
 ipython = "*"
-coverage = "==6.2"
-pytest-asyncio = "*"
-baldin = {path = ".", editable = true}
 mypy = "*"
 install = "*"
 types-aiofiles = "*"
 types-toml = "*"
+jupyter = "*"
+types-requests = "*"
+typer = "*"
+baldin = {editable = true, extras = ["tests", "docs"], path = "."}
 
 [scripts]
+api = "uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000"
 test = "docker-compose exec web python -m pytest"
 testv = "docker-compose exec web python -m pytest -vv"
-psql = "docker-compose exec db psql -U postgres"
-ipython = "docker-compose exec web ipython"
-shell = "docker-compose exec web bash"
-api = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8004"
+psql = 'docker-compose exec db psql -U "$DEFAULT_DATABASE_USER" -d "$DEFAULT_DATABASE_DB"'
+build = "docker-compose exec web python setup.py sdist bdist_wheel"
+build-docs = "docker-compose exec web sphinx-build -b html docs ../docs"
+host-docs = "docker-compose exec web python -m http.server --directory ../docs"
 
 [requires]
 python_version = "3.11"

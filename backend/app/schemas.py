@@ -1,14 +1,16 @@
-# app/schemas.py
+# Path: app/schemas.py
+import json
 from datetime import datetime
 from enum import Enum
 from io import BytesIO
 from pathlib import Path  # TODO: Use Literal for performance improvement
-from typing import Any, Sequence, TypeVar
+from typing import Any, Literal, Sequence, TypeVar
 
+from fastapi import UploadFile
 from fastapi_users import schemas
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
-from pydantic import EmailStr, Field, model_validator
+from pydantic import EmailStr, Field, model_validator, validator
 from PyPDF2 import PdfReader
 
 from app import utils
@@ -18,6 +20,7 @@ from app import utils
 class BaseSchema(_BaseModel):
     class Config:
         from_attributes = True
+        protected_namespaces = ()  # Setting protected namespaces to empty
 
 
 # Types, properties, and shared models
@@ -44,6 +47,7 @@ class URIType(str, Enum):
     DATALAKE = "datalake"
     DATABASE = "database"
     API = "api"
+    URL = "url"
 
 
 class URI(BaseSchema):
@@ -54,6 +58,10 @@ class URI(BaseSchema):
         json_encoders = {
             "URI": lambda v: v.dict(),
         }
+
+    @validator("type", pre=True)  # Not sure if pre=True is neccessary?
+    def validate_type(cls, v: str) -> URIType:
+        return URIType(v)
 
 
 class BaseRead(BaseSchema):
@@ -68,31 +76,102 @@ class Pagination(BaseSchema):
     request_count: bool = Field(False, description="Request a query for total count")
 
 
-# Model CRUD Schemas+
+# Model CRUD Schemas
+class BaseOrchestrationPipeline(BaseSchema):
+    name: str | None = Field(None, description="Name of the pipeline")
+    description: str | None = Field(None, description="Description of the pipeline")
+    definition: dict | None = Field(None, description="Parameters for the pipeline")
+
+
+class OrchestrationPipelineRead(BaseOrchestrationPipeline, BaseRead):
+    events: list["OrchestrationEventRead"] = Field(
+        [], description="Events in the pipeline", alias="orchestration_events"
+    )
+
+
+class OrchestrationPipelineCreate(BaseOrchestrationPipeline):
+    pass
+
+
+class OrchestrationPipelineUpdate(BaseOrchestrationPipeline):
+    events: list["OrchestrationEventRead"] = Field(
+        [], description="Events in the pipeline"
+    )
+
+
 class BaseOrchestrationEvent(BaseSchema):
-    status: OrchestrationEventStatusType | None = Field(None, description="Status")
-    error_message: str | None = Field(None, description="Error message, if any")
+    message: str | None = Field(None, description="Error message")
+    payload: dict | None = Field(None, description="Payload of the triggering event")
+    environment: str | None = Field(None, description="Application environment setting")
+    source_uri: URI | None = Field(None, description="Source of the pipeline")
+    destination_uri: URI | None = Field(None, description="Destination of the pipeline")
+    status: OrchestrationEventStatusType | None = Field(
+        None, description="Status of the event"
+    )
+    pipeline_id: UUID4 | None = Field(None, description="Pipeline ID")
+
+    @validator("source_uri", "destination_uri", pre=True)
+    def validate_uri(cls, v: Any) -> URI | None:
+        if isinstance(v, str):
+            return URI(**json.loads(v))
+        if isinstance(v, dict):
+            return URI(**v)
+        return v
 
 
-class OrchestrationEventRead(BaseRead, BaseOrchestrationEvent):
-    job_name: str | None = Field(None, description="Name of the ETL job")
-    source_uri: URI | None = Field(None, description="Source URI")
-    destination_uri: URI | None = Field(None, description="Destination URI")
+class OrchestrationEventRead(BaseOrchestrationEvent, BaseRead):
+    @validator("payload", pre=True)
+    def load_json(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                raise ValueError("Payload must be a valid JSON")
+        return v
 
 
 class OrchestrationEventCreate(BaseOrchestrationEvent):
-    job_name: str
-    source_uri: URI
-    destination_uri: URI
+    pipeline_id: UUID4
 
 
 class OrchestrationEventUpdate(BaseOrchestrationEvent):
     pass
 
 
+class ExtractorRequest(BaseSchema):
+    llm_name: str | None = Field("gpt-3.5-turbo", description="Model name")
+    examples: list["ExtractorExampleRead"] = Field(
+        [], description="Extraction examples"
+    )
+    instructions: str | None = Field(None, description="Extraction instruction")
+    json_schema: dict | None = Field(None, description="JSON schema", alias="schema")
+    text: str | None = Field(None, description="Text to extract from")
+
+    @validator("json_schema")
+    def validate_schema(cls, v: Any) -> dict[str, Any]:
+        """Validate the schema."""
+        utils.validate_json_schema(v)
+        return v
+
+
+class ExtractorResponse(BaseSchema):
+    data: list[Any] = Field([], description="Extracted data")
+    content_too_long: bool = Field(False, description="Content too long to extract")
+
+
 class BaseSkill(BaseSchema):
     name: str | None = Field(None, description="Name of the skill")
     category: str | None = Field(None, description="Category of the skill")
+    yoe: int | None = Field(None, description="Years of Experience")
+    subskills: str | None = Field(None, description="Sub-Skills")
+
+    @validator("yoe", pre=True)
+    def validate_yoe(cls, v) -> int:
+        if v:
+            v = int(v)
+            if v < 0:
+                raise ValueError("Years of experience must be a positive integer")
+        return v
 
 
 class SkillRead(BaseRead, BaseSkill):
@@ -115,6 +194,15 @@ class BaseExperience(BaseSchema):
     )
     end_date: datetime | None = Field(None, description="End date of the experience")
     description: str | None = Field(None, description="Description of the experience")
+    location: str | None = Field(None, description="Location of the experience")
+    projects: str | None = Field(None, description="Projects involved")
+
+    @validator("start_date", "end_date", pre=True)
+    def parse_date(cls, value):
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=None) if value.tzinfo else value
 
 
 class ExperienceRead(BaseExperience, BaseRead):
@@ -122,21 +210,110 @@ class ExperienceRead(BaseExperience, BaseRead):
 
 
 class ExperienceCreate(BaseExperience):
-    pass
+    @validator("projects", pre=True)
+    def parse_projects(cls, value):
+        if not value:
+            return
+        elif isinstance(value, list):
+            value = ", ".join(value)
+        return utils.wrap_text(value)
 
 
 class ExperienceUpdate(BaseExperience):
     pass
 
 
+class BaseEducation(BaseSchema):
+    university: str | None = Field(None, description="University name")
+    degree: str | None = Field(None, description="Degree name")
+    gradePoint: str | None = Field(None, description="Grade point")
+    activities: str | None = Field(None, description="Activities involved")
+    achievements: str | None = Field(None, description="Achievements")
+    start_date: datetime | None = Field(None, description="Start date of the education")
+    end_date: datetime | None = Field(None, description="End date of the education")
+
+    @validator("start_date", "end_date", pre=True)
+    def parse_date(cls, value):
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=None) if value.tzinfo else value
+
+
+class EducationRead(BaseEducation, BaseRead):
+    pass
+
+
+class EducationCreate(BaseEducation):
+    @validator("achievements", "activities", pre=True)
+    def parse_achievements(cls, value):
+        if not value:
+            return
+        elif isinstance(value, list):
+            value = ", ".join(value)
+        return utils.wrap_text(value)
+
+
+class EducationUpdate(BaseEducation):
+    pass
+
+
+class BaseCertificate(BaseSchema):
+    title: str | None = Field(None, description="Certificate title")
+    issuer: str | None = Field(None, description="Issuer of the certificate")
+    expiration_date: datetime | None = Field(
+        None, description="Expiration date of the certificate"
+    )
+    issued_date: datetime | None = Field(
+        None, description="Issued date of the certificate"
+    )
+
+    @validator("expiration_date", "issued_date", pre=True)
+    def parse_date(cls, value):
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=None) if value.tzinfo else value
+
+
+class CertificateRead(BaseCertificate, BaseRead):
+    pass
+
+
+class CertificateCreate(BaseCertificate):
+    pass
+
+
+class CertificateUpdate(BaseCertificate):
+    pass
+
+
+class BaseCompany(BaseSchema):
+    name: str | None = Field(None, description="Company name")
+    industry: str | None = Field(None, description="Industry of the company")
+    size: str | None = Field(None, description="Size of the company")
+    location: str | None = Field(None, description="Location of the company")
+    description: str | None = Field(None, description="Description of the company")
+
+
+class CompanyRead(BaseCompany, BaseRead):
+    pass
+
+
+class CompanyCreate(BaseCompany):
+    pass
+
+
+class CompanyUpdate(BaseCompany):
+    pass
+
+
 class BaseLead(BaseSchema):
     title: str | None = Field(None, description="Job title")
-    company: str | None = Field(None, description="Company name")
     description: str | None = Field(None, description="Job description")
     location: str | None = Field(None, description="Job location")
     salary: str | None = Field(None, description="Salary range")
     job_function: str | None = Field(None, description="Job function")
-    industries: str | None = Field(None, description="Industries involved")
     employment_type: str | None = Field(None, description="Type of employment")
     seniority_level: str | None = Field(None, description="Seniority level")
     education_level: str | None = Field(None, description="Required education level")
@@ -145,7 +322,10 @@ class BaseLead(BaseSchema):
 
 
 class LeadRead(BaseRead, BaseLead):
-    url: AnyHttpUrl
+    url: AnyHttpUrl | str | None = Field(None, description="Job posting URL")
+    companies: list[CompanyRead] = Field(
+        [], description="List of companies associated with the lead"
+    )
 
 
 class LeadsPaginatedRead(BaseSchema):
@@ -158,6 +338,7 @@ class LeadsPaginatedRead(BaseSchema):
 
 class LeadCreate(BaseLead):
     url: str
+    company_ids: list[UUID4] | None = Field(None, description="Company IDs")
 
     @model_validator(mode="after")
     def clean_and_wrap_text_fields(self) -> Any:
@@ -170,7 +351,7 @@ class LeadCreate(BaseLead):
 
 
 class LeadUpdate(BaseLead):
-    pass
+    company_ids: list[UUID4] = Field([], description="Company IDs")
 
 
 class BaseContact(BaseSchema):
@@ -247,7 +428,7 @@ class CoverLetterCreate(BaseCoverLetter):
         text_content = []
         for page_num in range(len(reader.pages)):
             page = reader.pages[page_num]
-            text_content.append(page.extract_text())
+            text_content.append(page.or_text())
         return cls(name=name, content=text_content[0], content_type=ContentType.GENERATED)  # type: ignore
 
 
@@ -266,10 +447,23 @@ class BaseUser(BaseSchema):
     zip_code: str | None = Field(None, description="Zip code")
     country: str | None = Field(None, description="Country")
     time_zone: str | None = Field(None, description="Time zone")
+    avatar_uri: URI | None = Field(None, description="Avatar URI")
 
 
 class UserRead(schemas.BaseUser[UUID4], BaseUser):  # type: ignore
     pass
+
+
+# Define a schema for the user profile that includes skills and experiences
+class UserProfileRead(BaseSchema):
+    skills: list[SkillRead] = Field([], description="User's skills")
+    experiences: list[ExperienceRead] = Field(
+        [], description="User's professional experiences"
+    )
+    education: list[EducationRead] = Field(
+        [], description="User's educational background"
+    )
+    certificates: list[CertificateRead] = Field([], description="User's certificates")
 
 
 class UserCreate(schemas.BaseUserCreate, BaseUser):
@@ -280,16 +474,91 @@ class UserUpdate(schemas.BaseUserUpdate, BaseUser):
     pass
 
 
+class BaseExtractorExample(BaseSchema):
+    content: str | None = Field(None, description="Example content")
+    output: str | None = Field(None, description="Example output")
+
+
+class ExtractorExampleRead(BaseRead, BaseExtractorExample):
+    pass
+
+
+class ExtractorExampleCreate(BaseExtractorExample):
+    pass
+
+
+class ExtractorExampleUpdate(BaseExtractorExample):
+    pass
+
+
+class BaseExtractor(BaseSchema):
+    name: str | None = Field(None, description="Extractor name")
+    description: str | None = Field(None, description="Extractor description")
+    json_schema: dict | str | None = Field(None, description="JSON schema")
+    instruction: str | None = Field(None, description="Extractor instruction")
+    extractor_examples: list[ExtractorExampleRead] = Field(
+        [], description="Extractor examples"
+    )
+
+    @validator("json_schema")
+    def validate_schema(cls, v: Any) -> dict[str, Any]:
+        """Validate the schema."""
+        if isinstance(v, str):
+            v = json.loads(v)
+        if v:
+            utils.validate_json_schema(v)
+        return v
+
+
+class ExtractorRead(BaseRead, BaseExtractor):
+    pass
+
+
+class ExtractorCreate(BaseExtractor):
+    pass
+
+
+class ExtractorUpdate(BaseExtractor):
+    pass
+
+
+class ExtractorRun(BaseSchema):
+    """Request to run an extractor."""
+
+    mode: Literal["entire_document", "retrieval"] = Field(
+        "entire_document",
+        description="Mode to run the extractor in. 'entire_document' extracts information from the entire document. 'retrieval' extracts information from a specific section of the document.",
+    )
+    file: UploadFile | None = Field(
+        None,
+        description="A file to extract information from. If provided, the file will be processed and the text extracted.",
+    )
+    text: str | None = Field(
+        None,
+        description="Text to extract information from. If provided, the text will be processed and the information extracted.",
+    )
+    url: AnyHttpUrl | None = Field(
+        None,
+        description="A URL to extract information from. If provided, the URL will be processed and the information extracted.",
+    )
+    llm: str | None = Field(
+        None,
+        description="The language model to use for the extraction.",
+    )
+
+
 class ApplicationRead(BaseRead):
     lead_id: UUID4
     user_id: UUID4
     lead: LeadRead
     user: UserRead
+    status: str | None = Field(None, description="Application status")
 
 
 class ApplicationCreate(BaseSchema):
     lead_id: UUID4
+    status: str
 
 
 class ApplicationUpdate(BaseSchema):
-    status: str | None = Field(None, description="Application status")
+    status: str

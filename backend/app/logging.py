@@ -1,10 +1,20 @@
+# Path: app/logging.py
+
 import asyncio
 import json
 import logging
+import sys
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 from app.core import conf
+
+if conf.settings.ENVIRONMENT == "DEV":
+    logging.basicConfig(
+        stream=sys.stdout,
+        format="%(name)s|%(levelname)s: %(message)s",
+        level="ERROR",
+    )
 
 
 class AsyncJSONFileLogger:
@@ -52,17 +62,38 @@ class AsyncJSONFileLogger:
 _lock = asyncio.Lock()
 
 
+def _get_logger_filepath(name: str) -> Path:
+    filepath = Path(conf.settings.PUBLIC_ASSETS_DIR) / "logs" / f"{name}.json"
+    print(str(filepath))
+    if not filepath.exists():
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+    return filepath
+
+
 def get_async_logger(
     name, backupcount=None, interval="D", encoding="utf-8"
 ) -> AsyncJSONFileLogger:
     backupcount = backupcount or 5
-    filepath = (
-        Path(conf.settings.PUBLIC_ASSETS_DIR)
-        / f"{conf.settings.LOGGING_FILE_NAME}.json"  # noqa
+    return AsyncJSONFileLogger(
+        name, _get_logger_filepath(name), backupcount, interval, encoding
     )
-    if not filepath.exists():
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-    return AsyncJSONFileLogger(name, str(filepath), backupcount, interval, encoding)
+
+
+def get_logger(name: str) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(conf.settings.LOGGING_LEVEL)
+    formatter = logging.Formatter(
+        '{"levelname": "%(levelname)s", "message": "%(message)s", "asctime": "%(asctime)s", "process_id": "%(process)s", "thread_id": "%(thread)s"}'
+    )
+    handler = TimedRotatingFileHandler(
+        _get_logger_filepath(name),
+        backupCount=5,
+        when="D",
+        encoding="utf-8",
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    return logger
 
 
 console_log = logging.getLogger("uvicorn")

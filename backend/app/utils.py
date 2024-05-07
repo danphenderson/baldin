@@ -1,14 +1,17 @@
-# app/utils.py
+# Path: app/utils.py
 
 import json
 import re
 import textwrap
 from io import BytesIO
 from pathlib import Path
-from typing import List, Type
+from typing import Any, Type
 
 import aiofiles
 from bs4 import BeautifulSoup
+from jsonschema import exceptions
+from jsonschema.validators import Draft202012Validator
+from langchain_core.utils.json_schema import dereference_refs
 from pydantic import BaseModel
 from PyPDF2 import PdfReader
 
@@ -31,24 +34,46 @@ def wrap_text(text: str, width: int = 120) -> str:
     return "\n".join(textwrap.wrap(text, width=width))
 
 
-def split_soup_lines(soup: BeautifulSoup) -> List[str]:
+def split_soup_lines(soup: BeautifulSoup) -> list[str]:
     """
     Splits the HTML of the loaded source document into a list of strings.
     """
     return [line.strip() for line in soup.get_text().splitlines() if line.strip()]
 
 
-def extract_soup_hrefs(soup: BeautifulSoup) -> List[str]:
+def extract_soup_hrefs(soup: BeautifulSoup) -> list[str]:
     """
     Extracts all links from a BeautifulSoup object.
     """
     return [link.get("href") for link in soup.find_all("a") if link.get("href")]
 
 
+def extract_json(text: str) -> list[dict]:
+    """Extracts JSON content from a string where JSON is embedded between ```json and ``` tags.
+
+    Parameters:
+        text (str): The text containing the JSON content.
+
+    Returns:
+        list: A list of extracted JSON strings.
+    """
+    # Define the regular expression pattern to match JSON blocks
+    pattern = r"```json(.*?)```"
+
+    # Find all non-overlapping matches of the pattern in the string
+    matches = re.findall(pattern, text, re.DOTALL)
+
+    # Return the list of matched JSON strings, stripping any leading or trailing whitespace
+    try:
+        return [json.loads(match.strip()) for match in matches]
+    except Exception:
+        raise ValueError(f"Failed to parse: {text}")
+
+
 # Asynchronous utils
 
 
-async def generate_pydantic_models_from_json(
+async def generate_pydantic_models_from_docs_dir(
     model: Type[BaseModel], directory: str | Path
 ):
     """
@@ -74,7 +99,7 @@ async def generate_pydantic_models_from_json(
             try:
                 for model in _generate_pydantic_model_from_json(model, doc):
                     yield model
-            except Exception as _:
+            except Exception as _:  # noqa
                 continue
 
 
@@ -119,7 +144,7 @@ async def pdf_to_dict(pdf_path: str | Path) -> dict:
     }
 
 
-def generate_resourouces(filepath):
+def generate_resources(filepath):
     """
     An  generator function to load a filepath resources.
 
@@ -130,3 +155,72 @@ def generate_resourouces(filepath):
     # Get a list of PDF files, if filepath is a single file, then len(model_files)==1
     model_files = [p for p in filepath.glob("*.pdf") if filepath.is_dir()]
     return model_files if model_files else [filepath]
+
+
+"""Adapters to convert between different formats."""
+
+
+def _rm_titles(kv: dict) -> dict:
+    """Remove titles from a dictionary."""
+    new_kv = {}
+    for k, v in kv.items():
+        if k == "title":
+            continue
+        elif isinstance(v, dict):
+            new_kv[k] = _rm_titles(v)
+        else:
+            new_kv[k] = v
+    return new_kv
+
+
+# TODO: Rename function to be more descriptive
+def update_json_schema(
+    schema: dict,
+    *,
+    multi: bool = True,
+) -> dict:
+    """Add missing fields to JSON schema and add support for multiple records."""
+    from app.logging import console_log
+
+    if schema is None:
+        console_log.error("Schema is None in update_json_schema.")
+        raise ValueError("Schema cannot be None.")
+
+    console_log.warning(f"Original schema in update_json_schema: {schema}")
+    if multi:
+        dereferenced_schema = dereference_refs(schema)
+        # Ensure dereferenced_schema is valid before using it as 'items'
+        if not isinstance(dereferenced_schema, dict):
+            console_log.error(
+                f"Expected a dictionary but got: {type(dereferenced_schema)}"
+            )
+            raise ValueError("The dereferenced schema should be a dictionary.")
+
+        # Wrap the schema in an object called "Root" with a property called: "data"
+        # which will be a json array of the original schema.
+        schema_ = {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": dereferenced_schema,
+                },
+            },
+            "required": ["data"],
+        }
+    else:
+        raise NotImplementedError("Only multi is supported for now.")
+
+    # TODO: Function should return schema_ here instead of adding specific extractor fields
+    schema_["title"] = "extractor"
+    schema_["description"] = "Extract information matching the given schema."
+    return schema_
+
+
+# TODO: Rename function to be more descriptive
+def validate_json_schema(schema: dict[str, Any]) -> None:
+    """Validate a JSON schema."""
+    try:
+        Draft202012Validator.check_schema(schema)
+    except exceptions.ValidationError as e:
+        raise ValueError(f"Invalid schema: {e.message}")

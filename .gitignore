@@ -12,7 +12,6 @@
 **.pnp.js
 **/dist/
 **/coverage/
-**/public/
 **.mypy_cache/
 **.pytest_cache/
 **.egg-info/
@@ -38,3 +37,7 @@
 # CDK asset staging directory
 **/                                 .cdk.staging
 **/cdk.out
+backend/public/db/
+backend/public/test_db/
+backend/public/logs/
+backend/public/datalake/

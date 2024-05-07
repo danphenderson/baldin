@@ -1,38 +1,30 @@
 # Overview
 
-Baldin helps navigate the modern job market.
+Streamline your journey to employment with Baldin.
 ------
 
-Documentation is available at [https://baldin.readthedocs.io/en/latest/](https://baldin.readthedocs.io/en/latest/)
+
+Baldin is a platform that helps you find job opportunities, build and manage your applications, and prepare for interviews.
+
+
+
+Documentation is available at [https://danphenderson.github.io/baldin/](https://danphenderson.github.io/baldin/)
 
 
 **Source Code**:  <a href="https://github.com/danphenderson/baldin" target="_blank">https://https://github.com/danphenderson/baldin</a>
 
 
-## 🚧 Features 🚧
+## 🚧 Features + Bugs 🚧
 
-Currently, the application is in its infancy. The following features are
-planned for the first release:
+Currently, the application is in its infancy. See open issues for a list of planned features and known bugs. If you find a bug, have a feature request, or simply a question, please file an issue.
 
-- [x] User authentication
-- [x] User registration
-- [x] User settings
-- [ ] ETL pipeline for job data
-- [ ] Job search
-- [ ] Job finder
-- [ ] Coverletter generator
-- [ ] Resume generators
-- [ ] Job application recommendation engine
-
-
-### Feature/Bug Request
-
-If you find a bug or have a feature request, please file an issue on the
-repository's [issue tracker](https://github.com/danphenderson/baldin/issues)
+[issue tracker](https://github.com/danphenderson/baldin/issues)
 
 # Contributing
 
-Contributions are welcome!
+Contributions are welcome! The frontend is built with React and the backend is built with FastAPI. The API is powered by a Postgres database.
+
+Currently the frontend of the application needs to get up to speed with the backend. The backend is in a good place to start building out the frontend.
 
 ### Getting Started
 
@@ -51,35 +43,23 @@ Fork the [repository](https://github.com/danphenderson) (look for the "Fork" but
 Then clone your fork locally: `git clone git@github.com:YOURGITHUBNAME/baldin.git`
 
 
+### Local Network
+
+Baldin: [API](http://127.0.0.1:8000) | [Frontend](http://localhost:3000/) | [Admin](http://localhost:8004/admin)
+
+OpenAPI Documentation: [Swagger](http://localhost:8000/docs) | [(Re)docs](http://127.0.0.1:8000/redocs)
+
+
 ### Building and Running
 
 After cloning your forked version of the repository, spin up the development stack with the following steps:
 
-In the `backend/` directory:
-
-   - Build your Python virtual-environment with [pipenv](https://pipenv.pypa.io/en/latest/): `pipenv install --dev .`
-
-   - Using the `.env.example` file, create a .env file in the `backend/` directory.
-
-   - Using docker-compose spin up the Postgres database: `docker-compose up --build`
-
-   - Now The API is now ready to run: `pipenv run api`
-
-In the `frontend/` directory:
-
-   - Install the dependencies: `npm install`
-
-   - Start the development server: `npm start`
-
-### Development Network
-
-Baldin: [API](http://127.0.0.1:8004) | [Frontend](http://localhost:3000/)
-
-OpenAPI: [Swagger Documentation](http://127.0.0.1:8004/docs) | [(re)docs](http://127.0.0.1:8004/redocs)
+1. Use `backend/.env.example` to create `backend/.env` with a valid `OPEN_API_KEY`
+2. In the root of the reposity run `docker-compose up --build`
 
 ### 5-steps to contributing
 
-After finishing the above steps, you're ready to start contributing!
+After running Baldin locally, you're ready to start contributing!
 
 1. Create a branch for your changes: `git checkout -b <issue-number>-branch-name`
 
@@ -93,15 +73,13 @@ After finishing the above steps, you're ready to start contributing!
 
 5. Wait for your changes to be reviewed and merged!
 
+*Note*: before committing changes for the first time, run  `pre-commit install` in the root of the repository.
+
 ### Futher Considerations
 
-When modifying the api, generate the `frontend/schema.d.ts` using the openapi-typescript package:
+- Commiting modifications to the API endpoints and schemas trigger  `scripts/fronted_update_schemas.sh` hook to update `openapi.json` and `frontend/src/schemas.d.ts`.
 
-`npx openapi-typescript ./openapi.json -o ./schema.d.ts`
-
-Where `openapi.json` is the latest OpenAPI specification for the API.
-
-**Generating new API Key**: `openssl rand -base64 32`
+- Generating new API Keys: `openssl rand -base64 32`
 
 ## License
 This project is licensed under the terms of the [MIT license](/LICENSE).

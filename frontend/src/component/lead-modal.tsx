@@ -15,12 +15,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ open, onClose, onSave, initialDat
   // Providing default values for all fields in LeadCreate
   const defaultLeadData: LeadCreate = {
     title: '',
-    company: '',
     description: '',
     location: '',
     salary: '',
     job_function: '',
-    industries: '',
     employment_type: '',
     seniority_level: '',
     notes: '',

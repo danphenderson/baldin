@@ -11,7 +11,6 @@ from stacks.proxy_server import ProxyServerStack
 
 vpc = VPCStack(app, "VPCStack")
 s3 = S3Stack(app, "S3Stack")
-
-proxy_server = ProxyServerStack(app, "ProxyServerStack", vpc)
+#proxy_server = ProxyServerStack(app, "ProxyServerStack", vpc)
 
 app.synth()

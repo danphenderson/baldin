@@ -8,7 +8,18 @@ from os import getenv
 PROJECT_DIR = Path(__file__).parent.parent
 PYPROJECT_CONTENT = toml_load(f"{PROJECT_DIR}/pyproject.toml")["project"]
 
-class Settings(BaseSettings):
+class _BaseSettings(BaseSettings):
+    class Config:
+        case_sensitive = False
+        env_file = PROJECT_DIR / ".env"
+        env_file_encoding = "utf-8"
+        extra = "allow"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
+class Settings(_BaseSettings):
 
     # LOGGING SETTINGS
     LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
@@ -26,7 +37,6 @@ class Settings(BaseSettings):
     # AWS SETTINGS
     AWS_REGION: str
     AWS_ACCOUNT: str
-
 
     # S3 SETTINGS
     S3_PUBLIC_STATIC_ASSETS_BUCKET: str = "baldin-public-assets"

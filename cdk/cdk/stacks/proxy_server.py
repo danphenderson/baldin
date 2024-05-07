@@ -20,9 +20,16 @@ class ProxyServerStack(Stack):
         )
 
         # Create a role for the EC2 instance
-        role = iam.Role(
+        role_conditions = {
+            "StringEquals": {
+                "ec2:Region": "us-west"
+            }
+        }
+
+        ec2_instance_role = iam.Role(
             self, "ProxyInstanceRole",
-            assumed_by=iam.ServicePrincipal("ec2.amazonaws.com").with_conditions(),
+            assumed_by=iam.ServicePrincipal("ec2.amazonaws.com").with_conditions(role_conditions), # type: ignore
+            description="Role for the EC2 instance",
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore")
             ]
@@ -34,9 +41,9 @@ class ProxyServerStack(Stack):
             instance_type=ec2.InstanceType("t3.micro"),
             machine_image=ami,
             vpc=vpc,
-            role=role,  # Change the type of the role parameter to IRole | None
+            role=ec2_instance_role,  # Change the type of the role parameter to IRole | None
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-            key_name="your-key-pair-name"  # Replace with your SSH key pair name
+            key_name="baldin-key"  # Replace with your SSH key pair name
         )
 
         # Output the public IP of the proxy server

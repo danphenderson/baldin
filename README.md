@@ -7,7 +7,6 @@ Streamline your journey to employment with Baldin.
 Baldin is a platform that helps you find job opportunities, build and manage your applications, and prepare for interviews.
 
 
-
 Documentation is available at [https://danphenderson.github.io/baldin/](https://danphenderson.github.io/baldin/)
 
 

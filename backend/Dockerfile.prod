@@ -1,0 +1,34 @@
+FROM python:3.11-slim-bookworm
+
+# create directories and user
+RUN mkdir -p /home/app/web \
+  && addgroup --system app \
+  && adduser --system --group app
+
+WORKDIR /home/app/web
+
+# environment settings
+ENV PYTHONDONTWRITEBYTECODE 1 \
+    PYTHONUNBUFFERED 1 \
+    HOME=/home/app \
+    APP_HOME=/home/app/web
+
+# install dependencies
+RUN apt-get update \
+  && apt-get install -y netcat-traditional gcc postgresql-client \
+  && rm -rf /var/lib/apt/lists/* \
+  && pip install --upgrade pip && pip install pipenv
+
+COPY Pipfile Pipfile.lock ./
+RUN pipenv install --system --deploy --ignore-pipfile
+
+# optional for web testing with playwright
+RUN playwright install && playwright install-deps
+
+COPY . .
+
+RUN chown -R app:app /home/app/web
+
+USER app
+
+#CMD gunicorn --bind 0.0.0.0:${PORT:-8000} app.main:app -k uvicorn.workers.UvicornWorker

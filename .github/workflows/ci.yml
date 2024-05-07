@@ -5,6 +5,7 @@ concurrency:
     ${{ github.ref_type }}-
     ${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
+
 on:
   workflow_dispatch:
     inputs:
@@ -34,6 +35,8 @@ on:
       - "docs/**"
 permissions:
   contents: read # to fetch code (actions/checkout)
+
+
 jobs:
   lint:
     name: Run pre-commit hooks

@@ -31,7 +31,7 @@ class _BaseSettings(BaseSettings):
 class Settings(_BaseSettings):
     # CORE SETTINGS
     SECRET_KEY: str
-    ENVIRONMENT: Literal["DEV", "PYTEST", "STAGE", "PRODUCTION"]
+    ENVIRONMENT: Literal["DEV", "PYTEST", "STAGE", "PROD"]
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     BACKEND_CORS_ORIGINS: Union[str, list[AnyHttpUrl]]
     LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"

@@ -1,10 +1,10 @@
 
 # About
 
-Ship Baldin to AWS using CloudFormation with Infrastructure defined as Code (IaC) using the AWS Cloud Development Kit (CDK).'
+Ship Baldin to AWS using CloudFormation with Infrastructure defined as Code (IaC) using the AWS Cloud Development Kit (CDK).
 
 
-## Prerequisites
+### Prerequisites
 Create a virtual environment and activate it, e.g. with pipenv:
 
 ```
@@ -18,16 +18,11 @@ Create a `.env` file in the root of the project with the following variables set
 AWS_REGION=
 AWS_ACCOUNT=
 ```
+The AWS_ACCOUNT ID value can be found in the AWS console under your account settings.
 
-Note, you can also set these variables in your shell environment. The AWS_ACCOUNT variable refers can be found in the AWS console under your account settings. The AWS_REGION variable is the region you want to deploy the stack to.
-
-
-## Usage
-
-At this point you can now build Baldin's infrastructure using the CDK CLI. The following commands are available:
+### AWS CDK CLI
 
 To synthesize the CloudFormation template:
-
 ```
 $ cdk synth
 ```
@@ -56,10 +51,21 @@ To see the difference between the deployed stack and the current state:
 $ cdk diff <STACK-ID>
 ```
 
-Note, the `STACK-ID` can be found in the output of the `cdk ls` command. Also, the first time you deploy the stack you must bootstrap the environment:
+Note, the first time you deploy with the AWS CDK CLI, you must boostrap your account:
 
 ```
 $ cdk bootstrap
 ```
+
+### Shipping Baldin
+
+To ship Baldin to AWS, you must deploy the stacks in roughly the following order:
+
+1. `BaldinIAMStack`
+2. `BaldinVPCStack`
+3. `BaldinS3Stack`
+4. `BaldinECRStack`
+5. `BaldinDBStack`
+6. `BaldinAPIStack`
 
 Enjoy!

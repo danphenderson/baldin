@@ -4,7 +4,7 @@ from aws_cdk import aws_s3 as s3
 
 from conf import settings
 
-class S3Stack(Stack):
+class BaldinS3Stack(Stack):
 
 
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:

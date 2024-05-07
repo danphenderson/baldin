@@ -1,7 +1,7 @@
 from aws_cdk import Stack, CfnOutput, aws_ec2 as ec2
 from constructs import Construct
 
-class VPCStack(Stack):
+class BaldinVPCStack(Stack):
 
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)

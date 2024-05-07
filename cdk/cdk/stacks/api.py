@@ -3,6 +3,7 @@ from aws_cdk import (
     Stack,
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
+    aws_logs as logs
 )
 
 from constructs import Construct
@@ -28,13 +29,19 @@ class BaldinAPIStack(Stack):
             self, "BaldinAPITaskDef"
         )
 
+        # Setup CloudWatch Logs
         self.container = self.task_definition.add_container(
             "BaldinAPIContainer",
             image=ecs.ContainerImage.from_asset(settings.BALDIN_API_IMAGE_FILE),
             memory_limit_mib=512,
             cpu=256,
-            environment={k: v for k, v in settings.BALDIN_API_IMAGE_ENV.items() if v is not None} # or just # type: ignore this line
+            environment={k: v for k, v in settings.BALDIN_API_IMAGE_ENV.items() if v is not None}, # or just # type: ignore this line,
+            logging=ecs.LogDrivers.aws_logs(
+                stream_prefix="BaldinAPI",
+                log_retention=logs.RetentionDays.ONE_MONTH  # You can adjust the retention period
+            ),
         )
+
         self.container.add_port_mappings(
             ecs.PortMapping(container_port=8000)
         )

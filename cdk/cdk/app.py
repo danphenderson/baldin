@@ -15,6 +15,5 @@ s3_stack = BaldinS3Stack(app, "BaldinS3Stack")
 iam_stack = BaldinIAMStack(app, "BaldinIAMStack")
 ecr_stack = BaldinECRStack(app, "BaldinECRStack")
 db_stack = BaldinDBStack(app, "BaldinDBStack", vpc_stack.vpc)
-#api_stack = BaldinAPIStack(app, "BaldinAPIStack", vpc_stack.vpc)
-
+api_stack = BaldinAPIStack(app, "BaldinAPIStack", vpc_stack.vpc)
 app.synth()

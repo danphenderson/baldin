@@ -10,6 +10,14 @@ from aws_cdk import (
 from constructs import Construct
 
 from conf import settings
+from utils import build_and_push_docker_image
+
+def build_and_push_image(image_tag: str):
+    # Build and push the Docker image to ECR
+    repository_name = "baldin-api-repository"
+    build_and_push_docker_image(repository_name, settings.BALDIN_API_PATH, image_tag)
+
+
 class BaldinAPIStack(Stack):
     def __init__(self, scope: Construct, id: str, vpc, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)

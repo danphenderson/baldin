@@ -1,0 +1,66 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: db
+      POSTGRES_USER: xpHMVyxenH
+      POSTGRES_PASSWORD: GpZODNAOLkEPucEpcqXrcDqNNLGpYJxXwhuJdcLvVMgkrHkULP
+    volumes:
+      - ./backend/public/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U xpHMVyxenH -d db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  test_db:
+    image: postgres:15
+    restart: unless-stopped
+    ports:
+      - "5431:5432"
+    environment:
+      POSTGRES_DB: test_db
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: FliGUljTeFPZFdNBBbvQyJblNUaucMnsYgXtmEJHYVlXyliKyq
+    volumes:
+      - ./backend/public/test_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d test_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile.prod
+    command: gunicorn --bind 0.0.0.0:8000 app.main:app -k uvicorn.workers.UvicornWorker --log-level debug
+    env_file:
+      - ./backend/.env.prod
+    volumes:
+      - ./backend:/usr/src/app
+    ports:
+      - 8004:8000
+    depends_on:
+      db:
+        condition: service_healthy
+      test_db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ./Dockerfile.prod
+    env_file:
+      - ./frontend/.env.prod
+    volumes:
+      - ./frontend:/usr/src/app
+    ports:
+      - 3000:3000
+    depends_on:
+      - web

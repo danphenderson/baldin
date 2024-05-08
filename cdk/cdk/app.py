@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Path: cdk/cdk/app.py
 import aws_cdk as cdk
 
 app = cdk.App()

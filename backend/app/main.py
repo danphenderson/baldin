@@ -75,15 +75,15 @@ admin.mount_to(app)
 @app.on_event("startup")  # noqa
 async def startup_event():
     console_log.info("Starting up...")
+    tracemalloc.start()
     await create_db_and_tables()
     await create_default_superuser()
-    tracemalloc.start()
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    console_log.info("Shutting down...")
     tracemalloc.stop()
+    console_log.info("Shutting down...")
 
 
 @app.get("/")

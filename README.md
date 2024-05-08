@@ -19,12 +19,6 @@ Currently, the application is in its infancy. See open issues for a list of plan
 
 [issue tracker](https://github.com/danphenderson/baldin/issues)
 
-# Contributing
-
-Contributions are welcome! The frontend is built with React and the backend is built with FastAPI. The API is powered by a Postgres database.
-
-Currently the frontend of the application needs to get up to speed with the backend. The backend is in a good place to start building out the frontend.
-
 ### Getting Started
 
 Ensure you have the following requirements installed:
@@ -44,9 +38,16 @@ Then clone your fork locally: `git clone git@github.com:YOURGITHUBNAME/baldin.gi
 
 ### Local Network
 
-Baldin: [API](http://localhost:8000) | [Frontend](http://localhost:3000/) | [Admin](http://localhost:8004/admin)
+The development stack is composed of the following services:
 
-OpenAPI Documentation: [Swagger](http://localhost:8004/docs) | [(Re)docs](http://localhost:8004/redocs)
+**Baldin**
+    [API](http://localhost:8000)
+    [Frontend](http://localhost:3000/)
+    [Admin](http://localhost:8004/admin)
+
+**Documentation**
+    [Swagger](http://localhost:8004/docs)
+    [(Re)docs](http://localhost:8004/redocs)
 
 
 ### Building and Running
@@ -56,7 +57,14 @@ After cloning your forked version of the repository, spin up the development sta
 1. Use `backend/.env.example` to create `backend/.env` with a valid `OPEN_API_KEY`
 2. In the root of the reposity run `docker-compose up --build`
 
-### 5-steps to contributing
+### Contributing
+
+Contributions are welcome! The frontend is built with React and the backend is built with FastAPI. The API is powered by a Postgres database.
+
+Currently the frontend of the application needs to get up to speed with the backend. The backend is in a good place to start building out the frontend.
+
+
+### 5-steps to Contributing
 
 After running Baldin locally, you're ready to start contributing!
 

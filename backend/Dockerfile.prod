@@ -19,12 +19,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 # Create directories and user
-RUN mkdir -p /home/app/web \
+RUN mkdir -p /home/backend/ \
     && addgroup --system app \
     && adduser --system --group app
 
 # Set working directory
-WORKDIR /home/app/web
+WORKDIR /home/backend/
 
 # Install system dependencies
 RUN apt-get update \
@@ -53,8 +53,8 @@ COPY --from=dependencies /usr/local/lib/python3.11/site-packages /usr/local/lib/
 COPY --from=dependencies /usr/local/bin /usr/local/bin
 
 # Set environment variables specific to the application
-ENV HOME=/home/app \
-    APP_HOME=/home/app/web
+ENV HOME=/home/ \
+    APP_HOME=/home/backend/
 
 # Set working directory
 WORKDIR $APP_HOME

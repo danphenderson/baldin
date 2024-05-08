@@ -24,13 +24,13 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install npm dependencies
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Copy the frontend source code into the container
 COPY . .
 
 # Build the production version of the application
-RUN npm run build
+RUN npm run build --verbose
 
 # --- Production Stage ---
 # Use a smaller, more secure base image for the production stage

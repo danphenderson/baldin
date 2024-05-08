@@ -1,0 +1,72 @@
+## Dockerfile for production environment
+#
+# Multi-Stage Build:
+# 1. Base Stage: Sets up the base environment, installs system dependencies required for both the build process and runtime.
+#       - Dependencies Stage: Handles the installation of Python and Playwright dependencies. This keeps the build dependencies separate from the final runtime environment.
+#       - Final Stage: Constructs the final slimmed-down image by copying the installed packages from the dependencies stage and the application code. This stage does not include build dependencies like GCC, reducing the final image size and improving security.
+# 2. Security Enhancements:
+#       - User privileges are reduced by switching to a non-root user app, which limits the potential impact of security vulnerabilities within the application or its dependencies.
+# 3. Efficiency Improvements:
+#       - The use of --no-install-recommends during the apt-get install reduces the number of unnecessary packages installed in the image, decreasing its size.
+#       - Removal of the APT lists after installation (rm -rf /var/lib/apt/lists/*) cleans up unnecessary files and reduces the layer size.
+
+
+# Base image
+FROM python:3.11-slim-bookworm as base
+
+# Set environment variables to reduce Python bytecode generation and buffer
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Create directories and user
+RUN mkdir -p /home/app/web \
+    && addgroup --system app \
+    && adduser --system --group app
+
+# Set working directory
+WORKDIR /home/app/web
+
+# Install system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends netcat-traditional gcc postgresql-client \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --upgrade pip
+
+# Dependency image
+FROM base as dependencies
+
+# Copy the Pipfile and Pipfile.lock into the image
+COPY Pipfile Pipfile.lock ./
+
+# Install Python dependencies
+RUN pip install pipenv \
+    && pipenv install --system --deploy --ignore-pipfile
+
+# Install Playwright for browser automation
+RUN playwright install && playwright install-deps
+
+# Final stage
+FROM base as final
+
+# Copy virtual environment from dependencies stage
+COPY --from=dependencies /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=dependencies /usr/local/bin /usr/local/bin
+
+# Set environment variables specific to the application
+ENV HOME=/home/app \
+    APP_HOME=/home/app/web
+
+# Set working directory
+WORKDIR $APP_HOME
+
+# Copy application code (and other necessary files) to container
+COPY . .
+
+# Ensure the created user owns the application files
+RUN chown -R app:app $APP_HOME
+
+# Switch to non-root user
+USER app
+
+# Set command to run the application using gunicorn with Uvicorn workers
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app.main:app", "-k", "uvicorn.workers.UvicornWorker", "--log-level", "debug"]

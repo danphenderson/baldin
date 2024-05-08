@@ -7,7 +7,6 @@ Streamline your journey to employment with Baldin.
 Baldin is a platform that helps you find job opportunities, build and manage your applications, and prepare for interviews.
 
 
-
 Documentation is available at [https://danphenderson.github.io/baldin/](https://danphenderson.github.io/baldin/)
 
 
@@ -45,9 +44,9 @@ Then clone your fork locally: `git clone git@github.com:YOURGITHUBNAME/baldin.gi
 
 ### Local Network
 
-Baldin: [API](http://127.0.0.1:8000) | [Frontend](http://localhost:3000/) | [Admin](http://localhost:8004/admin)
+Baldin: [API](http://localhost:8000) | [Frontend](http://localhost:3000/) | [Admin](http://localhost:8004/admin)
 
-OpenAPI Documentation: [Swagger](http://localhost:8000/docs) | [(Re)docs](http://127.0.0.1:8000/redocs)
+OpenAPI Documentation: [Swagger](http://localhost:8004/docs) | [(Re)docs](http://localhost:8004/redocs)
 
 
 ### Building and Running

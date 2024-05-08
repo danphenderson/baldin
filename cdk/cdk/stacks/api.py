@@ -1,12 +1,11 @@
 from aws_cdk import (
+    Fn,
     CfnOutput,
     Stack,
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_logs as logs,
     aws_ecr as ecr,
-    aws_ec2 as ec2,
-    aws_secretsmanager as secretsmanager
 )
 
 from constructs import Construct
@@ -14,7 +13,7 @@ from constructs import Construct
 from conf import settings
 from utils import build_and_push_docker_image
 
-def build_and_push_image(image_tag: str):
+def build_and_push_api_image(tag: str):
     """
     TODO: Figure out why this function isn't reporting progress to the console.
 
@@ -22,20 +21,20 @@ def build_and_push_image(image_tag: str):
     """
     # Build and push the Docker image to ECR
     repository_name = "baldin-api-repository"
-    build_and_push_docker_image(repository_name, settings.BALDIN_API_PATH, image_tag)
+
+    build_and_push_docker_image(repository_name, settings.BALDIN_API_PATH, tag)
 
 
 class BaldinAPIStack(Stack):
-    def __init__(self, scope: Construct, id: str, vpc, db, **kwargs) -> None:
+    def __init__(self, scope: Construct, id: str, vpc, api_sg, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-        # Load the image environment variables
-        env_dict = {k: v for k, v in settings.BALDIN_API_IMAGE_ENV.items() if v is not None}
+        # Import values from dependant parent stacks
 
         # Create an ECS cluster
         self.cluster = ecs.Cluster(
             self, "BaldinAPICluster",
-            vpc=vpc
+            vpc=vpc,
         )
 
         # Define task definition with a single container
@@ -43,65 +42,26 @@ class BaldinAPIStack(Stack):
             self, "BaldinAPITaskDef"
         )
 
-        # Fetch the database credentials secret
-        db_credentials_secret = secretsmanager.Secret.from_secret_complete_arn(
-            self, "BaldinDBCredentialsSecret",
-            db.secret.secret_arn
-        )
-
-
-
         # Setup CloudWatch Logs
         self.container = self.task_definition.add_container(
             "BaldinAPIContainer",
             # Use an image from ECR
             image=ecs.ContainerImage.from_ecr_repository(
                 ecr.Repository.from_repository_name(self, "BaldinAPIRepo", "baldin-api-repository"),
-                "latest"
+                tag=settings.BALDIN_API_IMAGE_TAG
             ),
             memory_limit_mib=512,
             cpu=256,
-            environment={  # Non-sensitive env vars
-                "ENV_VAR_NAME": "value"
-            },
-            secrets={
-                "DATABASE_USERNAME": ecs.Secret.from_secrets_manager(db_credentials_secret, "username"),
-                "DATABASE_PASSWORD": ecs.Secret.from_secrets_manager(db_credentials_secret, "password")
-            },
+            environment=settings.BALDIN_API_ENV,
             logging=ecs.LogDrivers.aws_logs(
                 stream_prefix="BaldinAPI",
                 log_retention=logs.RetentionDays.ONE_MONTH
             ),
         )
 
-
+        # Add port mappings
         self.container.add_port_mappings(
-            ecs.PortMapping(container_port=8000)
-        )
-
-        # Define a security group for your ECS service
-        ecs_security_group = ec2.SecurityGroup(
-            self, "BaldinAPIServiceSG",
-            vpc=vpc,
-            description="Security group for the ECS service",
-            allow_all_outbound=True  # Modify as necessary for your use case
-        )
-
-
-
-        # Define a security group for your ECS service
-        ecs_security_group = ec2.SecurityGroup(
-            self, "BaldinAPIServiceSG",
-            vpc=vpc,
-            description="Security group for the ECS service",
-            allow_all_outbound=True  # Modify as necessary for your use case
-        )
-
-        # Allow inbound HTTP traffic on port 80
-        ecs_security_group.add_ingress_rule(
-            ec2.Peer.any_ipv4(),
-            ec2.Port.tcp(80),
-            "Allow inbound HTTP traffic"
+            ecs.PortMapping(container_port=int(settings.BALDIN_API_ENV.get('PORT', "8000")))
         )
 
 
@@ -110,11 +70,12 @@ class BaldinAPIStack(Stack):
             self, "BaldinAPIFargateService",
             cluster=self.cluster,
             task_definition=self.task_definition,
-            security_groups=[ecs_security_group],
+            security_groups=[api_sg],
             desired_count=2,
             listener_port=80,
             public_load_balancer=True
         )
+
         # Output the DNS where the service can be accessed
         CfnOutput(
             self, "BaldinAPILoadBalancerDNS",

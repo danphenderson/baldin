@@ -12,9 +12,15 @@ from stacks.db import BaldinDBStack
 from stacks.api import BaldinAPIStack
 
 vpc_stack = BaldinVPCStack(app, "BaldinVPCStack")
+
 s3_stack = BaldinS3Stack(app, "BaldinS3Stack")
+
 iam_stack = BaldinIAMStack(app, "BaldinIAMStack")
+
 ecr_stack = BaldinECRStack(app, "BaldinECRStack")
-db_stack = BaldinDBStack(app, "BaldinDBStack", vpc_stack.vpc)
-api_stack = BaldinAPIStack(app, "BaldinAPIStack", vpc_stack.vpc)
+
+db_stack = BaldinDBStack(app, "BaldinDBStack", vpc=vpc_stack.vpc)
+
+api_stack = BaldinAPIStack(app, "BaldinAPIStack", vpc = vpc_stack.vpc, api_sg = vpc_stack.api_sg)
+
 app.synth()

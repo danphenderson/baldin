@@ -1,4 +1,5 @@
 from aws_cdk import (
+    Fn,
     CfnOutput,
     Duration,
     Stack,
@@ -11,6 +12,9 @@ from constructs import Construct
 from conf import settings
 
 class BaldinDBStack(Stack):
+    @property
+    def db_secret(self):
+        return self.db_credentials.secret
     def __init__(self, scope: Construct, id: str, vpc, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
@@ -21,16 +25,21 @@ class BaldinDBStack(Stack):
             description="Allow access to RDS from the application",
             allow_all_outbound=True
         )
+
         security_group.add_ingress_rule(
             ec2.Peer.any_ipv4(),
-            ec2.Port.tcp(int(settings.BALDIN_API_IMAGE_ENV['DEFAULT_DATABASE_PORT'] or 5432)),  # Use the port from settings
+            ec2.Port.tcp(int(settings.BALDIN_API_ENV['DEFAULT_DATABASE_PORT'] or 5432)),  # Use the port from settings
             "Allow PostgreSQL access"
         )
 
         # Define the subnet selection for the database
         subnet_selection = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)
 
-        db_instance = rds.DatabaseInstance(
+        # Define the database credentials
+        self.db_credentials = rds.Credentials.from_generated_secret(settings.BALDIN_API_ENV['DEFAULT_DATABASE_USER'] or "admin")
+
+        # Create the RDS instance
+        self.db_instance = rds.DatabaseInstance(
             self, "BaldinDBInstance",
             engine=rds.DatabaseInstanceEngine.postgres(
                 version=rds.PostgresEngineVersion.VER_15
@@ -49,12 +58,19 @@ class BaldinDBStack(Stack):
             deletion_protection=False,
             storage_encrypted=True,
             database_name="baldin_db",
-            credentials=rds.Credentials.from_generated_secret("postgres"),
+            credentials=self.db_credentials,
+        )
+
+        # Output the database instance id/identifier
+        CfnOutput(
+            self, "BaldinDBId",
+            value=self.db_instance.instance_identifier,
+            description="Identifier of the Baldin RDS instance."
         )
 
         # Output the secrets manager secret
         CfnOutput(
-            self, "BaldinDBCredentials",
-            value=db_instance.secret.secret_arn, # type: ignore
-            description="ARN of the RDS instance credentials in Secrets Manager"
+            self, "BaldinDBCredentialsSecretArn",
+            value=self.db_instance.secret.secret_arn, # type: ignore
+            description="Complete ARN to secrets manager credentials of the Baldin RDS instance."
         )

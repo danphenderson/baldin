@@ -31,9 +31,15 @@ class Settings(_BaseSettings):
     VERSION: str = PYPROJECT_CONTENT["version"]
     DESCRIPTION: str = PYPROJECT_CONTENT["description"]
 
-    # BALDIN SETTINGS
+    # BALDIN API SETTINGS
     BALDIN_API_PATH: Path = PROJECT_DIR.parent / "backend"
     BALDIN_API_ENV_PATH: str = str(PROJECT_DIR.parent / "backend" / ".env.prod")
+    BALDIN_API_IMAGE_TAG: str = "latest"
+
+    # BALDIN FRONTEND SETTINGS
+    BALDIN_FRONTEND_PATH: Path = PROJECT_DIR.parent / "frontend"
+    BALDIN_FRONTEND_ENV_PATH: str = str(PROJECT_DIR.parent / "frontend" / ".env.prod")
+    BALDIN_FRONTEND_IMAGE_TAG: str = "latest"
 
     # AWS SETTINGS
     AWS_REGION: str
@@ -50,8 +56,8 @@ class Settings(_BaseSettings):
 
 
     @property
-    def BALDIN_API_IMAGE_ENV(self):
-        return DotEnv(self.BALDIN_API_ENV_PATH).dict()
+    def BALDIN_API_ENV(self):
+        return {k:v for k, v in DotEnv(self.BALDIN_API_ENV_PATH).dict().items() if v is not None}
 
 
     class Config:

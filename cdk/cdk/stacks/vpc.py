@@ -65,12 +65,12 @@ class BaldinVPCStack(Stack):
         self.web_sg.add_ingress_rule(
             ec2.Peer.any_ipv4(),
             ec2.Port.tcp(80),
-            "Allow HTTP traffic"
+            "Allow HTTP traffic on port 80"
         )
         self.web_sg.add_ingress_rule(
             ec2.Peer.any_ipv4(),
             ec2.Port.tcp(443),
-            "Allow HTTPS traffic"
+            "Allow HTTPS traffic on port 443"
         )
 
         # API Security Group
@@ -81,7 +81,7 @@ class BaldinVPCStack(Stack):
             allow_all_outbound=True
         )
         self.api_sg.add_ingress_rule(
-            ec2.Peer.security_group(self.web_sg),
+            ec2.Peer.security_group_id(self.web_sg.security_group_id),
             ec2.Port.tcp(8000),  # Adjust port according to your API service
             "Allow inbound API traffic from web tier"
         )
@@ -94,13 +94,13 @@ class BaldinVPCStack(Stack):
             allow_all_outbound=False  # Default, adjust if necessary
         )
         self.db_sg.add_ingress_rule(
-            ec2.Peer.security_group(self.api_sg), # type: ignore
+            ec2.Peer.security_group_id(self.api_sg.security_group_id), # type: ignore
             ec2.Port.tcp(5432),  # Standard PostgreSQL port, adjust as necessary
             "Allow database access from API tier"
         )
 
         # Output the VPC ID and security group IDs
         CfnOutput(self, "BaldinVPCId", value=self.vpc.vpc_id, description="The ID of the Baldin VPC")
-        CfnOutput(self, "WebSGId", value=self.web_sg.security_group_id, description="Web Security Group ID")
-        CfnOutput(self, "APISGId", value=self.api_sg.security_group_id, description="API Security Group ID")
-        CfnOutput(self, "DBSGId", value=self.db_sg.security_group_id, description="Database Security Group ID")
+        CfnOutput(self, "BaldinWebSGId", value=self.web_sg.security_group_id, description="Frontend Web Security Group ID")
+        CfnOutput(self, "BaldinAPISGId", value=self.api_sg.security_group_id, description="Backend API Security Group ID")
+        CfnOutput(self, "BaldinDBSGId", value=self.db_sg.security_group_id, description="Database Security Group ID")

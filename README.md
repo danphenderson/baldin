@@ -15,20 +15,21 @@ Documentation is available at [https://danphenderson.github.io/baldin/](https://
 
 ## 🚧 Features + Bugs 🚧
 
-Currently, the application is in its infancy. See open issues for a list of planned features and known bugs. If you find a bug, have a feature request, or simply a question, please file an issue.
+Currently, the application is in its infancy. See open issues for a list of planned features and
+known bugs. If you find a bug, have a feature request, or simply a question, please file an issue.
 
 [issue tracker](https://github.com/danphenderson/baldin/issues)
 
-### Getting Started
+### Development
 
-Ensure you have the following requirements installed:
+To run baldin locally, ensure you have the following requirements installed:
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 - [Node.js](https://nodejs.org/en/download/)
 - [TypeScript](https://www.typescriptlang.org/download)
 - [pipenv](https://pipenv.pypa.io/en/latest/)
-- [pyenv](`https://github.com/pyenv/pyenv#installation`) (or your preferred Python version manager) with Python 3.11.2
+- [pyenv](https://github.com/pyenv/pyenv#installation) (or your preferred Python version manager) with Python 3.11.2
 
 
 Fork the [repository](https://github.com/danphenderson) (look for the "Fork" button).
@@ -54,8 +55,10 @@ The development stack is composed of the following services:
 
 After cloning your forked version of the repository, spin up the development stack with the following steps:
 
-1. Use `backend/.env.example` to create `backend/.env` with a valid `OPEN_API_KEY`
-2. In the root of the reposity run `docker-compose up --build`
+1. Use `backend/.env.example` to create `backend/.env` with a valid `OPEN_API_KEY`.
+**OPTIONAL**: Supply LinkedIn and Glassdoor credentials to accelerate job searching and
+application management.
+2. In the root of the repository, run `docker-compose up --build`.
 
 ### Contributing
 

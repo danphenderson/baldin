@@ -57,8 +57,11 @@ services:
     env_file:
       - ./frontend/.env
     command: npm start
+    stdin_open: true
+    tty: true
     volumes:
       - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
     ports:
       - 3000:3000
     depends_on:

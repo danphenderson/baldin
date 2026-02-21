@@ -3,7 +3,12 @@ from operator import itemgetter
 from typing import Any, Optional
 
 from fastapi import HTTPException
-from langchain.text_splitter import CharacterTextSplitter
+
+try:
+    from langchain_text_splitters import CharacterTextSplitter
+except ImportError:  # pragma: no cover
+    from langchain.text_splitter import CharacterTextSplitter
+
 from langchain_community.vectorstores import FAISS
 from langchain_core.runnables import RunnableLambda
 from langchain_openai import OpenAIEmbeddings

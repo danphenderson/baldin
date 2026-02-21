@@ -5,7 +5,12 @@ from typing import Any, Sequence
 
 from fastapi import HTTPException
 from jsonschema import Draft202012Validator, exceptions
-from langchain.text_splitter import TokenTextSplitter
+
+try:
+    from langchain_text_splitters import TokenTextSplitter
+except ImportError:  # pragma: no cover
+    from langchain.text_splitter import TokenTextSplitter
+
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import chain

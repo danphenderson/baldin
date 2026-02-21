@@ -4,10 +4,21 @@ from __future__ import annotations
 from typing import BinaryIO, List
 
 from fastapi import HTTPException
-from langchain.document_loaders.parsers import BS4HTMLParser, PDFMinerParser
-from langchain.document_loaders.parsers.generic import MimeTypeBasedParser
-from langchain.document_loaders.parsers.txt import TextParser
-from langchain_community.document_loaders import Blob
+
+try:
+    from langchain_community.document_loaders import Blob
+    from langchain_community.document_loaders.parsers import (
+        BS4HTMLParser,
+        PDFMinerParser,
+    )
+    from langchain_community.document_loaders.parsers.generic import MimeTypeBasedParser
+    from langchain_community.document_loaders.parsers.txt import TextParser
+except ImportError:  # pragma: no cover
+    from langchain.document_loaders.parsers import BS4HTMLParser, PDFMinerParser
+    from langchain.document_loaders.parsers.generic import MimeTypeBasedParser
+    from langchain.document_loaders.parsers.txt import TextParser
+    from langchain_community.document_loaders import Blob
+
 from langchain_core.documents import Document
 
 HANDLERS = {

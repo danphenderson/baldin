@@ -5,7 +5,8 @@ The backend defines the Baldin API and the data ETL pipelines that power the API
 
 ## Getting Started
 
-To get started, create a `baldin/backend/.env` file for local development using the `baldin/backend/.env.example` file with your unique `OPEN_API_KEY`.
+To get started, create a `baldin/backend/.env` file for local development using the
+`baldin/backend/.env.example` file with your unique `OPEN_API_KEY`.
 
 
 ### API

@@ -25,7 +25,7 @@ COPY Pipfile Pipfile.lock ./
 
 # Install Python dependencies
 RUN pip install pipenv \
-    && pipenv install --system --deploy --ignore-pipfile
+    && pipenv install --system --skip-lock
 
 # Install Playwright for browser automation
 RUN playwright install && playwright install-deps

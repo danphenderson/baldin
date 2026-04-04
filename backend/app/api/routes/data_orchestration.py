@@ -1,7 +1,7 @@
 # app/api/routes/data_orchestration.py
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import (  # noqa
@@ -12,6 +12,7 @@ from app.api.deps import (  # noqa
     get_orchestration_pipeline,
     models,
     schemas,
+    update_orchestration_event,
 )
 
 router: APIRouter = APIRouter()
@@ -65,27 +66,68 @@ async def update_orch_pipeline(
 
 @router.delete("/pipelines/{id}", status_code=204)
 async def delete_orch_pipeline(
-    pipeline: schemas.OrchestrationPipelineRead = Depends(get_orchestration_pipeline),
+    pipeline: models.OrchestrationPipeline = Depends(get_orchestration_pipeline),
     db: AsyncSession = Depends(get_async_session),
 ):
+    event_count_result = await db.execute(
+        select(func.count())
+        .select_from(models.OrchestrationEvent)
+        .where(models.OrchestrationEvent.pipeline_id == pipeline.id)
+    )
+    event_count = event_count_result.scalar() or 0
+    if event_count > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Cannot delete workflow with {event_count} existing "
+                f"run{'s' if event_count != 1 else ''}. "
+                "Delete all runs first."
+            ),
+        )
     await db.delete(pipeline)
     await db.commit()
     return None
 
 
-@router.get("/events", response_model=list[schemas.OrchestrationEventRead])
+@router.get("/events", response_model=schemas.OrchestrationEventPaginatedRead)
 async def read_orch_events(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
+    status: schemas.OrchestrationEventStatusType | None = Query(
+        None, description="Filter by run status"
+    ),
+    pipeline_id: str | None = Query(None, description="Filter by workflow ID"),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
 ):
-    rows = await db.execute(
+    base = (
         select(models.OrchestrationEvent)
         .join(models.OrchestrationPipeline)
         .where(models.OrchestrationPipeline.user_id == user.id)
+    )
+
+    if status is not None:
+        base = base.where(models.OrchestrationEvent.status == status.value)
+    if pipeline_id is not None:
+        base = base.where(models.OrchestrationEvent.pipeline_id == pipeline_id)
+
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = count_result.scalar() or 0
+
+    rows = await db.execute(
+        base.order_by(desc(models.OrchestrationEvent.created_at))
+        .offset((page - 1) * page_size)
+        .limit(page_size)
         .options(selectinload(models.OrchestrationEvent.orchestration_pipeline))
     )
-    result = rows.scalars().all()
-    return result
+    items = rows.scalars().all()
+
+    return schemas.OrchestrationEventPaginatedRead(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get(
@@ -121,12 +163,6 @@ async def create_orch_event(
     response_model=schemas.OrchestrationEventRead,
 )
 async def update_orch_event(
-    payload: schemas.OrchestrationEventUpdate,
-    event: schemas.OrchestrationEventRead = Depends(get_orchestration_event),
-    db: AsyncSession = Depends(get_async_session),
+    event: models.OrchestrationEvent = Depends(update_orchestration_event),
 ):
-    for field, value in payload.dict(exclude_unset=True, exclude_defaults=True).items():
-        setattr(event, field, value)
-    await db.commit()
-    await db.refresh(event)
     return event

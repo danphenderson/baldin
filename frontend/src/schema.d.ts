@@ -1675,6 +1675,33 @@ export interface components {
        */
       pipeline_id: string;
     };
+    /** OrchestrationEventPaginatedRead */
+    OrchestrationEventPaginatedRead: {
+      /**
+       * Items
+       * @description Paginated list of orchestration events
+       * @default []
+       */
+      items?: components["schemas"]["OrchestrationEventRead-Output"][];
+      /**
+       * Total
+       * @description Total number of matching events
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
     /** OrchestrationEventRead */
     "OrchestrationEventRead-Input": {
       /**
@@ -1778,7 +1805,13 @@ export interface components {
      * @enum {string}
      */
     OrchestrationEventStatusType: "pending" | "running" | "success" | "failure";
-    /** OrchestrationEventUpdate */
+    /**
+     * OrchestrationEventUpdate
+     * @description Update schema for orchestration events.
+     *
+     * pipeline_id is intentionally excluded — runs cannot be reassigned
+     * to a different workflow after creation.
+     */
     OrchestrationEventUpdate: {
       /**
        * Message
@@ -1803,11 +1836,6 @@ export interface components {
       destination_uri?: components["schemas"]["URI"] | null;
       /** @description Status of the event */
       status?: components["schemas"]["OrchestrationEventStatusType"] | null;
-      /**
-       * Pipeline Id
-       * @description Pipeline ID
-       */
-      pipeline_id?: string | null;
     };
     /** OrchestrationPipelineCreate */
     OrchestrationPipelineCreate: {
@@ -1872,6 +1900,28 @@ export interface components {
        * @default []
        */
       orchestration_events?: components["schemas"]["OrchestrationEventRead-Output"][];
+      /**
+       * Run Count
+       * @description Total number of runs
+       * @default 0
+       */
+      run_count?: number;
+      /**
+       * Failure Count
+       * @description Number of failed runs
+       * @default 0
+       */
+      failure_count?: number;
+      /**
+       * Last Run Status
+       * @description Status of the most recent run
+       */
+      last_run_status?: string | null;
+      /**
+       * Last Run At
+       * @description Timestamp of the most recent run
+       */
+      last_run_at?: string | null;
     };
     /** OrchestrationPipelineUpdate */
     OrchestrationPipelineUpdate: {
@@ -3249,11 +3299,29 @@ export interface operations {
   };
   /** Read Orch Events */
   read_orch_events_data_orchestration_events_get: {
+    parameters: {
+      query?: {
+        /** @description Filter by run status */
+        status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+        /** @description Filter by workflow ID */
+        pipeline_id?: string | null;
+        /** @description Page number */
+        page?: number;
+        /** @description Items per page */
+        page_size?: number;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead-Output"][];
+          "application/json": components["schemas"]["OrchestrationEventPaginatedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

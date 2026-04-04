@@ -2,8 +2,8 @@ import React, { useContext, useEffect, useState, useCallback, useMemo } from 're
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Card, CardContent, Typography, Button, Chip, LinearProgress,
-  useTheme, alpha, Stack, IconButton, TextField, Dialog, DialogTitle,
-  DialogContent, DialogActions, Skeleton, Tooltip, ButtonBase,
+  useTheme, alpha, Stack, TextField, Dialog, DialogTitle,
+  DialogContent, DialogActions, Skeleton, ButtonBase,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
@@ -305,35 +305,6 @@ const DashboardPage: React.FC = () => {
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
-
-      {/* ── Header actions ── */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3.5 }}>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Tooltip title="Refresh data">
-            <IconButton
-              onClick={refresh}
-              aria-label="Refresh dashboard data"
-              sx={{ border: `1px solid ${theme.palette.divider}` }}
-            >
-              <RefreshIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Button
-            variant="contained"
-            startIcon={<BoltIcon />}
-            onClick={() => setExtractDialog(true)}
-            sx={{
-              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-              '&:hover': {
-                background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
-                boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.35)}`,
-              },
-            }}
-          >
-            Extract Lead
-          </Button>
-        </Stack>
-      </Box>
 
       {/* ── Metrics ── */}
       <Grid container spacing={2.5} sx={{ mb: 3.5 }}>

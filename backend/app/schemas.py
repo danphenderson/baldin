@@ -87,6 +87,34 @@ class OrchestrationPipelineRead(BaseOrchestrationPipeline, BaseRead):
     events: list["OrchestrationEventRead"] = Field(
         [], description="Events in the pipeline", alias="orchestration_events"
     )
+    run_count: int = Field(0, description="Total number of runs")
+    failure_count: int = Field(0, description="Number of failed runs")
+    last_run_status: str | None = Field(
+        None, description="Status of the most recent run"
+    )
+    last_run_at: datetime | None = Field(
+        None, description="Timestamp of the most recent run"
+    )
+
+    @model_validator(mode="after")
+    def compute_summary(self) -> "OrchestrationPipelineRead":
+        events = self.events or []
+        self.run_count = len(events)
+        self.failure_count = sum(
+            1
+            for e in events
+            if getattr(e, "status", None)
+            in (OrchestrationEventStatusType.FAILED, "failure")
+        )
+        if events:
+            latest = max(events, key=lambda e: e.created_at)
+            self.last_run_status = (
+                latest.status.value
+                if isinstance(latest.status, OrchestrationEventStatusType)
+                else latest.status
+            )
+            self.last_run_at = latest.created_at
+        return self
 
 
 class OrchestrationPipelineCreate(BaseOrchestrationPipeline):
@@ -134,8 +162,38 @@ class OrchestrationEventCreate(BaseOrchestrationEvent):
     pipeline_id: UUID4
 
 
-class OrchestrationEventUpdate(BaseOrchestrationEvent):
-    pass
+class OrchestrationEventUpdate(BaseSchema):
+    """Update schema for orchestration events.
+
+    pipeline_id is intentionally excluded — runs cannot be reassigned
+    to a different workflow after creation.
+    """
+
+    message: str | None = Field(None, description="Error message")
+    payload: dict | None = Field(None, description="Payload of the triggering event")
+    environment: str | None = Field(None, description="Application environment setting")
+    source_uri: URI | None = Field(None, description="Source of the pipeline")
+    destination_uri: URI | None = Field(None, description="Destination of the pipeline")
+    status: OrchestrationEventStatusType | None = Field(
+        None, description="Status of the event"
+    )
+
+    @validator("source_uri", "destination_uri", pre=True)
+    def validate_uri(cls, v: Any) -> URI | None:
+        if isinstance(v, str):
+            return URI(**json.loads(v))
+        if isinstance(v, dict):
+            return URI(**v)
+        return v
+
+
+class OrchestrationEventPaginatedRead(BaseSchema):
+    items: list[OrchestrationEventRead] = Field(
+        [], description="Paginated list of orchestration events"
+    )
+    total: int = Field(0, description="Total number of matching events")
+    page: int = Field(1, ge=1, description="Current page number")
+    page_size: int = Field(20, ge=1, description="Items per page")
 
 
 class ExtractorRequest(BaseSchema):

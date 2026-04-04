@@ -220,10 +220,22 @@ async def update_orchestration_event(
     id: UUID4,
     payload: schemas.OrchestrationEventUpdate,
     db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
 ) -> models.OrchestrationEvent:
-    event = await db.get(models.OrchestrationEvent, id)
+    query = (
+        select(models.OrchestrationEvent)
+        .where(models.OrchestrationEvent.id == id)
+        .options(selectinload(models.OrchestrationEvent.orchestration_pipeline))
+    )
+    result = await db.execute(query)
+    event = result.scalars().first()
     if not event:
         raise await _404(event, id)
+    if (
+        not event.orchestration_pipeline
+        or event.orchestration_pipeline.user_id != user.id
+    ):
+        raise await _403(user.id, event, id)
     for var, value in payload.dict(exclude_unset=True).items():
         setattr(event, var, value)
     await db.commit()

@@ -69,6 +69,7 @@ Exit criteria:
 ## Phase 2: Put Production Deployment Behind a Private Control Plane
 
 Status: `[x]` Complete
+`PRIVATE_DEPLOYMENT_CONTROL_PLANE.md` Status: `[ ]` Not started
 
 Objective:
 

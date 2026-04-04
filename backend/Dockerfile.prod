@@ -12,11 +12,12 @@
 
 
 # Base image
-FROM python:3.11-slim-bookworm as base
+FROM python:3.11-slim-bookworm AS base
 
 # Set environment variables to reduce Python bytecode generation and buffer
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 # Create directories and user
 RUN mkdir -p /home/backend/ \
@@ -28,12 +29,12 @@ WORKDIR /home/backend/
 
 # Install system dependencies
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends netcat-traditional gcc postgresql-client \
+    && apt-get install -y --no-install-recommends netcat-traditional gcc libmagic1 postgresql-client \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --upgrade pip
 
 # Dependency image
-FROM base as dependencies
+FROM base AS dependencies
 
 # Copy the Pipfile and Pipfile.lock into the image
 COPY Pipfile Pipfile.lock ./
@@ -42,15 +43,17 @@ COPY Pipfile Pipfile.lock ./
 RUN pip install pipenv \
     && pipenv install --system --deploy --ignore-pipfile
 
-# Install Playwright for browser automation
-RUN playwright install && playwright install-deps
-
 # Final stage
-FROM base as final
+FROM base AS final
 
 # Copy virtual environment from dependencies stage
 COPY --from=dependencies /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=dependencies /usr/local/bin /usr/local/bin
+
+# Install Playwright browsers and native dependencies in the runtime image.
+RUN playwright install --with-deps chromium \
+    && chmod -R a+rX /ms-playwright \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables specific to the application
 ENV HOME=/home/ \
@@ -69,4 +72,4 @@ RUN chown -R app:app $APP_HOME
 USER app
 
 # Set command to run the application using gunicorn with Uvicorn workers
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app.main:app", "-k", "uvicorn.workers.UvicornWorker", "--log-level", "debug"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app.main:app", "-k", "uvicorn.workers.UvicornWorker", "--log-level", "info"]

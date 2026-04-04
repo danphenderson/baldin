@@ -16,6 +16,7 @@ from app.api.deps import (
     get_async_session,
     get_current_user,
     get_extractor_by_name,
+    get_extractor_run_payload,
     get_orchestration_pipeline_by_name,
     get_skill,
     models,
@@ -50,7 +51,7 @@ async def extract_user_skills_task(
 @router.post("/extract", response_model=dict[str, str])
 async def extract_user_skills(
     background_tasks: BackgroundTasks,
-    payload: schemas.ExtractorRun = Depends(),
+    payload: schemas.ExtractorRun = Depends(get_extractor_run_payload),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -89,12 +90,6 @@ async def get_current_user_skills(
         select(models.Skill).where(models.Skill.user_id == user.id)
     )
     skills = result.scalars().all()
-
-    if not skills:
-        raise HTTPException(
-            status_code=404, detail="No applications found for the current user"
-        )
-
     return skills
 
 

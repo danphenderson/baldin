@@ -91,10 +91,15 @@ async def read_leads(
     offset = (pagination.page - 1) * pagination.page_size
 
     # Execute the paginated query
-    lead_query = select(models.Lead).offset(offset).limit(pagination.page_size)
+    lead_query = (
+        select(models.Lead)
+        .options(joinedload(models.Lead.companies))
+        .offset(offset)
+        .limit(pagination.page_size)
+    )
     leads = await db.execute(lead_query)
 
-    lead_list = leads.scalars().all()
+    lead_list = leads.scalars().unique().all()
     # total_count = None
 
     # # Get the total count
@@ -107,11 +112,8 @@ async def read_leads(
     total_count_result = await db.execute(total_count_query)
     total_count = total_count_result.scalar_one()
 
-    if not lead_list:  # TODO: Should this be above the total_count check?
-        raise HTTPException(status_code=404, detail="No leads found")
-
     return schemas.LeadsPaginatedRead(
-        leads=[schemas.LeadRead(**lead.__dict__) for lead in lead_list],
+        leads=[schemas.LeadRead.model_validate(lead) for lead in lead_list],
         pagination=pagination,
         total_count=total_count,
     )
@@ -124,9 +126,9 @@ async def update_lead(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    console_log.info(f"Updating lead {id} with data: {payload.dict()}")
+    console_log.info(f"Updating lead {lead.id} with data: {payload.dict()}")
     if "companies" in payload.dict():
-        console_log.info(f"Updating companies for lead {id}")
+        console_log.info(f"Updating companies for lead {lead.id}")
 
     # Update the lead
     for field, value in payload.dict(exclude_unset=True).items():
@@ -168,6 +170,7 @@ async def purge_leads(
 async def delete_lead(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
 ):
     lead = await db.get(models.Lead, id)
     if not lead:
@@ -175,7 +178,7 @@ async def delete_lead(
 
     await db.delete(lead)
     await db.commit()
-    return {"message": "Lead deleted successfully"}
+    return None
 
 
 @router.post("/extract", response_model=schemas.LeadRead)

@@ -4,13 +4,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>app.main &#8212; baldin 0.1.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d10597a4" />
+    <title>app.main &#8212; Baldin Developer Preview Docs</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=34bb78ad" />
     <link rel="stylesheet" type="text/css" href="../../_static/pydoctheme.css?v=8635fa60" />
 
-    <script src="../../_static/documentation_options.js?v=01f34227"></script>
-    <script src="../../_static/doctools.js?v=9a2dae69"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/documentation_options.js?v=f34cbc3c"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
 
     <script src="../../_static/sidebar.js"></script>
 
@@ -27,7 +27,7 @@
       <h3>Navigation</h3>
       <ul>
         <li class="responsive-menu"><a href="#sidebar-anchor" title="Navigation">&#9776;</a></li>
-        <li><a href="../../index.html">baldin-0.1.0</a> &#187;</li>
+        <li><a href="../../index.html">Baldin-0.1.0-alpha</a> &#187;</li>
           <li><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
       </ul>
     </div>
@@ -45,28 +45,33 @@
           <div class="body" role="main">
 
   <h1>Source code for app.main</h1><div class="highlight"><pre>
-<span></span><span class="c1"># app/main.py</span>
+<span></span><span class="c1"># Path: app/main.py</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Main FastAPI app instance declaration</span>
+<span class="sd">Main FastAPI app instance declaration and admin interface setup.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tracemalloc</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="kn">import</span> <span class="n">time</span>
 
-<span class="kn">import</span> <span class="nn">tracemalloc</span>
-<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
-<span class="kn">from</span> <span class="nn">fastapi</span> <span class="kn">import</span> <span class="n">FastAPI</span><span class="p">,</span> <span class="n">Request</span><span class="p">,</span> <span class="n">Response</span>
-<span class="kn">from</span> <span class="nn">fastapi.middleware.cors</span> <span class="kn">import</span> <span class="n">CORSMiddleware</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span><span class="p">,</span> <span class="n">Request</span><span class="p">,</span> <span class="n">Response</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi.middleware.cors</span><span class="w"> </span><span class="kn">import</span> <span class="n">CORSMiddleware</span>
 
-<span class="kn">from</span> <span class="nn">app.api.api</span> <span class="kn">import</span> <span class="n">api_router</span>
-<span class="kn">from</span> <span class="nn">app.core</span> <span class="kn">import</span> <span class="n">conf</span>
-<span class="kn">from</span> <span class="nn">app.core.db</span> <span class="kn">import</span> <span class="n">create_db_and_tables</span>
-<span class="kn">from</span> <span class="nn">app.core.security</span> <span class="kn">import</span> <span class="n">create_default_superuser</span>
-<span class="kn">from</span> <span class="nn">app.logging</span> <span class="kn">import</span> <span class="n">get_async_logger</span><span class="p">,</span> <span class="n">console_log</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">app.admin</span><span class="w"> </span><span class="kn">import</span> <span class="n">admin</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">app.api.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">api_router</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">app.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">conf</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">app.core.db</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_db_and_tables</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">app.core.security</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_default_superuser</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">app.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">console_log</span><span class="p">,</span> <span class="n">get_async_logger</span>
+
+<span class="c1"># Setup basic logging</span>
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">()</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">get_async_logger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span>
-    <span class="n">title</span><span class="o">=</span><span class="n">conf</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">PROJECT_NAME</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="n">conf</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">PROJECT_NAME</span><span class="o">.</span><span class="n">title</span><span class="p">(),</span>
     <span class="n">version</span><span class="o">=</span><span class="n">conf</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">VERSION</span><span class="p">,</span>
     <span class="n">description</span><span class="o">=</span><span class="n">conf</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">DESCRIPTION</span><span class="p">,</span>
     <span class="n">openapi_url</span><span class="o">=</span><span class="s2">&quot;/openapi.json&quot;</span><span class="p">,</span>
@@ -85,10 +90,11 @@
 
 <span class="c1"># Log to console if in development</span>
 <span class="k">if</span> <span class="n">conf</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ENVIRONMENT</span> <span class="o">==</span> <span class="s2">&quot;DEV&quot;</span><span class="p">:</span>
+
 <div class="viewcode-block" id="console_log_requests">
 <a class="viewcode-back" href="../../index.html#app.main.console_log_requests">[docs]</a>
     <span class="nd">@app</span><span class="o">.</span><span class="n">middleware</span><span class="p">(</span><span class="s2">&quot;http&quot;</span><span class="p">)</span>
-    <span class="k">async</span> <span class="k">def</span> <span class="nf">console_log_requests</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span> <span class="n">call_next</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">console_log_requests</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span> <span class="n">call_next</span><span class="p">):</span>
         <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
         <span class="n">response</span><span class="p">:</span> <span class="n">Response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">call_next</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
         <span class="n">process_time</span> <span class="o">=</span> <span class="p">(</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span>
@@ -96,58 +102,59 @@
         <span class="k">return</span> <span class="n">response</span></div>
 
 
+
 <span class="c1"># Log all requests to the application asychronously</span>
 <span class="c1"># else: Not neccesarry to log in developement, alllowing us to check in public assets dir to github</span>
 <div class="viewcode-block" id="log_requests">
 <a class="viewcode-back" href="../../index.html#app.main.log_requests">[docs]</a>
 <span class="nd">@app</span><span class="o">.</span><span class="n">middleware</span><span class="p">(</span><span class="s2">&quot;http&quot;</span><span class="p">)</span>
-<span class="k">async</span> <span class="k">def</span> <span class="nf">log_requests</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span> <span class="n">call_next</span><span class="p">):</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">log_requests</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span> <span class="n">call_next</span><span class="p">):</span>
     <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
     <span class="n">response</span><span class="p">:</span> <span class="n">Response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">call_next</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
     <span class="n">process_time</span> <span class="o">=</span> <span class="p">(</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span>
-    <span class="k">await</span> <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Request: </span><span class="si">{</span><span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2"> completed in </span><span class="si">{</span><span class="n">process_time</span><span class="si">}</span><span class="s2">ms, status code: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Request: </span><span class="si">{</span><span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2"> completed in </span><span class="si">{</span><span class="n">process_time</span><span class="si">}</span><span class="s2">ms, status code: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
     <span class="k">return</span> <span class="n">response</span></div>
+
 
 
 <span class="n">app</span><span class="o">.</span><span class="n">include_router</span><span class="p">(</span><span class="n">api_router</span><span class="p">)</span>
 
-
+<span class="n">admin</span><span class="o">.</span><span class="n">mount_to</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
 
 <span class="c1"># FIXME: The setup is currently for development, we need to add a production setup</span>
 <span class="c1"># TODO: Abstract startup &amp; shutdown event defs to conditionally act based on the conf.settings.ENVIRONMENT</span>
 <div class="viewcode-block" id="startup_event">
 <a class="viewcode-back" href="../../index.html#app.main.startup_event">[docs]</a>
-<span class="nd">@app</span><span class="o">.</span><span class="n">on_event</span><span class="p">(</span><span class="s2">&quot;startup&quot;</span><span class="p">)</span>
-<span class="k">async</span> <span class="k">def</span> <span class="nf">startup_event</span><span class="p">():</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_event</span><span class="p">(</span><span class="s2">&quot;startup&quot;</span><span class="p">)</span>  <span class="c1"># noqa</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">startup_event</span><span class="p">():</span>
     <span class="n">console_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Starting up...&quot;</span><span class="p">)</span>
-    <span class="k">await</span> <span class="n">create_db_and_tables</span><span class="p">()</span>
-    <span class="k">await</span> <span class="n">create_default_superuser</span><span class="p">()</span>
-    <span class="n">tracemalloc</span><span class="o">.</span><span class="n">start</span><span class="p">()</span></div>
+    <span class="n">tracemalloc</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">conf</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">SHOULD_BOOTSTRAP_ON_STARTUP</span><span class="p">:</span>
+        <span class="k">await</span> <span class="n">create_db_and_tables</span><span class="p">()</span>
+        <span class="k">await</span> <span class="n">create_default_superuser</span><span class="p">()</span>
+        <span class="n">console_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Development bootstrap completed.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">console_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Skipping automatic schema creation and default superuser bootstrap outside DEV/PYTEST.&quot;</span>
+        <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="shutdown_event">
 <a class="viewcode-back" href="../../index.html#app.main.shutdown_event">[docs]</a>
 <span class="nd">@app</span><span class="o">.</span><span class="n">on_event</span><span class="p">(</span><span class="s2">&quot;shutdown&quot;</span><span class="p">)</span>
-<span class="k">async</span> <span class="k">def</span> <span class="nf">shutdown_event</span><span class="p">():</span>
-    <span class="n">console_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Shutting down...&quot;</span><span class="p">)</span>
-    <span class="n">tracemalloc</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span></div>
-
-
-
-<div class="viewcode-block" id="pong">
-<a class="viewcode-back" href="../../index.html#app.main.pong">[docs]</a>
-<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/ping&quot;</span><span class="p">)</span>
-<span class="k">async</span> <span class="k">def</span> <span class="nf">pong</span><span class="p">():</span>
-    <span class="n">console_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Pong!&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;success!&quot;</span><span class="p">}</span></div>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">shutdown_event</span><span class="p">():</span>
+    <span class="n">tracemalloc</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+    <span class="n">console_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Shutting down...&quot;</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="root">
 <a class="viewcode-back" href="../../index.html#app.main.root">[docs]</a>
 <span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
-<span class="k">async</span> <span class="k">def</span> <span class="nf">root</span><span class="p">():</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">root</span><span class="p">():</span>
     <span class="n">console_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Root!&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Hello World!&quot;</span><span class="p">}</span></div>
 
@@ -157,7 +164,7 @@
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
     <a id="sidebar-anchor"></a>
 
@@ -194,9 +201,9 @@
     </div>
 
     <div class="footer" role="contentinfo">
-    &#169; Copyright 2023, Daniel P. Henderson.
-      Last updated on Apr 24, 2024.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.3.7.
+    &#169; Copyright 2026, Daniel P. Henderson.
+      Last updated on Apr 03, 2026.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

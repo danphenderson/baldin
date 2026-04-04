@@ -1,12 +1,9 @@
 # app/api/routes/resumes.py
 import json
-from asyncio import gather
-from datetime import datetime
 from io import BytesIO
-from pathlib import Path
 
 from aiofiles import open as aopen
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import UUID4
 from reportlab.lib.pagesizes import letter
@@ -22,14 +19,10 @@ from app.api.deps import (
     create_resume,
     get_async_session,
     get_current_user,
-    get_orchestration_event,
     get_orchestration_pipeline_by_name,
     get_resume,
     models,
     schemas,
-    session_context,
-    update_orchestration_event,
-    utils,
 )
 
 router: APIRouter = APIRouter()
@@ -86,9 +79,9 @@ async def download_resume(
 
     # Create a StreamingResponse that streams the PDF file
     response = StreamingResponse(pdf_buffer, media_type="application/pdf")
-    response.headers[
-        "Content-Disposition"
-    ] = f'attachment; filename="{resume.name}.pdf"'
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{resume.name}.pdf"'
+    )
 
     return response
 
@@ -102,10 +95,6 @@ async def get_current_user_resumes(
         select(models.Resume).where(models.Resume.user_id == user.id)
     )
     resumes = result.scalars().all()
-    if not resumes:
-        raise HTTPException(
-            status_code=404, detail="No resumes found for the current user"
-        )
     return resumes
 
 

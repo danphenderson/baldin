@@ -1,847 +1,406 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { Box, CircularProgress, Stack, IconButton, Typography, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, Snackbar, Card, CardContent, Avatar, Grid, Accordion, AccordionSummary, AccordionDetails, CardActions } from '@mui/material';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import EditIcon from '@mui/icons-material/Edit';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-
-// User Context and Services
+import React, { useContext, useEffect, useState, useCallback } from 'react';
+import {
+  Box, Grid, Card, CardContent, Typography, Chip, Stack, Button, TextField,
+  useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
+  Skeleton, Alert, Avatar, Divider, Tabs, Tab, LinearProgress,
+} from '@mui/material';
+import {
+  Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Save as SaveIcon,
+  Upload as UploadIcon, AutoAwesome as AIIcon, Code as SkillIcon,
+  Work as WorkIcon, School as SchoolIcon, CardMembership as CertIcon,
+  Contacts as ContactIcon,
+} from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
-import { getUser, getUserProfile, updateUser, UserUpdate } from '../service/users';
-import { getExperiences, createExperience, updateExperience, ExperienceRead, ExperienceCreate, ExperienceUpdate } from '../service/experiences';
-import { getSkills, createSkill, updateSkill, SkillRead, SkillCreate, SkillUpdate, extractSkill } from '../service/skills';
-import { getEducations, createEducation, updateEducation, EducationRead, EducationCreate, EducationUpdate } from '../service/education';
-import { getCertificates, createCertificate, updateCertificate, CertificateRead, CertificateCreate, CertificateUpdate } from '../service/certificates';
-import { getContacts, createContact, updateContact, ContactRead, ContactCreate, ContactUpdate } from '../service/contacts';
-import { getCoverLetterTemplates, updateCoverLetterTemplate, createCoverLetterTemplate, CoverLetterRead, CoverLetterCreate, CoverLetterUpdate } from '../service/cover-letters';
-import { getResumeTemplates, updateResumeTemplate, createResumeTemplate, ResumeRead, ResumeCreate, ResumeUpdate } from '../service/resumes';
+import { getUser, updateUser } from '../service/users';
+import { getSkills, createSkill, updateSkill, deleteSkill, extractSkill } from '../service/skills';
+import { getExperiences, createExperience, updateExperience, deleteExperience } from '../service/experiences';
+import { getEducations as getEducation, createEducation, updateEducation, deleteEducation } from '../service/education';
+import { getCertificates, createCertificate, updateCertificate, deleteCertificate } from '../service/certificates';
+import { getContacts, createContact, updateContact, deleteContact } from '../service/contacts';
 
-// Modals
-import SkillsModal, { SkillsExtractModal } from '../component/skills-modal';
-import ExperiencesModal from '../component/experiences-modal';
-import CertificateModal from '../component/certificate-modal';
-import EducationModal from '../component/education-modal';
-import ContactModal from '../component/contacts-modal';
-import CoverLetterModal from '../component/cover-letters-modal';
-import ResumeModal from '../component/resumes-modal';
-import ErrorMessage from '../component/common/error-message';
-import MessageAlert from '../component/common/alert';
-import ContentDisplay from '../component/common/content-modal';
-
-const UserProfilePage = () => {
-  const {user, token, setUser } = useContext(UserContext);
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+const ProfilePage: React.FC = () => {
+  const theme = useTheme();
+  const { token, setUser } = useContext(UserContext);
+  const [tab, setTab] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [extractRunnerOpen, setExtractRunnerOpen] = useState(false);
+  const [success, setSuccess] = useState('');
 
-  // User State
-  const [userDetails, setUserDetails] = useState<UserUpdate>(user || {} as UserUpdate);
+  // Profile fields
+  const [profileForm, setProfileForm] = useState<any>({});
 
-  const load = (loading: boolean, message: string) => {
-    setLoading(loading);
-    setMessage(message);
-  };
+  // Section data
+  const [skills, setSkills] = useState<any[]>([]);
+  const [experiences, setExperiences] = useState<any[]>([]);
+  const [education, setEducation] = useState<any[]>([]);
+  const [certificates, setCertificates] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
 
-  /// Load Data
-  const fetchUserData = async () => {
+  // Editing
+  const [editItem, setEditItem] = useState<any>(null);
+  const [editSection, setEditSection] = useState('');
+  const [editOpen, setEditOpen] = useState(false);
+
+  // AI extraction
+  const [extracting, setExtracting] = useState(false);
+  const [extractFile, setExtractFile] = useState<File | null>(null);
+
+  const refresh = useCallback(async () => {
     if (!token) return;
-
+    setLoading(true);
     try {
-        load(true, 'Fetching user data');
-        setUserDetails(await getUser(token));
-        setExperiences(await getExperiences(token));
-        setSkills(await getSkills(token));
-        setEducations(await getEducations(token));
-        setCertificates(await getCertificates(token));
-        setContacts(await getContacts(token));
-    } catch (error) {
-        setError('Failed to fetch user data');
-    } finally {
-        load(false, '');
-    }
-  };
-
-  useEffect(() => {
-      if (token && !user) {
-          fetchUserData();
-      }
-  }, [token, user]);
-
-
-
-  const handleClose = () => {
-      setOpen(false);
-      setMessage('');
-      setError('');
-  };
-
-  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.preventDefault();
-      if (!token) {
-          setError('Authorization token is missing');
-          return;
-      }
-
-      try {
-          setOpen(false);
-          const updatedUser = await updateUser(token, userDetails);
-          setUser(updatedUser);
-          setMessage('Profile updated successfully');
-      } catch (error) {
-          setError('There was an error updating the profile');
-      }
-  };
-
-
-  // Skills State
-  const [skillsModalOpen, setSkillsModalOpen] = useState(false);
-  const [selectedSkill, setSelectedSkill] = useState<SkillRead | undefined>(undefined);
-  const [skills, setSkills] = useState<SkillRead[]>([]);
-
-  const handleOpenSkillsModal = (skill?: SkillRead) => {
-    setSelectedSkill(skill);
-    setSkillsModalOpen(true);
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-      setUserDetails(prevState => ({
-          ...prevState,
-          [name]: value
-      }));
-  };
-  // Ensure that skillData is of a type that includes `id` as a string
-  const handleSaveSkill = async (skillData: SkillCreate | SkillUpdate) => {
-    if (!token) return;
-
-    try {
-        if ('id' in skillData && typeof skillData.id === 'string') {
-            // Now TypeScript knows skillData.id is a string
-            await updateSkill(token, skillData.id, skillData);
-        } else {
-          // Create skill and add to state
-          const newSkill = await createSkill(token, skillData);
-          skills.push(newSkill);
-        }
-        setSkillsModalOpen(false);
-    } catch (error) {
-        console.error('Failed to save skill data', error);
-    }
-  };
-
-  const skillsColumns: GridColDef[] = [
-    { field: 'name', headerName: 'Name', width: 150 },
-    { field: 'category', headerName: 'Category', width: 250 },
-    { field: 'subskills', headerName: 'Subskills', width: 300 },
-    { field: 'yoe', headerName: 'Years of Experience', type: 'number', width: 180 },
-    {
-        field: 'actions',
-        headerName: 'Actions',
-        sortable: false,
-        renderCell: (params) => (
-            <Button color="primary" onClick={() => handleOpenSkillsModal(params.row)}>
-                Edit
-            </Button>
-        ),
-        width: 100,
-    },
-  ];
-
-
-  // Experiences State
-  const [experienceModalOpen, setExperienceModalOpen] = useState(false);
-  const [experiences, setExperiences] = useState<ExperienceRead[]>([]);
-  const [selectedExperience, setSelectedExperience] = useState<ExperienceRead | undefined>(undefined);
-
-  const handleOpenExperienceModal = (experience?: ExperienceRead) => {
-    setSelectedExperience(experience);
-    setExperienceModalOpen(true);
-  }
-
-  const handleSaveExperience = async (experienceData: ExperienceCreate | ExperienceUpdate) => {
-    if (!token) return;
-
-    try {
-        // Check if experienceData has an id to determine if it's an update or create operation
-        if ('id' in experienceData && typeof experienceData.id === 'string') {
-            await updateExperience(token, experienceData.id, experienceData);
-        } else {
-            await createExperience(token, experienceData);
-        }
-        setExperienceModalOpen(false);
-        fetchUserData();  // Refresh the list after saving
-    } catch (error) {
-        console.error('Failed to save experience data', error);
-    }
-  };
-
-  const experienceColumns: GridColDef[] = [
-    { field: 'title', headerName: 'Title', width: 150},
-    { field: 'company', headerName: 'Company', width: 150 },
-    { field: 'position', headerName: 'Position', width: 150 },
-    { field: 'start_date', headerName: 'Start Date', width: 150 },
-    { field: 'end_date', headerName: 'End Date', width: 150 },
-    { field: 'description', headerName: 'Description', width: 200 },
-    { field: 'location', headerName: 'Location', width: 150},
-    { field: 'projects', headerName: 'Projects', width: 200},
-    {
-        field: 'actions',
-        headerName: 'Actions',
-        sortable: false,
-        renderCell: (params) => (
-            <Button color="primary" onClick={() => handleOpenExperienceModal(params.row)}>
-                Edit
-            </Button>
-        ),
-        width: 100,
-    },
-  ];
-
-
-  // Education State
-  const [educationModalOpen, setEducationModalOpen] = useState(false);
-  const [education, setEducations] = useState<EducationRead[]>([]);
-  const [selectedEducation, setSelectedEducation] = useState<EducationRead | undefined>(undefined);
-
-  const handleOpenEducationModal = (education?: EducationRead) => {
-    setSelectedEducation(education);
-    setEducationModalOpen(true);
-  }
-  const handleSaveEducation = async (educationData: EducationCreate | EducationUpdate) => {
-    if (!token) return;
-    try {
-        // Check if educationData has an id to determine if it's an update or create operation
-        if ('id' in educationData && typeof educationData.id === 'string') {
-            await updateEducation(token, educationData.id, educationData);
-        } else {
-            await createEducation(token, educationData);
-        }
-        setEducationModalOpen(false);
-        fetchUserData();  // Refresh the list after saving
-    } catch (error) {
-        console.error('Failed to save education data', error);
-    }
-};
-
-  const educationColumns: GridColDef[] = [
-    { field: 'university', headerName: 'Institution', width: 250 },
-    { field: 'degree', headerName: 'Degree', width: 300 },
-    { field: 'activities', headerName: 'Involvement', width: 300 },
-    { field: 'start_date', headerName: 'Start Date', width: 150 },
-    { field: 'end_date', headerName: 'End Date', width: 150 },
-    { field: 'gradePoint', headerName: 'Grade Point', width: 50},
-    {
-        field: 'actions',
-        headerName: 'Actions',
-        sortable: false,
-        renderCell: (params) => (
-            <Button color="primary" onClick={() => handleOpenEducationModal(params.row)}>
-                Edit
-            </Button>
-        ),
-        width: 100,
-    },
-  ];
-
-  // Certificate State
-  const [certificateModalOpen, setCertificateModalOpen] = useState(false);
-  const [certificates, setCertificates] = useState<CertificateRead[]>([]);
-  const [selectedCertificate, setSelectedCertificate] = useState<CertificateRead | undefined>(undefined);
-
-  const handleOpenCertificateModal = (certificate?: CertificateRead) => {
-    setSelectedCertificate(certificate);
-    setCertificateModalOpen(true);
-  }
-
-  const handleSaveCertificate = async (certificateData: CertificateCreate | CertificateUpdate) => {
-    if (!token) return;
-
-    try {
-      if ('id' in certificateData && typeof certificateData.id === 'string') {
-          await updateCertificate(token, certificateData.id, certificateData);
-      }
-      else {
-          await createCertificate(token, certificateData);
-      }
-      setCertificateModalOpen(false);
-      fetchUserData();  // Refresh the list after saving
-    } catch (error) {
-        console.error('Failed to save certificate data', error);
-    }
-  };
-
-  const certificateColumns: GridColDef[] = [
-    { field: 'title', headerName: 'Title', width: 250 },
-    { field: 'organization', headerName: 'Organization', width: 250 },
-    { field: 'date', headerName: 'Date', width: 150 },
-    { field: 'description', headerName: 'Description', width: 300 },
-    {
-        field: 'actions',
-        headerName: 'Actions',
-        sortable: false,
-        renderCell: (params) => (
-            <Button color="primary" onClick={() => handleOpenCertificateModal(params.row)}>
-                Edit
-            </Button>
-        ),
-        width: 100,
-    },
-  ];
-
-  // Contacts State
-  const [contacts, setContacts] = useState<ContactRead[]>([]);
-  const [selectedContact, setSelectedContact] = useState<ContactRead | undefined>(undefined);
-  const [contactModalOpen, setContactModalOpen] = useState(false);
-
-  const handleOpenContactModal = (contact?: ContactRead) => {
-    setSelectedContact(contact);
-    setContactModalOpen(true);
-  };
-
-  const handleSaveContact = async (contactData: ContactCreate | ContactUpdate) => {
-    if (!token) return;
-
-    try {
-      if ('id' in contactData && typeof contactData.id === 'string') {
-          await updateContact(token, contactData.id, contactData);
-      } else {
-          await createContact(token, contactData);
-      }
-    } catch (error) {
-        console.error('Failed to save contact data', error);
-    };
-  };
-
-  const contactsColumns: GridColDef[] = [
-    { field: 'first_name', headerName: 'First Name', width: 150 },
-    { field: 'last_name', headerName: 'Last Name', width: 150 },
-    { field: 'email', headerName: 'Email', width: 200 },
-    { field: 'phone_number', headerName: 'Phone Number', width: 150 },
-    { field: 'time_zone', headerName: 'Time Zone', width: 150 },
-    {
-        field: 'actions',
-        headerName: 'Actions',
-        sortable: false,
-        renderCell: (params) => (
-            <Button color="primary" onClick={() => handleOpenContactModal(params.row)}>
-                Edit
-            </Button>
-        ),
-        width: 100,
-    },
-  ];
-
-
-
-  // Cover Letter Templates
-  const [coverLetterTemplates, setCoverLetterTemplates] = useState<CoverLetterRead[]>([]);
-  const [selectedCoverLetter, setSelectedCoverLetter] = useState<CoverLetterRead | undefined>(undefined);
-  const [coverLetterModalOpen, setCoverLetterModalOpen] = useState(false);
-
-  const handleOpenCoverLetterModal = (coverLetter?: CoverLetterRead) => {
-    setSelectedCoverLetter(coverLetter);
-    setCoverLetterModalOpen(true);
-  };
-
-  const handleSaveCoverLetter = async (coverLetterData: CoverLetterCreate | CoverLetterUpdate) => {
-    if (!token) return;
-
-    try {
-      if ('id' in coverLetterData && typeof coverLetterData.id === 'string') {
-          await updateCoverLetterTemplate(token, coverLetterData.id, coverLetterData);
-      } else {
-          await createCoverLetterTemplate(token, coverLetterData);
-      }
-      setCoverLetterModalOpen(false);
-      fetchUserData();  // Refresh the list after saving
-    } catch (error) {
-        console.error('Failed to save cover letter data', error);
-    }
-  };
-
-  const coverLetterColumns: GridColDef[] = [
-    { field: 'title', headerName: 'Title', width: 250 },
-    { field: 'content', headerName: 'Content', width: 250 },
-    {
-        field: 'actions',
-        headerName: 'Actions',
-        sortable: false,
-        renderCell: (params) => (
-            <Button color="primary" onClick={() => handleOpenCoverLetterModal(params.row)}>
-                Edit
-            </Button>
-        ),
-        width: 100,
-    },
-  ];
-
-  const fetchCoverLetterTemplates = async () => {
-    if (!token) return;
-
-    try {
-      setCoverLetterTemplates(await getCoverLetterTemplates(token));
-    } catch (error) {
-      setError('Failed to fetch cover letter templates');
-    }
-  }
-
-  useEffect(() => {
-    if (token) {
-      fetchCoverLetterTemplates();
-    }
+      const [u, sk, ex, ed, ce, co] = await Promise.all([
+        getUser(token), getSkills(token), getExperiences(token),
+        getEducation(token), getCertificates(token), getContacts(token),
+      ]);
+      setProfileForm(u || {});
+      setSkills(sk || []);
+      setExperiences(ex || []);
+      setEducation(ed || []);
+      setCertificates(ce || []);
+      setContacts(co || []);
+    } catch (e: any) { setError(e.message); }
+    setLoading(false);
   }, [token]);
 
+  useEffect(() => { refresh(); }, [refresh]);
 
-  // Resume Templates
-  const [resumeTemplates, setResumeTemplates] = useState<ResumeRead[]>([]);
-  const [selectedResume, setSelectedResume] = useState<ResumeRead | undefined>(undefined);
-  const [resumeModalOpen, setResumeModalOpen] = useState(false);
-
-  const handleOpenResumeModal = (resume?: ResumeRead) => {
-    setSelectedResume(resume);
-    setResumeModalOpen(true);
-  };
-
-  const handleSaveResume = async (resumeData: ResumeCreate | ResumeUpdate) => {
+  const handleSaveProfile = async () => {
     if (!token) return;
-
+    setSaving(true);
     try {
-      if ('id' in resumeData && typeof resumeData.id === 'string') {
-          await updateResumeTemplate(token, resumeData.id, resumeData);
-      } else {
-          await createResumeTemplate(token, resumeData);
-      }
-      setResumeModalOpen(false);
-      fetchUserData();  // Refresh the list after saving
-    } catch (error) {
-        console.error('Failed to save resume data', error);
-    }
+      const updated = await updateUser(token, profileForm);
+      setUser(updated);
+      setSuccess('Profile updated');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (e: any) { setError(e.message); }
+    setSaving(false);
   };
 
-  const resumeColumns: GridColDef[] = [
-    { field: 'title', headerName: 'Title', width: 250 },
-    { field: 'content', headerName: 'Content', width: 250 },
-    {
-        field: 'actions',
-        headerName: 'Actions',
-        sortable: false,
-        renderCell: (params) => (
-            <Button color="primary" onClick={() => handleOpenResumeModal(params.row)}>
-                Edit
-            </Button>
-        ),
-        width: 100,
-    },
+  const handleExtractSkills = async () => {
+    if (!token || !extractFile) return;
+    setExtracting(true);
+    try {
+      await extractSkill(token, { file: extractFile, mode: 'entire_document' });
+      setExtractFile(null);
+      setSuccess('Skills extracted! Refreshing...');
+      setTimeout(() => { setSuccess(''); refresh(); }, 2000);
+    } catch (e: any) { setError(e.message); }
+    setExtracting(false);
+  };
+
+  // Generic CRUD handlers
+  const handleSaveItem = async () => {
+    if (!token || !editItem) return;
+    try {
+      const ops: any = {
+        skills: { create: createSkill, update: updateSkill },
+        experiences: { create: createExperience, update: updateExperience },
+        education: { create: createEducation, update: updateEducation },
+        certificates: { create: createCertificate, update: updateCertificate },
+        contacts: { create: createContact, update: updateContact },
+      };
+      const op = ops[editSection];
+      if (editItem.id) await op.update(token, editItem.id, editItem);
+      else await op.create(token, editItem);
+      setEditOpen(false);
+      setEditItem(null);
+      refresh();
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const handleDeleteItem = async (id: string, section: string) => {
+    if (!token) return;
+    const ops: any = { skills: deleteSkill, experiences: deleteExperience, education: deleteEducation, certificates: deleteCertificate, contacts: deleteContact };
+    try { await ops[section](token, id); refresh(); }
+    catch (e: any) { setError(e.message); }
+  };
+
+  const openCreate = (section: string, template: any) => {
+    setEditSection(section);
+    setEditItem(template);
+    setEditOpen(true);
+  };
+
+  const openEdit = (section: string, item: any) => {
+    setEditSection(section);
+    setEditItem({ ...item });
+    setEditOpen(true);
+  };
+
+  const userInitials = profileForm
+    ? `${profileForm.first_name?.[0] || ''}${profileForm.last_name?.[0] || ''}`.toUpperCase() || '?'
+    : '?';
+
+  const tabs = [
+    { label: 'Skills', icon: <SkillIcon />, count: skills.length },
+    { label: 'Experience', icon: <WorkIcon />, count: experiences.length },
+    { label: 'Education', icon: <SchoolIcon />, count: education.length },
+    { label: 'Certificates', icon: <CertIcon />, count: certificates.length },
+    { label: 'Contacts', icon: <ContactIcon />, count: contacts.length },
   ];
 
-  const fetchResumeTemplates = async () => {
-    if (!token) return;
-
-    try {
-      setResumeTemplates(await getResumeTemplates(token));
-    } catch (error) {
-      setError('Failed to fetch resume templates');
-    }
+  if (loading) {
+    return <Box><Skeleton variant="rounded" height={200} sx={{ borderRadius: 3, mb: 3 }} /><Skeleton variant="rounded" height={400} sx={{ borderRadius: 3 }} /></Box>;
   }
-
-  useEffect(() => {
-    if (token) {
-      fetchResumeTemplates();
-    }
-  }, [token]);
-
-
-  // User Details
-  const UserDetails = ({ userDetails, loading, setOpen }: { userDetails: any, loading: boolean, setOpen: React.Dispatch<React.SetStateAction<boolean>> }) => {
-    const formatKey = (key: string) => key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-    const nameFields = ['first_name', 'last_name'];
-    const addressFields = ['address_line_1', 'address_line_2', 'city', 'state', 'zip_code', 'country'];
-    const contactFields = ['phone_number', 'email', 'time_zone'];
-
-    return (
-      <Card>
-        <CardContent>
-          <Grid container spacing={2} alignItems="center">
-            {loading ? (
-              <Grid item xs={12}>
-                <CircularProgress />
-              </Grid>
-            ) : (
-              <>
-                <Grid item xs={4}>
-                  {Object.entries(userDetails).map(([key, value]) => {
-                    if (nameFields.includes(key)) {
-                      return <Typography key={key}>{`${formatKey(key)}: ${value}`}</Typography>;
-                    }
-                    return null;
-                  })}
-                </Grid>
-                <Grid item xs={4}>
-                  {Object.entries(userDetails).map(([key, value]) => {
-                    if (addressFields.includes(key)) {
-                      return <Typography key={key}>{`${formatKey(key)}: ${value}`}</Typography>;
-                    }
-                    return null;
-                  })}
-                </Grid>
-                <Grid item xs={4}>
-                  {Object.entries(userDetails).map(([key, value]) => {
-                    if (contactFields.includes(key)) {
-                      return <Typography key={key}>{`${formatKey(key)}: ${value}`}</Typography>;
-                    }
-                    return null;
-                  })}
-                </Grid>
-              </>
-            )}
-          </Grid>
-        </CardContent>
-        <CardActions>
-          <IconButton onClick={() => setOpen(true)} size="small">
-            <EditIcon />
-            <Typography>Edit User Info</Typography>
-          </IconButton>
-        </CardActions>
-      </Card>
-    );
-  };
 
   return (
-    <Stack spacing={8}>
-      {/* Page Title */}
-      <Typography variant="h4">User Profile</Typography>
+    <Box>
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
-      {/* Handle Alert State */}
-      {loading ? <MessageAlert severity="info" message={message}/> : null}
-
-      {/* Base User Details */}
-      {userDetails && <UserDetails userDetails={userDetails} loading={loading} setOpen={setOpen} />}
-      <Dialog open={open} onClose={handleClose} fullWidth>
-          <DialogTitle>Edit User Information</DialogTitle>
-          <DialogContent>
+      {/* Profile Hero */}
+      <Card sx={{ mb: 3, background: theme.palette.mode === 'dark' ? `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.1)}, ${alpha(theme.palette.secondary.dark, 0.08)})` : undefined }}>
+        <CardContent sx={{ p: 4 }}>
+          <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <Avatar sx={{ width: 80, height: 80, fontSize: '2rem', fontWeight: 800, background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})` }}>
+              {userInitials}
+            </Avatar>
+            <Box sx={{ flexGrow: 1 }}>
               <Grid container spacing={2}>
-                  {Object.keys(userDetails).map(key => {
-                      const value = userDetails[key as keyof UserUpdate] || '';
-                      return (
-                          <Grid item xs={12} key={key}>
-                              <TextField
-                                  margin="dense"
-                                  label={key.replace(/_/g, ' ')}
-                                  type="text"
-                                  fullWidth
-                                  variant="outlined"
-                                  name={key}
-                                  value={value}
-                                  onChange={handleChange}
-                              />
-                          </Grid>
-                      );
-                  })}
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField fullWidth size="small" label="First Name" value={profileForm.first_name || ''} onChange={e => setProfileForm((p: any) => ({ ...p, first_name: e.target.value }))} />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField fullWidth size="small" label="Last Name" value={profileForm.last_name || ''} onChange={e => setProfileForm((p: any) => ({ ...p, last_name: e.target.value }))} />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField fullWidth size="small" label="Email" value={profileForm.email || ''} disabled />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField fullWidth size="small" label="Phone" value={profileForm.phone_number || ''} onChange={e => setProfileForm((p: any) => ({ ...p, phone_number: e.target.value }))} />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField fullWidth size="small" label="Address Line 1" value={profileForm.address_line_1 || ''} onChange={e => setProfileForm((p: any) => ({ ...p, address_line_1: e.target.value }))} />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField fullWidth size="small" label="Address Line 2" value={profileForm.address_line_2 || ''} onChange={e => setProfileForm((p: any) => ({ ...p, address_line_2: e.target.value }))} />
+                </Grid>
+                <Grid item xs={6} sm={3} md={1.5}>
+                  <TextField fullWidth size="small" label="City" value={profileForm.city || ''} onChange={e => setProfileForm((p: any) => ({ ...p, city: e.target.value }))} />
+                </Grid>
+                <Grid item xs={6} sm={3} md={1.5}>
+                  <TextField fullWidth size="small" label="State" value={profileForm.state || ''} onChange={e => setProfileForm((p: any) => ({ ...p, state: e.target.value }))} />
+                </Grid>
+                <Grid item xs={6} sm={3} md={1.5}>
+                  <TextField fullWidth size="small" label="Zip Code" value={profileForm.zip_code || ''} onChange={e => setProfileForm((p: any) => ({ ...p, zip_code: e.target.value }))} />
+                </Grid>
+                <Grid item xs={6} sm={3} md={1.5}>
+                  <TextField fullWidth size="small" label="Country" value={profileForm.country || ''} onChange={e => setProfileForm((p: any) => ({ ...p, country: e.target.value }))} />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField fullWidth size="small" label="Time Zone" value={profileForm.time_zone || ''} onChange={e => setProfileForm((p: any) => ({ ...p, time_zone: e.target.value }))} placeholder="e.g. America/New_York" />
+                </Grid>
               </Grid>
-          </DialogContent>
-          <DialogActions>
-              <Button onClick={handleClose}>Cancel</Button>
-              <Button onClick={handleSubmit}>Save</Button>
-          </DialogActions>
-      </Dialog>
+              <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                <Button variant="contained" size="small" startIcon={<SaveIcon />} onClick={handleSaveProfile} disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Profile'}
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
 
-      {/* User Profile Details */}
-      <Stack>
-        {/* Skills */}
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-skills-content" id="panel-skills-header">
-              <Typography variant="h6">Skills</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <>
+      {/* AI Import Section */}
+      <Card sx={{ mb: 3, border: `1px dashed ${alpha(theme.palette.primary.main, 0.3)}` }}>
+        <CardContent sx={{ p: 3 }}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <AIIcon color="primary" />
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography variant="subtitle1" fontWeight={600}>AI Resume Import</Typography>
+              <Typography variant="body2" color="text.secondary">Upload your resume to auto-extract skills</Typography>
+            </Box>
+            <Button component="label" variant="outlined" startIcon={<UploadIcon />} disabled={extracting}>
+              Choose File
+              <input type="file" hidden accept=".pdf,.txt,.html" onChange={(e) => setExtractFile(e.target.files?.[0] || null)} />
+            </Button>
+            {extractFile && (
+              <>
+                <Chip label={extractFile.name} size="small" onDelete={() => setExtractFile(null)} />
+                <Button variant="contained" size="small" startIcon={<AIIcon />} onClick={handleExtractSkills} disabled={extracting}>
+                  {extracting ? 'Extracting...' : 'Extract'}
+                </Button>
+              </>
+            )}
+          </Stack>
+          {extracting && <LinearProgress sx={{ mt: 2 }} />}
+        </CardContent>
+      </Card>
+
+      {/* Tabbed Sections */}
+      <Card>
+        <Tabs value={tab} onChange={(_, v) => setTab(v)}
+          sx={{ px: 2, pt: 1, '& .MuiTab-root': { fontWeight: 600, textTransform: 'none', minHeight: 48 } }}
+          variant="scrollable" scrollButtons="auto"
+        >
+          {tabs.map((t, i) => (
+            <Tab key={i} icon={t.icon} iconPosition="start" label={`${t.label} (${t.count})`} />
+          ))}
+        </Tabs>
+        <Divider />
+        <CardContent sx={{ p: 3 }}>
+          {/* Skills Tab */}
+          {tab === 0 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                <Button size="small" startIcon={<AddIcon />} onClick={() => openCreate('skills', { name: '', category: '', yoe: 0, subskills: '' })}>Add Skill</Button>
+              </Box>
+              {skills.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>No skills yet. Add manually or use AI import.</Typography>
+              ) : (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {skills.map((skill: any) => (
+                    <Chip key={skill.id} label={`${skill.name}${skill.yoe ? ` (${skill.yoe}yr)` : ''}`}
+                      color="primary" variant="outlined"
+                      onDelete={() => handleDeleteItem(skill.id, 'skills')}
+                      onClick={() => openEdit('skills', skill)}
+                    />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          )}
+
+          {/* Experience Tab */}
+          {tab === 1 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                <Button size="small" startIcon={<AddIcon />} onClick={() => openCreate('experiences', { title: '', company: '', location: '', start_date: '', end_date: '', description: '', projects: '' })}>Add Experience</Button>
+              </Box>
               <Stack spacing={2}>
-                <Button onClick={() => handleOpenSkillsModal()} variant="contained" color="primary">
-                  Add
-                </Button>
-                <Button variant="contained" color="primary" onClick={() => setExtractRunnerOpen(true)}>
-                  Extract
-                </Button>
-                <SkillsExtractModal
-                  open={extractRunnerOpen}
-                  onClose={() => setExtractRunnerOpen(false)}
-                  onSave={() => console.log('Run skill extractor')}
-                />
+                {experiences.map((exp: any) => (
+                  <Box key={exp.id} sx={{ p: 2, borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Box>
+                        <Typography variant="body1" fontWeight={600}>{exp.title}</Typography>
+                        <Typography variant="body2" color="text.secondary">{exp.company}{exp.location ? ` · ${exp.location}` : ''}</Typography>
+                        <Typography variant="caption" color="text.secondary">{exp.start_date} — {exp.end_date || 'Present'}</Typography>
+                      </Box>
+                      <Stack direction="row" spacing={0.5}>
+                        <IconButton size="small" onClick={() => openEdit('experiences', exp)}><EditIcon fontSize="small" /></IconButton>
+                        <IconButton size="small" color="error" onClick={() => handleDeleteItem(exp.id, 'experiences')}><DeleteIcon fontSize="small" /></IconButton>
+                      </Stack>
+                    </Box>
+                    {exp.description && <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{exp.description}</Typography>}
+                    {exp.projects && <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>Projects: {exp.projects}</Typography>}
+                  </Box>
+                ))}
               </Stack>
-              <Box style={{ height: 400, width: '100%' }}>
-                  <DataGrid
-                    rows={skills}
-                    columns={skillsColumns}
-                    onRowDoubleClick={(params) => handleOpenSkillsModal(params.row)}
-                    onRowClick={(params) => setSelectedSkill(params.row as SkillRead)}
-                  />
+            </Box>
+          )}
+
+          {/* Education Tab */}
+          {tab === 2 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                <Button size="small" startIcon={<AddIcon />} onClick={() => openCreate('education', { university: '', degree: '', gradePoint: '', start_date: '', end_date: '', activities: '', achievements: '' })}>Add Education</Button>
               </Box>
-              <SkillsModal
-                  open={skillsModalOpen}
-                  onClose={() => setSkillsModalOpen(false)}
-                  onSave={handleSaveSkill}
-                  initialData={selectedSkill}
-              />
-              {selectedSkill && (
-                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-                  <Typography variant="h6">Details</Typography>
-                  <Stack spacing={2}>
-                    <Typography><strong>Name:</strong> {selectedSkill.name}</Typography>
-                    <Typography><strong>Category:</strong> {selectedSkill.category}</Typography>
-                    <Typography><strong>Subskills:</strong> {selectedSkill.subskills}</Typography>
-                    <Typography><strong>Years of Experience:</strong> {selectedSkill.yoe}</Typography>
-                  </Stack>
-                </Box>
-              )
-              }
-            </>
-          </AccordionDetails>
-        </Accordion>
+              <Stack spacing={2}>
+                {education.map((edu: any) => (
+                  <Box key={edu.id} sx={{ p: 2, borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Box>
+                        <Typography variant="body1" fontWeight={600}>{edu.degree}</Typography>
+                        <Typography variant="body2" color="text.secondary">{edu.university}</Typography>
+                        <Typography variant="caption" color="text.secondary">{edu.start_date} — {edu.end_date || 'Present'}{edu.gradePoint ? ` · GPA: ${edu.gradePoint}` : ''}</Typography>
+                      </Box>
+                      <Stack direction="row" spacing={0.5}>
+                        <IconButton size="small" onClick={() => openEdit('education', edu)}><EditIcon fontSize="small" /></IconButton>
+                        <IconButton size="small" color="error" onClick={() => handleDeleteItem(edu.id, 'education')}><DeleteIcon fontSize="small" /></IconButton>
+                      </Stack>
+                    </Box>
+                    {edu.activities && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>Activities: {edu.activities}</Typography>}
+                    {edu.achievements && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>Achievements: {edu.achievements}</Typography>}
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
+          )}
 
-        {/* Experiences */}
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-experiences-content" id="panel-experiences-header">
-              <Typography variant="h6">Experiences</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-              <Button onClick={() => handleOpenExperienceModal()} variant="contained" color="primary">
-                  Add Experience
-              </Button>
-              <Box style={{ height: 400, width: '100%' }}>
-                  <DataGrid
-                    rows={experiences}
-                    columns={experienceColumns}
-                    onRowDoubleClick={(params) => handleOpenExperienceModal(params.row)}
-                    onRowClick={(params) => setSelectedExperience(params.row as ExperienceRead)}
-                  />
+          {/* Certificates Tab */}
+          {tab === 3 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                <Button size="small" startIcon={<AddIcon />} onClick={() => openCreate('certificates', { title: '', issuer: '', issued_date: '', expiration_date: '' })}>Add Certificate</Button>
               </Box>
-              <ExperiencesModal
-                open={experienceModalOpen}
-                onClose={() => setExperienceModalOpen(false)}
-                onSave={handleSaveExperience}
-                initialData={selectedExperience}
-              />
-              {selectedExperience && (
-                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-                  <Typography variant="h6">Lead Details</Typography>
-                  <Stack spacing={2}>
-                    <Typography><strong>Title:</strong> {selectedExperience.title}</Typography>
-                    <Typography><strong>Company:</strong> {selectedExperience.company}</Typography>
-                    <Typography><strong>Start Date:</strong> {selectedExperience.start_date}</Typography>
-                    <Typography><strong>End Date:</strong> {selectedExperience.end_date}</Typography>
-                    <Typography><strong>Description:</strong> {selectedExperience.description}</Typography>
-                    <Typography><strong>Location:</strong> {selectedExperience.location}</Typography>
-                    <Typography><strong>Projects:</strong> {selectedExperience.projects}</Typography>
-                  </Stack>
-                </Box>
-              )
-              }
-          </AccordionDetails>
-        </Accordion>
+              <Stack spacing={2}>
+                {certificates.map((cert: any) => (
+                  <Box key={cert.id} sx={{ p: 2, borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Box>
+                        <Typography variant="body1" fontWeight={600}>{cert.title}</Typography>
+                        <Typography variant="body2" color="text.secondary">{cert.issuer}</Typography>
+                        <Typography variant="caption" color="text.secondary">{cert.issued_date}{cert.expiration_date ? ` — ${cert.expiration_date}` : ''}</Typography>
+                      </Box>
+                      <Stack direction="row" spacing={0.5}>
+                        <IconButton size="small" onClick={() => openEdit('certificates', cert)}><EditIcon fontSize="small" /></IconButton>
+                        <IconButton size="small" color="error" onClick={() => handleDeleteItem(cert.id, 'certificates')}><DeleteIcon fontSize="small" /></IconButton>
+                      </Stack>
+                    </Box>
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
+          )}
 
-        {/* Education */}
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-education-content" id="panel-education-header">
-              <Typography variant="h6">Education</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-              <Button onClick={() => handleOpenEducationModal()} variant="contained" color="primary">
-                  Add Education
-              </Button>
-              <Box style={{ height: 400, width: '100%' }}>
-                  <DataGrid
-                    rows={education}
-                    columns={educationColumns}
-                    onRowDoubleClick={(params) => handleOpenEducationModal(params.row)}
-                    onRowClick={(params) => setSelectedEducation(params.row as EducationRead)}
-                  />
+          {/* Contacts Tab */}
+          {tab === 4 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                <Button size="small" startIcon={<AddIcon />} onClick={() => openCreate('contacts', { first_name: '', last_name: '', email: '', phone_number: '', time_zone: '', notes: '' })}>Add Contact</Button>
               </Box>
-              <EducationModal
-                open={educationModalOpen}
-                onClose={() => setEducationModalOpen(false)}
-                onSave={handleSaveEducation}
-                initialData={selectedEducation}
+              <Grid container spacing={2}>
+                {contacts.map((contact: any) => (
+                  <Grid item xs={12} sm={6} md={4} key={contact.id}>
+                    <Box sx={{ p: 2, borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Box>
+                          <Typography variant="body1" fontWeight={600}>{contact.first_name} {contact.last_name}</Typography>
+                          {contact.email && <Typography variant="body2" color="text.secondary">{contact.email}</Typography>}
+                          {contact.phone_number && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{contact.phone_number}</Typography>}
+                          {contact.time_zone && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>TZ: {contact.time_zone}</Typography>}
+                        </Box>
+                        <Stack direction="row" spacing={0.5}>
+                          <IconButton size="small" onClick={() => openEdit('contacts', contact)}><EditIcon fontSize="small" /></IconButton>
+                          <IconButton size="small" color="error" onClick={() => handleDeleteItem(contact.id, 'contacts')}><DeleteIcon fontSize="small" /></IconButton>
+                        </Stack>
+                      </Box>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Generic Edit Dialog */}
+      <Dialog open={editOpen} onClose={() => { setEditOpen(false); setEditItem(null); }} maxWidth="sm" fullWidth>
+        <DialogTitle fontWeight={700}>
+          {editItem?.id ? 'Edit' : 'Add'} {editSection.charAt(0).toUpperCase() + editSection.slice(1).replace(/s$/, '')}
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            {editItem && Object.keys(editItem).filter(k => k !== 'id' && k !== 'user_id' && k !== 'created_at' && k !== 'updated_at').map((key) => (
+              <TextField key={key} fullWidth label={key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                value={editItem[key] ?? ''} onChange={e => setEditItem((p: any) => ({ ...p, [key]: e.target.value }))}
+                multiline={key === 'description' || key === 'notes' || key === 'projects'}
+                rows={key === 'description' || key === 'notes' ? 3 : 1}
+                type={key === 'yoe' ? 'number' : key.includes('date') ? 'date' : 'text'}
+                InputLabelProps={key.includes('date') ? { shrink: true } : undefined}
               />
-              {selectedEducation && (
-                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-                  <Typography variant="h6">Details</Typography>
-                  <Stack spacing={2}>
-                    <Typography><strong>Institution:</strong> {selectedEducation.university}</Typography>
-                    <Typography><strong>Degree:</strong> {selectedEducation.degree}</Typography>
-                    <Typography><strong>Involvement:</strong> {selectedEducation.activities}</Typography>
-                    <Typography><strong>Start Date:</strong> {selectedEducation.start_date}</Typography>
-                    <Typography><strong>End Date:</strong> {selectedEducation.end_date}</Typography>
-                    <Typography><strong>Grade Point:</strong> {selectedEducation.gradePoint}</Typography>
-                  </Stack>
-                </Box>
-              )
-              }
-          </AccordionDetails>
-        </Accordion>
-
-        {/* Certificates */}
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-certificates-content" id="panel-certificates-header">
-              <Typography variant="h6">Certificates</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-              <Button onClick={() => handleOpenCertificateModal()} variant="contained" color="primary">
-                  Add Certificate
-              </Button>
-              <Box style={{ height: 400, width: '100%' }}>
-                  <DataGrid
-                    rows={certificates}
-                    columns={certificateColumns}
-                    onRowDoubleClick={(params) => handleOpenCertificateModal(params.row)}
-                    onRowClick={(params) => setSelectedCertificate(params.row as CertificateRead)}
-                  />
-              </Box>
-              <CertificateModal
-                open={certificateModalOpen}
-                onClose={() => setCertificateModalOpen(false)}
-                onSave={handleSaveCertificate}
-                initialData={selectedCertificate}
-              />
-              {selectedCertificate && (
-                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-                  <Typography variant="h6">Details</Typography>
-                  <Stack spacing={2}>
-                    <Typography><strong>Name:</strong> {selectedCertificate.title}</Typography>
-                    <Typography><strong>Issuer:</strong> {selectedCertificate.issuer}</Typography>
-                    <Typography><strong>Date:</strong> {selectedCertificate.issued_date}</Typography>
-                    <Typography><strong>Expiration:</strong> {selectedCertificate.expiration_date}</Typography>
-                  </Stack>
-                </Box>
-              )
-              }
-          </AccordionDetails>
-        </Accordion>
-
-        {/* Contacts */}
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-contacts-content" id="panel-contacts-header">
-              <Typography variant="h6">Contacts</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-              <Button onClick={() => handleOpenContactModal()} variant="contained" color="primary">
-                  Add Contact
-              </Button>
-              <Box style={{ height: 400, width: '100%' }}>
-                  <DataGrid
-                    rows={contacts}
-                    columns={contactsColumns}
-                    onRowDoubleClick={(params) => handleOpenContactModal(params.row)}
-                    onRowClick={(params) => setSelectedContact(params.row as ContactRead)}
-                  />
-              </Box>
-              <ContactModal
-                open={contactModalOpen}
-                onClose={() => setContactModalOpen(false)}
-                onSave={handleSaveContact}
-                initialData={selectedContact}
-              />
-              {selectedContact && (
-                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-                  <Typography variant="h6">Details</Typography>
-                  <Stack spacing={2}>
-                    <Typography><strong>First Name:</strong> {selectedContact.first_name}</Typography>
-                    <Typography><strong>Last Name:</strong> {selectedContact.last_name}</Typography>
-                    <Typography><strong>Email:</strong> {selectedContact.email}</Typography>
-                    <Typography><strong>Phone Number:</strong> {selectedContact.phone_number}</Typography>
-                    <Typography><strong>Time Zone:</strong> {selectedContact.time_zone}</Typography>
-                  </Stack>
-                </Box>
-              )
-              }
-          </AccordionDetails>
-        </Accordion>
-      </Stack>
-
-      {/* Templates */}
-      <Stack>
-        <Typography variant="h4" align='center'>Template Designer</Typography>
-        {/* Cover Letter Templates */}
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-cover-letters-content" id="panel-cover-letters-header">
-              <Typography variant="h6">Cover Letter Templates</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-              <Button onClick={() => handleOpenCoverLetterModal()} variant="contained" color="primary">
-                  Add Cover Letter Template
-              </Button>
-              <Box style={{ height: 400, width: '100%' }}>
-                  <DataGrid
-                    rows={coverLetterTemplates}
-                    columns={coverLetterColumns}
-                    onRowClick={(params) => setSelectedCoverLetter(params.row as CoverLetterRead)}
-                    onRowDoubleClick={(params) => handleOpenCoverLetterModal(params.row)}
-                  />
-              </Box>
-              <CoverLetterModal
-                open={coverLetterModalOpen}
-                onClose={() => setCoverLetterModalOpen(false)}
-                onSave={handleSaveCoverLetter}
-                initialData={selectedCoverLetter}
-              />
-
-              {/* Display Selected Cover Letter Details */}
-              {selectedCoverLetter && (
-                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-                  <Stack spacing={2}>
-                    <Typography variant="h6">Cover Letter: {selectedCoverLetter.name} </Typography>
-                    <ContentDisplay formatted_string={selectedCoverLetter.content ?? ''} />
-                    <Button onClick={() => alert('Create Cover Letter functionality not implemented')}>Generate Cover Letter</Button>
-                  </Stack>
-                </Box>
-              )
-              }
-          </AccordionDetails>
-        </Accordion>
-
-        {/* Resume Templates */}
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-resumes-content" id="panel-resumes-header">
-              <Typography variant="h6">Resume Templates</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-              <Button onClick={() => handleOpenResumeModal()} variant="contained" color="primary">
-                  Add Resume Template
-              </Button>
-              <Box style={{ height: 400, width: '100%' }}>
-                  <DataGrid
-                    rows={resumeTemplates}
-                    columns={resumeColumns}
-                    onRowDoubleClick={(params) => handleOpenResumeModal(params.row)}
-                    onRowClick={(params) => setSelectedResume(params.row as ResumeRead)}
-                  />
-              </Box>
-              <ResumeModal
-                open={resumeModalOpen}
-                onClose={() => setResumeModalOpen(false)}
-                onSave={handleSaveResume}
-                initialData={selectedResume}
-              />
-
-              {/* Display Selected Resume Details */}
-              {selectedResume && (
-                <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 300, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-                  <Stack spacing={2}>
-                    <Typography variant="h6">Resume: {selectedResume.name} </Typography>
-                    <ContentDisplay formatted_string={selectedResume.content ?? ''} />
-                    <Button onClick={() => alert('Create Resume functionality not implemented')}>Generate Resume</Button>
-                  </Stack>
-                </Box>
-              )
-              }
-          </AccordionDetails>
-        </Accordion>
-      </Stack>
-      {/* Error Handeling */}
-      {error && <ErrorMessage message={error} />}
-      {message && <Snackbar open={Boolean(message)} autoHideDuration={6000} message={message} />}
-    </Stack>
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => { setEditOpen(false); setEditItem(null); }}>Cancel</Button>
+          <Button variant="contained" onClick={handleSaveItem}>Save</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 
-export default UserProfilePage;
+export default ProfilePage;

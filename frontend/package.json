@@ -1,47 +1,35 @@
 {
   "name": "frontend",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
+  "type": "module",
   "dependencies": {
-    "@emotion/react": "^11.11.1",
-    "@emotion/styled": "^11.11.0",
-    "@fontsource/roboto": "^5.0.5",
-    "@mui/icons-material": "^5.14.1",
-    "@mui/material": "^5.14.2",
-    "@mui/styled-engine-sc": "^5.12.0",
-    "@mui/x-data-grid": "^6.10.2",
-    "@stripe/react-stripe-js": "^2.1.2",
-    "@stripe/stripe-js": "^2.0.0",
-    "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/jest": "^27.5.2",
-    "@types/node": "^16.18.39",
-    "@types/react": "^18.2.17",
-    "@types/react-dom": "^18.2.7",
-    "markdown-to-jsx": "^7.2.1",
-    "path-browserify": "^1.0.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-json-tree": "^0.19.0",
-    "react-router-dom": "^6.14.2",
-    "react-scripts": "^3.0.1",
-    "styled-components": "^5.3.11",
-    "typescript": "^4.9.5",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fontsource/source-sans-3": "^5.2.8",
+    "@fontsource/space-grotesk": "^5.2.8",
+    "@mui/icons-material": "^7.3.2",
+    "@mui/material": "^7.3.2",
+    "@mui/x-data-grid": "^8.11.2",
+    "fuse.js": "^7.1.0",
+    "markdown-to-jsx": "^7.7.0",
+    "motion": "^12.23.12",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-github-calendar": "^4.5.10",
+    "react-json-tree": "^0.20.0",
+    "react-router-dom": "^7.8.2",
+    "react-tooltip": "^5.28.0",
+    "recharts": "^3.1.2",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "node --openssl-legacy-provider node_modules/react-scripts/scripts/start.js",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "install:clean": "rm -r node_modules package-lock.json && npm i --package-lock-only && npm install"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+    "dev": "vite",
+    "build": "node ./scripts/build-static.mjs",
+    "preview": "vite preview",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest --passWithNoTests",
+    "install:clean": "rm -rf node_modules package-lock.json && npm install"
   },
   "browserslist": {
     "production": [
@@ -56,9 +44,18 @@
     ]
   },
   "devDependencies": {
-    "@types/http-proxy-middleware": "^1.0.0",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.3.0",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.0",
     "eslint-plugin-react": "^7.32.2",
-    "http-proxy-middleware": "^3.0.0",
-    "openapi-typescript": "^6.7.2"
+    "jsdom": "^26.1.0",
+    "openapi-typescript": "^6.7.2",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3",
+    "vitest": "^2.1.9"
   }
 }

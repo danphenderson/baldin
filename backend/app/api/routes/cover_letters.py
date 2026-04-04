@@ -1,7 +1,5 @@
 # app/api/routes/cover_letters.py
 import json
-from asyncio import gather
-from datetime import datetime
 from io import BytesIO
 
 from aiofiles import open as aopen
@@ -14,11 +12,10 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from app.api.deps import AsyncSession, conf
-from app.api.deps import console_log as log
 from app.api.deps import (
+    AsyncSession,
+    conf,
     create_cover_letter,
-    create_extractor,
     create_orchestration_event,
     create_orchestration_pipeline,
     generate_cover_letter,
@@ -87,9 +84,9 @@ async def download_cover_letter(
 
     # Create a StreamingResponse that streams the PDF file
     response = StreamingResponse(pdf_buffer, media_type="application/pdf")
-    response.headers[
-        "Content-Disposition"
-    ] = f'attachment; filename="{cover_letter.name}.pdf"'
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{cover_letter.name}.pdf"'
+    )
 
     return response
 
@@ -97,8 +94,9 @@ async def download_cover_letter(
 @router.post("/generate", response_model=schemas.CoverLetterRead)
 async def generate_user_cover_letter(
     lead_id: UUID4,
-    template_id: str
-    | None = Query(None, description="Template ID for the cover letter"),
+    template_id: str | None = Query(
+        None, description="Template ID for the cover letter"
+    ),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -159,8 +157,9 @@ async def generate_user_cover_letter(
 
 @router.get("/", response_model=list[schemas.CoverLetterRead])
 async def get_current_user_cover_letters(
-    content_type: schemas.ContentType
-    | None = Query(None, description="Filter by content type"),
+    content_type: schemas.ContentType | None = Query(
+        None, description="Filter by content type"
+    ),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -169,12 +168,6 @@ async def get_current_user_cover_letters(
         query = query.filter(models.CoverLetter.content_type == content_type)
     cover_letters = await db.execute(query)
     cover_letters = cover_letters.scalars().all()  # type: ignore
-
-    if not cover_letters:
-        raise HTTPException(
-            status_code=404, detail="No cover letters found for the current user"
-        )
-
     return cover_letters
 
 

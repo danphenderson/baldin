@@ -3,7 +3,7 @@ from typing import Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import UUID4, AnyHttpUrl, Field
+from pydantic import UUID4, Field
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 from typing_extensions import TypedDict
@@ -17,6 +17,7 @@ from app.api.deps import (
     get_current_user,
     get_extractor,
     get_extractor_example,
+    get_extractor_run_payload,
     models,
     run_extractor,
     schemas,
@@ -254,7 +255,7 @@ async def delete_extractor_example(
 @router.post("/{id}/run", response_model=schemas.ExtractorResponse)
 async def extractor_runner(
     extractor: schemas.ExtractorRead = Depends(get_extractor),
-    payload: schemas.ExtractorRun = Depends(schemas.ExtractorRun),
+    payload: schemas.ExtractorRun = Depends(get_extractor_run_payload),
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> schemas.ExtractorResponse:

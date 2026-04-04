@@ -34,10 +34,6 @@ async def read_current_user_experiences(
         select(models.Experience).where(models.Experience.user_id == user.id)
     )
     experiences = result.scalars().all()
-    if not experiences:
-        raise HTTPException(
-            status_code=404, detail="No experiences found for the current user"
-        )
     return experiences
 
 
@@ -155,7 +151,7 @@ async def seed_experiences(
         schemas.OrchestrationEventCreate(
             message="Seeding Experiences table with initial data",
             environment=conf.settings.ENVIRONMENT,
-            pipeline_id=pipeline.id, # type: ignore
+            pipeline_id=pipeline.id,  # type: ignore
             status=schemas.OrchestrationEventStatusType.PENDING,
             payload={},
             source_uri=schemas.URI(name=str(seed_path), type=schemas.URIType.FILE),

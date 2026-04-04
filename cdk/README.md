@@ -1,71 +1,47 @@
 
-# About
+# Public AWS Boundary Notes
 
-Ship Baldin to AWS using CloudFormation with Infrastructure defined as Code (IaC) using the AWS Cloud Development Kit (CDK).
+This directory is intentionally limited to AWS architecture exploration and CDK shape review.
+It is not the live production control plane for Baldin.
 
+## What Stays Public
 
-### Prerequisites
-Create a virtual environment and activate it, e.g. with pipenv:
+- The repository can show the broad AWS resource layout used for experimentation.
+- The public workflow can validate the backend container build and the frontend static bundle.
+- Readers can inspect the split between backend container delivery and static frontend hosting.
 
-```
-$ pipenv install
-$ pipenv shell
-```
+## What Moved Behind The Private Boundary
 
-Create a `.env` file in the root of the project with the following variables set:
+- `cdk deploy`, `cdk destroy`, and `cdk bootstrap` operational use
+- ECR image promotion and release tagging
+- Frontend bucket sync, CDN invalidation, and live asset publication
+- Environment-specific secrets, approval gates, rollback steps, and runbooks
 
-```txt
-AWS_REGION=
-AWS_ACCOUNT=
-```
-The AWS_ACCOUNT ID value can be found in the AWS console under your account settings.
+The preferred production model is a separate private infrastructure repository.
+If that is deferred, the fallback is a protected private GitHub environment with required approvals
+and environment-scoped secrets. The public repository should never be the direct rollout surface.
 
-### AWS CDK CLI
+## Public Artifact Boundary
 
-To synthesize the CloudFormation template:
-```
-$ cdk synth
-```
+The only deploy-adjacent outputs that remain public are candidate artifacts:
 
-To list the stacks in the app:
+- Backend candidate image built from `backend/Dockerfile`
+- Frontend candidate bundle built into `frontend/dist`
 
-```
-$ cdk ls
-```
+Promotion of those artifacts into live AWS resources happens only from the private control plane
+documented in [../PRIVATE_DEPLOYMENT_CONTROL_PLANE.md](../PRIVATE_DEPLOYMENT_CONTROL_PLANE.md).
 
-To deploy the stack:
+## Safe Public Exploration
 
-```
-$ cdk deploy
-```
+If you want to inspect the CDK app without using it as a rollout mechanism, stay on synth-only
+commands such as:
 
-To destroy the stack:
-
-```
-$ cdk destroy
+```bash
+pipenv install
+pipenv shell
+cdk ls
+cdk synth
 ```
 
-To see the difference between the deployed stack and the current state:
-
-```
-$ cdk diff <STACK-ID>
-```
-
-Note, the first time you deploy with the AWS CDK CLI, you must boostrap your account:
-
-```
-$ cdk bootstrap
-```
-
-### Shipping Baldin
-
-To ship Baldin to AWS, you must deploy the stacks in roughly the following order:
-
-1. `BaldinIAMStack`
-2. `BaldinVPCStack`
-3. `BaldinS3Stack`
-4. `BaldinECRStack`
-5. `BaldinDBStack`
-6. `BaldinAPIStack`
-
-Enjoy!
+Some stack values still read local placeholder configuration while synthesizing. Treat that flow as
+exploratory only, not as a supported public deployment contract.

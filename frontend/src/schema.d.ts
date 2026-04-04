@@ -41,6 +41,14 @@ export interface paths {
     /** Get Table Details */
     get: operations["get_table_details_db_management_table_details__table_name__get"];
   };
+  "/db-management/users/{user_id}/purge": {
+    /** Purge User Data */
+    patch: operations["purge_user_data_db_management_users__user_id__purge_patch"];
+  };
+  "/db-management/users/{user_id}": {
+    /** Delete User */
+    delete: operations["delete_user_db_management_users__user_id__delete"];
+  };
   "/users/me": {
     /** Users:Current User */
     get: operations["users_current_user_users_me_get"];
@@ -386,6 +394,14 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    /** ApplicationCoverLetterAttach */
+    ApplicationCoverLetterAttach: {
+      /**
+       * Cover Letter Id
+       * Format: uuid4
+       */
+      cover_letter_id: string;
+    };
     /** ApplicationCreate */
     ApplicationCreate: {
       /**
@@ -434,6 +450,14 @@ export interface components {
        */
       status?: string | null;
     };
+    /** ApplicationResumeAttach */
+    ApplicationResumeAttach: {
+      /**
+       * Resume Id
+       * Format: uuid4
+       */
+      resume_id: string;
+    };
     /** ApplicationUpdate */
     ApplicationUpdate: {
       /** Status */
@@ -452,7 +476,10 @@ export interface components {
       grant_type?: string | null;
       /** Username */
       username: string;
-      /** Password */
+      /**
+       * Password
+       * Format: password
+       */
       password: string;
       /**
        * Scope
@@ -461,18 +488,37 @@ export interface components {
       scope?: string;
       /** Client Id */
       client_id?: string | null;
-      /** Client Secret */
+      /**
+       * Client Secret
+       * Format: password
+       */
       client_secret?: string | null;
     };
     /** Body_extract_user_skills_skills_extract_post */
     Body_extract_user_skills_skills_extract_post: {
       /** File */
       file?: string | null;
+      /** Mode */
+      mode?: string | null;
+      /** Text */
+      text?: string | null;
+      /** Url */
+      url?: string | null;
+      /** Llm */
+      llm?: string | null;
     };
     /** Body_extractor_runner_extractor__id__run_post */
     Body_extractor_runner_extractor__id__run_post: {
       /** File */
       file?: string | null;
+      /** Mode */
+      mode?: string | null;
+      /** Text */
+      text?: string | null;
+      /** Url */
+      url?: string | null;
+      /** Llm */
+      llm?: string | null;
     };
     /** Body_reset_forgot_password_auth_forgot_password_post */
     Body_reset_forgot_password_auth_forgot_password_post: {
@@ -707,7 +753,9 @@ export interface components {
       /** Max Chunks */
       max_chunks: number;
       /** Models */
-      models: Record<string, never>[];
+      models: {
+          [key: string]: unknown;
+        }[];
     };
     /** ContactCreate */
     ContactCreate: {
@@ -1181,7 +1229,9 @@ export interface components {
        * Json Schema
        * @description JSON schema
        */
-      json_schema?: Record<string, never> | string | null;
+      json_schema?: {
+        [key: string]: unknown;
+      } | string | null;
       /**
        * Instruction
        * @description Extractor instruction
@@ -1265,7 +1315,9 @@ export interface components {
        * Json Schema
        * @description JSON schema
        */
-      json_schema?: Record<string, never> | string | null;
+      json_schema?: {
+        [key: string]: unknown;
+      } | string | null;
       /**
        * Instruction
        * @description Extractor instruction
@@ -1327,7 +1379,7 @@ export interface components {
        * File
        * @description A file to extract information from. If provided, the file will be processed and the text extracted.
        */
-      file?: File | null;
+      file?: string | null;
       /**
        * Text
        * @description Text to extract information from. If provided, the text will be processed and the information extracted.
@@ -1360,7 +1412,9 @@ export interface components {
        * Json Schema
        * @description JSON schema
        */
-      json_schema?: Record<string, never> | string | null;
+      json_schema?: {
+        [key: string]: unknown;
+      } | string | null;
       /**
        * Instruction
        * @description Extractor instruction
@@ -1601,7 +1655,9 @@ export interface components {
        * Payload
        * @description Payload of the triggering event
        */
-      payload?: Record<string, never> | null;
+      payload?: {
+        [key: string]: unknown;
+      } | null;
       /**
        * Environment
        * @description Application environment setting
@@ -1648,7 +1704,9 @@ export interface components {
        * Payload
        * @description Payload of the triggering event
        */
-      payload?: Record<string, never> | null;
+      payload?: {
+        [key: string]: unknown;
+      } | null;
       /**
        * Environment
        * @description Application environment setting
@@ -1695,7 +1753,9 @@ export interface components {
        * Payload
        * @description Payload of the triggering event
        */
-      payload?: Record<string, never> | null;
+      payload?: {
+        [key: string]: unknown;
+      } | null;
       /**
        * Environment
        * @description Application environment setting
@@ -1729,7 +1789,9 @@ export interface components {
        * Payload
        * @description Payload of the triggering event
        */
-      payload?: Record<string, never> | null;
+      payload?: {
+        [key: string]: unknown;
+      } | null;
       /**
        * Environment
        * @description Application environment setting
@@ -1763,7 +1825,9 @@ export interface components {
        * Definition
        * @description Parameters for the pipeline
        */
-      definition?: Record<string, never> | null;
+      definition?: {
+        [key: string]: unknown;
+      } | null;
     };
     /** OrchestrationPipelineRead */
     OrchestrationPipelineRead: {
@@ -1799,7 +1863,9 @@ export interface components {
        * Definition
        * @description Parameters for the pipeline
        */
-      definition?: Record<string, never> | null;
+      definition?: {
+        [key: string]: unknown;
+      } | null;
       /**
        * Orchestration Events
        * @description Events in the pipeline
@@ -1823,7 +1889,9 @@ export interface components {
        * Definition
        * @description Parameters for the pipeline
        */
-      definition?: Record<string, never> | null;
+      definition?: {
+        [key: string]: unknown;
+      } | null;
       /**
        * Events
        * @description Events in the pipeline
@@ -2107,6 +2175,33 @@ export interface components {
        */
       is_verified?: boolean | null;
     };
+    /** UserDataOperationResult */
+    UserDataOperationResult: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User affected by the data-management operation
+       */
+      user_id: string;
+      /**
+       * User Deleted
+       * @description Whether the user row was removed
+       */
+      user_deleted: boolean;
+      /**
+       * Cleared Profile Fields
+       * @description Number of profile fields cleared from the retained user
+       * @default 0
+       */
+      cleared_profile_fields?: number;
+      /**
+       * Deleted Records
+       * @description Deleted record counts grouped by table or association
+       */
+      deleted_records?: {
+        [key: string]: number;
+      };
+    };
     /** UserProfileRead */
     UserProfileRead: {
       /**
@@ -2287,6 +2382,10 @@ export interface components {
       msg: string;
       /** Error Type */
       type: string;
+      /** Input */
+      input?: unknown;
+      /** Context */
+      ctx?: Record<string, never>;
     };
   };
   responses: never;
@@ -2498,6 +2597,50 @@ export interface operations {
           "application/json": {
             [key: string]: string;
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Purge User Data */
+  purge_user_data_db_management_users__user_id__purge_patch: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserDataOperationResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User */
+  delete_user_db_management_users__user_id__delete: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserDataOperationResult"];
         };
       };
       /** @description Validation Error */
@@ -2815,7 +2958,9 @@ export interface operations {
       /** @description Successful Response */
       202: {
         content: {
-          "application/json": Record<string, never>;
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
       };
     };
@@ -3091,10 +3236,8 @@ export interface operations {
     };
     responses: {
       /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": unknown;
-        };
+      204: {
+        content: never;
       };
       /** @description Validation Error */
       422: {
@@ -3458,14 +3601,6 @@ export interface operations {
   };
   /** Extract User Skills */
   extract_user_skills_skills_extract_post: {
-    parameters: {
-      query?: {
-        mode?: "entire_document" | "retrieval";
-        text?: string | null;
-        url?: string | null;
-        llm?: string | null;
-      };
-    };
     requestBody?: {
       content: {
         "multipart/form-data": components["schemas"]["Body_extract_user_skills_skills_extract_post"];
@@ -3611,7 +3746,7 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       200: {
-        "application/pdf": File;
+        content: never;
       };
       /** @description Validation Error */
       422: {
@@ -3780,7 +3915,7 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       200: {
-        "application/pdf": File;
+        content: never;
       };
       /** @description Validation Error */
       422: {
@@ -4039,7 +4174,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["ResumeCreate"];
+        "application/json": components["schemas"]["ApplicationResumeAttach"];
       };
     };
     responses: {
@@ -4088,7 +4223,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["CoverLetterCreate"];
+        "application/json": components["schemas"]["ApplicationCoverLetterAttach"];
       };
     };
     responses: {
@@ -4627,12 +4762,6 @@ export interface operations {
    */
   extractor_runner_extractor__id__run_post: {
     parameters: {
-      query?: {
-        mode?: "entire_document" | "retrieval";
-        text?: string | null;
-        url?: string | null;
-        llm?: string | null;
-      };
       path: {
         id: string;
       };

@@ -474,6 +474,18 @@ class UserUpdate(schemas.BaseUserUpdate, BaseUser):
     pass
 
 
+class UserDataOperationResult(BaseSchema):
+    user_id: UUID4 = Field(description="User affected by the data-management operation")
+    user_deleted: bool = Field(description="Whether the user row was removed")
+    cleared_profile_fields: int = Field(
+        0, description="Number of profile fields cleared from the retained user"
+    )
+    deleted_records: dict[str, int] = Field(
+        default_factory=dict,
+        description="Deleted record counts grouped by table or association",
+    )
+
+
 class BaseExtractorExample(BaseSchema):
     content: str | None = Field(None, description="Example content")
     output: str | None = Field(None, description="Example output")
@@ -562,3 +574,11 @@ class ApplicationCreate(BaseSchema):
 
 class ApplicationUpdate(BaseSchema):
     status: str
+
+
+class ApplicationResumeAttach(BaseSchema):
+    resume_id: UUID4
+
+
+class ApplicationCoverLetterAttach(BaseSchema):
+    cover_letter_id: UUID4

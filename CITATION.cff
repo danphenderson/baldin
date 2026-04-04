@@ -2,17 +2,20 @@
 # Visit https://bit.ly/cffinit to generate yours today!
 
 cff-version: 1.2.0
-title: baldin
+title: Baldin
 message: >-
-  If you use this software, please cite it using the
-  metadata from this file.
+  If you use this software in research, please cite it
+  using the metadata from this file.
 type: software
 authors:
   - given-names: Daniel P. Henderson
     email: me@danhenderson.dev
 repository-code: 'https://github.com/danphenderson/baldin'
 url: 'https://github.com/danphenderson/baldin'
-abstract: Job automation application.
+abstract: Developer-preview, local-first job-search automation workspace.
 keywords:
   - baldin
+  - job-search-automation
+  - local-first
+  - developer-preview
 license: MIT

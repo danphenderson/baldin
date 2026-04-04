@@ -1,0 +1,34 @@
+import react from '@vitejs/plugin-react';
+import { loadEnv } from 'vite';
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig(({ mode, command }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const apiUrl = env.VITE_API_URL?.trim();
+  const isLocalApiUrl = Boolean(apiUrl && /(^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$)/i.test(apiUrl));
+
+  if (command === 'build' && !apiUrl) {
+    throw new Error('VITE_API_URL must be set before running a production build.');
+  }
+
+  if (command === 'build' && isLocalApiUrl) {
+    throw new Error('VITE_API_URL must point to a non-localhost origin for production builds.');
+  }
+
+  return {
+    plugins: [react()],
+    server: {
+      host: '0.0.0.0',
+      port: 5173,
+    },
+    preview: {
+      host: '0.0.0.0',
+      port: 5173,
+    },
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: './src/setupTests.ts',
+    },
+  };
+});

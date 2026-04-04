@@ -1,95 +1,109 @@
-# Overview
+# Baldin
 
-Streamline your journey to employment with Baldin.
-------
+Baldin is a developer-preview workspace for exploring job-search automation locally. It combines a FastAPI backend, a React/Vite frontend, PostgreSQL, and a set of experimental extraction and orchestration flows for leads, applications, resumes, cover letters, and candidate profile data.
 
+> Baldin is local-first right now.
+> The public repository is meant for local evaluation, architecture exploration, and contribution. It is not positioned as a production-hardened SaaS or a finished deployment blueprint.
 
-Baldin is a platform that helps you find job opportunities, build and manage your applications, and prepare for interviews.
+## What You Can Explore
 
+- Track companies, leads, applications, resumes, cover letters, contacts, education, experience, and skills.
+- Exercise extraction and orchestration workflows against a local stack.
+- Inspect the FastAPI surface through Swagger and the admin UI.
+- Develop against both the main Postgres database and the separate test database defined in `docker-compose.yml`.
 
-Documentation is available at [https://danphenderson.github.io/baldin/](https://danphenderson.github.io/baldin/)
+## Local Quickstart
 
-
-**Source Code**:  <a href="https://github.com/danphenderson/baldin" target="_blank">https://https://github.com/danphenderson/baldin</a>
-
-
-## 🚧 Features + Bugs 🚧
-
-Currently, the application is in its infancy. See open issues for a list of planned features and
-known bugs. If you find a bug, have a feature request, or simply a question, please file an issue.
-
-[issue tracker](https://github.com/danphenderson/baldin/issues)
-
-### Development
-
-To run baldin locally, ensure you have the following requirements installed:
+### Requirements
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
+
+Optional local toolchain if you want to work outside containers:
+
 - [Node.js](https://nodejs.org/en/download/)
-- [TypeScript](https://www.typescriptlang.org/download)
+- [Python 3.11](https://www.python.org/downloads/)
 - [pipenv](https://pipenv.pypa.io/en/latest/)
-- [pyenv](https://github.com/pyenv/pyenv#installation) (or your preferred Python version manager) with Python 3.11.2
 
+### Setup
 
-Fork the [repository](https://github.com/danphenderson) (look for the "Fork" button).
+1. Clone the repository.
+2. Copy `backend/.env.example` to `backend/.env`.
+3. Review the values in `backend/.env`:
+   - `OPENAI_API_KEY` enables AI-assisted extraction and automation features.
+   - `LINKEDIN_*` and `GLASSDOOR_*` credentials are optional.
+   - `FIRST_SUPERUSER_EMAIL` and `FIRST_SUPERUSER_PASSWORD` control the local admin bootstrap user.
+4. Start the local stack from the repository root:
 
-Then clone your fork locally: `git clone git@github.com:YOURGITHUBNAME/baldin.git`
+```bash
+docker-compose up --build
+```
 
+5. Open the local services:
+   - Frontend: [http://localhost:5173](http://localhost:5173)
+   - API: [http://localhost:8004](http://localhost:8004)
+   - Swagger UI: [http://localhost:8004/docs](http://localhost:8004/docs)
+   - ReDoc: [http://localhost:8004/redoc](http://localhost:8004/redoc)
+   - Admin: [http://localhost:8004/admin](http://localhost:8004/admin)
 
-### Local Network
+The backend starts in `DEV` mode, creates tables automatically, and bootstraps the default superuser from `backend/.env`.
 
-The development stack is composed of the following services:
+## Architecture
 
-**Baldin**
-    [API](http://localhost:8000)
-    [Frontend](http://localhost:3000/)
-    [Admin](http://localhost:8004/admin)
+Baldin is split into a few clear pieces:
 
-**Documentation**
-    [Swagger](http://localhost:8004/docs)
-    [(Re)docs](http://localhost:8004/redocs)
+- `backend/`: FastAPI application, Starlette Admin, authentication, extractors, orchestration flows, and tests.
+- `frontend/`: React/Vite client that talks to the backend through `VITE_API_URL`.
+- `docker-compose.yml`: the local-first entry point for the API, frontend, Postgres, and the separate test Postgres service.
+- `cdk/`: public AWS boundary notes and exploratory CDK scaffolding. It is not the live production control plane.
+- `docs/`: generated documentation output.
 
+For deeper backend details, including the data model and migration workflow, see [backend/README.md](backend/README.md).
 
-### Building and Running
+## Deployment Boundary
 
-After cloning your forked version of the repository, spin up the development stack with the following steps:
+The public repository now stops at buildable artifacts.
 
-1. Use `backend/.env.example` to create `backend/.env` with a valid `OPEN_API_KEY`.
-**OPTIONAL**: Supply LinkedIn and Glassdoor credentials to accelerate job searching and
-application management.
-2. In the root of the repository, run `docker-compose up --build`.
+- Pushes to `main` can validate the backend container build and the frontend static bundle.
+- Pushes to `main` cannot publish the backend image, sync frontend assets, or change production state.
+- Live rollout, production secrets, approval gates, and operator runbooks are intentionally kept behind a private control plane.
 
-### Contributing
+The public or local artifact boundary is:
 
-Contributions are welcome! The frontend is built with React and the backend is built with FastAPI. The API is powered by a Postgres database.
+- Backend candidate image from `backend/Dockerfile`
+- Frontend candidate bundle from `frontend/dist`
 
-Currently the frontend of the application needs to get up to speed with the backend. The backend is in a good place to start building out the frontend.
+The handoff model for production rollout is documented in [PRIVATE_DEPLOYMENT_CONTROL_PLANE.md](PRIVATE_DEPLOYMENT_CONTROL_PLANE.md).
 
+## Project Status
 
-### 5-steps to Contributing
+Baldin is still early. Expect rough edges, evolving APIs, documentation gaps, and unfinished automation workflows.
 
-After running Baldin locally, you're ready to start contributing!
+If you hit something confusing or broken, open an issue in the [issue tracker](https://github.com/danphenderson/baldin/issues).
 
-1. Create a branch for your changes: `git checkout -b <issue-number>-branch-name`
+## Contributing
 
-2. Make your changes and commit them:
-   `git add . && git commit -m "Your message here"`
+Contributions are welcome, especially around frontend polish, workflow reliability, and documentation.
 
-3. Push your changes to your fork:
-    `git push origin <issue-number>-branch-name`
+1. Create a branch for your change.
+2. Make the change and run the relevant checks.
+3. Push your branch.
+4. Open a pull request.
 
-4. Open a pull request in the upstream repository (look for the "Pull Request" button).
+Before your first commit, install the hooks:
 
-5. Wait for your changes to be reviewed and merged!
+```bash
+pre-commit install
+```
 
-*Note*: before committing changes for the first time, run  `pre-commit install` in the root of the repository.
+## Docs and Source
 
-### Futher Considerations
-
-- Commiting modifications to the API endpoints and schemas trigger  `scripts/fronted_update_schemas.sh` hook to update `openapi.json` and `frontend/src/schemas.d.ts`.
-
-- Generating new API Keys: `openssl rand -base64 32`
+- Documentation: [https://danphenderson.github.io/baldin/](https://danphenderson.github.io/baldin/)
+- Source code: [https://github.com/danphenderson/baldin](https://github.com/danphenderson/baldin)
+- Execution plan: [EXECUTION_PLAN.md](EXECUTION_PLAN.md)
+- Private deployment boundary: [PRIVATE_DEPLOYMENT_CONTROL_PLANE.md](PRIVATE_DEPLOYMENT_CONTROL_PLANE.md)
+- Public AWS boundary notes: [cdk/README.md](cdk/README.md)
 
 ## License
-This project is licensed under the terms of the [MIT license](/LICENSE).
+
+This project is licensed under the terms of the [MIT license](LICENSE).

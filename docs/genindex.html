@@ -4,13 +4,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Index &#8212; baldin 0.1.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d10597a4" />
+    <title>Index &#8212; Baldin Developer Preview Docs</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=34bb78ad" />
     <link rel="stylesheet" type="text/css" href="_static/pydoctheme.css?v=8635fa60" />
 
-    <script src="_static/documentation_options.js?v=01f34227"></script>
-    <script src="_static/doctools.js?v=9a2dae69"></script>
-    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/documentation_options.js?v=f34cbc3c"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 
     <script src="_static/sidebar.js"></script>
 
@@ -27,7 +27,7 @@
       <h3>Navigation</h3>
       <ul>
         <li class="responsive-menu"><a href="#sidebar-anchor" title="Navigation">&#9776;</a></li>
-        <li><a href="index.html">baldin-0.1.0</a> &#187;</li>
+        <li><a href="index.html">Baldin-0.1.0-alpha</a> &#187;</li>
       </ul>
     </div>
 
@@ -114,8 +114,6 @@
         <li><a href="index.html#module-app.models">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     app.schemas
 
@@ -123,6 +121,8 @@
         <li><a href="index.html#module-app.schemas">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.models.Lead.application">application (app.models.Lead attribute)</a>
 </li>
       <li><a href="index.html#app.models.Application">Application (class in app.models)</a>
@@ -133,9 +133,13 @@
         <li><a href="index.html#app.models.ResumeXApplication.application_id">(app.models.ResumeXApplication attribute)</a>
 </li>
       </ul></li>
+      <li><a href="index.html#app.schemas.ApplicationCoverLetterAttach">ApplicationCoverLetterAttach (class in app.schemas)</a>
+</li>
       <li><a href="index.html#app.schemas.ApplicationCreate">ApplicationCreate (class in app.schemas)</a>
 </li>
       <li><a href="index.html#app.schemas.ApplicationRead">ApplicationRead (class in app.schemas)</a>
+</li>
+      <li><a href="index.html#app.schemas.ApplicationResumeAttach">ApplicationResumeAttach (class in app.schemas)</a>
 </li>
       <li><a href="index.html#app.models.CoverLetter.applications">applications (app.models.CoverLetter attribute)</a>
 
@@ -162,6 +166,8 @@
       <li><a href="index.html#app.models.Base">Base (class in app.models)</a>
 </li>
       <li><a href="index.html#app.schemas.BaseCertificate">BaseCertificate (class in app.schemas)</a>
+</li>
+      <li><a href="index.html#app.schemas.BaseCompany">BaseCompany (class in app.schemas)</a>
 </li>
       <li><a href="index.html#app.schemas.BaseContact">BaseContact (class in app.schemas)</a>
 </li>
@@ -229,16 +235,36 @@
       </ul></li>
       <li><a href="index.html#app.schemas.LeadCreate.clean_and_wrap_text_fields">clean_and_wrap_text_fields() (app.schemas.LeadCreate method)</a>
 </li>
+      <li><a href="index.html#app.schemas.UserDataOperationResult.cleared_profile_fields">cleared_profile_fields (app.schemas.UserDataOperationResult attribute)</a>
+</li>
+      <li><a href="index.html#app.models.Lead.companies">companies (app.models.Lead attribute)</a>
+
+      <ul>
+        <li><a href="index.html#app.schemas.LeadRead.companies">(app.schemas.LeadRead attribute)</a>
+</li>
+      </ul></li>
       <li><a href="index.html#app.models.Experience.company">company (app.models.Experience attribute)</a>
 
       <ul>
-        <li><a href="index.html#app.models.Lead.company">(app.models.Lead attribute)</a>
-</li>
         <li><a href="index.html#app.schemas.BaseExperience.company">(app.schemas.BaseExperience attribute)</a>
 </li>
-        <li><a href="index.html#app.schemas.BaseLead.company">(app.schemas.BaseLead attribute)</a>
+      </ul></li>
+      <li><a href="index.html#app.models.Company">Company (class in app.models)</a>
+</li>
+      <li><a href="index.html#app.models.LeadXCompany.company_id">company_id (app.models.LeadXCompany attribute)</a>
+</li>
+      <li><a href="index.html#app.schemas.LeadCreate.company_ids">company_ids (app.schemas.LeadCreate attribute)</a>
+
+      <ul>
+        <li><a href="index.html#app.schemas.LeadUpdate.company_ids">(app.schemas.LeadUpdate attribute)</a>
 </li>
       </ul></li>
+      <li><a href="index.html#app.schemas.CompanyCreate">CompanyCreate (class in app.schemas)</a>
+</li>
+      <li><a href="index.html#app.schemas.CompanyRead">CompanyRead (class in app.schemas)</a>
+</li>
+      <li><a href="index.html#app.schemas.CompanyUpdate">CompanyUpdate (class in app.schemas)</a>
+</li>
       <li><a href="index.html#app.main.console_log_requests">console_log_requests() (in module app.main)</a>
 </li>
       <li><a href="index.html#app.models.Contact">Contact (class in app.models)</a>
@@ -267,6 +293,8 @@
       </ul></li>
       <li><a href="index.html#app.schemas.ExtractorResponse.content_too_long">content_too_long (app.schemas.ExtractorResponse attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.models.CoverLetter.content_type">content_type (app.models.CoverLetter attribute)</a>
 
       <ul>
@@ -277,8 +305,6 @@
         <li><a href="index.html#app.schemas.BaseResume.content_type">(app.schemas.BaseResume attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.schemas.ContentType">ContentType (class in app.schemas)</a>
 </li>
       <li><a href="index.html#app.models.User.country">country (app.models.User attribute)</a>
@@ -288,7 +314,11 @@
 </li>
       </ul></li>
       <li><a href="index.html#app.models.CoverLetterXApplication.cover_letter_id">cover_letter_id (app.models.CoverLetterXApplication attribute)</a>
+
+      <ul>
+        <li><a href="index.html#app.schemas.ApplicationCoverLetterAttach.cover_letter_id">(app.schemas.ApplicationCoverLetterAttach attribute)</a>
 </li>
+      </ul></li>
       <li><a href="index.html#app.models.Application.cover_letters">cover_letters (app.models.Application attribute)</a>
 
       <ul>
@@ -312,6 +342,8 @@
 </li>
         <li><a href="index.html#app.models.Certificate.created_at">(app.models.Certificate attribute)</a>
 </li>
+        <li><a href="index.html#app.models.Company.created_at">(app.models.Company attribute)</a>
+</li>
         <li><a href="index.html#app.models.Contact.created_at">(app.models.Contact attribute)</a>
 </li>
         <li><a href="index.html#app.models.CoverLetter.created_at">(app.models.CoverLetter attribute)</a>
@@ -327,6 +359,8 @@
         <li><a href="index.html#app.models.ExtractorExample.created_at">(app.models.ExtractorExample attribute)</a>
 </li>
         <li><a href="index.html#app.models.Lead.created_at">(app.models.Lead attribute)</a>
+</li>
+        <li><a href="index.html#app.models.LeadXCompany.created_at">(app.models.LeadXCompany attribute)</a>
 </li>
         <li><a href="index.html#app.models.OrchestrationEvent.created_at">(app.models.OrchestrationEvent attribute)</a>
 </li>
@@ -357,20 +391,32 @@
 </li>
       <li><a href="index.html#app.schemas.URIType.DATALAKE">DATALAKE (app.schemas.URIType attribute)</a>
 </li>
+      <li><a href="index.html#app.models.OrchestrationPipeline.definition">definition (app.models.OrchestrationPipeline attribute)</a>
+
+      <ul>
+        <li><a href="index.html#app.schemas.BaseOrchestrationPipeline.definition">(app.schemas.BaseOrchestrationPipeline attribute)</a>
+</li>
+      </ul></li>
       <li><a href="index.html#app.models.Education.degree">degree (app.models.Education attribute)</a>
 
       <ul>
         <li><a href="index.html#app.schemas.BaseEducation.degree">(app.schemas.BaseEducation attribute)</a>
 </li>
       </ul></li>
-      <li><a href="index.html#app.models.Experience.description">description (app.models.Experience attribute)</a>
+      <li><a href="index.html#app.schemas.UserDataOperationResult.deleted_records">deleted_records (app.schemas.UserDataOperationResult attribute)</a>
+</li>
+      <li><a href="index.html#app.models.Company.description">description (app.models.Company attribute)</a>
 
       <ul>
+        <li><a href="index.html#app.models.Experience.description">(app.models.Experience attribute)</a>
+</li>
         <li><a href="index.html#app.models.Extractor.description">(app.models.Extractor attribute)</a>
 </li>
         <li><a href="index.html#app.models.Lead.description">(app.models.Lead attribute)</a>
 </li>
         <li><a href="index.html#app.models.OrchestrationPipeline.description">(app.models.OrchestrationPipeline attribute)</a>
+</li>
+        <li><a href="index.html#app.schemas.BaseCompany.description">(app.schemas.BaseCompany attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.BaseExperience.description">(app.schemas.BaseExperience attribute)</a>
 </li>
@@ -396,7 +442,11 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.models.User.education">education (app.models.User attribute)</a>
+
+      <ul>
+        <li><a href="index.html#app.schemas.UserProfileRead.education">(app.schemas.UserProfileRead attribute)</a>
 </li>
+      </ul></li>
       <li><a href="index.html#app.models.Education">Education (class in app.models)</a>
 </li>
       <li><a href="index.html#app.models.Lead.education_level">education_level (app.models.Lead attribute)</a>
@@ -408,8 +458,6 @@
       <li><a href="index.html#app.schemas.EducationCreate">EducationCreate (class in app.schemas)</a>
 </li>
       <li><a href="index.html#app.schemas.EducationRead">EducationRead (class in app.schemas)</a>
-</li>
-      <li><a href="index.html#app.schemas.UserProfileRead.educations">educations (app.schemas.UserProfileRead attribute)</a>
 </li>
       <li><a href="index.html#app.schemas.EducationUpdate">EducationUpdate (class in app.schemas)</a>
 </li>
@@ -435,6 +483,12 @@
         <li><a href="index.html#app.schemas.BaseEducation.end_date">(app.schemas.BaseEducation attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.BaseExperience.end_date">(app.schemas.BaseExperience attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="index.html#app.models.OrchestrationEvent.environment">environment (app.models.OrchestrationEvent attribute)</a>
+
+      <ul>
+        <li><a href="index.html#app.schemas.BaseOrchestrationEvent.environment">(app.schemas.BaseOrchestrationEvent attribute)</a>
 </li>
       </ul></li>
       <li><a href="index.html#app.schemas.OrchestrationPipelineRead.events">events (app.schemas.OrchestrationPipelineRead attribute)</a>
@@ -495,6 +549,8 @@
 </li>
       <li><a href="index.html#app.schemas.ExtractorResponse">ExtractorResponse (class in app.schemas)</a>
 </li>
+      <li><a href="index.html#app.schemas.ExtractorRun">ExtractorRun (class in app.schemas)</a>
+</li>
       <li><a href="index.html#app.models.User.extractors">extractors (app.models.User attribute)</a>
 </li>
       <li><a href="index.html#app.schemas.ExtractorUpdate">ExtractorUpdate (class in app.schemas)</a>
@@ -506,6 +562,8 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.schemas.OrchestrationEventStatusType.FAILED">FAILED (app.schemas.OrchestrationEventStatusType attribute)</a>
+</li>
+      <li><a href="index.html#app.schemas.ExtractorRun.file">file (app.schemas.ExtractorRun attribute)</a>
 </li>
       <li><a href="index.html#app.schemas.URIType.FILE">FILE (app.schemas.URIType attribute)</a>
 </li>
@@ -576,6 +634,8 @@
 </li>
         <li><a href="index.html#app.models.Certificate.id">(app.models.Certificate attribute)</a>
 </li>
+        <li><a href="index.html#app.models.Company.id">(app.models.Company attribute)</a>
+</li>
         <li><a href="index.html#app.models.Contact.id">(app.models.Contact attribute)</a>
 </li>
         <li><a href="index.html#app.models.CoverLetter.id">(app.models.CoverLetter attribute)</a>
@@ -591,6 +651,8 @@
         <li><a href="index.html#app.models.ExtractorExample.id">(app.models.ExtractorExample attribute)</a>
 </li>
         <li><a href="index.html#app.models.Lead.id">(app.models.Lead attribute)</a>
+</li>
+        <li><a href="index.html#app.models.LeadXCompany.id">(app.models.LeadXCompany attribute)</a>
 </li>
         <li><a href="index.html#app.models.OrchestrationEvent.id">(app.models.OrchestrationEvent attribute)</a>
 </li>
@@ -609,10 +671,10 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#app.models.Lead.industries">industries (app.models.Lead attribute)</a>
+      <li><a href="index.html#app.models.Company.industry">industry (app.models.Company attribute)</a>
 
       <ul>
-        <li><a href="index.html#app.schemas.BaseLead.industries">(app.schemas.BaseLead attribute)</a>
+        <li><a href="index.html#app.schemas.BaseCompany.industry">(app.schemas.BaseCompany attribute)</a>
 </li>
       </ul></li>
       <li><a href="index.html#app.models.Extractor.instruction">instruction (app.models.Extractor attribute)</a>
@@ -692,29 +754,45 @@
       <li><a href="index.html#app.models.Application.lead_id">lead_id (app.models.Application attribute)</a>
 
       <ul>
+        <li><a href="index.html#app.models.LeadXCompany.lead_id">(app.models.LeadXCompany attribute)</a>
+</li>
         <li><a href="index.html#app.schemas.ApplicationCreate.lead_id">(app.schemas.ApplicationCreate attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.ApplicationRead.lead_id">(app.schemas.ApplicationRead attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.schemas.LeadCreate">LeadCreate (class in app.schemas)</a>
 </li>
       <li><a href="index.html#app.schemas.LeadRead">LeadRead (class in app.schemas)</a>
 </li>
-      <li><a href="index.html#app.schemas.LeadsPaginatedRead.leads">leads (app.schemas.LeadsPaginatedRead attribute)</a>
+      <li><a href="index.html#app.models.Company.leads">leads (app.models.Company attribute)</a>
+
+      <ul>
+        <li><a href="index.html#app.schemas.LeadsPaginatedRead.leads">(app.schemas.LeadsPaginatedRead attribute)</a>
 </li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.schemas.LeadsPaginatedRead">LeadsPaginatedRead (class in app.schemas)</a>
 </li>
       <li><a href="index.html#app.schemas.LeadUpdate">LeadUpdate (class in app.schemas)</a>
 </li>
+      <li><a href="index.html#app.models.LeadXCompany">LeadXCompany (class in app.models)</a>
+</li>
+      <li><a href="index.html#app.schemas.ExtractorRun.llm">llm (app.schemas.ExtractorRun attribute)</a>
+</li>
       <li><a href="index.html#app.schemas.ExtractorRequest.llm_name">llm_name (app.schemas.ExtractorRequest attribute)</a>
 </li>
-      <li><a href="index.html#app.models.Experience.location">location (app.models.Experience attribute)</a>
+      <li><a href="index.html#app.schemas.OrchestrationEventRead.load_json">load_json() (app.schemas.OrchestrationEventRead class method)</a>
+</li>
+      <li><a href="index.html#app.models.Company.location">location (app.models.Company attribute)</a>
 
       <ul>
+        <li><a href="index.html#app.models.Experience.location">(app.models.Experience attribute)</a>
+</li>
         <li><a href="index.html#app.models.Lead.location">(app.models.Lead attribute)</a>
+</li>
+        <li><a href="index.html#app.schemas.BaseCompany.location">(app.schemas.BaseCompany attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.BaseExperience.location">(app.schemas.BaseExperience attribute)</a>
 </li>
@@ -737,142 +815,22 @@
       </ul></li>
       <li><a href="index.html#app.models.Base.metadata">metadata (app.models.Base attribute)</a>
 </li>
-      <li><a href="index.html#app.schemas.ApplicationCreate.model_computed_fields">model_computed_fields (app.schemas.ApplicationCreate attribute)</a>
+      <li><a href="index.html#app.schemas.ExtractorRun.mode">mode (app.schemas.ExtractorRun attribute)</a>
+</li>
+      <li><a href="index.html#app.schemas.ApplicationCoverLetterAttach.model_config">model_config (app.schemas.ApplicationCoverLetterAttach attribute)</a>
 
       <ul>
-        <li><a href="index.html#app.schemas.ApplicationRead.model_computed_fields">(app.schemas.ApplicationRead attribute)</a>
+        <li><a href="index.html#app.schemas.ApplicationCreate.model_config">(app.schemas.ApplicationCreate attribute)</a>
 </li>
-        <li><a href="index.html#app.schemas.ApplicationUpdate.model_computed_fields">(app.schemas.ApplicationUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseCertificate.model_computed_fields">(app.schemas.BaseCertificate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseContact.model_computed_fields">(app.schemas.BaseContact attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseCoverLetter.model_computed_fields">(app.schemas.BaseCoverLetter attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseEducation.model_computed_fields">(app.schemas.BaseEducation attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseExperience.model_computed_fields">(app.schemas.BaseExperience attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseExtractor.model_computed_fields">(app.schemas.BaseExtractor attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseExtractorExample.model_computed_fields">(app.schemas.BaseExtractorExample attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseLead.model_computed_fields">(app.schemas.BaseLead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseOrchestrationEvent.model_computed_fields">(app.schemas.BaseOrchestrationEvent attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseOrchestrationPipeline.model_computed_fields">(app.schemas.BaseOrchestrationPipeline attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseRead.model_computed_fields">(app.schemas.BaseRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseResume.model_computed_fields">(app.schemas.BaseResume attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseSchema.model_computed_fields">(app.schemas.BaseSchema attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseSkill.model_computed_fields">(app.schemas.BaseSkill attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseUser.model_computed_fields">(app.schemas.BaseUser attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.CertificateCreate.model_computed_fields">(app.schemas.CertificateCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.CertificateRead.model_computed_fields">(app.schemas.CertificateRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.CertificateUpdate.model_computed_fields">(app.schemas.CertificateUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ContactCreate.model_computed_fields">(app.schemas.ContactCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ContactRead.model_computed_fields">(app.schemas.ContactRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ContactUpdate.model_computed_fields">(app.schemas.ContactUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.CoverLetterCreate.model_computed_fields">(app.schemas.CoverLetterCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.CoverLetterRead.model_computed_fields">(app.schemas.CoverLetterRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.CoverLetterUpdate.model_computed_fields">(app.schemas.CoverLetterUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.EducationCreate.model_computed_fields">(app.schemas.EducationCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.EducationRead.model_computed_fields">(app.schemas.EducationRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.EducationUpdate.model_computed_fields">(app.schemas.EducationUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExperienceCreate.model_computed_fields">(app.schemas.ExperienceCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExperienceRead.model_computed_fields">(app.schemas.ExperienceRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExperienceUpdate.model_computed_fields">(app.schemas.ExperienceUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorCreate.model_computed_fields">(app.schemas.ExtractorCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorExampleCreate.model_computed_fields">(app.schemas.ExtractorExampleCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorExampleRead.model_computed_fields">(app.schemas.ExtractorExampleRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorExampleUpdate.model_computed_fields">(app.schemas.ExtractorExampleUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorRead.model_computed_fields">(app.schemas.ExtractorRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorRequest.model_computed_fields">(app.schemas.ExtractorRequest attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorResponse.model_computed_fields">(app.schemas.ExtractorResponse attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorUpdate.model_computed_fields">(app.schemas.ExtractorUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.LeadCreate.model_computed_fields">(app.schemas.LeadCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.LeadRead.model_computed_fields">(app.schemas.LeadRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.LeadsPaginatedRead.model_computed_fields">(app.schemas.LeadsPaginatedRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.LeadUpdate.model_computed_fields">(app.schemas.LeadUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.OrchestrationEventCreate.model_computed_fields">(app.schemas.OrchestrationEventCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.OrchestrationEventRead.model_computed_fields">(app.schemas.OrchestrationEventRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.OrchestrationEventUpdate.model_computed_fields">(app.schemas.OrchestrationEventUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.OrchestrationPipelineCreate.model_computed_fields">(app.schemas.OrchestrationPipelineCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.OrchestrationPipelineRead.model_computed_fields">(app.schemas.OrchestrationPipelineRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.OrchestrationPipelineUpdate.model_computed_fields">(app.schemas.OrchestrationPipelineUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.Pagination.model_computed_fields">(app.schemas.Pagination attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ResumeCreate.model_computed_fields">(app.schemas.ResumeCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ResumeRead.model_computed_fields">(app.schemas.ResumeRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ResumeUpdate.model_computed_fields">(app.schemas.ResumeUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.SkillCreate.model_computed_fields">(app.schemas.SkillCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.SkillRead.model_computed_fields">(app.schemas.SkillRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.SkillUpdate.model_computed_fields">(app.schemas.SkillUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.URI.model_computed_fields">(app.schemas.URI attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.UserCreate.model_computed_fields">(app.schemas.UserCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.UserProfileRead.model_computed_fields">(app.schemas.UserProfileRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.UserRead.model_computed_fields">(app.schemas.UserRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.UserUpdate.model_computed_fields">(app.schemas.UserUpdate attribute)</a>
-</li>
-      </ul></li>
-      <li><a href="index.html#app.schemas.ApplicationCreate.model_config">model_config (app.schemas.ApplicationCreate attribute)</a>
-
-      <ul>
         <li><a href="index.html#app.schemas.ApplicationRead.model_config">(app.schemas.ApplicationRead attribute)</a>
+</li>
+        <li><a href="index.html#app.schemas.ApplicationResumeAttach.model_config">(app.schemas.ApplicationResumeAttach attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.ApplicationUpdate.model_config">(app.schemas.ApplicationUpdate attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.BaseCertificate.model_config">(app.schemas.BaseCertificate attribute)</a>
+</li>
+        <li><a href="index.html#app.schemas.BaseCompany.model_config">(app.schemas.BaseCompany attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.BaseContact.model_config">(app.schemas.BaseContact attribute)</a>
 </li>
@@ -907,6 +865,12 @@
         <li><a href="index.html#app.schemas.CertificateRead.model_config">(app.schemas.CertificateRead attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.CertificateUpdate.model_config">(app.schemas.CertificateUpdate attribute)</a>
+</li>
+        <li><a href="index.html#app.schemas.CompanyCreate.model_config">(app.schemas.CompanyCreate attribute)</a>
+</li>
+        <li><a href="index.html#app.schemas.CompanyRead.model_config">(app.schemas.CompanyRead attribute)</a>
+</li>
+        <li><a href="index.html#app.schemas.CompanyUpdate.model_config">(app.schemas.CompanyUpdate attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.ContactCreate.model_config">(app.schemas.ContactCreate attribute)</a>
 </li>
@@ -945,6 +909,8 @@
         <li><a href="index.html#app.schemas.ExtractorRequest.model_config">(app.schemas.ExtractorRequest attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.ExtractorResponse.model_config">(app.schemas.ExtractorResponse attribute)</a>
+</li>
+        <li><a href="index.html#app.schemas.ExtractorRun.model_config">(app.schemas.ExtractorRun attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.ExtractorUpdate.model_config">(app.schemas.ExtractorUpdate attribute)</a>
 </li>
@@ -986,6 +952,8 @@
 </li>
         <li><a href="index.html#app.schemas.UserCreate.model_config">(app.schemas.UserCreate attribute)</a>
 </li>
+        <li><a href="index.html#app.schemas.UserDataOperationResult.model_config">(app.schemas.UserDataOperationResult attribute)</a>
+</li>
         <li><a href="index.html#app.schemas.UserProfileRead.model_config">(app.schemas.UserProfileRead attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.UserRead.model_config">(app.schemas.UserRead attribute)</a>
@@ -995,134 +963,6 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#app.schemas.ApplicationCreate.model_fields">model_fields (app.schemas.ApplicationCreate attribute)</a>
-
-      <ul>
-        <li><a href="index.html#app.schemas.ApplicationRead.model_fields">(app.schemas.ApplicationRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ApplicationUpdate.model_fields">(app.schemas.ApplicationUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseCertificate.model_fields">(app.schemas.BaseCertificate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseContact.model_fields">(app.schemas.BaseContact attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseCoverLetter.model_fields">(app.schemas.BaseCoverLetter attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseEducation.model_fields">(app.schemas.BaseEducation attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseExperience.model_fields">(app.schemas.BaseExperience attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseExtractor.model_fields">(app.schemas.BaseExtractor attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseExtractorExample.model_fields">(app.schemas.BaseExtractorExample attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseLead.model_fields">(app.schemas.BaseLead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseOrchestrationEvent.model_fields">(app.schemas.BaseOrchestrationEvent attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseOrchestrationPipeline.model_fields">(app.schemas.BaseOrchestrationPipeline attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseRead.model_fields">(app.schemas.BaseRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseResume.model_fields">(app.schemas.BaseResume attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseSchema.model_fields">(app.schemas.BaseSchema attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseSkill.model_fields">(app.schemas.BaseSkill attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseUser.model_fields">(app.schemas.BaseUser attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.CertificateCreate.model_fields">(app.schemas.CertificateCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.CertificateRead.model_fields">(app.schemas.CertificateRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.CertificateUpdate.model_fields">(app.schemas.CertificateUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ContactCreate.model_fields">(app.schemas.ContactCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ContactRead.model_fields">(app.schemas.ContactRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ContactUpdate.model_fields">(app.schemas.ContactUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.CoverLetterCreate.model_fields">(app.schemas.CoverLetterCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.CoverLetterRead.model_fields">(app.schemas.CoverLetterRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.CoverLetterUpdate.model_fields">(app.schemas.CoverLetterUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.EducationCreate.model_fields">(app.schemas.EducationCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.EducationRead.model_fields">(app.schemas.EducationRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.EducationUpdate.model_fields">(app.schemas.EducationUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExperienceCreate.model_fields">(app.schemas.ExperienceCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExperienceRead.model_fields">(app.schemas.ExperienceRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExperienceUpdate.model_fields">(app.schemas.ExperienceUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorCreate.model_fields">(app.schemas.ExtractorCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorExampleCreate.model_fields">(app.schemas.ExtractorExampleCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorExampleRead.model_fields">(app.schemas.ExtractorExampleRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorExampleUpdate.model_fields">(app.schemas.ExtractorExampleUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorRead.model_fields">(app.schemas.ExtractorRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorRequest.model_fields">(app.schemas.ExtractorRequest attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorResponse.model_fields">(app.schemas.ExtractorResponse attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ExtractorUpdate.model_fields">(app.schemas.ExtractorUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.LeadCreate.model_fields">(app.schemas.LeadCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.LeadRead.model_fields">(app.schemas.LeadRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.LeadsPaginatedRead.model_fields">(app.schemas.LeadsPaginatedRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.LeadUpdate.model_fields">(app.schemas.LeadUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.OrchestrationEventCreate.model_fields">(app.schemas.OrchestrationEventCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.OrchestrationEventRead.model_fields">(app.schemas.OrchestrationEventRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.OrchestrationEventUpdate.model_fields">(app.schemas.OrchestrationEventUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.OrchestrationPipelineCreate.model_fields">(app.schemas.OrchestrationPipelineCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.OrchestrationPipelineRead.model_fields">(app.schemas.OrchestrationPipelineRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.OrchestrationPipelineUpdate.model_fields">(app.schemas.OrchestrationPipelineUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.Pagination.model_fields">(app.schemas.Pagination attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ResumeCreate.model_fields">(app.schemas.ResumeCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ResumeRead.model_fields">(app.schemas.ResumeRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.ResumeUpdate.model_fields">(app.schemas.ResumeUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.SkillCreate.model_fields">(app.schemas.SkillCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.SkillRead.model_fields">(app.schemas.SkillRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.SkillUpdate.model_fields">(app.schemas.SkillUpdate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.URI.model_fields">(app.schemas.URI attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.UserCreate.model_fields">(app.schemas.UserCreate attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.UserProfileRead.model_fields">(app.schemas.UserProfileRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.UserRead.model_fields">(app.schemas.UserRead attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.UserUpdate.model_fields">(app.schemas.UserUpdate attribute)</a>
-</li>
-      </ul></li>
       <li>
     module
 
@@ -1140,12 +980,12 @@
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#app.models.CoverLetter.name">name (app.models.CoverLetter attribute)</a>
+      <li><a href="index.html#app.models.Company.name">name (app.models.Company attribute)</a>
 
       <ul>
-        <li><a href="index.html#app.models.Extractor.name">(app.models.Extractor attribute)</a>
+        <li><a href="index.html#app.models.CoverLetter.name">(app.models.CoverLetter attribute)</a>
 </li>
-        <li><a href="index.html#app.models.OrchestrationEvent.name">(app.models.OrchestrationEvent attribute)</a>
+        <li><a href="index.html#app.models.Extractor.name">(app.models.Extractor attribute)</a>
 </li>
         <li><a href="index.html#app.models.OrchestrationPipeline.name">(app.models.OrchestrationPipeline attribute)</a>
 </li>
@@ -1153,11 +993,11 @@
 </li>
         <li><a href="index.html#app.models.Skill.name">(app.models.Skill attribute)</a>
 </li>
+        <li><a href="index.html#app.schemas.BaseCompany.name">(app.schemas.BaseCompany attribute)</a>
+</li>
         <li><a href="index.html#app.schemas.BaseCoverLetter.name">(app.schemas.BaseCoverLetter attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.BaseExtractor.name">(app.schemas.BaseExtractor attribute)</a>
-</li>
-        <li><a href="index.html#app.schemas.BaseOrchestrationEvent.name">(app.schemas.BaseOrchestrationEvent attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.BaseOrchestrationPipeline.name">(app.schemas.BaseOrchestrationPipeline attribute)</a>
 </li>
@@ -1232,12 +1072,26 @@
 </li>
       <li><a href="index.html#app.schemas.Pagination">Pagination (class in app.schemas)</a>
 </li>
-      <li><a href="index.html#app.models.OrchestrationPipeline.params">params (app.models.OrchestrationPipeline attribute)</a>
+      <li><a href="index.html#app.schemas.EducationCreate.parse_achievements">parse_achievements() (app.schemas.EducationCreate class method)</a>
+</li>
+      <li><a href="index.html#app.schemas.BaseCertificate.parse_date">parse_date() (app.schemas.BaseCertificate class method)</a>
 
       <ul>
-        <li><a href="index.html#app.schemas.BaseOrchestrationPipeline.params">(app.schemas.BaseOrchestrationPipeline attribute)</a>
+        <li><a href="index.html#app.schemas.BaseEducation.parse_date">(app.schemas.BaseEducation class method)</a>
+</li>
+        <li><a href="index.html#app.schemas.BaseExperience.parse_date">(app.schemas.BaseExperience class method)</a>
 </li>
       </ul></li>
+      <li><a href="index.html#app.schemas.ExperienceCreate.parse_projects">parse_projects() (app.schemas.ExperienceCreate class method)</a>
+</li>
+      <li><a href="index.html#app.models.OrchestrationEvent.payload">payload (app.models.OrchestrationEvent attribute)</a>
+
+      <ul>
+        <li><a href="index.html#app.schemas.BaseOrchestrationEvent.payload">(app.schemas.BaseOrchestrationEvent attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.schemas.OrchestrationEventStatusType.PENDING">PENDING (app.schemas.OrchestrationEventStatusType attribute)</a>
 </li>
       <li><a href="index.html#app.models.Contact.phone_number">phone_number (app.models.Contact attribute)</a>
@@ -1250,8 +1104,6 @@
         <li><a href="index.html#app.schemas.BaseUser.phone_number">(app.schemas.BaseUser attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.models.OrchestrationEvent.pipeline_id">pipeline_id (app.models.OrchestrationEvent attribute)</a>
 
       <ul>
@@ -1260,8 +1112,6 @@
         <li><a href="index.html#app.schemas.OrchestrationEventCreate.pipeline_id">(app.schemas.OrchestrationEventCreate attribute)</a>
 </li>
       </ul></li>
-      <li><a href="index.html#app.main.pong">pong() (in module app.main)</a>
-</li>
       <li><a href="index.html#app.models.Experience.projects">projects (app.models.Experience attribute)</a>
 
       <ul>
@@ -1283,13 +1133,17 @@
       <li><a href="index.html#app.models.Resume">Resume (class in app.models)</a>
 </li>
       <li><a href="index.html#app.models.ResumeXApplication.resume_id">resume_id (app.models.ResumeXApplication attribute)</a>
+
+      <ul>
+        <li><a href="index.html#app.schemas.ApplicationResumeAttach.resume_id">(app.schemas.ApplicationResumeAttach attribute)</a>
 </li>
+      </ul></li>
       <li><a href="index.html#app.schemas.ResumeCreate">ResumeCreate (class in app.schemas)</a>
-</li>
-      <li><a href="index.html#app.schemas.ResumeRead">ResumeRead (class in app.schemas)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="index.html#app.schemas.ResumeRead">ResumeRead (class in app.schemas)</a>
+</li>
       <li><a href="index.html#app.models.Application.resumes">resumes (app.models.Application attribute)</a>
 
       <ul>
@@ -1324,6 +1178,12 @@
       </ul></li>
       <li><a href="index.html#app.main.shutdown_event">shutdown_event() (in module app.main)</a>
 </li>
+      <li><a href="index.html#app.models.Company.size">size (app.models.Company attribute)</a>
+
+      <ul>
+        <li><a href="index.html#app.schemas.BaseCompany.size">(app.schemas.BaseCompany attribute)</a>
+</li>
+      </ul></li>
       <li><a href="index.html#app.models.Skill">Skill (class in app.models)</a>
 </li>
       <li><a href="index.html#app.schemas.SkillCreate">SkillCreate (class in app.schemas)</a>
@@ -1344,6 +1204,8 @@
         <li><a href="index.html#app.schemas.BaseOrchestrationEvent.source_uri">(app.schemas.BaseOrchestrationEvent attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.models.Education.start_date">start_date (app.models.Education attribute)</a>
 
       <ul>
@@ -1354,8 +1216,6 @@
         <li><a href="index.html#app.schemas.BaseExperience.start_date">(app.schemas.BaseExperience attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.main.startup_event">startup_event() (in module app.main)</a>
 </li>
       <li><a href="index.html#app.models.User.state">state (app.models.User attribute)</a>
@@ -1395,7 +1255,11 @@
       <li><a href="index.html#app.schemas.ContentType.TEMPLATE">TEMPLATE (app.schemas.ContentType attribute)</a>
 </li>
       <li><a href="index.html#app.schemas.ExtractorRequest.text">text (app.schemas.ExtractorRequest attribute)</a>
+
+      <ul>
+        <li><a href="index.html#app.schemas.ExtractorRun.text">(app.schemas.ExtractorRun attribute)</a>
 </li>
+      </ul></li>
       <li><a href="index.html#app.models.Contact.time_zone">time_zone (app.models.Contact attribute)</a>
 
       <ul>
@@ -1406,6 +1270,8 @@
         <li><a href="index.html#app.schemas.BaseUser.time_zone">(app.schemas.BaseUser attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.models.Certificate.title">title (app.models.Certificate attribute)</a>
 
       <ul>
@@ -1420,8 +1286,6 @@
         <li><a href="index.html#app.schemas.BaseLead.title">(app.schemas.BaseLead attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.schemas.LeadsPaginatedRead.total_count">total_count (app.schemas.LeadsPaginatedRead attribute)</a>
 </li>
       <li><a href="index.html#app.schemas.URI.type">type (app.schemas.URI attribute)</a>
@@ -1445,6 +1309,8 @@
 </li>
         <li><a href="index.html#app.models.Certificate.updated_at">(app.models.Certificate attribute)</a>
 </li>
+        <li><a href="index.html#app.models.Company.updated_at">(app.models.Company attribute)</a>
+</li>
         <li><a href="index.html#app.models.Contact.updated_at">(app.models.Contact attribute)</a>
 </li>
         <li><a href="index.html#app.models.CoverLetter.updated_at">(app.models.CoverLetter attribute)</a>
@@ -1460,6 +1326,8 @@
         <li><a href="index.html#app.models.ExtractorExample.updated_at">(app.models.ExtractorExample attribute)</a>
 </li>
         <li><a href="index.html#app.models.Lead.updated_at">(app.models.Lead attribute)</a>
+</li>
+        <li><a href="index.html#app.models.LeadXCompany.updated_at">(app.models.LeadXCompany attribute)</a>
 </li>
         <li><a href="index.html#app.models.OrchestrationEvent.updated_at">(app.models.OrchestrationEvent attribute)</a>
 </li>
@@ -1485,11 +1353,15 @@
       <li><a href="index.html#app.models.Lead.url">url (app.models.Lead attribute)</a>
 
       <ul>
+        <li><a href="index.html#app.schemas.ExtractorRun.url">(app.schemas.ExtractorRun attribute)</a>
+</li>
         <li><a href="index.html#app.schemas.LeadCreate.url">(app.schemas.LeadCreate attribute)</a>
 </li>
         <li><a href="index.html#app.schemas.LeadRead.url">(app.schemas.LeadRead attribute)</a>
 </li>
       </ul></li>
+      <li><a href="index.html#app.schemas.URIType.URL">URL (app.schemas.URIType attribute)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="index.html#app.models.Application.user">user (app.models.Application attribute)</a>
@@ -1518,6 +1390,8 @@
       </ul></li>
       <li><a href="index.html#app.models.User">User (class in app.models)</a>
 </li>
+      <li><a href="index.html#app.schemas.UserDataOperationResult.user_deleted">user_deleted (app.schemas.UserDataOperationResult attribute)</a>
+</li>
       <li><a href="index.html#app.models.Application.user_id">user_id (app.models.Application attribute)</a>
 
       <ul>
@@ -1541,8 +1415,12 @@
 </li>
         <li><a href="index.html#app.schemas.ApplicationRead.user_id">(app.schemas.ApplicationRead attribute)</a>
 </li>
+        <li><a href="index.html#app.schemas.UserDataOperationResult.user_id">(app.schemas.UserDataOperationResult attribute)</a>
+</li>
       </ul></li>
       <li><a href="index.html#app.schemas.UserCreate">UserCreate (class in app.schemas)</a>
+</li>
+      <li><a href="index.html#app.schemas.UserDataOperationResult">UserDataOperationResult (class in app.schemas)</a>
 </li>
       <li><a href="index.html#app.schemas.UserProfileRead">UserProfileRead (class in app.schemas)</a>
 </li>
@@ -1564,7 +1442,11 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="index.html#app.schemas.URI.validate_type">validate_type() (app.schemas.URI class method)</a>
+</li>
       <li><a href="index.html#app.schemas.BaseOrchestrationEvent.validate_uri">validate_uri() (app.schemas.BaseOrchestrationEvent class method)</a>
+</li>
+      <li><a href="index.html#app.schemas.BaseSkill.validate_yoe">validate_yoe() (app.schemas.BaseSkill class method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1599,7 +1481,7 @@
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
     <a id="sidebar-anchor"></a>
 
@@ -1636,9 +1518,9 @@
     </div>
 
     <div class="footer" role="contentinfo">
-    &#169; Copyright 2023, Daniel P. Henderson.
-      Last updated on Apr 24, 2024.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.3.7.
+    &#169; Copyright 2026, Daniel P. Henderson.
+      Last updated on Apr 03, 2026.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

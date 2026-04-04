@@ -1,11 +1,11 @@
 // Path: frontend/src/service/db-management.tsx
 
 import { components } from '../schema';
+import { API_URL } from '../config/env';
 
 
 
-// TODO - pull this from the environment schema.d.ts
-const BASE_URL = `${process.env.REACT_APP_API_URL}/db-management`;
+const BASE_URL = `${API_URL}/db-management`;
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
   if (!token) {

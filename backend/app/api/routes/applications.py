@@ -11,7 +11,9 @@ from app.api.deps import (
     generate_cover_letter,
     get_application,
     get_async_session,
+    get_cover_letter,
     get_current_user,
+    get_resume,
     model_to_dict,
     models,
     schemas,
@@ -83,11 +85,6 @@ async def get_applications(
     )
     # Ensure that unique rows are considered to avoid duplicates due to joinedload
     applications = result.scalars().unique().all()
-
-    if not applications:
-        raise HTTPException(
-            status_code=404, detail="No applications found for the current user"
-        )
     return applications
 
 
@@ -174,12 +171,6 @@ async def get_application_resumes(
         .where(models.ResumeXApplication.application_id == app.id)
     )
     resumes = result.scalars().all()
-
-    if not resumes:
-        raise HTTPException(
-            status_code=404, detail="No resumes found for this application"
-        )
-
     return resumes
 
 
@@ -204,34 +195,29 @@ async def get_application_cover_letters(
         .where(models.CoverLetterXApplication.application_id == app.id)
     )
     cover_letters = result.scalars().all()
-
-    if not cover_letters:
-        raise HTTPException(
-            status_code=404, detail="No cover letters found for this application"
-        )
-
     return cover_letters
 
 
 @router.post("/{id}/resumes", status_code=201, response_model=schemas.ResumeRead)
 async def add_resume_to_application(
-    id: UUID4,
-    payload: schemas.ResumeCreate,
+    payload: schemas.ApplicationResumeAttach,
+    application: models.Application = Depends(get_application),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    # Create a new resume instance
-    resume = models.Resume(**payload.dict(), user_id=user.id)
+    resume = await get_resume(payload.resume_id, db, user)
 
-    # Add resume to the database
-    db.add(resume)
-    await db.commit()
-    await db.refresh(resume)
-
-    # Create an association between the resume and the application
-    association = models.ResumeXApplication(application_id=id, resume_id=resume.id)
-    db.add(association)
-    await db.commit()
+    association = await db.get(
+        models.ResumeXApplication,
+        (application.id, resume.id),
+    )
+    if not association:
+        association = models.ResumeXApplication(
+            application_id=application.id,
+            resume_id=resume.id,
+        )
+        db.add(association)
+        await db.commit()
 
     return resume
 
@@ -240,25 +226,24 @@ async def add_resume_to_application(
     "/{id}/cover_letters", status_code=201, response_model=schemas.CoverLetterRead
 )
 async def add_cover_letter_to_application(
-    id: UUID4,
-    payload: schemas.CoverLetterCreate,
+    payload: schemas.ApplicationCoverLetterAttach,
+    application: models.Application = Depends(get_application),
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    # Create a new cover letter instance
-    cover_letter = models.CoverLetter(**payload.dict(), user_id=user.id)
+    cover_letter = await get_cover_letter(payload.cover_letter_id, db, user)
 
-    # Add cover letter to the database
-    db.add(cover_letter)
-    await db.commit()
-    await db.refresh(cover_letter)
-
-    # Create an association between the cover letter and the application
-    association = models.CoverLetterXApplication(
-        application_id=id, cover_letter_id=cover_letter.id
+    association = await db.get(
+        models.CoverLetterXApplication,
+        (application.id, cover_letter.id),
     )
-    db.add(association)
-    await db.commit()
+    if not association:
+        association = models.CoverLetterXApplication(
+            application_id=application.id,
+            cover_letter_id=cover_letter.id,
+        )
+        db.add(association)
+        await db.commit()
 
     return cover_letter
 
@@ -270,8 +255,9 @@ async def add_cover_letter_to_application(
 )
 async def generate_cover_letter_for_application(
     id: UUID4,
-    template_id: str
-    | None = Query(None, description="Template ID for cover letter generation"),
+    template_id: str | None = Query(
+        None, description="Template ID for cover letter generation"
+    ),
     db: AsyncSession = Depends(get_async_session),  # noqa
     user: schemas.UserRead = Depends(get_current_user),
 ):

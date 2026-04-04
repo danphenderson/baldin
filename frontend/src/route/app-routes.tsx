@@ -1,44 +1,41 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import UserRoute from './user-routes';
-import App from '../page/home';
-import LoginPage from '../page/login';
-import PublicLayout from '../layout/public-layout';
-import AppLayout from '../layout/home-layout';
-import RegistrationPage from '../page/register';
-import ErrorPage from '../page/error';
-import UserProfilePage from '../page/profile';
+import AuthLayout from '../layout/auth-layout';
+import AppLayout from '../layout/app-layout';
+import DashboardPage from '../page/dashboard';
 import LeadsPage from '../page/leads';
-import DataOrchestrationPage from '../page/data-orchestration';
 import ApplicationsPage from '../page/applications';
-import UserTermsPage from '../page/user-terms';
-import ExtractorPage from '../page/extractor';
+import DocumentsPage from '../page/documents';
+import ProfilePage from '../page/profile';
+import PipelinesPage from '../page/pipelines';
+import CompaniesPage from '../page/companies';
+import LoginPage from '../page/login';
+import RegisterPage from '../page/register';
+import ErrorPage from '../page/error';
 
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
-
-        <Route element={<AppLayout />}>
-            <Route path="/" element={<UserRoute />}>
-                <Route index element={<App />} />
-                <Route path="/leads" element={<LeadsPage />} />
-                <Route path="/applications" element={<ApplicationsPage />} />
-                <Route path="/data-orchestration" element={<DataOrchestrationPage />} />
-                <Route path="/profile" element={<UserProfilePage />} />
-                <Route path="/extractor" element={<ExtractorPage />} />
-                <Route path="*" element={<ErrorPage />} />
-                {/* More user routes can be added here */}
-            </Route>
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<UserRoute />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="/leads" element={<LeadsPage />} />
+          <Route path="/applications" element={<ApplicationsPage />} />
+          <Route path="/documents" element={<DocumentsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/pipelines" element={<PipelinesPage />} />
+          <Route path="/companies" element={<CompaniesPage />} />
+          <Route path="*" element={<ErrorPage />} />
         </Route>
+      </Route>
 
-        <Route element={<PublicLayout />}>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegistrationPage />} />
-            <Route path="/user-terms" element={<UserTermsPage/>} />
-            {/* Other public routes */}
-        </Route>
+      <Route element={<AuthLayout />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Route>
 
-        <Route path="*" element={<ErrorPage />} />
+      <Route path="*" element={<ErrorPage />} />
     </Routes>
   );
 };

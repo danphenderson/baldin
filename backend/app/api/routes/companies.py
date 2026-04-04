@@ -91,8 +91,6 @@ async def get_company_leads(
         .where(models.LeadXCompany.company_id == company.id)
     )
     leads = result.scalars().all()
-    if not leads:
-        raise HTTPException(status_code=404, detail="No leads found for the company")
     return leads
 
 

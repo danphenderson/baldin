@@ -14,14 +14,12 @@ except ImportError:  # pragma: no cover
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import chain
-from pydantic import BaseModel, Field, validator
 
 from app import schemas
-from app.core import conf
 from app.core.conf import openai, settings
 from app.logging import console_log
-from app.models import Extractor, ExtractorExample
-from app.utils import update_json_schema, validate_json_schema
+from app.models import ExtractorExample
+from app.utils import update_json_schema
 
 
 def _cast_example_to_dict(example: ExtractorExample) -> dict[str, Any]:
@@ -120,6 +118,15 @@ def get_examples_from_extractor(
     ]
 
 
+def _get_token_text_splitter(llm_name: str) -> TokenTextSplitter:
+    """Build a token splitter without relying on model-name auto-detection."""
+    return TokenTextSplitter(
+        chunk_size=openai.get_chunk_size(llm_name),
+        chunk_overlap=20,
+        encoding_name=openai.get_tokenizer_encoding(llm_name),
+    )
+
+
 @chain
 async def extraction_runnable(
     extraction_request: schemas.ExtractorRequest,
@@ -163,11 +170,7 @@ async def extract_entire_document(
     console_log.warning(f"Extracting to schema: {json_schema}")
 
     examples = get_examples_from_extractor(extractor)
-    text_splitter = TokenTextSplitter(
-        chunk_size=openai.get_chunk_size(llm_name),
-        chunk_overlap=20,
-        model_name=openai.DEFAULT_MODEL,
-    )
+    text_splitter = _get_token_text_splitter(llm_name)
     texts = text_splitter.split_text(content)
     console_log.warning(f"Extracting from {len(texts)} chunks")
     extraction_requests = [
@@ -189,10 +192,10 @@ async def extract_entire_document(
         content_too_long = False
 
     # Run extractions which may potentially yield duplicate results
-    extract_responses: Sequence[
-        schemas.ExtractorResponse
-    ] = await extraction_runnable.abatch(
-        extraction_requests, {"max_concurrency": settings.MAX_CONCURRENCY}
+    extract_responses: Sequence[schemas.ExtractorResponse] = (
+        await extraction_runnable.abatch(
+            extraction_requests, {"max_concurrency": settings.MAX_CONCURRENCY}
+        )
     )
     # Deduplicate the results
     return {

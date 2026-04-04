@@ -13,5 +13,7 @@ RUN npm install --legacy-peer-deps
 # Copy the frontend source code into the container
 COPY . .
 
-# Set the startup command for the frontend application
-CMD ["npm", "start"]
+EXPOSE 5173
+
+# Start the Vite development server
+CMD ["npm", "run", "dev"]

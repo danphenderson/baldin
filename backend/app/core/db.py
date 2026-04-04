@@ -1,15 +1,31 @@
 # Path: app/core/db.py
 
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator
+from uuid import UUID
 
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyUserDatabase
+from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.sql import text
 
 from app import models
 from app.core import conf
+
+USER_PROFILE_FIELDS = (
+    "first_name",
+    "last_name",
+    "phone_number",
+    "address_line_1",
+    "address_line_2",
+    "city",
+    "state",
+    "zip_code",
+    "country",
+    "time_zone",
+    "avatar_uri",
+)
 
 # Determine the appropriate SQLAlchemy database URI based on the environment
 if conf.settings.ENVIRONMENT == "PYTEST":
@@ -19,7 +35,6 @@ else:
         conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI
     )  # Use string conversion as a workaround
 
-print(f"SQLALCHEMY_DATABASE_URI: {sqlalchemy_database_uri}\n")
 # Create an asynchronous engine for SQLAlchemy
 async_engine = create_async_engine(sqlalchemy_database_uri, echo=False)
 
@@ -119,3 +134,182 @@ class DataBaseManager:
         result = await self.session.execute(query, {"table_name": table_name})
         # Same here, ensure to access results correctly
         return {row.column_name: row.data_type for row in result.mappings().all()}
+
+    async def _list_ids(self, statement: Any) -> list[UUID]:
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
+    async def _delete_rows(self, model: Any, *conditions: Any) -> int:
+        result = await self.session.execute(delete(model).where(*conditions))
+        return int(result.rowcount or 0)
+
+    async def _delete_rows_matching_any(self, model: Any, conditions: list[Any]) -> int:
+        if not conditions:
+            return 0
+        return await self._delete_rows(model, or_(*conditions))
+
+    async def _delete_user_related_rows(self, user_id: UUID) -> dict[str, int]:
+        application_ids = await self._list_ids(
+            select(models.Application.id).where(models.Application.user_id == user_id)
+        )
+        resume_ids = await self._list_ids(
+            select(models.Resume.id).where(models.Resume.user_id == user_id)
+        )
+        cover_letter_ids = await self._list_ids(
+            select(models.CoverLetter.id).where(models.CoverLetter.user_id == user_id)
+        )
+        extractor_ids = await self._list_ids(
+            select(models.Extractor.id).where(models.Extractor.user_id == user_id)
+        )
+        pipeline_ids = await self._list_ids(
+            select(models.OrchestrationPipeline.id).where(
+                models.OrchestrationPipeline.user_id == user_id
+            )
+        )
+
+        deleted_records = {
+            models.OrchestrationEvent.__tablename__: 0,
+            models.ExtractorExample.__tablename__: 0,
+            models.ResumeXApplication.__tablename__: 0,
+            models.CoverLetterXApplication.__tablename__: 0,
+            models.Application.__tablename__: 0,
+            models.Skill.__tablename__: 0,
+            models.Experience.__tablename__: 0,
+            models.Education.__tablename__: 0,
+            models.Certificate.__tablename__: 0,
+            models.Contact.__tablename__: 0,
+            models.Resume.__tablename__: 0,
+            models.CoverLetter.__tablename__: 0,
+            models.Extractor.__tablename__: 0,
+            models.OrchestrationPipeline.__tablename__: 0,
+        }
+
+        if pipeline_ids:
+            deleted_records[models.OrchestrationEvent.__tablename__] = (
+                await self._delete_rows(
+                    models.OrchestrationEvent,
+                    models.OrchestrationEvent.pipeline_id.in_(pipeline_ids),
+                )
+            )
+
+        if extractor_ids:
+            deleted_records[models.ExtractorExample.__tablename__] = (
+                await self._delete_rows(
+                    models.ExtractorExample,
+                    models.ExtractorExample.extractor_id.in_(extractor_ids),
+                )
+            )
+
+        resume_link_conditions: list[Any] = []
+        if application_ids:
+            resume_link_conditions.append(
+                models.ResumeXApplication.application_id.in_(application_ids)
+            )
+        if resume_ids:
+            resume_link_conditions.append(
+                models.ResumeXApplication.resume_id.in_(resume_ids)
+            )
+        deleted_records[models.ResumeXApplication.__tablename__] = (
+            await self._delete_rows_matching_any(
+                models.ResumeXApplication, resume_link_conditions
+            )
+        )
+
+        cover_letter_link_conditions: list[Any] = []
+        if application_ids:
+            cover_letter_link_conditions.append(
+                models.CoverLetterXApplication.application_id.in_(application_ids)
+            )
+        if cover_letter_ids:
+            cover_letter_link_conditions.append(
+                models.CoverLetterXApplication.cover_letter_id.in_(cover_letter_ids)
+            )
+        deleted_records[models.CoverLetterXApplication.__tablename__] = (
+            await self._delete_rows_matching_any(
+                models.CoverLetterXApplication, cover_letter_link_conditions
+            )
+        )
+
+        deleted_records[models.Application.__tablename__] = await self._delete_rows(
+            models.Application, models.Application.user_id == user_id
+        )
+        deleted_records[models.Skill.__tablename__] = await self._delete_rows(
+            models.Skill, models.Skill.user_id == user_id
+        )
+        deleted_records[models.Experience.__tablename__] = await self._delete_rows(
+            models.Experience, models.Experience.user_id == user_id
+        )
+        deleted_records[models.Education.__tablename__] = await self._delete_rows(
+            models.Education, models.Education.user_id == user_id
+        )
+        deleted_records[models.Certificate.__tablename__] = await self._delete_rows(
+            models.Certificate, models.Certificate.user_id == user_id
+        )
+        deleted_records[models.Contact.__tablename__] = await self._delete_rows(
+            models.Contact, models.Contact.user_id == user_id
+        )
+        deleted_records[models.Resume.__tablename__] = await self._delete_rows(
+            models.Resume, models.Resume.user_id == user_id
+        )
+        deleted_records[models.CoverLetter.__tablename__] = await self._delete_rows(
+            models.CoverLetter, models.CoverLetter.user_id == user_id
+        )
+        deleted_records[models.Extractor.__tablename__] = await self._delete_rows(
+            models.Extractor, models.Extractor.user_id == user_id
+        )
+        deleted_records[models.OrchestrationPipeline.__tablename__] = (
+            await self._delete_rows(
+                models.OrchestrationPipeline,
+                models.OrchestrationPipeline.user_id == user_id,
+            )
+        )
+
+        return deleted_records
+
+    def _clear_user_profile_fields(self, user: models.User) -> int:
+        cleared_profile_fields = 0
+        for field_name in USER_PROFILE_FIELDS:
+            if getattr(user, field_name) is not None:
+                setattr(user, field_name, None)
+                cleared_profile_fields += 1
+        return cleared_profile_fields
+
+    async def purge_user_data(self, user_id: UUID) -> dict[str, Any] | None:
+        user = await self.session.get(models.User, user_id)
+        if user is None:
+            return None
+
+        try:
+            deleted_records = await self._delete_user_related_rows(user_id)
+            cleared_profile_fields = self._clear_user_profile_fields(user)
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+
+        return {
+            "user_id": user_id,
+            "user_deleted": False,
+            "cleared_profile_fields": cleared_profile_fields,
+            "deleted_records": deleted_records,
+        }
+
+    async def delete_user(self, user_id: UUID) -> dict[str, Any] | None:
+        user = await self.session.get(models.User, user_id)
+        if user is None:
+            return None
+
+        try:
+            deleted_records = await self._delete_user_related_rows(user_id)
+            await self.session.delete(user)
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+
+        return {
+            "user_id": user_id,
+            "user_deleted": True,
+            "cleared_profile_fields": 0,
+            "deleted_records": deleted_records,
+        }

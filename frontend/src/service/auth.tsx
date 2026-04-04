@@ -1,8 +1,9 @@
 // Path: frontend/src/service/auth.tsx
 
 import { components } from '../schema';
+import { API_URL } from '../config/env';
 
-const BASE_URL = `${process.env.REACT_APP_API_URL}/auth`; // Can be moved to a config file
+const BASE_URL = `${API_URL}/auth`;
 
 const JSON_HEADERS = {"Content-Type": "application/json"};
 

@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
-# -- Path setup --------------------------------------------------------------
-# Ensure that the package is in the path
-import os
 import sys
+import tomllib
+from pathlib import Path
 
 import sphinx_py3doc_enhanced_theme
 
-sys.path.insert(0, os.path.abspath("../.."))  # TODO: Change to pathlib?
+DOCS_DIR = Path(__file__).resolve().parent
+BACKEND_DIR = DOCS_DIR.parent
+REPO_ROOT = BACKEND_DIR.parent
+PYPROJECT = tomllib.loads((BACKEND_DIR / "pyproject.toml").read_text(encoding="utf-8"))
+
+sys.path.insert(0, str(BACKEND_DIR))
+sys.path.insert(0, str(REPO_ROOT))
 
 
 extensions = [
@@ -22,11 +27,11 @@ extensions = [
 ]
 source_suffix = ".rst"
 master_doc = "index"
-project = "baldin"
-year = "2023"
+project = "Baldin"
+year = "2026"
 author = "Daniel P. Henderson"
 copyright = "{0}, {1}".format(year, author)
-version = release = "0.1.0"
+version = release = PYPROJECT["project"]["version"]
 
 pygments_style = "trac"
 templates_path = ["."]
@@ -47,6 +52,7 @@ html_sidebars = {
     "**": ["searchbox.html", "globaltoc.html", "sourcelink.html"],
 }
 html_short_title = "%s-%s" % (project, version)
+html_title = "Baldin Developer Preview Docs"
 
 napoleon_use_ivar = True
 napoleon_use_rtype = False

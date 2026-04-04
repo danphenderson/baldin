@@ -35,10 +35,6 @@ async def read_current_user_educations(
         select(models.Education).where(models.Education.user_id == user.id)
     )
     educations = result.scalars().all()
-    if not educations:
-        raise HTTPException(
-            status_code=404, detail="No educations found for the current user"
-        )
     return educations
 
 

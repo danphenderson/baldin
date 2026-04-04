@@ -1,14 +1,14 @@
 // Path: frontend/src/service/cover-letters.tsx
 
 import { components } from "../schema";
+import { API_URL } from '../config/env';
 
 // do not export these types, as they should be asscessed from the resume and cover-letter services
 export type CoverLetterRead = components['schemas']['CoverLetterRead'];
 export type CoverLetterUpdate = components['schemas']['CoverLetterUpdate'];
 export type CoverLetterCreate = components['schemas']['CoverLetterCreate'];
 
-// TODO - pull this from the environment schema.d.ts
-const BASE_URL = `${process.env.REACT_APP_API_URL}/cover_letters`;
+const BASE_URL = `${API_URL}/cover_letters`;
 
 
 const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
@@ -29,8 +29,19 @@ const createRequestOptions = (token: string, method: string, body?: any): Reques
 const fetchAPI = async (url: string, options: RequestInit) => {
   const response = await fetch(url, options);
   if (!response.ok) {
-    // Custom error handling can be implemented here
-    throw new Error('API request failed');
+    let message = 'API request failed';
+    try {
+      const data = await response.json();
+      if (data?.detail) {
+        message = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+      }
+    } catch {
+      // Keep the default message when the error response is not JSON.
+    }
+    throw new Error(message);
+  }
+  if (response.status === 204 || response.status === 205) {
+    return null;
   }
   return response.json();
 };
@@ -58,7 +69,7 @@ export const updateCoverLetter = async (token: string, id: string, coverLetter: 
 
 export const deleteCoverLetter = async (token: string, id: string): Promise<void> => {
   const requestOptions = createRequestOptions(token, "DELETE");
-  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
+  await fetchAPI(`${BASE_URL}/${id}`, requestOptions);
 }
 
 // Cover Letter Templates
@@ -87,7 +98,7 @@ export const updateCoverLetterTemplate = async (token: string, id: string, cover
 
 export const deleteCoverLetterTemplate = async (token: string, id: string): Promise<void> => {
   const requestOptions = createRequestOptions(token, "DELETE");
-  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
+  await fetchAPI(`${BASE_URL}/${id}`, requestOptions);
 }
 
 export const seedCoverLetters = async (token: string): Promise<CoverLetterRead[]> => {

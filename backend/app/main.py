@@ -24,7 +24,7 @@ logging.basicConfig()
 logger = get_async_logger(__name__)
 
 app = FastAPI(
-    title=conf.settings.PROJECT_NAME,
+    title=conf.settings.PROJECT_NAME.title(),
     version=conf.settings.VERSION,
     description=conf.settings.DESCRIPTION,
     openapi_url="/openapi.json",
@@ -70,14 +70,21 @@ app.include_router(api_router)
 
 admin.mount_to(app)
 
+
 # FIXME: The setup is currently for development, we need to add a production setup
 # TODO: Abstract startup & shutdown event defs to conditionally act based on the conf.settings.ENVIRONMENT
 @app.on_event("startup")  # noqa
 async def startup_event():
     console_log.info("Starting up...")
     tracemalloc.start()
-    await create_db_and_tables()
-    await create_default_superuser()
+    if conf.settings.SHOULD_BOOTSTRAP_ON_STARTUP:
+        await create_db_and_tables()
+        await create_default_superuser()
+        console_log.info("Development bootstrap completed.")
+    else:
+        console_log.info(
+            "Skipping automatic schema creation and default superuser bootstrap outside DEV/PYTEST."
+        )
 
 
 @app.on_event("shutdown")

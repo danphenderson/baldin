@@ -34,10 +34,6 @@ async def get_current_user_contacts(
         select(models.Contact).where(models.Contact.user_id == user.id)
     )
     contacts = result.scalars().all()
-    if not contacts:
-        raise HTTPException(
-            status_code=404, detail="No contacts found for the current user"
-        )
     return contacts
 
 

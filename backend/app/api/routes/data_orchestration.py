@@ -1,7 +1,6 @@
 # app/api/routes/data_orchestration.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import UUID4
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -19,16 +18,16 @@ router: APIRouter = APIRouter()
 
 
 @router.get("/pipelines", response_model=list[schemas.OrchestrationPipelineRead])
-async def read_orch_pipelines(db: AsyncSession = Depends(get_async_session)):
+async def read_orch_pipelines(
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
     rows = await db.execute(
-        select(models.OrchestrationPipeline).options(
-            selectinload(models.OrchestrationPipeline.orchestration_events)
-        )
+        select(models.OrchestrationPipeline)
+        .where(models.OrchestrationPipeline.user_id == user.id)
+        .options(selectinload(models.OrchestrationPipeline.orchestration_events))
     )
     result = rows.scalars().all()
-
-    if not result:
-        raise HTTPException(status_code=404, detail="No ETL pipelines found")
     return result
 
 
@@ -45,45 +44,47 @@ async def create_orch_pipeline(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    pipeline_model = models.OrchestrationPipeline(**pipeline.dict())
+    pipeline_model = models.OrchestrationPipeline(**pipeline.dict(), user_id=user.id)
     db.add(pipeline_model)
     await db.commit()
-    await db.refresh(pipeline_model)
-    return pipeline_model
+    return await get_orchestration_pipeline(pipeline_model.id, db, user)
 
 
 @router.put("/pipelines/{id}", response_model=schemas.OrchestrationPipelineRead)
 async def update_orch_pipeline(
-    id: UUID4,
-    pipeline: schemas.OrchestrationPipelineUpdate,
+    payload: schemas.OrchestrationPipelineUpdate,
+    pipeline: models.OrchestrationPipeline = Depends(get_orchestration_pipeline),
     db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
 ):
-    existing_pipeline = await db.get(models.OrchestrationPipeline, id)
-    if not existing_pipeline:
-        raise HTTPException(status_code=404, detail="No ETL pipeline found")
-    for field, value in pipeline:
-        setattr(existing_pipeline, field, value)
+    for field, value in payload.dict(exclude_unset=True, exclude={"events"}).items():
+        setattr(pipeline, field, value)
     await db.commit()
-    await db.refresh(existing_pipeline)
-    return existing_pipeline
+    return await get_orchestration_pipeline(pipeline.id, db, user)
 
 
-@router.delete("/pipelines/{id}")
+@router.delete("/pipelines/{id}", status_code=204)
 async def delete_orch_pipeline(
     pipeline: schemas.OrchestrationPipelineRead = Depends(get_orchestration_pipeline),
     db: AsyncSession = Depends(get_async_session),
 ):
     await db.delete(pipeline)
     await db.commit()
-    return {"message": "Pipeline deleted"}
+    return None
 
 
 @router.get("/events", response_model=list[schemas.OrchestrationEventRead])
-async def read_orch_events(db: AsyncSession = Depends(get_async_session)):
-    rows = await db.execute(select(models.OrchestrationEvent))
+async def read_orch_events(
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    rows = await db.execute(
+        select(models.OrchestrationEvent)
+        .join(models.OrchestrationPipeline)
+        .where(models.OrchestrationPipeline.user_id == user.id)
+        .options(selectinload(models.OrchestrationEvent.orchestration_pipeline))
+    )
     result = rows.scalars().all()
-    if not result:
-        raise HTTPException(status_code=404, detail="No ETL events found")
     return result
 
 
@@ -106,8 +107,7 @@ async def create_orch_event(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    # Check that the pipeline exists
-    pipeline = await db.get(models.OrchestrationPipeline, event.pipeline_id)  # noqa
+    await get_orchestration_pipeline(event.pipeline_id, db, user)
     event_model = models.OrchestrationEvent(**event.dict())
     db.add(event_model)
     await db.commit()

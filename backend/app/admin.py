@@ -1,7 +1,6 @@
 # Path: app/api/routes/admin.py
-from venv import logger
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import HTTPException, Request
 from starlette.responses import Response
 from starlette.status import HTTP_401_UNAUTHORIZED
 from starlette_admin.auth import AdminConfig, AdminUser, AuthProvider
@@ -11,11 +10,8 @@ from starlette_admin.views import DropDown, Link
 
 from app import models, schemas
 from app.core.db import async_engine
-from app.core.security import get_current_user
 from app.logging import console_log as log
-from app.logging import get_logger
 
-# log = get_logger(__name__)
 
 # Auth setup
 class AdminAuthProvider(AuthProvider):
@@ -40,7 +36,7 @@ class AdminAuthProvider(AuthProvider):
         """
         Configure the admin panel based on the authenticated user.
         """
-        return AdminConfig(app_title=f"Admin")
+        return AdminConfig(app_title="Admin")
 
     async def logout(self, request: Request, response: Response) -> Response:
         """
@@ -103,7 +99,7 @@ admin.add_view(
         icon="fa fa-link",
         views=[
             Link("Swagger Docs", url="http://127.0.0.1:8004/docs", target="_blank"),
-            Link("Baldin Frontend", url="http://localhost:3000/", target="_blank"),
+            Link("Baldin Frontend", url="http://localhost:5173/", target="_blank"),
         ],
     )
 )

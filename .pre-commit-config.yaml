@@ -16,7 +16,7 @@ repos:
       - id: isort
         files: ^backend/
   - repo: https://github.com/psf/black
-    rev: '22.3.0'
+    rev: 24.10.0
     hooks:
       - id: black
         files: ^backend/
@@ -24,7 +24,7 @@ repos:
     rev: 6.1.0
     hooks:
       - id: flake8
-        args: ['--ignore=E501']
+        args: ['--extend-ignore=E203,E501,W503']
         files: ^backend/
   - repo: local
     hooks:

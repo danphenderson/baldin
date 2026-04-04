@@ -3,11 +3,20 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path  # noqa
-from sre_constants import SUCCESS
 from typing import Any, Sequence
 
-from fastapi import BackgroundTasks, Depends, HTTPException, Query  # noqa
-from pydantic import UUID4
+from fastapi import (  # noqa
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
+from fastapi.exceptions import RequestValidationError
+from pydantic import UUID4, ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -40,6 +49,8 @@ from app.extractor.parsing import (  # noqa
 from app.extractor.retrieval import extract_from_content  # noqa
 from app.logging import console_log, get_async_logger
 
+__all__ = ["console_log"]
+
 log = get_async_logger(__name__)
 
 
@@ -69,17 +80,90 @@ async def get_pagination_params(
     )
 
 
+def _normalize_extractor_input_value(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    normalized = value.strip()
+    if not normalized or normalized.lower() in {"null", "undefined"}:
+        return None
+
+    return normalized
+
+
+def _build_extractor_run_payload(payload: dict[str, Any]) -> schemas.ExtractorRun:
+    try:
+        return schemas.ExtractorRun(**payload)
+    except ValidationError as exc:
+        raise RequestValidationError(exc.errors()) from exc
+
+
+async def get_extractor_run_payload(
+    request: Request,
+    file: UploadFile | None = File(default=None),
+    mode: str | None = Form(default=None),
+    text: str | None = Form(default=None),
+    url: str | None = Form(default=None),
+    llm: str | None = Form(default=None),
+) -> schemas.ExtractorRun:
+    content_type = request.headers.get("content-type", "")
+
+    if content_type.startswith("application/json"):
+        try:
+            body = await request.json()
+        except json.JSONDecodeError as exc:
+            raise RequestValidationError(
+                [
+                    {
+                        "loc": ("body",),
+                        "msg": "Invalid JSON payload.",
+                        "type": "value_error.jsondecode",
+                    }
+                ]
+            ) from exc
+
+        if not isinstance(body, dict):
+            raise RequestValidationError(
+                [
+                    {
+                        "loc": ("body",),
+                        "msg": "Extractor payload must be a JSON object.",
+                        "type": "type_error.dict",
+                    }
+                ]
+            )
+
+        return _build_extractor_run_payload(body)
+
+    query = request.query_params
+    return _build_extractor_run_payload(
+        {
+            "mode": _normalize_extractor_input_value(mode)
+            or _normalize_extractor_input_value(query.get("mode"))
+            or "entire_document",
+            "file": file,
+            "text": _normalize_extractor_input_value(text)
+            or _normalize_extractor_input_value(query.get("text")),
+            "url": _normalize_extractor_input_value(url)
+            or _normalize_extractor_input_value(query.get("url")),
+            "llm": _normalize_extractor_input_value(llm)
+            or _normalize_extractor_input_value(query.get("llm")),
+        }
+    )
+
+
 async def get_lead(
     id: UUID4, db: AsyncSession = Depends(get_async_session)
 ) -> models.Lead:
-    lead = await db.execute(
+    result = await db.execute(
         select(models.Lead)
         .options(joinedload(models.Lead.companies))
         .where(models.Lead.id == id)
     )
+    lead = result.scalars().first()
     if not lead:
         raise HTTPException(status_code=404, detail=f"Lead not found: {id}")
-    return lead.scalars().first()
+    return lead
 
 
 async def create_lead(
@@ -110,11 +194,24 @@ async def get_company_by_id(
 
 
 async def get_orchestration_event(
-    id: UUID4, db: AsyncSession = Depends(get_async_session)
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
 ) -> models.OrchestrationEvent:
-    orch_event = await db.get(models.OrchestrationEvent, id)
+    query = (
+        select(models.OrchestrationEvent)
+        .where(models.OrchestrationEvent.id == id)
+        .options(selectinload(models.OrchestrationEvent.orchestration_pipeline))
+    )
+    result = await db.execute(query)
+    orch_event = result.scalars().first()
     if not orch_event:
         raise await _404(orch_event, id)
+    if (
+        not orch_event.orchestration_pipeline
+        or orch_event.orchestration_pipeline.user_id != user.id  # type: ignore[union-attr]
+    ):
+        raise await _403(user.id, orch_event, id)
     await log.info(f"get_orchestration_event: {orch_event}")
     return orch_event
 
@@ -124,7 +221,9 @@ async def update_orchestration_event(
     payload: schemas.OrchestrationEventUpdate,
     db: AsyncSession = Depends(get_async_session),
 ) -> models.OrchestrationEvent:
-    event = await get_orchestration_event(id, db)
+    event = await db.get(models.OrchestrationEvent, id)
+    if not event:
+        raise await _404(event, id)
     for var, value in payload.dict(exclude_unset=True).items():
         setattr(event, var, value)
     await db.commit()
@@ -489,7 +588,11 @@ async def run_extractor(
     elif payload.url:
         text = await extract_text_from_url(str(payload.url))
     elif payload.file:
-        documents = parse_binary_input(payload.file.file)  # type: ignore
+        documents = parse_binary_input(
+            payload.file.file,
+            file_name=payload.file.filename,
+            content_type=payload.file.content_type,
+        )
         text = "\n".join([document.page_content for document in documents])
 
     if not text:
@@ -509,9 +612,9 @@ async def run_extractor(
             payload={
                 "mode": payload.mode,
                 "llm": payload.llm,
-                "text": text[:200]
-                if text
-                else None,  # FIXME: Add slicing to prevent very long text
+                "text": (
+                    text[:200] if text else None
+                ),  # FIXME: Add slicing to prevent very long text
                 "file": payload.file.filename if payload.file else None,
             },
             # type: ignore
@@ -538,10 +641,19 @@ async def run_extractor(
                 f"Invalid mode {payload.mode}. Expected one of 'entire_document', 'retrieval'."
             )
     except Exception as e:
-        await update_orchestration_event(
-            event.id, payload=schemas.OrchestrationEventUpdate(message=f"Failure to extract orchestration event: {e.with_traceback()}", status=schemas.OrchestrationEventStatusType.FAILED), db=db  # type: ignore
+        error_message = (
+            f"Failure running extractor {extractor.name}: " f"{type(e).__name__}: {e}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        await log.exception(error_message)
+        await update_orchestration_event(
+            event.id,
+            payload=schemas.OrchestrationEventUpdate(
+                message=error_message,
+                status=schemas.OrchestrationEventStatusType.FAILED,
+            ),
+            db=db,  # type: ignore
+        )
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
     await update_orchestration_event(
         event.id, payload=schemas.OrchestrationEventUpdate(message=f"Success! Extracted res: {res}", status=schemas.OrchestrationEventStatusType.SUCCESS), db=db  # type: ignore

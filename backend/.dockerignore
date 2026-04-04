@@ -1,6 +1,5 @@
 .dockerignore
-Dockerfile
-Dockerfile.prod
+Dockerfile.dev
 .venv
 public/db
 .env*

@@ -4,13 +4,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>app.models &#8212; baldin 0.1.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d10597a4" />
+    <title>app.models &#8212; Baldin Developer Preview Docs</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=34bb78ad" />
     <link rel="stylesheet" type="text/css" href="../../_static/pydoctheme.css?v=8635fa60" />
 
-    <script src="../../_static/documentation_options.js?v=01f34227"></script>
-    <script src="../../_static/doctools.js?v=9a2dae69"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/documentation_options.js?v=f34cbc3c"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
 
     <script src="../../_static/sidebar.js"></script>
 
@@ -27,7 +27,7 @@
       <h3>Navigation</h3>
       <ul>
         <li class="responsive-menu"><a href="#sidebar-anchor" title="Navigation">&#9776;</a></li>
-        <li><a href="../../index.html">baldin-0.1.0</a> &#187;</li>
+        <li><a href="../../index.html">Baldin-0.1.0-alpha</a> &#187;</li>
           <li><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
       </ul>
     </div>
@@ -45,18 +45,18 @@
           <div class="body" role="main">
 
   <h1>Source code for app.models</h1><div class="highlight"><pre>
-<span></span><span class="c1"># app/models.py</span>
-<span class="kn">from</span> <span class="nn">uuid</span> <span class="kn">import</span> <span class="n">uuid4</span>
+<span></span><span class="c1"># Path: app/models.py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">uuid</span><span class="w"> </span><span class="kn">import</span> <span class="n">uuid4</span>
 
-<span class="kn">from</span> <span class="nn">fastapi_users.db</span> <span class="kn">import</span> <span class="n">SQLAlchemyBaseUserTableUUID</span>
-<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">JSON</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">DateTime</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">Text</span><span class="p">,</span> <span class="n">func</span>
-<span class="kn">from</span> <span class="nn">sqlalchemy.dialects.postgresql</span> <span class="kn">import</span> <span class="n">JSONB</span><span class="p">,</span> <span class="n">UUID</span>
-<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">DeclarativeBase</span><span class="p">,</span> <span class="n">relationship</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi_users.db</span><span class="w"> </span><span class="kn">import</span> <span class="n">SQLAlchemyBaseUserTableUUID</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="kn">import</span> <span class="n">JSON</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">DateTime</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">Text</span><span class="p">,</span> <span class="n">func</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy.dialects.postgresql</span><span class="w"> </span><span class="kn">import</span> <span class="n">JSONB</span><span class="p">,</span> <span class="n">UUID</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeclarativeBase</span><span class="p">,</span> <span class="n">relationship</span>
 
 
 <div class="viewcode-block" id="Base">
 <a class="viewcode-back" href="../../index.html#app.models.Base">[docs]</a>
-<span class="k">class</span> <span class="nc">Base</span><span class="p">(</span><span class="n">DeclarativeBase</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Base</span><span class="p">(</span><span class="n">DeclarativeBase</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Base model for all database entities.</span>
 <span class="sd">    Provides common attributes like ID, creation, and update timestamps.</span>
@@ -76,17 +76,18 @@
 
 <div class="viewcode-block" id="OrchestrationEvent">
 <a class="viewcode-back" href="../../index.html#app.models.OrchestrationEvent">[docs]</a>
-<span class="k">class</span> <span class="nc">OrchestrationEvent</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">OrchestrationEvent</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Model for orchestration events.</span>
-<span class="sd">    Contains job name, status, message, and reference to the pipeline.</span>
+<span class="sd">    Contains orchestration pipeline event status, message, and reference to the pipeline.</span>
 <span class="sd">    Useful for tracking the status of ETL jobs.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;orchestration_events&quot;</span>
-    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
     <span class="n">status</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;pending&quot;</span><span class="p">)</span>  <span class="c1"># running, success, failure</span>
     <span class="n">message</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSON</span><span class="p">)</span>
+    <span class="n">environment</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
     <span class="n">source_uri</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSON</span><span class="p">)</span>
     <span class="n">destination_uri</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSON</span><span class="p">)</span>
     <span class="n">pipeline_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UUID</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;orchestration_pipelines.id&quot;</span><span class="p">))</span>
@@ -98,7 +99,7 @@
 
 <div class="viewcode-block" id="OrchestrationPipeline">
 <a class="viewcode-back" href="../../index.html#app.models.OrchestrationPipeline">[docs]</a>
-<span class="k">class</span> <span class="nc">OrchestrationPipeline</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">OrchestrationPipeline</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Model for ETL (Extract, Transform, Load) pipelines.</span>
 <span class="sd">    Contains name, description, source, destination, and parameters.</span>
@@ -106,9 +107,9 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;orchestration_pipelines&quot;</span>
-    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="n">description</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
-    <span class="n">params</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSON</span><span class="p">)</span>
+    <span class="n">definition</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSON</span><span class="p">)</span>
     <span class="n">user_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UUID</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;users.id&quot;</span><span class="p">))</span>
     <span class="n">user</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;User&quot;</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s2">&quot;orchestration_pipelines&quot;</span><span class="p">)</span>
     <span class="n">orchestration_events</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span>
@@ -120,7 +121,7 @@
 <span class="c1"># Extractor models</span>
 <div class="viewcode-block" id="ExtractorExample">
 <a class="viewcode-back" href="../../index.html#app.models.ExtractorExample">[docs]</a>
-<span class="k">class</span> <span class="nc">ExtractorExample</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ExtractorExample</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A representation of an example.</span>
 
 <span class="sd">    Examples consist of content together with the expected output.</span>
@@ -141,14 +142,14 @@
     <span class="n">extractor_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UUID</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;extractors.id&quot;</span><span class="p">))</span>
     <span class="n">extractor</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Extractor&quot;</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s2">&quot;extractor_examples&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&lt;ExtractorExample(uuid=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">, content=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">[:</span><span class="mi">20</span><span class="p">]</span><span class="si">}</span><span class="s2">&gt;&quot;</span></div>
 
 
 
 <div class="viewcode-block" id="Extractor">
 <a class="viewcode-back" href="../../index.html#app.models.Extractor">[docs]</a>
-<span class="k">class</span> <span class="nc">Extractor</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Extractor</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Represents an extractor for parsing structured data from unstructured text.</span>
 <span class="sd">    Contains name, description, schema, instruction, etc.</span>
@@ -156,7 +157,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;extractors&quot;</span>
-    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="n">description</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
     <span class="n">json_schema</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSONB</span><span class="p">)</span>
     <span class="n">instruction</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
@@ -164,14 +165,46 @@
     <span class="n">user</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;User&quot;</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s2">&quot;extractors&quot;</span><span class="p">)</span>
     <span class="n">extractor_examples</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;ExtractorExample&quot;</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s2">&quot;extractor&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&lt;Extractor(id=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">, description=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="si">}</span><span class="s2">)&gt;&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="LeadXCompany">
+<a class="viewcode-back" href="../../index.html#app.models.LeadXCompany">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LeadXCompany</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;leads_x_companies&quot;</span>
+    <span class="n">lead_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UUID</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;leads.id&quot;</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">company_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UUID</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;companies.id&quot;</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="Company">
+<a class="viewcode-back" href="../../index.html#app.models.Company">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Company</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents a company.</span>
+<span class="sd">    Includes company name, industry, size, location, etc.</span>
+<span class="sd">    Linked to job leads through many-to-many relationship.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;companies&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">industry</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
+    <span class="n">location</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
+
+    <span class="n">leads</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span>
+        <span class="s2">&quot;Lead&quot;</span><span class="p">,</span> <span class="n">secondary</span><span class="o">=</span><span class="s2">&quot;leads_x_companies&quot;</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s2">&quot;companies&quot;</span>
+    <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="Lead">
 <a class="viewcode-back" href="../../index.html#app.models.Lead">[docs]</a>
-<span class="k">class</span> <span class="nc">Lead</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Lead</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Represents a job lead.</span>
 <span class="sd">    Includes URL, title, company, description, location, salary, etc.</span>
@@ -181,18 +214,20 @@
     <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;leads&quot;</span>
     <span class="n">url</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">title</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
-    <span class="n">company</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
     <span class="n">description</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
     <span class="n">location</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
     <span class="n">salary</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
     <span class="n">job_function</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
-    <span class="n">industries</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">employment_type</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
     <span class="n">seniority_level</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
     <span class="n">education_level</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
     <span class="n">notes</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
     <span class="n">hiring_manager</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
-    <span class="n">application</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Application&quot;</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s2">&quot;lead&quot;</span><span class="p">)</span></div>
+
+    <span class="n">application</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Application&quot;</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s2">&quot;lead&quot;</span><span class="p">)</span>
+    <span class="n">companies</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span>
+        <span class="s2">&quot;Company&quot;</span><span class="p">,</span> <span class="n">secondary</span><span class="o">=</span><span class="s2">&quot;leads_x_companies&quot;</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s2">&quot;leads&quot;</span>
+    <span class="p">)</span></div>
 
 
 
@@ -201,7 +236,7 @@
 <span class="c1"># User models</span>
 <div class="viewcode-block" id="Skill">
 <a class="viewcode-back" href="../../index.html#app.models.Skill">[docs]</a>
-<span class="k">class</span> <span class="nc">Skill</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Skill</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Model for user skills.</span>
 <span class="sd">    Each skill associated with a user via many-to-one relationship.</span>
@@ -219,7 +254,7 @@
 
 <div class="viewcode-block" id="Experience">
 <a class="viewcode-back" href="../../index.html#app.models.Experience">[docs]</a>
-<span class="k">class</span> <span class="nc">Experience</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Experience</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Represents user&#39;s professional experience.</span>
 <span class="sd">    Links to user with job title, company, duration details.</span>
@@ -242,7 +277,7 @@
 <span class="c1"># Add Education model</span>
 <div class="viewcode-block" id="Education">
 <a class="viewcode-back" href="../../index.html#app.models.Education">[docs]</a>
-<span class="k">class</span> <span class="nc">Education</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Education</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
     <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;user_education&quot;</span>
     <span class="n">university</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
     <span class="n">degree</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
@@ -259,7 +294,7 @@
 <span class="c1"># Add Certificate model</span>
 <div class="viewcode-block" id="Certificate">
 <a class="viewcode-back" href="../../index.html#app.models.Certificate">[docs]</a>
-<span class="k">class</span> <span class="nc">Certificate</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Certificate</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
     <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;user_certificates&quot;</span>
     <span class="n">title</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
     <span class="n">issuer</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>
@@ -272,7 +307,7 @@
 
 <div class="viewcode-block" id="Application">
 <a class="viewcode-back" href="../../index.html#app.models.Application">[docs]</a>
-<span class="k">class</span> <span class="nc">Application</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Application</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Model for job applications.</span>
 <span class="sd">    Contains cover letter, resume, notes, status.</span>
@@ -298,7 +333,7 @@
 
 <div class="viewcode-block" id="Contact">
 <a class="viewcode-back" href="../../index.html#app.models.Contact">[docs]</a>
-<span class="k">class</span> <span class="nc">Contact</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Contact</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Represents a contact associated with a user.</span>
 <span class="sd">    Stores details like name, phone, email, notes.</span>
@@ -318,7 +353,7 @@
 
 <div class="viewcode-block" id="Resume">
 <a class="viewcode-back" href="../../index.html#app.models.Resume">[docs]</a>
-<span class="k">class</span> <span class="nc">Resume</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Resume</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Represents a user&#39;s resume.</span>
 <span class="sd">    Contains name, content, type.</span>
@@ -341,7 +376,7 @@
 
 <div class="viewcode-block" id="ResumeXApplication">
 <a class="viewcode-back" href="../../index.html#app.models.ResumeXApplication">[docs]</a>
-<span class="k">class</span> <span class="nc">ResumeXApplication</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ResumeXApplication</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Crosswalk table for resumes and job applications many-to-many relationship.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -354,11 +389,11 @@
 
 <div class="viewcode-block" id="CoverLetter">
 <a class="viewcode-back" href="../../index.html#app.models.CoverLetter">[docs]</a>
-<span class="k">class</span> <span class="nc">CoverLetter</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CoverLetter</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Represents a user&#39;s cover letter.</span>
 <span class="sd">    Includes name, content, type.</span>
-<span class="sd">    Linked to users and job applications via many-to-one and many-to-many relationships.</span>
+<span class="sd">    Linked to users and job applications via many-to-one and many-to-many relationships, respectively.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;cover_letters&quot;</span>
@@ -377,7 +412,7 @@
 
 <div class="viewcode-block" id="CoverLetterXApplication">
 <a class="viewcode-back" href="../../index.html#app.models.CoverLetterXApplication">[docs]</a>
-<span class="k">class</span> <span class="nc">CoverLetterXApplication</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CoverLetterXApplication</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Crosswalk table for cover letters and job applications many-to-many relationship.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -390,7 +425,7 @@
 
 <div class="viewcode-block" id="User">
 <a class="viewcode-back" href="../../index.html#app.models.User">[docs]</a>
-<span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">SQLAlchemyBaseUserTableUUID</span><span class="p">,</span> <span class="n">Base</span><span class="p">):</span>  <span class="c1"># type: ignore</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">SQLAlchemyBaseUserTableUUID</span><span class="p">,</span> <span class="n">Base</span><span class="p">):</span>  <span class="c1"># type: ignore</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Extended user model with additional fields like name, contact information, and address.</span>
 <span class="sd">    Core of user-related operations, linked to applications, skills, experiences, etc.</span>
@@ -427,7 +462,7 @@
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
     <a id="sidebar-anchor"></a>
 
@@ -464,9 +499,9 @@
     </div>
 
     <div class="footer" role="contentinfo">
-    &#169; Copyright 2023, Daniel P. Henderson.
-      Last updated on Apr 24, 2024.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.3.7.
+    &#169; Copyright 2026, Daniel P. Henderson.
+      Last updated on Apr 03, 2026.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

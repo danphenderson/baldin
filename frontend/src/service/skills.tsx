@@ -1,6 +1,7 @@
 // Path: frontend/src/service/skills.tsx
 
 import { components } from "../schema";
+import { API_URL } from '../config/env';
 
 export type SkillRead = components['schemas']['SkillRead'];
 export type SkillCreate = components['schemas']['SkillCreate'];
@@ -8,8 +9,7 @@ export type SkillUpdate = components['schemas']['SkillUpdate'];
 
 type ExtractorRun = components['schemas']['ExtractorRun'];
 
-// TODO - pull this from the environment schema.d.ts
-const BASE_URL = `${process.env.REACT_APP_API_URL}/skills/`;
+const BASE_URL = `${API_URL}/skills/`;
 
 
 const createRequestOptions = (token: string, method: string, body?: any, isFormData?: boolean): RequestInit => {
@@ -50,8 +50,19 @@ const createRequestOptions = (token: string, method: string, body?: any, isFormD
 const fetchAPI = async (url: string, options: RequestInit) => {
   const response = await fetch(url, options);
   if (!response.ok) {
-    // Custom error handling can be implemented here
-    throw new Error('API request failed');
+    let message = 'API request failed';
+    try {
+      const data = await response.json();
+      if (data?.detail) {
+        message = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+      }
+    } catch {
+      // Keep the default message when the error response is not JSON.
+    }
+    throw new Error(message);
+  }
+  if (response.status === 204 || response.status === 205) {
+    return null;
   }
   return response.json();
 };
@@ -79,7 +90,7 @@ export const updateSkill = async (token: string, id: string, skill: SkillUpdate)
 
 export const deleteSkill = async (token: string, id: string): Promise<void> => {
   const requestOptions = createRequestOptions(token, "DELETE");
-  return fetchAPI(`${BASE_URL}${id}`, requestOptions);
+  await fetchAPI(`${BASE_URL}${id}`, requestOptions);
 }
 
 export const extractSkill = async (token: string, data: ExtractorRun): Promise<ExtractorRun> => {

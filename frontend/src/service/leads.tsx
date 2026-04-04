@@ -1,6 +1,7 @@
 // Path: frontend/src/service/leads.tsx
 
 import { components } from '../schema';
+import { API_URL } from '../config/env';
 
 export type LeadRead = components['schemas']['LeadRead'];
 export type LeadUpdate = components['schemas']['LeadUpdate'];
@@ -11,7 +12,7 @@ export type LeadsPaginatedRead = components['schemas']['LeadsPaginatedRead'];
 // types that are exported from other services
 type OrchestrationEventRead = components['schemas']['OrchestrationEventRead-Output'];
 
-const BASE_URL = `${process.env.REACT_APP_API_URL}/leads`; // Can be moved to a config file or environment variable
+const BASE_URL = `${API_URL}/leads`;
 
 
 const createRequestOptions = (token: string | null, method: string, body?: any, isFormData?: boolean): RequestInit => {

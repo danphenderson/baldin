@@ -37,10 +37,6 @@ async def read_current_user_certificates(
         select(models.Certificate).where(models.Certificate.user_id == user.id)
     )
     certificates = result.scalars().all()
-    if not certificates:
-        raise HTTPException(
-            status_code=404, detail="No certificates found for the current user"
-        )
     return certificates
 
 

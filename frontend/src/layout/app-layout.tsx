@@ -1,9 +1,9 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
-  AppBar, Toolbar, Typography, IconButton, Avatar, Menu, MenuItem, Divider,
-  useTheme, alpha, Tooltip, Badge,
+  AppBar, Toolbar, Typography, IconButton, Avatar, Chip, Divider,
+  useTheme, alpha, Tooltip, Badge, ClickAwayListener, useMediaQuery,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -21,6 +21,7 @@ import {
   Business as CompaniesIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
+import { logout as logoutApi } from '../service/auth';
 import { useThemeMode } from '../theme/theme-provider';
 
 const DRAWER_WIDTH = 260;
@@ -36,28 +37,101 @@ const navItems = [
   { label: 'Pipelines', icon: <PipelinesIcon />, path: '/pipelines' },
 ];
 
+const HEADER_ACTION_DIAL_ID = 'header-account-actions';
+const HEADER_ACTION_STAGGER_MS = 70;
+
 const AppLayout: React.FC = () => {
   const theme = useTheme();
+  const isCompactToolbar = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, setToken, setUser } = useContext(UserContext);
+  const { user, token, setToken, setUser } = useContext(UserContext);
   const { mode, toggleMode } = useThemeMode();
   const [collapsed, setCollapsed] = useState(false);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [isAccountDialOpen, setIsAccountDialOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const drawerWidth = collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH;
   const textTransition = 'opacity 0.2s ease, max-width 0.2s ease';
+  const accountRailWidth = isCompactToolbar ? 184 : 270;
 
-  const handleLogout = () => {
+  const closeAccountDial = () => setIsAccountDialOpen(false);
+
+  useEffect(() => {
+    if (!isAccountDialOpen) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsAccountDialOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAccountDialOpen]);
+
+  const clearLocalAuth = () => {
     setToken(null);
     setUser(null);
     localStorage.removeItem('baldin_token');
     navigate('/login');
   };
 
+  const handleLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
+
+    try {
+      if (token) {
+        await logoutApi(token);
+      }
+    } catch (error) {
+      console.error('Failed to sign out from the backend session.', error);
+    } finally {
+      closeAccountDial();
+      clearLocalAuth();
+      setIsLoggingOut(false);
+    }
+  };
+
+  const handleThemeToggle = () => {
+    toggleMode();
+    closeAccountDial();
+  };
+
   const userInitials = user
     ? `${(user as any).first_name?.[0] || ''}${(user as any).last_name?.[0] || ''}`.toUpperCase() || user.email[0].toUpperCase()
     : '?';
+
+  const accountActions = [
+    {
+      key: 'logout',
+      label: isLoggingOut ? 'Signing Out...' : 'Sign Out',
+      icon: <LogoutIcon fontSize="small" />,
+      onClick: handleLogout,
+      color: theme.palette.error.main,
+      background: alpha(theme.palette.error.main, theme.palette.mode === 'dark' ? 0.16 : 0.08),
+      borderColor: alpha(theme.palette.error.main, 0.26),
+      shadow: alpha(theme.palette.error.main, 0.16),
+      disabled: isLoggingOut,
+    },
+    {
+      key: 'theme',
+      label: isCompactToolbar ? (mode === 'dark' ? 'Light' : 'Dark') : (mode === 'dark' ? 'Light Theme' : 'Dark Theme'),
+      icon: mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />,
+      onClick: handleThemeToggle,
+      color: theme.palette.secondary.main,
+      background: alpha(theme.palette.secondary.main, theme.palette.mode === 'dark' ? 0.18 : 0.1),
+      borderColor: alpha(theme.palette.secondary.main, 0.28),
+      shadow: alpha(theme.palette.secondary.main, 0.18),
+      disabled: isLoggingOut,
+    },
+  ];
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
@@ -233,42 +307,134 @@ const AppLayout: React.FC = () => {
             borderBottom: `1px solid ${theme.palette.divider}`,
           }}
         >
-          <Toolbar sx={{ justifyContent: 'flex-end', gap: 1 }}>
-            <Tooltip title={mode === 'dark' ? 'Light mode' : 'Dark mode'}>
-              <IconButton onClick={toggleMode} sx={{ color: theme.palette.text.secondary }}>
-                {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
-              </IconButton>
-            </Tooltip>
-
-            <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ p: 0.5 }}>
-              <Badge
-                overlap="circular"
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                variant="dot"
-                sx={{ '& .MuiBadge-badge': { backgroundColor: theme.palette.success.main } }}
+          <Toolbar sx={{ justifyContent: 'flex-end', gap: 1, minHeight: 72 }}>
+            <ClickAwayListener onClickAway={closeAccountDial}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  minWidth: 0,
+                  maxWidth: '100%',
+                }}
               >
-                <Avatar
+                <Box
+                  id={HEADER_ACTION_DIAL_ID}
+                  role="group"
+                  aria-label="Account actions"
+                  aria-hidden={!isAccountDialOpen}
                   sx={{
-                    width: 36, height: 36, fontSize: '0.875rem', fontWeight: 700,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                    width: isAccountDialOpen ? accountRailWidth : 0,
+                    maxWidth: isCompactToolbar ? 'calc(100vw - 132px)' : 'calc(100vw - 272px)',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    transition: 'width 320ms cubic-bezier(0.2, 0.8, 0.2, 1)',
                   }}
                 >
-                  {userInitials}
-                </Avatar>
-              </Badge>
-            </IconButton>
+                  {accountActions.map((action, index) => {
+                    const delayIndex = isAccountDialOpen
+                      ? accountActions.length - 1 - index
+                      : index;
 
-            <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={() => setAnchorEl(null)} transformOrigin={{ horizontal: 'right', vertical: 'top' }} anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}>
-              <MenuItem onClick={() => { setAnchorEl(null); navigate('/profile'); }}>
-                <ListItemIcon><ProfileIcon fontSize="small" /></ListItemIcon>
-                Profile
-              </MenuItem>
-              <Divider />
-              <MenuItem onClick={() => { setAnchorEl(null); handleLogout(); }}>
-                <ListItemIcon><LogoutIcon fontSize="small" /></ListItemIcon>
-                Sign out
-              </MenuItem>
-            </Menu>
+                    return (
+                      <Box
+                        key={action.key}
+                        sx={{
+                          maxWidth: isAccountDialOpen ? (isCompactToolbar ? 104 : 148) : 0,
+                          mr: isAccountDialOpen ? 1 : 0,
+                          opacity: isAccountDialOpen ? 1 : 0,
+                          transform: isAccountDialOpen ? 'translateY(0)' : 'translateY(-14px)',
+                          overflow: 'hidden',
+                          pointerEvents: isAccountDialOpen && !action.disabled ? 'auto' : 'none',
+                          transition: [
+                            'max-width 280ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+                            'margin-right 280ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+                            'opacity 180ms ease',
+                            'transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+                          ].join(', '),
+                          transitionDelay: `${delayIndex * HEADER_ACTION_STAGGER_MS}ms`,
+                        }}
+                      >
+                        <Chip
+                          clickable
+                          icon={action.icon}
+                          label={action.label}
+                          onClick={action.disabled ? undefined : action.onClick}
+                          sx={{
+                            height: 38,
+                            borderRadius: '999px',
+                            justifyContent: 'flex-start',
+                            borderColor: action.borderColor,
+                            color: action.color,
+                            backgroundColor: action.background,
+                            backdropFilter: 'blur(14px)',
+                            boxShadow: `0 10px 24px ${action.shadow}`,
+                            opacity: action.disabled ? 0.78 : 1,
+                            '& .MuiChip-icon': {
+                              color: 'inherit',
+                              ml: 1,
+                            },
+                            '& .MuiChip-label': {
+                              px: 1.25,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            },
+                            '&:hover': {
+                              backgroundColor: alpha(action.color, theme.palette.mode === 'dark' ? 0.24 : 0.14),
+                              borderColor: alpha(action.color, 0.4),
+                            },
+                          }}
+                        />
+                      </Box>
+                    );
+                  })}
+                </Box>
+
+                <Tooltip title={isAccountDialOpen ? 'Close account actions' : 'Open account actions'}>
+                  <IconButton
+                    onClick={() => setIsAccountDialOpen((prev) => !prev)}
+                    aria-controls={HEADER_ACTION_DIAL_ID}
+                    aria-expanded={isAccountDialOpen ? 'true' : undefined}
+                    aria-label={isAccountDialOpen ? 'Close account actions' : 'Open account actions'}
+                    sx={{
+                      p: 0.5,
+                      borderRadius: '999px',
+                      backgroundColor: alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.62 : 0.82),
+                      boxShadow: isAccountDialOpen
+                        ? `0 0 0 4px ${alpha(theme.palette.primary.main, 0.12)}`
+                        : 'none',
+                      transition: 'background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
+                      '&:hover': {
+                        backgroundColor: alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.76 : 0.94),
+                        transform: 'translateY(-1px)',
+                      },
+                    }}
+                  >
+                    <Badge
+                      overlap="circular"
+                      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                      variant="dot"
+                      sx={{ '& .MuiBadge-badge': { backgroundColor: theme.palette.success.main } }}
+                    >
+                      <Avatar
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          fontSize: '0.875rem',
+                          fontWeight: 700,
+                          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                        }}
+                      >
+                        {userInitials}
+                      </Avatar>
+                    </Badge>
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </ClickAwayListener>
           </Toolbar>
         </AppBar>
 

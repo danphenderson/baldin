@@ -10,6 +10,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { List, ListItem, ListItemButton, ListItemText } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
+import { logout as logoutApi } from '../../service/auth';
 
 const menuItems = [
   { text: 'Leads', path: '/leads' },
@@ -19,19 +20,37 @@ const menuItems = [
 ];
 
 const Header: React.FC<{ title?: string }> = ({ title }) => {
-  const { user, setToken } = useContext(UserContext);
+  const { user, token, setToken, setUser } = useContext(UserContext);
   const navigate = useNavigate();
   const location = useLocation();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const open = Boolean(anchorEl);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleLogout = () => {
-    setToken(null);
-    navigate('/login');
+  const handleLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
+
+    try {
+      if (token) {
+        await logoutApi(token);
+      }
+    } catch (error) {
+      console.error('Failed to sign out from the backend session.', error);
+    } finally {
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem('baldin_token');
+      setIsLoggingOut(false);
+      navigate('/login');
+    }
   };
 
   return (
@@ -80,8 +99,8 @@ const Header: React.FC<{ title?: string }> = ({ title }) => {
             <SettingsIcon />
           </IconButton>
           {open && (
-            <Button color="inherit" onClick={handleLogout}>
-              Logout
+            <Button color="inherit" onClick={handleLogout} disabled={isLoggingOut}>
+              {isLoggingOut ? 'Signing out...' : 'Logout'}
             </Button>
           )}
         </Toolbar>

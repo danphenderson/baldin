@@ -9,7 +9,7 @@ const UserTermsPage = () => {
           Privacy Policy and Terms and Conditions
         </Typography>
         <Typography variant="subtitle1" component="p" gutterBottom>Last updated: June 17, 2023</Typography>
-        <Typography paragraph>
+        <Typography component="p" sx={{ mb: 2 }}>
           This Privacy Policy and Terms and Conditions describes Our policies and procedures on the collection, use and disclosure of Your information when You use the Service and tells You about Your privacy rights and how the law protects You.
           We use Your Personal data to provide and improve the Service. By using the Service, You agree to the collection and use of information in accordance with this Privacy Policy and Terms and Conditions.
         </Typography>
@@ -17,7 +17,7 @@ const UserTermsPage = () => {
         {/* "Interpretations and Definitions" */}
         <Typography variant="h5" gutterBottom>Interpretation and Definitions</Typography>
         <Typography variant="h6" gutterBottom>Interpretation</Typography>
-        <Typography paragraph>
+        <Typography component="p" sx={{ mb: 2 }}>
           The words of which the initial letter is capitalized have meanings defined under the following conditions. The following definitions shall have the same meaning regardless of whether they appear in singular or in plural.
         </Typography>
         <Typography variant="h6" gutterBottom>Definitions</Typography>
@@ -63,7 +63,7 @@ const UserTermsPage = () => {
         </Typography>
 
         <Typography variant="h6" gutterBottom>Usage Data</Typography>
-        <Typography paragraph>
+        <Typography component="p" sx={{ mb: 2 }}>
           Usage Data is collected automatically when using the Service.
           Usage Data may include information such as Your Device’s Internet Protocol address (e.g. IP address), browser type, browser version, the pages of our Service that You visit, the time and date of Your visit, the time spent on those pages, unique device identifiers and other diagnostic data.
           When You access the Service by or through a mobile device, We may collect certain information automatically, including, but not limited to, the type of mobile device You use, Your mobile device unique ID, the IP address of Your mobile device, Your mobile operating system, the type of mobile Internet browser You use, unique device identifiers and other diagnostic data.
@@ -129,32 +129,32 @@ const UserTermsPage = () => {
         </Typography>
 
         <Typography variant="h6" gutterBottom>Retention of Your Personal Data</Typography>
-        <Typography paragraph>
+        <Typography component="p" sx={{ mb: 2 }}>
           The Company will retain Your Personal Data only for as long as is necessary for the purposes set out in this Privacy Policy and Terms and Conditions. We will retain and use Your Personal Data to the extent necessary to comply with Our legal obligations (for example, if We are required to retain Your data to comply with applicable laws), resolve disputes, and enforce Our legal agreements and policies.
           The Company will also retain Usage Data for internal analysis purposes. Usage Data is generally retained for a shorter period of time, except when this data is used to strengthen the security or to improve the functionality of Our Service, or We are legally obligated to retain this data for longer time periods.
         </Typography>
 
         <Typography variant="h6" gutterBottom>Transfer of Your Personal Data</Typography>
-        <Typography paragraph>
+        <Typography component="p" sx={{ mb: 2 }}>
           Your information, including Personal Data, is processed at the Company’s operating offices and in any other places where the parties involved in the processing are located. It means that this information may be transferred to — and maintained on — computers located outside of Your state, province, country or other governmental jurisdiction where the data protection laws may differ than those from Your jurisdiction.
           Your consent to this Privacy Policy and Terms and Conditions followed by Your submission of such information represents Your agreement to that transfer.
           The Company will take all steps reasonably necessary to ensure that Your data is treated securely and in accordance with this Privacy Policy and no transfer of Your Personal Data will take place to an organization or a country unless there are adequate controls in place including the security of Your data and other personal information.
         </Typography>
 
         <Typography variant="h6" gutterBottom>Delete Your Personal Data</Typography>
-        <Typography paragraph>
+        <Typography component="p" sx={{ mb: 2 }}>
           You have the right to delete or request that We assist in deleting the Personal Data that We have collected about You. Our Service may give You the ability to delete certain information about You from within the Service. You may update, amend, or delete Your information at any time by signing in to Your Account, if you have one, and visiting the account settings section that allows you to manage Your personal information. You may also contact Us to request access to, correct, or delete any personal information that You have provided to Us. Please note, however, that We may need to retain certain information when we have a legal obligation or lawful basis to do so.
         </Typography>
 
         <Typography variant="h6" gutterBottom>Disclosure of Your Personal Data</Typography>
 
         <Typography variant="h6" gutterBottom>Business Transactions</Typography>
-        <Typography paragraph>
+        <Typography component="p" sx={{ mb: 2 }}>
           If the Company is involved in a merger, acquisition or asset sale, Your Personal Data may be transferred. We will provide notice before Your Personal Data is transferred and becomes subject to a different Privacy Policy.
         </Typography>
 
         <Typography variant="h6" gutterBottom>Law enforcement</Typography>
-        <Typography paragraph>
+        <Typography component="p" sx={{ mb: 2 }}>
           Under certain circumstances, the Company may be required to disclose Your Personal Data if required to do so by law or in response to valid requests by public authorities (e.g. a court or a government agency).
         </Typography>
 
@@ -172,18 +172,18 @@ const UserTermsPage = () => {
 
 
         <Typography variant="h6" gutterBottom>Storage of Your Personal Data</Typography>
-        <Typography paragraph>
+        <Typography component="p" sx={{ mb: 2 }}>
           The Company will take all steps reasonably necessary to ensure that Your data is treated securely and in accordance with this Privacy Policy and no transfer of Your Personal Data will take place to an organization or a country unless there are adequate controls in place including the security of Your data and other personal information.
         </Typography>
 
         <Typography variant="h6" gutterBottom>Security of Your Personal Data</Typography>
-        <Typography paragraph>
+        <Typography component="p" sx={{ mb: 2 }}>
           The security of Your Personal Data is important to Us, but remember that no method of transmission over the Internet, or method of electronic storage is 100% secure. While We strive to use commercially acceptable means to protect Your Personal Data, We cannot guarantee its absolute security.
           Our Data Protection Officer can be reached at admin@baldin.app.
         </Typography>
 
         <Typography variant="h5" gutterBottom>Children’s Privacy</Typography>
-        <Typography paragraph>
+        <Typography component="p" sx={{ mb: 2 }}>
           Our Service does not address anyone under the age of 13. We do not knowingly collect personally identifiable information from anyone under the age of 13. If You are a parent or guardian and
           You are aware that Your child has provided Us with Personal Data, please contact Us. If We become aware that We have collected Personal Data from anyone under the age of 13 without verification
           of parental consent, We take steps to remove that information from Our servers. If We need to rely on consent as a legal basis for processing Your information and Your country requires consent
@@ -191,13 +191,13 @@ const UserTermsPage = () => {
         </Typography>
 
         <Typography variant="h5" gutterBottom>Links to Other Websites</Typography>
-        <Typography paragraph>
+        <Typography component="p" sx={{ mb: 2 }}>
           Our Service may contain links to other websites that are not operated by Us. If You click on a third party link, You will be directed to that third party’s site. We strongly advise You to review the Privacy Policy of every site You visit.
           We have no control over and assume no responsibility for the content, privacy policies or practices of any third party sites or services.
         </Typography>
 
         <Typography variant="h5" gutterBottom>Changes to this Privacy Policy</Typography>
-        <Typography paragraph>
+        <Typography component="p" sx={{ mb: 2 }}>
           We may update Our Privacy Policy from time to time. We will notify You of any changes by posting the new Privacy Policy on this page.
           We will let You know via email and/or a prominent notice on Our Service, prior to the change becoming effective and update the “Last updated” date at the top of this Privacy Policy.
           You are advised to review this Privacy Policy periodically for any changes. Changes to this Privacy Policy are effective when they are posted on this page.
@@ -205,7 +205,7 @@ const UserTermsPage = () => {
 
         <Typography variant="h5" gutterBottom>Contact Us</Typography>
         <Typography>If you have any questions about this Privacy Policy, You can contact us:</Typography>
-        <Typography paragraph>By email: <Link href="mailto:admin@baldin.app" target="_blank" rel="noopener">admin@baldin.app</Link></Typography>
+        <Typography component="p" sx={{ mb: 2 }}>By email: <Link href="mailto:admin@baldin.app" target="_blank" rel="noopener">admin@baldin.app</Link></Typography>
       </Stack>
   );
 };

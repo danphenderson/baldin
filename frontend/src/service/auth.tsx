@@ -7,6 +7,11 @@ const BASE_URL = `${API_URL}/auth`;
 
 const JSON_HEADERS = {"Content-Type": "application/json"};
 
+const createAuthHeaders = (token?: string) => ({
+  ...JSON_HEADERS,
+  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+});
+
 const fetchApi = async (url: string, options: RequestInit): Promise<Response> => {
   const response = await fetch(url, options);
   if (!response.ok) {
@@ -19,7 +24,7 @@ const fetchApi = async (url: string, options: RequestInit): Promise<Response> =>
 export const register = async (user: components['schemas']['UserCreate']) => {
   await fetchApi(`${BASE_URL}/register`, {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: createAuthHeaders(),
     body: JSON.stringify(user),
   });
 }
@@ -37,17 +42,21 @@ export const login = async (email: string, password: string): Promise<string> =>
   return data.access_token;
 }
 
-export const logout = async () => {
+export const logout = async (token: string) => {
+  if (!token) {
+    throw new Error('Authorization token is required');
+  }
+
   await fetchApi(`${BASE_URL}/jwt/logout`, {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: createAuthHeaders(token),
   });
 }
 
 export const forgotPassword = async (email: string) => {
   await fetchApi(`${BASE_URL}/forgot-password`, {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: createAuthHeaders(),
     body: JSON.stringify({ email }),
   });
 }
@@ -55,7 +64,7 @@ export const forgotPassword = async (email: string) => {
 export const resetPassword = async (token: string, password: string) => {
   await fetchApi(`${BASE_URL}/reset-password`, {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: createAuthHeaders(),
     body: JSON.stringify({ token, password }),
   });
 }
@@ -63,7 +72,7 @@ export const resetPassword = async (token: string, password: string) => {
 export const requestVerifyToken = async (email: string) => {
   await fetchApi(`${BASE_URL}/request-verify-token`, {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: createAuthHeaders(),
     body: JSON.stringify({ email }),
   });
 }
@@ -71,7 +80,7 @@ export const requestVerifyToken = async (email: string) => {
 export const verify = async (token: string) => {
   await fetchApi(`${BASE_URL}/verify`, {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: createAuthHeaders(),
     body: JSON.stringify({ token }),
   });
 }

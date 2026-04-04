@@ -18,6 +18,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { JSONTree } from 'react-json-tree';
 import { UserContext } from '../context/user-context';
+import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import {
   type OrchestrationEventRead,
   type OrchestrationEventStatus,
@@ -180,7 +181,7 @@ const PipelineCard: React.FC<{
             </Box>
             <Box sx={{ minWidth: 0 }}>
               <Typography variant="body1" fontWeight={700} noWrap>
-                {pipe.name || 'Untitled Pipeline'}
+                {pipe.name || 'Untitled Workflow'}
               </Typography>
               {pipe.description && (
                 <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
@@ -193,27 +194,27 @@ const PipelineCard: React.FC<{
             <Tooltip title="Edit">
               <IconButton
                 size="small"
-                aria-label={`Edit ${pipe.name || 'pipeline'}`}
+                aria-label={`Edit ${pipe.name || 'workflow'}`}
                 onClick={(e) => { e.stopPropagation(); onEdit(); }}
                 sx={{ color: theme.palette.text.secondary }}
               >
                 <EditIcon sx={{ fontSize: 16 }} />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Trigger event">
+            <Tooltip title="Trigger run">
               <IconButton
                 size="small"
-                aria-label={`Trigger event for ${pipe.name || 'pipeline'}`}
+                aria-label={`Trigger run for ${pipe.name || 'workflow'}`}
                 onClick={(e) => { e.stopPropagation(); onTrigger(); }}
                 sx={{ color: theme.palette.primary.main }}
               >
                 <RunIcon sx={{ fontSize: 16 }} />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Delete pipeline">
+            <Tooltip title="Delete workflow">
               <IconButton
                 size="small"
-                aria-label={`Delete ${pipe.name || 'pipeline'}`}
+                aria-label={`Delete ${pipe.name || 'workflow'}`}
                 onClick={(e) => { e.stopPropagation(); onDelete(); }}
                 sx={{ color: theme.palette.error.main, opacity: 0.7, '&:hover': { opacity: 1 } }}
               >
@@ -242,7 +243,7 @@ const PipelineCard: React.FC<{
               },
             }}
           >
-            <Typography variant="caption" color="text.secondary">events</Typography>
+            <Typography variant="caption" color="text.secondary">runs</Typography>
           </Badge>
           {Object.keys(statusSummary).length > 0 && (
             <Stack direction="row" spacing={0.25} sx={{ ml: 'auto' }}>
@@ -317,7 +318,7 @@ const EventRow: React.FC<{
         {/* Content */}
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <Typography variant="body2" fontWeight={600} noWrap>
-            {evt.message || 'Untitled event'}
+            {evt.message || 'Untitled run'}
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mt: 0.25 }}>
             {pipelineName && (
@@ -456,7 +457,7 @@ const PipelinesPage: React.FC = () => {
   const handleCreate = async () => {
     if (!token) return;
     if (!isValidJson(newPipeline.definition)) {
-      setError('Pipeline definition must be valid JSON');
+      setError('Workflow definition must be valid JSON');
       return;
     }
     try {
@@ -481,7 +482,7 @@ const PipelinesPage: React.FC = () => {
 
   const handleTrigger = async () => {
     if (!token) return;
-    if (!triggerForm.pipeline_id) { setError('Select a pipeline to trigger'); return; }
+    if (!triggerForm.pipeline_id) { setError('Select a workflow to trigger'); return; }
     if (!isValidJson(triggerForm.payload)) { setError('Payload must be valid JSON'); return; }
     try {
       await createOrchestrationEvent(token, {
@@ -537,6 +538,8 @@ const PipelinesPage: React.FC = () => {
     return counts;
   }, [events]);
 
+  usePageToolbarHeader('Workflows', `${pipelines.length} workflow${pipelines.length !== 1 ? 's' : ''}`);
+
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
@@ -549,52 +552,44 @@ const PipelinesPage: React.FC = () => {
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
           justifyContent: 'space-between',
-          alignItems: isMobile ? 'stretch' : 'flex-start',
+          alignItems: isMobile ? 'stretch' : 'center',
           gap: 2,
           mb: 3,
         }}
       >
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: '-0.02em' }}>
-            Pipelines
-          </Typography>
-          <Stack direction="row" spacing={1.5} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
-            <Typography variant="body2" color="text.secondary">
-              {pipelines.length} pipeline{pipelines.length !== 1 ? 's' : ''}
+        <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
+          {Object.entries(eventCounts).filter(([k]) => k !== 'total').map(([status, count]) => (
+            <Typography
+              key={status}
+              variant="body2"
+              sx={{
+                color: STATUS_CONFIG[status as OrchestrationEventStatus]?.color ?? 'text.secondary',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+              }}
+            >
+              <DotIcon sx={{ fontSize: 8 }} />
+              {count} {status}
             </Typography>
-            {Object.entries(eventCounts).filter(([k]) => k !== 'total').map(([status, count]) => (
-              <Typography
-                key={status}
-                variant="body2"
-                sx={{
-                  color: STATUS_CONFIG[status as OrchestrationEventStatus]?.color ?? 'text.secondary',
-                  fontWeight: 500,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                }}
-              >
-                <DotIcon sx={{ fontSize: 8 }} />
-                {count} {status}
-              </Typography>
-            ))}
-          </Stack>
-        </Box>
+          ))}
+        </Stack>
         <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
           <Tooltip title="Refresh">
             <IconButton
               onClick={refresh}
-              aria-label="Refresh pipelines"
+              aria-label="Refresh workflows"
               sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '10px' }}
             >
               <RefreshIcon />
             </IconButton>
           </Tooltip>
           <Button variant="outlined" startIcon={<RunIcon />} onClick={() => setTriggerOpen(true)}>
-            Trigger Event
+            Trigger Run
           </Button>
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
-            New Pipeline
+            New Workflow
           </Button>
         </Stack>
       </Box>
@@ -613,8 +608,8 @@ const PipelinesPage: React.FC = () => {
         <Stack direction="row" spacing={1.5} sx={{ mb: 3 }}>
           <TextField
             size="small"
-            placeholder="Search pipelines & events…"
-            aria-label="Search pipelines and events"
+            placeholder="Search workflows & runs…"
+            aria-label="Search workflows and runs"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             slotProps={{
@@ -651,7 +646,7 @@ const PipelinesPage: React.FC = () => {
 
       {/* ---- Loading skeletons ---- */}
       {loading ? (
-        <Grid container spacing={3} aria-busy="true" aria-label="Loading pipelines">
+        <Grid container spacing={3} aria-busy="true" aria-label="Loading workflows">
           <Grid size={{ xs: 12, md: 5 }}>
             <Skeleton variant="text" width={80} height={20} sx={{ mb: 2 }} />
             <Stack spacing={2}>
@@ -670,7 +665,7 @@ const PipelinesPage: React.FC = () => {
           {/* ---- Pipelines column ---- */}
           <Grid size={{ xs: 12, md: 5 }}>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-              PIPELINES
+              WORKFLOWS
             </Typography>
 
             {filteredPipelines.length === 0 ? (
@@ -692,16 +687,16 @@ const PipelinesPage: React.FC = () => {
                     <PipelineIcon sx={{ fontSize: 28, color: alpha(theme.palette.primary.main, 0.5) }} />
                   </Box>
                   <Typography variant="body1" fontWeight={600} sx={{ mb: 0.5 }}>
-                    {search ? 'No matching pipelines' : 'No pipelines yet'}
+                    {search ? 'No matching workflows' : 'No workflows yet'}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5, maxWidth: 260, mx: 'auto' }}>
                     {search
                       ? 'Try a different search term or clear your filter.'
-                      : 'Create your first orchestration pipeline to automate your job search workflow.'}
+                      : 'Create your first workflow to automate your job search.'}
                   </Typography>
                   {!search && (
                     <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
-                      New Pipeline
+                      New Workflow
                     </Button>
                   )}
                 </CardContent>
@@ -740,7 +735,7 @@ const PipelinesPage: React.FC = () => {
           {/* ---- Events column ---- */}
           <Grid size={{ xs: 12, md: 7 }}>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-              RECENT EVENTS
+              RECENT RUNS
             </Typography>
 
             {filteredEvents.length === 0 ? (
@@ -762,12 +757,12 @@ const PipelinesPage: React.FC = () => {
                     <ScheduleIcon sx={{ fontSize: 28, color: alpha(theme.palette.primary.main, 0.5) }} />
                   </Box>
                   <Typography variant="body1" fontWeight={600} sx={{ mb: 0.5 }}>
-                    {search || statusFilter !== 'all' ? 'No matching events' : 'No events yet'}
+                    {search || statusFilter !== 'all' ? 'No matching runs' : 'No runs yet'}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 280, mx: 'auto' }}>
                     {search || statusFilter !== 'all'
-                      ? 'Adjust your search or status filter to see events.'
-                      : 'Events will appear here when you trigger a pipeline run.'}
+                      ? 'Adjust your search or status filter to see runs.'
+                      : 'Runs will appear here when you trigger a workflow.'}
                   </Typography>
                 </CardContent>
               </Card>
@@ -784,7 +779,7 @@ const PipelinesPage: React.FC = () => {
                 ))}
                 {filteredEvents.length > 30 && (
                   <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', pt: 1 }}>
-                    Showing 30 of {filteredEvents.length} events
+                    Showing 30 of {filteredEvents.length} runs
                   </Typography>
                 )}
               </Stack>
@@ -799,7 +794,7 @@ const PipelinesPage: React.FC = () => {
 
       {/* ---- Create Pipeline ---- */}
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth aria-labelledby="create-pipeline-title">
-        <DialogTitle id="create-pipeline-title" fontWeight={700}>Create Pipeline</DialogTitle>
+        <DialogTitle id="create-pipeline-title" fontWeight={700}>Create Workflow</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
             <TextField
@@ -813,7 +808,7 @@ const PipelinesPage: React.FC = () => {
             <TextField
               fullWidth
               label="Description"
-              placeholder="What does this pipeline do?"
+              placeholder="What does this workflow do?"
               multiline
               minRows={2}
               value={newPipeline.description}
@@ -847,14 +842,14 @@ const PipelinesPage: React.FC = () => {
             onClick={handleCreate}
             disabled={!newPipeline.name.trim() || !isValidJson(newPipeline.definition)}
           >
-            Create Pipeline
+            Create Workflow
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* ---- Trigger Event ---- */}
       <Dialog open={triggerOpen} onClose={() => setTriggerOpen(false)} maxWidth="sm" fullWidth aria-labelledby="trigger-event-title">
-        <DialogTitle id="trigger-event-title" fontWeight={700}>Trigger Event</DialogTitle>
+        <DialogTitle id="trigger-event-title" fontWeight={700}>Trigger Run</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
             <FormControl fullWidth>
@@ -917,7 +912,7 @@ const PipelinesPage: React.FC = () => {
 
       {/* ---- Edit Pipeline ---- */}
       <Dialog open={editPipeOpen} onClose={() => setEditPipeOpen(false)} maxWidth="sm" fullWidth aria-labelledby="edit-pipeline-title">
-        <DialogTitle id="edit-pipeline-title" fontWeight={700}>Edit Pipeline</DialogTitle>
+        <DialogTitle id="edit-pipeline-title" fontWeight={700}>Edit Workflow</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
             <TextField
@@ -989,7 +984,7 @@ const PipelinesPage: React.FC = () => {
                 </Box>
                 <Box>
                   <Typography variant="h6" fontWeight={700}>
-                    {selectedPipeline.name || 'Untitled Pipeline'}
+                    {selectedPipeline.name || 'Untitled Workflow'}
                   </Typography>
                   {selectedPipeline.description && (
                     <Typography variant="body2" color="text.secondary">
@@ -1008,7 +1003,7 @@ const PipelinesPage: React.FC = () => {
                     Created {formatRelativeTime(selectedPipeline.created_at)}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {selectedPipeline.events.length} event{selectedPipeline.events.length !== 1 ? 's' : ''}
+                    {selectedPipeline.events.length} run{selectedPipeline.events.length !== 1 ? 's' : ''}
                   </Typography>
                 </Stack>
 
@@ -1045,7 +1040,7 @@ const PipelinesPage: React.FC = () => {
                 {selectedPipeline.events.length > 0 && (
                   <Box>
                     <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
-                      EVENTS ({selectedPipeline.events.length})
+                      RUNS ({selectedPipeline.events.length})
                     </Typography>
                     <Stack spacing={1}>
                       {selectedPipeline.events.map((evt) => {
@@ -1080,7 +1075,7 @@ const PipelinesPage: React.FC = () => {
                             </Box>
                             <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                               <Typography variant="body2" fontWeight={500} noWrap>
-                                {evt.message || 'Untitled event'}
+                                {evt.message || 'Untitled run'}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
                                 {formatRelativeTime(evt.created_at)}
@@ -1122,7 +1117,7 @@ const PipelinesPage: React.FC = () => {
                   setTriggerOpen(true);
                 }}
               >
-                Trigger Event
+                Trigger Run
               </Button>
             </DialogActions>
           </>
@@ -1152,13 +1147,13 @@ const PipelinesPage: React.FC = () => {
           >
             <WarningIcon sx={{ color: theme.palette.error.main }} />
           </Box>
-          <Typography variant="h6" fontWeight={700}>Delete Pipeline</Typography>
+          <Typography variant="h6" fontWeight={700}>Delete Workflow</Typography>
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary">
             Are you sure you want to delete{' '}
             <Typography component="span" fontWeight={600} color="text.primary">
-              {deleteTarget?.name || 'this pipeline'}
+              {deleteTarget?.name || 'this workflow'}
             </Typography>
             ? This action cannot be undone.
           </Typography>
@@ -1166,7 +1161,7 @@ const PipelinesPage: React.FC = () => {
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
           <Button variant="contained" color="error" startIcon={<DeleteIcon />} onClick={handleConfirmDelete}>
-            Delete Pipeline
+            Delete Workflow
           </Button>
         </DialogActions>
       </Dialog>

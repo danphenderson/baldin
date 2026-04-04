@@ -13,6 +13,7 @@ import {
   NoteAdd as NoteAddIcon, SortByAlpha as SortIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
+import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import {
   getResumes, createResume, updateResume, deleteResume, downloadResume,
   type ResumeRead, type ResumeCreate, type ResumeUpdate,
@@ -85,6 +86,11 @@ const DocumentsPage: React.FC = () => {
   const [coverLetters, setCoverLetters] = useState<CoverLetterRead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  usePageToolbarHeader(
+    'Documents Studio',
+    `${resumes.length} resume${resumes.length !== 1 ? 's' : ''} · ${coverLetters.length} cover letter${coverLetters.length !== 1 ? 's' : ''}`,
+  );
 
   /* ---- filter / sort state --------------------------------------- */
   const [category, setCategory] = useState<CategoryFilter>('all');
@@ -218,16 +224,7 @@ const DocumentsPage: React.FC = () => {
     <Box>
       {/* ── Page header ─────────────────────────────────────────── */}
       <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1 }}>
-              Documents Studio
-              <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'primary.main', display: 'inline-block' }} />
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {resumes.length} resume{resumes.length !== 1 ? 's' : ''} · {coverLetters.length} cover letter{coverLetters.length !== 1 ? 's' : ''}
-            </Typography>
-          </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <Tooltip title="Refresh">
               <IconButton onClick={refresh} size="small" aria-label="Refresh documents" sx={{ border: `1px solid ${theme.palette.divider}` }}>

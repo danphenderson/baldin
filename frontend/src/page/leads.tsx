@@ -1,14 +1,14 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Box, Typography, Button, Stack, Skeleton, Snackbar, Alert,
-  IconButton, Tooltip, Pagination as MuiPagination, useTheme,
+  Box, Typography, Skeleton, Snackbar, Alert,
+  Pagination as MuiPagination,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
   Bolt as BoltIcon, Search as SearchIcon, Add as AddIcon,
-  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
+import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import {
   getLeads, createLead, updateLead, deleteLead, extractLead,
   type LeadRead, type LeadCreate, type LeadUpdate,
@@ -38,7 +38,6 @@ const PAGE_SIZE = 12;
 /* ------------------------------------------------------------------ */
 
 const LeadsPage: React.FC = () => {
-  const theme = useTheme();
   const { token } = useContext(UserContext);
 
   // Data
@@ -119,6 +118,8 @@ const LeadsPage: React.FC = () => {
 
   useEffect(() => { setPage(1); }, [search, filter]);
 
+  usePageToolbarHeader('Job Leads', `${leads.length} tracked`);
+
   /* ---- Actions ---- */
 
   const handleExtract = async () => {
@@ -191,30 +192,6 @@ const LeadsPage: React.FC = () => {
 
   return (
     <Box>
-      {/* ── Header ── */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, flexWrap: 'wrap', gap: 1 }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800 }}>Job Leads</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-            {loading ? 'Loading...' : `${filtered.length} lead${filtered.length !== 1 ? 's' : ''} ${search || filter !== 'all' ? 'matched' : 'tracked'}`}
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Tooltip title="Refresh leads">
-            <IconButton
-              onClick={refresh}
-              aria-label="Refresh leads"
-              sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 2.5 }}
-            >
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-          <Button variant="outlined" startIcon={<AddIcon />} onClick={openCreate}>
-            Add Lead
-          </Button>
-        </Stack>
-      </Box>
-
       {/* ── AI Extraction Bar ── */}
       <LeadExtractionBar
         url={extractUrl}

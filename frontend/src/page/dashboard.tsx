@@ -20,6 +20,7 @@ import {
   Circle as DotIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
+import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import { getLeads, extractLead, type LeadRead } from '../service/leads';
 import { getApplications, createApplication, type ApplicationRead } from '../service/applications';
 import { getUserProfile, type UserProfile } from '../service/users';
@@ -149,7 +150,7 @@ const MetricTile: React.FC<MetricTileProps> = ({ label, value, detail, accent, i
 const DashboardPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { token, user } = useContext(UserContext);
+  const { token } = useContext(UserContext);
 
   const [data, setData] = useState<DashboardData>({
     leads: [],
@@ -258,7 +259,8 @@ const DashboardPage: React.FC = () => {
   }, [applications]);
 
   const greeting = greetingForHour(new Date().getHours());
-  const firstName = user?.first_name;
+
+  usePageToolbarHeader(greeting, 'Your autopilot at a glance');
 
   /* ---- loading skeleton ---- */
 
@@ -304,25 +306,8 @@ const DashboardPage: React.FC = () => {
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
 
-      {/* ── Greeting bar ── */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 2,
-          mb: 3.5,
-        }}
-      >
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-            {greeting}{firstName ? `, ${firstName}` : ''}
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mt: 0.25 }}>
-            Your autopilot at a glance
-          </Typography>
-        </Box>
+      {/* ── Header actions ── */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3.5 }}>
         <Stack direction="row" spacing={1} alignItems="center">
           <Tooltip title="Refresh data">
             <IconButton

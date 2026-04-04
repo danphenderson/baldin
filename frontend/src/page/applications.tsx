@@ -14,6 +14,7 @@ import {
   Warning as WarningIcon, Close as CloseIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
+import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import {
   getApplications, updateApplication, deleteApplication,
   getApplicationCoverLetters, generatecoverLetter, getApplicationResumes,
@@ -688,20 +689,13 @@ const ApplicationsPage: React.FC = () => {
   };
 
   const interviewCount = buckets.get('interview')?.length ?? 0;
-  const offerCount = buckets.get('offer')?.length ?? 0;
+
+  usePageToolbarHeader('Applications', `${applications.length} total · ${interviewCount} interviewing`);
 
   return (
     <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, flexWrap: 'wrap', gap: 1 }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800 }}>Applications</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {applications.length} total
-            {interviewCount > 0 && <> &middot; {interviewCount} interviewing</>}
-            {offerCount > 0 && <> &middot; {offerCount} {offerCount === 1 ? 'offer' : 'offers'}</>}
-          </Typography>
-        </Box>
+      {/* Header actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 1 }}>
         <Tooltip title="Refresh">
           <IconButton
             onClick={refresh}

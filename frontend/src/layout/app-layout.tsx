@@ -23,6 +23,7 @@ import {
 import { UserContext } from '../context/user-context';
 import { logout as logoutApi } from '../service/auth';
 import { useThemeMode } from '../theme/theme-provider';
+import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-header-context';
 
 const DRAWER_WIDTH = 260;
 const DRAWER_COLLAPSED = 72;
@@ -34,7 +35,7 @@ const navItems = [
   { label: 'Documents', icon: <DocumentsIcon />, path: '/documents' },
   { label: 'Companies', icon: <CompaniesIcon />, path: '/companies' },
   { label: 'Profile', icon: <ProfileIcon />, path: '/profile' },
-  { label: 'Pipelines', icon: <PipelinesIcon />, path: '/pipelines' },
+  { label: 'Workflows', icon: <PipelinesIcon />, path: '/workflows' },
 ];
 
 const HEADER_ACTION_DIAL_ID = 'header-account-actions';
@@ -50,6 +51,7 @@ const AppLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [isAccountDialOpen, setIsAccountDialOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [toolbarHeader, setToolbarHeader] = useState<ToolbarHeaderContent | null>(null);
 
   const drawerWidth = collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH;
   const textTransition = 'opacity 0.2s ease, max-width 0.2s ease';
@@ -341,7 +343,51 @@ const AppLayout: React.FC = () => {
             borderBottom: `1px solid ${theme.palette.divider}`,
           }}
         >
-          <Toolbar sx={{ justifyContent: 'flex-end', gap: 1, minHeight: 72 }}>
+          <Toolbar sx={{ justifyContent: 'space-between', gap: 2, minHeight: 72 }}>
+            <Box
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                display: 'flex',
+                alignItems: 'baseline',
+                flexWrap: 'wrap',
+                columnGap: 0.75,
+                rowGap: 0.25,
+                pr: 1,
+              }}
+            >
+              {toolbarHeader && (
+                <>
+                  <Typography
+                    component="h1"
+                    variant={isCompactToolbar ? 'h6' : 'h5'}
+                    sx={{
+                      fontWeight: 800,
+                      letterSpacing: '-0.02em',
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    {toolbarHeader.title}
+                  </Typography>
+                  {toolbarHeader.subtitle && (
+                    <Typography
+                      variant={isCompactToolbar ? 'body2' : 'body1'}
+                      color="text.secondary"
+                      sx={{
+                        minWidth: 0,
+                        lineHeight: 1.3,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: isCompactToolbar ? 'normal' : 'nowrap',
+                      }}
+                    >
+                      : {toolbarHeader.subtitle}
+                    </Typography>
+                  )}
+                </>
+              )}
+            </Box>
+
             <ClickAwayListener onClickAway={closeAccountDial}>
               <Box
                 sx={{
@@ -483,7 +529,9 @@ const AppLayout: React.FC = () => {
             background: theme.palette.background.default,
           }}
         >
-          <Outlet />
+          <ToolbarHeaderContext.Provider value={setToolbarHeader}>
+            <Outlet />
+          </ToolbarHeaderContext.Provider>
         </Box>
       </Box>
     </Box>

@@ -15,6 +15,7 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserContext } from '../context/user-context';
+import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import { getUser, updateUser, type UserRead, type UserUpdate } from '../service/users';
 import {
   getSkills, createSkill, updateSkill, deleteSkill, extractSkill,
@@ -430,6 +431,8 @@ const ProfilePage: React.FC = () => {
     return [profile.city, profile.state, profile.country].filter(Boolean).join(', ');
   }, [profile]);
 
+  usePageToolbarHeader('Profile', "Your professional identity powering Baldin's AI autopilot");
+
   const skillsByCategory = useMemo(() => {
     const map = new Map<string, SkillRead[]>();
     for (const skill of skills) {
@@ -468,19 +471,6 @@ const ProfilePage: React.FC = () => {
 
   return (
     <Box>
-      {/* Page header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography
-          variant="h4"
-          sx={{ fontWeight: 700, letterSpacing: '-0.02em' }}
-        >
-          Profile
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Your professional identity powering Baldin's AI autopilot
-        </Typography>
-      </Box>
-
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
           {error}

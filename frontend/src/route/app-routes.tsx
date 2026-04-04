@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import UserRoute from './user-routes';
 import AuthLayout from '../layout/auth-layout';
 import AppLayout from '../layout/app-layout';
@@ -26,7 +26,8 @@ const AppRoutes: React.FC = () => {
           <Route path="/applications" element={<ApplicationsPage />} />
           <Route path="/documents" element={<DocumentsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/pipelines" element={<PipelinesPage />} />
+          <Route path="/workflows" element={<PipelinesPage />} />
+          <Route path="/pipelines" element={<Navigate to="/workflows" replace />} />
           <Route path="/companies" element={<CompaniesPage />} />
           <Route path="*" element={<ErrorPage />} />
         </Route>

@@ -14,6 +14,7 @@ import {
   WarningAmber as WarningIcon, Schedule as TimeIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
+import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import {
   getCompanies, createCompany, updateCompany, deleteCompany, getCompanyLeads, extractCompany,
   type CompanyRead, type CompanyCreate, type CompanyUpdate,
@@ -256,6 +257,8 @@ const CompaniesPage: React.FC = () => {
     return matchesSearch && matchesIndustry;
   });
 
+  usePageToolbarHeader('Companies', `${companies.length} tracked`);
+
   /* ================================================================ */
   /*  Render                                                          */
   /* ================================================================ */
@@ -326,20 +329,11 @@ const CompaniesPage: React.FC = () => {
       {/* -------- Page header -------------------------------------- */}
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        justifyContent="flex-end"
+        alignItems={{ xs: 'stretch', sm: 'center' }}
         spacing={1.5}
         sx={{ mb: 3 }}
       >
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-            Companies
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-            {companies.length} {companies.length === 1 ? 'company' : 'companies'} tracked
-          </Typography>
-        </Box>
-
         <Stack direction="row" spacing={1}>
           <Tooltip title="Refresh">
             <IconButton

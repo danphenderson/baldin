@@ -24,6 +24,7 @@ Optional local toolchain if you want to work outside containers:
 - [Node.js](https://nodejs.org/en/download/)
 - [Python 3.11](https://www.python.org/downloads/)
 - [pipenv](https://pipenv.pypa.io/en/latest/)
+- [Playwright](https://playwright.dev/docs/intro)
 
 ### Setup
 
@@ -55,29 +56,13 @@ Baldin is split into a few clear pieces:
 - `backend/`: FastAPI application, Starlette Admin, authentication, extractors, orchestration flows, and tests.
 - `frontend/`: React/Vite client that talks to the backend through `VITE_API_URL`.
 - `docker-compose.yml`: the local-first entry point for the API, frontend, Postgres, and the separate test Postgres service.
-- `cdk/`: public AWS boundary notes and exploratory CDK scaffolding. It is not the live production control plane.
 - `docs/`: generated documentation output.
 
-For deeper backend details, including the data model and migration workflow, see [backend/README.md](backend/README.md).
-
-## Deployment Boundary
-
-The public repository now stops at buildable artifacts.
-
-- Pushes to `main` can validate the backend container build and the frontend static bundle.
-- Pushes to `main` cannot publish the backend image, sync frontend assets, or change production state.
-- Live rollout, production secrets, approval gates, and operator runbooks are intentionally kept behind a private control plane.
-
-The public or local artifact boundary is:
-
-- Backend candidate image from `backend/Dockerfile`
-- Frontend candidate bundle from `frontend/dist`
-
-The handoff model for production rollout is documented in [PRIVATE_DEPLOYMENT_CONTROL_PLANE.md](PRIVATE_DEPLOYMENT_CONTROL_PLANE.md).
+For deeper backend details, including the data model and future migration workflows, see [backend/README.md](backend/README.md).
 
 ## Project Status
 
-Baldin is still early. Expect rough edges, evolving APIs, documentation gaps, and unfinished automation workflows.
+Baldin is still early. Expect rough edges, evolving APIs, documentation gaps, breaking changes to data model and unfinished automation workflows.
 
 If you hit something confusing or broken, open an issue in the [issue tracker](https://github.com/danphenderson/baldin/issues).
 
@@ -96,13 +81,7 @@ Before your first commit, install the hooks:
 pre-commit install
 ```
 
-## Docs and Source
-
-- Documentation: [https://danphenderson.github.io/baldin/](https://danphenderson.github.io/baldin/)
-- Source code: [https://github.com/danphenderson/baldin](https://github.com/danphenderson/baldin)
-- Execution plan: [EXECUTION_PLAN.md](EXECUTION_PLAN.md)
-- Private deployment boundary: [PRIVATE_DEPLOYMENT_CONTROL_PLANE.md](PRIVATE_DEPLOYMENT_CONTROL_PLANE.md)
-- Public AWS boundary notes: [cdk/README.md](cdk/README.md)
+TODO: relocate to CONTRIBUTING.md and reference from herein.
 
 ## License
 

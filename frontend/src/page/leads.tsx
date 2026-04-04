@@ -1,10 +1,11 @@
 import React, { useContext, useEffect, useState, useCallback } from 'react';
 import {
-  Box, Grid, Card, CardContent, Typography, Button, Chip, TextField, Stack,
+  Box, Card, CardContent, Typography, Button, Chip, TextField, Stack,
   useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   InputAdornment, Select, MenuItem, FormControl, InputLabel, Tooltip, Skeleton,
   Alert, Collapse, Divider,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Bolt as BoltIcon, Search as SearchIcon, Delete as DeleteIcon,
   Edit as EditIcon, OpenInNew as OpenIcon, Business as CompanyIcon, LocationOn as LocationIcon,

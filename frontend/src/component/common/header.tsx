@@ -8,7 +8,7 @@ import IconButton from '@mui/material/IconButton';
 import { useContext } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
-import { List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import { List, ListItem, ListItemButton, ListItemText } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 
 const menuItems = [
@@ -49,10 +49,23 @@ const Header: React.FC<{ title?: string }> = ({ title }) => {
             />
           </IconButton>
           <List sx={{ display: 'flex', flexGrow: 1 }}>
-            {menuItems.map((item, index) => (
-              <ListItem button key={index} onClick={() => navigate(item.path)} sx={{ backgroundColor: location.pathname === item.path ? 'rgba(255, 255, 255, 0.2)' : 'inherit' }}  // Shade the selected menu item
-              >
-                <ListItemText primary={item.text} />
+            {menuItems.map((item) => (
+              <ListItem disablePadding key={item.path}>
+                <ListItemButton
+                  onClick={() => navigate(item.path)}
+                  selected={location.pathname === item.path}
+                  sx={{
+                    color: 'inherit',
+                    '&.Mui-selected': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    },
+                    '&.Mui-selected:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.28)',
+                    },
+                  }}
+                >
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
               </ListItem>
             ))}
           </List>

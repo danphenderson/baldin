@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Button, CircularProgress, List, ListItem, ListItemText, Stack, Typography } from '@mui/material';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { getOrchestrationEvents, OrchestrationEventRead } from '../service/data-orchestration';
 import { seedLeads } from '../service/leads';
 import { useContext } from 'react';
@@ -76,7 +76,7 @@ const DataOrchestrationPage: React.FC = () => {
   };
 
 
-  const columns: GridColDef[] = [
+  const columns: GridColDef<OrchestrationEventRead>[] = [
     {
       field: 'status',
       headerName: 'Status',
@@ -86,18 +86,18 @@ const DataOrchestrationPage: React.FC = () => {
       field: "source_uri",
       headerName: "Source URI",
       width: 350,
-      valueGetter: (params) => params.row.source_uri.name,
+      valueGetter: (_value, row) => row.source_uri?.name ?? '',
     },
     {
       field: "destination_uri",
       headerName: "Destination URI",
       width: 350,
-      valueGetter: (params) => params.row.destination_uri.name,
+      valueGetter: (_value, row) => row.destination_uri?.name ?? '',
     },
     { field: 'payload',
       headerName: 'Payload',
       width: 100,
-      valueGetter: (params) => JSON.stringify(params.row.payload),
+      valueGetter: (_value, row) => JSON.stringify(row.payload),
     },
     {
       field: 'message',

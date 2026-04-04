@@ -6,8 +6,11 @@ import { API_URL } from '../config/env';
 export type SkillRead = components['schemas']['SkillRead'];
 export type SkillCreate = components['schemas']['SkillCreate'];
 export type SkillUpdate = components['schemas']['SkillUpdate'];
-
-type ExtractorRun = components['schemas']['ExtractorRun'];
+type SkillExtractBody = components['schemas']['Body_extract_user_skills_skills_extract_post'];
+export type SkillExtractRequest = Omit<SkillExtractBody, 'file'> & {
+  file?: File | null;
+};
+export type SkillExtractResponse = Record<string, string>;
 
 const BASE_URL = `${API_URL}/skills/`;
 
@@ -29,7 +32,9 @@ const createRequestOptions = (token: string, method: string, body?: any, isFormD
     headers.delete("Content-Type");
     if (body) {
       for (const [key, value] of Object.entries(body)) {
-        formData.append(key, value as string);
+        if (value !== null && value !== undefined) {
+          formData.append(key, value instanceof File ? value : String(value));
+        }
       }
     }
     return {
@@ -93,11 +98,11 @@ export const deleteSkill = async (token: string, id: string): Promise<void> => {
   await fetchAPI(`${BASE_URL}${id}`, requestOptions);
 }
 
-export const extractSkill = async (token: string, data: ExtractorRun): Promise<ExtractorRun> => {
+export const extractSkill = async (token: string, data: SkillExtractRequest): Promise<SkillExtractResponse> => {
   const isFileUpload = data.file ? true : false;
   console.log("isFileUpload", isFileUpload);
   const requestOptions = createRequestOptions(token, "POST", data, isFileUpload);
-  return fetchAPI(`${BASE_URL}extract`, requestOptions);
+  return fetchAPI(`${BASE_URL}extract`, requestOptions) as Promise<SkillExtractResponse>;
 }
 
 export const seedSkills = async (token: string): Promise<void> => {

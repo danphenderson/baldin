@@ -4,7 +4,10 @@ import { components } from "../schema";
 import { API_URL } from '../config/env';
 
 export type ExtractorResponse = components['schemas']['ExtractorResponse'];
-export type ExtractorRun = components['schemas']['ExtractorRun'];
+type ExtractorRunBody = components['schemas']['Body_extractor_runner_extractor__id__run_post'];
+export type ExtractorRun = Omit<ExtractorRunBody, 'file'> & {
+  file?: File | null;
+};
 export type ExtractorRead = components['schemas']['ExtractorRead'];
 export type ExtractorCreate = components['schemas']['ExtractorCreate'];
 export type ExtractorUpdate = components['schemas']['ExtractorUpdate'];
@@ -32,7 +35,9 @@ const createRequestOptions = (token: string, method: string, body?: any, isFormD
     headers.delete("Content-Type");
     if (body) {
       for (const [key, value] of Object.entries(body)) {
-        formData.append(key, value as string);
+        if (value !== null && value !== undefined) {
+          formData.append(key, value instanceof File ? value : String(value));
+        }
       }
     }
     return {

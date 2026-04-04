@@ -117,7 +117,7 @@ export const downloadCoverLetter = async (token: string, id: string): Promise<vo
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = response.headers.get("content-disposition")?.split('filename=')[1].replaceAll('"', '') || 'download.pdf';
+  a.download = response.headers.get("content-disposition")?.split('filename=')[1].replace(/"/g, '') || 'download.pdf';
   document.body.appendChild(a);
   a.click();
   a.remove();

@@ -1,9 +1,10 @@
 import React, { useContext, useEffect, useState, useCallback } from 'react';
 import {
-  Box, Grid, Card, CardContent, Typography, Chip, Stack, Button, TextField,
+  Box, Card, CardContent, Typography, Chip, Stack, Button, TextField,
   useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   Skeleton, Alert, Avatar, Divider, Tabs, Tab, LinearProgress,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Save as SaveIcon,
   Upload as UploadIcon, AutoAwesome as AIIcon, Code as SkillIcon,

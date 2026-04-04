@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Stack, Typography, Link, Box } from '@mui/material';
+import { Stack, Typography, Link } from '@mui/material';
 
 const UserTermsPage = () => {
   return (
@@ -21,7 +21,7 @@ const UserTermsPage = () => {
           The words of which the initial letter is capitalized have meanings defined under the following conditions. The following definitions shall have the same meaning regardless of whether they appear in singular or in plural.
         </Typography>
         <Typography variant="h6" gutterBottom>Definitions</Typography>
-        <Typography paragraph>
+        <Typography component="div" sx={{ mb: 2 }}>
           <ul>
             <li>For the purposes of this Privacy Policy and Terms and Conditions:
               <ul>
@@ -51,7 +51,7 @@ const UserTermsPage = () => {
 
 
         <Typography variant="h6" gutterBottom>Personal Data</Typography>
-        <Typography paragraph>
+        <Typography component="div" sx={{ mb: 2 }}>
           While using Our Service, We may ask You to provide Us with certain personally identifiable information that can be used to contact or identify You. Personally identifiable information may include, but is not limited to:
           <ul>
             <li>Email address</li>
@@ -71,7 +71,7 @@ const UserTermsPage = () => {
         </Typography>
 
         <Typography variant="h6" gutterBottom>Information from Third-Party Social Media Services</Typography>
-        <Typography paragraph>
+        <Typography component="div" sx={{ mb: 2 }}>
           The Company allows You to create an account and log in to use the Service through the following Third-party Social Media Services:
           <ul>
             <li>Google</li>
@@ -83,7 +83,7 @@ const UserTermsPage = () => {
         </Typography>
 
         <Typography variant="h6" gutterBottom>Tracking Technologies and Cookies</Typography>
-        <Typography paragraph>
+        <Typography component="div" sx={{ mb: 2 }}>
           We use Cookies and similar tracking technologies to track the activity on Our Service and store certain information. Tracking technologies used are beacons, tags, and scripts to collect and track information and to improve and analyze Our Service.
           You can instruct Your browser to refuse all Cookies or to indicate when a Cookie is being sent. However, if You do not accept Cookies, You may not be able to use some parts of our Service.
           Cookies can be “Persistent” or “Session” Cookies. Persistent Cookies remain on Your personal computer or mobile device when You go offline, while Session Cookies are deleted as soon as You close Your web browser.
@@ -105,7 +105,7 @@ const UserTermsPage = () => {
         </Typography>
 
         <Typography variant="h6" gutterBottom>Use of Your Personal Data</Typography>
-        <Typography paragraph>
+        <Typography component="div" sx={{ mb: 2 }}>
           The Company may use Personal Data for the following purposes:
           <ul>
             <li>To provide and maintain our Service, including to monitor the usage of our Service.</li>
@@ -159,7 +159,7 @@ const UserTermsPage = () => {
         </Typography>
 
         <Typography variant="h6" gutterBottom>Other legal requirements</Typography>
-        <Typography paragraph>
+        <Typography component="div" sx={{ mb: 2 }}>
           The Company may disclose Your Personal Data in the good faith belief that such action is necessary to:
           <ul>
             <li>Comply with a legal obligation</li>

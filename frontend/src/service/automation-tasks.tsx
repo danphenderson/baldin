@@ -1,10 +1,18 @@
 import { components } from '../schema';
 import { API_URL } from '../config/env';
 
-export type AutomationTaskRead = components['schemas']['AutomationTaskRead'];
-export type LeadDiscoveryTaskCreate = components['schemas']['LeadDiscoveryTaskCreate'];
-export type LeadEnrichmentTaskCreate = components['schemas']['LeadEnrichmentTaskCreate'];
-export type LinkedInEasyApplyTaskCreate = components['schemas']['LinkedInEasyApplyTaskCreate'];
+export type AutomationTaskRead = {
+  id: string;
+  created_at?: string;
+  updated_at?: string;
+  status?: string | null;
+  task_type?: string | null;
+  [key: string]: unknown;
+};
+
+export type LeadDiscoveryTaskCreate = Record<string, unknown>;
+export type LeadEnrichmentTaskCreate = Record<string, unknown>;
+export type LinkedInEasyApplyTaskCreate = Record<string, unknown>;
 
 const BASE_URL = `${API_URL}/automation_tasks`;
 

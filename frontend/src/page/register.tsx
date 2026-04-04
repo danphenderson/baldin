@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Box, Card, CardContent, Typography, TextField, Button, Link, Alert, CircularProgress,
-  useTheme, alpha, InputAdornment, IconButton, Grid,
+  useTheme, alpha, InputAdornment, IconButton,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import { AutoAwesome as LogoIcon, Visibility, VisibilityOff, Email, Lock, Person } from '@mui/icons-material';
 import { register } from '../service/auth';
 

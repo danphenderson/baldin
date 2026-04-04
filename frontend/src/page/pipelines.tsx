@@ -1,9 +1,10 @@
 import React, { useContext, useEffect, useState, useCallback } from 'react';
 import {
-  Box, Grid, Card, CardContent, Typography, Chip, Stack, Button, TextField,
+  Box, Card, CardContent, Typography, Chip, Stack, Button, TextField,
   useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   Tooltip, Skeleton, Alert, Divider,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Hub as PipelineIcon, PlayArrow as RunIcon, Delete as DeleteIcon,
   Add as AddIcon, Refresh as RefreshIcon, CheckCircle as SuccessIcon,

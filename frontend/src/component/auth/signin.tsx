@@ -1,5 +1,6 @@
 import React, { useState, useContext } from "react";
-import { Grid, Box, Typography, Container, TextField, Button } from '@mui/material';
+import { Box, Typography, Container, TextField, Button } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import { useNavigate } from "react-router-dom";
 
 import { login } from "../../service/auth";

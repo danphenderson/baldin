@@ -29,7 +29,6 @@ interface ExampleCreateModalProps {
 export const ExtractRunModal: React.FC<ExtractRunModalProps> = ({ open, onClose, onSave, initialData, extractorId }) => {
   const defaultData: ExtractorRun = {
     mode: 'entire_document',
-    file: null,
     text: null,
     url: null,
     llm: '',
@@ -63,7 +62,7 @@ export const ExtractRunModal: React.FC<ExtractRunModalProps> = ({ open, onClose,
       <DialogTitle>Run Extractor</DialogTitle>
       <DialogContent>
         <FilePicker
-          value={data.file ? [new File([], data.file.name)] : []}
+          value={data.file ? [data.file] : []}
           label="File"
           multiple={false}
           disabled={false}
@@ -72,26 +71,26 @@ export const ExtractRunModal: React.FC<ExtractRunModalProps> = ({ open, onClose,
           onChange={handleFileSelection}
         />
         <TextField
-          label="File"
-          value={data.file}
-          onChange={(e) => setData({ ...data, file: (e.target as HTMLInputElement).files?.[0] || null })}
+          label="Selected file"
+          value={data.file?.name ?? ''}
           fullWidth
+          InputProps={{ readOnly: true }}
         />
         <TextField
           label="Text"
-          value={data.text}
+          value={data.text ?? ''}
           onChange={(e) => setData({ ...data, text: e.target.value })}
           fullWidth
         />
         <TextField
           label="URL"
-          value={data.url}
+          value={data.url ?? ''}
           onChange={(e) => setData({ ...data, url: e.target.value })}
           fullWidth
         />
         <TextField
           label="LLM"
-          value={data.llm}
+          value={data.llm ?? ''}
           onChange={(e) => setData({ ...data, llm: e.target.value })}
           fullWidth
         />

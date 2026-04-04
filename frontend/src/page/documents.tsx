@@ -4,7 +4,7 @@ import {
   useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Tooltip, Skeleton, Alert, Select, MenuItem, FormControl, InputLabel,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   Description as DocIcon, Download as DownloadIcon, Delete as DeleteIcon,
   Edit as EditIcon, Add as AddIcon, Refresh as RefreshIcon,
@@ -160,17 +160,17 @@ const DocumentsPage: React.FC = () => {
 
       {loading ? (
         <Grid container spacing={2}>
-          {[1,2,3,4].map(i => <Grid item xs={12} md={6} key={i}><Skeleton variant="rounded" height={100} sx={{ borderRadius: 3 }} /></Grid>)}
+          {[1,2,3,4].map(i => <Grid size={{ xs: 12, md: 6 }} key={i}><Skeleton variant="rounded" height={100} sx={{ borderRadius: 3 }} /></Grid>)}
         </Grid>
       ) : (
         <Grid container spacing={2}>
           {(tab === 0 ? resumes : tab === 1 ? coverLetters : [...resumeTemplates.map(t => ({...t, _tplType: 'resume'})), ...clTemplates.map(t => ({...t, _tplType: 'cover_letter'}))]).map((doc: any) => (
-            <Grid item xs={12} md={6} key={doc.id}>
+            <Grid size={{ xs: 12, md: 6 }} key={doc.id}>
               <DocCard doc={doc} type={tab === 0 ? 'resume' : tab === 1 ? 'cover_letter' : doc._tplType || 'resume'} />
             </Grid>
           ))}
           {(tab === 0 ? resumes : tab === 1 ? coverLetters : [...resumeTemplates, ...clTemplates]).length === 0 && (
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Box sx={{ textAlign: 'center', py: 8 }}>
                 <DocIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                 <Typography variant="h6" color="text.secondary">No {tab === 0 ? 'resumes' : tab === 1 ? 'cover letters' : 'templates'} yet</Typography>

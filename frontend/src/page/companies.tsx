@@ -5,7 +5,7 @@ import {
   Tooltip, Skeleton, Alert, InputAdornment, Divider, Collapse, List, ListItem,
   ListItemText, ListItemIcon,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   Business as CompanyIcon, Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
   Search as SearchIcon, AutoAwesome as AIIcon, LocationOn as LocationIcon,
@@ -184,7 +184,7 @@ const CompaniesPage: React.FC = () => {
 
       {/* Company Cards */}
       {loading ? (
-        <Grid container spacing={2}>{[1, 2, 3].map(i => <Grid item xs={12} md={6} key={i}><Skeleton variant="rounded" height={200} /></Grid>)}</Grid>
+        <Grid container spacing={2}>{[1, 2, 3].map(i => <Grid size={{ xs: 12, md: 6 }} key={i}><Skeleton variant="rounded" height={200} /></Grid>)}</Grid>
       ) : filtered.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <CompanyIcon sx={{ fontSize: 64, color: alpha(theme.palette.text.primary, 0.15), mb: 2 }} />
@@ -193,7 +193,7 @@ const CompaniesPage: React.FC = () => {
       ) : (
         <Grid container spacing={2}>
           {filtered.map(company => (
-            <Grid item xs={12} md={6} key={company.id}>
+            <Grid size={{ xs: 12, md: 6 }} key={company.id}>
               <Card sx={{ transition: 'all 0.2s', '&:hover': { transform: 'translateY(-2px)', boxShadow: `0 8px 24px ${alpha('#000', 0.15)}` } }}>
                 <CardContent sx={{ p: 3 }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="flex-start">

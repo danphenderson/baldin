@@ -4,7 +4,7 @@ import {
   useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   Skeleton, Alert, Avatar, Divider, Tabs, Tab, LinearProgress,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Save as SaveIcon,
   Upload as UploadIcon, AutoAwesome as AIIcon, Code as SkillIcon,
@@ -160,37 +160,37 @@ const ProfilePage: React.FC = () => {
             </Avatar>
             <Box sx={{ flexGrow: 1 }}>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField fullWidth size="small" label="First Name" value={profileForm.first_name || ''} onChange={e => setProfileForm((p: any) => ({ ...p, first_name: e.target.value }))} />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField fullWidth size="small" label="Last Name" value={profileForm.last_name || ''} onChange={e => setProfileForm((p: any) => ({ ...p, last_name: e.target.value }))} />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField fullWidth size="small" label="Email" value={profileForm.email || ''} disabled />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField fullWidth size="small" label="Phone" value={profileForm.phone_number || ''} onChange={e => setProfileForm((p: any) => ({ ...p, phone_number: e.target.value }))} />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField fullWidth size="small" label="Address Line 1" value={profileForm.address_line_1 || ''} onChange={e => setProfileForm((p: any) => ({ ...p, address_line_1: e.target.value }))} />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField fullWidth size="small" label="Address Line 2" value={profileForm.address_line_2 || ''} onChange={e => setProfileForm((p: any) => ({ ...p, address_line_2: e.target.value }))} />
                 </Grid>
-                <Grid item xs={6} sm={3} md={1.5}>
+                <Grid size={{ xs: 6, sm: 3, md: 1.5 }}>
                   <TextField fullWidth size="small" label="City" value={profileForm.city || ''} onChange={e => setProfileForm((p: any) => ({ ...p, city: e.target.value }))} />
                 </Grid>
-                <Grid item xs={6} sm={3} md={1.5}>
+                <Grid size={{ xs: 6, sm: 3, md: 1.5 }}>
                   <TextField fullWidth size="small" label="State" value={profileForm.state || ''} onChange={e => setProfileForm((p: any) => ({ ...p, state: e.target.value }))} />
                 </Grid>
-                <Grid item xs={6} sm={3} md={1.5}>
+                <Grid size={{ xs: 6, sm: 3, md: 1.5 }}>
                   <TextField fullWidth size="small" label="Zip Code" value={profileForm.zip_code || ''} onChange={e => setProfileForm((p: any) => ({ ...p, zip_code: e.target.value }))} />
                 </Grid>
-                <Grid item xs={6} sm={3} md={1.5}>
+                <Grid size={{ xs: 6, sm: 3, md: 1.5 }}>
                   <TextField fullWidth size="small" label="Country" value={profileForm.country || ''} onChange={e => setProfileForm((p: any) => ({ ...p, country: e.target.value }))} />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField fullWidth size="small" label="Time Zone" value={profileForm.time_zone || ''} onChange={e => setProfileForm((p: any) => ({ ...p, time_zone: e.target.value }))} placeholder="e.g. America/New_York" />
                 </Grid>
               </Grid>
@@ -354,7 +354,7 @@ const ProfilePage: React.FC = () => {
               </Box>
               <Grid container spacing={2}>
                 {contacts.map((contact: any) => (
-                  <Grid item xs={12} sm={6} md={4} key={contact.id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={contact.id}>
                     <Box sx={{ p: 2, borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Box>

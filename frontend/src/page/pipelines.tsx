@@ -4,7 +4,7 @@ import {
   useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   Tooltip, Skeleton, Alert, Divider,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   Hub as PipelineIcon, PlayArrow as RunIcon, Delete as DeleteIcon,
   Add as AddIcon, Refresh as RefreshIcon, CheckCircle as SuccessIcon,
@@ -164,12 +164,12 @@ const PipelinesPage: React.FC = () => {
 
       {loading ? (
         <Grid container spacing={2}>
-          {[1,2,3].map(i => <Grid item xs={12} md={4} key={i}><Skeleton variant="rounded" height={160} sx={{ borderRadius: 3 }} /></Grid>)}
+          {[1,2,3].map(i => <Grid size={{ xs: 12, md: 4 }} key={i}><Skeleton variant="rounded" height={160} sx={{ borderRadius: 3 }} /></Grid>)}
         </Grid>
       ) : (
         <Grid container spacing={3}>
           {/* Pipelines */}
-          <Grid item xs={12} md={5}>
+          <Grid size={{ xs: 12, md: 5 }}>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>PIPELINES</Typography>
             {pipelines.length === 0 ? (
               <Card><CardContent sx={{ textAlign: 'center', py: 4 }}>
@@ -223,7 +223,7 @@ const PipelinesPage: React.FC = () => {
           </Grid>
 
           {/* Recent Events */}
-          <Grid item xs={12} md={7}>
+          <Grid size={{ xs: 12, md: 7 }}>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>RECENT EVENTS</Typography>
             {events.length === 0 ? (
               <Card><CardContent sx={{ textAlign: 'center', py: 4 }}>

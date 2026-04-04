@@ -5,7 +5,7 @@ import {
   useTheme, alpha, Stack, IconButton, TextField, Dialog, DialogTitle,
   DialogContent, DialogActions, Skeleton, Tooltip,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   WorkOutline as LeadsIcon,
   Assignment as AppIcon,
@@ -142,7 +142,7 @@ const DashboardPage: React.FC = () => {
       <Box>
         <Grid container spacing={3}>
           {[1, 2, 3, 4].map((i) => (
-            <Grid item xs={12} sm={6} md={3} key={i}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={i}>
               <Skeleton variant="rounded" height={140} sx={{ borderRadius: 3 }} />
             </Grid>
           ))}
@@ -180,7 +180,7 @@ const DashboardPage: React.FC = () => {
 
       {/* Stats */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <StatCard
             title="Job Leads" value={leads.length}
             subtitle={`${unappliedLeads.length} unapplied`}
@@ -189,7 +189,7 @@ const DashboardPage: React.FC = () => {
             onClick={() => navigate('/leads')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <StatCard
             title="Applications" value={applications.length}
             subtitle={`${activeApps.length} active`}
@@ -198,7 +198,7 @@ const DashboardPage: React.FC = () => {
             onClick={() => navigate('/applications')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <StatCard
             title="Companies" value={companies.length}
             subtitle="tracked"
@@ -207,7 +207,7 @@ const DashboardPage: React.FC = () => {
             onClick={() => navigate('/companies')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <StatCard
             title="Pipelines" value={pipelines.length}
             subtitle="active"
@@ -216,7 +216,7 @@ const DashboardPage: React.FC = () => {
             onClick={() => navigate('/pipelines')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <StatCard
             title="Profile" value={`${profileCompleteness}%`}
             subtitle="completeness"
@@ -225,7 +225,7 @@ const DashboardPage: React.FC = () => {
             onClick={() => navigate('/profile')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <StatCard
             title="Success Rate" value={applications.length > 0 ? `${Math.round((applications.filter((a: any) => a.status === 'offer').length / applications.length) * 100)}%` : '—'}
             subtitle="offers received"
@@ -237,7 +237,7 @@ const DashboardPage: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Application Status Breakdown */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>APPLICATION STATUS</Typography>
@@ -268,7 +268,7 @@ const DashboardPage: React.FC = () => {
         </Grid>
 
         {/* Profile completeness */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>PROFILE STRENGTH</Typography>
@@ -311,7 +311,7 @@ const DashboardPage: React.FC = () => {
         </Grid>
 
         {/* Recent leads */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -370,7 +370,7 @@ const DashboardPage: React.FC = () => {
         </Grid>
 
         {/* Quick actions */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Card>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>QUICK ACTIONS</Typography>
@@ -383,7 +383,7 @@ const DashboardPage: React.FC = () => {
                   { label: 'Companies', icon: <CompanyIcon />, action: () => navigate('/companies'), color: theme.palette.info.main },
                   { label: 'Pipelines', icon: <PipelineIcon />, action: () => navigate('/pipelines'), color: '#f59e0b' },
                 ].map((item) => (
-                  <Grid item xs={12} sm={6} md={2} key={item.label}>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }} key={item.label}>
                     <Button
                       fullWidth variant="outlined" startIcon={item.icon}
                       onClick={item.action}

@@ -4,7 +4,7 @@ import {
   Box, Card, CardContent, Typography, TextField, Button, Link, Alert, CircularProgress,
   useTheme, alpha, InputAdornment, IconButton,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import { AutoAwesome as LogoIcon, Visibility, VisibilityOff, Email, Lock, Person } from '@mui/icons-material';
 import { register } from '../service/auth';
 
@@ -59,12 +59,12 @@ const RegisterPage: React.FC = () => {
           {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
           <form onSubmit={handleSubmit}>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <TextField fullWidth label="First name" value={form.first_name} onChange={set('first_name')} required
                   InputProps={{ startAdornment: <InputAdornment position="start"><Person sx={{ color: 'text.secondary', fontSize: 20 }} /></InputAdornment> }}
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <TextField fullWidth label="Last name" value={form.last_name} onChange={set('last_name')} required />
               </Grid>
             </Grid>

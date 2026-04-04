@@ -1,6 +1,6 @@
 import React, { useState, useContext } from "react";
 import { Box, Typography, Container, TextField, Button } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import { useNavigate } from "react-router-dom";
 
 import { login } from "../../service/auth";
@@ -33,7 +33,7 @@ const SignIn: React.FC = () => {
         <Typography component="h1" variant="h5">Login</Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 required
                 fullWidth
@@ -45,7 +45,7 @@ const SignIn: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 required
                 fullWidth

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
@@ -86,7 +86,7 @@ const SignUp: React.FC = () => {
                 </Typography>
                 <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 2 }}>
                     <Grid container spacing={2} sx={{mt: 2}}>
-                        <Grid item xs={12}>
+                    <Grid size={12}>
                             <TextField
                                 required
                                 fullWidth
@@ -99,7 +99,7 @@ const SignUp: React.FC = () => {
                                 placeholder="Enter email"
                             />
                         </Grid>
-                        <Grid item xs={12}>
+                            <Grid size={12}>
                             <TextField
                                 required
                                 fullWidth
@@ -112,7 +112,7 @@ const SignUp: React.FC = () => {
                                 placeholder="Enter first name"
                             />
                         </Grid>
-                        <Grid item xs={12}>
+                            <Grid size={12}>
                             <TextField
                                 required
                                 fullWidth
@@ -125,7 +125,7 @@ const SignUp: React.FC = () => {
                                 placeholder="Enter last name"
                             />
                         </Grid>
-                        <Grid item xs={12}>
+                            <Grid size={12}>
                             <TextField
                                 required
                                 fullWidth
@@ -139,7 +139,7 @@ const SignUp: React.FC = () => {
                                 placeholder="Enter phone number"
                             />
                         </Grid>
-                        <Grid item xs={12}>
+                        <Grid size={12}>
                           <TextField
                             required
                             fullWidth
@@ -153,7 +153,7 @@ const SignUp: React.FC = () => {
                             placeholder="Enter address line 1"
                           />
                         </Grid>
-                        <Grid item xs={12}>
+                        <Grid size={12}>
                           <TextField
                             fullWidth
                             id="address_line_2"
@@ -166,7 +166,7 @@ const SignUp: React.FC = () => {
                             placeholder="Enter address line 2"
                           />
                         </Grid>
-                        <Grid item xs={12}>
+                        <Grid size={12}>
                           <TextField
                             required
                             fullWidth
@@ -180,7 +180,7 @@ const SignUp: React.FC = () => {
                             placeholder="Enter city"
                           />
                         </Grid>
-                        <Grid item xs={12}>
+                        <Grid size={12}>
                           <TextField
                             required
                             fullWidth
@@ -194,7 +194,7 @@ const SignUp: React.FC = () => {
                             placeholder="Enter state"
                           />
                         </Grid>
-                        <Grid item xs={12}>
+                        <Grid size={12}>
                           <TextField
                             required
                             fullWidth
@@ -208,7 +208,7 @@ const SignUp: React.FC = () => {
                             placeholder="Enter zip code"
                           />
                         </Grid>
-                        <Grid item xs={12}>
+                        <Grid size={12}>
                           <TextField
                             required
                             fullWidth
@@ -222,7 +222,7 @@ const SignUp: React.FC = () => {
                             placeholder="Enter country"
                           />
                         </Grid>
-                        <Grid item xs={12}>
+                        <Grid size={12}>
                             <TextField
                                 required
                                 fullWidth
@@ -236,7 +236,7 @@ const SignUp: React.FC = () => {
                                 placeholder="Enter password"
                             />
                         </Grid>
-                        <Grid item xs={12}>
+                            <Grid size={12}>
                             <TextField
                                 required
                                 fullWidth

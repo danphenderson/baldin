@@ -5,7 +5,7 @@ import {
   InputAdornment, Select, MenuItem, FormControl, InputLabel, Tooltip, Skeleton,
   Alert, Collapse, Divider,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   Bolt as BoltIcon, Search as SearchIcon, Delete as DeleteIcon,
   Edit as EditIcon, OpenInNew as OpenIcon, Business as CompanyIcon, LocationOn as LocationIcon,
@@ -161,7 +161,7 @@ const LeadsPage: React.FC = () => {
       {loading ? (
         <Grid container spacing={2}>
           {[1,2,3,4,5,6].map(i => (
-            <Grid item xs={12} md={6} key={i}><Skeleton variant="rounded" height={120} sx={{ borderRadius: 3 }} /></Grid>
+            <Grid size={{ xs: 12, md: 6 }} key={i}><Skeleton variant="rounded" height={120} sx={{ borderRadius: 3 }} /></Grid>
           ))}
         </Grid>
       ) : filteredLeads.length === 0 ? (
@@ -173,7 +173,7 @@ const LeadsPage: React.FC = () => {
       ) : (
         <Grid container spacing={2}>
           {filteredLeads.map((lead: any) => (
-            <Grid item xs={12} md={6} key={lead.id}>
+            <Grid size={{ xs: 12, md: 6 }} key={lead.id}>
               <Card sx={{ transition: 'all 0.2s', '&:hover': { borderColor: alpha(theme.palette.primary.main, 0.3) } }}>
                 <CardContent sx={{ p: 2.5 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -266,19 +266,19 @@ const LeadsPage: React.FC = () => {
         <DialogTitle fontWeight={700}>{editLead?.id ? 'Edit Lead' : 'Add Lead'}</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField fullWidth label="URL" value={editLead?.url || ''} onChange={e => setEditLead((p: any) => ({ ...p, url: e.target.value }))} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth label="Title" value={editLead?.title || ''} onChange={e => setEditLead((p: any) => ({ ...p, title: e.target.value }))} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth label="Location" value={editLead?.location || ''} onChange={e => setEditLead((p: any) => ({ ...p, location: e.target.value }))} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth label="Salary" value={editLead?.salary || ''} onChange={e => setEditLead((p: any) => ({ ...p, salary: e.target.value }))} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Employment Type</InputLabel>
                 <Select value={editLead?.employment_type || ''} label="Employment Type" onChange={e => setEditLead((p: any) => ({ ...p, employment_type: e.target.value }))}>
@@ -291,10 +291,10 @@ const LeadsPage: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth label="Job Function" value={editLead?.job_function || ''} onChange={e => setEditLead((p: any) => ({ ...p, job_function: e.target.value }))} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Seniority Level</InputLabel>
                 <Select value={editLead?.seniority_level || ''} label="Seniority Level" onChange={e => setEditLead((p: any) => ({ ...p, seniority_level: e.target.value }))}>
@@ -308,14 +308,14 @@ const LeadsPage: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth label="Education Level" value={editLead?.education_level || ''} onChange={e => setEditLead((p: any) => ({ ...p, education_level: e.target.value }))} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth label="Hiring Manager" value={editLead?.hiring_manager || ''} onChange={e => setEditLead((p: any) => ({ ...p, hiring_manager: e.target.value }))} />
             </Grid>
             {companies.length > 0 && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <FormControl fullWidth>
                   <InputLabel>Associated Companies</InputLabel>
                   <Select
@@ -337,10 +337,10 @@ const LeadsPage: React.FC = () => {
                 </FormControl>
               </Grid>
             )}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField fullWidth label="Description" multiline rows={4} value={editLead?.description || ''} onChange={e => setEditLead((p: any) => ({ ...p, description: e.target.value }))} />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField fullWidth label="Notes (internal)" multiline rows={2} value={editLead?.notes || ''} onChange={e => setEditLead((p: any) => ({ ...p, notes: e.target.value }))}
                 placeholder="Private notes about this opportunity..." />
             </Grid>

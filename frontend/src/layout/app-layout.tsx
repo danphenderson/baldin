@@ -16,7 +16,7 @@ import {
   LightMode as LightModeIcon,
   Logout as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
-  Menu as MenuIcon,
+  ChevronRight as ChevronRightIcon,
   AutoAwesome as AutoAwesomeIcon,
   Business as CompaniesIcon,
 } from '@mui/icons-material';
@@ -81,40 +81,80 @@ const AppLayout: React.FC = () => {
         }}
       >
         {/* Logo */}
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5, minHeight: 64 }}>
-          <Box
-            sx={{
-              width: 36, height: 36, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-            }}
-          >
-            <AutoAwesomeIcon sx={{ color: '#fff', fontSize: 20 }} />
-          </Box>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 800,
-              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              opacity: collapsed ? 0 : 1,
-              maxWidth: collapsed ? 0 : 120,
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-              transition: textTransition,
-            }}
-          >
-            Baldin
-          </Typography>
-          <Box sx={{ flexGrow: 1 }} />
-          <IconButton
-            size="small"
-            aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-            onClick={() => setCollapsed(!collapsed)}
-            sx={{ color: theme.palette.text.secondary }}
-          >
-            {collapsed ? <MenuIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
-          </IconButton>
+        <Box
+          sx={{
+            p: collapsed ? 1.5 : 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: 1.5,
+            minHeight: 64,
+          }}
+        >
+          {collapsed ? (
+            <Tooltip title="Open navigation" placement="right">
+              <IconButton
+                size="small"
+                aria-label="Open navigation"
+                onClick={() => setCollapsed(false)}
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '12px',
+                  color: theme.palette.text.secondary,
+                  border: `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
+                  backgroundColor: alpha(theme.palette.common.white, theme.palette.mode === 'dark' ? 0.04 : 0.5),
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.12),
+                    color: theme.palette.primary.main,
+                  },
+                }}
+              >
+                <ChevronRightIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <>
+              <Box
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                }}
+              >
+                <AutoAwesomeIcon sx={{ color: '#fff', fontSize: 20 }} />
+              </Box>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 800,
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  opacity: 1,
+                  maxWidth: 120,
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  transition: textTransition,
+                }}
+              >
+                Baldin
+              </Typography>
+              <Box sx={{ flexGrow: 1 }} />
+              <IconButton
+                size="small"
+                aria-label="Collapse navigation"
+                onClick={() => setCollapsed(true)}
+                sx={{ color: theme.palette.text.secondary }}
+              >
+                <ChevronLeftIcon fontSize="small" />
+              </IconButton>
+            </>
+          )}
         </Box>
 
         <Divider sx={{ opacity: 0.5 }} />

@@ -46,6 +46,7 @@ const AppLayout: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const drawerWidth = collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH;
+  const textTransition = 'opacity 0.2s ease, max-width 0.2s ease';
 
   const handleLogout = () => {
     setToken(null);
@@ -89,13 +90,29 @@ const AppLayout: React.FC = () => {
           >
             <AutoAwesomeIcon sx={{ color: '#fff', fontSize: 20 }} />
           </Box>
-          {!collapsed && (
-            <Typography variant="h6" sx={{ fontWeight: 800, background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Baldin
-            </Typography>
-          )}
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 800,
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              opacity: collapsed ? 0 : 1,
+              maxWidth: collapsed ? 0 : 120,
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              transition: textTransition,
+            }}
+          >
+            Baldin
+          </Typography>
           <Box sx={{ flexGrow: 1 }} />
-          <IconButton size="small" onClick={() => setCollapsed(!collapsed)} sx={{ color: theme.palette.text.secondary }}>
+          <IconButton
+            size="small"
+            aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            onClick={() => setCollapsed(!collapsed)}
+            sx={{ color: theme.palette.text.secondary }}
+          >
             {collapsed ? <MenuIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
           </IconButton>
         </Box>
@@ -108,13 +125,13 @@ const AppLayout: React.FC = () => {
             const isActive = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
             return (
               <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
-                <Tooltip title={collapsed ? item.label : ''} placement="right">
+                <Tooltip title={item.label} placement="right" disableHoverListener={!collapsed}>
                   <ListItemButton
                     onClick={() => navigate(item.path)}
                     sx={{
                       borderRadius: 2,
                       minHeight: 44,
-                      px: collapsed ? 2 : 2,
+                      px: collapsed ? 1.75 : 2,
                       justifyContent: collapsed ? 'center' : 'flex-start',
                       ...(isActive && {
                         background: alpha(theme.palette.primary.main, 0.12),
@@ -128,23 +145,34 @@ const AppLayout: React.FC = () => {
                   >
                     <ListItemIcon
                       sx={{
-                        minWidth: collapsed ? 0 : 40,
+                        minWidth: collapsed ? 'auto' : 40,
                         color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
                         justifyContent: 'center',
                       }}
                     >
                       {item.icon}
                     </ListItemIcon>
-                    {!collapsed && (
-                      <ListItemText
-                        primary={item.label}
-                        primaryTypographyProps={{
-                          fontSize: '0.875rem',
-                          fontWeight: isActive ? 600 : 400,
-                          color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
-                        }}
-                      />
-                    )}
+                    <ListItemText
+                      primary={item.label}
+                      sx={{
+                        flex: collapsed ? '0 0 0' : '1 1 auto',
+                        opacity: collapsed ? 0 : 1,
+                        maxWidth: collapsed ? 0 : 160,
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        transition: textTransition,
+                        '& .MuiTypography-root': {
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        },
+                      }}
+                      primaryTypographyProps={{
+                        fontSize: '0.875rem',
+                        fontWeight: isActive ? 600 : 400,
+                        color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                      }}
+                    />
                   </ListItemButton>
                 </Tooltip>
               </ListItem>

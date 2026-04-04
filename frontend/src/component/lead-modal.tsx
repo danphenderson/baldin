@@ -1,81 +1,220 @@
 import React, { useState, useEffect } from 'react';
-import { components } from '../schema.d';
-import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
+import {
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
+  FormControl, InputLabel, Select, MenuItem, Stack, Chip, Typography,
+  IconButton,
+} from '@mui/material';
+import Grid from '@mui/material/Grid';
+import { Close as CloseIcon } from '@mui/icons-material';
+import type { LeadRead, LeadCreate, LeadUpdate } from '../service/leads';
+import type { CompanyRead } from '../service/companies';
 
-type LeadCreate = components['schemas']['LeadCreate'];
-
-interface LeadModalProps {
+interface LeadFormDialogProps {
   open: boolean;
   onClose: () => void;
-  onSave: (lead: LeadCreate) => void;
-  initialData?: LeadCreate;
+  onSave: (data: LeadCreate | LeadUpdate) => Promise<void>;
+  lead: LeadRead | null;
+  companies: CompanyRead[];
 }
 
-const LeadModal: React.FC<LeadModalProps> = ({ open, onClose, onSave, initialData }) => {
-  // Providing default values for all fields in LeadCreate
-  const defaultLeadData: LeadCreate = {
-    title: '',
-    description: '',
-    location: '',
-    salary: '',
-    job_function: '',
-    employment_type: '',
-    seniority_level: '',
-    notes: '',
-    url: '',
-    // Ensure all fields from your LeadCreate type are covered here
-  };
+const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Internship', 'Freelance'];
+const SENIORITY_LEVELS = ['Entry', 'Mid', 'Senior', 'Lead', 'Staff', 'Director', 'Executive'];
 
-  const [leadData, setLeadData] = useState<LeadCreate>(defaultLeadData);
-  const [isEdited, setIsEdited] = useState(false);
+const LeadFormDialog: React.FC<LeadFormDialogProps> = ({ open, onClose, onSave, lead, companies }) => {
+  const isEdit = Boolean(lead?.id);
+
+  const [url, setUrl] = useState('');
+  const [title, setTitle] = useState('');
+  const [location, setLocation] = useState('');
+  const [salary, setSalary] = useState('');
+  const [employmentType, setEmploymentType] = useState('');
+  const [jobFunction, setJobFunction] = useState('');
+  const [seniorityLevel, setSeniorityLevel] = useState('');
+  const [educationLevel, setEducationLevel] = useState('');
+  const [hiringManager, setHiringManager] = useState('');
+  const [description, setDescription] = useState('');
+  const [notes, setNotes] = useState('');
+  const [companyIds, setCompanyIds] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (initialData) {
-      setLeadData(initialData);
-      setIsEdited(true);
+    if (!open) return;
+    if (lead) {
+      setUrl(lead.url || '');
+      setTitle(lead.title || '');
+      setLocation(lead.location || '');
+      setSalary(lead.salary || '');
+      setEmploymentType(lead.employment_type || '');
+      setJobFunction(lead.job_function || '');
+      setSeniorityLevel(lead.seniority_level || '');
+      setEducationLevel(lead.education_level || '');
+      setHiringManager(lead.hiring_manager || '');
+      setDescription(lead.description || '');
+      setNotes(lead.notes || '');
+      setCompanyIds(lead.companies?.map((c) => c.id) || []);
     } else {
-      setLeadData(defaultLeadData);
-      setIsEdited(false);
+      setUrl(''); setTitle(''); setLocation(''); setSalary('');
+      setEmploymentType(''); setJobFunction(''); setSeniorityLevel('');
+      setEducationLevel(''); setHiringManager(''); setDescription('');
+      setNotes(''); setCompanyIds([]);
     }
-  }, [initialData, open]);
+  }, [lead, open]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setLeadData({ ...leadData, [name]: value });
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      if (isEdit) {
+        const data: LeadUpdate = {
+          title: title || null,
+          description: description || null,
+          location: location || null,
+          salary: salary || null,
+          job_function: jobFunction || null,
+          employment_type: employmentType || null,
+          seniority_level: seniorityLevel || null,
+          education_level: educationLevel || null,
+          notes: notes || null,
+          hiring_manager: hiringManager || null,
+          company_ids: companyIds,
+        };
+        await onSave(data);
+      } else {
+        const data: LeadCreate = {
+          url,
+          title: title || null,
+          description: description || null,
+          location: location || null,
+          salary: salary || null,
+          job_function: jobFunction || null,
+          employment_type: employmentType || null,
+          seniority_level: seniorityLevel || null,
+          education_level: educationLevel || null,
+          notes: notes || null,
+          hiring_manager: hiringManager || null,
+          company_ids: companyIds.length > 0 ? companyIds : null,
+        };
+        await onSave(data);
+      }
+    } finally {
+      setSaving(false);
+    }
   };
-
-  const handleSave = () => {
-    onSave(leadData);
-    onClose();
-    setLeadData(defaultLeadData);
-  };
-
-  const formatLabel = (key: string) => key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
 
   return (
-    <Dialog open={open} onClose={onClose} aria-labelledby="form-dialog-title">
-      <DialogTitle id="form-dialog-title">{isEdited ? 'Edit Lead' : 'New Lead'}</DialogTitle>
-      <DialogContent>
-        {Object.entries(leadData).map(([key, value]) => (
-          <TextField
-            key={key}
-            margin="dense"
-            name={key}
-            label={formatLabel(key)}
-            type="text"
-            fullWidth
-            value={value}
-            onChange={handleChange}
-            // Add input validation as required
-          />
-        ))}
+    <Dialog
+      open={open}
+      onClose={saving ? undefined : onClose}
+      maxWidth="md"
+      fullWidth
+      aria-labelledby="lead-form-title"
+    >
+      <DialogTitle
+        id="lead-form-title"
+        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}
+      >
+        <Typography variant="h6" component="span" fontWeight={700}>
+          {isEdit ? 'Edit Lead' : 'Add Lead'}
+        </Typography>
+        <IconButton onClick={onClose} size="small" aria-label="Close dialog" disabled={saving}>
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent dividers>
+        <Grid container spacing={2} sx={{ mt: 0 }}>
+          {!isEdit && (
+            <Grid size={12}>
+              <TextField
+                fullWidth label="Job Posting URL" value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://..." required
+                slotProps={{ htmlInput: { 'aria-label': 'Job posting URL' } }}
+              />
+            </Grid>
+          )}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField fullWidth label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField fullWidth label="Location" value={location} onChange={(e) => setLocation(e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField fullWidth label="Salary" value={salary} onChange={(e) => setSalary(e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth>
+              <InputLabel>Employment Type</InputLabel>
+              <Select value={employmentType} label="Employment Type" onChange={(e) => setEmploymentType(e.target.value)}>
+                <MenuItem value="">None</MenuItem>
+                {EMPLOYMENT_TYPES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField fullWidth label="Job Function" value={jobFunction} onChange={(e) => setJobFunction(e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth>
+              <InputLabel>Seniority Level</InputLabel>
+              <Select value={seniorityLevel} label="Seniority Level" onChange={(e) => setSeniorityLevel(e.target.value)}>
+                <MenuItem value="">None</MenuItem>
+                {SENIORITY_LEVELS.map((l) => <MenuItem key={l} value={l}>{l}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField fullWidth label="Education Level" value={educationLevel} onChange={(e) => setEducationLevel(e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField fullWidth label="Hiring Manager" value={hiringManager} onChange={(e) => setHiringManager(e.target.value)} />
+          </Grid>
+          {companies.length > 0 && (
+            <Grid size={12}>
+              <FormControl fullWidth>
+                <InputLabel>Associated Companies</InputLabel>
+                <Select
+                  multiple value={companyIds} label="Associated Companies"
+                  onChange={(e) => setCompanyIds(e.target.value as string[])}
+                  renderValue={(selected) => (
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                      {selected.map((id) => {
+                        const c = companies.find((co) => co.id === id);
+                        return <Chip key={id} label={c?.name || id} size="small" />;
+                      })}
+                    </Stack>
+                  )}
+                >
+                  {companies.map((c) => (
+                    <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          )}
+          <Grid size={12}>
+            <TextField
+              fullWidth label="Description" multiline rows={4}
+              value={description} onChange={(e) => setDescription(e.target.value)}
+            />
+          </Grid>
+          <Grid size={12}>
+            <TextField
+              fullWidth label="Notes (internal)" multiline rows={2}
+              value={notes} onChange={(e) => setNotes(e.target.value)}
+              placeholder="Private notes about this opportunity..."
+            />
+          </Grid>
+        </Grid>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSave} color="primary">Save</Button>
+
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button variant="contained" onClick={handleSave} disabled={saving || (!isEdit && !url.trim())}>
+          {saving ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+        </Button>
       </DialogActions>
     </Dialog>
   );
 };
 
-export default LeadModal;
+export default LeadFormDialog;

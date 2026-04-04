@@ -54,8 +54,19 @@ const createRequestOptions = (token: string | null, method: string, body?: any, 
 const fetchAPI = async (url: string, options: RequestInit) => {
   const response = await fetch(url, options);
   if (!response.ok) {
-    // Custom error handling can be implemented here
-    throw new Error('API request failed');
+    let message = 'API request failed';
+    try {
+      const data = await response.json();
+      if (data?.detail) {
+        message = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+      }
+    } catch {
+      // Keep the default message when the error response is not JSON.
+    }
+    throw new Error(message);
+  }
+  if (response.status === 204 || response.status === 205) {
+    return null;
   }
   return response.json();
 };
@@ -83,7 +94,7 @@ export const updateLead = async (token: string, id: string, lead: LeadUpdate): P
 
 export const deleteLead = async (token: string, id: string): Promise<void> => {
   const requestOptions = createRequestOptions(token, "DELETE");
-  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
+  await fetchAPI(`${BASE_URL}/${id}`, requestOptions);
 };
 
 export const getLeadOrchestrationEvents = async (token: string, id: string): Promise<OrchestrationEventRead[]> => {
@@ -97,7 +108,6 @@ export const seedLeads = async (token: string): Promise<void> => {
 }
 
 export const extractLead = async (token: string, extraction_url: string): Promise<LeadRead> => {
-  // extraction_url is a query parameter that is passed to the backend to extract the lead
   const requestOptions = createRequestOptions(token, "POST");
-  return fetchAPI(`${BASE_URL}/extract?extraction_url=${extraction_url}`, requestOptions);
+  return fetchAPI(`${BASE_URL}/extract?extraction_url=${encodeURIComponent(extraction_url)}`, requestOptions);
 }

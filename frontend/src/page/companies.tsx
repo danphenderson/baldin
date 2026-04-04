@@ -1,9 +1,9 @@
-import React, { useContext, useEffect, useState, useCallback } from 'react';
+import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box, Card, CardContent, Typography, Button, Chip, Stack, TextField,
   useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   Tooltip, Skeleton, Alert, InputAdornment, Divider, Collapse, List, ListItem,
-  ListItemText, ListItemIcon,
+  ListItemText, ListItemIcon, CircularProgress, useMediaQuery,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
@@ -11,44 +11,121 @@ import {
   Search as SearchIcon, AutoAwesome as AIIcon, LocationOn as LocationIcon,
   People as SizeIcon, Category as IndustryIcon, Work as LeadIcon,
   ExpandMore, ExpandLess, OpenInNew as OpenIcon, Refresh as RefreshIcon,
+  WarningAmber as WarningIcon, Schedule as TimeIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import {
   getCompanies, createCompany, updateCompany, deleteCompany, getCompanyLeads, extractCompany,
+  type CompanyRead, type CompanyCreate, type CompanyUpdate,
 } from '../service/companies';
 import { createApplication } from '../service/applications';
+import { components } from '../schema';
+
+type LeadRead = components['schemas']['LeadRead'];
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                           */
+/* ------------------------------------------------------------------ */
+
+/** Relative-time label, e.g. "3 days ago" */
+const timeAgo = (iso: string): string => {
+  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
+};
+
+/** Two-letter monogram from a company name */
+const monogram = (name: string | null | undefined): string => {
+  if (!name) return '??';
+  const words = name.trim().split(/\s+/);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+};
+
+/** Stable colour derived from a string, using theme palette accents */
+const MONOGRAM_HUES = [
+  '#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e',
+  '#3b82f6', '#ec4899', '#14b8a6', '#a855f7', '#0ea5e9',
+];
+const monogramColor = (name: string | null | undefined): string => {
+  const s = name ?? '';
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) hash = s.charCodeAt(i) + ((hash << 5) - hash);
+  return MONOGRAM_HUES[Math.abs(hash) % MONOGRAM_HUES.length];
+};
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                         */
+/* ------------------------------------------------------------------ */
 
 const CompaniesPage: React.FC = () => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { token } = useContext(UserContext);
-  const [companies, setCompanies] = useState<any[]>([]);
+
+  // Data
+  const [companies, setCompanies] = useState<CompanyRead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const successTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Search & filter
   const [search, setSearch] = useState('');
+  const [activeIndustry, setActiveIndustry] = useState<string | null>(null);
+
+  // AI extraction
   const [extractUrl, setExtractUrl] = useState('');
   const [extracting, setExtracting] = useState(false);
 
-  // Dialog state
+  // Create / Edit dialog
   const [editDialog, setEditDialog] = useState(false);
-  const [editItem, setEditItem] = useState<any>(null);
+  const [editItem, setEditItem] = useState<CompanyCreate & { id?: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<CompanyRead | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Expanded card for leads
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [companyLeads, setCompanyLeads] = useState<Record<string, any[]>>({});
+  const [companyLeads, setCompanyLeads] = useState<Record<string, LeadRead[]>>({});
   const [loadingLeads, setLoadingLeads] = useState<string | null>(null);
+
+  /* -- Feedback helpers -------------------------------------------- */
+
+  const showSuccess = useCallback((msg: string) => {
+    clearTimeout(successTimer.current);
+    setSuccess(msg);
+    successTimer.current = setTimeout(() => setSuccess(''), 4000);
+  }, []);
+
+  useEffect(() => () => clearTimeout(successTimer.current), []);
+
+  /* -- Data loading ------------------------------------------------ */
 
   const refresh = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     try {
       const data = await getCompanies(token);
-      setCompanies(data || []);
-    } catch (e: any) { setError(e.message); }
+      setCompanies(data ?? []);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to load companies');
+    }
     setLoading(false);
   }, [token]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  /* -- AI extraction ---------------------------------------------- */
 
   const handleExtract = async () => {
     if (!token || !extractUrl.trim()) return;
@@ -57,243 +134,637 @@ const CompaniesPage: React.FC = () => {
     try {
       await extractCompany(token, extractUrl);
       setExtractUrl('');
-      setSuccess('Company extracted via AI!');
-      setTimeout(() => setSuccess(''), 3000);
+      showSuccess('Company extracted via AI — added to your list.');
       refresh();
-    } catch (e: any) { setError(e.message); }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Extraction failed');
+    }
     setExtracting(false);
+  };
+
+  /* -- Create / Update -------------------------------------------- */
+
+  const openCreateDialog = () => {
+    setEditItem({ name: '', industry: '', size: '', location: '', description: '' });
+    setEditDialog(true);
+  };
+
+  const openEditDialog = (company: CompanyRead) => {
+    setEditItem({ ...company });
+    setEditDialog(true);
+  };
+
+  const closeEditDialog = () => {
+    if (saving) return;
+    setEditDialog(false);
+    setEditItem(null);
   };
 
   const handleSave = async () => {
     if (!token || !editItem) return;
+    setSaving(true);
     try {
       if (editItem.id) {
-        await updateCompany(token, editItem.id, editItem);
+        const payload: CompanyUpdate = {
+          name: editItem.name,
+          industry: editItem.industry,
+          size: editItem.size,
+          location: editItem.location,
+          description: editItem.description,
+        };
+        await updateCompany(token, editItem.id, payload);
+        showSuccess(`${editItem.name || 'Company'} updated.`);
       } else {
-        await createCompany(token, editItem);
+        const payload: CompanyCreate = {
+          name: editItem.name,
+          industry: editItem.industry,
+          size: editItem.size,
+          location: editItem.location,
+          description: editItem.description,
+        };
+        await createCompany(token, payload);
+        showSuccess(`${editItem.name || 'Company'} created.`);
       }
       setEditDialog(false);
       setEditItem(null);
       refresh();
-    } catch (e: any) { setError(e.message); }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    }
+    setSaving(false);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!token) return;
+  /* -- Delete ----------------------------------------------------- */
+
+  const confirmDelete = (company: CompanyRead) => setDeleteTarget(company);
+
+  const handleDelete = async () => {
+    if (!token || !deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteCompany(token, id);
+      await deleteCompany(token, deleteTarget.id);
+      showSuccess(`${deleteTarget.name || 'Company'} deleted.`);
+      setDeleteTarget(null);
       refresh();
-    } catch (e: any) { setError(e.message); }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Delete failed');
+    }
+    setDeleting(false);
   };
+
+  /* -- Leads expansion -------------------------------------------- */
 
   const handleToggleLeads = async (companyId: string) => {
-    if (expandedId === companyId) {
-      setExpandedId(null);
-      return;
-    }
+    if (expandedId === companyId) { setExpandedId(null); return; }
     setExpandedId(companyId);
     if (!companyLeads[companyId] && token) {
       setLoadingLeads(companyId);
       try {
         const leads = await getCompanyLeads(token, companyId);
         setCompanyLeads(prev => ({ ...prev, [companyId]: leads }));
-      } catch { setCompanyLeads(prev => ({ ...prev, [companyId]: [] })); }
+      } catch {
+        setCompanyLeads(prev => ({ ...prev, [companyId]: [] }));
+      }
       setLoadingLeads(null);
     }
   };
 
-  const handleQuickApply = async (lead: any) => {
+  const handleQuickApply = async (lead: LeadRead) => {
     if (!token) return;
     try {
       await createApplication(token, { lead_id: lead.id, status: 'applied' });
-      setSuccess(`Applied to ${lead.title}!`);
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (e: any) { setError(e.message); }
+      showSuccess(`Applied to ${lead.title ?? 'position'}!`);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Application failed');
+    }
   };
 
-  const filtered = companies.filter(c =>
-    !search || [c.name, c.industry, c.location].some(f => f?.toLowerCase().includes(search.toLowerCase()))
-  );
+  /* -- Derived data ----------------------------------------------- */
 
-  const industryStats = companies.reduce((acc: Record<string, number>, c) => {
+  const industryStats = companies.reduce<Record<string, number>>((acc, c) => {
     const ind = c.industry || 'Unknown';
     acc[ind] = (acc[ind] || 0) + 1;
     return acc;
   }, {});
 
-  return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
-      {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert>}
-      {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert>}
+  const filtered = companies.filter(c => {
+    const matchesSearch = !search
+      || [c.name, c.industry, c.location, c.description]
+        .some(f => f?.toLowerCase().includes(search.toLowerCase()));
+    const matchesIndustry = !activeIndustry
+      || (c.industry || 'Unknown') === activeIndustry;
+    return matchesSearch && matchesIndustry;
+  });
 
-      {/* AI Extraction Bar */}
-      <Card sx={{ mb: 3, background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)}, ${alpha(theme.palette.secondary.main, 0.08)})` }}>
-        <CardContent sx={{ py: 2 }}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <AIIcon sx={{ color: theme.palette.primary.main }} />
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>AI Extract Company</Typography>
+  /* ================================================================ */
+  /*  Render                                                          */
+  /* ================================================================ */
+
+  return (
+    <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 1400, mx: 'auto' }}>
+      {/* Feedback banners */}
+      <Collapse in={!!error}><Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert></Collapse>
+      <Collapse in={!!success}><Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert></Collapse>
+
+      {/* -------- AI Extraction Bar -------------------------------- */}
+      <Card
+        sx={{
+          mb: 3,
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.07)}, ${alpha(theme.palette.secondary.main, 0.07)})`,
+          border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+        }}
+      >
+        <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1.5}
+            alignItems={{ sm: 'center' }}
+          >
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+              <AIIcon sx={{ color: theme.palette.primary.main, fontSize: 20 }} />
+              <Typography
+                variant="subtitle2"
+                sx={{ color: theme.palette.primary.main, whiteSpace: 'nowrap' }}
+              >
+                AI Extract
+              </Typography>
+            </Stack>
+
             <TextField
-              fullWidth size="small" placeholder="Paste a company page URL to extract details..."
-              value={extractUrl} onChange={e => setExtractUrl(e.target.value)}
+              fullWidth
+              size="small"
+              placeholder="Paste a company page URL…"
+              aria-label="Company page URL for AI extraction"
+              value={extractUrl}
+              onChange={e => setExtractUrl(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleExtract()}
+              slotProps={{
+                input: {
+                  sx: { fontSize: '0.875rem' },
+                },
+              }}
             />
+
             <Button
-              variant="contained" onClick={handleExtract} disabled={extracting || !extractUrl.trim()}
-              sx={{ px: 3, whiteSpace: 'nowrap', background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})` }}
+              variant="contained"
+              onClick={handleExtract}
+              disabled={extracting || !extractUrl.trim()}
+              startIcon={extracting ? <CircularProgress size={16} color="inherit" /> : undefined}
+              sx={{
+                px: 3,
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              }}
             >
-              {extracting ? 'Extracting...' : 'Extract'}
+              {extracting ? 'Extracting…' : 'Extract'}
             </Button>
           </Stack>
         </CardContent>
       </Card>
 
-      {/* Header + Stats */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      {/* -------- Page header -------------------------------------- */}
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        spacing={1.5}
+        sx={{ mb: 3 }}
+      >
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800 }}>Companies</Typography>
-          <Typography variant="body2" color="text.secondary">{companies.length} companies tracked</Typography>
+          <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+            Companies
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+            {companies.length} {companies.length === 1 ? 'company' : 'companies'} tracked
+          </Typography>
         </Box>
+
         <Stack direction="row" spacing={1}>
-          <IconButton onClick={refresh} sx={{ border: `1px solid ${theme.palette.divider}` }}><RefreshIcon /></IconButton>
-          <Button
-            variant="contained" startIcon={<AddIcon />}
-            onClick={() => { setEditItem({ name: '', industry: '', size: '', location: '', description: '' }); setEditDialog(true); }}
-            sx={{ background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})` }}
-          >
+          <Tooltip title="Refresh">
+            <IconButton
+              onClick={refresh}
+              aria-label="Refresh companies"
+              sx={{ border: `1px solid ${theme.palette.divider}` }}
+            >
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
             Add Company
           </Button>
         </Stack>
       </Stack>
 
-      {/* Industry breakdown chips */}
-      {Object.keys(industryStats).length > 0 && (
-        <Stack direction="row" spacing={1} sx={{ mb: 3, flexWrap: 'wrap', gap: 1 }}>
-          {Object.entries(industryStats).map(([ind, count]) => (
-            <Chip key={ind} label={`${ind} (${count})`} size="small" variant="outlined"
-              sx={{ borderColor: alpha(theme.palette.primary.main, 0.3), color: theme.palette.text.secondary }} />
+      {/* -------- Industry filter chips ---------------------------- */}
+      {Object.keys(industryStats).length > 1 && (
+        <Stack direction="row" sx={{ mb: 2.5, flexWrap: 'wrap', gap: 0.75 }}>
+          <Chip
+            label="All"
+            size="small"
+            variant={activeIndustry === null ? 'filled' : 'outlined'}
+            color={activeIndustry === null ? 'primary' : 'default'}
+            onClick={() => setActiveIndustry(null)}
+            sx={{ fontWeight: 600 }}
+          />
+          {Object.entries(industryStats)
+            .sort(([, a], [, b]) => b - a)
+            .map(([ind, count]) => (
+            <Chip
+              key={ind}
+              label={`${ind} (${count})`}
+              size="small"
+              variant={activeIndustry === ind ? 'filled' : 'outlined'}
+              color={activeIndustry === ind ? 'primary' : 'default'}
+              onClick={() => setActiveIndustry(prev => prev === ind ? null : ind)}
+              sx={{
+                fontWeight: activeIndustry === ind ? 600 : 400,
+                borderColor: alpha(theme.palette.primary.main, 0.25),
+              }}
+            />
           ))}
         </Stack>
       )}
 
-      {/* Search */}
+      {/* -------- Search ------------------------------------------- */}
       <TextField
-        fullWidth size="small" placeholder="Search companies..." value={search}
-        onChange={e => setSearch(e.target.value)} sx={{ mb: 3 }}
-        InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+        fullWidth
+        size="small"
+        placeholder="Search by name, industry, location, or description…"
+        aria-label="Search companies"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        sx={{ mb: 3 }}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" sx={{ color: theme.palette.text.secondary }} />
+              </InputAdornment>
+            ),
+          },
+        }}
       />
 
-      {/* Company Cards */}
+      {/* -------- Content area ------------------------------------- */}
       {loading ? (
-        <Grid container spacing={2}>{[1, 2, 3].map(i => <Grid size={{ xs: 12, md: 6 }} key={i}><Skeleton variant="rounded" height={200} /></Grid>)}</Grid>
-      ) : filtered.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-          <CompanyIcon sx={{ fontSize: 64, color: alpha(theme.palette.text.primary, 0.15), mb: 2 }} />
-          <Typography color="text.secondary">No companies yet. Extract one from a URL or add manually.</Typography>
-        </Box>
-      ) : (
         <Grid container spacing={2}>
-          {filtered.map(company => (
-            <Grid size={{ xs: 12, md: 6 }} key={company.id}>
-              <Card sx={{ transition: 'all 0.2s', '&:hover': { transform: 'translateY(-2px)', boxShadow: `0 8px 24px ${alpha('#000', 0.15)}` } }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>{company.name || 'Unnamed Company'}</Typography>
-                      <Stack direction="row" spacing={2} sx={{ mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
-                        {company.industry && (
-                          <Chip icon={<IndustryIcon sx={{ fontSize: 14 }} />} label={company.industry} size="small" variant="outlined" />
-                        )}
-                        {company.size && (
-                          <Chip icon={<SizeIcon sx={{ fontSize: 14 }} />} label={company.size} size="small" variant="outlined" />
-                        )}
-                        {company.location && (
-                          <Chip icon={<LocationIcon sx={{ fontSize: 14 }} />} label={company.location} size="small" variant="outlined" />
-                        )}
-                      </Stack>
-                      {company.description && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                          {company.description}
-                        </Typography>
-                      )}
-                    </Box>
-                    <Stack direction="row" spacing={0.5}>
-                      <Tooltip title="Edit">
-                        <IconButton size="small" onClick={() => { setEditItem({ ...company }); setEditDialog(true); }}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton size="small" color="error" onClick={() => handleDelete(company.id)}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
-                  </Stack>
-
-                  {/* Expandable Leads Section */}
-                  <Divider sx={{ my: 1.5 }} />
-                  <Button
-                    size="small" startIcon={<LeadIcon />}
-                    endIcon={expandedId === company.id ? <ExpandLess /> : <ExpandMore />}
-                    onClick={() => handleToggleLeads(company.id)}
-                    sx={{ textTransform: 'none', color: theme.palette.text.secondary }}
-                  >
-                    View Job Leads
-                  </Button>
-                  <Collapse in={expandedId === company.id}>
-                    {loadingLeads === company.id ? (
-                      <Skeleton variant="text" width="100%" />
-                    ) : (companyLeads[company.id] || []).length === 0 ? (
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1, pl: 1 }}>No leads found for this company.</Typography>
-                    ) : (
-                      <List dense sx={{ mt: 0.5 }}>
-                        {(companyLeads[company.id] || []).map((lead: any) => (
-                          <ListItem key={lead.id} sx={{ borderRadius: 1, '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
-                            secondaryAction={
-                              <Stack direction="row" spacing={0.5}>
-                                {lead.url && (
-                                  <Tooltip title="Open posting">
-                                    <IconButton size="small" href={lead.url} target="_blank" rel="noopener"><OpenIcon fontSize="small" /></IconButton>
-                                  </Tooltip>
-                                )}
-                                <Tooltip title="Quick apply">
-                                  <Button size="small" variant="outlined" onClick={() => handleQuickApply(lead)} sx={{ minWidth: 0, px: 1, fontSize: '0.7rem' }}>Apply</Button>
-                                </Tooltip>
-                              </Stack>
-                            }
-                          >
-                            <ListItemIcon sx={{ minWidth: 32 }}><LeadIcon fontSize="small" color="primary" /></ListItemIcon>
-                            <ListItemText
-                              primary={lead.title} secondary={[lead.location, lead.employment_type].filter(Boolean).join(' · ')}
-                              primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }}
-                            />
-                          </ListItem>
-                        ))}
-                      </List>
-                    )}
-                  </Collapse>
-                </CardContent>
-              </Card>
+          {[1, 2, 3, 4].map(i => (
+            <Grid size={{ xs: 12, md: 6 }} key={i}>
+              <Skeleton variant="rounded" height={180} sx={{ borderRadius: 3 }} />
             </Grid>
           ))}
         </Grid>
+      ) : filtered.length === 0 ? (
+        /* -- Empty state ------------------------------------------- */
+        <Box sx={{ textAlign: 'center', py: 10 }}>
+          <CompanyIcon
+            sx={{
+              fontSize: 72,
+              color: alpha(theme.palette.text.primary, 0.08),
+              mb: 2,
+            }}
+          />
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+            {companies.length === 0
+              ? 'No companies yet'
+              : 'No matches'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 360, mx: 'auto' }}>
+            {companies.length === 0
+              ? 'Extract a company from a URL using AI or add one manually to start tracking employers.'
+              : 'Try a different search term or clear your filters.'}
+          </Typography>
+          {companies.length === 0 && (
+            <Button variant="outlined" startIcon={<AddIcon />} onClick={openCreateDialog}>
+              Add your first company
+            </Button>
+          )}
+        </Box>
+      ) : (
+        /* -- Company card grid ------------------------------------ */
+        <Grid container spacing={2}>
+          {filtered.map(company => {
+            const mc = monogramColor(company.name);
+            const isExpanded = expandedId === company.id;
+            const leads = companyLeads[company.id] ?? [];
+            const leadsLoading = loadingLeads === company.id;
+
+            return (
+              <Grid size={{ xs: 12, md: 6 }} key={company.id}>
+                <Card
+                  sx={{
+                    transition: 'box-shadow 0.2s, transform 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 8px 32px ${alpha(mc, 0.12)}`,
+                    },
+                  }}
+                >
+                  <CardContent sx={{ p: { xs: 2.5, sm: 3 }, '&:last-child': { pb: 2.5 } }}>
+                    <Stack direction="row" spacing={2} alignItems="flex-start">
+                      {/* Monogram avatar */}
+                      <Box
+                        sx={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: '12px',
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: `linear-gradient(135deg, ${alpha(mc, 0.15)}, ${alpha(mc, 0.05)})`,
+                          border: `1px solid ${alpha(mc, 0.2)}`,
+                          color: mc,
+                          fontFamily: '"Space Grotesk", sans-serif',
+                          fontWeight: 700,
+                          fontSize: '0.95rem',
+                          letterSpacing: '0.04em',
+                          userSelect: 'none',
+                        }}
+                        aria-hidden
+                      >
+                        {monogram(company.name)}
+                      </Box>
+
+                      {/* Details */}
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+                          <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word' }}>
+                            {company.name || 'Unnamed Company'}
+                          </Typography>
+
+                          <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0, ml: 1 }}>
+                            <Tooltip title="Edit company">
+                              <IconButton
+                                size="small"
+                                aria-label={`Edit ${company.name ?? 'company'}`}
+                                onClick={() => openEditDialog(company)}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete company">
+                              <IconButton
+                                size="small"
+                                aria-label={`Delete ${company.name ?? 'company'}`}
+                                onClick={() => confirmDelete(company)}
+                                sx={{
+                                  color: theme.palette.text.secondary,
+                                  '&:hover': { color: theme.palette.error.main },
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        </Stack>
+
+                        {/* Metadata chips */}
+                        <Stack direction="row" sx={{ mt: 0.75, flexWrap: 'wrap', gap: 0.5 }}>
+                          {company.industry && (
+                            <Chip
+                              icon={<IndustryIcon sx={{ fontSize: 14 }} />}
+                              label={company.industry}
+                              size="small"
+                              variant="outlined"
+                            />
+                          )}
+                          {company.size && (
+                            <Chip
+                              icon={<SizeIcon sx={{ fontSize: 14 }} />}
+                              label={company.size}
+                              size="small"
+                              variant="outlined"
+                            />
+                          )}
+                          {company.location && (
+                            <Chip
+                              icon={<LocationIcon sx={{ fontSize: 14 }} />}
+                              label={company.location}
+                              size="small"
+                              variant="outlined"
+                            />
+                          )}
+                        </Stack>
+
+                        {/* Description */}
+                        {company.description && (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                              mt: 1,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            {company.description}
+                          </Typography>
+                        )}
+
+                        {/* Timestamp */}
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            mt: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            color: theme.palette.text.secondary,
+                            opacity: 0.7,
+                          }}
+                        >
+                          <TimeIcon sx={{ fontSize: 13 }} />
+                          Added {timeAgo(company.created_at)}
+                        </Typography>
+                      </Box>
+                    </Stack>
+
+                    {/* Expandable leads section */}
+                    <Divider sx={{ my: 1.5 }} />
+                    <Button
+                      size="small"
+                      startIcon={<LeadIcon />}
+                      endIcon={isExpanded ? <ExpandLess /> : <ExpandMore />}
+                      onClick={() => handleToggleLeads(company.id)}
+                      aria-expanded={isExpanded}
+                      sx={{ textTransform: 'none', color: theme.palette.text.secondary, fontWeight: 500 }}
+                    >
+                      Job Leads
+                    </Button>
+
+                    <Collapse in={isExpanded} unmountOnExit>
+                      {leadsLoading ? (
+                        <Stack spacing={1} sx={{ mt: 1, pl: 1 }}>
+                          <Skeleton variant="text" width="70%" />
+                          <Skeleton variant="text" width="55%" />
+                        </Stack>
+                      ) : leads.length === 0 ? (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mt: 1, pl: 1, fontStyle: 'italic' }}
+                        >
+                          No leads found for this company.
+                        </Typography>
+                      ) : (
+                        <List dense disablePadding sx={{ mt: 0.5 }}>
+                          {leads.map(lead => (
+                            <ListItem
+                              key={lead.id}
+                              sx={{
+                                borderRadius: 1.5,
+                                mb: 0.25,
+                                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) },
+                              }}
+                              secondaryAction={
+                                <Stack direction="row" spacing={0.5} alignItems="center">
+                                  {lead.url && (
+                                    <Tooltip title="Open job posting">
+                                      <IconButton
+                                        size="small"
+                                        component="a"
+                                        href={lead.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        aria-label={`Open posting for ${lead.title ?? 'job'}`}
+                                      >
+                                        <OpenIcon fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
+                                  )}
+                                  <Tooltip title="Quick apply">
+                                    <Button
+                                      size="small"
+                                      variant="outlined"
+                                      onClick={() => handleQuickApply(lead)}
+                                      sx={{ minWidth: 0, px: 1, fontSize: '0.7rem' }}
+                                    >
+                                      Apply
+                                    </Button>
+                                  </Tooltip>
+                                </Stack>
+                              }
+                            >
+                              <ListItemIcon sx={{ minWidth: 32 }}>
+                                <LeadIcon fontSize="small" color="primary" />
+                              </ListItemIcon>
+                              <ListItemText
+                                primary={lead.title ?? 'Untitled Position'}
+                                secondary={[lead.location, lead.employment_type].filter(Boolean).join(' · ')}
+                                primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }}
+                              />
+                            </ListItem>
+                          ))}
+                        </List>
+                      )}
+                    </Collapse>
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
       )}
 
-      {/* Edit / Create Dialog */}
-      <Dialog open={editDialog} onClose={() => setEditDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editItem?.id ? 'Edit Company' : 'Add Company'}</DialogTitle>
+      {/* -------- Create / Edit Dialog ----------------------------- */}
+      <Dialog
+        open={editDialog}
+        onClose={closeEditDialog}
+        maxWidth="sm"
+        fullWidth
+        fullScreen={isMobile}
+        aria-labelledby="company-dialog-title"
+      >
+        <DialogTitle id="company-dialog-title" sx={{ fontWeight: 700 }}>
+          {editItem?.id ? 'Edit Company' : 'New Company'}
+        </DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField fullWidth label="Company Name" value={editItem?.name || ''} onChange={e => setEditItem({ ...editItem, name: e.target.value })} />
-            <TextField fullWidth label="Industry" value={editItem?.industry || ''} onChange={e => setEditItem({ ...editItem, industry: e.target.value })} />
-            <TextField fullWidth label="Size" value={editItem?.size || ''} onChange={e => setEditItem({ ...editItem, size: e.target.value })} placeholder="e.g. 50-200, 1000+" />
-            <TextField fullWidth label="Location" value={editItem?.location || ''} onChange={e => setEditItem({ ...editItem, location: e.target.value })} />
-            <TextField fullWidth label="Description" value={editItem?.description || ''} onChange={e => setEditItem({ ...editItem, description: e.target.value })} multiline rows={3} />
+          <Stack spacing={2.5} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Company Name"
+              value={editItem?.name ?? ''}
+              onChange={e => setEditItem(prev => prev ? { ...prev, name: e.target.value } : prev)}
+              autoFocus
+            />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                fullWidth
+                label="Industry"
+                value={editItem?.industry ?? ''}
+                onChange={e => setEditItem(prev => prev ? { ...prev, industry: e.target.value } : prev)}
+              />
+              <TextField
+                fullWidth
+                label="Size"
+                value={editItem?.size ?? ''}
+                onChange={e => setEditItem(prev => prev ? { ...prev, size: e.target.value } : prev)}
+                placeholder="e.g. 50-200, 1000+"
+              />
+            </Stack>
+            <TextField
+              fullWidth
+              label="Location"
+              value={editItem?.location ?? ''}
+              onChange={e => setEditItem(prev => prev ? { ...prev, location: e.target.value } : prev)}
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              value={editItem?.description ?? ''}
+              onChange={e => setEditItem(prev => prev ? { ...prev, description: e.target.value } : prev)}
+              multiline
+              rows={3}
+            />
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave}>{editItem?.id ? 'Update' : 'Create'}</Button>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={closeEditDialog} disabled={saving}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : undefined}
+          >
+            {saving ? 'Saving…' : editItem?.id ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* -------- Delete Confirmation Dialog ----------------------- */}
+      <Dialog
+        open={!!deleteTarget}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        maxWidth="xs"
+        fullWidth
+        aria-labelledby="delete-dialog-title"
+      >
+        <DialogTitle id="delete-dialog-title" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700 }}>
+          <WarningIcon color="error" />
+          Delete Company
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            Are you sure you want to delete <strong>{deleteTarget?.name || 'this company'}</strong>?
+            This action cannot be undone and will remove all associated data.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDelete}
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
+          >
+            {deleting ? 'Deleting…' : 'Delete'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

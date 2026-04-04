@@ -1,356 +1,686 @@
-import React, { useContext, useEffect, useState, useCallback } from 'react';
+import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box, Card, CardContent, Typography, Button, Chip, TextField, Stack,
-  useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  InputAdornment, Select, MenuItem, FormControl, InputLabel, Tooltip, Skeleton,
-  Alert, Collapse, Divider,
+  useTheme, alpha, IconButton, InputAdornment, Select, MenuItem,
+  FormControl, InputLabel, Tooltip, Skeleton, Collapse, Divider,
+  Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions,
+  Pagination as MuiPagination, LinearProgress,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
   Bolt as BoltIcon, Search as SearchIcon, Delete as DeleteIcon,
-  Edit as EditIcon, OpenInNew as OpenIcon, Business as CompanyIcon, LocationOn as LocationIcon,
-  Work as WorkIcon, Add as AddIcon, ExpandMore, ExpandLess, Refresh as RefreshIcon,
-  School as EducationIcon, TrendingUp as SeniorityIcon, Notes as NotesIcon,
-  Person as ManagerIcon, AttachMoney as SalaryIcon, Category as FunctionIcon,
+  Edit as EditIcon, OpenInNew as OpenIcon, Business as CompanyIcon,
+  LocationOn as LocationIcon, Work as WorkIcon, Add as AddIcon,
+  ExpandMore, ExpandLess, Refresh as RefreshIcon,
+  TrendingUp as SeniorityIcon, AttachMoney as SalaryIcon,
+  AccessTime as TimeIcon, Person as ManagerIcon,
+  School as EducationIcon, Category as FunctionIcon,
+  Notes as NotesIcon, Warning as WarningIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
-import { getLeads, createLead, updateLead, deleteLead, extractLead } from '../service/leads';
+import {
+  getLeads, createLead, updateLead, deleteLead, extractLead,
+  type LeadRead, type LeadCreate, type LeadUpdate,
+} from '../service/leads';
 import { createApplication } from '../service/applications';
-import { getCompanies } from '../service/companies';
+import { getCompanies, type CompanyRead } from '../service/companies';
+import LeadFormDialog from '../component/lead-modal';
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function timeAgo(dateStr: string): string {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
+}
+
+function isValidUrl(str: string): boolean {
+  try {
+    const u = new URL(str);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+const PAGE_SIZE = 12;
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
 
 const LeadsPage: React.FC = () => {
   const theme = useTheme();
   const { token } = useContext(UserContext);
-  const [leads, setLeads] = useState<any[]>([]);
+
+  // Data
+  const [leads, setLeads] = useState<LeadRead[]>([]);
+  const [companies, setCompanies] = useState<CompanyRead[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Search / filter / pagination (client-side)
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [page, setPage] = useState(1);
+
+  // AI Extraction
   const [extractUrl, setExtractUrl] = useState('');
   const [extracting, setExtracting] = useState(false);
-  const [editLead, setEditLead] = useState<any>(null);
-  const [editDialog, setEditDialog] = useState(false);
+
+  // Card expansion
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [companies, setCompanies] = useState<any[]>([]);
+
+  // Form dialog (create / edit)
+  const [formOpen, setFormOpen] = useState(false);
+  const [formLead, setFormLead] = useState<LeadRead | null>(null);
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<LeadRead | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Quick-apply
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+
+  // Feedback
+  const [snack, setSnack] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false, message: '', severity: 'success',
+  });
+
+  const notify = useCallback((message: string, severity: 'success' | 'error' = 'success') => {
+    setSnack({ open: true, message, severity });
+  }, []);
+
+  /* ---- Data fetching ---- */
 
   const refresh = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await getLeads(token, { page: 1, page_size: 200, request_count: false });
-      setLeads(res.leads || res || []);
-      const co = await getCompanies(token);
-      setCompanies(co || []);
-    } catch (e: any) { setError(e.message); }
+      const [res, co] = await Promise.all([
+        getLeads(token, { page: 1, page_size: 500, request_count: false }),
+        getCompanies(token),
+      ]);
+      setLeads(res.leads ?? []);
+      setCompanies(co ?? []);
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Failed to load leads', 'error');
+    }
     setLoading(false);
-  }, [token]);
+  }, [token, notify]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  /* ---- Filtering + pagination ---- */
+
+  const filtered = useMemo(() => {
+    return leads.filter((lead) => {
+      const q = search.toLowerCase();
+      const matchesSearch = !q || [lead.title, lead.description, lead.location, lead.companies?.[0]?.name]
+        .some((f) => f?.toLowerCase().includes(q));
+      const matchesFilter =
+        filter === 'all' ||
+        (filter === 'remote' && lead.location?.toLowerCase().includes('remote')) ||
+        (filter === 'fulltime' && lead.employment_type?.toLowerCase().includes('full'));
+      return matchesSearch && matchesFilter;
+    });
+  }, [leads, search, filter]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // Reset to page 1 when search/filter changes
+  useEffect(() => { setPage(1); }, [search, filter]);
+
+  /* ---- Actions ---- */
+
   const handleExtract = async () => {
     if (!token || !extractUrl.trim()) return;
+    if (!isValidUrl(extractUrl.trim())) {
+      notify('Please enter a valid URL starting with http:// or https://', 'error');
+      return;
+    }
     setExtracting(true);
-    setError('');
     try {
       await extractLead(token, extractUrl.trim());
       setExtractUrl('');
+      notify('Lead extracted successfully');
       refresh();
-    } catch (e: any) { setError(e.message || 'Extraction failed'); }
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Extraction failed', 'error');
+    }
     setExtracting(false);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!token) return;
-    try { await deleteLead(token, id); refresh(); }
-    catch (e: any) { setError(e.message); }
-  };
-
-  const handleApply = async (leadId: string) => {
-    if (!token) return;
+  const handleDelete = async () => {
+    if (!token || !deleteTarget) return;
+    setDeleting(true);
     try {
-      await createApplication(token, { lead_id: leadId, status: 'applied' });
-      setSuccess('Application created!');
-      setTimeout(() => setSuccess(''), 3000);
-    }
-    catch (e: any) { setError(e.message); }
-  };
-
-  const handleSaveEdit = async () => {
-    if (!token || !editLead) return;
-    try {
-      if (editLead.id) {
-        await updateLead(token, editLead.id, editLead);
-      } else {
-        await createLead(token, editLead);
-      }
-      setEditDialog(false);
-      setEditLead(null);
+      await deleteLead(token, deleteTarget.id);
+      setDeleteTarget(null);
+      notify('Lead deleted');
       refresh();
-    } catch (e: any) { setError(e.message); }
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Delete failed', 'error');
+    }
+    setDeleting(false);
   };
 
-  const filteredLeads = leads.filter((lead: any) => {
-    const matchesSearch = !search || [lead.title, lead.description, lead.location, lead.companies?.[0]?.name]
-      .some(f => f?.toLowerCase().includes(search.toLowerCase()));
-    const matchesFilter = filter === 'all' ||
-      (filter === 'remote' && lead.location?.toLowerCase().includes('remote')) ||
-      (filter === 'fulltime' && lead.employment_type?.toLowerCase().includes('full'));
-    return matchesSearch && matchesFilter;
-  });
+  const handleSaveForm = async (data: LeadCreate | LeadUpdate) => {
+    if (!token) return;
+    try {
+      if (formLead?.id) {
+        await updateLead(token, formLead.id, data as LeadUpdate);
+        notify('Lead updated');
+      } else {
+        await createLead(token, data as LeadCreate);
+        notify('Lead created');
+      }
+      setFormOpen(false);
+      setFormLead(null);
+      await refresh();
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Failed to save lead', 'error');
+    }
+  };
+
+  const handleApply = async (lead: LeadRead) => {
+    if (!token) return;
+    setApplyingId(lead.id);
+    try {
+      await createApplication(token, { lead_id: lead.id, status: 'applied' });
+      notify(`Application created for "${lead.title || 'Untitled'}"`);
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Failed to create application', 'error');
+    }
+    setApplyingId(null);
+  };
+
+  /* ---- Render helpers ---- */
+
+  const gradientBg = `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`;
+
+  const renderMetaChip = (
+    icon: React.ReactElement,
+    label: string | null | undefined,
+    color?: string,
+  ) => {
+    if (!label) return null;
+    return (
+      <Chip
+        icon={icon}
+        label={label}
+        size="small"
+        variant="outlined"
+        sx={{
+          borderColor: color ? alpha(color, 0.35) : undefined,
+          color: color || 'text.secondary',
+          '& .MuiChip-icon': { color: color || 'text.secondary' },
+        }}
+      />
+    );
+  };
+
+  /* ================================================================ */
+  /*  JSX                                                              */
+  /* ================================================================ */
 
   return (
     <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      {/* ── Header ── */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, flexWrap: 'wrap', gap: 1 }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 800 }}>Job Leads</Typography>
-          <Typography variant="body2" color="text.secondary">{leads.length} leads tracked</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+            {loading ? 'Loading...' : `${filtered.length} lead${filtered.length !== 1 ? 's' : ''} ${search || filter !== 'all' ? 'matched' : 'tracked'}`}
+          </Typography>
         </Box>
-        <Stack direction="row" spacing={1}>
-          <Tooltip title="Refresh"><IconButton onClick={refresh} sx={{ border: `1px solid ${theme.palette.divider}` }}><RefreshIcon /></IconButton></Tooltip>
-          <Button variant="outlined" startIcon={<AddIcon />} onClick={() => { setEditLead({ url: '', title: '', description: '' }); setEditDialog(true); }}>
-            Manual Add
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Tooltip title="Refresh leads">
+            <IconButton
+              onClick={refresh}
+              aria-label="Refresh leads"
+              sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 2.5 }}
+            >
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={() => { setFormLead(null); setFormOpen(true); }}
+          >
+            Add Lead
           </Button>
         </Stack>
       </Box>
 
-      {/* AI Extraction Bar */}
-      <Card sx={{ mb: 3, background: theme.palette.mode === 'dark' ? `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.15)}, ${alpha(theme.palette.secondary.dark, 0.1)})` : undefined }}>
-        <CardContent sx={{ p: 3 }}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <BoltIcon color="primary" />
-            <Typography variant="subtitle1" fontWeight={600} sx={{ whiteSpace: 'nowrap' }}>AI Extract</Typography>
+      {/* ── AI Extraction Bar ── */}
+      <Card
+        sx={{
+          mb: 3,
+          position: 'relative',
+          overflow: 'hidden',
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.18)}, ${alpha(theme.palette.secondary.dark, 0.10)})`
+            : `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.08)}, ${alpha(theme.palette.secondary.light, 0.05)})`,
+          borderLeft: `3px solid ${theme.palette.primary.main}`,
+        }}
+      >
+        {extracting && <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0 }} />}
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+              <BoltIcon sx={{ color: theme.palette.primary.main }} />
+              <Typography variant="subtitle1" fontWeight={600} sx={{ whiteSpace: 'nowrap' }}>
+                AI Extract
+              </Typography>
+            </Stack>
             <TextField
-              fullWidth size="small" placeholder="Paste a job posting URL to auto-extract..."
-              value={extractUrl} onChange={(e) => setExtractUrl(e.target.value)}
+              fullWidth
+              size="small"
+              placeholder="Paste a job posting URL to auto-extract lead details..."
+              value={extractUrl}
+              onChange={(e) => setExtractUrl(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleExtract()}
-              InputProps={{
-                startAdornment: <InputAdornment position="start"><OpenIcon sx={{ fontSize: 18, color: 'text.secondary' }} /></InputAdornment>,
+              disabled={extracting}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <OpenIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                    </InputAdornment>
+                  ),
+                  'aria-label': 'Job posting URL for AI extraction',
+                },
               }}
             />
-            <Button variant="contained" onClick={handleExtract} disabled={!extractUrl.trim() || extracting}
-              sx={{ whiteSpace: 'nowrap', background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})` }}>
+            <Button
+              variant="contained"
+              onClick={handleExtract}
+              disabled={!extractUrl.trim() || extracting}
+              sx={{ whiteSpace: 'nowrap', minWidth: 110, background: gradientBg }}
+            >
               {extracting ? 'Extracting...' : 'Extract'}
             </Button>
           </Stack>
         </CardContent>
       </Card>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
-
-      {/* Search and Filter */}
-      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+      {/* ── Search, Filter, Pagination ── */}
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        sx={{ mb: 3 }}
+        alignItems={{ sm: 'center' }}
+      >
         <TextField
-          size="small" placeholder="Search leads..." value={search} onChange={(e) => setSearch(e.target.value)}
+          size="small"
+          placeholder="Search by title, company, or location..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
           sx={{ flexGrow: 1 }}
-          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} /></InputAdornment> }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                </InputAdornment>
+              ),
+              'aria-label': 'Search leads',
+            },
+          }}
         />
         <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Filter</InputLabel>
-          <Select value={filter} label="Filter" onChange={(e) => setFilter(e.target.value)}>
+          <InputLabel id="leads-filter-label">Filter</InputLabel>
+          <Select
+            labelId="leads-filter-label"
+            value={filter}
+            label="Filter"
+            onChange={(e) => setFilter(e.target.value)}
+          >
             <MenuItem value="all">All Leads</MenuItem>
             <MenuItem value="remote">Remote</MenuItem>
             <MenuItem value="fulltime">Full-time</MenuItem>
           </Select>
         </FormControl>
+        {pageCount > 1 && (
+          <MuiPagination
+            count={pageCount}
+            page={safePage}
+            onChange={(_, v) => setPage(v)}
+            size="small"
+            shape="rounded"
+            sx={{ '& .MuiPaginationItem-root': { fontWeight: 600 } }}
+          />
+        )}
       </Stack>
 
-      {/* Lead Cards */}
+      {/* ── Lead Cards ── */}
       {loading ? (
         <Grid container spacing={2}>
-          {[1,2,3,4,5,6].map(i => (
-            <Grid size={{ xs: 12, md: 6 }} key={i}><Skeleton variant="rounded" height={120} sx={{ borderRadius: 3 }} /></Grid>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Grid size={{ xs: 12, md: 6 }} key={i}>
+              <Skeleton variant="rounded" height={160} sx={{ borderRadius: 3 }} />
+            </Grid>
           ))}
         </Grid>
-      ) : filteredLeads.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-          <BoltIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">No leads found</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Extract your first lead from a job posting URL</Typography>
+      ) : paged.length === 0 ? (
+        <Box sx={{ textAlign: 'center', py: 10 }}>
+          {leads.length === 0 ? (
+            <>
+              <BoltIcon sx={{ fontSize: 56, color: alpha(theme.palette.primary.main, 0.3), mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" fontWeight={600}>No leads yet</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 360, mx: 'auto' }}>
+                Paste a job posting URL above to auto-extract your first lead, or add one manually.
+              </Typography>
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={() => { setFormLead(null); setFormOpen(true); }}
+              >
+                Add Lead Manually
+              </Button>
+            </>
+          ) : (
+            <>
+              <SearchIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1.5 }} />
+              <Typography variant="h6" color="text.secondary" fontWeight={600}>No matches</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Try adjusting your search or filter criteria.
+              </Typography>
+            </>
+          )}
         </Box>
       ) : (
         <Grid container spacing={2}>
-          {filteredLeads.map((lead: any) => (
-            <Grid size={{ xs: 12, md: 6 }} key={lead.id}>
-              <Card sx={{ transition: 'all 0.2s', '&:hover': { borderColor: alpha(theme.palette.primary.main, 0.3) } }}>
-                <CardContent sx={{ p: 2.5 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <Box sx={{ flexGrow: 1, minWidth: 0, mr: 1 }}>
-                      <Typography variant="body1" fontWeight={700} noWrap>{lead.title || 'Untitled Position'}</Typography>
-                      <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
-                        {lead.companies?.map((c: any) => (
-                          <Chip key={c.id} icon={<CompanyIcon sx={{ fontSize: 14 }} />} label={c.name} size="small" variant="outlined" />
-                        ))}
-                        {lead.location && (
-                          <Chip icon={<LocationIcon sx={{ fontSize: 14 }} />} label={lead.location} size="small" variant="outlined" />
-                        )}
-                        {lead.employment_type && (
-                          <Chip icon={<WorkIcon sx={{ fontSize: 14 }} />} label={lead.employment_type} size="small" color="primary" variant="outlined" />
-                        )}
-                        {lead.seniority_level && (
-                          <Chip icon={<SeniorityIcon sx={{ fontSize: 14 }} />} label={lead.seniority_level} size="small" variant="outlined" sx={{ borderColor: alpha(theme.palette.secondary.main, 0.4) }} />
-                        )}
-                        {lead.education_level && (
-                          <Chip icon={<EducationIcon sx={{ fontSize: 14 }} />} label={lead.education_level} size="small" variant="outlined" />
-                        )}
-                        {lead.job_function && (
-                          <Chip icon={<FunctionIcon sx={{ fontSize: 14 }} />} label={lead.job_function} size="small" variant="outlined" />
-                        )}
-                      </Stack>
-                      {lead.salary && (
-                        <Typography variant="body2" color="success.main" fontWeight={600} sx={{ mt: 1 }}>
-                          <SalaryIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'text-bottom' }} />{lead.salary}
-                        </Typography>
-                      )}
-                      {lead.hiring_manager && (
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                          <ManagerIcon sx={{ fontSize: 14, mr: 0.5 }} />Hiring Manager: {lead.hiring_manager}
-                        </Typography>
-                      )}
-                    </Box>
-                    <Stack direction="row" spacing={0.5}>
-                      {lead.url && (
-                        <Tooltip title="Open posting"><IconButton size="small" href={lead.url} target="_blank"><OpenIcon fontSize="small" /></IconButton></Tooltip>
-                      )}
-                      <Tooltip title="Edit"><IconButton size="small" onClick={() => { setEditLead(lead); setEditDialog(true); }}><EditIcon fontSize="small" /></IconButton></Tooltip>
-                      <Tooltip title="Delete"><IconButton size="small" onClick={() => handleDelete(lead.id)} color="error"><DeleteIcon fontSize="small" /></IconButton></Tooltip>
-                    </Stack>
-                  </Box>
+          {paged.map((lead) => {
+            const expanded = expandedId === lead.id;
+            const isApplying = applyingId === lead.id;
+            const companyName = lead.companies?.[0]?.name;
 
-                  {/* Expandable description + notes */}
-                  {(lead.description || lead.notes) && (
-                    <>
-                      <Collapse in={expandedId === lead.id} collapsedSize={0}>
-                        {lead.description && (
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, whiteSpace: 'pre-wrap' }}>
-                            {lead.description}
+            return (
+              <Grid size={{ xs: 12, md: 6 }} key={lead.id}>
+                <Card
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    borderLeft: `3px solid ${alpha(theme.palette.primary.main, 0.5)}`,
+                    '&:hover': {
+                      borderLeftColor: theme.palette.primary.main,
+                      boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.08)}`,
+                    },
+                  }}
+                >
+                  <CardContent sx={{ p: 2.5, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                    {/* Title + actions row */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+                      <Typography
+                        variant="body1"
+                        fontWeight={700}
+                        sx={{
+                          flexGrow: 1,
+                          minWidth: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {lead.title || 'Untitled Position'}
+                      </Typography>
+                      <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0, ml: 0.5 }}>
+                        {lead.url && (
+                          <Tooltip title="Open posting">
+                            <IconButton
+                              size="small"
+                              component="a"
+                              href={lead.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`Open job posting for ${lead.title || 'this lead'}`}
+                            >
+                              <OpenIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        <Tooltip title="Edit">
+                          <IconButton
+                            size="small"
+                            onClick={() => { setFormLead(lead); setFormOpen(true); }}
+                            aria-label={`Edit ${lead.title || 'lead'}`}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            onClick={() => setDeleteTarget(lead)}
+                            aria-label={`Delete ${lead.title || 'lead'}`}
+                            sx={{ color: alpha(theme.palette.error.main, 0.7), '&:hover': { color: theme.palette.error.main } }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </Box>
+
+                    {/* Company + location line */}
+                    {(companyName || lead.location) && (
+                      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mt: 0.75, flexWrap: 'wrap', gap: 0.5 }}>
+                        {companyName && (
+                          <Stack direction="row" spacing={0.5} alignItems="center">
+                            <CompanyIcon sx={{ fontSize: 15, color: 'text.secondary' }} />
+                            <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                              {companyName}
+                            </Typography>
+                          </Stack>
+                        )}
+                        {companyName && lead.location && (
+                          <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.4 }}>
+                            &bull;
                           </Typography>
                         )}
-                        {lead.notes && (
-                          <>
-                            <Divider sx={{ my: 1 }} />
-                            <Stack direction="row" spacing={0.5} alignItems="center">
-                              <NotesIcon sx={{ fontSize: 14, color: theme.palette.warning.main }} />
-                              <Typography variant="caption" fontWeight={600}>Notes</Typography>
-                            </Stack>
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
-                              {lead.notes}
+                        {lead.location && (
+                          <Stack direction="row" spacing={0.5} alignItems="center">
+                            <LocationIcon sx={{ fontSize: 15, color: 'text.secondary' }} />
+                            <Typography variant="body2" color="text.secondary">
+                              {lead.location}
                             </Typography>
-                          </>
+                          </Stack>
                         )}
-                      </Collapse>
-                      <Button size="small" onClick={() => setExpandedId(expandedId === lead.id ? null : lead.id)}
-                        endIcon={expandedId === lead.id ? <ExpandLess /> : <ExpandMore />} sx={{ mt: 0.5, textTransform: 'none' }}>
-                        {expandedId === lead.id ? 'Show less' : 'Show more'}
-                      </Button>
-                    </>
-                  )}
+                      </Stack>
+                    )}
 
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-                    <Button size="small" variant="contained" onClick={() => handleApply(lead.id)}
-                      sx={{ background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})` }}>
-                      Quick Apply
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
+                    {/* Metadata chips */}
+                    <Stack direction="row" spacing={0.75} sx={{ mt: 1.25, flexWrap: 'wrap', gap: 0.75 }}>
+                      {renderMetaChip(<WorkIcon sx={{ fontSize: 14 }} />, lead.employment_type, theme.palette.primary.main)}
+                      {renderMetaChip(<SeniorityIcon sx={{ fontSize: 14 }} />, lead.seniority_level, theme.palette.secondary.main)}
+                      {renderMetaChip(<FunctionIcon sx={{ fontSize: 14 }} />, lead.job_function)}
+                      {renderMetaChip(<EducationIcon sx={{ fontSize: 14 }} />, lead.education_level)}
+                    </Stack>
+
+                    {/* Salary */}
+                    {lead.salary && (
+                      <Typography variant="body2" fontWeight={600} sx={{ mt: 1.25, color: theme.palette.success.main }}>
+                        <SalaryIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'text-bottom' }} />
+                        {lead.salary}
+                      </Typography>
+                    )}
+
+                    {/* Hiring manager */}
+                    {lead.hiring_manager && (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: 0.75 }}>
+                        <ManagerIcon sx={{ fontSize: 14, mr: 0.5 }} />
+                        {lead.hiring_manager}
+                      </Typography>
+                    )}
+
+                    {/* Expandable description + notes */}
+                    {(lead.description || lead.notes) && (
+                      <Box sx={{ mt: 1 }}>
+                        <Collapse in={expanded} collapsedSize={0}>
+                          {lead.description && (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{
+                                mt: 1, whiteSpace: 'pre-wrap', lineHeight: 1.65,
+                                maxHeight: 200, overflowY: 'auto',
+                              }}
+                            >
+                              {lead.description}
+                            </Typography>
+                          )}
+                          {lead.notes && (
+                            <>
+                              <Divider sx={{ my: 1.25 }} />
+                              <Stack direction="row" spacing={0.5} alignItems="center">
+                                <NotesIcon sx={{ fontSize: 14, color: theme.palette.warning.main }} />
+                                <Typography variant="caption" fontWeight={600}>Notes</Typography>
+                              </Stack>
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+                                {lead.notes}
+                              </Typography>
+                            </>
+                          )}
+                        </Collapse>
+                        <Button
+                          size="small"
+                          onClick={() => setExpandedId(expanded ? null : lead.id)}
+                          endIcon={expanded ? <ExpandLess /> : <ExpandMore />}
+                          sx={{ mt: 0.5, textTransform: 'none', color: 'text.secondary', fontWeight: 500 }}
+                          aria-expanded={expanded}
+                          aria-label={expanded ? 'Collapse details' : 'Expand details'}
+                        >
+                          {expanded ? 'Less' : 'Details'}
+                        </Button>
+                      </Box>
+                    )}
+
+                    {/* Spacer */}
+                    <Box sx={{ flexGrow: 1 }} />
+
+                    {/* Footer: Quick Apply + timestamp */}
+                    <Divider sx={{ mt: 1.5, mb: 1.25, opacity: 0.5 }} />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={() => handleApply(lead)}
+                        disabled={isApplying}
+                        sx={{
+                          background: gradientBg,
+                          px: 2.5,
+                          fontSize: '0.8rem',
+                        }}
+                      >
+                        {isApplying ? 'Applying...' : 'Quick Apply'}
+                      </Button>
+                      <Tooltip title={new Date(lead.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}>
+                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ cursor: 'default' }}>
+                          <TimeIcon sx={{ fontSize: 13, color: 'text.secondary', opacity: 0.6 }} />
+                          <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.7 }}>
+                            {timeAgo(lead.created_at)}
+                          </Typography>
+                        </Stack>
+                      </Tooltip>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })}
         </Grid>
       )}
 
-      {/* Edit/Create Dialog */}
-      <Dialog open={editDialog} onClose={() => { setEditDialog(false); setEditLead(null); }} maxWidth="md" fullWidth>
-        <DialogTitle fontWeight={700}>{editLead?.id ? 'Edit Lead' : 'Add Lead'}</DialogTitle>
+      {/* ── Bottom pagination (for long pages) ── */}
+      {!loading && pageCount > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <MuiPagination
+            count={pageCount}
+            page={safePage}
+            onChange={(_, v) => setPage(v)}
+            shape="rounded"
+            sx={{ '& .MuiPaginationItem-root': { fontWeight: 600 } }}
+          />
+        </Box>
+      )}
+
+      {/* ── Form Dialog (create / edit) ── */}
+      <LeadFormDialog
+        open={formOpen}
+        onClose={() => { setFormOpen(false); setFormLead(null); }}
+        onSave={handleSaveForm}
+        lead={formLead}
+        companies={companies}
+      />
+
+      {/* ── Delete Confirmation ── */}
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onClose={deleting ? undefined : () => setDeleteTarget(null)}
+        maxWidth="xs"
+        fullWidth
+        aria-labelledby="delete-confirm-title"
+      >
+        <DialogTitle id="delete-confirm-title" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon sx={{ color: theme.palette.warning.main }} />
+          <Typography variant="h6" component="span" fontWeight={700}>Delete Lead</Typography>
+        </DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid size={12}>
-              <TextField fullWidth label="URL" value={editLead?.url || ''} onChange={e => setEditLead((p: any) => ({ ...p, url: e.target.value }))} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Title" value={editLead?.title || ''} onChange={e => setEditLead((p: any) => ({ ...p, title: e.target.value }))} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Location" value={editLead?.location || ''} onChange={e => setEditLead((p: any) => ({ ...p, location: e.target.value }))} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Salary" value={editLead?.salary || ''} onChange={e => setEditLead((p: any) => ({ ...p, salary: e.target.value }))} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth>
-                <InputLabel>Employment Type</InputLabel>
-                <Select value={editLead?.employment_type || ''} label="Employment Type" onChange={e => setEditLead((p: any) => ({ ...p, employment_type: e.target.value }))}>
-                  <MenuItem value="">None</MenuItem>
-                  <MenuItem value="Full-time">Full-time</MenuItem>
-                  <MenuItem value="Part-time">Part-time</MenuItem>
-                  <MenuItem value="Contract">Contract</MenuItem>
-                  <MenuItem value="Internship">Internship</MenuItem>
-                  <MenuItem value="Freelance">Freelance</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Job Function" value={editLead?.job_function || ''} onChange={e => setEditLead((p: any) => ({ ...p, job_function: e.target.value }))} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth>
-                <InputLabel>Seniority Level</InputLabel>
-                <Select value={editLead?.seniority_level || ''} label="Seniority Level" onChange={e => setEditLead((p: any) => ({ ...p, seniority_level: e.target.value }))}>
-                  <MenuItem value="">None</MenuItem>
-                  <MenuItem value="Entry">Entry</MenuItem>
-                  <MenuItem value="Mid">Mid</MenuItem>
-                  <MenuItem value="Senior">Senior</MenuItem>
-                  <MenuItem value="Lead">Lead</MenuItem>
-                  <MenuItem value="Director">Director</MenuItem>
-                  <MenuItem value="Executive">Executive</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Education Level" value={editLead?.education_level || ''} onChange={e => setEditLead((p: any) => ({ ...p, education_level: e.target.value }))} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Hiring Manager" value={editLead?.hiring_manager || ''} onChange={e => setEditLead((p: any) => ({ ...p, hiring_manager: e.target.value }))} />
-            </Grid>
-            {companies.length > 0 && (
-              <Grid size={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Associated Companies</InputLabel>
-                  <Select
-                    multiple value={editLead?.company_ids || []} label="Associated Companies"
-                    onChange={e => setEditLead((p: any) => ({ ...p, company_ids: e.target.value }))}
-                    renderValue={(selected: string[]) => (
-                      <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                        {selected.map(id => {
-                          const c = companies.find((co: any) => co.id === id);
-                          return <Chip key={id} label={c?.name || id} size="small" />;
-                        })}
-                      </Stack>
-                    )}
-                  >
-                    {companies.map((c: any) => (
-                      <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            )}
-            <Grid size={12}>
-              <TextField fullWidth label="Description" multiline rows={4} value={editLead?.description || ''} onChange={e => setEditLead((p: any) => ({ ...p, description: e.target.value }))} />
-            </Grid>
-            <Grid size={12}>
-              <TextField fullWidth label="Notes (internal)" multiline rows={2} value={editLead?.notes || ''} onChange={e => setEditLead((p: any) => ({ ...p, notes: e.target.value }))}
-                placeholder="Private notes about this opportunity..." />
-            </Grid>
-          </Grid>
+          <Typography variant="body2" color="text.secondary">
+            Are you sure you want to delete{' '}
+            <Typography component="span" fontWeight={600} color="text.primary">
+              {deleteTarget?.title || 'this lead'}
+            </Typography>
+            ? This action cannot be undone.
+          </Typography>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => { setEditDialog(false); setEditLead(null); }}>Cancel</Button>
-          <Button variant="contained" onClick={handleSaveEdit}>Save</Button>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ── Snackbar (transient feedback) ── */}
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={4000}
+        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnack((s) => ({ ...s, open: false }))}
+          severity={snack.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snack.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

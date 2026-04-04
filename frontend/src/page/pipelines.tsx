@@ -3,7 +3,7 @@ import {
   Box, Card, CardContent, Typography, Chip, Stack, Button, TextField,
   useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   Tooltip, Skeleton, Alert, Divider, Select, MenuItem, FormControl, InputLabel,
-  Badge, useMediaQuery, InputAdornment,
+  useMediaQuery, InputAdornment, Collapse, TablePagination,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import Grid from '@mui/material/Grid';
@@ -13,7 +13,8 @@ import {
   Error as ErrorIcon, HourglassEmpty as PendingIcon, Loop as RunningIcon,
   Edit as EditIcon, Schedule as ScheduleIcon, DataObject as DefinitionIcon,
   WarningAmber as WarningIcon, Search as SearchIcon,
-  FiberManualRecord as DotIcon,
+  FiberManualRecord as DotIcon, ExpandMore as ExpandMoreIcon,
+  KeyboardArrowRight as CollapseIcon, TrendingUp as TrendingIcon,
 } from '@mui/icons-material';
 import { AnimatePresence, motion } from 'motion/react';
 import { JSONTree } from 'react-json-tree';
@@ -23,9 +24,12 @@ import {
   type OrchestrationEventRead,
   type OrchestrationEventStatus,
   type OrchestrationPipelineRead,
+  type OrchestrationEventPaginatedRead,
+  type EventQueryParams,
   getOrchestrationPipelines, createOrchestrationPipeline, deleteOrchestrationPipeline,
   getOrchestrationPipeline, getOrchestrationEvents, createOrchestrationEvent,
   updateOrchestrationPipeline, updateOrchestrationEvent,
+  formatURI,
 } from '../service/data-orchestration';
 
 // ---------------------------------------------------------------------------
@@ -118,33 +122,83 @@ const EventStatusChip: React.FC<{ status: OrchestrationEventStatus }> = ({ statu
 };
 
 // ---------------------------------------------------------------------------
-// Pipeline Card
+// WF-09  Overview strip card
+// ---------------------------------------------------------------------------
+
+const OverviewStrip: React.FC<{ pipelines: OrchestrationPipelineRead[] }> = ({ pipelines }) => {
+  const theme = useTheme();
+
+  const stats = useMemo(() => {
+    let totalRuns = 0;
+    let totalFailures = 0;
+    let lastSuccess: string | null = null;
+    let recentRuns = 0;
+    const oneDayAgo = Date.now() - 86_400_000;
+
+    pipelines.forEach((p) => {
+      totalRuns += p.run_count;
+      totalFailures += p.failure_count;
+      if (p.last_run_at && new Date(p.last_run_at).getTime() > oneDayAgo) recentRuns++;
+      if (p.last_run_status === 'success' && p.last_run_at) {
+        if (!lastSuccess || p.last_run_at > lastSuccess) lastSuccess = p.last_run_at;
+      }
+    });
+
+    return { workflows: pipelines.length, totalRuns, totalFailures, recentRuns, lastSuccess };
+  }, [pipelines]);
+
+  const items: { label: string; value: string | number; color?: string; icon: React.ReactElement }[] = [
+    { label: 'Workflows', value: stats.workflows, icon: <PipelineIcon fontSize="small" /> },
+    { label: 'Total runs', value: stats.totalRuns, icon: <TrendingIcon fontSize="small" /> },
+    { label: 'Failures', value: stats.totalFailures, color: stats.totalFailures > 0 ? '#f43f5e' : undefined, icon: <ErrorIcon fontSize="small" /> },
+    { label: 'Recent (24h)', value: stats.recentRuns, icon: <RunningIcon fontSize="small" /> },
+    { label: 'Last success', value: stats.lastSuccess ? formatRelativeTime(stats.lastSuccess) : '—', icon: <SuccessIcon fontSize="small" /> },
+  ];
+
+  return (
+    <Card sx={{ mb: 3 }}>
+      <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
+        <Stack
+          direction="row"
+          divider={<Divider orientation="vertical" flexItem />}
+          spacing={3}
+          sx={{ justifyContent: 'space-around', flexWrap: 'wrap', rowGap: 1 }}
+        >
+          {items.map((item) => (
+            <Box key={item.label} sx={{ textAlign: 'center', minWidth: 80 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.25, color: item.color ?? theme.palette.text.secondary }}>
+                {item.icon}
+              </Box>
+              <Typography variant="h6" fontWeight={700} sx={{ color: item.color ?? 'text.primary', lineHeight: 1.2 }}>
+                {item.value}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">{item.label}</Typography>
+            </Box>
+          ))}
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// WF-10  Workflow card
 // ---------------------------------------------------------------------------
 
 const PipelineCard: React.FC<{
   pipe: OrchestrationPipelineRead;
-  events: OrchestrationEventRead[];
   onView: () => void;
   onEdit: () => void;
   onTrigger: () => void;
   onDelete: () => void;
   index: number;
-}> = ({ pipe, events, onView, onEdit, onTrigger, onDelete, index }) => {
+}> = ({ pipe, onView, onEdit, onTrigger, onDelete, index }) => {
   const theme = useTheme();
+  const lastStatusKey = (pipe.last_run_status as OrchestrationEventStatus) ?? null;
+  const lastCfg = lastStatusKey ? STATUS_CONFIG[lastStatusKey] : null;
 
-  const pipeEvents = useMemo(
-    () => events.filter((e) => e.pipeline_id === pipe.id),
-    [events, pipe.id],
-  );
-
-  const statusSummary = useMemo(() => {
-    const counts: Partial<Record<OrchestrationEventStatus, number>> = {};
-    pipeEvents.forEach((e) => {
-      const s = e.status ?? 'pending';
-      counts[s] = (counts[s] ?? 0) + 1;
-    });
-    return counts;
-  }, [pipeEvents]);
+  const srcLabel = formatURI((pipe.definition as Record<string, unknown> | undefined)?.source_uri);
+  const dstLabel = formatURI((pipe.definition as Record<string, unknown> | undefined)?.destination_uri);
 
   return (
     <MotionCard
@@ -224,41 +278,56 @@ const PipelineCard: React.FC<{
           </Stack>
         </Box>
 
-        {/* Metadata row */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1.5 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <ScheduleIcon sx={{ fontSize: 13 }} />
-            {formatRelativeTime(pipe.created_at)}
-          </Typography>
-          <Badge
-            badgeContent={pipeEvents.length}
-            color="primary"
-            max={99}
-            sx={{
-              '& .MuiBadge-badge': {
+        {/* Source / Destination summary */}
+        {(srcLabel || dstLabel) && (
+          <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+            {srcLabel && (
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <DotIcon sx={{ fontSize: 6, color: '#06b6d4' }} /> {srcLabel}
+              </Typography>
+            )}
+            {srcLabel && dstLabel && (
+              <Typography variant="caption" color="text.disabled">&rarr;</Typography>
+            )}
+            {dstLabel && (
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <DotIcon sx={{ fontSize: 6, color: '#8b5cf6' }} /> {dstLabel}
+              </Typography>
+            )}
+          </Stack>
+        )}
+
+        {/* Metadata row – last run status, time, run count */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
+          {lastCfg && (
+            <Chip
+              icon={lastCfg.icon}
+              label={lastCfg.label}
+              size="small"
+              sx={{
+                backgroundColor: alpha(lastCfg.color, 0.12),
+                color: lastCfg.color,
+                fontWeight: 600,
                 fontSize: '0.65rem',
-                height: 16,
-                minWidth: 16,
-                ...(pipeEvents.length === 0 && { display: 'none' }),
-              },
-            }}
-          >
-            <Typography variant="caption" color="text.secondary">runs</Typography>
-          </Badge>
-          {Object.keys(statusSummary).length > 0 && (
-            <Stack direction="row" spacing={0.25} sx={{ ml: 'auto' }}>
-              {(Object.entries(statusSummary) as [OrchestrationEventStatus, number][]).map(([s, count]) => (
-                <Tooltip key={s} title={`${count} ${STATUS_CONFIG[s].label.toLowerCase()}`}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                    <StatusDot status={s} />
-                    <Typography variant="caption" sx={{ color: STATUS_CONFIG[s].color, fontWeight: 600, fontSize: '0.65rem' }}>
-                      {count}
-                    </Typography>
-                  </Box>
-                </Tooltip>
-              ))}
-            </Stack>
+                height: 22,
+                '& .MuiChip-icon': { color: 'inherit' },
+              }}
+            />
           )}
+          {pipe.last_run_at && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <ScheduleIcon sx={{ fontSize: 13 }} />
+              {formatRelativeTime(pipe.last_run_at)}
+            </Typography>
+          )}
+          <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+            {pipe.run_count} run{pipe.run_count !== 1 ? 's' : ''}
+            {pipe.failure_count > 0 && (
+              <Typography component="span" variant="caption" sx={{ color: '#f43f5e', ml: 0.5 }}>
+                ({pipe.failure_count} failed)
+              </Typography>
+            )}
+          </Typography>
         </Box>
       </CardContent>
     </MotionCard>
@@ -266,7 +335,7 @@ const PipelineCard: React.FC<{
 };
 
 // ---------------------------------------------------------------------------
-// Event Row
+// WF-11  Run history row
 // ---------------------------------------------------------------------------
 
 const EventRow: React.FC<{
@@ -377,13 +446,19 @@ const PipelinesPage: React.FC = () => {
 
   // Data
   const [pipelines, setPipelines] = useState<OrchestrationPipelineRead[]>([]);
-  const [events, setEvents] = useState<OrchestrationEventRead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Paginated run history (WF-11)
+  const [eventsPage, setEventsPage] = useState<OrchestrationEventPaginatedRead>({ items: [], total: 0, page: 1, page_size: 20 });
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventPage, setEventPage] = useState(0); // 0-indexed for MUI TablePagination
+  const [eventPageSize, setEventPageSize] = useState(20);
 
   // Filters
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<OrchestrationEventStatus | 'all'>('all');
+  const [pipelineFilter, setPipelineFilter] = useState<string>('all');
 
   // Dialogs
   const [selectedPipeline, setSelectedPipeline] = useState<OrchestrationPipelineRead | null>(null);
@@ -411,36 +486,16 @@ const PipelinesPage: React.FC = () => {
     );
   }, [pipelines, search]);
 
-  const filteredEvents = useMemo(() => {
-    let evts = events;
-    if (statusFilter !== 'all') {
-      evts = evts.filter((e) => e.status === statusFilter);
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      evts = evts.filter(
-        (e) =>
-          (e.message ?? '').toLowerCase().includes(q) ||
-          (pipelineNameMap[e.pipeline_id ?? ''] ?? '').toLowerCase().includes(q),
-      );
-    }
-    return evts;
-  }, [events, statusFilter, search, pipelineNameMap]);
-
   // ---------------------------------------------------------------------------
   // Data fetching
   // ---------------------------------------------------------------------------
 
-  const refresh = useCallback(async () => {
+  const refreshPipelines = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     try {
-      const [pipes, evts] = await Promise.all([
-        getOrchestrationPipelines(token),
-        getOrchestrationEvents(token),
-      ]);
+      const pipes = await getOrchestrationPipelines(token);
       setPipelines(pipes || []);
-      setEvents(evts || []);
       setError('');
     } catch (e: unknown) {
       setError(getErrorMessage(e));
@@ -448,7 +503,30 @@ const PipelinesPage: React.FC = () => {
     setLoading(false);
   }, [token]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  const refreshEvents = useCallback(async () => {
+    if (!token) return;
+    setEventsLoading(true);
+    try {
+      const params: EventQueryParams = {
+        page: eventPage + 1, // API is 1-indexed
+        page_size: eventPageSize,
+      };
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (pipelineFilter !== 'all') params.pipeline_id = pipelineFilter;
+      const result = await getOrchestrationEvents(token, params);
+      setEventsPage(result);
+    } catch (e: unknown) {
+      setError(getErrorMessage(e));
+    }
+    setEventsLoading(false);
+  }, [token, eventPage, eventPageSize, statusFilter, pipelineFilter]);
+
+  const refresh = useCallback(async () => {
+    await Promise.all([refreshPipelines(), refreshEvents()]);
+  }, [refreshPipelines, refreshEvents]);
+
+  useEffect(() => { refreshPipelines(); }, [refreshPipelines]);
+  useEffect(() => { refreshEvents(); }, [refreshEvents]);
 
   // ---------------------------------------------------------------------------
   // Handlers
@@ -524,19 +602,10 @@ const PipelinesPage: React.FC = () => {
     if (!token) return;
     try {
       await updateOrchestrationEvent(token, eventId, { status: newStatus });
-      refresh();
+      refreshEvents();
+      refreshPipelines(); // summary fields may change
     } catch (e: unknown) { setError(getErrorMessage(e)); }
   };
-
-  // ---------------------------------------------------------------------------
-  // Event counts for summary bar
-  // ---------------------------------------------------------------------------
-
-  const eventCounts = useMemo(() => {
-    const counts: Record<string, number> = { total: events.length };
-    events.forEach((e) => { counts[e.status ?? 'pending'] = (counts[e.status ?? 'pending'] ?? 0) + 1; });
-    return counts;
-  }, [events]);
 
   usePageToolbarHeader('Workflows', `${pipelines.length} workflow${pipelines.length !== 1 ? 's' : ''}`);
 
@@ -546,6 +615,9 @@ const PipelinesPage: React.FC = () => {
 
   return (
     <Box>
+      {/* ---- WF-09 Overview strip ---- */}
+      {!loading && pipelines.length > 0 && <OverviewStrip pipelines={pipelines} />}
+
       {/* ---- Page header ---- */}
       <Box
         sx={{
@@ -557,24 +629,7 @@ const PipelinesPage: React.FC = () => {
           mb: 3,
         }}
       >
-        <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
-          {Object.entries(eventCounts).filter(([k]) => k !== 'total').map(([status, count]) => (
-            <Typography
-              key={status}
-              variant="body2"
-              sx={{
-                color: STATUS_CONFIG[status as OrchestrationEventStatus]?.color ?? 'text.secondary',
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-              }}
-            >
-              <DotIcon sx={{ fontSize: 8 }} />
-              {count} {status}
-            </Typography>
-          ))}
-        </Stack>
+        <Box />
         <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
           <Tooltip title="Refresh">
             <IconButton
@@ -604,12 +659,12 @@ const PipelinesPage: React.FC = () => {
       </AnimatePresence>
 
       {/* ---- Search & filter bar ---- */}
-      {!loading && (pipelines.length > 0 || events.length > 0) && (
-        <Stack direction="row" spacing={1.5} sx={{ mb: 3 }}>
+      {!loading && (pipelines.length > 0 || eventsPage.total > 0) && (
+        <Stack direction="row" spacing={1.5} sx={{ mb: 3, flexWrap: 'wrap', rowGap: 1 }}>
           <TextField
             size="small"
-            placeholder="Search workflows & runs…"
-            aria-label="Search workflows and runs"
+            placeholder="Search workflows…"
+            aria-label="Search workflows"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             slotProps={{
@@ -628,7 +683,7 @@ const PipelinesPage: React.FC = () => {
             <Select
               value={statusFilter}
               label="Status"
-              onChange={(e: SelectChangeEvent) => setStatusFilter(e.target.value as OrchestrationEventStatus | 'all')}
+              onChange={(e: SelectChangeEvent) => { setStatusFilter(e.target.value as OrchestrationEventStatus | 'all'); setEventPage(0); }}
             >
               <MenuItem value="all">All statuses</MenuItem>
               {(['pending', 'running', 'success', 'failure'] as const).map((s) => (
@@ -638,6 +693,19 @@ const PipelinesPage: React.FC = () => {
                     {STATUS_CONFIG[s].label}
                   </Box>
                 </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <InputLabel>Workflow</InputLabel>
+            <Select
+              value={pipelineFilter}
+              label="Workflow"
+              onChange={(e: SelectChangeEvent) => { setPipelineFilter(e.target.value); setEventPage(0); }}
+            >
+              <MenuItem value="all">All workflows</MenuItem>
+              {pipelines.map((p) => (
+                <MenuItem key={p.id} value={p.id}>{p.name || 'Untitled'}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -708,7 +776,6 @@ const PipelinesPage: React.FC = () => {
                     <PipelineCard
                       key={pipe.id}
                       pipe={pipe}
-                      events={events}
                       index={i}
                       onView={() => viewPipeline(pipe)}
                       onEdit={() => {
@@ -732,13 +799,24 @@ const PipelinesPage: React.FC = () => {
             )}
           </Grid>
 
-          {/* ---- Events column ---- */}
+          {/* ---- WF-11 Paginated run history ---- */}
           <Grid size={{ xs: 12, md: 7 }}>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-              RECENT RUNS
+              RUN HISTORY
+              {eventsPage.total > 0 && (
+                <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                  ({eventsPage.total} total)
+                </Typography>
+              )}
             </Typography>
 
-            {filteredEvents.length === 0 ? (
+            {eventsLoading ? (
+              <Stack spacing={1}>
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} variant="rounded" height={56} sx={{ borderRadius: 2 }} />
+                ))}
+              </Stack>
+            ) : eventsPage.items.length === 0 ? (
               <Card>
                 <CardContent sx={{ textAlign: 'center', py: 6 }}>
                   <Box
@@ -757,32 +835,41 @@ const PipelinesPage: React.FC = () => {
                     <ScheduleIcon sx={{ fontSize: 28, color: alpha(theme.palette.primary.main, 0.5) }} />
                   </Box>
                   <Typography variant="body1" fontWeight={600} sx={{ mb: 0.5 }}>
-                    {search || statusFilter !== 'all' ? 'No matching runs' : 'No runs yet'}
+                    {statusFilter !== 'all' || pipelineFilter !== 'all' ? 'No matching runs' : 'No runs yet'}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 280, mx: 'auto' }}>
-                    {search || statusFilter !== 'all'
-                      ? 'Adjust your search or status filter to see runs.'
+                    {statusFilter !== 'all' || pipelineFilter !== 'all'
+                      ? 'Adjust your status or workflow filter to see runs.'
                       : 'Runs will appear here when you trigger a workflow.'}
                   </Typography>
                 </CardContent>
               </Card>
             ) : (
-              <Stack spacing={1}>
-                {filteredEvents.slice(0, 30).map((evt, i) => (
-                  <EventRow
-                    key={evt.id}
-                    evt={evt}
-                    index={i}
-                    pipelineName={pipelineNameMap[evt.pipeline_id ?? ''] ?? ''}
-                    onStatusChange={(s) => handleUpdateEventStatus(evt.id, s)}
+              <>
+                <Stack spacing={1}>
+                  {eventsPage.items.map((evt, i) => (
+                    <EventRow
+                      key={evt.id}
+                      evt={evt}
+                      index={i}
+                      pipelineName={pipelineNameMap[evt.pipeline_id ?? ''] ?? ''}
+                      onStatusChange={(s) => handleUpdateEventStatus(evt.id, s)}
+                    />
+                  ))}
+                </Stack>
+                {eventsPage.total > eventPageSize && (
+                  <TablePagination
+                    component="div"
+                    count={eventsPage.total}
+                    page={eventPage}
+                    onPageChange={(_, newPage) => setEventPage(newPage)}
+                    rowsPerPage={eventPageSize}
+                    onRowsPerPageChange={(e) => { setEventPageSize(parseInt(e.target.value, 10)); setEventPage(0); }}
+                    rowsPerPageOptions={[10, 20, 50]}
+                    sx={{ mt: 1 }}
                   />
-                ))}
-                {filteredEvents.length > 30 && (
-                  <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', pt: 1 }}>
-                    Showing 30 of {filteredEvents.length} runs
-                  </Typography>
                 )}
-              </Stack>
+              </>
             )}
           </Grid>
         </Grid>
@@ -963,164 +1050,28 @@ const PipelinesPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* ---- Pipeline Detail ---- */}
+      {/* ---- WF-12  Pipeline Detail (summary-first, advanced JSON sections) ---- */}
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="md" fullWidth aria-labelledby="pipeline-detail-title">
         {selectedPipeline && (
-          <>
-            <DialogTitle id="pipeline-detail-title" sx={{ pb: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)}, ${alpha(theme.palette.secondary.main, 0.10)})`,
-                  }}
-                >
-                  <PipelineIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-                </Box>
-                <Box>
-                  <Typography variant="h6" fontWeight={700}>
-                    {selectedPipeline.name || 'Untitled Workflow'}
-                  </Typography>
-                  {selectedPipeline.description && (
-                    <Typography variant="body2" color="text.secondary">
-                      {selectedPipeline.description}
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            </DialogTitle>
-            <DialogContent>
-              <Stack spacing={3}>
-                {/* Metadata */}
-                <Stack direction="row" spacing={2}>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <ScheduleIcon sx={{ fontSize: 13 }} />
-                    Created {formatRelativeTime(selectedPipeline.created_at)}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {selectedPipeline.events.length} run{selectedPipeline.events.length !== 1 ? 's' : ''}
-                  </Typography>
-                </Stack>
-
-                <Divider />
-
-                {/* Definition */}
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                    <DefinitionIcon sx={{ fontSize: 16 }} />
-                    DEFINITION
-                  </Typography>
-                  <Box
-                    sx={{
-                      p: 2,
-                      borderRadius: 2,
-                      background: alpha(theme.palette.text.primary, 0.03),
-                      border: `1px solid ${theme.palette.divider}`,
-                      overflow: 'auto',
-                      maxHeight: 240,
-                      '& > ul': { margin: '0 !important', padding: '0 !important' },
-                    }}
-                  >
-                    <JSONTree
-                      data={selectedPipeline.definition ?? {}}
-                      theme={JSON_TREE_THEME}
-                      invertTheme={theme.palette.mode === 'light'}
-                      hideRoot
-                      shouldExpandNodeInitially={() => true}
-                    />
-                  </Box>
-                </Box>
-
-                {/* Events */}
-                {selectedPipeline.events.length > 0 && (
-                  <Box>
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
-                      RUNS ({selectedPipeline.events.length})
-                    </Typography>
-                    <Stack spacing={1}>
-                      {selectedPipeline.events.map((evt) => {
-                        const statusKey = evt.status ?? 'pending';
-                        const cfg = STATUS_CONFIG[statusKey];
-                        return (
-                          <Box
-                            key={evt.id}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1.5,
-                              p: 1.5,
-                              borderRadius: 2,
-                              border: `1px solid ${theme.palette.divider}`,
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                width: 28,
-                                height: 28,
-                                borderRadius: '8px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                backgroundColor: alpha(cfg.color, 0.12),
-                                color: cfg.color,
-                                flexShrink: 0,
-                              }}
-                            >
-                              {cfg.icon}
-                            </Box>
-                            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                              <Typography variant="body2" fontWeight={500} noWrap>
-                                {evt.message || 'Untitled run'}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {formatRelativeTime(evt.created_at)}
-                              </Typography>
-                            </Box>
-                            <EventStatusChip status={statusKey} />
-                          </Box>
-                        );
-                      })}
-                    </Stack>
-                  </Box>
-                )}
-              </Stack>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 3 }}>
-              <Button onClick={() => setDetailOpen(false)}>Close</Button>
-              <Button
-                variant="outlined"
-                startIcon={<EditIcon />}
-                onClick={() => {
-                  setEditPipeForm({
-                    id: selectedPipeline.id,
-                    name: selectedPipeline.name ?? '',
-                    description: selectedPipeline.description ?? '',
-                    definition: JSON.stringify(selectedPipeline.definition ?? {}, null, 2),
-                  });
-                  setDetailOpen(false);
-                  setEditPipeOpen(true);
-                }}
-              >
-                Edit
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<RunIcon />}
-                onClick={() => {
-                  setTriggerForm({ ...INITIAL_TRIGGER_FORM, pipeline_id: selectedPipeline.id });
-                  setDetailOpen(false);
-                  setTriggerOpen(true);
-                }}
-              >
-                Trigger Run
-              </Button>
-            </DialogActions>
-          </>
+          <PipelineDetailContent
+            pipeline={selectedPipeline}
+            onClose={() => setDetailOpen(false)}
+            onEdit={() => {
+              setEditPipeForm({
+                id: selectedPipeline.id,
+                name: selectedPipeline.name ?? '',
+                description: selectedPipeline.description ?? '',
+                definition: JSON.stringify(selectedPipeline.definition ?? {}, null, 2),
+              });
+              setDetailOpen(false);
+              setEditPipeOpen(true);
+            }}
+            onTrigger={() => {
+              setTriggerForm({ ...INITIAL_TRIGGER_FORM, pipeline_id: selectedPipeline.id });
+              setDetailOpen(false);
+              setTriggerOpen(true);
+            }}
+          />
         )}
       </Dialog>
 
@@ -1166,6 +1117,223 @@ const PipelinesPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// WF-12  Pipeline Detail dialog content (summary-first, collapsible advanced)
+// ---------------------------------------------------------------------------
+
+const PipelineDetailContent: React.FC<{
+  pipeline: OrchestrationPipelineRead;
+  onClose: () => void;
+  onEdit: () => void;
+  onTrigger: () => void;
+}> = ({ pipeline, onClose, onEdit, onTrigger }) => {
+  const theme = useTheme();
+  const [definitionOpen, setDefinitionOpen] = useState(false);
+  const [eventsOpen, setEventsOpen] = useState(true);
+
+  const srcLabel = formatURI((pipeline.definition as Record<string, unknown> | undefined)?.source_uri);
+  const dstLabel = formatURI((pipeline.definition as Record<string, unknown> | undefined)?.destination_uri);
+  const lastStatusKey = (pipeline.last_run_status as OrchestrationEventStatus) ?? null;
+  const lastCfg = lastStatusKey ? STATUS_CONFIG[lastStatusKey] : null;
+
+  return (
+    <>
+      <DialogTitle id="pipeline-detail-title" sx={{ pb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)}, ${alpha(theme.palette.secondary.main, 0.10)})`,
+            }}
+          >
+            <PipelineIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
+          </Box>
+          <Box>
+            <Typography variant="h6" fontWeight={700}>
+              {pipeline.name || 'Untitled Workflow'}
+            </Typography>
+            {pipeline.description && (
+              <Typography variant="body2" color="text.secondary">
+                {pipeline.description}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+      </DialogTitle>
+      <DialogContent>
+        <Stack spacing={3}>
+          {/* Summary metadata (WF-12: summary-first) */}
+          <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <ScheduleIcon sx={{ fontSize: 13 }} />
+              Created {formatRelativeTime(pipeline.created_at)}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {pipeline.run_count} run{pipeline.run_count !== 1 ? 's' : ''}
+            </Typography>
+            {pipeline.failure_count > 0 && (
+              <Typography variant="caption" sx={{ color: '#f43f5e' }}>
+                {pipeline.failure_count} failed
+              </Typography>
+            )}
+            {lastCfg && (
+              <Chip
+                icon={lastCfg.icon}
+                label={`Last: ${lastCfg.label}`}
+                size="small"
+                sx={{
+                  backgroundColor: alpha(lastCfg.color, 0.12),
+                  color: lastCfg.color,
+                  fontWeight: 600,
+                  fontSize: '0.65rem',
+                  height: 22,
+                  '& .MuiChip-icon': { color: 'inherit' },
+                }}
+              />
+            )}
+            {pipeline.last_run_at && (
+              <Typography variant="caption" color="text.secondary">
+                Last run {formatRelativeTime(pipeline.last_run_at)}
+              </Typography>
+            )}
+          </Stack>
+
+          {/* Source / Destination display */}
+          {(srcLabel || dstLabel) && (
+            <Box sx={{ p: 1.5, borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}>
+              <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+                {srcLabel && (
+                  <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <DotIcon sx={{ fontSize: 8, color: '#06b6d4' }} /> Source: {srcLabel}
+                  </Typography>
+                )}
+                {srcLabel && dstLabel && <Typography variant="body2" color="text.disabled">&rarr;</Typography>}
+                {dstLabel && (
+                  <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <DotIcon sx={{ fontSize: 8, color: '#8b5cf6' }} /> Dest: {dstLabel}
+                  </Typography>
+                )}
+              </Stack>
+            </Box>
+          )}
+
+          <Divider />
+
+          {/* Collapsible definition (advanced) */}
+          <Box>
+            <Box
+              onClick={() => setDefinitionOpen((o) => !o)}
+              sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer', mb: definitionOpen ? 1.5 : 0 }}
+            >
+              {definitionOpen ? <ExpandMoreIcon sx={{ fontSize: 18 }} /> : <CollapseIcon sx={{ fontSize: 18 }} />}
+              <DefinitionIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+              <Typography variant="subtitle2" color="text.secondary">
+                DEFINITION (JSON)
+              </Typography>
+            </Box>
+            <Collapse in={definitionOpen}>
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  background: alpha(theme.palette.text.primary, 0.03),
+                  border: `1px solid ${theme.palette.divider}`,
+                  overflow: 'auto',
+                  maxHeight: 240,
+                  '& > ul': { margin: '0 !important', padding: '0 !important' },
+                }}
+              >
+                <JSONTree
+                  data={pipeline.definition ?? {}}
+                  theme={JSON_TREE_THEME}
+                  invertTheme={theme.palette.mode === 'light'}
+                  hideRoot
+                  shouldExpandNodeInitially={() => true}
+                />
+              </Box>
+            </Collapse>
+          </Box>
+
+          {/* Runs section */}
+          {pipeline.events.length > 0 && (
+            <Box>
+              <Box
+                onClick={() => setEventsOpen((o) => !o)}
+                sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer', mb: eventsOpen ? 1.5 : 0 }}
+              >
+                {eventsOpen ? <ExpandMoreIcon sx={{ fontSize: 18 }} /> : <CollapseIcon sx={{ fontSize: 18 }} />}
+                <Typography variant="subtitle2" color="text.secondary">
+                  RUNS ({pipeline.events.length})
+                </Typography>
+              </Box>
+              <Collapse in={eventsOpen}>
+                <Stack spacing={1}>
+                  {pipeline.events.map((evt) => {
+                    const statusKey = evt.status ?? 'pending';
+                    const cfg = STATUS_CONFIG[statusKey];
+                    return (
+                      <Box
+                        key={evt.id}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                          p: 1.5,
+                          borderRadius: 2,
+                          border: `1px solid ${theme.palette.divider}`,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: alpha(cfg.color, 0.12),
+                            color: cfg.color,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {cfg.icon}
+                        </Box>
+                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                          <Typography variant="body2" fontWeight={500} noWrap>
+                            {evt.message || 'Untitled run'}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {formatRelativeTime(evt.created_at)}
+                          </Typography>
+                        </Box>
+                        <EventStatusChip status={statusKey} />
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              </Collapse>
+            </Box>
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 3 }}>
+        <Button onClick={onClose}>Close</Button>
+        <Button variant="outlined" startIcon={<EditIcon />} onClick={onEdit}>
+          Edit
+        </Button>
+        <Button variant="contained" startIcon={<RunIcon />} onClick={onTrigger}>
+          Trigger Run
+        </Button>
+      </DialogActions>
+    </>
   );
 };
 

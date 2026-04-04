@@ -62,8 +62,8 @@ const DataOrchestrationPage: React.FC = () => {
     }
     setIsLoading(true);
     try {
-      const pipelines = await getOrchestrationEvents(token);
-      setPipelines(pipelines);
+      const result = await getOrchestrationEvents(token);
+      setPipelines(result.items);
     } catch (error) {
       setError(`Failed to fetch pipelines: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {

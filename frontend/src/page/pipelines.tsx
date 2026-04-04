@@ -93,7 +93,7 @@ const StatusDot: React.FC<{ status: OrchestrationEventStatus }> = ({ status }) =
   const cfg = STATUS_CONFIG[status];
   return (
     <Tooltip title={cfg.label}>
-      <DotIcon sx={{ fontSize: 10, color: cfg.color }} />
+      <DotIcon sx={{ fontSize: 10, color: cfg.color }} aria-label={cfg.label} />
     </Tooltip>
   );
 };
@@ -193,6 +193,7 @@ const PipelineCard: React.FC<{
             <Tooltip title="Edit">
               <IconButton
                 size="small"
+                aria-label={`Edit ${pipe.name || 'pipeline'}`}
                 onClick={(e) => { e.stopPropagation(); onEdit(); }}
                 sx={{ color: theme.palette.text.secondary }}
               >
@@ -202,6 +203,7 @@ const PipelineCard: React.FC<{
             <Tooltip title="Trigger event">
               <IconButton
                 size="small"
+                aria-label={`Trigger event for ${pipe.name || 'pipeline'}`}
                 onClick={(e) => { e.stopPropagation(); onTrigger(); }}
                 sx={{ color: theme.palette.primary.main }}
               >
@@ -211,6 +213,7 @@ const PipelineCard: React.FC<{
             <Tooltip title="Delete pipeline">
               <IconButton
                 size="small"
+                aria-label={`Delete ${pipe.name || 'pipeline'}`}
                 onClick={(e) => { e.stopPropagation(); onDelete(); }}
                 sx={{ color: theme.palette.error.main, opacity: 0.7, '&:hover': { opacity: 1 } }}
               >
@@ -611,6 +614,7 @@ const PipelinesPage: React.FC = () => {
           <TextField
             size="small"
             placeholder="Search pipelines & events…"
+            aria-label="Search pipelines and events"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             slotProps={{
@@ -647,7 +651,7 @@ const PipelinesPage: React.FC = () => {
 
       {/* ---- Loading skeletons ---- */}
       {loading ? (
-        <Grid container spacing={3}>
+        <Grid container spacing={3} aria-busy="true" aria-label="Loading pipelines">
           <Grid size={{ xs: 12, md: 5 }}>
             <Skeleton variant="text" width={80} height={20} sx={{ mb: 2 }} />
             <Stack spacing={2}>
@@ -794,8 +798,8 @@ const PipelinesPage: React.FC = () => {
       {/* ================================================================== */}
 
       {/* ---- Create Pipeline ---- */}
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle fontWeight={700}>Create Pipeline</DialogTitle>
+      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth aria-labelledby="create-pipeline-title">
+        <DialogTitle id="create-pipeline-title" fontWeight={700}>Create Pipeline</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
             <TextField
@@ -849,8 +853,8 @@ const PipelinesPage: React.FC = () => {
       </Dialog>
 
       {/* ---- Trigger Event ---- */}
-      <Dialog open={triggerOpen} onClose={() => setTriggerOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle fontWeight={700}>Trigger Event</DialogTitle>
+      <Dialog open={triggerOpen} onClose={() => setTriggerOpen(false)} maxWidth="sm" fullWidth aria-labelledby="trigger-event-title">
+        <DialogTitle id="trigger-event-title" fontWeight={700}>Trigger Event</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
             <FormControl fullWidth>
@@ -912,8 +916,8 @@ const PipelinesPage: React.FC = () => {
       </Dialog>
 
       {/* ---- Edit Pipeline ---- */}
-      <Dialog open={editPipeOpen} onClose={() => setEditPipeOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle fontWeight={700}>Edit Pipeline</DialogTitle>
+      <Dialog open={editPipeOpen} onClose={() => setEditPipeOpen(false)} maxWidth="sm" fullWidth aria-labelledby="edit-pipeline-title">
+        <DialogTitle id="edit-pipeline-title" fontWeight={700}>Edit Pipeline</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
             <TextField
@@ -965,10 +969,10 @@ const PipelinesPage: React.FC = () => {
       </Dialog>
 
       {/* ---- Pipeline Detail ---- */}
-      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="md" fullWidth aria-labelledby="pipeline-detail-title">
         {selectedPipeline && (
           <>
-            <DialogTitle sx={{ pb: 1 }}>
+            <DialogTitle id="pipeline-detail-title" sx={{ pb: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <Box
                   sx={{
@@ -1131,8 +1135,9 @@ const PipelinesPage: React.FC = () => {
         onClose={() => setDeleteTarget(null)}
         maxWidth="xs"
         fullWidth
+        aria-labelledby="delete-pipeline-title"
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <DialogTitle id="delete-pipeline-title" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box
             sx={{
               width: 40,

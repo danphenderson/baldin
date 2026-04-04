@@ -263,8 +263,8 @@ const CompaniesPage: React.FC = () => {
   return (
     <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 1400, mx: 'auto' }}>
       {/* Feedback banners */}
-      <Collapse in={!!error}><Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert></Collapse>
-      <Collapse in={!!success}><Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert></Collapse>
+      <Collapse in={!!error}><Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }} role="alert">{error}</Alert></Collapse>
+      <Collapse in={!!success}><Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }} role="status" aria-live="polite">{success}</Alert></Collapse>
 
       {/* -------- AI Extraction Bar -------------------------------- */}
       <Card
@@ -408,7 +408,7 @@ const CompaniesPage: React.FC = () => {
 
       {/* -------- Content area ------------------------------------- */}
       {loading ? (
-        <Grid container spacing={2}>
+        <Grid container spacing={2} aria-busy="true" aria-label="Loading companies">
           {[1, 2, 3, 4].map(i => (
             <Grid size={{ xs: 12, md: 6 }} key={i}>
               <Skeleton variant="rounded" height={180} sx={{ borderRadius: 3 }} />

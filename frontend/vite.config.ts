@@ -17,6 +17,19 @@ export default defineConfig(({ mode, command }) => {
 
   return {
     plugins: [react()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'react-router-dom'],
+            mui: ['@mui/material', '@mui/icons-material'],
+            motion: ['motion/react'],
+            charts: ['recharts'],
+            json: ['react-json-tree'],
+          },
+        },
+      },
+    },
     server: {
       host: '0.0.0.0',
       port: 5173,

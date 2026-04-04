@@ -135,6 +135,40 @@ const AppLayout: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Skip to content link for keyboard users */}
+      <Box
+        component="a"
+        href="#main-content"
+        sx={{
+          position: 'absolute',
+          left: '-9999px',
+          top: 'auto',
+          width: '1px',
+          height: '1px',
+          overflow: 'hidden',
+          zIndex: 9999,
+          '&:focus': {
+            position: 'fixed',
+            top: 8,
+            left: 8,
+            width: 'auto',
+            height: 'auto',
+            overflow: 'visible',
+            bgcolor: 'background.paper',
+            color: 'primary.main',
+            px: 2,
+            py: 1,
+            borderRadius: 1,
+            boxShadow: 4,
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            textDecoration: 'none',
+          },
+        }}
+      >
+        Skip to main content
+      </Box>
+
       {/* Sidebar */}
       <Drawer
         variant="permanent"
@@ -234,7 +268,7 @@ const AppLayout: React.FC = () => {
         <Divider sx={{ opacity: 0.5 }} />
 
         {/* Nav Items */}
-        <List sx={{ px: 1, py: 1.5, flexGrow: 1 }}>
+        <List component="nav" aria-label="Main navigation" sx={{ px: 1, py: 1.5, flexGrow: 1 }}>
           {navItems.map((item) => {
             const isActive = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
             return (
@@ -441,6 +475,7 @@ const AppLayout: React.FC = () => {
         {/* Page content */}
         <Box
           component="main"
+          id="main-content"
           sx={{
             flexGrow: 1,
             p: 3,

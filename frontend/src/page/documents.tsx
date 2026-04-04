@@ -230,7 +230,7 @@ const DocumentsPage: React.FC = () => {
           </Box>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <Tooltip title="Refresh">
-              <IconButton onClick={refresh} size="small" sx={{ border: `1px solid ${theme.palette.divider}` }}>
+              <IconButton onClick={refresh} size="small" aria-label="Refresh documents" sx={{ border: `1px solid ${theme.palette.divider}` }}>
                 <RefreshIcon fontSize="small" />
               </IconButton>
             </Tooltip>
@@ -255,7 +255,7 @@ const DocumentsPage: React.FC = () => {
           </Stack>
         </Box>
 
-        {error && <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError('')}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError('')} role="alert">{error}</Alert>}
 
         {/* ── Toolbar ───────────────────────────────────────────── */}
         <Stack direction="row" spacing={1.5} sx={{ mt: 3, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -264,6 +264,7 @@ const DocumentsPage: React.FC = () => {
             onChange={e => setSearch(e.target.value)}
             slotProps={{ input: {
               startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} /></InputAdornment>,
+              'aria-label': 'Search documents',
             } }}
             sx={{ minWidth: 220, flex: { xs: '1 1 100%', sm: '0 1 280px' } }}
           />
@@ -305,7 +306,7 @@ const DocumentsPage: React.FC = () => {
 
       {/* ── Document grid ───────────────────────────────────────── */}
       {loading ? (
-        <Grid container spacing={2.5}>
+        <Grid container spacing={2.5} aria-busy="true" aria-label="Loading documents">
           {[1, 2, 3, 4, 5, 6].map(i => (
             <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={i}>
               <Skeleton variant="rounded" height={190} sx={{ borderRadius: 3 }} />
@@ -425,17 +426,17 @@ const DocumentsPage: React.FC = () => {
                       </Typography>
                       <Stack direction="row" spacing={0} className="doc-actions">
                         <Tooltip title="Download PDF">
-                          <IconButton size="small" onClick={e => { e.stopPropagation(); handleDownload(doc); }}>
+                          <IconButton size="small" aria-label={`Download ${doc.name || 'document'}`} onClick={e => { e.stopPropagation(); handleDownload(doc); }}>
                             <DownloadIcon sx={{ fontSize: 18 }} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Edit">
-                          <IconButton size="small" onClick={e => { e.stopPropagation(); openEditor(doc.docType, doc); }}>
+                          <IconButton size="small" aria-label={`Edit ${doc.name || 'document'}`} onClick={e => { e.stopPropagation(); openEditor(doc.docType, doc); }}>
                             <EditIcon sx={{ fontSize: 18 }} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Delete">
-                          <IconButton size="small" onClick={e => { e.stopPropagation(); setDeleteTarget(doc); }}>
+                          <IconButton size="small" aria-label={`Delete ${doc.name || 'document'}`} onClick={e => { e.stopPropagation(); setDeleteTarget(doc); }}>
                             <DeleteIcon sx={{ fontSize: 18, color: theme.palette.error.main }} />
                           </IconButton>
                         </Tooltip>
@@ -453,6 +454,7 @@ const DocumentsPage: React.FC = () => {
       <Dialog
         open={Boolean(viewerDoc)} onClose={() => setViewerDoc(null)}
         maxWidth="md" fullWidth
+        aria-labelledby="document-viewer-title"
         slotProps={{ paper: { sx: { maxHeight: '85vh' } } }}
       >
         {viewerDoc && (() => {
@@ -462,7 +464,7 @@ const DocumentsPage: React.FC = () => {
 
           return (
             <>
-              <DialogTitle sx={{ pb: 1 }}>
+              <DialogTitle id="document-viewer-title" sx={{ pb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
                   <Box sx={{
                     width: 48, height: 48, borderRadius: '14px', flexShrink: 0,
@@ -507,7 +509,7 @@ const DocumentsPage: React.FC = () => {
               <Divider />
               <DialogActions sx={{ px: 3, py: 2, justifyContent: 'space-between' }}>
                 <Tooltip title="Copy to clipboard">
-                  <IconButton size="small" onClick={() => { navigator.clipboard.writeText(viewerDoc.content ?? ''); }}>
+                  <IconButton size="small" aria-label="Copy document content to clipboard" onClick={() => { navigator.clipboard.writeText(viewerDoc.content ?? ''); }}>
                     <CopyIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
@@ -534,9 +536,10 @@ const DocumentsPage: React.FC = () => {
       <Dialog
         open={editorOpen} onClose={() => setEditorOpen(false)}
         maxWidth="md" fullWidth
+        aria-labelledby="document-editor-title"
         slotProps={{ paper: { sx: { maxHeight: '90vh' } } }}
       >
-        <DialogTitle sx={{ fontWeight: 700 }}>
+        <DialogTitle id="document-editor-title" sx={{ fontWeight: 700 }}>
           {editorData.id ? 'Edit' : 'Create'} {typeLabel(editorDocType)}
         </DialogTitle>
         <DialogContent>
@@ -593,8 +596,9 @@ const DocumentsPage: React.FC = () => {
       <Dialog
         open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}
         maxWidth="xs" fullWidth
+        aria-labelledby="confirm-delete-title"
       >
-        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <DialogTitle id="confirm-delete-title" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <WarningIcon color="error" /> Delete document
         </DialogTitle>
         <DialogContent>

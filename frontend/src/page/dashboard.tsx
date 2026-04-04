@@ -264,7 +264,7 @@ const DashboardPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+      <Box sx={{ maxWidth: 1200, mx: 'auto' }} aria-busy="true" aria-label="Loading dashboard">
         <Skeleton variant="rounded" height={72} sx={{ borderRadius: 3, mb: 3 }} />
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           {[1, 2, 3, 4].map((i) => (
@@ -289,7 +289,7 @@ const DashboardPage: React.FC = () => {
 
   if (error) {
     return (
-      <Box sx={{ maxWidth: 1200, mx: 'auto', textAlign: 'center', py: 10 }}>
+      <Box sx={{ maxWidth: 1200, mx: 'auto', textAlign: 'center', py: 10 }} role="alert">
         <Typography variant="h5" sx={{ mb: 1, fontWeight: 700 }}>Something went wrong</Typography>
         <Typography color="text.secondary" sx={{ mb: 3 }}>{error}</Typography>
         <Button variant="contained" onClick={refresh} startIcon={<RefreshIcon />}>

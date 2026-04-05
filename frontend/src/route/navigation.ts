@@ -33,12 +33,21 @@ export const secondaryNavByGroup: Record<string, SecondaryNavItem[]> = {
   ],
   '/me': [
     { label: 'Profile', path: '/me' },
-    { label: 'Documents', path: '/me/documents' },
+    { label: 'Studio', path: '/me/documents' },
   ],
   '/workflows': [
     { label: 'Pipelines', path: '/workflows' },
     { label: 'Extractors', path: '/workflows/extractors' },
     { label: 'Crawlers', path: '/workflows/crawlers' },
+  ],
+  '/network': [
+    { label: 'Directory', path: '/network/directory' },
+    { label: 'Connections', path: '/network/connections' },
+    { label: 'Messages', path: '/network/messages' },
+  ],
+  '/settings': [
+    { label: 'Subscription', path: '/settings/subscription' },
+    { label: 'Graduation', path: '/settings/graduation' },
   ],
 };
 
@@ -97,6 +106,16 @@ export const drawerSections: DrawerSection[] = [
     label: 'Identity',
     items: [
       { label: 'Profile', path: '/me' },
+      { label: 'Studio', path: '/me/documents' },
+    ],
+  },
+  {
+    key: 'network',
+    label: 'Network',
+    items: [
+      { label: 'Directory', path: '/network/directory' },
+      { label: 'Connections', path: '/network/connections' },
+      { label: 'Messages', path: '/network/messages' },
     ],
   },
   {
@@ -104,6 +123,14 @@ export const drawerSections: DrawerSection[] = [
     label: 'Automate',
     items: [
       { label: 'Workflows', path: '/workflows' },
+    ],
+  },
+  {
+    key: 'settings',
+    label: 'Settings',
+    items: [
+      { label: 'Subscription', path: '/settings/subscription' },
+      { label: 'Graduation', path: '/settings/graduation' },
     ],
   },
 ];

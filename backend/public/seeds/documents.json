@@ -1,0 +1,44 @@
+[
+    {
+        "kind": "resume",
+        "title": "Chronological Resume Template",
+        "status": "active",
+        "content": "[FULL NAME]\n[Address] | [Phone] | [Email] | [LinkedIn URL]\n\n--- PROFESSIONAL SUMMARY ---\n[2-3 sentence summary highlighting years of experience, key skills, and career objectives.]\n\n--- EXPERIENCE ---\n[Job Title] — [Company Name]\n[City, State] | [Start Date] – [End Date]\n• [Achievement or responsibility with quantifiable result]\n• [Achievement or responsibility with quantifiable result]\n• [Achievement or responsibility with quantifiable result]\n\n[Job Title] — [Company Name]\n[City, State] | [Start Date] – [End Date]\n• [Achievement or responsibility with quantifiable result]\n• [Achievement or responsibility with quantifiable result]\n\n--- EDUCATION ---\n[Degree] in [Field of Study] — [University Name]\n[City, State] | [Graduation Date]\n\n--- SKILLS ---\n[Skill 1] | [Skill 2] | [Skill 3] | [Skill 4] | [Skill 5]",
+        "content_type": "template"
+    },
+    {
+        "kind": "resume",
+        "title": "Functional / Skills-Based Resume Template",
+        "status": "active",
+        "content": "[FULL NAME]\n[Phone] | [Email] | [Portfolio URL]\n\n--- SUMMARY ---\n[Brief career summary focused on transferable skills and value proposition.]\n\n--- CORE COMPETENCIES ---\n[Skill Category 1]\n• [Specific accomplishment demonstrating this skill]\n• [Specific accomplishment demonstrating this skill]\n\n[Skill Category 2]\n• [Specific accomplishment demonstrating this skill]\n• [Specific accomplishment demonstrating this skill]\n\n[Skill Category 3]\n• [Specific accomplishment demonstrating this skill]\n• [Specific accomplishment demonstrating this skill]\n\n--- WORK HISTORY ---\n[Job Title] — [Company] | [Dates]\n[Job Title] — [Company] | [Dates]\n\n--- EDUCATION ---\n[Degree], [Institution] | [Year]",
+        "content_type": "template"
+    },
+    {
+        "kind": "cover_letter",
+        "title": "Standard Cover Letter Template",
+        "status": "active",
+        "content": "[Your Name]\n[Address]\n[City, State, Zip]\n[Email] | [Phone]\n[Date]\n\n[Hiring Manager's Name]\n[Company Name]\n[Company Address]\n\nDear [Hiring Manager's Name],\n\n[Opening: State the position you are applying for and how you learned about it. Include a hook that captures attention.]\n\n[Body 1: Highlight your most relevant qualifications and accomplishments. Connect your experience directly to the job requirements.]\n\n[Body 2: Demonstrate knowledge of the company and explain why you are a strong cultural fit. Reference specific projects, values, or initiatives.]\n\n[Closing: Reiterate your enthusiasm, thank the reader, and include a call to action regarding next steps.]\n\nSincerely,\n[Your Name]",
+        "content_type": "template"
+    },
+    {
+        "kind": "follow_up",
+        "title": "Interview Follow-Up Email Template",
+        "status": "active",
+        "content": "Subject: Thank You — [Position Title] Interview\n\nHi [Interviewer's Name],\n\nThank you for taking the time to meet with me [today/yesterday] to discuss the [Position Title] role at [Company Name].\n\nI enjoyed learning more about [specific topic discussed during interview] and am even more excited about the opportunity to contribute to [specific team goal or project].\n\n[Optional: Address any point you wish you had elaborated on during the interview.]\n\nPlease don't hesitate to reach out if you need any additional information from me. I look forward to hearing about next steps.\n\nBest regards,\n[Your Name]\n[Phone] | [Email]",
+        "content_type": "template"
+    },
+    {
+        "kind": "follow_up",
+        "title": "Application Status Check-In Template",
+        "status": "active",
+        "content": "Subject: Following Up — [Position Title] Application\n\nHi [Hiring Manager/Recruiter Name],\n\nI hope this message finds you well. I submitted my application for the [Position Title] role on [date] and wanted to follow up to express my continued interest in the position.\n\n[1-2 sentences reiterating your fit or mentioning a recent company development.]\n\nI understand the review process takes time, and I appreciate your consideration. I would welcome the opportunity to discuss how my background aligns with the team's needs.\n\nThank you for your time,\n[Your Name]\n[Phone] | [Email]",
+        "content_type": "template"
+    },
+    {
+        "kind": "reference_sheet",
+        "title": "Professional References Template",
+        "status": "active",
+        "content": "[YOUR FULL NAME]\nProfessional References\n\n---\n\n1. [Reference Name]\n   [Title] at [Company]\n   [Email] | [Phone]\n   Relationship: [e.g., Direct Supervisor at Company X, 2020-2023]\n\n2. [Reference Name]\n   [Title] at [Company]\n   [Email] | [Phone]\n   Relationship: [e.g., Colleague and Project Lead]\n\n3. [Reference Name]\n   [Title] at [Company]\n   [Email] | [Phone]\n   Relationship: [e.g., Academic Advisor at University]\n\n---\nReferences available upon request. Please contact me before reaching out so I may give them a heads-up.",
+        "content_type": "template"
+    }
+]

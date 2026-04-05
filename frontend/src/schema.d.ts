@@ -67,6 +67,15 @@ export interface paths {
     /** Read Profile */
     get: operations["read_profile_users_me_profile_get"];
   };
+  "/users/me/placement": {
+    /**
+     * Update Placement
+     * @description Update the current user's placement status.
+     *
+     * Valid transitions: active → graduated, graduated → alumni.
+     */
+    patch: operations["update_placement_users_me_placement_patch"];
+  };
   "/users/me/profile/extract": {
     /**
      * Extract User Profile
@@ -317,6 +326,76 @@ export interface paths {
     /** Generate Cover Letter For Application */
     post: operations["generate_cover_letter_for_application_applications__id__cover_letters_generate_post"];
   };
+  "/applications/{id}/documents": {
+    /** Get Application Documents */
+    get: operations["get_application_documents_applications__id__documents_get"];
+    /** Add Document To Application */
+    post: operations["add_document_to_application_applications__id__documents_post"];
+  };
+  "/applications/{id}/documents/{document_id}": {
+    /** Detach Document From Application */
+    delete: operations["detach_document_from_application_applications__id__documents__document_id__delete"];
+  };
+  "/documents/pinned": {
+    /**
+     * Get Pinned Documents
+     * @description Return the user's pinned (active/canonical) documents — at most one per kind.
+     */
+    get: operations["get_pinned_documents_documents_pinned_get"];
+  };
+  "/documents/": {
+    /** List Documents */
+    get: operations["list_documents_documents__get"];
+    /**
+     * Create Document
+     * @description Create a document with its initial version (v1).
+     */
+    post: operations["create_document_documents__post"];
+  };
+  "/documents/generate": {
+    /**
+     * Generate Document
+     * @description Generate document content via AI and persist as a Document + Version.
+     *
+     * Supported kinds: ``cover_letter``, ``resume``.  Others return 501.
+     *
+     * If ``document_id`` is provided the generated content is appended as a new
+     * version; otherwise a brand-new Document is created.
+     */
+    post: operations["generate_document_documents_generate_post"];
+  };
+  "/documents/{document_id}": {
+    /** Get Document Detail */
+    get: operations["get_document_detail_documents__document_id__get"];
+    /** Delete Document */
+    delete: operations["delete_document_documents__document_id__delete"];
+    /** Update Document */
+    patch: operations["update_document_documents__document_id__patch"];
+  };
+  "/documents/{document_id}/versions": {
+    /** List Versions */
+    get: operations["list_versions_documents__document_id__versions_get"];
+    /** Create Version */
+    post: operations["create_version_documents__document_id__versions_post"];
+  };
+  "/documents/{document_id}/versions/{version_id}": {
+    /** Get Version */
+    get: operations["get_version_documents__document_id__versions__version_id__get"];
+  };
+  "/documents/{document_id}/pin": {
+    /**
+     * Pin Document
+     * @description Pin (or unpin) a document as the active/canonical for its kind.
+     *
+     * When pinning, all other documents of the same kind for this user are
+     * unpinned first.
+     */
+    post: operations["pin_document_documents__document_id__pin_post"];
+  };
+  "/documents/{document_id}/download": {
+    /** Download Document */
+    get: operations["download_document_documents__document_id__download_get"];
+  };
   "/education/": {
     /** Read Current User Educations */
     get: operations["read_current_user_educations_education__get"];
@@ -442,6 +521,128 @@ export interface paths {
     /** Resume Crawler Run */
     post: operations["resume_crawler_run_crawlers_runs__run_id__resume_post"];
   };
+  "/directory/": {
+    /**
+     * List Directory
+     * @description Paginated, searchable user directory.
+     *
+     * Only users with ``is_discoverable=True`` and ``is_active=True`` are returned.
+     */
+    get: operations["list_directory_directory__get"];
+  };
+  "/directory/{user_id}": {
+    /**
+     * Read Public Profile
+     * @description View another user's public profile.
+     */
+    get: operations["read_public_profile_directory__user_id__get"];
+  };
+  "/connections/": {
+    /**
+     * List Connections
+     * @description List connections for the current user (both sent and received).
+     */
+    get: operations["list_connections_connections__get"];
+    /**
+     * Send Connection Request
+     * @description Send a connection request to another user.
+     */
+    post: operations["send_connection_request_connections__post"];
+  };
+  "/connections/{id}/accept": {
+    /**
+     * Accept Connection
+     * @description Accept a pending connection request. Only the addressee can accept.
+     */
+    patch: operations["accept_connection_connections__id__accept_patch"];
+  };
+  "/connections/{id}/decline": {
+    /**
+     * Decline Connection
+     * @description Decline a pending connection request. Only the addressee can decline.
+     */
+    patch: operations["decline_connection_connections__id__decline_patch"];
+  };
+  "/connections/{id}": {
+    /**
+     * Remove Connection
+     * @description Remove an accepted connection or cancel a pending request. Either party can do this.
+     */
+    delete: operations["remove_connection_connections__id__delete"];
+  };
+  "/connections/{id}/block": {
+    /**
+     * Block Connection
+     * @description Block a user via an existing connection record. Sets status to blocked.
+     */
+    post: operations["block_connection_connections__id__block_post"];
+  };
+  "/conversations/unread": {
+    /**
+     * Get Total Unread
+     * @description Total unread message count across all conversations (for sidebar badge).
+     */
+    get: operations["get_total_unread_conversations_unread_get"];
+  };
+  "/conversations/": {
+    /**
+     * List Conversations
+     * @description List the current user's conversations, sorted by most recent message.
+     */
+    get: operations["list_conversations_conversations__get"];
+    /**
+     * Create Conversation
+     * @description Create a DM or group conversation.
+     */
+    post: operations["create_conversation_conversations__post"];
+  };
+  "/conversations/{conversation_id}": {
+    /**
+     * Get Conversation
+     * @description Get conversation detail with paginated messages. Auto-marks as read.
+     */
+    get: operations["get_conversation_conversations__conversation_id__get"];
+  };
+  "/conversations/{conversation_id}/messages": {
+    /**
+     * Send Message
+     * @description Send a message in a conversation.
+     */
+    post: operations["send_message_conversations__conversation_id__messages_post"];
+  };
+  "/conversations/{conversation_id}/messages/{message_id}": {
+    /**
+     * Delete Message
+     * @description Delete your own message (hard delete).
+     */
+    delete: operations["delete_message_conversations__conversation_id__messages__message_id__delete"];
+    /**
+     * Edit Message
+     * @description Edit your own message.
+     */
+    patch: operations["edit_message_conversations__conversation_id__messages__message_id__patch"];
+  };
+  "/conversations/{conversation_id}/read": {
+    /**
+     * Mark Conversation Read
+     * @description Mark a conversation as read (update last_read_at).
+     */
+    post: operations["mark_conversation_read_conversations__conversation_id__read_post"];
+  };
+  "/conversations/{conversation_id}/participants": {
+    /**
+     * Add Participant
+     * @description Add a participant to a group conversation. Only admins can add.
+     */
+    post: operations["add_participant_conversations__conversation_id__participants_post"];
+  };
+  "/conversations/{conversation_id}/participants/{target_user_id}": {
+    /**
+     * Remove Participant
+     * @description Remove a participant or leave a group. Admins can remove others; anyone can leave.
+     */
+    delete: operations["remove_participant_conversations__conversation_id__participants__target_user_id__delete"];
+  };
   "/": {
     /** Root */
     get: operations["root__get"];
@@ -475,6 +676,22 @@ export interface components {
       next_step?: string | null;
       /** Next Step Due */
       next_step_due?: string | null;
+      /** Document Ids */
+      document_ids?: string[] | null;
+    };
+    /** ApplicationDocumentAttach */
+    ApplicationDocumentAttach: {
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Document to attach
+       */
+      document_id: string;
+      /**
+       * Version Id
+       * @description Specific version to pin for this application (default: head)
+       */
+      version_id?: string | null;
     };
     /** ApplicationRead */
     ApplicationRead: {
@@ -873,6 +1090,122 @@ export interface components {
           [key: string]: unknown;
         }[];
     };
+    /** ConnectionCreate */
+    ConnectionCreate: {
+      /**
+       * Addressee Id
+       * Format: uuid4
+       * @description User to send the connection request to
+       */
+      addressee_id: string;
+      /**
+       * Message
+       * @description Optional note accompanying the request
+       */
+      message?: string | null;
+    };
+    /** ConnectionRead */
+    ConnectionRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description The user who sent the request */
+      requester: components["schemas"]["ConnectionUserSummaryRead"];
+      /** @description The user who received the request */
+      addressee: components["schemas"]["ConnectionUserSummaryRead"];
+      /** @description Connection status */
+      status: components["schemas"]["ConnectionStatus"];
+      /**
+       * Message
+       * @description Optional note from the requester
+       */
+      message?: string | null;
+    };
+    /**
+     * ConnectionStatus
+     * @enum {string}
+     */
+    ConnectionStatus: "pending" | "accepted" | "declined" | "blocked";
+    /** ConnectionUserSummaryRead */
+    ConnectionUserSummaryRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Public display name
+       */
+      display_name: string;
+      /**
+       * Headline
+       * @description Professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
+      /**
+       * City
+       * @description City
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description State
+       */
+      state?: string | null;
+      /**
+       * Country
+       * @description Country
+       */
+      country?: string | null;
+    };
+    /** ConnectionsPaginatedRead */
+    ConnectionsPaginatedRead: {
+      /**
+       * Items
+       * @description Paginated connection records
+       */
+      items?: components["schemas"]["ConnectionRead"][];
+      /**
+       * Total
+       * @description Total matching connections
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
     /** ContactCreate */
     ContactCreate: {
       /**
@@ -995,6 +1328,172 @@ export interface components {
      * @enum {string}
      */
     ContentType: "custom" | "generated" | "template";
+    /** ConversationCreate */
+    ConversationCreate: {
+      /**
+       * Participant User Ids
+       * @description User IDs of the other participants (creator is auto-added)
+       */
+      participant_user_ids: string[];
+      /**
+       * @description Conversation type
+       * @default direct
+       */
+      type?: components["schemas"]["ConversationType"];
+      /**
+       * Title
+       * @description Title (required for group)
+       */
+      title?: string | null;
+    };
+    /** ConversationDetailRead */
+    ConversationDetailRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Conversation type */
+      type: components["schemas"]["ConversationType"];
+      /**
+       * Title
+       * @description Conversation title
+       */
+      title?: string | null;
+      /**
+       * Participants
+       * @description Conversation participants
+       */
+      participants?: components["schemas"]["ConversationParticipantRead"][];
+      /**
+       * Messages
+       * @description Paginated messages
+       */
+      messages?: components["schemas"]["MessageRead"][];
+      /**
+       * Total Messages
+       * @description Total message count
+       * @default 0
+       */
+      total_messages?: number;
+    };
+    /** ConversationParticipantRead */
+    ConversationParticipantRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description Participant user identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Participant display name
+       */
+      display_name: string;
+      /**
+       * Avatar Uri
+       * @description Participant avatar URI
+       */
+      avatar_uri?: string | null;
+      /** @description Participant role */
+      role: components["schemas"]["ConversationParticipantRole"];
+      /**
+       * Joined At
+       * Format: date-time
+       * @description When the participant joined
+       */
+      joined_at: string;
+    };
+    /**
+     * ConversationParticipantRole
+     * @enum {string}
+     */
+    ConversationParticipantRole: "member" | "admin";
+    /** ConversationRead */
+    ConversationRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Conversation type */
+      type: components["schemas"]["ConversationType"];
+      /**
+       * Title
+       * @description Conversation title
+       */
+      title?: string | null;
+      /**
+       * Participants
+       * @description Conversation participants
+       */
+      participants?: components["schemas"]["ConversationParticipantRead"][];
+      /** @description Most recent message preview */
+      last_message?: components["schemas"]["MessageRead"] | null;
+      /**
+       * Unread Count
+       * @description Unread messages for current user
+       * @default 0
+       */
+      unread_count?: number;
+    };
+    /**
+     * ConversationType
+     * @enum {string}
+     */
+    ConversationType: "direct" | "group";
+    /** ConversationsPaginatedRead */
+    ConversationsPaginatedRead: {
+      /**
+       * Items
+       * @description Paginated conversations
+       */
+      items?: components["schemas"]["ConversationRead"][];
+      /**
+       * Total
+       * @description Total matching conversations
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
     /** CoverLetterCreate */
     CoverLetterCreate: {
       /**
@@ -1378,6 +1877,240 @@ export interface components {
      * @enum {string}
      */
     CrawlerTriggerType: "manual" | "scheduled";
+    /** DocumentCreate */
+    DocumentCreate: {
+      /** @description Document kind discriminator */
+      kind: components["schemas"]["DocumentKind"];
+      /**
+       * Title
+       * @description Document title
+       */
+      title: string;
+      /**
+       * @description Initial lifecycle status
+       * @default draft
+       */
+      status?: components["schemas"]["DocumentStatus"];
+      /**
+       * Content
+       * @description Initial version content
+       */
+      content?: string | null;
+      /** @description Content origin type for the initial version */
+      content_type?: components["schemas"]["ContentType"] | null;
+    };
+    /** DocumentDetailRead */
+    DocumentDetailRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Document kind discriminator */
+      kind: components["schemas"]["DocumentKind"];
+      /**
+       * Title
+       * @description Document title
+       */
+      title: string;
+      /** @description Document lifecycle status */
+      status: components["schemas"]["DocumentStatus"];
+      /**
+       * Is Pinned
+       * @description Whether this is the active document for its kind
+       * @default false
+       */
+      is_pinned?: boolean;
+      /** @description Current head version inline */
+      head_version?: components["schemas"]["DocumentVersionRead"] | null;
+      /**
+       * Version Count
+       * @description Total number of versions
+       * @default 0
+       */
+      version_count?: number;
+      /**
+       * Versions
+       * @description Full version history, oldest first
+       */
+      versions?: components["schemas"]["DocumentVersionRead"][];
+    };
+    /** DocumentGenerateRequest */
+    DocumentGenerateRequest: {
+      /** @description Document kind to generate */
+      kind: components["schemas"]["DocumentKind"];
+      /**
+       * Lead Id
+       * Format: uuid4
+       * @description Lead to generate content from
+       */
+      lead_id: string;
+      /**
+       * Document Id
+       * @description Existing document to append a new version to (omit to create a new document)
+       */
+      document_id?: string | null;
+      /**
+       * Template Version Id
+       * @description Optional template version to use for generation
+       */
+      template_version_id?: string | null;
+    };
+    /**
+     * DocumentKind
+     * @enum {string}
+     */
+    DocumentKind: "resume" | "cover_letter" | "follow_up" | "reference_sheet" | "freeform";
+    /** DocumentPinRequest */
+    DocumentPinRequest: {
+      /**
+       * Pinned
+       * @description Whether to pin or unpin the document
+       * @default true
+       */
+      pinned?: boolean;
+    };
+    /** DocumentRead */
+    DocumentRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Document kind discriminator */
+      kind: components["schemas"]["DocumentKind"];
+      /**
+       * Title
+       * @description Document title
+       */
+      title: string;
+      /** @description Document lifecycle status */
+      status: components["schemas"]["DocumentStatus"];
+      /**
+       * Is Pinned
+       * @description Whether this is the active document for its kind
+       * @default false
+       */
+      is_pinned?: boolean;
+      /** @description Current head version inline */
+      head_version?: components["schemas"]["DocumentVersionRead"] | null;
+      /**
+       * Version Count
+       * @description Total number of versions
+       * @default 0
+       */
+      version_count?: number;
+    };
+    /**
+     * DocumentStatus
+     * @enum {string}
+     */
+    DocumentStatus: "draft" | "active" | "archived";
+    /** DocumentUpdate */
+    DocumentUpdate: {
+      /**
+       * Title
+       * @description Updated title
+       */
+      title?: string | null;
+      /** @description Updated lifecycle status */
+      status?: components["schemas"]["DocumentStatus"] | null;
+    };
+    /** DocumentVersionCreate */
+    DocumentVersionCreate: {
+      /**
+       * Name
+       * @description Snapshot title
+       */
+      name?: string | null;
+      /**
+       * Content
+       * @description Version content
+       */
+      content?: string | null;
+      /** @description Content origin type */
+      content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * Change Summary
+       * @description User or system note for this version
+       */
+      change_summary?: string | null;
+    };
+    /** DocumentVersionRead */
+    DocumentVersionRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Parent document identifier
+       */
+      document_id: string;
+      /**
+       * Version Number
+       * @description Monotonically incrementing version number
+       */
+      version_number: number;
+      /**
+       * Name
+       * @description Snapshot title
+       */
+      name?: string | null;
+      /**
+       * Content
+       * @description Version content
+       */
+      content?: string | null;
+      /** @description Content origin type */
+      content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * Change Summary
+       * @description User or system note for this version
+       */
+      change_summary?: string | null;
+    };
     /** EducationCreate */
     EducationCreate: {
       /**
@@ -2166,6 +2899,17 @@ export interface components {
       registered_at: string;
       /** @description The participant's exposed public profile */
       public_profile: components["schemas"]["LeadParticipantPublicProfileRead"];
+      /**
+       * Is Connected
+       * @description Whether the viewer has an accepted connection with this participant
+       * @default false
+       */
+      is_connected?: boolean;
+      /**
+       * Connection Id
+       * @description Connection record id, if an accepted connection exists
+       */
+      connection_id?: string | null;
     };
     /** LeadRead */
     LeadRead: {
@@ -2433,6 +3177,84 @@ export interface components {
        * @description Total number of leads, if pagination requested
        */
       total_count: number | null;
+    };
+    /** MessageAuthorRead */
+    MessageAuthorRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description Author user identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Author display name
+       */
+      display_name: string;
+      /**
+       * Avatar Uri
+       * @description Author avatar URI
+       */
+      avatar_uri?: string | null;
+    };
+    /** MessageCreate */
+    MessageCreate: {
+      /**
+       * Content
+       * @description Message content
+       */
+      content: string;
+      /**
+       * Parent Message Id
+       * @description Parent message ID for threaded replies
+       */
+      parent_message_id?: string | null;
+    };
+    /** MessageEdit */
+    MessageEdit: {
+      /**
+       * Content
+       * @description Updated message content
+       */
+      content: string;
+    };
+    /** MessageRead */
+    MessageRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Message author */
+      author: components["schemas"]["MessageAuthorRead"];
+      /**
+       * Content
+       * @description Message content
+       */
+      content: string;
+      /**
+       * Edited At
+       * @description When the message was last edited
+       */
+      edited_at?: string | null;
+      /**
+       * Parent Message Id
+       * @description Parent message ID for threaded replies
+       */
+      parent_message_id?: string | null;
     };
     /** OrchestrationEventCreate */
     OrchestrationEventCreate: {
@@ -2783,6 +3605,16 @@ export interface components {
       request_count?: boolean;
     };
     /**
+     * PlacementStatus
+     * @enum {string}
+     */
+    PlacementStatus: "active" | "graduated" | "alumni";
+    /** PlacementUpdate */
+    PlacementUpdate: {
+      /** @description Target placement status (active, graduated, alumni) */
+      placement_status: components["schemas"]["PlacementStatus"];
+    };
+    /**
      * ProfileExtractResponse
      * @description Response from the unified profile extraction endpoint.
      */
@@ -3003,6 +3835,11 @@ export interface components {
       subskills?: string | null;
     };
     /**
+     * SubscriptionTier
+     * @enum {string}
+     */
+    SubscriptionTier: "free" | "starter" | "pro";
+    /**
      * SuggestExtractor
      * @description A request to create an extractor from a text sample.
      */
@@ -3030,6 +3867,14 @@ export interface components {
      * @enum {string}
      */
     URIType: "filepath" | "datalake" | "database" | "api" | "url";
+    /** UnreadCountRead */
+    UnreadCountRead: {
+      /**
+       * Total Unread
+       * @description Total unread messages across conversations
+       */
+      total_unread: number;
+    };
     /** UserCreate */
     UserCreate: {
       /**
@@ -3085,6 +3930,42 @@ export interface components {
       /** @description Avatar URI */
       avatar_uri?: components["schemas"]["URI"] | null;
       /**
+       * Headline
+       * @description Short professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Bio
+       * @description Longer about-me blurb
+       */
+      bio?: string | null;
+      /**
+       * Is Discoverable
+       * @description Whether the user appears in the directory
+       * @default true
+       */
+      is_discoverable?: boolean;
+      /**
+       * @description Subscription tier
+       * @default free
+       */
+      subscription_tier?: components["schemas"]["SubscriptionTier"];
+      /**
+       * Subscription Expires At
+       * @description When the current subscription expires
+       */
+      subscription_expires_at?: string | null;
+      /**
+       * @description Job-seeker lifecycle status
+       * @default active
+       */
+      placement_status?: components["schemas"]["PlacementStatus"];
+      /**
+       * Placement Date
+       * @description Date when the user transitioned to graduated/alumni
+       */
+      placement_date?: string | null;
+      /**
        * Email
        * Format: email
        */
@@ -3134,6 +4015,80 @@ export interface components {
         [key: string]: number;
       };
     };
+    /** UserDirectoryPaginatedRead */
+    UserDirectoryPaginatedRead: {
+      /**
+       * Items
+       * @description Paginated user directory entries
+       */
+      items?: components["schemas"]["UserDirectoryRead"][];
+      /**
+       * Total
+       * @description Total matching users
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** UserDirectoryRead */
+    UserDirectoryRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Public display name
+       */
+      display_name: string;
+      /**
+       * Headline
+       * @description Professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
+      /**
+       * City
+       * @description City
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description State
+       */
+      state?: string | null;
+      /**
+       * Country
+       * @description Country
+       */
+      country?: string | null;
+      /** @description Lifecycle status */
+      placement_status: components["schemas"]["PlacementStatus"];
+      /** @description Subscription tier */
+      subscription_tier: components["schemas"]["SubscriptionTier"];
+      /**
+       * Skills Summary
+       * @description Top skill names
+       */
+      skills_summary?: string[];
+    };
     /** UserProfileRead */
     UserProfileRead: {
       /**
@@ -3160,6 +4115,62 @@ export interface components {
        * @default []
        */
       certificates?: components["schemas"]["CertificateRead"][];
+    };
+    /** UserPublicProfileRead */
+    UserPublicProfileRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Public display name
+       */
+      display_name: string;
+      /**
+       * Headline
+       * @description Professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Bio
+       * @description About-me blurb
+       */
+      bio?: string | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
+      /**
+       * City
+       * @description City
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description State
+       */
+      state?: string | null;
+      /**
+       * Country
+       * @description Country
+       */
+      country?: string | null;
+      /** @description Lifecycle status */
+      placement_status: components["schemas"]["PlacementStatus"];
+      /**
+       * Skills
+       * @description User skills
+       */
+      skills?: components["schemas"]["SkillRead"][];
+      /**
+       * Experiences
+       * @description Work experiences
+       */
+      experiences?: components["schemas"]["ExperienceRead"][];
     };
     /** UserRead */
     UserRead: {
@@ -3215,6 +4226,42 @@ export interface components {
       time_zone?: string | null;
       /** @description Avatar URI */
       avatar_uri?: components["schemas"]["URI"] | null;
+      /**
+       * Headline
+       * @description Short professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Bio
+       * @description Longer about-me blurb
+       */
+      bio?: string | null;
+      /**
+       * Is Discoverable
+       * @description Whether the user appears in the directory
+       * @default true
+       */
+      is_discoverable?: boolean;
+      /**
+       * @description Subscription tier
+       * @default free
+       */
+      subscription_tier?: components["schemas"]["SubscriptionTier"];
+      /**
+       * Subscription Expires At
+       * @description When the current subscription expires
+       */
+      subscription_expires_at?: string | null;
+      /**
+       * @description Job-seeker lifecycle status
+       * @default active
+       */
+      placement_status?: components["schemas"]["PlacementStatus"];
+      /**
+       * Placement Date
+       * @description Date when the user transitioned to graduated/alumni
+       */
+      placement_date?: string | null;
       /**
        * Id
        * Format: uuid4
@@ -3295,6 +4342,42 @@ export interface components {
       time_zone?: string | null;
       /** @description Avatar URI */
       avatar_uri?: components["schemas"]["URI"] | null;
+      /**
+       * Headline
+       * @description Short professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Bio
+       * @description Longer about-me blurb
+       */
+      bio?: string | null;
+      /**
+       * Is Discoverable
+       * @description Whether the user appears in the directory
+       * @default true
+       */
+      is_discoverable?: boolean;
+      /**
+       * @description Subscription tier
+       * @default free
+       */
+      subscription_tier?: components["schemas"]["SubscriptionTier"];
+      /**
+       * Subscription Expires At
+       * @description When the current subscription expires
+       */
+      subscription_expires_at?: string | null;
+      /**
+       * @description Job-seeker lifecycle status
+       * @default active
+       */
+      placement_status?: components["schemas"]["PlacementStatus"];
+      /**
+       * Placement Date
+       * @description Date when the user transitioned to graduated/alumni
+       */
+      placement_date?: string | null;
       /** Password */
       password?: string | null;
       /** Email */
@@ -3748,6 +4831,33 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["UserProfileRead"];
+        };
+      };
+    };
+  };
+  /**
+   * Update Placement
+   * @description Update the current user's placement status.
+   *
+   * Valid transitions: active → graduated, graduated → alumni.
+   */
+  update_placement_users_me_placement_patch: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PlacementUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -5385,6 +6495,370 @@ export interface operations {
       };
     };
   };
+  /** Get Application Documents */
+  get_application_documents_applications__id__documents_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Add Document To Application */
+  add_document_to_application_applications__id__documents_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationDocumentAttach"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Detach Document From Application */
+  detach_document_from_application_applications__id__documents__document_id__delete: {
+    parameters: {
+      path: {
+        document_id: string;
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Pinned Documents
+   * @description Return the user's pinned (active/canonical) documents — at most one per kind.
+   */
+  get_pinned_documents_documents_pinned_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"][];
+        };
+      };
+    };
+  };
+  /** List Documents */
+  list_documents_documents__get: {
+    parameters: {
+      query?: {
+        /** @description Filter by kind */
+        kind?: components["schemas"]["DocumentKind"] | null;
+        /** @description Filter by status */
+        status?: components["schemas"]["DocumentStatus"] | null;
+        /** @description Filter by pinned state */
+        is_pinned?: boolean | null;
+        /** @description Search by title (case-insensitive) */
+        search?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Create Document
+   * @description Create a document with its initial version (v1).
+   */
+  create_document_documents__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Generate Document
+   * @description Generate document content via AI and persist as a Document + Version.
+   *
+   * Supported kinds: ``cover_letter``, ``resume``.  Others return 501.
+   *
+   * If ``document_id`` is provided the generated content is appended as a new
+   * version; otherwise a brand-new Document is created.
+   */
+  generate_document_documents_generate_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentGenerateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Document Detail */
+  get_document_detail_documents__document_id__get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Document */
+  delete_document_documents__document_id__delete: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Document */
+  update_document_documents__document_id__patch: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Versions */
+  list_versions_documents__document_id__versions_get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentVersionRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Version */
+  create_version_documents__document_id__versions_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentVersionCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentVersionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Version */
+  get_version_documents__document_id__versions__version_id__get: {
+    parameters: {
+      path: {
+        document_id: string;
+        version_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentVersionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Pin Document
+   * @description Pin (or unpin) a document as the active/canonical for its kind.
+   *
+   * When pinning, all other documents of the same kind for this user are
+   * unpinned first.
+   */
+  pin_document_documents__document_id__pin_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DocumentPinRequest"] | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Download Document */
+  download_document_documents__document_id__download_get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Read Current User Educations */
   read_current_user_educations_education__get: {
     responses: {
@@ -6116,6 +7590,479 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["CrawlerRunRead"];
         };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Directory
+   * @description Paginated, searchable user directory.
+   *
+   * Only users with ``is_discoverable=True`` and ``is_active=True`` are returned.
+   */
+  list_directory_directory__get: {
+    parameters: {
+      query?: {
+        /** @description Search by name, headline, or skill */
+        q?: string | null;
+        /** @description Filter by placement status */
+        placement_status?: components["schemas"]["PlacementStatus"] | null;
+        /** @description Filter by city/state/country */
+        location?: string | null;
+        /** @description Page number starting from 1 */
+        page?: number;
+        /** @description Number of records per page */
+        page_size?: number;
+        /** @description Return total count of records */
+        request_count?: boolean;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserDirectoryPaginatedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Read Public Profile
+   * @description View another user's public profile.
+   */
+  read_public_profile_directory__user_id__get: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserPublicProfileRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Connections
+   * @description List connections for the current user (both sent and received).
+   */
+  list_connections_connections__get: {
+    parameters: {
+      query?: {
+        /** @description Filter by connection status */
+        status?: string | null;
+        /** @description Page number starting from 1 */
+        page?: number;
+        /** @description Number of records per page */
+        page_size?: number;
+        /** @description Return total count of records */
+        request_count?: boolean;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConnectionsPaginatedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Send Connection Request
+   * @description Send a connection request to another user.
+   */
+  send_connection_request_connections__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ConnectionCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ConnectionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Accept Connection
+   * @description Accept a pending connection request. Only the addressee can accept.
+   */
+  accept_connection_connections__id__accept_patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConnectionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Decline Connection
+   * @description Decline a pending connection request. Only the addressee can decline.
+   */
+  decline_connection_connections__id__decline_patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConnectionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Remove Connection
+   * @description Remove an accepted connection or cancel a pending request. Either party can do this.
+   */
+  remove_connection_connections__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Block Connection
+   * @description Block a user via an existing connection record. Sets status to blocked.
+   */
+  block_connection_connections__id__block_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConnectionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Total Unread
+   * @description Total unread message count across all conversations (for sidebar badge).
+   */
+  get_total_unread_conversations_unread_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UnreadCountRead"];
+        };
+      };
+    };
+  };
+  /**
+   * List Conversations
+   * @description List the current user's conversations, sorted by most recent message.
+   */
+  list_conversations_conversations__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConversationsPaginatedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Create Conversation
+   * @description Create a DM or group conversation.
+   */
+  create_conversation_conversations__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ConversationCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ConversationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Conversation
+   * @description Get conversation detail with paginated messages. Auto-marks as read.
+   */
+  get_conversation_conversations__conversation_id__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+      path: {
+        conversation_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConversationDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Send Message
+   * @description Send a message in a conversation.
+   */
+  send_message_conversations__conversation_id__messages_post: {
+    parameters: {
+      path: {
+        conversation_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MessageCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["MessageRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Delete Message
+   * @description Delete your own message (hard delete).
+   */
+  delete_message_conversations__conversation_id__messages__message_id__delete: {
+    parameters: {
+      path: {
+        conversation_id: string;
+        message_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Edit Message
+   * @description Edit your own message.
+   */
+  edit_message_conversations__conversation_id__messages__message_id__patch: {
+    parameters: {
+      path: {
+        conversation_id: string;
+        message_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MessageEdit"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MessageRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Mark Conversation Read
+   * @description Mark a conversation as read (update last_read_at).
+   */
+  mark_conversation_read_conversations__conversation_id__read_post: {
+    parameters: {
+      path: {
+        conversation_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Add Participant
+   * @description Add a participant to a group conversation. Only admins can add.
+   */
+  add_participant_conversations__conversation_id__participants_post: {
+    parameters: {
+      query: {
+        /** @description User ID to add */
+        user_id: string;
+      };
+      path: {
+        conversation_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ConversationParticipantRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Remove Participant
+   * @description Remove a participant or leave a group. Admins can remove others; anyone can leave.
+   */
+  remove_participant_conversations__conversation_id__participants__target_user_id__delete: {
+    parameters: {
+      path: {
+        conversation_id: string;
+        target_user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
       };
       /** @description Validation Error */
       422: {

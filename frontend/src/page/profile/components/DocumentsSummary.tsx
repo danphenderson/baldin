@@ -8,8 +8,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { getResumes } from '../../../service/resumes';
-import { getCoverLetters } from '../../../service/cover-letters';
+import { getDocuments, getPinnedDocuments } from '../../../service/documents';
 import { stagger } from '../constants';
 
 const MotionBox = motion.create(Box);
@@ -23,8 +22,8 @@ export const DocumentsSummary: React.FC<DocumentsSummaryProps> = ({ token }) => 
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [resumeCount, setResumeCount] = useState(0);
-  const [coverLetterCount, setCoverLetterCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [pinnedNames, setPinnedNames] = useState<string[]>([]);
 
   useEffect(() => {
     if (!token) {
@@ -34,13 +33,13 @@ export const DocumentsSummary: React.FC<DocumentsSummaryProps> = ({ token }) => 
     let cancelled = false;
     (async () => {
       try {
-        const [resumes, letters] = await Promise.all([
-          getResumes(token),
-          getCoverLetters(token),
+        const [docs, pinned] = await Promise.all([
+          getDocuments(token),
+          getPinnedDocuments(token),
         ]);
         if (!cancelled) {
-          setResumeCount(resumes.length);
-          setCoverLetterCount(letters.length);
+          setTotalCount(docs.length);
+          setPinnedNames(pinned.map(d => d.title || 'Untitled'));
         }
       } catch {
         // Silently degrade — this is an informational CTA
@@ -51,10 +50,11 @@ export const DocumentsSummary: React.FC<DocumentsSummaryProps> = ({ token }) => 
     return () => { cancelled = true; };
   }, [token]);
 
-  const total = resumeCount + coverLetterCount;
   const summary =
-    total > 0
-      ? `${resumeCount} resume${resumeCount !== 1 ? 's' : ''} · ${coverLetterCount} cover letter${coverLetterCount !== 1 ? 's' : ''}`
+    totalCount > 0
+      ? pinnedNames.length > 0
+        ? `${totalCount} document${totalCount !== 1 ? 's' : ''} · Active: ${pinnedNames.join(', ')}`
+        : `${totalCount} document${totalCount !== 1 ? 's' : ''}`
       : 'No documents yet';
 
   return (

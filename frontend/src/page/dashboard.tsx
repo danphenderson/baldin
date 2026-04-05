@@ -18,6 +18,9 @@ import {
   CheckCircleOutline as CheckIcon,
   RadioButtonUnchecked as UncheckedIcon,
   Circle as DotIcon,
+  Star as TierIcon,
+  PeopleAlt as ConnectionsIcon,
+  MailOutline as UnreadIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
@@ -25,6 +28,8 @@ import { getLeads, extractLead, type LeadRead } from '../service/leads';
 import { getApplications, createApplication, type ApplicationRead } from '../service/applications';
 import { getUserProfile, type UserProfile } from '../service/users';
 import { getCompanies } from '../service/companies';
+import { getConnections } from '../service/connections';
+import { getUnreadCount } from '../service/messages';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -35,6 +40,8 @@ interface DashboardData {
   applications: ApplicationRead[];
   profile: UserProfile | null;
   companyCount: number;
+  pendingConnectionCount: number;
+  unreadMessageCount: number;
 }
 
 interface MetricTileProps {
@@ -150,13 +157,15 @@ const MetricTile: React.FC<MetricTileProps> = ({ label, value, detail, accent, i
 const DashboardPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { token } = useContext(UserContext);
+  const { token, user } = useContext(UserContext);
 
   const [data, setData] = useState<DashboardData>({
     leads: [],
     applications: [],
     profile: null,
     companyCount: 0,
+    pendingConnectionCount: 0,
+    unreadMessageCount: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -171,24 +180,35 @@ const DashboardPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [leadsRes, appsRes, profileRes, companiesRes] = await Promise.all([
+      const [leadsRes, appsRes, profileRes, companiesRes, connectionsRes, unreadRes] = await Promise.all([
         getLeads(token, { page: 1, page_size: 100, request_count: true }),
         getApplications(token),
         getUserProfile(token),
         getCompanies(token).catch(() => []),
+        getConnections(token, { page: 1, page_size: 500 }).catch(() => ({ items: [] })),
+        getUnreadCount(token).catch(() => ({ unread_count: 0 })),
       ]);
+
+      const currentUserId = user?.id;
+      const pendingReceived = (connectionsRes.items ?? []).filter(
+        (c: { status: string; addressee: { user_id: string } }) =>
+          c.status === 'pending' && c.addressee.user_id === currentUserId,
+      ).length;
+
       setData({
         leads: (leadsRes.leads ?? []) as LeadRead[],
         applications: (appsRes ?? []) as ApplicationRead[],
         profile: profileRes,
         companyCount: Array.isArray(companiesRes) ? companiesRes.length : 0,
+        pendingConnectionCount: pendingReceived,
+        unreadMessageCount: (unreadRes as { unread_count: number }).unread_count ?? 0,
       });
     } catch (e) {
       console.error(e);
       setError('Unable to load dashboard data. Please try again.');
     }
     setLoading(false);
-  }, [token]);
+  }, [token, user]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -220,7 +240,10 @@ const DashboardPage: React.FC = () => {
 
   /* ---- derived ---- */
 
-  const { leads, applications, profile, companyCount } = data;
+  const { leads, applications, profile, companyCount, pendingConnectionCount, unreadMessageCount } = data;
+
+  const tierLabel = ((user?.subscription_tier as string) ?? 'free').charAt(0).toUpperCase() +
+    ((user?.subscription_tier as string) ?? 'free').slice(1);
 
   const appliedLeadIds = useMemo(
     () => new Set(applications.map((a) => a.lead_id)),
@@ -330,12 +353,12 @@ const DashboardPage: React.FC = () => {
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
           <MetricTile
-            label="Companies"
-            value={companyCount}
-            detail="tracked"
-            accent={theme.palette.info.main}
-            icon={<CompanyIcon fontSize="small" />}
-            onClick={() => navigate('/leads/companies')}
+            label="Plan"
+            value={tierLabel}
+            detail={user?.subscription_tier === 'free' ? 'Upgrade available' : undefined}
+            accent={theme.palette.warning.main}
+            icon={<TierIcon fontSize="small" />}
+            onClick={() => navigate('/settings/subscription')}
           />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
@@ -346,6 +369,36 @@ const DashboardPage: React.FC = () => {
             accent={theme.palette.success.main}
             icon={<PersonIcon fontSize="small" />}
             onClick={() => navigate('/me')}
+          />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <MetricTile
+            label="Pending Requests"
+            value={pendingConnectionCount}
+            detail="connection requests"
+            accent="#8b5cf6"
+            icon={<ConnectionsIcon fontSize="small" />}
+            onClick={() => navigate('/network/connections')}
+          />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <MetricTile
+            label="Unread Messages"
+            value={unreadMessageCount}
+            detail="conversations"
+            accent="#6366f1"
+            icon={<UnreadIcon fontSize="small" />}
+            onClick={() => navigate('/network/messages')}
+          />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <MetricTile
+            label="Companies"
+            value={companyCount}
+            detail="tracked"
+            accent={theme.palette.info.main}
+            icon={<CompanyIcon fontSize="small" />}
+            onClick={() => navigate('/leads/companies')}
           />
         </Grid>
       </Grid>

@@ -8,6 +8,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -365,6 +366,11 @@ class Application(Base):
         secondary="cover_letters_x_applications",
         back_populates="applications",
     )
+    documents = relationship(
+        "Document",
+        secondary="documents_x_applications",
+        back_populates="applications",
+    )
 
 
 class Contact(Base):
@@ -444,6 +450,82 @@ class CoverLetterXApplication(Base):
     cover_letter_id = Column(UUID, ForeignKey("cover_letters.id"), primary_key=True)
 
 
+# ---------------------------------------------------------------------------
+#  Unified Document models (versioned, multi-kind)
+# ---------------------------------------------------------------------------
+
+
+class Document(Base):
+    """
+    Unified document model replacing separate Resume / CoverLetter tables.
+    Each document has a kind discriminator and append-only version history.
+    """
+
+    __tablename__ = "documents"
+
+    user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    kind = Column(String, nullable=False, index=True)
+    title = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="draft")
+    is_pinned = Column(Boolean, default=False, nullable=False)
+    head_version_id = Column(UUID, ForeignKey("document_versions.id"))
+
+    user = relationship("User", back_populates="documents")
+    versions = relationship(
+        "DocumentVersion",
+        back_populates="document",
+        foreign_keys="DocumentVersion.document_id",
+        cascade="all, delete-orphan",
+        order_by="DocumentVersion.version_number",
+        lazy="selectin",
+    )
+    head_version = relationship(
+        "DocumentVersion",
+        foreign_keys=[head_version_id],
+        post_update=True,
+        uselist=False,
+        lazy="selectin",
+    )
+    applications = relationship(
+        "Application",
+        secondary="documents_x_applications",
+        back_populates="documents",
+    )
+
+
+class DocumentVersion(Base):
+    """
+    Immutable snapshot of document content.  Every save creates a new row.
+    """
+
+    __tablename__ = "document_versions"
+    __table_args__ = (UniqueConstraint("document_id", "version_number"),)
+
+    document_id = Column(UUID, ForeignKey("documents.id"), nullable=False, index=True)
+    version_number = Column(Integer, nullable=False)
+    name = Column(String)
+    content = Column(Text)
+    content_type = Column(String)
+    change_summary = Column(String)
+
+    document = relationship(
+        "Document",
+        back_populates="versions",
+        foreign_keys=[document_id],
+    )
+
+
+class DocumentXApplication(Base):
+    """Junction: links a document (optionally at a specific version) to an application."""
+
+    __tablename__ = "documents_x_applications"
+    __table_args__ = (UniqueConstraint("application_id", "document_id"),)
+
+    application_id = Column(UUID, ForeignKey("applications.id"), primary_key=True)
+    document_id = Column(UUID, ForeignKey("documents.id"), primary_key=True)
+    version_id = Column(UUID, ForeignKey("document_versions.id"))
+
+
 class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     """
     Extended user model with additional fields like name, contact information, and address.
@@ -496,8 +578,128 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     education = relationship("Education", back_populates="user")
     certificates = relationship("Certificate", back_populates="user")
     cover_letters = relationship("CoverLetter", back_populates="user")
+    documents = relationship("Document", back_populates="user")
     extractors = relationship("Extractor", back_populates="user")
     orchestration_pipelines = relationship(
         "OrchestrationPipeline", back_populates="user"
     )
     crawler_pipelines = relationship("CrawlerPipeline", back_populates="created_by")
+    sent_connections = relationship(
+        "Connection",
+        foreign_keys="Connection.requester_id",
+        back_populates="requester",
+        cascade="all, delete-orphan",
+    )
+    received_connections = relationship(
+        "Connection",
+        foreign_keys="Connection.addressee_id",
+        back_populates="addressee",
+        cascade="all, delete-orphan",
+    )
+
+
+class Connection(Base):
+    """Represents a peer connection request between two users."""
+
+    __tablename__ = "connections"
+    __table_args__ = (UniqueConstraint("requester_id", "addressee_id"),)
+
+    requester_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    addressee_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String, default="pending", nullable=False)
+    message = Column(Text)
+
+    requester = relationship(
+        "User", foreign_keys=[requester_id], back_populates="sent_connections"
+    )
+    addressee = relationship(
+        "User", foreign_keys=[addressee_id], back_populates="received_connections"
+    )
+
+
+# ---------------------------------------------------------------------------
+#  Messaging models
+# ---------------------------------------------------------------------------
+
+
+class Conversation(Base):
+    """Represents a direct or group messaging conversation."""
+
+    __tablename__ = "conversations"
+
+    type = Column(String, nullable=False)  # "direct" or "group"
+    title = Column(Text, nullable=True)
+    created_by_user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+
+    created_by = relationship("User")
+    participants = relationship(
+        "ConversationParticipant",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    messages = relationship(
+        "Message",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class ConversationParticipant(Base):
+    """Junction table linking users to conversations."""
+
+    __tablename__ = "conversation_participants"
+    __table_args__ = (UniqueConstraint("conversation_id", "user_id"),)
+
+    conversation_id = Column(
+        UUID,
+        ForeignKey("conversations.id", ondelete="CASCADE"),
+        nullable=False,
+        primary_key=True,
+    )
+    user_id = Column(
+        UUID,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        primary_key=True,
+    )
+    joined_at = Column(DateTime, server_default=func.now())
+    last_read_at = Column(DateTime, nullable=True)
+    role = Column(String, default="member")  # "member" or "admin"
+
+    conversation = relationship("Conversation", back_populates="participants")
+    user = relationship("User")
+
+
+class Message(Base):
+    """A single message within a conversation."""
+
+    __tablename__ = "messages"
+    __table_args__ = (
+        Index("ix_messages_conversation_created", "conversation_id", "created_at"),
+    )
+
+    conversation_id = Column(
+        UUID,
+        ForeignKey("conversations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    author_user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    parent_message_id = Column(UUID, ForeignKey("messages.id"), nullable=True)
+    edited_at = Column(DateTime, nullable=True)
+
+    conversation = relationship("Conversation", back_populates="messages")
+    author = relationship("User")
+    parent = relationship(
+        "Message",
+        remote_side="Message.id",
+        back_populates="replies",
+    )
+    replies = relationship(
+        "Message",
+        back_populates="parent",
+        cascade="all, delete-orphan",
+    )

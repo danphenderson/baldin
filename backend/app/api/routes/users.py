@@ -123,6 +123,43 @@ async def read_profile(
     return schemas.UserProfileRead.from_orm(user_with_details)
 
 
+@router.patch("/me/placement", response_model=schemas.UserRead)
+async def update_placement(
+    payload: schemas.PlacementUpdate,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Update the current user's placement status.
+
+    Valid transitions: active → graduated, graduated → alumni.
+    """
+    from datetime import datetime as _dt
+
+    current = schemas.PlacementStatus(current_user.placement_status)
+    target = payload.placement_status
+
+    valid_transitions = {
+        schemas.PlacementStatus.ACTIVE: {schemas.PlacementStatus.GRADUATED},
+        schemas.PlacementStatus.GRADUATED: {schemas.PlacementStatus.ALUMNI},
+        schemas.PlacementStatus.ALUMNI: set(),
+    }
+
+    if target not in valid_transitions.get(current, set()):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot transition from {current.value} to {target.value}",
+        )
+
+    current_user.placement_status = target.value  # type: ignore
+    if target in (schemas.PlacementStatus.GRADUATED, schemas.PlacementStatus.ALUMNI):
+        current_user.placement_date = _dt.utcnow()  # type: ignore
+
+    db.add(current_user)
+    await db.commit()
+    await db.refresh(current_user)
+    return current_user
+
+
 # ── Extractor definitions for each profile section ──────────────────────
 
 _SECTION_EXTRACTORS = {

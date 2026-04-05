@@ -5,7 +5,7 @@ import json
 from aiofiles import open as aopen
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import UUID4
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app import utils
@@ -94,15 +94,23 @@ def _serialize_registration(
 
 def _serialize_participant_summary(
     registration: models.LeadRegistration,
+    viewer_connections: dict[UUID4, UUID4] | None = None,
 ) -> schemas.LeadParticipantSummaryRead:
     if registration.user is None:
         raise HTTPException(
             status_code=500,
             detail="Lead registration is missing the associated user",
         )
+    is_connected = False
+    connection_id = None
+    if viewer_connections and registration.user_id in viewer_connections:
+        is_connected = True
+        connection_id = viewer_connections[registration.user_id]
     return schemas.LeadParticipantSummaryRead(
         registered_at=registration.created_at,
         public_profile=_serialize_public_profile(registration.user),
+        is_connected=is_connected,
+        connection_id=connection_id,
     )
 
 
@@ -220,12 +228,14 @@ async def _build_lead_read_response(
 
 
 def _serialize_lead_detail(
-    lead: models.Lead, user: schemas.UserRead
+    lead: models.Lead,
+    user: schemas.UserRead,
+    viewer_connections: dict[UUID4, UUID4] | None = None,
 ) -> schemas.LeadDetailRead:
     lead_read = _serialize_lead(lead, user)
     viewer_registration = _get_viewer_registration(lead, user.id)
     participant_summaries = [
-        _serialize_participant_summary(registration)
+        _serialize_participant_summary(registration, viewer_connections)
         for registration in sorted(lead.registrations, key=lambda item: item.created_at)
         if registration.expose_profile and registration.user is not None
     ]
@@ -446,12 +456,37 @@ async def read_leads(
     )
 
 
+async def _get_viewer_accepted_connections(
+    viewer_id: UUID4, db: AsyncSession
+) -> dict[UUID4, UUID4]:
+    """Return a mapping of {other_user_id: connection_id} for accepted connections."""
+    result = await db.execute(
+        select(models.Connection).where(
+            models.Connection.status == "accepted",
+            or_(
+                models.Connection.requester_id == viewer_id,
+                models.Connection.addressee_id == viewer_id,
+            ),
+        )
+    )
+    connections = result.scalars().all()
+    lookup: dict[UUID4, UUID4] = {}
+    for conn in connections:
+        other = (
+            conn.addressee_id if conn.requester_id == viewer_id else conn.requester_id
+        )
+        lookup[other] = conn.id
+    return lookup
+
+
 @router.get("/{id}", status_code=200, response_model=schemas.LeadDetailRead)
 async def read_lead(
     lead: models.Lead = Depends(get_lead),
     user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    return _serialize_lead_detail(lead, user)
+    viewer_connections = await _get_viewer_accepted_connections(user.id, db)
+    return _serialize_lead_detail(lead, user, viewer_connections)
 
 
 @router.patch("/{id}", status_code=200, response_model=schemas.LeadRead)

@@ -1,8 +1,11 @@
-import React, { useState, useEffect, createContext } from "react";
+import React, { useState, useEffect, createContext, useCallback } from "react";
 import { getUser } from "../service/users"; // Import the getUser function
 import { components } from '../schema.d';
 
 type UserRead = components['schemas']['UserRead'];
+type Tier = 'free' | 'starter' | 'pro';
+
+const TIER_RANK: Record<Tier, number> = { free: 0, starter: 1, pro: 2 };
 
 type UserContextValue = {
   user: UserRead | null;
@@ -10,6 +13,7 @@ type UserContextValue = {
   token: string | null;
   setToken: React.Dispatch<React.SetStateAction<string | null>>;
   loading: boolean;
+  canAccessTier: (tier: Tier) => boolean;
 };
 
 export const UserContext = createContext<UserContextValue>({
@@ -18,6 +22,7 @@ export const UserContext = createContext<UserContextValue>({
   token: null,
   setToken: () => {},
   loading: true,
+  canAccessTier: () => false,
 });
 
 interface UserProviderProps {
@@ -53,7 +58,17 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     fetchUser();
   }, [token]);
 
-  const contextValue = { user, setUser, token, setToken, loading };
+  const canAccessTier = useCallback((tier: Tier): boolean => {
+    if (!user) return false;
+    const userTier = (user.subscription_tier as Tier) ?? 'free';
+    const expiresAt = user.subscription_expires_at;
+    const effective: Tier = userTier !== 'free' && expiresAt && new Date(expiresAt) < new Date()
+      ? 'free'
+      : userTier;
+    return TIER_RANK[effective] >= TIER_RANK[tier];
+  }, [user]);
+
+  const contextValue = { user, setUser, token, setToken, loading, canAccessTier };
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
 };

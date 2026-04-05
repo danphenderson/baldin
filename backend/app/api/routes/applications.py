@@ -14,6 +14,7 @@ from app.api.deps import (
     get_async_session,
     get_cover_letter,
     get_current_user,
+    get_document,
     get_resume,
     model_to_dict,
     models,
@@ -45,7 +46,10 @@ async def create_application(
         )
 
     # Create a new application
-    application_data = {**payload.dict(exclude_unset=True), "user_id": user.id}
+    application_data = {
+        **payload.dict(exclude_unset=True, exclude={"document_ids"}),
+        "user_id": user.id,
+    }
     application_data["status_history"] = [
         {
             "from": None,
@@ -58,6 +62,23 @@ async def create_application(
     db.add(application)
     await db.commit()
     await db.refresh(application)
+
+    # Bulk-attach documents when IDs are provided
+    if payload.document_ids:
+        for doc_id in payload.document_ids:
+            result = await db.execute(
+                select(models.Document).where(
+                    models.Document.id == doc_id,
+                    models.Document.user_id == user.id,
+                )
+            )
+            doc = result.scalars().first()
+            if doc:
+                link = models.DocumentXApplication(
+                    document_id=doc.id, application_id=application.id
+                )
+                db.add(link)
+        await db.commit()
 
     # Eagerly load related objects (lead and user) for serialization
     result = await db.execute(
@@ -376,3 +397,113 @@ async def get_application_by_id(
     # Fetch company details for the application
 
     return application
+
+
+# ---------------------------------------------------------------------------
+#  Application ↔ Document attachment
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{id}/documents", response_model=list[schemas.DocumentRead])
+async def get_application_documents(
+    app: models.Application = Depends(get_application),
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    if app.user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to view this application",
+        )
+    result = await db.execute(
+        select(models.Document)
+        .join(models.DocumentXApplication)
+        .where(models.DocumentXApplication.application_id == app.id)
+    )
+    docs = result.scalars().all()
+    return [
+        schemas.DocumentRead(
+            id=d.id,
+            created_at=d.created_at,
+            updated_at=d.updated_at,
+            kind=d.kind,
+            title=d.title,
+            status=d.status,
+            is_pinned=d.is_pinned,
+            head_version=(
+                schemas.DocumentVersionRead.model_validate(d.head_version)
+                if d.head_version
+                else None
+            ),
+            version_count=len(d.versions) if d.versions else 0,
+        )
+        for d in docs
+    ]
+
+
+@router.post("/{id}/documents", status_code=201, response_model=schemas.DocumentRead)
+async def add_document_to_application(
+    payload: schemas.ApplicationDocumentAttach,
+    application: models.Application = Depends(get_application),
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    doc = await get_document(payload.document_id, db, user)
+
+    existing = await db.execute(
+        select(models.DocumentXApplication).where(
+            models.DocumentXApplication.application_id == application.id,
+            models.DocumentXApplication.document_id == doc.id,
+        )
+    )
+    if existing.scalars().first():
+        raise HTTPException(
+            status_code=400, detail="Document already attached to this application"
+        )
+
+    assoc = models.DocumentXApplication(
+        application_id=application.id,
+        document_id=doc.id,
+        version_id=payload.version_id,
+    )
+    db.add(assoc)
+    await db.commit()
+
+    return schemas.DocumentRead(
+        id=doc.id,
+        created_at=doc.created_at,
+        updated_at=doc.updated_at,
+        kind=doc.kind,
+        title=doc.title,
+        status=doc.status,
+        is_pinned=doc.is_pinned,
+        head_version=(
+            schemas.DocumentVersionRead.model_validate(doc.head_version)
+            if doc.head_version
+            else None
+        ),
+        version_count=len(doc.versions) if doc.versions else 0,
+    )
+
+
+@router.delete("/{id}/documents/{document_id}", status_code=204)
+async def detach_document_from_application(
+    document_id: UUID4,
+    application: models.Application = Depends(get_application),
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    result = await db.execute(
+        select(models.DocumentXApplication).where(
+            models.DocumentXApplication.application_id == application.id,
+            models.DocumentXApplication.document_id == document_id,
+        )
+    )
+    assoc = result.scalars().first()
+    if not assoc:
+        raise HTTPException(
+            status_code=404, detail="Document not attached to this application"
+        )
+    await db.delete(assoc)
+    await db.commit()
+    return None

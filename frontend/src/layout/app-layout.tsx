@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
@@ -17,9 +17,13 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   AutoAwesome as AutoAwesomeIcon,
+  Explore as DirectoryIcon,
+  People as ConnectionsIcon,
+  Chat as MessagesIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import { logout as logoutApi } from '../service/auth';
+import { getUnreadCount } from '../service/messages';
 import { useThemeMode } from '../theme/theme-provider';
 import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-header-context';
 import SecondaryNavBar from '../component/common/secondary-nav-bar';
@@ -35,6 +39,9 @@ const drawerIcons: Record<string, React.ReactNode> = {
   '/applications': <ApplicationsIcon />,
   '/me': <ProfileIcon />,
   '/workflows': <PipelinesIcon />,
+  '/network/directory': <DirectoryIcon />,
+  '/network/connections': <ConnectionsIcon />,
+  '/network/messages': <MessagesIcon />,
 };
 
 const HEADER_ACTION_DIAL_ID = 'header-account-actions';
@@ -51,6 +58,30 @@ const AppLayout: React.FC = () => {
   const [isAccountDialOpen, setIsAccountDialOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [toolbarHeader, setToolbarHeader] = useState<ToolbarHeaderContent | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchUnread = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await getUnreadCount(token);
+      setUnreadCount(data.total_unread);
+    } catch {
+      // Silently ignore — badge is best-effort
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) {
+      setUnreadCount(0);
+      return undefined;
+    }
+    fetchUnread();
+    intervalRef.current = setInterval(fetchUnread, 30_000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [token, fetchUnread]);
 
   const drawerWidth = collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH;
   const textTransition = 'opacity 0.2s ease, max-width 0.2s ease';
@@ -329,7 +360,13 @@ const AppLayout: React.FC = () => {
                             justifyContent: 'center',
                           }}
                         >
-                          {drawerIcons[item.path]}
+                          {item.path === '/network/messages' ? (
+                            <Badge badgeContent={unreadCount} color="error" max={99}>
+                              {drawerIcons[item.path]}
+                            </Badge>
+                          ) : (
+                            drawerIcons[item.path]
+                          )}
                         </ListItemIcon>
                         <ListItemText
                           primary={item.label}

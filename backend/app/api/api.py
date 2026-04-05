@@ -7,15 +7,19 @@ from app.api.routes import (
     applications,
     certificate,
     companies,
+    connections,
     contacts,
     cover_letters,
     crawlers,
     data_orchestration,
     db_management,
+    directory,
+    documents,
     education,
     experiences,
     extractor,
     leads,
+    messages,
     resumes,
     skills,
     users,
@@ -97,6 +101,11 @@ api_router.include_router(
     tags=["applications"],
 )
 api_router.include_router(
+    documents.router,
+    prefix="/documents",
+    tags=["documents"],
+)
+api_router.include_router(
     education.router,
     prefix="/education",
     tags=["education"],
@@ -115,4 +124,19 @@ api_router.include_router(
     crawlers.router,
     prefix="/crawlers",
     tags=["crawlers"],
+)
+api_router.include_router(
+    directory.router,
+    prefix="/directory",
+    tags=["directory"],
+)
+api_router.include_router(
+    connections.router,
+    prefix="/connections",
+    tags=["connections"],
+)
+api_router.include_router(
+    messages.router,
+    prefix="/conversations",
+    tags=["messaging"],
 )

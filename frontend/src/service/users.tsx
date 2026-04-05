@@ -7,6 +7,7 @@ export type UserRead = components['schemas']['UserRead'];
 export type UserUpdate = components['schemas']['UserUpdate'];
 export type UserProfile = components['schemas']['UserProfileRead'];
 export type ProfileExtractResponse = components['schemas']['ProfileExtractResponse'];
+export type PlacementUpdate = components['schemas']['PlacementUpdate'];
 
 export interface ProfileExtractSource {
   url?: string | null;
@@ -74,6 +75,11 @@ export const seedUsers = async (token: string): Promise<void> => {
   const requestOptions = createRequestOptions(token, "POST");
   return await fetchApi(`${API_URL}/users/seed`, requestOptions);
 }
+
+export const updatePlacement = async (token: string, data: PlacementUpdate): Promise<UserRead> => {
+  const requestOptions = createRequestOptions(token, "PATCH", data);
+  return await fetchApi(`${BASE_URL}/placement`, requestOptions);
+};
 
 export const extractProfile = async (
   token: string,

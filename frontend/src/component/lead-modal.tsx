@@ -45,6 +45,7 @@ import {
   Reply as ReplyIcon,
   SaveOutlined as SaveIcon,
   TravelExplore as ViewIcon,
+  PersonAdd as PersonAddIcon,
   WorkspacesOutlined as LeadIcon,
 } from '@mui/icons-material';
 import ConfirmDialog from './common/confirm-dialog';
@@ -68,6 +69,7 @@ import {
   updateLead,
   updateLeadRegistration,
 } from '../service/leads';
+import { createConnection } from '../service/connections';
 
 type LeadTab = 'overview' | 'edit' | 'notes' | 'comments' | 'people';
 export type LeadModalTab = LeadTab;
@@ -438,6 +440,7 @@ const LeadModal: React.FC<LeadModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [comments, setComments] = useState<LeadCommentRead[]>([]);
+  const [connectingUserId, setConnectingUserId] = useState<string | null>(null);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsError, setCommentsError] = useState('');
   const [sharedDraft, setSharedDraft] = useState<SharedDraft>(() => buildSharedDraft(null));
@@ -1120,6 +1123,19 @@ const LeadModal: React.FC<LeadModalProps> = ({
             {participants.map((participant) => {
               const profile = participant.public_profile;
               const location = [profile.city, profile.state, profile.country].filter(Boolean).join(', ');
+              const isConnected = participant.is_connected ?? false;
+
+              const handleParticipantConnect = async () => {
+                if (!token) return;
+                setConnectingUserId(profile.user_id);
+                try {
+                  await createConnection(token, { addressee_id: profile.user_id });
+                  onNotify('Connection request sent');
+                } catch (err: unknown) {
+                  onNotify(err instanceof Error ? err.message : 'Failed to send request', 'error');
+                }
+                setConnectingUserId(null);
+              };
 
               return (
                 <Grid key={profile.user_id} size={{ xs: 12, sm: 6, lg: 4 }}>
@@ -1130,14 +1146,30 @@ const LeadModal: React.FC<LeadModalProps> = ({
                           <Avatar src={profile.avatar_uri || undefined} sx={{ width: 48, height: 48 }}>
                             {profile.display_name.charAt(0)}
                           </Avatar>
-                          <Box sx={{ minWidth: 0 }}>
+                          <Box sx={{ minWidth: 0, flex: 1 }}>
                             <Typography variant="body1" fontWeight={700}>{profile.display_name}</Typography>
                             {location && <Typography variant="body2" color="text.secondary">{location}</Typography>}
                           </Box>
+                          {isConnected && (
+                            <Chip label="Connected" size="small" color="success" variant="outlined" />
+                          )}
                         </Stack>
-                        <Typography variant="body2" color="text.secondary">
-                          Joined {timeAgo(participant.registered_at)}
-                        </Typography>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+                            Joined {timeAgo(participant.registered_at)}
+                          </Typography>
+                          {!isConnected && (
+                            <Chip
+                              icon={connectingUserId === profile.user_id ? undefined : <PersonAddIcon />}
+                              label={connectingUserId === profile.user_id ? 'Sending…' : 'Connect'}
+                              color="primary"
+                              variant="outlined"
+                              size="small"
+                              disabled={connectingUserId === profile.user_id}
+                              onClick={handleParticipantConnect}
+                            />
+                          )}
+                        </Stack>
                       </Stack>
                     </CardContent>
                   </Card>

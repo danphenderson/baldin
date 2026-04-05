@@ -8,10 +8,12 @@ export type ApplicationCreate = components['schemas']['ApplicationCreate'];
 export type ApplicationUpdate = components['schemas']['ApplicationUpdate'];
 type ApplicationResumeAttach = components['schemas']['ApplicationResumeAttach'];
 type ApplicationCoverLetterAttach = components['schemas']['ApplicationCoverLetterAttach'];
+type ApplicationDocumentAttach = components['schemas']['ApplicationDocumentAttach'];
 
 // do not export these types, as they should be asscessed from the resume and cover-letter services
 type ResumeRead = components['schemas']['ResumeRead'];
 type CoverLetterRead = components['schemas']['CoverLetterRead'];
+type DocumentRead = components['schemas']['DocumentRead'];
 
 const BASE_URL = `${API_URL}/applications/`;
 
@@ -102,3 +104,23 @@ export const generatecoverLetter = async (token: string, id: string, template_id
   const url = `${BASE_URL}${id}/cover_letters/generate?template_id=${template_id}`
   return fetchAPI(url, requestOptions);
 }
+
+/* ------------------------------------------------------------------ */
+/*  Unified document endpoints                                         */
+/* ------------------------------------------------------------------ */
+
+export const getApplicationDocuments = async (token: string, id: string): Promise<DocumentRead[]> => {
+  const requestOptions = createRequestOptions(token, "GET");
+  return fetchAPI(`${BASE_URL}${id}/documents`, requestOptions);
+};
+
+export const addApplicationDocument = async (token: string, id: string, documentId: string, versionId?: string): Promise<DocumentRead> => {
+  const payload: ApplicationDocumentAttach = { document_id: documentId, version_id: versionId ?? null };
+  const requestOptions = createRequestOptions(token, "POST", payload);
+  return fetchAPI(`${BASE_URL}${id}/documents`, requestOptions);
+};
+
+export const detachApplicationDocument = async (token: string, id: string, documentId: string): Promise<void> => {
+  const requestOptions = createRequestOptions(token, "DELETE");
+  await fetchAPI(`${BASE_URL}${id}/documents/${documentId}`, requestOptions);
+};

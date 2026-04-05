@@ -100,6 +100,56 @@ async def get_pagination_params(
     )
 
 
+# ---------------------------------------------------------------------------
+# Subscription tier and placement gating
+# ---------------------------------------------------------------------------
+
+_TIER_ORDER = {
+    schemas.SubscriptionTier.FREE: 0,
+    schemas.SubscriptionTier.STARTER: 1,
+    schemas.SubscriptionTier.PRO: 2,
+}
+
+
+def require_tier(minimum: schemas.SubscriptionTier):
+    """Return a FastAPI dependency that raises 403 if the user's tier is below *minimum*
+    or their subscription has expired (for non-free tiers)."""
+
+    async def _guard(user: models.User = Depends(get_current_user)):
+        user_tier = schemas.SubscriptionTier(user.subscription_tier)
+        if _TIER_ORDER[user_tier] < _TIER_ORDER[minimum]:
+            raise HTTPException(
+                status_code=403,
+                detail=f"This feature requires a {minimum.value} subscription or above",
+            )
+        # Free tier never expires; paid tiers check expiry
+        if user_tier != schemas.SubscriptionTier.FREE and user.subscription_expires_at:
+            if user.subscription_expires_at < datetime.utcnow():
+                raise HTTPException(
+                    status_code=403,
+                    detail="Your subscription has expired",
+                )
+        return user
+
+    return _guard
+
+
+def require_active_placement():
+    """Return a FastAPI dependency that raises 403 if the user has graduated/alumni status
+    and is trying to use active-seeker features."""
+
+    async def _guard(user: models.User = Depends(get_current_user)):
+        status = schemas.PlacementStatus(user.placement_status)
+        if status != schemas.PlacementStatus.ACTIVE:
+            raise HTTPException(
+                status_code=403,
+                detail="This feature is only available to active job seekers",
+            )
+        return user
+
+    return _guard
+
+
 def _normalize_extractor_input_value(value: str | None) -> str | None:
     if value is None:
         return None
@@ -497,6 +547,25 @@ async def create_resume(
     await db.refresh(resume)
     await log.info(f"create_resume: {resume}")
     return resume
+
+
+# ---------------------------------------------------------------------------
+#  Document helpers (unified, versioned)
+# ---------------------------------------------------------------------------
+
+
+async def get_document(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Document:
+    document = await db.get(models.Document, id)
+    if not document:
+        raise await _404(document, id)
+    if document.user_id != user.id:  # type: ignore
+        raise await _403(user.id, document, id)
+    await log.info(f"get_document: {document}")
+    return document
 
 
 async def get_experience(

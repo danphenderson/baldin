@@ -21,8 +21,10 @@ import {
   getApplications, updateApplication, deleteApplication,
   getApplicationCoverLetters, generatecoverLetter, getApplicationResumes,
   createApplicationResume, createApplicationCoverLetter,
+  getApplicationDocuments, addApplicationDocument, detachApplicationDocument,
   type ApplicationRead,
 } from '../../service/applications';
+import { getDocuments, downloadDocument } from '../../service/documents';
 import { getCoverLetters, downloadCoverLetter, type CoverLetterRead } from '../../service/cover-letters';
 import { getResumes, downloadResume, type ResumeRead } from '../../service/resumes';
 import { COLUMNS, relativeDate } from './use-applications';
@@ -53,6 +55,11 @@ const ApplicationDetailPage: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [generating, setGenerating] = useState(false);
+
+  /* unified document state */
+  type DocumentRead = Awaited<ReturnType<typeof getApplicationDocuments>>[number];
+  const [appDocuments, setAppDocuments] = useState<DocumentRead[]>([]);
+  const [allDocuments, setAllDocuments] = useState<DocumentRead[]>([]);
 
   /* delete confirmation */
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -108,11 +115,13 @@ const ApplicationDetailPage: React.FC = () => {
     const loadDocs = async () => {
       setLoadingDocs(true);
       try {
-        const [cls, resData, letters, res] = await Promise.all([
+        const [cls, resData, letters, res, appDocs, allDocs] = await Promise.all([
           getApplicationCoverLetters(token, app.id),
           getApplicationResumes(token, app.id),
           getCoverLetters(token),
           getResumes(token),
+          getApplicationDocuments(token, app.id),
+          getDocuments(token),
         ]);
         if (cancelled) return;
         setAppCoverLetters(cls || []);
@@ -120,6 +129,8 @@ const ApplicationDetailPage: React.FC = () => {
         setAllCoverLetters(letters || []);
         setTemplates((letters || []).filter((t: CoverLetterRead) => t.content_type === 'template'));
         setAllResumes(res || []);
+        setAppDocuments(appDocs || []);
+        setAllDocuments(allDocs || []);
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load documents');
       }
@@ -271,6 +282,34 @@ const ApplicationDetailPage: React.FC = () => {
   const availableCoverLetters = allCoverLetters.filter(
     (cl) => !appCoverLetters.some((attached) => attached.id === cl.id),
   );
+  const availableDocuments = allDocuments.filter(
+    (d) => !appDocuments.some((attached) => attached.id === d.id),
+  );
+
+  /* attach document (unified) */
+  const handleAttachDocument = async (docId: string) => {
+    if (!token || !app) return;
+    try {
+      await addApplicationDocument(token, app.id, docId);
+      const docs = await getApplicationDocuments(token, app.id);
+      setAppDocuments(docs || []);
+      showSuccess('Document attached');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to attach document');
+    }
+  };
+
+  /* detach document (unified) */
+  const handleDetachDocument = async (docId: string) => {
+    if (!token || !app) return;
+    try {
+      await detachApplicationDocument(token, app.id, docId);
+      setAppDocuments((prev) => prev.filter((d) => d.id !== docId));
+      showSuccess('Document detached');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to detach document');
+    }
+  };
 
   /* ---------------------------------------------------------------- */
   /*  Loading state                                                    */
@@ -494,6 +533,66 @@ const ApplicationDetailPage: React.FC = () => {
                 );
               })}
             </Stack>
+          )}
+        </Box>
+
+        {/* -------- Documents (Unified) -------- */}
+        <Box sx={{ px: 3, py: 3 }}>
+          <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+            Documents
+          </Typography>
+
+          {loadingDocs ? (
+            <Stack spacing={1}>{[0, 1].map((i) => <Skeleton key={i} variant="rounded" height={40} />)}</Stack>
+          ) : appDocuments.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.6 }}>
+              No documents attached yet
+            </Typography>
+          ) : (
+            <Stack spacing={1}>
+              {appDocuments.map((doc) => (
+                <Box
+                  key={doc.id}
+                  sx={{
+                    display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1,
+                    borderRadius: 2, border: `1px solid ${theme.palette.divider}`,
+                    bgcolor: alpha(doc.kind === 'resume' ? theme.palette.primary.main : theme.palette.secondary.main, 0.03),
+                  }}
+                >
+                  <DocIcon fontSize="small" color={doc.kind === 'resume' ? 'primary' : 'secondary'} />
+                  <Typography variant="body2" sx={{ flexGrow: 1, minWidth: 0 }} noWrap>{doc.title || 'Untitled'}</Typography>
+                  <Chip label={doc.kind} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 22, textTransform: 'capitalize' }} />
+                  <Chip label={`v${doc.version_count}`} size="small" sx={{ fontSize: '0.65rem', height: 22 }} />
+                  <Tooltip title="Download">
+                    <IconButton size="small" onClick={() => token && downloadDocument(token, doc.id)} aria-label="Download document">
+                      <DownloadIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Detach">
+                    <IconButton size="small" onClick={() => handleDetachDocument(doc.id)} aria-label="Detach document">
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              ))}
+            </Stack>
+          )}
+
+          {!loadingDocs && availableDocuments.length > 0 && (
+            <FormControl size="small" sx={{ mt: 1.5, minWidth: 220 }}>
+              <InputLabel id="detail-attach-doc">Attach a document</InputLabel>
+              <Select
+                labelId="detail-attach-doc"
+                label="Attach a document"
+                displayEmpty
+                value=""
+                onChange={(e) => handleAttachDocument(e.target.value)}
+              >
+                {availableDocuments.map((d) => (
+                  <MenuItem key={d.id} value={d.id}>{d.title || 'Untitled'} ({d.kind})</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           )}
         </Box>
 

@@ -62,6 +62,13 @@ class PlacementStatus(str, Enum):
     ALUMNI = "alumni"
 
 
+class ConnectionStatus(str, Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
+    BLOCKED = "blocked"
+
+
 class URI(BaseSchema):
     name: str
     type: URIType
@@ -462,6 +469,14 @@ class LeadParticipantSummaryRead(BaseSchema):
     public_profile: LeadParticipantPublicProfileRead = Field(
         description="The participant's exposed public profile"
     )
+    is_connected: bool = Field(
+        False,
+        description="Whether the viewer has an accepted connection with this participant",
+    )
+    connection_id: UUID4 | None = Field(
+        None,
+        description="Connection record id, if an accepted connection exists",
+    )
 
 
 class LeadRegistrationRead(BaseSchema):
@@ -704,6 +719,106 @@ class CoverLetterUpdate(BaseCoverLetter):
     pass
 
 
+# ---------------------------------------------------------------------------
+#  Unified Document schemas (versioned, multi-kind)
+# ---------------------------------------------------------------------------
+
+
+class DocumentKind(str, Enum):
+    RESUME = "resume"
+    COVER_LETTER = "cover_letter"
+    FOLLOW_UP = "follow_up"
+    REFERENCE_SHEET = "reference_sheet"
+    FREEFORM = "freeform"
+
+
+class DocumentStatus(str, Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+class DocumentVersionRead(BaseRead):
+    document_id: UUID4 = Field(description="Parent document identifier")
+    version_number: int = Field(description="Monotonically incrementing version number")
+    name: str | None = Field(None, description="Snapshot title")
+    content: str | None = Field(None, description="Version content")
+    content_type: ContentType | None = Field(None, description="Content origin type")
+    change_summary: str | None = Field(
+        None, description="User or system note for this version"
+    )
+
+
+class DocumentVersionCreate(BaseSchema):
+    name: str | None = Field(None, description="Snapshot title")
+    content: str | None = Field(None, description="Version content")
+    content_type: ContentType | None = Field(None, description="Content origin type")
+    change_summary: str | None = Field(
+        None, description="User or system note for this version"
+    )
+
+
+class DocumentRead(BaseRead):
+    kind: DocumentKind = Field(description="Document kind discriminator")
+    title: str = Field(description="Document title")
+    status: DocumentStatus = Field(description="Document lifecycle status")
+    is_pinned: bool = Field(
+        False, description="Whether this is the active document for its kind"
+    )
+    head_version: DocumentVersionRead | None = Field(
+        None, description="Current head version inline"
+    )
+    version_count: int = Field(0, description="Total number of versions")
+
+
+class DocumentDetailRead(DocumentRead):
+    versions: list[DocumentVersionRead] = Field(
+        default_factory=list, description="Full version history, oldest first"
+    )
+
+
+class DocumentCreate(BaseSchema):
+    kind: DocumentKind = Field(description="Document kind discriminator")
+    title: str = Field(description="Document title")
+    status: DocumentStatus = Field(
+        DocumentStatus.DRAFT, description="Initial lifecycle status"
+    )
+    content: str | None = Field(None, description="Initial version content")
+    content_type: ContentType | None = Field(
+        None, description="Content origin type for the initial version"
+    )
+
+
+class DocumentUpdate(BaseSchema):
+    title: str | None = Field(None, description="Updated title")
+    status: DocumentStatus | None = Field(None, description="Updated lifecycle status")
+
+
+class DocumentPinRequest(BaseSchema):
+    pinned: bool = Field(True, description="Whether to pin or unpin the document")
+
+
+class ApplicationDocumentAttach(BaseSchema):
+    document_id: UUID4 = Field(description="Document to attach")
+    version_id: UUID4 | None = Field(
+        None,
+        description="Specific version to pin for this application (default: head)",
+    )
+
+
+class DocumentGenerateRequest(BaseSchema):
+    kind: DocumentKind = Field(description="Document kind to generate")
+    lead_id: UUID4 = Field(description="Lead to generate content from")
+    document_id: UUID4 | None = Field(
+        None,
+        description="Existing document to append a new version to (omit to create a new document)",
+    )
+    template_version_id: UUID4 | None = Field(
+        None,
+        description="Optional template version to use for generation",
+    )
+
+
 class BaseUser(BaseSchema):
     first_name: str | None = Field(None, description="First name")
     last_name: str | None = Field(None, description="Last name")
@@ -718,7 +833,9 @@ class BaseUser(BaseSchema):
     avatar_uri: URI | None = Field(None, description="Avatar URI")
     headline: str | None = Field(None, description="Short professional tagline")
     bio: str | None = Field(None, description="Longer about-me blurb")
-    is_discoverable: bool = Field(True, description="Whether the user appears in the directory")
+    is_discoverable: bool = Field(
+        True, description="Whether the user appears in the directory"
+    )
     subscription_tier: SubscriptionTier = Field(
         SubscriptionTier.FREE, description="Subscription tier"
     )
@@ -755,6 +872,222 @@ class UserCreate(schemas.BaseUserCreate, BaseUser):
 
 class UserUpdate(schemas.BaseUserUpdate, BaseUser):
     pass
+
+
+class PlacementUpdate(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
+
+    placement_status: PlacementStatus = Field(
+        description="Target placement status (active, graduated, alumni)"
+    )
+
+
+class UserDirectoryRead(BaseSchema):
+    user_id: UUID4 = Field(description="User identifier")
+    display_name: str = Field(description="Public display name")
+    headline: str | None = Field(None, description="Professional tagline")
+    avatar_uri: str | None = Field(None, description="Avatar URI")
+    city: str | None = Field(None, description="City")
+    state: str | None = Field(None, description="State")
+    country: str | None = Field(None, description="Country")
+    placement_status: PlacementStatus = Field(description="Lifecycle status")
+    subscription_tier: SubscriptionTier = Field(description="Subscription tier")
+    skills_summary: list[str] = Field(
+        default_factory=list, description="Top skill names"
+    )
+
+
+class UserDirectoryPaginatedRead(BaseSchema):
+    items: list[UserDirectoryRead] = Field(
+        default_factory=list, description="Paginated user directory entries"
+    )
+    total: int = Field(0, description="Total matching users")
+    page: int = Field(1, ge=1, description="Current page number")
+    page_size: int = Field(20, ge=1, description="Items per page")
+
+
+class UserPublicProfileRead(BaseSchema):
+    user_id: UUID4 = Field(description="User identifier")
+    display_name: str = Field(description="Public display name")
+    headline: str | None = Field(None, description="Professional tagline")
+    bio: str | None = Field(None, description="About-me blurb")
+    avatar_uri: str | None = Field(None, description="Avatar URI")
+    city: str | None = Field(None, description="City")
+    state: str | None = Field(None, description="State")
+    country: str | None = Field(None, description="Country")
+    placement_status: PlacementStatus = Field(description="Lifecycle status")
+    skills: list[SkillRead] = Field(default_factory=list, description="User skills")
+    experiences: list[ExperienceRead] = Field(
+        default_factory=list, description="Work experiences"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Connection schemas
+# ---------------------------------------------------------------------------
+
+
+class ConnectionCreate(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
+
+    addressee_id: UUID4 = Field(description="User to send the connection request to")
+    message: str | None = Field(
+        None, description="Optional note accompanying the request"
+    )
+
+
+class ConnectionUserSummaryRead(BaseSchema):
+    user_id: UUID4 = Field(description="User identifier")
+    display_name: str = Field(description="Public display name")
+    headline: str | None = Field(None, description="Professional tagline")
+    avatar_uri: str | None = Field(None, description="Avatar URI")
+    city: str | None = Field(None, description="City")
+    state: str | None = Field(None, description="State")
+    country: str | None = Field(None, description="Country")
+
+
+class ConnectionRead(BaseRead):
+    requester: ConnectionUserSummaryRead = Field(
+        description="The user who sent the request"
+    )
+    addressee: ConnectionUserSummaryRead = Field(
+        description="The user who received the request"
+    )
+    status: ConnectionStatus = Field(description="Connection status")
+    message: str | None = Field(None, description="Optional note from the requester")
+
+
+class ConnectionsPaginatedRead(BaseSchema):
+    items: list[ConnectionRead] = Field(
+        default_factory=list, description="Paginated connection records"
+    )
+    total: int = Field(0, description="Total matching connections")
+    page: int = Field(1, ge=1, description="Current page number")
+    page_size: int = Field(20, ge=1, description="Items per page")
+
+
+# ---------------------------------------------------------------------------
+# Messaging schemas
+# ---------------------------------------------------------------------------
+
+
+class ConversationType(str, Enum):
+    DIRECT = "direct"
+    GROUP = "group"
+
+
+class ConversationParticipantRole(str, Enum):
+    MEMBER = "member"
+    ADMIN = "admin"
+
+
+class ConversationCreate(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
+
+    participant_user_ids: list[UUID4] = Field(
+        description="User IDs of the other participants (creator is auto-added)"
+    )
+    type: ConversationType = Field(
+        ConversationType.DIRECT, description="Conversation type"
+    )
+    title: str | None = Field(None, description="Title (required for group)")
+
+    @model_validator(mode="after")
+    def validate_participants(self) -> "ConversationCreate":
+        if self.type == ConversationType.DIRECT:
+            if len(self.participant_user_ids) != 1:
+                raise ValueError(
+                    "Direct conversations must have exactly 1 other participant"
+                )
+        else:
+            if len(self.participant_user_ids) < 2:
+                raise ValueError(
+                    "Group conversations require at least 2 other participants"
+                )
+            if not self.title or not self.title.strip():
+                raise ValueError("Group conversations require a title")
+        return self
+
+
+class MessageCreate(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
+
+    content: str = Field(
+        ..., min_length=1, max_length=5000, description="Message content"
+    )
+    parent_message_id: UUID4 | None = Field(
+        None, description="Parent message ID for threaded replies"
+    )
+
+
+class MessageEdit(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
+
+    content: str = Field(
+        ..., min_length=1, max_length=5000, description="Updated message content"
+    )
+
+
+class MessageAuthorRead(BaseSchema):
+    user_id: UUID4 = Field(description="Author user identifier")
+    display_name: str = Field(description="Author display name")
+    avatar_uri: str | None = Field(None, description="Author avatar URI")
+
+
+class MessageRead(BaseRead):
+    author: MessageAuthorRead = Field(description="Message author")
+    content: str = Field(description="Message content")
+    edited_at: datetime | None = Field(
+        None, description="When the message was last edited"
+    )
+    parent_message_id: UUID4 | None = Field(
+        None, description="Parent message ID for threaded replies"
+    )
+
+
+class ConversationParticipantRead(BaseSchema):
+    user_id: UUID4 = Field(description="Participant user identifier")
+    display_name: str = Field(description="Participant display name")
+    avatar_uri: str | None = Field(None, description="Participant avatar URI")
+    role: ConversationParticipantRole = Field(description="Participant role")
+    joined_at: datetime = Field(description="When the participant joined")
+
+
+class ConversationRead(BaseRead):
+    type: ConversationType = Field(description="Conversation type")
+    title: str | None = Field(None, description="Conversation title")
+    participants: list[ConversationParticipantRead] = Field(
+        default_factory=list, description="Conversation participants"
+    )
+    last_message: MessageRead | None = Field(
+        None, description="Most recent message preview"
+    )
+    unread_count: int = Field(0, description="Unread messages for current user")
+
+
+class ConversationDetailRead(BaseRead):
+    type: ConversationType = Field(description="Conversation type")
+    title: str | None = Field(None, description="Conversation title")
+    participants: list[ConversationParticipantRead] = Field(
+        default_factory=list, description="Conversation participants"
+    )
+    messages: list[MessageRead] = Field(
+        default_factory=list, description="Paginated messages"
+    )
+    total_messages: int = Field(0, description="Total message count")
+
+
+class ConversationsPaginatedRead(BaseSchema):
+    items: list[ConversationRead] = Field(
+        default_factory=list, description="Paginated conversations"
+    )
+    total: int = Field(0, description="Total matching conversations")
+    page: int = Field(1, ge=1, description="Current page number")
+    page_size: int = Field(20, ge=1, description="Items per page")
+
+
+class UnreadCountRead(BaseSchema):
+    total_unread: int = Field(description="Total unread messages across conversations")
 
 
 class ProfileExtractSource(BaseSchema):
@@ -899,6 +1232,7 @@ class ApplicationCreate(BaseSchema):
     notes: str | None = None
     next_step: str | None = None
     next_step_due: datetime | None = None
+    document_ids: list[UUID4] | None = None
 
 
 class ApplicationUpdate(BaseSchema):

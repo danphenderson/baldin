@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
-import { ExtractorRun, ExtractorCreate, ExtractorExampleRead, ExtractorExmpleCreate, ExtractorResponse, ExtractorUpdate, runExtractor, createExtractor, createExtractorExample, getExtractorExamples, deleteExtractorExample} from '../service/extractor';  // Adjust import path as necessary
+import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, CircularProgress } from '@mui/material';
+import { ExtractorRun, ExtractorCreate, ExtractorRead, ExtractorExampleRead, ExtractorExmpleCreate, ExtractorResponse, ExtractorUpdate, runExtractor, createExtractor, createExtractorExample, getExtractorExamples, deleteExtractorExample} from '../service/extractor';
 import  FilePicker  from '../component/common/file-picker';
 import { useContext } from 'react';
 import { UserContext } from '../context/user-context';
 
 interface ExtractRunModalProps {
   open: boolean;
-  onSave: (data: any) => void;
+  onSave: (data: ExtractorResponse) => void;
+  onError: (message: string) => void;
   initialData?: ExtractorRun;
   extractorId: string;
   onClose: () => void;
@@ -15,18 +16,20 @@ interface ExtractRunModalProps {
 
 interface ExtractorCreateModalProps {
   open: boolean;
-  onSave: (data: ExtractorCreate) => void;
+  onSave: (data: ExtractorRead) => void;
+  onError: (message: string) => void;
   onClose: () => void;
 }
 
 interface ExampleCreateModalProps {
   extractorId: string;
   open: boolean;
-  onSave: (data: ExtractorExmpleCreate) => void;
+  onSave: (data: ExtractorExampleRead) => void;
+  onError: (message: string) => void;
   onClose: () => void;
 }
 
-export const ExtractRunModal: React.FC<ExtractRunModalProps> = ({ open, onClose, onSave, initialData, extractorId }) => {
+export const ExtractRunModal: React.FC<ExtractRunModalProps> = ({ open, onClose, onSave, onError, initialData, extractorId }) => {
   const defaultData: ExtractorRun = {
     mode: 'entire_document',
     text: null,
@@ -34,18 +37,30 @@ export const ExtractRunModal: React.FC<ExtractRunModalProps> = ({ open, onClose,
     llm: '',
   };
   const [data, setData] = useState<ExtractorRun>({ ...defaultData, ...initialData});
+  const [saving, setSaving] = useState(false);
   const { token } = useContext(UserContext);
 
   useEffect(() => {
     setData({ ...defaultData, ...initialData });
   }, [initialData]);
 
+  useEffect(() => {
+    if (open) {
+      setData({ ...defaultData, ...initialData });
+      setSaving(false);
+    }
+  }, [open]);
+
   const handleSave = async () => {
+    setSaving(true);
     try {
       const result = await runExtractor(token || '', extractorId, data as ExtractorRun);
       onSave(result);
     } catch (error) {
-      console.error(error);
+      const message = error instanceof Error ? error.message : 'Failed to run extractor';
+      onError(message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -96,13 +111,16 @@ export const ExtractRunModal: React.FC<ExtractRunModalProps> = ({ open, onClose,
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleSave}>Run</Button>
+        <Button onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <CircularProgress size={20} /> : 'Run'}
+        </Button>
       </DialogActions>
     </Dialog>
   );
 };
 
-export const ExtractorCreateModal: React.FC<ExtractorCreateModalProps> = ({ open, onClose, onSave }) => {
+export const ExtractorCreateModal: React.FC<ExtractorCreateModalProps> = ({ open, onClose, onSave, onError }) => {
   { /* Add support for suggesting extractors */}
   const defaultData: ExtractorCreate = {
     name: '',
@@ -111,14 +129,26 @@ export const ExtractorCreateModal: React.FC<ExtractorCreateModalProps> = ({ open
     json_schema: {},
   };
   const [data, setData] = useState<ExtractorCreate>(defaultData);
+  const [saving, setSaving] = useState(false);
   const { token } = useContext(UserContext);
 
+  useEffect(() => {
+    if (open) {
+      setData(defaultData);
+      setSaving(false);
+    }
+  }, [open]);
+
   const handleSave = async () => {
+    setSaving(true);
     try {
       const result = await createExtractor(token || '', data);
       onSave(result);
     } catch (error) {
-      console.error(error);
+      const message = error instanceof Error ? error.message : 'Failed to create extractor';
+      onError(message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -152,27 +182,41 @@ export const ExtractorCreateModal: React.FC<ExtractorCreateModalProps> = ({ open
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleSave}>Create</Button>
+        <Button onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <CircularProgress size={20} /> : 'Create'}
+        </Button>
       </DialogActions>
     </Dialog>
   );
 }
 
 
-export const ExampleCreateModal: React.FC<ExampleCreateModalProps> = ({ open, extractorId, onClose, onSave }) => {
+export const ExampleCreateModal: React.FC<ExampleCreateModalProps> = ({ open, extractorId, onClose, onSave, onError }) => {
   const defaultData: ExtractorExmpleCreate = {
     content: '', output: ''
   };
   const [data, setData] = useState<ExtractorExmpleCreate>(defaultData);
+  const [saving, setSaving] = useState(false);
   const { token } = useContext(UserContext);
 
+  useEffect(() => {
+    if (open) {
+      setData(defaultData);
+      setSaving(false);
+    }
+  }, [open]);
+
   const handleSave = async () => {
+    setSaving(true);
     try {
       const result = await createExtractorExample(token || '', extractorId, data);
       onSave(result);
-      onClose();
     } catch (error) {
-      console.error(error);
+      const message = error instanceof Error ? error.message : 'Failed to create example';
+      onError(message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -194,7 +238,10 @@ export const ExampleCreateModal: React.FC<ExampleCreateModalProps> = ({ open, ex
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleSave}>Create</Button>
+        <Button onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <CircularProgress size={20} /> : 'Create'}
+        </Button>
       </DialogActions>
     </Dialog>
   );

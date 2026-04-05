@@ -1,24 +1,35 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Stack, Typography, Button, Snackbar, Alert, CircularProgress } from '@mui/material';
+import { Stack, Typography, Button, Snackbar, Alert, CircularProgress, Paper, Box } from '@mui/material';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 
-import { ExtractorRead, getExtractors } from '../service/extractor';
+import { ExtractorRead, ExtractorResponse, getExtractors } from '../service/extractor';
 
 import ExtractRunModal from '../component/extractor-modal';
 import { ExtractorCreateModal, ExampleCreateModal } from '../component/extractor-modal';
 import RichJsonDisplay from '../component/common/json-modal';
 
+type FeedbackSeverity = 'success' | 'error';
+
 const ExtractorPage: React.FC = () => {
   const { token } = useContext(UserContext);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [extractorCreateModalOpen, setCreateExtractorOpen] = useState(false);
   const [extractors, setExtractors] = useState<ExtractorRead[]>([]);
   const [selectedExtractor, setSelectedExtractor] = useState<ExtractorRead | null>(null);
   const [extractRunnerOpen, setExtractRunnerOpen] = useState(false);
   const [createExtractorExampleOpen, setCreateExtractorExampleOpen] = useState(false);
+  const [runResult, setRunResult] = useState<ExtractorResponse | null>(null);
+
+  // Unified feedback snackbar
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [feedbackSeverity, setFeedbackSeverity] = useState<FeedbackSeverity>('success');
+
+  const showFeedback = (message: string, severity: FeedbackSeverity) => {
+    setFeedbackMessage(message);
+    setFeedbackSeverity(severity);
+  };
 
   usePageToolbarHeader('Extractors', `${extractors.length} configured`);
 
@@ -31,14 +42,12 @@ const ExtractorPage: React.FC = () => {
       const data = await getExtractors(token);
 
       if (!data) {
-        console.error('Failed to fetch extractors');
-        setError('Failed to load extractors');
+        showFeedback('Failed to load extractors', 'error');
         return;
       }
       setExtractors(data);
     } catch (err) {
-      console.error('Failed to fetch extractors:', err);
-      setError(typeof err === 'string' ? err : 'Failed to load extractors');
+      showFeedback(typeof err === 'string' ? err : 'Failed to load extractors', 'error');
     }
     setLoading(false);
   }, [token]);
@@ -46,6 +55,45 @@ const ExtractorPage: React.FC = () => {
   useEffect(() => {
     fetchExtractors();
   }, [fetchExtractors]);
+
+  // --- Create extractor completion ---
+  const handleCreateSuccess = useCallback((created: ExtractorRead) => {
+    setCreateExtractorOpen(false);
+    setExtractors((prev) => [...prev, created]);
+    setSelectedExtractor(created);
+    showFeedback(`Extractor "${created.name}" created`, 'success');
+  }, []);
+
+  const handleCreateError = useCallback((message: string) => {
+    showFeedback(message, 'error');
+  }, []);
+
+  // --- Run extractor completion ---
+  const handleRunSuccess = useCallback((result: ExtractorResponse) => {
+    setExtractRunnerOpen(false);
+    setRunResult(result);
+    showFeedback(
+      result.content_too_long
+        ? 'Extraction completed (content was truncated)'
+        : 'Extraction completed',
+      'success',
+    );
+  }, []);
+
+  const handleRunError = useCallback((message: string) => {
+    showFeedback(message, 'error');
+  }, []);
+
+  // --- Create example completion ---
+  const handleExampleCreateSuccess = useCallback(() => {
+    setCreateExtractorExampleOpen(false);
+    fetchExtractors();
+    showFeedback('Example added', 'success');
+  }, [fetchExtractors]);
+
+  const handleExampleCreateError = useCallback((message: string) => {
+    showFeedback(message, 'error');
+  }, []);
 
   const columns: GridColDef[] = [
     { field: 'name', headerName: 'Name', width: 200 },
@@ -63,17 +111,19 @@ const ExtractorPage: React.FC = () => {
       ) : (
         <Stack spacing={2}>
           <Button variant="contained" color="primary" onClick={() => setCreateExtractorOpen(true)}>Create Extractor</Button>
-          {extractorCreateModalOpen && (
-            <ExtractorCreateModal
-              open={extractorCreateModalOpen}
-              onClose={() => setCreateExtractorOpen(false)}
-              onSave={() => fetchExtractors()}
-            />
-          )}
+          <ExtractorCreateModal
+            open={extractorCreateModalOpen}
+            onClose={() => setCreateExtractorOpen(false)}
+            onSave={handleCreateSuccess}
+            onError={handleCreateError}
+          />
           <DataGrid
             rows={extractors}
             columns={columns}
-            onRowClick={(params) => setSelectedExtractor(params.row as ExtractorRead)}
+            onRowClick={(params) => {
+              setSelectedExtractor(params.row as ExtractorRead);
+              setRunResult(null);
+            }}
             autoHeight
             checkboxSelection
           />
@@ -87,9 +137,30 @@ const ExtractorPage: React.FC = () => {
                   open={extractRunnerOpen}
                   onClose={() => setExtractRunnerOpen(false)}
                   extractorId={selectedExtractor.id}
-                  onSave={() => console.log('Run extractor')}
+                  onSave={handleRunSuccess}
+                  onError={handleRunError}
                 />
               </Stack>
+
+              {/* Run Result */}
+              {runResult && (
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Stack spacing={1}>
+                    <Typography variant="h6">Run Result</Typography>
+                    {runResult.content_too_long && (
+                      <Alert severity="warning" variant="outlined">Content was too long and may have been truncated.</Alert>
+                    )}
+                    {runResult.data && runResult.data.length > 0 ? (
+                      <RichJsonDisplay jsonString={JSON.stringify(runResult.data, null, 2)} />
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">No data returned.</Typography>
+                    )}
+                    <Box>
+                      <Button size="small" onClick={() => setRunResult(null)}>Dismiss</Button>
+                    </Box>
+                  </Stack>
+                </Paper>
+              )}
 
               {/* Selected Extractor Details */}
               <Typography variant="h5">Extractor Details</Typography>
@@ -111,10 +182,8 @@ const ExtractorPage: React.FC = () => {
                   open={createExtractorExampleOpen}
                   extractorId={selectedExtractor.id}
                   onClose={() => setCreateExtractorExampleOpen(false)}
-                  onSave={() => {
-                    fetchExtractors();
-                    setCreateExtractorExampleOpen(false);
-                  }}
+                  onSave={handleExampleCreateSuccess}
+                  onError={handleExampleCreateError}
                 />
               </Stack>
 
@@ -128,8 +197,8 @@ const ExtractorPage: React.FC = () => {
         </Stack>
       )}
 
-      <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)}>
-        <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>
+      <Snackbar open={!!feedbackMessage} autoHideDuration={6000} onClose={() => setFeedbackMessage(null)}>
+        <Alert severity={feedbackSeverity} onClose={() => setFeedbackMessage(null)}>{feedbackMessage}</Alert>
       </Snackbar>
     </Stack>
   );

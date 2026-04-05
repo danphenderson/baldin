@@ -18,7 +18,7 @@ from fastapi import (  # noqa
 from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4, ValidationError
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import selectinload
 
 from app import logging, models, schemas, utils  # noqa
 from app.core import conf  # noqa
@@ -153,17 +153,38 @@ async def get_extractor_run_payload(
 
 
 async def get_lead(
-    id: UUID4, db: AsyncSession = Depends(get_async_session)
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Lead:
     result = await db.execute(
         select(models.Lead)
-        .options(joinedload(models.Lead.companies))
+        .options(
+            selectinload(models.Lead.companies),
+            selectinload(models.Lead.users),
+        )
         .where(models.Lead.id == id)
     )
-    lead = result.scalars().first()
+    lead = result.scalars().unique().first()
     if not lead:
         raise HTTPException(status_code=404, detail=f"Lead not found: {id}")
+    if not getattr(user, "is_superuser", False) and lead.users:
+        if not any(lead_user.id == user.id for lead_user in lead.users):
+            raise await _403(user.id, lead, id)
     return lead
+
+
+async def get_mutable_lead(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Lead:
+    lead = await get_lead(id, db, user)
+    if getattr(user, "is_superuser", False):
+        return lead
+    if any(lead_user.id == user.id for lead_user in lead.users):
+        return lead
+    raise await _403(user.id, lead, id)
 
 
 async def create_lead(
@@ -171,16 +192,47 @@ async def create_lead(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Lead:
-    lead = models.Lead(**payload.dict(exclude={"company_ids"}))
-    if payload.company_ids:
-        lead.companies = [
-            await db.get(models.Company, company_id)
-            for company_id in payload.company_ids
-        ]
-    db.add(lead)
-    await db.commit()
-    await db.refresh(lead)
-    return lead
+    result = await db.execute(
+        select(models.Lead)
+        .options(
+            selectinload(models.Lead.companies),
+            selectinload(models.Lead.users),
+        )
+        .where(models.Lead.url == payload.url)
+    )
+    lead = result.scalars().unique().first()
+    current_user = await db.get(models.User, user.id)
+    if current_user is None:
+        raise HTTPException(status_code=404, detail=f"User not found: {user.id}")
+
+    changed = False
+    if lead is None:
+        lead = models.Lead(**payload.model_dump(exclude={"company_ids"}))
+        lead.users.append(current_user)
+        db.add(lead)
+        changed = True
+    elif not any(lead_user.id == user.id for lead_user in lead.users):
+        lead.users.append(current_user)
+        changed = True
+
+    existing_company_ids = {
+        company.id
+        for company in getattr(lead, "companies", [])
+        if company.id is not None
+    }
+    for company_id in payload.company_ids or []:
+        if company_id in existing_company_ids:
+            continue
+        company = await db.get(models.Company, company_id)
+        if company is not None:
+            lead.companies.append(company)
+            existing_company_ids.add(company.id)
+            changed = True
+
+    if changed:
+        await db.commit()
+
+    return await get_lead(lead.id, db, user)
 
 
 async def get_company_by_id(

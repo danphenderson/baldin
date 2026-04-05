@@ -26,7 +26,7 @@ from fastapi_users.authentication import (
     JWTStrategy,
 )
 from fastapi_users.db import SQLAlchemyUserDatabase
-from fastapi_users.exceptions import UserAlreadyExists
+from fastapi_users.exceptions import UserAlreadyExists, UserNotExists
 
 from app import models, schemas
 from app.core import conf
@@ -86,6 +86,43 @@ get_current_superuser = fastapi_users.current_user(active=True, superuser=True)
 get_async_session_context = contextlib.asynccontextmanager(get_async_session)
 get_user_db_context = contextlib.asynccontextmanager(get_user_db)
 get_user_manager_context = contextlib.asynccontextmanager(get_user_manager)
+
+
+async def authenticate_user_credentials(
+    email: str, password: str
+) -> Optional[models.User]:
+    async with get_async_session_context() as session:
+        async with get_user_db_context(session) as user_db:
+            async with get_user_manager_context(user_db) as user_manager:
+                try:
+                    user = await user_manager.get_by_email(email)
+                except UserNotExists:
+                    user_manager.password_helper.hash(password)
+                    return None
+
+                verified, updated_password_hash = (
+                    user_manager.password_helper.verify_and_update(
+                        password, user.hashed_password
+                    )
+                )
+                if not verified or not user.is_active:
+                    return None
+
+                if updated_password_hash is not None:
+                    user = await user_db.update(
+                        user, {"hashed_password": updated_password_hash}
+                    )
+
+                return user
+
+
+async def authenticate_superuser_credentials(
+    email: str, password: str
+) -> Optional[models.User]:
+    user = await authenticate_user_credentials(email, password)
+    if user is None or not user.is_superuser:
+        return None
+    return user
 
 
 async def create_user(schema: schemas.UserCreate):

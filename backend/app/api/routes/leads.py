@@ -4,9 +4,8 @@ import json
 
 from aiofiles import open as aopen
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import UUID4
-from sqlalchemy import delete, func, select
-from sqlalchemy.orm import joinedload
+from sqlalchemy import delete, distinct, func, or_, select
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import AsyncSession, conf
 from app.api.deps import console_log
@@ -17,9 +16,11 @@ from app.api.deps import (
     create_orchestration_event,
     create_orchestration_pipeline,
     get_async_session,
+    get_current_superuser,
     get_current_user,
     get_extractor_by_name,
     get_lead,
+    get_mutable_lead,
     get_orchestration_pipeline_by_name,
     get_pagination_params,
     logging,
@@ -39,43 +40,12 @@ async def create_job_lead(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    # Check if a lead with the same URL already exists
-    existing_lead = await db.execute(
-        select(models.Lead).where(models.Lead.url == payload.url)
-    )
-    existing_lead = existing_lead.scalars().first()  # type: ignore
-
-    if existing_lead:
-        # Lead with the same URL already exists, return an error response
-        raise HTTPException(status_code=400, detail="Lead with this URL already exists")
-
-    # Create a new lead if it doesn't exist
-    lead = models.Lead(**payload.dict(exclude={"company_ids"}))
-
-    # If companies are provided, associate them with the lead
-    for company_id in getattr(payload, "company_ids") or []:
-        company = await db.get(models.Company, company_id)
-        if company:
-            lead.companies.append(company)
-
-    db.add(lead)
-    await db.commit()
-    # Retrieve the lead with companies eagerly loaded
-    lead = await db.execute(
-        select(models.Lead)
-        .where(models.Lead.id == lead.id)
-        .options(joinedload(models.Lead.companies))
-    )  # type: ignore
-    lead = lead.scalars().first()
-
-    return lead
+    return await create_lead(payload, db=db, user=user)
 
 
 @router.get("/{id}", status_code=200, response_model=schemas.LeadRead)
 async def read_lead(
     lead: models.Lead = Depends(get_lead),
-    user=Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     console_log.warning(f"Lead: {lead.__dict__.get('companies', 'No Companies')}")
     return lead
@@ -93,22 +63,27 @@ async def read_leads(
     # Execute the paginated query
     lead_query = (
         select(models.Lead)
-        .options(joinedload(models.Lead.companies))
+        .options(
+            selectinload(models.Lead.companies),
+            selectinload(models.Lead.users),
+        )
         .offset(offset)
         .limit(pagination.page_size)
     )
+    total_count_query = select(func.count(distinct(models.Lead.id))).select_from(
+        models.Lead
+    )
+
+    if not getattr(user, "is_superuser", False):
+        visibility_filter = or_(models.User.id == user.id, models.User.id.is_(None))
+        lead_query = lead_query.outerjoin(models.Lead.users).where(visibility_filter)
+        total_count_query = total_count_query.outerjoin(models.Lead.users).where(
+            visibility_filter
+        )
+
     leads = await db.execute(lead_query)
 
     lead_list = leads.scalars().unique().all()
-    # total_count = None
-
-    # # Get the total count
-    # if pagination.request_count:
-    #     total_count_query = select(func.count(models.Lead.id))
-    #     total_count_result = await db.execute(total_count_query)
-    #     total_count = total_count_result.scalar_one()
-    # HACK: This is a hack to get the total count
-    total_count_query = select(func.count(models.Lead.id))
     total_count_result = await db.execute(total_count_query)
     total_count = total_count_result.scalar_one()
 
@@ -122,20 +97,22 @@ async def read_leads(
 @router.patch("/{id}", status_code=200, response_model=schemas.LeadRead)
 async def update_lead(
     payload: schemas.LeadUpdate,
-    lead: schemas.LeadRead = Depends(get_lead),
+    lead: models.Lead = Depends(get_mutable_lead),
     db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
 ):
-    console_log.info(f"Updating lead {lead.id} with data: {payload.dict()}")
-    if "companies" in payload.dict():
+    payload_data = payload.model_dump()
+    console_log.info(f"Updating lead {lead.id} with data: {payload_data}")
+    if "companies" in payload_data:
         console_log.info(f"Updating companies for lead {lead.id}")
 
     # Update the lead
-    for field, value in payload.dict(exclude_unset=True).items():
+    for field, value in payload.model_dump(
+        exclude_unset=True, exclude={"company_ids"}
+    ).items():
         setattr(lead, field, value)
 
     # Handle company associations
-    if payload.company_ids is not None:
+    if "company_ids" in payload.model_fields_set:
         # Clear existing companies and add new ones
         lead.companies = []
         for company_id in payload.company_ids:
@@ -155,12 +132,31 @@ async def update_lead(
 @router.delete("/purge", status_code=202, response_model=dict)
 async def purge_leads(
     db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
+    user: schemas.UserRead = Depends(get_current_superuser),
 ):
     """
     Drops all leads records in the table.
     """
-    # Execute a bulk delete query
+    lead_ids = select(models.Lead.id)
+    application_ids = select(models.Application.id).where(
+        models.Application.lead_id.in_(lead_ids)
+    )
+
+    await db.execute(
+        delete(models.ResumeXApplication).where(
+            models.ResumeXApplication.application_id.in_(application_ids)
+        )
+    )
+    await db.execute(
+        delete(models.CoverLetterXApplication).where(
+            models.CoverLetterXApplication.application_id.in_(application_ids)
+        )
+    )
+    await db.execute(
+        delete(models.Application).where(models.Application.lead_id.in_(lead_ids))
+    )
+    await db.execute(delete(models.LeadXUser))
+    await db.execute(delete(models.LeadXCompany))
     await db.execute(delete(models.Lead))
     await db.commit()
     return {"message": "All leads have been purged successfully"}
@@ -168,14 +164,9 @@ async def purge_leads(
 
 @router.delete("/{id}", status_code=204)
 async def delete_lead(
-    id: UUID4,
+    lead: models.Lead = Depends(get_mutable_lead),
     db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
 ):
-    lead = await db.get(models.Lead, id)
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
-
     await db.delete(lead)
     await db.commit()
     return None
@@ -223,20 +214,14 @@ async def extract_lead(
 
     # Process and save the extracted data
     try:
-        # FIXME: Hack to remove company_ids
         company_ids = result.data[0].pop("company_ids", None)
         logger.warning("Company IDs: " + str(company_ids))
         logger.warning("result.data[0]: " + str(result.data[0]))
-        lead = models.Lead(**result.data[0])
-        db.add(lead)
-        await db.commit()
-        # Retrieve the lead with companies eagerly loaded
-        lead = await db.execute(
-            select(models.Lead)
-            .where(models.Lead.id == lead.id)
-            .options(joinedload(models.Lead.companies))
-        )  # type: ignore
-        lead = lead.scalars().first()
+        lead = await create_lead(
+            schemas.LeadCreate(**result.data[0], company_ids=company_ids),
+            db=db,
+            user=user,
+        )
     except Exception as e:
         logger.error(f"Error saving lead to database: {e}")
         logger.warning(f"Result was {result.data[0]}")

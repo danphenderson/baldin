@@ -45,6 +45,7 @@ starlette-admin = "*"
 python-magic = "*"
 reportlab = "*"
 gunicorn = "==21.0.1"
+itsdangerous = "*"
 
 [dev-packages]
 ipython = "*"

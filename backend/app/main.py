@@ -77,9 +77,13 @@ admin.mount_to(app)
 async def startup_event():
     console_log.info("Starting up...")
     tracemalloc.start()
+    if getattr(app.state, "bootstrap_completed", False):
+        console_log.info("Startup bootstrap already completed for this process.")
+        return
     if conf.settings.SHOULD_BOOTSTRAP_ON_STARTUP:
         await create_db_and_tables()
         await create_default_superuser()
+        app.state.bootstrap_completed = True
         console_log.info("Development bootstrap completed.")
     else:
         console_log.info(

@@ -115,6 +115,13 @@ class LeadXCompany(Base):
     company_id = Column(UUID, ForeignKey("companies.id"), primary_key=True)
 
 
+class LeadXUser(Base):
+
+    __tablename__ = "leads_x_users"
+    lead_id = Column(UUID, ForeignKey("leads.id"), primary_key=True)
+    user_id = Column(UUID, ForeignKey("users.id"), primary_key=True)
+
+
 class Company(Base):
     """
     Represents a company.
@@ -158,9 +165,11 @@ class Lead(Base):
     companies = relationship(
         "Company", secondary="leads_x_companies", back_populates="leads"
     )
+    users = relationship("User", secondary="leads_x_users", back_populates="leads")
 
 
 # End of system models
+
 
 # User models
 class Skill(Base):
@@ -340,6 +349,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     country = Column(String)
     time_zone = Column(String)
     avatar_uri = Column(String)
+    leads = relationship("Lead", secondary="leads_x_users", back_populates="users")
     applications = relationship("Application", back_populates="user")
     contacts = relationship("Contact", back_populates="user")
     skills = relationship("Skill", back_populates="user")

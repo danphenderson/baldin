@@ -45,7 +45,7 @@ docker-compose up --build
    - API: [http://localhost:8004](http://localhost:8004)
    - Swagger UI: [http://localhost:8004/docs](http://localhost:8004/docs)
    - ReDoc: [http://localhost:8004/redoc](http://localhost:8004/redoc)
-   - Admin: [http://localhost:8004/admin](http://localhost:8004/admin)
+   - Admin: [http://localhost:8004/admin](http://localhost:8004/admin) using the bootstrapped superuser email and password from `FIRST_SUPERUSER_EMAIL` and `FIRST_SUPERUSER_PASSWORD`
 
 The backend starts in `DEV` mode, creates tables automatically, and bootstraps the default superuser from `backend/.env`.
 

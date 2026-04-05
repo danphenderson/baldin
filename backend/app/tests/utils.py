@@ -59,18 +59,17 @@ async def create_etl_event(session: AsyncSession):
 
 async def create_lead(session: AsyncSession):
     lead = Lead(
-        url="http://example.com/job",
+        url=f"https://example.com/job/{random_lower_string(12)}",
         title="Test Job Title",
-        company="Test Company",
         description="Test Job Description",
         location="Test Location",
         salary="50,000 - 70,000",
         job_function="Test Function",
-        industries="Test Industry",
         employment_type="Full-Time",
         seniority_level="Mid-Level",
         education_level="Bachelor's",
         notes="Test Note",
+        hiring_manager="Test Hiring Manager",
     )
     session.add(lead)
     await session.commit()

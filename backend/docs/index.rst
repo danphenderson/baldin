@@ -29,7 +29,7 @@ When the local stack is running, the primary entry points are:
 * API: ``http://localhost:8004``
 * Swagger UI: ``http://localhost:8004/docs``
 * ReDoc: ``http://localhost:8004/redoc``
-* Admin: ``http://localhost:8004/admin``
+* Admin: ``http://localhost:8004/admin`` using the bootstrapped ``FIRST_SUPERUSER_EMAIL`` and ``FIRST_SUPERUSER_PASSWORD`` credentials
 
 API Reference
 -------------

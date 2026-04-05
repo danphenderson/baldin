@@ -170,6 +170,7 @@ class DataBaseManager:
         deleted_records = {
             models.OrchestrationEvent.__tablename__: 0,
             models.ExtractorExample.__tablename__: 0,
+            models.LeadXUser.__tablename__: 0,
             models.ResumeXApplication.__tablename__: 0,
             models.CoverLetterXApplication.__tablename__: 0,
             models.Application.__tablename__: 0,
@@ -228,6 +229,10 @@ class DataBaseManager:
             await self._delete_rows_matching_any(
                 models.CoverLetterXApplication, cover_letter_link_conditions
             )
+        )
+
+        deleted_records[models.LeadXUser.__tablename__] = await self._delete_rows(
+            models.LeadXUser, models.LeadXUser.user_id == user_id
         )
 
         deleted_records[models.Application.__tablename__] = await self._delete_rows(

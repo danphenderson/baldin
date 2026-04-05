@@ -914,3 +914,323 @@ def model_to_dict(model_instance):
     elif isinstance(model_instance, list):
         return [model_to_dict(item) for item in model_instance]
     return model_instance
+
+
+# ---------------------------------------------------------------------------
+# Crawler dependency helpers
+# ---------------------------------------------------------------------------
+
+
+async def get_crawler_pipeline(
+    pipeline_id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.CrawlerPipeline:
+    query = (
+        select(models.CrawlerPipeline)
+        .filter(models.CrawlerPipeline.id == pipeline_id)
+        .options(selectinload(models.CrawlerPipeline.runs))
+    )
+    result = await db.execute(query)
+    pipeline = result.scalars().first()
+    if not pipeline:
+        raise await _404(pipeline, pipeline_id)
+    await log.info(f"get_crawler_pipeline: {pipeline}")
+    return pipeline  # type: ignore
+
+
+async def list_crawler_pipelines(
+    db: AsyncSession = Depends(get_async_session),
+) -> list[models.CrawlerPipeline]:
+    query = (
+        select(models.CrawlerPipeline)
+        .options(selectinload(models.CrawlerPipeline.runs))
+        .order_by(models.CrawlerPipeline.created_at.desc())
+    )
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
+async def create_crawler_pipeline(
+    payload: schemas.CrawlerPipelineCreate,
+    user: schemas.UserRead,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.CrawlerPipeline:
+    pipeline = models.CrawlerPipeline(**payload.dict(), created_by_user_id=user.id)
+    db.add(pipeline)
+    await db.commit()
+    await db.refresh(pipeline)
+    await log.info(f"create_crawler_pipeline: {pipeline}")
+    return await get_crawler_pipeline(pipeline.id, db)
+
+
+async def update_crawler_pipeline(
+    pipeline: models.CrawlerPipeline,
+    payload: schemas.CrawlerPipelineUpdate,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.CrawlerPipeline:
+    for field, value in payload.dict(exclude_unset=True).items():
+        setattr(pipeline, field, value)
+    await db.commit()
+    await db.refresh(pipeline)
+    await log.info(f"update_crawler_pipeline: {pipeline}")
+    return pipeline
+
+
+async def create_crawler_run(
+    pipeline: models.CrawlerPipeline,
+    trigger_type: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.CrawlerRun:
+    run = models.CrawlerRun(
+        crawler_pipeline_id=pipeline.id,
+        trigger_type=trigger_type,
+        status="pending",
+    )
+    db.add(run)
+    await db.flush()
+
+    # Create an OrchestrationEvent for audit trail
+    event = models.OrchestrationEvent(
+        status="pending",
+        message=f"Crawler run triggered ({trigger_type}) for pipeline {pipeline.name}",
+        payload={
+            "crawler_pipeline_id": str(pipeline.id),
+            "crawler_run_id": str(run.id),
+            "trigger_type": trigger_type,
+            "source": pipeline.source,
+        },
+        environment=conf.settings.ENVIRONMENT,
+    )
+    db.add(event)
+    await db.commit()
+    await db.refresh(run)
+    await log.info(f"create_crawler_run: {run}")
+    return run
+
+
+async def get_crawler_run(
+    run_id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.CrawlerRun:
+    run = await db.get(models.CrawlerRun, run_id)
+    if not run:
+        raise await _404(run, run_id)
+    await log.info(f"get_crawler_run: {run}")
+    return run
+
+
+# ---------------------------------------------------------------------------
+# Crawler run execution pipeline
+# ---------------------------------------------------------------------------
+
+_ADAPTER_MAP = {
+    "linkedin": "etl.linkedin.LinkedInCrawler",
+    "glassdoor": "etl.glassdoor.GlassdoorCrawler",
+}
+
+
+def crawler_result_to_lead_create(result) -> schemas.LeadCreate:
+    """Convert a CrawlerResult dataclass into a LeadCreate schema.
+
+    company_name is appended to description because LeadCreate uses
+    company_ids (UUID list) rather than a name string.  Company association
+    can be improved in a later phase.
+    """
+    description = result.description or ""
+    if result.company_name:
+        if description:
+            description = f"[{result.company_name}]\n{description}"
+        else:
+            description = f"[{result.company_name}]"
+
+    return schemas.LeadCreate(
+        url=result.url,
+        title=result.title,
+        description=description or None,
+        location=result.location,
+        salary=result.salary,
+        job_function=result.job_function,
+        employment_type=result.employment_type,
+        seniority_level=result.seniority_level,
+        education_level=result.education_level,
+        company_ids=None,
+    )
+
+
+def _instantiate_adapter(
+    source: str, query_definition: dict, execution_policy: dict | None
+):
+    """Lazily import and instantiate the correct ETL adapter."""
+    if source == "linkedin":
+        from etl.linkedin import LinkedInCrawler
+
+        return LinkedInCrawler(
+            keywords=query_definition.get("keywords", []),
+            location=query_definition.get("location", ""),
+            page_start=query_definition.get("page_start", 1),
+            page_end=query_definition.get("page_end", 5),
+            headless=(execution_policy or {}).get("headless", True),
+        )
+    elif source == "glassdoor":
+        from etl.glassdoor import GlassdoorCrawler
+
+        return GlassdoorCrawler(
+            keywords=query_definition.get("keywords", ""),
+            location=query_definition.get("location", ""),
+            headless=(execution_policy or {}).get("headless", True),
+        )
+    else:
+        raise ValueError(f"Unsupported crawler source: {source}")
+
+
+async def _find_orchestration_event_for_run(
+    run_id: uuid.UUID, db: AsyncSession
+) -> models.OrchestrationEvent | None:
+    """Find the OrchestrationEvent created alongside a CrawlerRun."""
+    result = await db.execute(
+        select(models.OrchestrationEvent).where(
+            models.OrchestrationEvent.payload["crawler_run_id"].as_string()
+            == str(run_id)
+        )
+    )
+    return result.scalars().first()
+
+
+async def execute_crawler_run(
+    run: models.CrawlerRun,
+    db: AsyncSession,
+    user: models.User,
+) -> models.CrawlerRun:
+    """Execute a crawler run: instantiate adapter, crawl, persist leads, update stats."""
+    from etl import base as etl_base  # noqa: local import to avoid circular deps
+
+    stats = {
+        "leads_found": 0,
+        "leads_created": 0,
+        "leads_deduped": 0,
+        "errors": 0,
+    }
+
+    # Load pipeline
+    pipeline = await db.get(models.CrawlerPipeline, run.crawler_pipeline_id)
+    if pipeline is None:
+        run.status = "failed"
+        run.error_summary = f"Pipeline {run.crawler_pipeline_id} not found"
+        run.finished_at = datetime.utcnow()
+        await db.commit()
+        return run
+
+    # Transition to running
+    run.status = "running"
+    run.started_at = datetime.utcnow()
+    await db.commit()
+
+    # Update OrchestrationEvent to RUNNING
+    event = await _find_orchestration_event_for_run(run.id, db)
+    if event is not None:
+        event.status = "running"
+        event.message = f"Crawler run started for pipeline {pipeline.name}"
+        await db.commit()
+
+    # Build a UserRead-compatible object for create_lead
+    user_read = schemas.UserRead.model_validate(user, from_attributes=True)
+
+    try:
+        adapter = _instantiate_adapter(
+            pipeline.source,
+            pipeline.query_definition or {},
+            pipeline.execution_policy,
+        )
+
+        async with adapter:
+            async for result in adapter.search_jobs():
+                # Check for external cancel/pause before processing each lead
+                await db.refresh(run, ["status"])
+                if run.status == "cancelled":
+                    run.stats = stats
+                    if not run.finished_at:
+                        run.finished_at = datetime.utcnow()
+                    await db.commit()
+                    if event is not None:
+                        event.status = "failure"
+                        event.message = "Crawler run cancelled externally"
+                        await db.commit()
+                    return run
+                if run.status == "paused":
+                    run.stats = stats
+                    await db.commit()
+                    if event is not None:
+                        event.message = (
+                            f"Crawler run paused after {stats['leads_found']} leads"
+                        )
+                        await db.commit()
+                    return run
+
+                stats["leads_found"] += 1
+
+                if not result.url:
+                    await log.warning("Skipping CrawlerResult with empty URL")
+                    stats["errors"] += 1
+                    continue
+
+                try:
+                    lead_payload = crawler_result_to_lead_create(result)
+                    lead_result = await create_lead(lead_payload, db, user_read)
+
+                    if (
+                        lead_result.disposition
+                        == schemas.LeadExtractDisposition.CREATED
+                    ):
+                        stats["leads_created"] += 1
+                    else:
+                        stats["leads_deduped"] += 1
+                except Exception:
+                    await log.exception(f"Error persisting lead from {result.url}")
+                    stats["errors"] += 1
+
+        # Success
+        run.status = "success"
+        run.finished_at = datetime.utcnow()
+        run.stats = stats
+        await db.commit()
+
+        if event is not None:
+            event.status = "success"
+            event.message = (
+                f"Crawler run completed: {stats['leads_created']} created, "
+                f"{stats['leads_deduped']} deduped, {stats['errors']} errors"
+            )
+            await db.commit()
+
+    except Exception as exc:
+        await log.exception(f"Crawler run {run.id} failed: {exc}")
+        run.status = "failed"
+        run.finished_at = datetime.utcnow()
+        run.stats = stats
+        run.error_summary = str(exc)[:2000]
+        await db.commit()
+
+        if event is not None:
+            event.status = "failure"
+            event.message = f"Crawler run failed: {str(exc)[:500]}"
+            await db.commit()
+
+    return run
+
+
+async def execute_crawler_run_background(run_id: uuid.UUID, user_id: uuid.UUID) -> None:
+    """Background-task wrapper that opens its own db session."""
+    async with session_context() as db:
+        run = await db.get(models.CrawlerRun, run_id)
+        if run is None:
+            await log.error(f"execute_crawler_run_background: run {run_id} not found")
+            return
+        user = await db.get(models.User, user_id)
+        if user is None:
+            await log.error(f"execute_crawler_run_background: user {user_id} not found")
+            run.status = "failed"
+            run.error_summary = f"User {user_id} not found"
+            run.finished_at = datetime.utcnow()
+            await db.commit()
+            return
+        await execute_crawler_run(run, db, user)

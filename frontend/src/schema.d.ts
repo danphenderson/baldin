@@ -67,6 +67,13 @@ export interface paths {
     /** Read Profile */
     get: operations["read_profile_users_me_profile_get"];
   };
+  "/users/me/profile/extract": {
+    /**
+     * Extract User Profile
+     * @description Extract all profile sections from one or many sources and persist results.
+     */
+    post: operations["extract_user_profile_users_me_profile_extract_post"];
+  };
   "/users/seed": {
     /** Seed Users */
     post: operations["seed_users_users_seed_post"];
@@ -399,6 +406,42 @@ export interface paths {
      */
     post: operations["extractor_runner_extractor__id__run_post"];
   };
+  "/crawlers/pipelines": {
+    /** List Crawler Pipelines */
+    get: operations["list_crawler_pipelines_crawlers_pipelines_get"];
+    /** Create Crawler Pipeline */
+    post: operations["create_crawler_pipeline_crawlers_pipelines_post"];
+  };
+  "/crawlers/pipelines/{pipeline_id}": {
+    /** Get Crawler Pipeline */
+    get: operations["get_crawler_pipeline_crawlers_pipelines__pipeline_id__get"];
+    /** Update Crawler Pipeline */
+    patch: operations["update_crawler_pipeline_crawlers_pipelines__pipeline_id__patch"];
+  };
+  "/crawlers/pipelines/{pipeline_id}/runs": {
+    /** Trigger Crawler Run */
+    post: operations["trigger_crawler_run_crawlers_pipelines__pipeline_id__runs_post"];
+  };
+  "/crawlers/runs": {
+    /** List Crawler Runs */
+    get: operations["list_crawler_runs_crawlers_runs_get"];
+  };
+  "/crawlers/runs/{run_id}": {
+    /** Get Crawler Run */
+    get: operations["get_crawler_run_crawlers_runs__run_id__get"];
+  };
+  "/crawlers/runs/{run_id}/cancel": {
+    /** Cancel Crawler Run */
+    post: operations["cancel_crawler_run_crawlers_runs__run_id__cancel_post"];
+  };
+  "/crawlers/runs/{run_id}/pause": {
+    /** Pause Crawler Run */
+    post: operations["pause_crawler_run_crawlers_runs__run_id__pause_post"];
+  };
+  "/crawlers/runs/{run_id}/resume": {
+    /** Resume Crawler Run */
+    post: operations["resume_crawler_run_crawlers_runs__run_id__resume_post"];
+  };
   "/": {
     /** Root */
     get: operations["root__get"];
@@ -543,6 +586,29 @@ export interface components {
        * Format: password
        */
       client_secret?: string | null;
+    };
+    /** Body_extract_user_profile_users_me_profile_extract_post */
+    Body_extract_user_profile_users_me_profile_extract_post: {
+      /** File */
+      file?: string | null;
+      /**
+       * Mode
+       * @default entire_document
+       */
+      mode?: string;
+      /** Text */
+      text?: string | null;
+      /** Url */
+      url?: string | null;
+      /** Llm */
+      llm?: string | null;
+      /** Sources Json */
+      sources_json?: string | null;
+      /**
+       * Source Files
+       * @default []
+       */
+      source_files?: string[];
     };
     /** Body_extract_user_skills_skills_extract_post */
     Body_extract_user_skills_skills_extract_post: {
@@ -992,6 +1058,326 @@ export interface components {
       /** @description Cover letter content type */
       content_type?: components["schemas"]["ContentType"] | null;
     };
+    /** CrawlerPipelineCreate */
+    CrawlerPipelineCreate: {
+      /**
+       * Name
+       * @description Pipeline name
+       */
+      name: string;
+      /**
+       * Description
+       * @description Pipeline description
+       */
+      description?: string | null;
+      /** @description Crawl source platform */
+      source: components["schemas"]["CrawlerSourceType"];
+      /**
+       * Query Definition
+       * @description Source-specific search parameters
+       */
+      query_definition: {
+        [key: string]: unknown;
+      };
+      /**
+       * Schedule Definition
+       * @description Schedule cadence definition
+       */
+      schedule_definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Enabled
+       * @description Whether the pipeline is active
+       * @default true
+       */
+      enabled?: boolean;
+      /**
+       * Execution Policy
+       * @description Concurrency, timeouts, headless mode
+       */
+      execution_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Extraction Policy
+       * @description Whether to run LLM extraction on crawled leads
+       */
+      extraction_policy?: {
+        [key: string]: unknown;
+      } | null;
+    };
+    /** CrawlerPipelineRead */
+    CrawlerPipelineRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Name
+       * @description Pipeline name
+       */
+      name: string;
+      /**
+       * Description
+       * @description Pipeline description
+       */
+      description?: string | null;
+      /** @description Crawl source platform */
+      source: components["schemas"]["CrawlerSourceType"];
+      /**
+       * Query Definition
+       * @description Source-specific search parameters
+       */
+      query_definition: {
+        [key: string]: unknown;
+      };
+      /**
+       * Schedule Definition
+       * @description Schedule cadence definition
+       */
+      schedule_definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Enabled
+       * @description Whether the pipeline is active
+       */
+      enabled: boolean;
+      /**
+       * Execution Policy
+       * @description Concurrency, timeouts, headless mode
+       */
+      execution_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Extraction Policy
+       * @description Whether to run LLM extraction on crawled leads
+       */
+      extraction_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Created By User Id
+       * Format: uuid4
+       * @description Superuser who created the pipeline
+       */
+      created_by_user_id: string;
+      /** @description Status of the most recent run */
+      last_run_status?: components["schemas"]["CrawlerRunStatus"] | null;
+      /**
+       * Last Run At
+       * @description Timestamp of the most recent run
+       */
+      last_run_at?: string | null;
+      /**
+       * Run Count
+       * @description Total number of runs
+       * @default 0
+       */
+      run_count?: number;
+    };
+    /** CrawlerPipelineUpdate */
+    CrawlerPipelineUpdate: {
+      /**
+       * Name
+       * @description Pipeline name
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Pipeline description
+       */
+      description?: string | null;
+      /**
+       * Query Definition
+       * @description Source-specific search parameters
+       */
+      query_definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Schedule Definition
+       * @description Schedule cadence definition
+       */
+      schedule_definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Enabled
+       * @description Whether the pipeline is active
+       */
+      enabled?: boolean | null;
+      /**
+       * Execution Policy
+       * @description Concurrency, timeouts, headless mode
+       */
+      execution_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Extraction Policy
+       * @description Whether to run LLM extraction on crawled leads
+       */
+      extraction_policy?: {
+        [key: string]: unknown;
+      } | null;
+    };
+    /**
+     * CrawlerRunDetailRead
+     * @description Extended read schema for single-run detail endpoint with linked events.
+     */
+    CrawlerRunDetailRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Crawler Pipeline Id
+       * Format: uuid4
+       * @description Parent pipeline ID
+       */
+      crawler_pipeline_id: string;
+      /** @description How the run was triggered */
+      trigger_type: components["schemas"]["CrawlerTriggerType"];
+      /** @description Current run status */
+      status: components["schemas"]["CrawlerRunStatus"];
+      /**
+       * Scheduled For
+       * @description When the run was scheduled for
+       */
+      scheduled_for?: string | null;
+      /**
+       * Started At
+       * @description When the run started
+       */
+      started_at?: string | null;
+      /**
+       * Finished At
+       * @description When the run finished
+       */
+      finished_at?: string | null;
+      /**
+       * Stats
+       * @description Run statistics
+       */
+      stats?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Error Summary
+       * @description Error summary if failed
+       */
+      error_summary?: string | null;
+      /**
+       * Events
+       * @description Linked orchestration events
+       * @default []
+       */
+      events?: components["schemas"]["OrchestrationEventSummary"][];
+    };
+    /** CrawlerRunRead */
+    CrawlerRunRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Crawler Pipeline Id
+       * Format: uuid4
+       * @description Parent pipeline ID
+       */
+      crawler_pipeline_id: string;
+      /** @description How the run was triggered */
+      trigger_type: components["schemas"]["CrawlerTriggerType"];
+      /** @description Current run status */
+      status: components["schemas"]["CrawlerRunStatus"];
+      /**
+       * Scheduled For
+       * @description When the run was scheduled for
+       */
+      scheduled_for?: string | null;
+      /**
+       * Started At
+       * @description When the run started
+       */
+      started_at?: string | null;
+      /**
+       * Finished At
+       * @description When the run finished
+       */
+      finished_at?: string | null;
+      /**
+       * Stats
+       * @description Run statistics
+       */
+      stats?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Error Summary
+       * @description Error summary if failed
+       */
+      error_summary?: string | null;
+    };
+    /**
+     * CrawlerRunStatus
+     * @enum {string}
+     */
+    CrawlerRunStatus: "pending" | "running" | "success" | "failed" | "cancelled" | "paused";
+    /**
+     * CrawlerSourceType
+     * @enum {string}
+     */
+    CrawlerSourceType: "linkedin" | "glassdoor";
+    /**
+     * CrawlerTriggerType
+     * @enum {string}
+     */
+    CrawlerTriggerType: "manual" | "scheduled";
     /** EducationCreate */
     EducationCreate: {
       /**
@@ -1445,6 +1831,11 @@ export interface components {
        * @description The language model to use for the extraction.
        */
       llm?: string | null;
+      /**
+       * Sources
+       * @description Multiple sources to extract from in a single batch. When provided, url/file/text are ignored.
+       */
+      sources?: components["schemas"]["ProfileExtractSource"][] | null;
     };
     /** ExtractorUpdate */
     ExtractorUpdate: {
@@ -2205,6 +2596,28 @@ export interface components {
      */
     OrchestrationEventStatusType: "pending" | "running" | "success" | "failure";
     /**
+     * OrchestrationEventSummary
+     * @description Lightweight summary of an OrchestrationEvent for embedding in CrawlerRunDetailRead.
+     */
+    OrchestrationEventSummary: {
+      /**
+       * Status
+       * @description Event status
+       */
+      status?: string | null;
+      /**
+       * Message
+       * @description Event message
+       */
+      message?: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       * @description When the event was created
+       */
+      created_at: string;
+    };
+    /**
      * OrchestrationEventUpdate
      * @description Update schema for orchestration events.
      *
@@ -2368,6 +2781,76 @@ export interface components {
        * @default false
        */
       request_count?: boolean;
+    };
+    /**
+     * ProfileExtractResponse
+     * @description Response from the unified profile extraction endpoint.
+     */
+    ProfileExtractResponse: {
+      /**
+       * User
+       * @description Extracted core user fields (first_name, last_name, etc.)
+       */
+      user?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Skills
+       * @description Extracted and persisted skills
+       * @default []
+       */
+      skills?: components["schemas"]["SkillRead"][];
+      /**
+       * Experiences
+       * @description Extracted and persisted experiences
+       * @default []
+       */
+      experiences?: components["schemas"]["ExperienceRead"][];
+      /**
+       * Education
+       * @description Extracted and persisted education records
+       * @default []
+       */
+      education?: components["schemas"]["EducationRead"][];
+      /**
+       * Certificates
+       * @description Extracted and persisted certificates
+       * @default []
+       */
+      certificates?: components["schemas"]["CertificateRead"][];
+      /**
+       * Content Too Long
+       * @description True if any source exceeded extraction limits
+       * @default false
+       */
+      content_too_long?: boolean;
+      /**
+       * Sources Count
+       * @description Number of sources that were processed
+       * @default 1
+       */
+      sources_count?: number;
+    };
+    /**
+     * ProfileExtractSource
+     * @description A single extraction source — exactly one of url, file, or text.
+     */
+    ProfileExtractSource: {
+      /**
+       * Url
+       * @description URL to extract from
+       */
+      url?: string | null;
+      /**
+       * File
+       * @description File to extract from
+       */
+      file?: string | null;
+      /**
+       * Text
+       * @description Raw text to extract from
+       */
+      text?: string | null;
     };
     /** ResumeCreate */
     ResumeCreate: {
@@ -3265,6 +3748,31 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["UserProfileRead"];
+        };
+      };
+    };
+  };
+  /**
+   * Extract User Profile
+   * @description Extract all profile sections from one or many sources and persist results.
+   */
+  extract_user_profile_users_me_profile_extract_post: {
+    requestBody?: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_extract_user_profile_users_me_profile_extract_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProfileExtractResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -5386,6 +5894,227 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["ExtractorResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Crawler Pipelines */
+  list_crawler_pipelines_crawlers_pipelines_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerPipelineRead"][];
+        };
+      };
+    };
+  };
+  /** Create Crawler Pipeline */
+  create_crawler_pipeline_crawlers_pipelines_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CrawlerPipelineCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Crawler Pipeline */
+  get_crawler_pipeline_crawlers_pipelines__pipeline_id__get: {
+    parameters: {
+      path: {
+        pipeline_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Crawler Pipeline */
+  update_crawler_pipeline_crawlers_pipelines__pipeline_id__patch: {
+    parameters: {
+      path: {
+        pipeline_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CrawlerPipelineUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Trigger Crawler Run */
+  trigger_crawler_run_crawlers_pipelines__pipeline_id__runs_post: {
+    parameters: {
+      path: {
+        pipeline_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Crawler Runs */
+  list_crawler_runs_crawlers_runs_get: {
+    parameters: {
+      query?: {
+        /** @description Filter by pipeline source */
+        source?: string | null;
+        /** @description Filter by run status */
+        status?: string | null;
+        /** @description Filter by pipeline ID */
+        pipeline_id?: string | null;
+        /** @description Filter by trigger type */
+        trigger_type?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Crawler Run */
+  get_crawler_run_crawlers_runs__run_id__get: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Cancel Crawler Run */
+  cancel_crawler_run_crawlers_runs__run_id__cancel_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Pause Crawler Run */
+  pause_crawler_run_crawlers_runs__run_id__pause_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Resume Crawler Run */
+  resume_crawler_run_crawlers_runs__run_id__resume_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
         };
       };
       /** @description Validation Error */

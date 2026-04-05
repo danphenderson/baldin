@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Box, Card, CardContent, Typography, Stack, Button, LinearProgress,
-  Chip, Collapse, useTheme, alpha,
+  useTheme, alpha,
 } from '@mui/material';
 import {
   CheckCircle as CheckIcon,
@@ -11,9 +11,7 @@ import {
   CardMembership as CertIcon,
   Contacts as ContactIcon,
   Edit as EditIcon,
-  Upload as UploadIcon,
   AutoAwesome as AIIcon,
-  ExpandMore as ExpandIcon,
   ArrowForward as ArrowForwardIcon,
 } from '@mui/icons-material';
 import { motion } from 'motion/react';
@@ -34,13 +32,7 @@ interface ProfileBuilderPanelProps {
   rankedTasks: RankedTask[];
   openCreate: (section: SectionKey) => void;
   startEditProfile: () => void;
-  // AI extraction
-  extracting: boolean;
-  extractFile: File | null;
-  setExtractFile: (f: File | null) => void;
-  aiExpanded: boolean;
-  setAiExpanded: (v: boolean | ((prev: boolean) => boolean)) => void;
-  handleExtractSkills: () => Promise<void>;
+  onOpenImportModal: () => void;
 }
 
 const SECTION_ICONS: Record<string, React.ReactElement> = {
@@ -57,12 +49,7 @@ export const ProfileBuilderPanel: React.FC<ProfileBuilderPanelProps> = ({
   rankedTasks,
   openCreate,
   startEditProfile,
-  extracting,
-  extractFile,
-  setExtractFile,
-  aiExpanded,
-  setAiExpanded,
-  handleExtractSkills,
+  onOpenImportModal,
 }) => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -192,79 +179,17 @@ export const ProfileBuilderPanel: React.FC<ProfileBuilderPanelProps> = ({
           </Stack>
         )}
 
-        {/* ── AI Resume Import (collapsed) ─── */}
+        {/* ── AI Profile Import ─── */}
         <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-          <Box
-            sx={{ display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer' }}
-            onClick={() => setAiExpanded((prev: boolean) => !prev)}
-            role="button"
-            tabIndex={0}
-            aria-expanded={aiExpanded}
-            aria-label="Toggle AI resume import"
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setAiExpanded((prev: boolean) => !prev);
-              }
-            }}
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<AIIcon />}
+            onClick={onOpenImportModal}
+            sx={{ fontWeight: 600, fontSize: '0.8rem' }}
           >
-            <AIIcon sx={{ color: theme.palette.primary.main, fontSize: 18 }} />
-            <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
-              Import skills from resume
-            </Typography>
-            <ExpandIcon
-              sx={{
-                fontSize: 18,
-                transform: aiExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.25s',
-                color: 'text.secondary',
-              }}
-            />
-          </Box>
-          <Collapse in={aiExpanded}>
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={2}
-              alignItems={{ sm: 'center' }}
-              sx={{ mt: 2 }}
-            >
-              <Button
-                component="label"
-                variant="outlined"
-                size="small"
-                startIcon={<UploadIcon />}
-                disabled={extracting}
-                sx={{ flexShrink: 0 }}
-              >
-                Choose File
-                <input
-                  type="file"
-                  hidden
-                  accept=".pdf,.txt,.html"
-                  onChange={e => setExtractFile(e.target.files?.[0] ?? null)}
-                />
-              </Button>
-              {extractFile && (
-                <Chip
-                  label={extractFile.name}
-                  size="small"
-                  onDelete={() => setExtractFile(null)}
-                  sx={{ maxWidth: 250 }}
-                />
-              )}
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<AIIcon />}
-                onClick={handleExtractSkills}
-                disabled={extracting || !extractFile}
-                sx={{ flexShrink: 0 }}
-              >
-                {extracting ? 'Extracting…' : 'Extract Skills'}
-              </Button>
-            </Stack>
-            {extracting && <LinearProgress sx={{ mt: 2 }} />}
-          </Collapse>
+            Import Profile
+          </Button>
         </Box>
 
         {/* ── Documents Studio CTA ─── */}

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { getUser, updateUser, type UserRead, type UserUpdate } from '../../../service/users';
-import { getSkills, createSkill, updateSkill, deleteSkill, extractSkill, type SkillRead } from '../../../service/skills';
+import { getSkills, createSkill, updateSkill, deleteSkill, type SkillRead } from '../../../service/skills';
 import { getExperiences, createExperience, updateExperience, deleteExperience, type ExperienceRead } from '../../../service/experiences';
 import { getEducations as getEducation, createEducation, updateEducation, deleteEducation, type EducationRead } from '../../../service/education';
 import { getCertificates, createCertificate, updateCertificate, deleteCertificate, type CertificateRead } from '../../../service/certificates';
@@ -32,13 +32,9 @@ export interface UseProfileDataReturn {
   pf: (key: keyof UserUpdate, value: string) => void;
   setUser: ((u: UserRead) => void) | undefined;
 
-  // AI extraction
-  extracting: boolean;
-  extractFile: File | null;
-  setExtractFile: (f: File | null) => void;
-  aiExpanded: boolean;
-  setAiExpanded: (v: boolean | ((prev: boolean) => boolean)) => void;
-  handleExtractSkills: () => Promise<void>;
+  // Profile import modal
+  showImportModal: boolean;
+  setShowImportModal: (v: boolean) => void;
 
   // Section CRUD
   editOpen: boolean;
@@ -65,7 +61,7 @@ export function useProfileData(
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [aiExpanded, setAiExpanded] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -86,8 +82,7 @@ export function useProfileData(
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  const [extracting, setExtracting] = useState(false);
-  const [extractFile, setExtractFile] = useState<File | null>(null);
+
 
   // -----------------------------------------------------------------------
   // Data fetching
@@ -156,23 +151,7 @@ export function useProfileData(
   const pf = (key: keyof UserUpdate, value: string) =>
     setProfileDraft(prev => ({ ...prev, [key]: value }));
 
-  // -----------------------------------------------------------------------
-  // AI extraction
-  // -----------------------------------------------------------------------
 
-  const handleExtractSkills = async () => {
-    if (!token || !extractFile) return;
-    setExtracting(true);
-    try {
-      await extractSkill(token, { file: extractFile, mode: 'entire_document' });
-      setExtractFile(null);
-      setToast('Skills extracted successfully');
-      await refresh();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Extraction failed');
-    }
-    setExtracting(false);
-  };
 
   // -----------------------------------------------------------------------
   // Section CRUD
@@ -268,12 +247,8 @@ export function useProfileData(
     handleSaveProfile,
     pf,
     setUser: setUserCtx,
-    extracting,
-    extractFile,
-    setExtractFile,
-    aiExpanded,
-    setAiExpanded,
-    handleExtractSkills,
+    showImportModal,
+    setShowImportModal,
     editOpen,
     editSection,
     editItem,

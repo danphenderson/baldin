@@ -38,6 +38,7 @@ export const secondaryNavByGroup: Record<string, SecondaryNavItem[]> = {
   '/workflows': [
     { label: 'Pipelines', path: '/workflows' },
     { label: 'Extractors', path: '/workflows/extractors' },
+    { label: 'Crawlers', path: '/workflows/crawlers' },
   ],
 };
 

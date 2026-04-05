@@ -50,6 +50,18 @@ class URIType(str, Enum):
     URL = "url"
 
 
+class SubscriptionTier(str, Enum):
+    FREE = "free"
+    STARTER = "starter"
+    PRO = "pro"
+
+
+class PlacementStatus(str, Enum):
+    ACTIVE = "active"
+    GRADUATED = "graduated"
+    ALUMNI = "alumni"
+
+
 class URI(BaseSchema):
     name: str
     type: URIType
@@ -704,6 +716,21 @@ class BaseUser(BaseSchema):
     country: str | None = Field(None, description="Country")
     time_zone: str | None = Field(None, description="Time zone")
     avatar_uri: URI | None = Field(None, description="Avatar URI")
+    headline: str | None = Field(None, description="Short professional tagline")
+    bio: str | None = Field(None, description="Longer about-me blurb")
+    is_discoverable: bool = Field(True, description="Whether the user appears in the directory")
+    subscription_tier: SubscriptionTier = Field(
+        SubscriptionTier.FREE, description="Subscription tier"
+    )
+    subscription_expires_at: datetime | None = Field(
+        None, description="When the current subscription expires"
+    )
+    placement_status: PlacementStatus = Field(
+        PlacementStatus.ACTIVE, description="Job-seeker lifecycle status"
+    )
+    placement_date: datetime | None = Field(
+        None, description="Date when the user transitioned to graduated/alumni"
+    )
 
 
 class UserRead(schemas.BaseUser[UUID4], BaseUser):  # type: ignore
@@ -728,6 +755,37 @@ class UserCreate(schemas.BaseUserCreate, BaseUser):
 
 class UserUpdate(schemas.BaseUserUpdate, BaseUser):
     pass
+
+
+class ProfileExtractSource(BaseSchema):
+    """A single extraction source — exactly one of url, file, or text."""
+
+    url: AnyHttpUrl | None = Field(None, description="URL to extract from")
+    file: UploadFile | None = Field(None, description="File to extract from")
+    text: str | None = Field(None, description="Raw text to extract from")
+
+
+class ProfileExtractResponse(BaseSchema):
+    """Response from the unified profile extraction endpoint."""
+
+    user: dict = Field(
+        default_factory=dict,
+        description="Extracted core user fields (first_name, last_name, etc.)",
+    )
+    skills: list[SkillRead] = Field([], description="Extracted and persisted skills")
+    experiences: list[ExperienceRead] = Field(
+        [], description="Extracted and persisted experiences"
+    )
+    education: list[EducationRead] = Field(
+        [], description="Extracted and persisted education records"
+    )
+    certificates: list[CertificateRead] = Field(
+        [], description="Extracted and persisted certificates"
+    )
+    content_too_long: bool = Field(
+        False, description="True if any source exceeded extraction limits"
+    )
+    sources_count: int = Field(1, description="Number of sources that were processed")
 
 
 class UserDataOperationResult(BaseSchema):
@@ -813,6 +871,10 @@ class ExtractorRun(BaseSchema):
         None,
         description="The language model to use for the extraction.",
     )
+    sources: list[ProfileExtractSource] | None = Field(
+        None,
+        description="Multiple sources to extract from in a single batch. When provided, url/file/text are ignored.",
+    )
 
 
 class ApplicationRead(BaseRead):
@@ -852,3 +914,160 @@ class ApplicationResumeAttach(BaseSchema):
 
 class ApplicationCoverLetterAttach(BaseSchema):
     cover_letter_id: UUID4
+
+
+# Crawler schemas
+
+
+class CrawlerSourceType(str, Enum):
+    LINKEDIN = "linkedin"
+    GLASSDOOR = "glassdoor"
+
+
+class CrawlerTriggerType(str, Enum):
+    MANUAL = "manual"
+    SCHEDULED = "scheduled"
+
+
+class CrawlerRunStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    PAUSED = "paused"
+
+
+class CrawlerPipelineCreate(BaseSchema):
+    name: str = Field(description="Pipeline name")
+    description: str | None = Field(None, description="Pipeline description")
+    source: CrawlerSourceType = Field(description="Crawl source platform")
+    query_definition: dict = Field(description="Source-specific search parameters")
+    schedule_definition: dict | None = Field(
+        None, description="Schedule cadence definition"
+    )
+    enabled: bool = Field(True, description="Whether the pipeline is active")
+    execution_policy: dict | None = Field(
+        None, description="Concurrency, timeouts, headless mode"
+    )
+    extraction_policy: dict | None = Field(
+        None, description="Whether to run LLM extraction on crawled leads"
+    )
+
+
+class CrawlerPipelineUpdate(BaseSchema):
+    name: str | None = Field(None, description="Pipeline name")
+    description: str | None = Field(None, description="Pipeline description")
+    query_definition: dict | None = Field(
+        None, description="Source-specific search parameters"
+    )
+    schedule_definition: dict | None = Field(
+        None, description="Schedule cadence definition"
+    )
+    enabled: bool | None = Field(None, description="Whether the pipeline is active")
+    execution_policy: dict | None = Field(
+        None, description="Concurrency, timeouts, headless mode"
+    )
+    extraction_policy: dict | None = Field(
+        None, description="Whether to run LLM extraction on crawled leads"
+    )
+
+
+class CrawlerPipelineRead(BaseRead):
+    name: str = Field(description="Pipeline name")
+    description: str | None = Field(None, description="Pipeline description")
+    source: CrawlerSourceType = Field(description="Crawl source platform")
+    query_definition: dict = Field(description="Source-specific search parameters")
+    schedule_definition: dict | None = Field(
+        None, description="Schedule cadence definition"
+    )
+    enabled: bool = Field(description="Whether the pipeline is active")
+    execution_policy: dict | None = Field(
+        None, description="Concurrency, timeouts, headless mode"
+    )
+    extraction_policy: dict | None = Field(
+        None, description="Whether to run LLM extraction on crawled leads"
+    )
+    created_by_user_id: UUID4 = Field(description="Superuser who created the pipeline")
+    last_run_status: CrawlerRunStatus | None = Field(
+        None, description="Status of the most recent run"
+    )
+    last_run_at: datetime | None = Field(
+        None, description="Timestamp of the most recent run"
+    )
+    run_count: int = Field(0, description="Total number of runs")
+
+    @model_validator(mode="before")
+    @classmethod
+    def compute_run_summary(cls, data: Any) -> Any:
+        runs = None
+        if hasattr(data, "runs"):
+            runs = data.runs
+        elif isinstance(data, dict):
+            runs = data.get("runs")
+        if runs:
+            run_count = len(runs)
+            latest = max(
+                runs,
+                key=lambda r: getattr(
+                    r,
+                    "created_at",
+                    r.get("created_at") if isinstance(r, dict) else datetime.min,
+                ),
+            )
+            if hasattr(latest, "status"):
+                last_status = latest.status
+                last_at = latest.created_at
+            else:
+                last_status = latest.get("status")
+                last_at = latest.get("created_at")
+            if isinstance(data, dict):
+                data["run_count"] = run_count
+                data["last_run_status"] = last_status
+                data["last_run_at"] = last_at
+            else:
+                # ORM object — set via returned dict
+                pass
+        return data
+
+
+class CrawlerRunRead(BaseRead):
+    crawler_pipeline_id: UUID4 = Field(description="Parent pipeline ID")
+    trigger_type: CrawlerTriggerType = Field(description="How the run was triggered")
+    status: CrawlerRunStatus = Field(description="Current run status")
+    scheduled_for: datetime | None = Field(
+        None, description="When the run was scheduled for"
+    )
+    started_at: datetime | None = Field(None, description="When the run started")
+    finished_at: datetime | None = Field(None, description="When the run finished")
+    stats: dict | None = Field(None, description="Run statistics")
+    error_summary: str | None = Field(None, description="Error summary if failed")
+
+
+class CrawlerRunCreate(BaseSchema):
+    """Internal schema — not user-facing."""
+
+    crawler_pipeline_id: UUID4
+    trigger_type: CrawlerTriggerType = Field(
+        CrawlerTriggerType.MANUAL, description="Trigger type"
+    )
+    status: CrawlerRunStatus = Field(
+        CrawlerRunStatus.PENDING, description="Initial status"
+    )
+    scheduled_for: datetime | None = Field(None, description="Scheduled time")
+
+
+class OrchestrationEventSummary(BaseSchema):
+    """Lightweight summary of an OrchestrationEvent for embedding in CrawlerRunDetailRead."""
+
+    status: str | None = Field(None, description="Event status")
+    message: str | None = Field(None, description="Event message")
+    created_at: datetime = Field(description="When the event was created")
+
+
+class CrawlerRunDetailRead(CrawlerRunRead):
+    """Extended read schema for single-run detail endpoint with linked events."""
+
+    events: list[OrchestrationEventSummary] = Field(
+        [], description="Linked orchestration events"
+    )

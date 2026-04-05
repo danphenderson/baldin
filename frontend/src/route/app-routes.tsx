@@ -12,10 +12,11 @@ import DashboardPage from '../page/dashboard';
 import LeadsPage from '../page/leads';
 import { ApplicationsQueuePage, ApplicationsBoardPage, ApplicationDetailPage } from '../page/applications';
 import DocumentsPage from '../page/documents';
-import ProfilePage from '../page/profile';
+import ProfilePage from '../page/profile/index';
 import PipelinesPage from '../page/pipelines';
 import CompaniesPage from '../page/companies';
 import ExtractorPage from '../page/extractor';
+import CrawlersPage from '../page/crawlers';
 import LoginPage from '../page/login';
 import RegisterPage from '../page/register';
 import UserTermsPage from '../page/user-terms';
@@ -51,6 +52,7 @@ const AppRoutes: React.FC = () => {
           <Route path="workflows" element={<WorkflowsGroupLayout />}>
             <Route index element={<PipelinesPage />} />
             <Route path="extractors" element={<ExtractorPage />} />
+            <Route path="crawlers" element={<CrawlersPage />} />
           </Route>
 
           {/* ── Legacy redirects ── */}

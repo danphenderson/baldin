@@ -4,6 +4,7 @@
 Main FastAPI app instance declaration and admin interface setup.
 """
 
+import asyncio
 import logging
 import tracemalloc
 from time import time
@@ -90,9 +91,28 @@ async def startup_event():
             "Skipping automatic schema creation and default superuser bootstrap outside DEV/PYTEST."
         )
 
+    # Start crawler scheduler if enabled
+    if conf.settings.SHOULD_RUN_CRAWLER_SCHEDULER:
+        from app.crawler_scheduler import crawler_scheduler_loop
+
+        app.state.crawler_scheduler_task = asyncio.create_task(crawler_scheduler_loop())
+        console_log.info("Crawler scheduler started.")
+    else:
+        console_log.info("Crawler scheduler disabled for this environment.")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
+    # Cancel crawler scheduler if running
+    scheduler_task = getattr(app.state, "crawler_scheduler_task", None)
+    if scheduler_task is not None:
+        scheduler_task.cancel()
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            pass
+        console_log.info("Crawler scheduler stopped.")
+
     tracemalloc.stop()
     console_log.info("Shutting down...")
 

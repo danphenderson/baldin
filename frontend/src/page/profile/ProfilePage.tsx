@@ -26,6 +26,7 @@ import { DateSpan } from './components/DateSpan';
 import { EditDialog } from './components/EditDialog';
 import { DeleteDialog } from './components/DeleteDialog';
 import { DocumentsSummary } from './components/DocumentsSummary';
+import ProfileImportModal from '../../component/profile-import-modal';
 
 const MotionBox = motion.create(Box);
 
@@ -53,6 +54,13 @@ const ProfilePage: React.FC = () => {
   }), [data.skills, data.experiences, data.education, data.certificates, data.contacts]);
 
   useEffect(() => { data.refresh(); }, [data.refresh]);
+
+  // Auto-open import modal for first-time users (empty profile)
+  useEffect(() => {
+    if (!data.loading && completionPercent === 0) {
+      data.setShowImportModal(true);
+    }
+  }, [data.loading, completionPercent]);
 
   // -----------------------------------------------------------------------
   // Derived
@@ -135,12 +143,7 @@ const ProfilePage: React.FC = () => {
         rankedTasks={rankedTasks}
         openCreate={data.openCreate}
         startEditProfile={data.startEditProfile}
-        extracting={data.extracting}
-        extractFile={data.extractFile}
-        setExtractFile={data.setExtractFile}
-        aiExpanded={data.aiExpanded}
-        setAiExpanded={data.setAiExpanded}
-        handleExtractSkills={data.handleExtractSkills}
+        onOpenImportModal={() => data.setShowImportModal(true)}
       />
 
       {/* ── Profile Sections ────────────────────────────────────────── */}
@@ -379,6 +382,17 @@ const ProfilePage: React.FC = () => {
         deleteTarget={data.deleteTarget}
         onCancel={data.cancelDelete}
         onConfirm={data.handleDelete}
+      />
+
+      {/* ── Profile Import Modal ──────────────────────────────────────── */}
+      <ProfileImportModal
+        open={data.showImportModal}
+        onClose={() => data.setShowImportModal(false)}
+        token={token}
+        onSuccess={() => {
+          data.setToast('Profile imported successfully');
+          data.refresh();
+        }}
       />
 
       {/* ── Success toast ─────────────────────────────────────────────── */}

@@ -73,6 +73,52 @@ class OrchestrationPipeline(Base):
     )
 
 
+# Crawler models
+
+
+class CrawlerPipeline(Base):
+    """
+    Superuser-managed crawler pipeline definition.
+    Stores source, query parameters, schedule, and execution policies
+    for automated lead crawling jobs.
+    """
+
+    __tablename__ = "crawler_pipelines"
+    name = Column(String, index=True, nullable=False)
+    description = Column(Text)
+    source = Column(String, nullable=False)
+    query_definition = Column(JSON, nullable=False)
+    schedule_definition = Column(JSON)
+    enabled = Column(Boolean, default=True, nullable=False)
+    execution_policy = Column(JSON)
+    extraction_policy = Column(JSON)
+    created_by_user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    created_by = relationship("User", back_populates="crawler_pipelines")
+    runs = relationship("CrawlerRun", back_populates="crawler_pipeline")
+
+
+class CrawlerRun(Base):
+    """
+    Represents a single execution of a crawler pipeline.
+    Tracks trigger type, status, timing, checkpoint for resumability,
+    and aggregate stats.
+    """
+
+    __tablename__ = "crawler_runs"
+    crawler_pipeline_id = Column(
+        UUID, ForeignKey("crawler_pipelines.id"), nullable=False, index=True
+    )
+    trigger_type = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="pending")
+    scheduled_for = Column(DateTime)
+    started_at = Column(DateTime)
+    finished_at = Column(DateTime)
+    checkpoint = Column(JSON)
+    stats = Column(JSON)
+    error_summary = Column(Text)
+    crawler_pipeline = relationship("CrawlerPipeline", back_populates="runs")
+
+
 # Extractor models
 class ExtractorExample(Base):
     """A representation of an example.
@@ -416,6 +462,16 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     country = Column(String)
     time_zone = Column(String)
     avatar_uri = Column(String)
+
+    # Social / subscription / lifecycle fields
+    headline = Column(Text)
+    bio = Column(Text)
+    is_discoverable = Column(Boolean, default=True, nullable=False)
+    subscription_tier = Column(String, default="free", nullable=False)
+    subscription_expires_at = Column(DateTime)
+    placement_status = Column(String, default="active", nullable=False)
+    placement_date = Column(DateTime)
+
     lead_registrations = relationship(
         "LeadRegistration",
         back_populates="user",
@@ -444,3 +500,4 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     orchestration_pipelines = relationship(
         "OrchestrationPipeline", back_populates="user"
     )
+    crawler_pipelines = relationship("CrawlerPipeline", back_populates="created_by")

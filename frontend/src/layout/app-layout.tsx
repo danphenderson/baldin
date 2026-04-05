@@ -412,7 +412,7 @@ const AppLayout: React.FC = () => {
                         whiteSpace: isCompactToolbar ? 'normal' : 'nowrap',
                       }}
                     >
-                      : {toolbarHeader.subtitle}
+                      {toolbarHeader.subtitle}
                     </Typography>
                   )}
                 </>

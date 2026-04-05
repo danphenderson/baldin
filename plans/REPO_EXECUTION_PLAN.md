@@ -1,121 +1,70 @@
 # Baldin Execution Plan
 
-This document tracks the execution plan for repositioning Baldin as a credible,
-local-first developer-preview project while keeping production deployment and
-operational control behind a private boundary.
+This document tracks the execution plan for taking Baldin from a private
+product codebase with partially restored but stale infrastructure to a
+controlled market launch.
+
+The repository is now private. It remains the main engineering workspace for
+local development, but it is also regaining deployment ownership so Baldin can
+ship faster without exposing IP or operational details outside the team.
 
 ## Status Legend
 
 - `[x]` Complete
+- `[~]` In progress
 - `[ ]` Not started
 
 ## Current Summary
 
+- The old public-preview and separate-private-control-plane framing is superseded.
 - Phase 1 is complete.
-- Phase 2 is complete.
-- Phases 3 through 7 are planned and not yet started.
-- Phase 3 is the next blocking phase.
+- Phases 2 through 7 are planned and not yet started.
+- Phase 2 is the next blocking phase.
 
-## Phase 1: Reposition the Public Repo as a Local-First Developer Preview
+## Phase 1: Reset the Baseline and Repo Posture
 
 Status: `[x]` Complete
 
 Objective:
 
-- Reframe Baldin's public presentation around local evaluation, architecture
-  exploration, and contribution rather than implying a production-ready SaaS.
+- Replace the stale public-repo execution story with a private launch program
+  that treats this repository as both the product source and the deployment
+  control plane.
 
 Completed work:
 
-- Rewrote the root README to describe Baldin as a developer-preview,
-  local-first workspace.
-- Clarified the local quickstart, service entry points, and architecture
-  boundaries in the public README.
-- Aligned backend package metadata with the new public positioning.
-- Aligned FastAPI metadata and refreshed the checked-in OpenAPI artifact.
-- Updated citation metadata to match the new project framing.
-- Replaced placeholder-like Sphinx landing content with real project framing and
-  local service links.
-- Rebuilt the tracked published docs output so the checked-in docs site matches
-  the source copy.
+- Rewrote the execution plan around a staged market-launch sequence instead of a
+  public-preview narrative.
+- Updated the root README so it describes the private repository as the primary
+  engineering workspace and explains the current release posture.
+- Replaced the stale CDK boundary notes that assumed deployment happened outside
+  this repo.
+- Marked the restored CDK application as reference material for the next deploy
+  path, not as an approved production baseline.
 
 Checklist:
 
-- [x] Reframe the root README around local-first developer-preview positioning.
-- [x] Clarify that the public repository is for evaluation, exploration, and contribution.
-- [x] Align backend package metadata with the public README.
-- [x] Align FastAPI title and description with the new framing.
-- [x] Refresh `openapi.json` from the running backend.
-- [x] Update `CITATION.cff` to match the new framing.
-- [x] Rewrite the Sphinx docs landing page and metadata.
-- [x] Rebuild the tracked published docs output.
+- [x] Archive the old public-preview and external-control-plane assumptions.
+- [x] Treat this private repo as both the source of truth and the deployment
+  control surface again.
+- [x] Reframe the top-level docs around a fast, controlled launch instead of
+  public positioning.
+- [x] Mark the restored CDK app as input material for a narrower release path,
+  not a production-ready deployment blueprint.
 
 Evidence:
 
 - `README.md`
-- `backend/pyproject.toml`
-- `backend/app/main.py`
-- `openapi.json`
-- `CITATION.cff`
-- `backend/docs/index.rst`
-- `backend/docs/conf.py`
-- `docs/`
-
-Exit criteria:
-
-- Baldin reads consistently as a local-first, developer-preview project across
-  the README, docs, package metadata, citation metadata, and OpenAPI output.
-
-## Phase 2: Put Production Deployment Behind a Private Control Plane
-
-Status: `[x]` Complete
-`PRIVATE_DEPLOYMENT_CONTROL_PLANE.md` Status: `[ ]` Not started
-
-Objective:
-
-- Ensure the public repository can demonstrate, build, and validate Baldin
-  without being able to directly ship production.
-
-Checklist:
-
-- [x] Remove automatic production deployment behavior from the public repository.
-- [x] Ensure a push to `main` in the public repo cannot publish the backend image.
-- [x] Ensure a push to `main` in the public repo cannot sync the frontend bundle.
-- [x] Move live rollout steps, production environments, and operational runbooks into a private boundary.
-- [x] Prefer a separate private infrastructure repository for deployment control.
-- [x] If a separate repo is deferred, use a protected private GitHub environment with required approvals and environment-scoped secrets.
-- [x] Keep public docs at the architecture and artifact-boundary level only.
-- [x] Document the private deployment control path.
-
-Completed work:
-
-- Replaced the public AWS deploy workflow with a build-only candidate-artifact workflow.
-- Removed AWS credential use, ECR pushes, and S3 sync behavior from the public GitHub Actions path.
-- Added an explicit public-to-private deployment boundary document.
-- Rewrote the public AWS/CDK notes so they stop at architecture review and artifact boundaries.
-- Turned the public frontend S3 sync helper into a guardrail that points to the private control plane.
-- Quarantined the unused public ECR push helper in the CDK utilities.
-
-Deliverables:
-
-- Revised public GitHub Actions workflow with no automatic production deploy path.
-- Private deployment boundary defined.
-- Sanitized public deployment notes.
-
-Evidence:
-
-- `.github/workflows/build.yml`
-- `README.md`
-- `PRIVATE_DEPLOYMENT_CONTROL_PLANE.md`
+- `plans/REPO_EXECUTION_PLAN.md`
 - `cdk/README.md`
-- `scripts/sync_frontend_to_s3.sh`
-- `cdk/cdk/utils.py`
+- `cdk/PRIVATE_DEPLOYMENT_CONTROL_PLANE.md`
 
 Exit criteria:
 
-- A push to `main` in the public repository cannot directly change production state.
+- The execution plan and top-level docs no longer imply that Baldin is a public
+  preview project or that deployment ownership lives outside this repository.
 
-## Phase 3: Turn CI Into a Real Integration Gate
+## Phase 2: Turn CI Into a Real Integration Gate
 
 Status: `[ ]` Not started
 
@@ -146,125 +95,178 @@ Exit criteria:
 - `main` cannot be merged through normal flow unless backend tests, frontend
   build, frontend tests, and selected type or contract checks pass.
 
-## Phase 4: Remove Dev-Only Shortcuts From the Public Production Story
+## Phase 3: Choose the Minimal Production Topology
 
 Status: `[ ]` Not started
 
 Objective:
 
-- Make the public repo safe and credible as a developer-preview project without
-  normalizing dev-only behavior as production design.
+- Pick the smallest deployment architecture that can support a fast, controlled
+  launch without trying to revive every old infrastructure path.
+
+Checklist:
+
+- [ ] Decide the first release environment matrix, including staging and production.
+- [ ] Keep the current artifact split unless there is a better reason to change it:
+  backend container plus frontend static bundle.
+- [ ] Decide the backend compute target, database topology, static asset hosting,
+  and network boundaries for the first release.
+- [ ] Define artifact naming, promotion flow, configuration ownership, and secret
+  management for each environment.
+- [ ] Define the rollback boundary for both backend and frontend releases.
+- [ ] Treat the restored CDK stacks as reference material and retire any paths
+  that do not fit the approved minimal topology.
+
+Deliverables:
+
+- A documented release topology.
+- An environment matrix.
+- A deployment contract covering artifacts, secrets, promotion, and rollback.
+
+Evidence:
+
+- `.github/workflows/build.yml`
+- `cdk/cdk/app.py`
+- `cdk/cdk/stacks/api.py`
+- `cdk/cdk/stacks/db.py`
+- `cdk/README.md`
+
+Exit criteria:
+
+- There is one approved release architecture for Baldin, and the repo no longer
+  carries competing stories about how production deployment works.
+
+## Phase 4: Rebuild Deployment Automation in This Repo
+
+Status: `[ ]` Not started
+
+Objective:
+
+- Restore deployment ownership inside this repository using protected workflows,
+  environment-scoped secrets, and a staging-first rollout path.
+
+Checklist:
+
+- [ ] Rebuild deploy workflows so they promote the same backend image and frontend
+  bundle produced by the build pipeline.
+- [ ] Add protected environments, manual approvals, and environment-scoped secrets.
+- [ ] Replace or retire stale infrastructure paths that assume public S3 website
+  hosting, destructive removal policies, broad IAM scopes, open database ingress,
+  or disabled ECR promotion.
+- [ ] Ensure staging deployment, smoke validation, and rollback can be exercised
+  from the approved workflow path.
+- [ ] Document the deploy and rollback path that operators should actually use.
+
+Deliverables:
+
+- Protected staging and production deploy workflows.
+- Release artifact promotion path.
+- Updated deployment notes and rollback procedure.
+
+Exit criteria:
+
+- Baldin can be deployed from this repo through a reviewed, approval-gated path
+  that matches the chosen release topology.
+
+## Phase 5: Remove Runtime Launch Blockers
+
+Status: `[ ]` Not started
+
+Objective:
+
+- Remove development-only runtime shortcuts that would make production rollout
+  fragile or misleading.
 
 Checklist:
 
 - [ ] Replace fixed example values for secret-bearing settings with placeholders.
-- [ ] Replace fixed bootstrap admin credentials with clearly fake placeholders and setup guidance.
-- [ ] Ensure example configuration does not look like production-ready defaults.
-- [ ] Treat schema creation, migrations, and first-admin creation as controlled operations, not implicit startup behavior.
-- [ ] Update startup code comments to make DEV and PYTEST bootstrap behavior explicit.
-- [ ] Update public docs so local bootstrap is described as development-only.
-- [ ] Review runtime workaround comments and isolate or remove hack-level behavior.
-- [ ] Review `conf.py` workaround-level logic and either quarantine it behind a documented switch or retire it.
+- [ ] Replace fixed bootstrap admin credentials with clearly fake placeholders and
+  setup guidance.
+- [ ] Stop implicit schema creation and first-admin creation in production startup.
+- [ ] Split development and test bootstrap behavior from production startup.
+- [ ] Establish migration discipline instead of relying on `create_all` and
+  drop-and-recreate patterns.
+- [ ] Review workaround-level runtime logic and either quarantine it behind a
+  documented switch or retire it.
 
 Deliverables:
 
-- Safe example environment file.
-- Explicit guidance for migrations and first-admin creation.
-- Updated docs and comments around startup behavior and workarounds.
+- Safe example configuration.
+- Explicit bootstrap and migration guidance.
+- Updated startup behavior and operational docs.
 
 Exit criteria:
 
-- Public readers do not see real-looking secrets, reusable admin credentials, or
-  development shortcuts presented as acceptable production practice.
+- Production startup no longer depends on implicit development bootstrap behavior,
+  and operators have an explicit path for schema and admin setup.
 
-## Phase 5: Add a Formal Production-Readiness Gate
+## Phase 6: Add the Minimum Production Safety Controls
 
 Status: `[ ]` Not started
 
 Objective:
 
-- Create a concise, defensible go or no-go gate before Baldin is treated as a
-  user-facing service.
+- Add the minimum operational controls needed to launch Baldin without relying
+  on guesswork during incidents or abuse.
 
 Checklist:
 
-- [ ] Write a launch-readiness checklist with owners and status per item.
-- [ ] Review authentication and authorization posture.
-- [ ] Review rate limiting and abuse controls.
-- [ ] Review migration discipline and rollback planning.
+- [ ] Review authentication and session posture.
+- [ ] Add rate limiting or equivalent abuse controls.
 - [ ] Review backup and restore expectations.
 - [ ] Review logging, metrics, and alerting coverage.
 - [ ] Review error handling and operator visibility.
-- [ ] Review data retention and deletion expectations.
-- [ ] Review legal, abuse, and scraping-related concerns.
-- [ ] Record an explicit go or no-go decision before any public-user launch.
+- [ ] Define readiness, liveness, and smoke-test expectations.
+- [ ] Write a concise launch-readiness checklist with named owners.
+- [ ] Record an explicit go or no-go decision before broader release.
 
 Deliverables:
 
 - Launch-readiness checklist.
 - Risk register.
-- Recorded go or no-go decision with owner and date.
+- Minimum operational runbooks for backup, restore, smoke testing, and rollback.
 
 Exit criteria:
 
-- Baldin has a documented production-readiness decision point that blocks public-user launch until passed.
+- Baldin has a documented operational gate that must be cleared before the
+  product is treated as broadly launchable.
 
-## Phase 6: Run a Limited-Audience Release, Not a Public Launch
+## Phase 7: Run a Staged Launch, Then Broaden
 
 Status: `[ ]` Not started
 
 Objective:
 
-- Validate the system with a constrained audience and reversible rollout before
-  making any broader availability claim.
+- Validate Baldin under a controlled rollout before expanding to broader market
+  availability.
 
 Checklist:
 
-- [ ] Define the allowed release audience up front.
-- [ ] Keep deployments manual or approval-gated during this phase.
-- [ ] Create and verify a rollback path before admitting external users.
-- [ ] Monitor beta usage, operational load, and failures.
-- [ ] Capture issues, feedback, and incidents in a release log.
-- [ ] Delay any broader rollout until the limited release findings are reviewed.
+- [ ] Deploy to staging and execute smoke tests.
+- [ ] Verify rollback before admitting external users.
+- [ ] Release to a controlled first audience, even if the end goal is broader launch.
+- [ ] Monitor operational load, failures, and product feedback.
+- [ ] Capture incidents, fixes, and launch decisions in a release log.
+- [ ] Decide whether Baldin is ready for broader availability based on staged
+  launch evidence instead of urgency alone.
 
 Deliverables:
 
-- Limited-audience rollout plan.
-- Rollback procedure.
-- Beta feedback and incident log.
+- Staging validation report.
+- Rollback verification.
+- Release log with findings and decision points.
 
 Exit criteria:
 
-- Baldin has been exercised by a limited audience under controlled rollout rules,
-  with documented findings and rollback confidence.
+- Baldin has passed through staged rollout with documented evidence strong enough
+  to justify broader market availability.
 
-## Phase 7: Package the Portfolio Story Deliberately
+## Explicitly Out of Critical Path
 
-Status: `[ ]` Not started
+The following work is intentionally deferred until Baldin is stable under a real
+release path:
 
-Objective:
-
-- Present Baldin as a credible engineering sample with honest scope and clear
-  technical decisions.
-
-Checklist:
-
-- [ ] Publish a short case study, README section, or write-up centered on engineering decisions.
-- [ ] Emphasize the local-first development experience.
-- [ ] Emphasize the split between backend container delivery and static frontend delivery.
-- [ ] Emphasize the separation between public source visibility and private deployment control.
-- [ ] Emphasize the CI and release gates introduced in earlier phases.
-- [ ] Emphasize the experimental nature and limits of the AI and extraction workflows.
-- [ ] Avoid claims that imply mature product status or broad availability.
-- [ ] Prepare resume and interview bullets aligned with the actual implementation.
-
-Deliverables:
-
-- Public case study or architecture write-up.
-- Tightened README and positioning copy where needed.
-- Resume and interview bullet set aligned to the real scope of the project.
-
-Exit criteria:
-
-- Baldin reads as an intentional and credible engineering example in the repo,
-  supporting write-up, CV, and interview narrative.
+- Public storytelling, portfolio packaging, and resume framing
+- Broad architecture cleanup that does not improve launch safety or speed
+- Restoring legacy infrastructure paths that do not fit the approved minimal
+  deployment topology

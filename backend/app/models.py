@@ -182,12 +182,16 @@ class Lead(Base):
 
     application = relationship("Application", back_populates="lead")
     companies = relationship(
-        "Company", secondary="leads_x_companies", back_populates="leads"
+        "Company",
+        secondary="leads_x_companies",
+        back_populates="leads",
+        lazy="selectin",
     )
     registrations = relationship(
         "LeadRegistration",
         back_populates="lead",
         cascade="all, delete-orphan",
+        lazy="selectin",
     )
     users = relationship(
         "User",
@@ -199,6 +203,7 @@ class Lead(Base):
         "LeadComment",
         back_populates="lead",
         cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
 
@@ -298,6 +303,10 @@ class Application(Base):
 
     __tablename__ = "applications"
     status = Column(String)
+    notes = Column(Text)
+    next_step = Column(String)
+    next_step_due = Column(DateTime)
+    status_history = Column(JSONB, server_default="[]")
     lead_id = Column(UUID, ForeignKey("leads.id"), index=True)
     user_id = Column(UUID, ForeignKey("users.id"))
     lead = relationship("Lead", back_populates="application", uselist=False)

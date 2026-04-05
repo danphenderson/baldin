@@ -29,6 +29,7 @@ from app.api.deps import (
     run_extractor,
     schemas,
 )
+from app.core.db import session_context
 
 logger = logging.get_logger(__name__)
 
@@ -110,7 +111,9 @@ def _serialize_comment(comment: models.LeadComment) -> schemas.LeadCommentRead:
     if not comment.anonymous and comment.author is not None:
         author_profile = _serialize_public_profile(comment.author)
 
-    replies = sorted(comment.replies or [], key=lambda reply: reply.created_at)
+    replies = []
+    if comment.parent_comment_id is None:
+        replies = sorted(comment.replies or [], key=lambda reply: reply.created_at)
     return schemas.LeadCommentRead(
         id=comment.id,
         created_at=comment.created_at,
@@ -146,6 +149,71 @@ def _serialize_lead(lead: models.Lead, user: schemas.UserRead) -> schemas.LeadRe
         ],
         interest_count=len(lead.registrations),
         comment_count=len(lead.comments),
+        viewer_is_registered=viewer_registration is not None,
+        viewer_permissions=_build_viewer_permissions(user, viewer_registration),
+    )
+
+
+async def _build_lead_read_response(
+    lead_id: UUID4, user: schemas.UserRead, db: AsyncSession
+) -> schemas.LeadRead:
+    lead = await db.get(models.Lead, lead_id)
+    if lead is None:
+        raise HTTPException(status_code=404, detail=f"Lead not found: {lead_id}")
+
+    companies_result = await db.execute(
+        select(models.Company)
+        .join(
+            models.LeadXCompany,
+            models.LeadXCompany.company_id == models.Company.id,
+        )
+        .where(models.LeadXCompany.lead_id == lead_id)
+        .order_by(models.Company.created_at.asc())
+    )
+    companies = companies_result.scalars().unique().all()
+
+    registrations_result = await db.execute(
+        select(models.LeadRegistration).where(
+            models.LeadRegistration.lead_id == lead_id
+        )
+    )
+    registrations = registrations_result.scalars().all()
+    viewer_registration = next(
+        (
+            registration
+            for registration in registrations
+            if registration.user_id == user.id
+        ),
+        None,
+    )
+
+    comment_count_result = await db.execute(
+        select(func.count(models.LeadComment.id)).where(
+            models.LeadComment.lead_id == lead_id
+        )
+    )
+    comment_count = int(comment_count_result.scalar() or 0)
+
+    return schemas.LeadRead(
+        id=lead.id,
+        created_at=lead.created_at,
+        updated_at=lead.updated_at,
+        url=lead.url,
+        canonical_url=lead.canonical_url,
+        title=lead.title,
+        description=lead.description,
+        location=lead.location,
+        salary=lead.salary,
+        job_function=lead.job_function,
+        employment_type=lead.employment_type,
+        seniority_level=lead.seniority_level,
+        education_level=lead.education_level,
+        hiring_manager=lead.hiring_manager,
+        companies=[
+            schemas.CompanyRead.model_validate(company) for company in companies
+        ],
+        interest_count=len(registrations),
+        comment_count=comment_count,
         viewer_is_registered=viewer_registration is not None,
         viewer_permissions=_build_viewer_permissions(user, viewer_registration),
     )
@@ -190,38 +258,51 @@ async def _update_lead_companies(
     if company_ids is None:
         return False
 
-    changed = False
-    existing_companies = {
-        company.id: company for company in getattr(lead, "companies", []) if company.id
-    }
+    existing_company_ids_result = await db.execute(
+        select(models.LeadXCompany.company_id).where(
+            models.LeadXCompany.lead_id == lead.id
+        )
+    )
+    existing_company_ids = set(existing_company_ids_result.scalars().all())
+
+    valid_requested_ids: list[UUID4] = []
+    seen_company_ids: set[UUID4] = set()
+    for company_id in company_ids:
+        if company_id in seen_company_ids:
+            continue
+        seen_company_ids.add(company_id)
+        company = await db.get(models.Company, company_id)
+        if company is not None:
+            valid_requested_ids.append(company_id)
+
+    requested_company_ids = set(valid_requested_ids)
 
     if replace:
-        next_companies: list[models.Company] = []
-        seen_company_ids: set[UUID4] = set()
-        for company_id in company_ids:
-            if company_id in seen_company_ids:
+        company_ids_to_remove = existing_company_ids - requested_company_ids
+        company_ids_to_add = requested_company_ids - existing_company_ids
+
+        if company_ids_to_remove:
+            await db.execute(
+                delete(models.LeadXCompany).where(
+                    models.LeadXCompany.lead_id == lead.id,
+                    models.LeadXCompany.company_id.in_(company_ids_to_remove),
+                )
+            )
+
+        for company_id in valid_requested_ids:
+            if company_id not in company_ids_to_add:
                 continue
-            seen_company_ids.add(company_id)
-            company = await db.get(models.Company, company_id)
-            if company is not None:
-                next_companies.append(company)
-        requested_ids = {company.id for company in next_companies if company.id}
-        if set(existing_companies) != requested_ids:
-            lead.companies = next_companies
-            changed = True
-        return changed
+            db.add(models.LeadXCompany(lead_id=lead.id, company_id=company_id))
 
-    for company_id in company_ids:
-        if company_id in existing_companies:
-            continue
-        company = await db.get(models.Company, company_id)
-        if company is None:
-            continue
-        lead.companies.append(company)
-        existing_companies[company.id] = company
-        changed = True
+        return bool(company_ids_to_remove or company_ids_to_add)
 
-    return changed
+    company_ids_to_add = requested_company_ids - existing_company_ids
+    for company_id in valid_requested_ids:
+        if company_id not in company_ids_to_add:
+            continue
+        db.add(models.LeadXCompany(lead_id=lead.id, company_id=company_id))
+
+    return bool(company_ids_to_add)
 
 
 def _require_registered_viewer(
@@ -259,7 +340,8 @@ async def create_job_lead(
     user: schemas.UserRead = Depends(get_current_user),
 ):
     result = await create_lead(payload, db=db, user=user)
-    return _serialize_lead(result.lead, user)
+    async with session_context() as refresh_session:
+        return await _build_lead_read_response(result.lead.id, user, refresh_session)
 
 
 @router.post("/extract", response_model=schemas.LeadExtractResponse)
@@ -323,7 +405,7 @@ async def extract_lead(
         ) from exc
 
     return schemas.LeadExtractResponse(
-        lead=_serialize_lead(lead_result.lead, user),
+        lead=await _build_lead_read_response(lead_result.lead.id, user, db),
         disposition=lead_result.disposition,
         submitted_url=submitted_url,
         normalized_url=lead_result.normalized_url,
@@ -423,8 +505,8 @@ async def update_lead(
     if changed:
         await db.commit()
 
-    refreshed_lead = await get_lead(lead.id, db, user)
-    return _serialize_lead(refreshed_lead, user)
+    async with session_context() as refresh_session:
+        return await _build_lead_read_response(lead.id, user, refresh_session)
 
 
 @router.post(

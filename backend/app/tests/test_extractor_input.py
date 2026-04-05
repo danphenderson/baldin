@@ -3,7 +3,7 @@ import io
 
 import pytest
 from fastapi import Depends, FastAPI
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 
 from app import schemas
 from app.api.deps import get_extractor_run_payload
@@ -33,8 +33,9 @@ def _build_test_app() -> FastAPI:
 @pytest.mark.asyncio
 async def test_get_extractor_run_payload_accepts_json_body() -> None:
     app = _build_test_app()
+    transport = ASGITransport(app=app)
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
             "/extract",
             json={
@@ -60,8 +61,9 @@ async def test_get_extractor_run_payload_accepts_json_body() -> None:
 @pytest.mark.asyncio
 async def test_get_extractor_run_payload_accepts_multipart_form() -> None:
     app = _build_test_app()
+    transport = ASGITransport(app=app)
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
             "/extract",
             data={

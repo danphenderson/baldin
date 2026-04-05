@@ -28,7 +28,8 @@ export const secondaryNavByGroup: Record<string, SecondaryNavItem[]> = {
     { label: 'Companies', path: '/leads/companies' },
   ],
   '/applications': [
-    { label: 'Pipeline', path: '/applications' },
+    { label: 'All Applications', path: '/applications' },
+    { label: 'Board', path: '/applications/board' },
   ],
   '/me': [
     { label: 'Profile', path: '/me' },

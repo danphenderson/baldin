@@ -10,7 +10,7 @@ import ApplicationsGroupLayout from '../layout/applications-group-layout';
 import WorkflowsGroupLayout from '../layout/workflows-group-layout';
 import DashboardPage from '../page/dashboard';
 import LeadsPage from '../page/leads';
-import ApplicationsPage from '../page/applications';
+import { ApplicationsQueuePage, ApplicationsBoardPage, ApplicationDetailPage } from '../page/applications';
 import DocumentsPage from '../page/documents';
 import ProfilePage from '../page/profile';
 import PipelinesPage from '../page/pipelines';
@@ -36,7 +36,9 @@ const AppRoutes: React.FC = () => {
 
           {/* ── Applications group ── */}
           <Route path="applications" element={<ApplicationsGroupLayout />}>
-            <Route index element={<ApplicationsPage />} />
+            <Route index element={<ApplicationsQueuePage />} />
+            <Route path="board" element={<ApplicationsBoardPage />} />
+            <Route path=":applicationId" element={<ApplicationDetailPage />} />
           </Route>
 
           {/* ── Identity group ── */}

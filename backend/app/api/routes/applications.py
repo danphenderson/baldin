@@ -1,5 +1,6 @@
 # Path: app/api/routes/applications.py
 import json
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import UUID4
@@ -45,6 +46,13 @@ async def create_application(
 
     # Create a new application
     application_data = {**payload.dict(exclude_unset=True), "user_id": user.id}
+    application_data["status_history"] = [
+        {
+            "from": None,
+            "to": payload.status,
+            "changed_at": datetime.utcnow().isoformat(),
+        }
+    ]
 
     application = models.Application(**application_data)
     db.add(application)
@@ -112,8 +120,22 @@ async def update_application(
         )
 
     # Update the application's attributes
-    for var, value in payload.dict(exclude_unset=True).items():
-        setattr(application, var, value)
+    update_data = payload.dict(exclude_unset=True)
+    new_status = update_data.get("status")
+    if new_status is not None and new_status != application.status:
+        history = list(application.status_history or [])
+        history.append(
+            {
+                "from": application.status,
+                "to": new_status,
+                "changed_at": datetime.utcnow().isoformat(),
+            }
+        )
+        application.status_history = history
+
+    for var, value in update_data.items():
+        if var != "status_history":
+            setattr(application, var, value)
 
     await db.commit()
     await db.refresh(application)

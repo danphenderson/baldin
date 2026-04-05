@@ -4,12 +4,17 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core import conf
+from app.core.db import async_engine, drop_and_create_db_and_tables
 from app.main import app
 from app.tests import utils
+
+pytestmark = pytest.mark.asyncio(loop_scope="module")
 
 
 @asynccontextmanager
 async def _client() -> AsyncClient:
+    await async_engine.dispose()
+    await drop_and_create_db_and_tables()
     transport = ASGITransport(app=app)
     async with AsyncClient(
         transport=transport,
@@ -81,7 +86,7 @@ async def _create_event(
     return response.json()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_read_orch_pipelines_only_returns_current_users_records() -> None:
     async with _client() as client:
         owner_email = await _register_user(client, "owner-pass")
@@ -106,7 +111,7 @@ async def test_read_orch_pipelines_only_returns_current_users_records() -> None:
     assert other_pipeline["id"] not in returned_ids
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_created_pipeline_is_owned_by_current_user() -> None:
     async with _client() as client:
         owner_email = await _register_user(client, "owner-pass")
@@ -129,7 +134,7 @@ async def test_created_pipeline_is_owned_by_current_user() -> None:
     assert other_response.status_code == 403
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_update_orch_pipeline_requires_ownership() -> None:
     async with _client() as client:
         owner_email = await _register_user(client, "owner-pass")
@@ -150,7 +155,7 @@ async def test_update_orch_pipeline_requires_ownership() -> None:
     assert response.status_code == 403
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_read_orch_events_only_returns_current_users_records() -> None:
     async with _client() as client:
         owner_email = await _register_user(client, "owner-pass")
@@ -185,7 +190,7 @@ async def test_read_orch_events_only_returns_current_users_records() -> None:
     assert other_event["id"] not in returned_ids
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_create_orch_event_requires_pipeline_ownership() -> None:
     async with _client() as client:
         owner_email = await _register_user(client, "owner-pass")
@@ -212,7 +217,7 @@ async def test_create_orch_event_requires_pipeline_ownership() -> None:
     assert response.status_code == 403
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_read_orch_event_requires_ownership() -> None:
     async with _client() as client:
         owner_email = await _register_user(client, "owner-pass")
@@ -242,7 +247,7 @@ async def test_read_orch_event_requires_ownership() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_update_event_cannot_reassign_pipeline_id() -> None:
     """pipeline_id must be ignored on event updates."""
     async with _client() as client:
@@ -268,7 +273,7 @@ async def test_update_event_cannot_reassign_pipeline_id() -> None:
     assert response.json()["pipeline_id"] == pipe_a["id"]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_update_event_requires_ownership() -> None:
     """Only the pipeline owner can update an event."""
     async with _client() as client:
@@ -298,7 +303,7 @@ async def test_update_event_requires_ownership() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_read_events_returns_paginated_response() -> None:
     async with _client() as client:
         email = await _register_user(client, "page-pass")
@@ -324,7 +329,7 @@ async def test_read_events_returns_paginated_response() -> None:
     assert body["page_size"] == 3
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_read_events_sorted_newest_first() -> None:
     async with _client() as client:
         email = await _register_user(client, "sort-pass")
@@ -347,7 +352,7 @@ async def test_read_events_sorted_newest_first() -> None:
     assert ids.index(second["id"]) < ids.index(first["id"])
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_read_events_filter_by_status() -> None:
     async with _client() as client:
         email = await _register_user(client, "filt-pass")
@@ -373,7 +378,7 @@ async def test_read_events_filter_by_status() -> None:
     assert body["total"] >= 1
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_read_events_filter_by_pipeline_id() -> None:
     async with _client() as client:
         email = await _register_user(client, "pfilt-pass")
@@ -404,7 +409,7 @@ async def test_read_events_filter_by_pipeline_id() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_delete_pipeline_blocked_when_runs_exist() -> None:
     async with _client() as client:
         email = await _register_user(client, "del-pass")
@@ -424,7 +429,7 @@ async def test_delete_pipeline_blocked_when_runs_exist() -> None:
     assert "existing run" in response.json()["detail"].lower()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_delete_pipeline_succeeds_when_no_runs() -> None:
     async with _client() as client:
         email = await _register_user(client, "del2-pass")
@@ -447,7 +452,7 @@ async def test_delete_pipeline_succeeds_when_no_runs() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_pipeline_read_includes_summary_fields() -> None:
     async with _client() as client:
         email = await _register_user(client, "sum-pass")
@@ -472,7 +477,7 @@ async def test_pipeline_read_includes_summary_fields() -> None:
     assert body["last_run_at"] is not None
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_pipeline_list_includes_summary_fields() -> None:
     async with _client() as client:
         email = await _register_user(client, "sumlist-pass")

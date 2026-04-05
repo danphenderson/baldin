@@ -426,6 +426,12 @@ export interface components {
       lead_id: string;
       /** Status */
       status: string;
+      /** Notes */
+      notes?: string | null;
+      /** Next Step */
+      next_step?: string | null;
+      /** Next Step Due */
+      next_step_due?: string | null;
     };
     /** ApplicationRead */
     ApplicationRead: {
@@ -464,6 +470,29 @@ export interface components {
        * @description Application status
        */
       status?: string | null;
+      /**
+       * Notes
+       * @description Free-form user notes
+       */
+      notes?: string | null;
+      /**
+       * Next Step
+       * @description Next action for this application
+       */
+      next_step?: string | null;
+      /**
+       * Next Step Due
+       * @description When the next step is due
+       */
+      next_step_due?: string | null;
+      /**
+       * Status History
+       * @description Append-only log of status transitions
+       * @default []
+       */
+      status_history?: {
+          [key: string]: unknown;
+        }[] | null;
     };
     /** ApplicationResumeAttach */
     ApplicationResumeAttach: {
@@ -476,7 +505,13 @@ export interface components {
     /** ApplicationUpdate */
     ApplicationUpdate: {
       /** Status */
-      status: string;
+      status?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /** Next Step */
+      next_step?: string | null;
+      /** Next Step Due */
+      next_step_due?: string | null;
     };
     /** BearerResponse */
     BearerResponse: {

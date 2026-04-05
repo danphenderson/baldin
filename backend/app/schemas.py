@@ -821,15 +821,29 @@ class ApplicationRead(BaseRead):
     lead: LeadRead
     user: UserRead
     status: str | None = Field(None, description="Application status")
+    notes: str | None = Field(None, description="Free-form user notes")
+    next_step: str | None = Field(None, description="Next action for this application")
+    next_step_due: datetime | None = Field(
+        None, description="When the next step is due"
+    )
+    status_history: list[dict] | None = Field(
+        default=[], description="Append-only log of status transitions"
+    )
 
 
 class ApplicationCreate(BaseSchema):
     lead_id: UUID4
     status: str
+    notes: str | None = None
+    next_step: str | None = None
+    next_step_due: datetime | None = None
 
 
 class ApplicationUpdate(BaseSchema):
-    status: str
+    status: str | None = None
+    notes: str | None = None
+    next_step: str | None = None
+    next_step_due: datetime | None = None
 
 
 class ApplicationResumeAttach(BaseSchema):

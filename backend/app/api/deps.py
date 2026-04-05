@@ -18,7 +18,7 @@ from fastapi import (  # noqa
 )
 from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4, ValidationError
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
 
 from app import logging, models, schemas, utils  # noqa
@@ -180,6 +180,7 @@ async def get_lead(
     del user
     result = await db.execute(
         select(models.Lead)
+        .execution_options(populate_existing=True)
         .options(
             selectinload(models.Lead.companies),
             selectinload(models.Lead.registrations).selectinload(
@@ -226,39 +227,51 @@ async def _apply_company_ids(
     if company_ids is None:
         return False
 
-    changed = False
-    existing_companies = {
-        company.id: company for company in getattr(lead, "companies", []) if company.id
-    }
+    existing_company_ids_result = await db.execute(
+        select(models.LeadXCompany.company_id).where(
+            models.LeadXCompany.lead_id == lead.id
+        )
+    )
+    existing_company_ids = set(existing_company_ids_result.scalars().all())
+
+    valid_requested_ids: list[UUID4] = []
+    seen_company_ids: set[UUID4] = set()
+    for company_id in company_ids:
+        if company_id in seen_company_ids:
+            continue
+        seen_company_ids.add(company_id)
+        company = await db.get(models.Company, company_id)
+        if company is not None:
+            valid_requested_ids.append(company_id)
+
+    requested_company_ids = set(valid_requested_ids)
 
     if replace:
-        requested_companies: list[models.Company] = []
-        seen_company_ids: set[UUID4] = set()
-        for company_id in company_ids:
-            if company_id in seen_company_ids:
+        company_ids_to_remove = existing_company_ids - requested_company_ids
+        company_ids_to_add = requested_company_ids - existing_company_ids
+
+        if company_ids_to_remove:
+            await db.execute(
+                delete(models.LeadXCompany).where(
+                    models.LeadXCompany.lead_id == lead.id,
+                    models.LeadXCompany.company_id.in_(company_ids_to_remove),
+                )
+            )
+
+        for company_id in valid_requested_ids:
+            if company_id not in company_ids_to_add:
                 continue
-            seen_company_ids.add(company_id)
-            company = await db.get(models.Company, company_id)
-            if company is not None:
-                requested_companies.append(company)
-        requested_ids = {company.id for company in requested_companies if company.id}
-        current_ids = set(existing_companies)
-        if current_ids != requested_ids:
-            lead.companies = requested_companies
-            changed = True
-        return changed
+            db.add(models.LeadXCompany(lead_id=lead.id, company_id=company_id))
 
-    for company_id in company_ids:
-        if company_id in existing_companies:
-            continue
-        company = await db.get(models.Company, company_id)
-        if company is None:
-            continue
-        lead.companies.append(company)
-        existing_companies[company.id] = company
-        changed = True
+        return bool(company_ids_to_remove or company_ids_to_add)
 
-    return changed
+    company_ids_to_add = requested_company_ids - existing_company_ids
+    for company_id in valid_requested_ids:
+        if company_id not in company_ids_to_add:
+            continue
+        db.add(models.LeadXCompany(lead_id=lead.id, company_id=company_id))
+
+    return bool(company_ids_to_add)
 
 
 def _fill_empty_shared_fields(lead: models.Lead, payload: schemas.LeadCreate) -> bool:

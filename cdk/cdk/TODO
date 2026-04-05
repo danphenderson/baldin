@@ -1,0 +1,8 @@
+
+Keep public AWS notes synth-only
+
+Document the private control-plane handoff
+
+Preserve backend and frontend artifact boundaries
+
+Avoid reintroducing public rollout commands

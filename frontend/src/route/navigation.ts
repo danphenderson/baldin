@@ -62,4 +62,7 @@ export const legacyRedirects: Record<string, string> = {
   '/companies': '/leads/companies',
   '/documents': '/me/documents',
   '/profile': '/me',
+  '/pipelines': '/workflows',
+  '/data-orchestration': '/workflows',
+  '/extractor': '/workflows/extractors',
 };

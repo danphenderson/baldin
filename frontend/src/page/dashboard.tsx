@@ -335,7 +335,7 @@ const DashboardPage: React.FC = () => {
             detail="tracked"
             accent={theme.palette.info.main}
             icon={<CompanyIcon fontSize="small" />}
-            onClick={() => navigate('/companies')}
+            onClick={() => navigate('/leads/companies')}
           />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
@@ -345,7 +345,7 @@ const DashboardPage: React.FC = () => {
             detail={`${profileSections.filter((s) => s.done).length} of ${profileSections.length} sections`}
             accent={theme.palette.success.main}
             icon={<PersonIcon fontSize="small" />}
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/me')}
           />
         </Grid>
       </Grid>
@@ -614,7 +614,7 @@ const DashboardPage: React.FC = () => {
                   variant="outlined"
                   size="small"
                   sx={{ mt: 2.5 }}
-                  onClick={() => navigate('/profile')}
+                  onClick={() => navigate('/me')}
                 >
                   Complete your profile
                 </Button>

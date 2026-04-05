@@ -16,7 +16,7 @@ const menuItems = [
   { text: 'Leads', path: '/leads' },
   { text: 'Applications', path: '/applications' },
   { text: 'Workflows', path: '/workflows' },
-  { text: 'Extractors', path: '/extractor' },
+  { text: 'Extractors', path: '/workflows/extractors' },
 ];
 
 const Header: React.FC<{ title?: string }> = ({ title }) => {
@@ -59,7 +59,7 @@ const Header: React.FC<{ title?: string }> = ({ title }) => {
         <Toolbar>
           <IconButton
             size="large"
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/me')}
             sx={{ marginRight: 2 }}
           >
             <Avatar

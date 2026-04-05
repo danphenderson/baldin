@@ -25,7 +25,7 @@ import { logout as logoutApi } from '../service/auth';
 import { useThemeMode } from '../theme/theme-provider';
 import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-header-context';
 import SecondaryNavBar from '../component/common/secondary-nav-bar';
-import { getSecondaryNavItems } from '../route/navigation';
+import { getSecondaryNavItems, legacyRedirects } from '../route/navigation';
 
 const DRAWER_WIDTH = 260;
 const DRAWER_COLLAPSED = 72;
@@ -275,7 +275,10 @@ const AppLayout: React.FC = () => {
         {/* Nav Items */}
         <List component="nav" aria-label="Main navigation" sx={{ px: 1, py: 1.5, flexGrow: 1 }}>
           {navItems.map((item) => {
-            const isActive = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
+            const resolved = legacyRedirects[item.path] ?? item.path;
+            const isActive = resolved === '/'
+              ? location.pathname === '/'
+              : location.pathname === resolved || location.pathname.startsWith(`${resolved}/`);
             return (
               <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
                 <Tooltip title={item.label} placement="right" disableHoverListener={!collapsed}>

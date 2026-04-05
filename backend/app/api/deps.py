@@ -610,6 +610,9 @@ def model_to_dict(model_instance):
 # Crawler execution
 # ---------------------------------------------------------------------------
 
+# Maximum number of characters retained from crawled page text.
+MAX_CRAWLER_RESULT_TEXT_LENGTH: int = 4000
+
 
 async def _get_or_create_crawler_pipeline(
     run: models.CrawlerRun,
@@ -692,7 +695,7 @@ async def execute_crawler_run(
 
     try:
         text = await extract_text_from_url(run.url)
-        run.result = {"text": text[:4000]}
+        run.result = {"text": text[:MAX_CRAWLER_RESULT_TEXT_LENGTH]}
         run.status = schemas.CrawlerRunStatus.SUCCESS
         await update_orchestration_event(
             event.id,

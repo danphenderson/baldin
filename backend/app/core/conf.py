@@ -81,6 +81,8 @@ class Settings(_BaseSettings):
     # Execution mode: "inline" runs crawls in the API process;
     # "worker" enqueues jobs to Redis for the crawler-worker service.
     CRAWLER_EXECUTION_MODE: Literal["inline", "worker"] = "inline"
+    # How often (in seconds) the crawler scheduler polls for pending runs.
+    CRAWLER_SCHEDULER_INTERVAL: int = 60
 
     # VALIDATORS
     @validator("BACKEND_CORS_ORIGINS")

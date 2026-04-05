@@ -94,7 +94,7 @@ async def get_crawler_run(
     if not run:
         raise HTTPException(status_code=404, detail=f"CrawlerRun {id} not found")
     if run.user_id != user.id:
-        raise HTTPException(status_code=403, detail="Not authorised")
+        raise HTTPException(status_code=403, detail="Not authorized")
     return run
 
 
@@ -110,7 +110,7 @@ async def resume_crawler_run(
     if not run:
         raise HTTPException(status_code=404, detail=f"CrawlerRun {id} not found")
     if run.user_id != user.id:
-        raise HTTPException(status_code=403, detail="Not authorised")
+        raise HTTPException(status_code=403, detail="Not authorized")
     if run.status == schemas.CrawlerRunStatus.RUNNING:
         raise HTTPException(status_code=409, detail="Run is already in progress")
     # Reset to pending so execute_crawler_run will pick it up

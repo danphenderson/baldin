@@ -17,9 +17,6 @@ from app.logging import get_async_logger
 
 log = get_async_logger(__name__)
 
-# How often (in seconds) the scheduler polls for pending runs.
-SCHEDULER_INTERVAL_SECONDS: int = 60
-
 
 async def _dispatch_pending_runs() -> None:
     """Enqueue or inline-execute all pending crawler runs found in Postgres."""
@@ -55,9 +52,14 @@ async def _inline_execute(run_id, user_id) -> None:
 
 async def start_crawler_scheduler() -> None:
     """Run the scheduler loop indefinitely.  Designed to be launched with
-    ``asyncio.create_task()`` from the application startup handler."""
+    ``asyncio.create_task()`` from the application startup handler.
+
+    The poll interval is controlled by the ``CRAWLER_SCHEDULER_INTERVAL``
+    setting (default 60 s) so it can be adjusted without code changes.
+    """
+    interval = conf.settings.CRAWLER_SCHEDULER_INTERVAL
     await log.info(
-        f"Crawler scheduler started (interval={SCHEDULER_INTERVAL_SECONDS}s, "
+        f"Crawler scheduler started (interval={interval}s, "
         f"mode={conf.settings.CRAWLER_EXECUTION_MODE})"
     )
     while True:
@@ -65,4 +67,4 @@ async def start_crawler_scheduler() -> None:
             await _dispatch_pending_runs()
         except Exception as exc:
             await log.error(f"Crawler scheduler error: {exc}")
-        await asyncio.sleep(SCHEDULER_INTERVAL_SECONDS)
+        await asyncio.sleep(interval)

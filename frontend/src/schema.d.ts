@@ -77,6 +77,10 @@ export interface paths {
     /** Create Job Lead */
     post: operations["create_job_lead_leads__post"];
   };
+  "/leads/extract": {
+    /** Extract Lead */
+    post: operations["extract_lead_leads_extract_post"];
+  };
   "/leads/{id}": {
     /** Read Lead */
     get: operations["read_lead_leads__id__get"];
@@ -85,16 +89,27 @@ export interface paths {
     /** Update Lead */
     patch: operations["update_lead_leads__id__patch"];
   };
-  "/leads/purge": {
-    /**
-     * Purge Leads
-     * @description Drops all leads records in the table.
-     */
-    delete: operations["purge_leads_leads_purge_delete"];
+  "/leads/{id}/registration": {
+    /** Create Lead Registration */
+    post: operations["create_lead_registration_leads__id__registration_post"];
+    /** Delete Lead Registration */
+    delete: operations["delete_lead_registration_leads__id__registration_delete"];
+    /** Update Lead Registration */
+    patch: operations["update_lead_registration_leads__id__registration_patch"];
   };
-  "/leads/extract": {
-    /** Extract Lead */
-    post: operations["extract_lead_leads_extract_post"];
+  "/leads/{id}/comments": {
+    /** Read Lead Comments */
+    get: operations["read_lead_comments_leads__id__comments_get"];
+    /** Create Lead Comment */
+    post: operations["create_lead_comment_leads__id__comments_post"];
+  };
+  "/leads/{id}/comments/{comment_id}/replies": {
+    /** Create Lead Comment Reply */
+    post: operations["create_lead_comment_reply_leads__id__comments__comment_id__replies_post"];
+  };
+  "/leads/purge": {
+    /** Purge Leads */
+    delete: operations["purge_leads_leads_purge_delete"];
   };
   "/leads/seed": {
     /** Seed Leads */
@@ -1432,6 +1447,70 @@ export interface components {
       /** Detail */
       detail?: components["schemas"]["ValidationError"][];
     };
+    /** LeadCommentCreate */
+    LeadCommentCreate: {
+      /**
+       * Content
+       * @description Comment content
+       */
+      content: string;
+      /**
+       * Anonymous
+       * @description Whether the comment hides the author's public profile
+       * @default true
+       */
+      anonymous?: boolean;
+    };
+    /** LeadCommentRead */
+    LeadCommentRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Lead Id
+       * Format: uuid4
+       * @description Lead identifier
+       */
+      lead_id: string;
+      /**
+       * Parent Comment Id
+       * @description Parent comment identifier for replies
+       */
+      parent_comment_id?: string | null;
+      /**
+       * Content
+       * @description Comment content
+       */
+      content: string;
+      /**
+       * Anonymous
+       * @description Whether the comment hides the author's public profile
+       * @default true
+       */
+      anonymous?: boolean;
+      /** @description The author's public profile, when the comment is non-anonymous */
+      author_public_profile?: components["schemas"]["LeadParticipantPublicProfileRead"] | null;
+      /**
+       * Replies
+       * @description Replies to this top-level comment
+       */
+      replies?: components["schemas"]["LeadCommentRead"][];
+    };
     /** LeadCreate */
     LeadCreate: {
       /**
@@ -1475,11 +1554,6 @@ export interface components {
        */
       education_level?: string | null;
       /**
-       * Notes
-       * @description Additional notes
-       */
-      notes?: string | null;
-      /**
        * Hiring Manager
        * @description Hiring manager
        */
@@ -1491,6 +1565,181 @@ export interface components {
        * @description Company IDs
        */
       company_ids?: string[] | null;
+    };
+    /** LeadDetailRead */
+    LeadDetailRead: {
+      /**
+       * Title
+       * @description Job title
+       */
+      title?: string | null;
+      /**
+       * Description
+       * @description Job description
+       */
+      description?: string | null;
+      /**
+       * Location
+       * @description Job location
+       */
+      location?: string | null;
+      /**
+       * Salary
+       * @description Salary range
+       */
+      salary?: string | null;
+      /**
+       * Job Function
+       * @description Job function
+       */
+      job_function?: string | null;
+      /**
+       * Employment Type
+       * @description Type of employment
+       */
+      employment_type?: string | null;
+      /**
+       * Seniority Level
+       * @description Seniority level
+       */
+      seniority_level?: string | null;
+      /**
+       * Education Level
+       * @description Required education level
+       */
+      education_level?: string | null;
+      /**
+       * Hiring Manager
+       * @description Hiring manager
+       */
+      hiring_manager?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Url
+       * @description Job posting URL
+       */
+      url: string;
+      /**
+       * Canonical Url
+       * @description Canonical lead URL used for deduplication
+       */
+      canonical_url: string;
+      /**
+       * Companies
+       * @description List of companies associated with the lead
+       */
+      companies?: components["schemas"]["CompanyRead"][];
+      /**
+       * Interest Count
+       * @description How many viewers are currently registered on the lead
+       * @default 0
+       */
+      interest_count?: number;
+      /**
+       * Comment Count
+       * @description How many comments and replies exist for the lead
+       * @default 0
+       */
+      comment_count?: number;
+      /**
+       * Viewer Is Registered
+       * @description Whether the current viewer is registered on the lead
+       * @default false
+       */
+      viewer_is_registered?: boolean;
+      /** @description Current-viewer permissions for this lead */
+      viewer_permissions?: components["schemas"]["LeadViewerPermissionsRead"];
+      /** @description The current viewer's lead registration, if present */
+      viewer_registration?: components["schemas"]["LeadRegistrationRead"] | null;
+      /**
+       * Participant Summaries
+       * @description Registered participants who opted to expose their profile
+       */
+      participant_summaries?: components["schemas"]["LeadParticipantSummaryRead"][];
+    };
+    /**
+     * LeadExtractDisposition
+     * @enum {string}
+     */
+    LeadExtractDisposition: "created" | "matched_existing_joined" | "matched_existing_already_registered";
+    /** LeadExtractResponse */
+    LeadExtractResponse: {
+      /** @description The resulting lead record */
+      lead: components["schemas"]["LeadRead"];
+      /** @description Whether extraction created a lead or matched an existing one */
+      disposition: components["schemas"]["LeadExtractDisposition"];
+      /**
+       * Submitted Url
+       * @description The URL submitted for extraction
+       */
+      submitted_url: string;
+      /**
+       * Normalized Url
+       * @description The canonicalized URL used for deduplication
+       */
+      normalized_url: string;
+    };
+    /** LeadParticipantPublicProfileRead */
+    LeadParticipantPublicProfileRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Public display name for the participant
+       */
+      display_name: string;
+      /**
+       * City
+       * @description Participant city
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description Participant state
+       */
+      state?: string | null;
+      /**
+       * Country
+       * @description Participant country
+       */
+      country?: string | null;
+      /**
+       * Avatar Uri
+       * @description Participant avatar URI
+       */
+      avatar_uri?: string | null;
+    };
+    /** LeadParticipantSummaryRead */
+    LeadParticipantSummaryRead: {
+      /**
+       * Registered At
+       * Format: date-time
+       * @description When the participant registered interest in the lead
+       */
+      registered_at: string;
+      /** @description The participant's exposed public profile */
+      public_profile: components["schemas"]["LeadParticipantPublicProfileRead"];
     };
     /** LeadRead */
     LeadRead: {
@@ -1535,11 +1784,6 @@ export interface components {
        */
       education_level?: string | null;
       /**
-       * Notes
-       * @description Additional notes
-       */
-      notes?: string | null;
-      /**
        * Hiring Manager
        * @description Hiring manager
        */
@@ -1566,16 +1810,91 @@ export interface components {
        * Url
        * @description Job posting URL
        */
-      url?: string | null;
+      url: string;
+      /**
+       * Canonical Url
+       * @description Canonical lead URL used for deduplication
+       */
+      canonical_url: string;
       /**
        * Companies
        * @description List of companies associated with the lead
-       * @default []
        */
       companies?: components["schemas"]["CompanyRead"][];
+      /**
+       * Interest Count
+       * @description How many viewers are currently registered on the lead
+       * @default 0
+       */
+      interest_count?: number;
+      /**
+       * Comment Count
+       * @description How many comments and replies exist for the lead
+       * @default 0
+       */
+      comment_count?: number;
+      /**
+       * Viewer Is Registered
+       * @description Whether the current viewer is registered on the lead
+       * @default false
+       */
+      viewer_is_registered?: boolean;
+      /** @description Current-viewer permissions for this lead */
+      viewer_permissions?: components["schemas"]["LeadViewerPermissionsRead"];
     };
-    /** LeadUpdate */
-    LeadUpdate: {
+    /** LeadRegistrationRead */
+    LeadRegistrationRead: {
+      /**
+       * Lead Id
+       * Format: uuid4
+       * @description Lead identifier
+       */
+      lead_id: string;
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Internal Notes
+       * @description Viewer-scoped notes for this registration
+       */
+      internal_notes?: string | null;
+      /**
+       * Expose Profile
+       * @description Whether the viewer exposes their profile to participants
+       * @default false
+       */
+      expose_profile?: boolean;
+      /**
+       * Created At
+       * Format: date-time
+       * @description When the registration was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description When the registration was last updated
+       */
+      updated_at: string;
+    };
+    /** LeadRegistrationUpdate */
+    LeadRegistrationUpdate: {
+      /**
+       * Internal Notes
+       * @description Viewer-scoped notes for this registration
+       */
+      internal_notes?: string | null;
+      /**
+       * Expose Profile
+       * @description Whether the viewer exposes their profile to participants
+       */
+      expose_profile?: boolean | null;
+    };
+    /** LeadSharedUpdate */
+    LeadSharedUpdate: {
       /**
        * Title
        * @description Job title
@@ -1617,11 +1936,6 @@ export interface components {
        */
       education_level?: string | null;
       /**
-       * Notes
-       * @description Additional notes
-       */
-      notes?: string | null;
-      /**
        * Hiring Manager
        * @description Hiring manager
        */
@@ -1629,9 +1943,59 @@ export interface components {
       /**
        * Company Ids
        * @description Company IDs
-       * @default []
        */
-      company_ids?: string[];
+      company_ids?: string[] | null;
+    };
+    /** LeadViewerPermissionsRead */
+    LeadViewerPermissionsRead: {
+      /**
+       * Can Register
+       * @description Whether the viewer can register
+       * @default false
+       */
+      can_register?: boolean;
+      /**
+       * Can Leave Registration
+       * @description Whether the viewer can remove their registration
+       * @default false
+       */
+      can_leave_registration?: boolean;
+      /**
+       * Can Update Registration
+       * @description Whether the viewer can edit their registration metadata
+       * @default false
+       */
+      can_update_registration?: boolean;
+      /**
+       * Can Update Shared Fields
+       * @description Whether the viewer can update shared lead fields
+       * @default false
+       */
+      can_update_shared_fields?: boolean;
+      /**
+       * Can Clear Or Overwrite Shared Fields
+       * @description Whether the viewer can clear or overwrite populated shared fields
+       * @default false
+       */
+      can_clear_or_overwrite_shared_fields?: boolean;
+      /**
+       * Can Delete Shared Lead
+       * @description Whether the viewer can delete the shared lead
+       * @default false
+       */
+      can_delete_shared_lead?: boolean;
+      /**
+       * Can View Comments
+       * @description Whether the viewer can read comments on the lead
+       * @default false
+       */
+      can_view_comments?: boolean;
+      /**
+       * Can Post Comments
+       * @description Whether the viewer can post comments on the lead
+       * @default false
+       */
+      can_post_comments?: boolean;
     };
     /** LeadsPaginatedRead */
     LeadsPaginatedRead: {
@@ -2930,6 +3294,28 @@ export interface operations {
       };
     };
   };
+  /** Extract Lead */
+  extract_lead_leads_extract_post: {
+    parameters: {
+      query: {
+        extraction_url: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadExtractResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Read Lead */
   read_lead_leads__id__get: {
     parameters: {
@@ -2941,7 +3327,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["LeadRead"];
+          "application/json": components["schemas"]["LeadDetailRead"];
         };
       };
       /** @description Validation Error */
@@ -2981,7 +3367,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["LeadUpdate"];
+        "application/json": components["schemas"]["LeadSharedUpdate"];
       };
     };
     responses: {
@@ -2999,10 +3385,153 @@ export interface operations {
       };
     };
   };
-  /**
-   * Purge Leads
-   * @description Drops all leads records in the table.
-   */
+  /** Create Lead Registration */
+  create_lead_registration_leads__id__registration_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRegistrationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Lead Registration */
+  delete_lead_registration_leads__id__registration_delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Lead Registration */
+  update_lead_registration_leads__id__registration_patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadRegistrationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRegistrationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Lead Comments */
+  read_lead_comments_leads__id__comments_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadCommentRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Lead Comment */
+  create_lead_comment_leads__id__comments_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadCommentCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["LeadCommentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Lead Comment Reply */
+  create_lead_comment_reply_leads__id__comments__comment_id__replies_post: {
+    parameters: {
+      path: {
+        comment_id: string;
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadCommentCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["LeadCommentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Purge Leads */
   purge_leads_leads_purge_delete: {
     responses: {
       /** @description Successful Response */
@@ -3011,28 +3540,6 @@ export interface operations {
           "application/json": {
             [key: string]: unknown;
           };
-        };
-      };
-    };
-  };
-  /** Extract Lead */
-  extract_lead_leads_extract_post: {
-    parameters: {
-      query: {
-        extraction_url: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["LeadRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

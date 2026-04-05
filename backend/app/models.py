@@ -2,7 +2,18 @@
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -115,11 +126,19 @@ class LeadXCompany(Base):
     company_id = Column(UUID, ForeignKey("companies.id"), primary_key=True)
 
 
-class LeadXUser(Base):
+class LeadRegistration(Base):
+    """Represents a viewer's registration or interest for a shared lead."""
 
-    __tablename__ = "leads_x_users"
-    lead_id = Column(UUID, ForeignKey("leads.id"), primary_key=True)
-    user_id = Column(UUID, ForeignKey("users.id"), primary_key=True)
+    __tablename__ = "lead_registrations"
+    __table_args__ = (UniqueConstraint("lead_id", "user_id"),)
+
+    lead_id = Column(UUID, ForeignKey("leads.id"), nullable=False, index=True)
+    user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    internal_notes = Column(Text)
+    expose_profile = Column(Boolean, default=False, nullable=False)
+
+    lead = relationship("Lead", back_populates="registrations")
+    user = relationship("User", back_populates="lead_registrations")
 
 
 class Company(Base):
@@ -149,7 +168,8 @@ class Lead(Base):
     """
 
     __tablename__ = "leads"
-    url = Column(String, unique=True, index=True)
+    url = Column(String, nullable=False)
+    canonical_url = Column(String, unique=True, index=True, nullable=False)
     title = Column(String)
     description = Column(String)
     location = Column(String)
@@ -158,14 +178,52 @@ class Lead(Base):
     employment_type = Column(String)
     seniority_level = Column(String)
     education_level = Column(String)
-    notes = Column(Text)
     hiring_manager = Column(String)
 
     application = relationship("Application", back_populates="lead")
     companies = relationship(
         "Company", secondary="leads_x_companies", back_populates="leads"
     )
-    users = relationship("User", secondary="leads_x_users", back_populates="leads")
+    registrations = relationship(
+        "LeadRegistration",
+        back_populates="lead",
+        cascade="all, delete-orphan",
+    )
+    users = relationship(
+        "User",
+        secondary="lead_registrations",
+        back_populates="leads",
+        viewonly=True,
+    )
+    comments = relationship(
+        "LeadComment",
+        back_populates="lead",
+        cascade="all, delete-orphan",
+    )
+
+
+class LeadComment(Base):
+    """Represents a lead comment or a single-level reply."""
+
+    __tablename__ = "lead_comments"
+    lead_id = Column(UUID, ForeignKey("leads.id"), nullable=False, index=True)
+    author_user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    parent_comment_id = Column(UUID, ForeignKey("lead_comments.id"), index=True)
+    content = Column(Text, nullable=False)
+    anonymous = Column(Boolean, default=True, nullable=False)
+
+    lead = relationship("Lead", back_populates="comments")
+    author = relationship("User", back_populates="lead_comments")
+    parent_comment = relationship(
+        "LeadComment",
+        remote_side="LeadComment.id",
+        back_populates="replies",
+    )
+    replies = relationship(
+        "LeadComment",
+        back_populates="parent_comment",
+        cascade="all, delete-orphan",
+    )
 
 
 # End of system models
@@ -349,7 +407,22 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     country = Column(String)
     time_zone = Column(String)
     avatar_uri = Column(String)
-    leads = relationship("Lead", secondary="leads_x_users", back_populates="users")
+    lead_registrations = relationship(
+        "LeadRegistration",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    leads = relationship(
+        "Lead",
+        secondary="lead_registrations",
+        back_populates="users",
+        viewonly=True,
+    )
+    lead_comments = relationship(
+        "LeadComment",
+        back_populates="author",
+        cascade="all, delete-orphan",
+    )
     applications = relationship("Application", back_populates="user")
     contacts = relationship("Contact", back_populates="user")
     skills = relationship("Skill", back_populates="user")

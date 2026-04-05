@@ -63,7 +63,10 @@ async def drop_and_create_db_and_tables():
     # TODO: This function should be removed once we have alembic migrations in place.
     """
     async with async_engine.begin() as conn:
-        await conn.run_sync(models.Base.metadata.drop_all)
+        await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        await conn.execute(text("CREATE SCHEMA public"))
+        await conn.execute(text("GRANT ALL ON SCHEMA public TO postgres"))
+        await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
         await conn.run_sync(models.Base.metadata.create_all)
 
 
@@ -170,7 +173,8 @@ class DataBaseManager:
         deleted_records = {
             models.OrchestrationEvent.__tablename__: 0,
             models.ExtractorExample.__tablename__: 0,
-            models.LeadXUser.__tablename__: 0,
+            models.LeadRegistration.__tablename__: 0,
+            models.LeadComment.__tablename__: 0,
             models.ResumeXApplication.__tablename__: 0,
             models.CoverLetterXApplication.__tablename__: 0,
             models.Application.__tablename__: 0,
@@ -231,8 +235,13 @@ class DataBaseManager:
             )
         )
 
-        deleted_records[models.LeadXUser.__tablename__] = await self._delete_rows(
-            models.LeadXUser, models.LeadXUser.user_id == user_id
+        deleted_records[models.LeadRegistration.__tablename__] = (
+            await self._delete_rows(
+                models.LeadRegistration, models.LeadRegistration.user_id == user_id
+            )
+        )
+        deleted_records[models.LeadComment.__tablename__] = await self._delete_rows(
+            models.LeadComment, models.LeadComment.author_user_id == user_id
         )
 
         deleted_records[models.Application.__tablename__] = await self._delete_rows(

@@ -40,6 +40,12 @@ Optional local toolchain if you want to work outside containers:
 docker-compose up --build
 ```
 
+If you hit local schema drift after pulling breaking model changes, reset the developer databases and restart the stack:
+
+```bash
+./scripts/reset_local_db.sh
+```
+
 5. Open the local services:
    - Frontend: [http://localhost:5173](http://localhost:5173)
    - API: [http://localhost:8004](http://localhost:8004)

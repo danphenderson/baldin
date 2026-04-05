@@ -7,6 +7,7 @@ from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from pydantic import UUID4
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import utils as app_utils
 from app.models import (
     Application,
     Contact,
@@ -58,8 +59,10 @@ async def create_etl_event(session: AsyncSession):
 
 
 async def create_lead(session: AsyncSession):
+    url = f"https://example.com/job/{random_lower_string(12)}"
     lead = Lead(
-        url=f"https://example.com/job/{random_lower_string(12)}",
+        url=url,
+        canonical_url=app_utils.canonicalize_lead_url(url),
         title="Test Job Title",
         description="Test Job Description",
         location="Test Location",
@@ -68,7 +71,6 @@ async def create_lead(session: AsyncSession):
         employment_type="Full-Time",
         seniority_level="Mid-Level",
         education_level="Bachelor's",
-        notes="Test Note",
         hiring_manager="Test Hiring Manager",
     )
     session.add(lead)

@@ -28,7 +28,7 @@ You own the production evolution of the frontend prototype in ./frontend. Your j
 ## Constraints
 - DO NOT hand-edit generated files such as frontend/src/schema.d.ts.
 - DO NOT make purely cosmetic changes that ignore loading, empty, error, success, and mobile states.
-- DO NOT introduce new frontend frameworks or parallel state/styling systems without a strong repo-specific reason.
+- DO NOT introduce new frontend frameworks or parallel state or styling systems without a strong repo-specific reason.
 - DO NOT settle for generic UI polish. Improve hierarchy, readability, flow, and confidence for real usage.
 - DO NOT widen scope into backend/platform work unless it is necessary to unblock the frontend.
 

@@ -12,7 +12,7 @@ from app.api.deps import (  # noqa
     get_orchestration_pipeline,
     models,
     schemas,
-    update_orchestration_event,
+    update_orchestration_event_for_current_user,
 )
 
 router: APIRouter = APIRouter()
@@ -163,6 +163,8 @@ async def create_orch_event(
     response_model=schemas.OrchestrationEventRead,
 )
 async def update_orch_event(
-    event: models.OrchestrationEvent = Depends(update_orchestration_event),
+    event: models.OrchestrationEvent = Depends(
+        update_orchestration_event_for_current_user
+    ),
 ):
     return event

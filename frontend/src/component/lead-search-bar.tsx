@@ -51,6 +51,8 @@ const LeadSearchBar: React.FC<LeadSearchBarProps> = ({
         onChange={(e) => onFilterChange(e.target.value)}
       >
         <MenuItem value="all">All Leads</MenuItem>
+        <MenuItem value="registered">I&apos;m Tracking</MenuItem>
+        <MenuItem value="active">Active Collaboration</MenuItem>
         <MenuItem value="remote">Remote</MenuItem>
         <MenuItem value="fulltime">Full-time</MenuItem>
       </Select>

@@ -1,6 +1,7 @@
 # Path: app/api/deps.py
 import json
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path  # noqa
 from typing import Any, Sequence
@@ -52,6 +53,25 @@ from app.logging import console_log, get_async_logger
 __all__ = ["console_log"]
 
 log = get_async_logger(__name__)
+
+LEAD_SHARED_MUTABLE_FIELDS = (
+    "title",
+    "description",
+    "location",
+    "salary",
+    "job_function",
+    "employment_type",
+    "seniority_level",
+    "education_level",
+    "hiring_manager",
+)
+
+
+@dataclass
+class LeadCreateResult:
+    lead: models.Lead
+    disposition: schemas.LeadExtractDisposition
+    normalized_url: str
 
 
 async def _403(user_id: UUID4, obj: Any, id: UUID4 | str) -> HTTPException:
@@ -157,21 +177,100 @@ async def get_lead(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Lead:
+    del user
     result = await db.execute(
         select(models.Lead)
         .options(
             selectinload(models.Lead.companies),
-            selectinload(models.Lead.users),
+            selectinload(models.Lead.registrations).selectinload(
+                models.LeadRegistration.user
+            ),
+            selectinload(models.Lead.comments),
         )
         .where(models.Lead.id == id)
     )
     lead = result.scalars().unique().first()
     if not lead:
         raise HTTPException(status_code=404, detail=f"Lead not found: {id}")
-    if not getattr(user, "is_superuser", False) and lead.users:
-        if not any(lead_user.id == user.id for lead_user in lead.users):
-            raise await _403(user.id, lead, id)
     return lead
+
+
+def _get_lead_registration(
+    lead: models.Lead, user_id: UUID4 | uuid.UUID
+) -> models.LeadRegistration | None:
+    return next(
+        (
+            registration
+            for registration in getattr(lead, "registrations", [])
+            if registration.user_id == user_id
+        ),
+        None,
+    )
+
+
+def _is_empty_shared_value(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    return False
+
+
+async def _apply_company_ids(
+    lead: models.Lead,
+    company_ids: Sequence[UUID4] | None,
+    db: AsyncSession,
+    *,
+    replace: bool,
+) -> bool:
+    if company_ids is None:
+        return False
+
+    changed = False
+    existing_companies = {
+        company.id: company for company in getattr(lead, "companies", []) if company.id
+    }
+
+    if replace:
+        requested_companies: list[models.Company] = []
+        seen_company_ids: set[UUID4] = set()
+        for company_id in company_ids:
+            if company_id in seen_company_ids:
+                continue
+            seen_company_ids.add(company_id)
+            company = await db.get(models.Company, company_id)
+            if company is not None:
+                requested_companies.append(company)
+        requested_ids = {company.id for company in requested_companies if company.id}
+        current_ids = set(existing_companies)
+        if current_ids != requested_ids:
+            lead.companies = requested_companies
+            changed = True
+        return changed
+
+    for company_id in company_ids:
+        if company_id in existing_companies:
+            continue
+        company = await db.get(models.Company, company_id)
+        if company is None:
+            continue
+        lead.companies.append(company)
+        existing_companies[company.id] = company
+        changed = True
+
+    return changed
+
+
+def _fill_empty_shared_fields(lead: models.Lead, payload: schemas.LeadCreate) -> bool:
+    changed = False
+    for field, value in payload.model_dump(
+        exclude={"company_ids", "url"}, exclude_none=True
+    ).items():
+        if not _is_empty_shared_value(getattr(lead, field)):
+            continue
+        setattr(lead, field, value)
+        changed = True
+    return changed
 
 
 async def get_mutable_lead(
@@ -182,7 +281,7 @@ async def get_mutable_lead(
     lead = await get_lead(id, db, user)
     if getattr(user, "is_superuser", False):
         return lead
-    if any(lead_user.id == user.id for lead_user in lead.users):
+    if _get_lead_registration(lead, user.id) is not None:
         return lead
     raise await _403(user.id, lead, id)
 
@@ -191,14 +290,18 @@ async def create_lead(
     payload: schemas.LeadCreate,
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
-) -> models.Lead:
+) -> LeadCreateResult:
+    normalized_url = utils.canonicalize_lead_url(payload.url)
     result = await db.execute(
         select(models.Lead)
         .options(
             selectinload(models.Lead.companies),
-            selectinload(models.Lead.users),
+            selectinload(models.Lead.registrations).selectinload(
+                models.LeadRegistration.user
+            ),
+            selectinload(models.Lead.comments),
         )
-        .where(models.Lead.url == payload.url)
+        .where(models.Lead.canonical_url == normalized_url)
     )
     lead = result.scalars().unique().first()
     current_user = await db.get(models.User, user.id)
@@ -206,33 +309,39 @@ async def create_lead(
         raise HTTPException(status_code=404, detail=f"User not found: {user.id}")
 
     changed = False
+    disposition = schemas.LeadExtractDisposition.CREATED
     if lead is None:
-        lead = models.Lead(**payload.model_dump(exclude={"company_ids"}))
-        lead.users.append(current_user)
+        lead = models.Lead(
+            **payload.model_dump(exclude={"company_ids"}, exclude_none=True),
+            canonical_url=normalized_url,
+        )
+        lead.registrations.append(models.LeadRegistration(user=current_user))
         db.add(lead)
         changed = True
-    elif not any(lead_user.id == user.id for lead_user in lead.users):
-        lead.users.append(current_user)
-        changed = True
-
-    existing_company_ids = {
-        company.id
-        for company in getattr(lead, "companies", [])
-        if company.id is not None
-    }
-    for company_id in payload.company_ids or []:
-        if company_id in existing_company_ids:
-            continue
-        company = await db.get(models.Company, company_id)
-        if company is not None:
-            lead.companies.append(company)
-            existing_company_ids.add(company.id)
+    else:
+        registration = _get_lead_registration(lead, user.id)
+        if registration is None:
+            lead.registrations.append(models.LeadRegistration(user=current_user))
+            disposition = schemas.LeadExtractDisposition.MATCHED_EXISTING_JOINED
             changed = True
+        else:
+            disposition = (
+                schemas.LeadExtractDisposition.MATCHED_EXISTING_ALREADY_REGISTERED
+            )
+        if _fill_empty_shared_fields(lead, payload):
+            changed = True
+
+    if await _apply_company_ids(lead, payload.company_ids, db, replace=False):
+        changed = True
 
     if changed:
         await db.commit()
 
-    return await get_lead(lead.id, db, user)
+    return LeadCreateResult(
+        lead=await get_lead(lead.id, db, user),
+        disposition=disposition,
+        normalized_url=normalized_url,
+    )
 
 
 async def get_company_by_id(
@@ -271,19 +380,22 @@ async def get_orchestration_event(
 async def update_orchestration_event(
     id: UUID4,
     payload: schemas.OrchestrationEventUpdate,
-    db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession,
+    user: schemas.UserRead | None = None,
 ) -> models.OrchestrationEvent:
-    query = (
-        select(models.OrchestrationEvent)
-        .where(models.OrchestrationEvent.id == id)
-        .options(selectinload(models.OrchestrationEvent.orchestration_pipeline))
-    )
-    result = await db.execute(query)
-    event = result.scalars().first()
+    if user is None:
+        event = await db.get(models.OrchestrationEvent, id)
+    else:
+        query = (
+            select(models.OrchestrationEvent)
+            .where(models.OrchestrationEvent.id == id)
+            .options(selectinload(models.OrchestrationEvent.orchestration_pipeline))
+        )
+        result = await db.execute(query)
+        event = result.scalars().first()
     if not event:
         raise await _404(event, id)
-    if (
+    if user is not None and (
         not event.orchestration_pipeline
         or event.orchestration_pipeline.user_id != user.id
     ):
@@ -294,6 +406,15 @@ async def update_orchestration_event(
     await db.refresh(event)
     await log.info(f"update_orchestration_event: {event}")
     return event
+
+
+async def update_orchestration_event_for_current_user(
+    id: UUID4,
+    payload: schemas.OrchestrationEventUpdate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.OrchestrationEvent:
+    return await update_orchestration_event(id, payload, db, user)
 
 
 async def create_orchestration_event(

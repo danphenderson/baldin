@@ -1,7 +1,9 @@
-import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useContext, useEffect, useState, useCallback, useMemo, useDeferredValue } from 'react';
 import {
   Box, Typography, Skeleton, Snackbar, Alert,
   Pagination as MuiPagination,
+  Stack,
+  Chip,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
@@ -10,13 +12,23 @@ import {
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import {
-  getLeads, createLead, updateLead, deleteLead, extractLead,
-  type LeadRead, type LeadCreate, type LeadUpdate,
+  getLeads,
+  createLead,
+  updateLead,
+  deleteLead,
+  extractLead,
+} from '../service/leads';
+import type {
+  LeadRead,
+  LeadCreate,
+  LeadExtractResponse,
+  LeadSharedUpdate,
 } from '../service/leads';
 import { createApplication } from '../service/applications';
 import { getCompanies, type CompanyRead } from '../service/companies';
-import LeadFormDialog from '../component/lead-modal';
+import LeadFormDialog from '../component/lead-form-dialog';
 import LeadCard from '../component/lead-card';
+import LeadModal, { type LeadModalTab } from '../component/lead-modal';
 import LeadExtractionBar from '../component/lead-extraction-bar';
 import LeadSearchBar from '../component/lead-search-bar';
 import ConfirmDialog from '../component/common/confirm-dialog';
@@ -32,6 +44,32 @@ function isValidUrl(str: string): boolean {
 }
 
 const PAGE_SIZE = 12;
+
+const filterLeadIntoList = (items: LeadRead[], nextLead: LeadRead, moveToFront = false): LeadRead[] => {
+  const nextItems = items.filter((item) => item.id !== nextLead.id);
+  if (moveToFront) {
+    return [nextLead, ...nextItems];
+  }
+
+  const existingIndex = items.findIndex((item) => item.id === nextLead.id);
+  if (existingIndex === -1) {
+    return [nextLead, ...nextItems];
+  }
+
+  nextItems.splice(existingIndex, 0, nextLead);
+  return nextItems;
+};
+
+const extractMessage = (response: LeadExtractResponse): string => {
+  switch (response.disposition) {
+    case 'created':
+      return 'Lead extracted and added to your board.';
+    case 'matched_existing_joined':
+      return 'Matched an existing shared lead and joined you to it.';
+    default:
+      return 'Matched a shared lead you are already tracking.';
+  }
+};
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -49,13 +87,16 @@ const LeadsPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const deferredSearch = useDeferredValue(search);
 
   // AI Extraction
   const [extractUrl, setExtractUrl] = useState('');
   const [extracting, setExtracting] = useState(false);
 
-  // Card expansion
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Lead detail modal
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedLeadTab, setSelectedLeadTab] = useState<LeadModalTab>('overview');
+  const [extractContext, setExtractContext] = useState<LeadExtractResponse | null>(null);
 
   // Form dialog (create / edit)
   const [formOpen, setFormOpen] = useState(false);
@@ -101,26 +142,44 @@ const LeadsPage: React.FC = () => {
 
   const filtered = useMemo(() => {
     return leads.filter((lead) => {
-      const q = search.toLowerCase();
+      const q = deferredSearch.toLowerCase().trim();
+      const interestCount = lead.interest_count ?? 0;
       const matchesSearch = !q || [lead.title, lead.description, lead.location, lead.companies?.[0]?.name]
         .some((f) => f?.toLowerCase().includes(q));
       const matchesFilter =
         filter === 'all' ||
+        (filter === 'registered' && Boolean(lead.viewer_is_registered)) ||
+        (filter === 'active' && (interestCount > 1 || (lead.comment_count ?? 0) > 0)) ||
         (filter === 'remote' && lead.location?.toLowerCase().includes('remote')) ||
         (filter === 'fulltime' && lead.employment_type?.toLowerCase().includes('full'));
       return matchesSearch && matchesFilter;
     });
-  }, [leads, search, filter]);
+  }, [deferredSearch, filter, leads]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
   const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const joinedCount = useMemo(() => leads.filter((lead) => lead.viewer_is_registered).length, [leads]);
+  const activeCount = useMemo(() => leads.filter((lead) => (lead.interest_count ?? 0) > 1 || (lead.comment_count ?? 0) > 0).length, [leads]);
+  const discussionCount = useMemo(() => leads.filter((lead) => (lead.comment_count ?? 0) > 0).length, [leads]);
 
-  useEffect(() => { setPage(1); }, [search, filter]);
+  useEffect(() => { setPage(1); }, [deferredSearch, filter]);
 
-  usePageToolbarHeader('Job Leads', `${leads.length} tracked`);
+  usePageToolbarHeader('Job Leads', `${joinedCount} joined · ${activeCount} active · ${discussionCount} with discussion`);
 
   /* ---- Actions ---- */
+
+  const openLead = useCallback((lead: LeadRead, nextTab: LeadModalTab = 'overview', nextExtractContext: LeadExtractResponse | null = null) => {
+    setSelectedLeadId(lead.id);
+    setSelectedLeadTab(nextTab);
+    setExtractContext(nextExtractContext);
+  }, []);
+
+  const closeLead = useCallback(() => {
+    setSelectedLeadId(null);
+    setSelectedLeadTab('overview');
+    setExtractContext(null);
+  }, []);
 
   const handleExtract = async () => {
     if (!token || !extractUrl.trim()) return;
@@ -130,10 +189,12 @@ const LeadsPage: React.FC = () => {
     }
     setExtracting(true);
     try {
-      await extractLead(token, extractUrl.trim());
+      const response = await extractLead(token, extractUrl.trim());
+      setLeads((current) => filterLeadIntoList(current, response.lead, true));
       setExtractUrl('');
-      notify('Lead extracted successfully');
-      refresh();
+      setPage(1);
+      notify(extractMessage(response));
+      openLead(response.lead, 'overview', response);
     } catch (e: unknown) {
       notify(e instanceof Error ? e.message : 'Extraction failed', 'error');
     }
@@ -145,28 +206,33 @@ const LeadsPage: React.FC = () => {
     setDeleting(true);
     try {
       await deleteLead(token, deleteTarget.id);
+      setLeads((current) => current.filter((lead) => lead.id !== deleteTarget.id));
       setDeleteTarget(null);
       notify('Lead deleted');
-      refresh();
+      if (selectedLeadId === deleteTarget.id) {
+        closeLead();
+      }
     } catch (e: unknown) {
       notify(e instanceof Error ? e.message : 'Delete failed', 'error');
     }
     setDeleting(false);
   };
 
-  const handleSaveForm = async (data: LeadCreate | LeadUpdate) => {
+  const handleSaveForm = async (data: LeadCreate | LeadSharedUpdate) => {
     if (!token) return;
     try {
       if (formLead?.id) {
-        await updateLead(token, formLead.id, data as LeadUpdate);
+        const updated = await updateLead(token, formLead.id, data as LeadSharedUpdate);
+        setLeads((current) => filterLeadIntoList(current, updated));
         notify('Lead updated');
       } else {
-        await createLead(token, data as LeadCreate);
+        const created = await createLead(token, data as LeadCreate);
+        setLeads((current) => filterLeadIntoList(current, created, true));
         notify('Lead created');
+        openLead(created);
       }
       setFormOpen(false);
       setFormLead(null);
-      await refresh();
     } catch (e: unknown) {
       notify(e instanceof Error ? e.message : 'Failed to save lead', 'error');
     }
@@ -185,6 +251,17 @@ const LeadsPage: React.FC = () => {
   };
 
   const openCreate = () => { setFormLead(null); setFormOpen(true); };
+
+  const handleLeadChange = useCallback((lead: LeadRead) => {
+    setLeads((current) => filterLeadIntoList(current, lead));
+  }, []);
+
+  const handleLeadDeleted = useCallback((leadId: string) => {
+    setLeads((current) => current.filter((lead) => lead.id !== leadId));
+    if (selectedLeadId === leadId) {
+      closeLead();
+    }
+  }, [closeLead, selectedLeadId]);
 
   /* ================================================================ */
   /*  JSX                                                              */
@@ -210,6 +287,12 @@ const LeadsPage: React.FC = () => {
         onFilterChange={setFilter}
         onPageChange={setPage}
       />
+
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ mb: 3 }}>
+        <Chip label={`${joinedCount} joined by you`} color="success" variant={joinedCount ? 'filled' : 'outlined'} />
+        <Chip label={`${activeCount} active shared leads`} color="secondary" variant={activeCount ? 'filled' : 'outlined'} />
+        <Chip label={`${discussionCount} with discussion`} color="primary" variant={discussionCount ? 'filled' : 'outlined'} />
+      </Stack>
 
       {/* ── Lead Cards ── */}
       {loading ? (
@@ -241,10 +324,9 @@ const LeadsPage: React.FC = () => {
             <Grid size={{ xs: 12, md: 6 }} key={lead.id}>
               <LeadCard
                 lead={lead}
-                expanded={expandedId === lead.id}
                 applying={applyingId === lead.id}
-                onToggleExpand={(id) => setExpandedId(expandedId === id ? null : id)}
-                onEdit={(l) => { setFormLead(l); setFormOpen(true); }}
+                onOpen={(l) => openLead(l)}
+                onEdit={(l) => openLead(l, 'edit')}
                 onDelete={setDeleteTarget}
                 onApply={handleApply}
               />
@@ -273,6 +355,21 @@ const LeadsPage: React.FC = () => {
         onSave={handleSaveForm}
         lead={formLead}
         companies={companies}
+      />
+
+      <LeadModal
+        open={Boolean(selectedLeadId)}
+        token={token}
+        leadId={selectedLeadId}
+        companies={companies}
+        applying={Boolean(selectedLeadId && applyingId === selectedLeadId)}
+        extractContext={extractContext}
+        initialTab={selectedLeadTab}
+        onClose={closeLead}
+        onApply={handleApply}
+        onLeadChange={handleLeadChange}
+        onLeadDeleted={handleLeadDeleted}
+        onNotify={notify}
       />
 
       {/* ── Delete Confirmation ── */}

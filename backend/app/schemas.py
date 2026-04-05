@@ -10,7 +10,7 @@ from fastapi import UploadFile
 from fastapi_users import schemas
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
-from pydantic import EmailStr, Field, model_validator, validator
+from pydantic import ConfigDict, EmailStr, Field, model_validator, validator
 from PyPDF2 import PdfReader
 
 from app import utils
@@ -366,7 +366,37 @@ class CompanyUpdate(BaseCompany):
     pass
 
 
-class BaseLead(BaseSchema):
+LEAD_SHARED_TEXT_FIELDS = (
+    "title",
+    "description",
+    "location",
+    "salary",
+    "job_function",
+    "employment_type",
+    "seniority_level",
+    "education_level",
+    "hiring_manager",
+)
+
+
+def _clean_optional_wrapped_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = utils.clean_text(value)
+    if not cleaned:
+        return None
+    return utils.wrap_text(cleaned)
+
+
+def _normalize_lead_text_fields(model: Any) -> Any:
+    for field in LEAD_SHARED_TEXT_FIELDS:
+        if field not in model.model_fields_set:
+            continue
+        setattr(model, field, _clean_optional_wrapped_text(getattr(model, field)))
+    return model
+
+
+class BaseLeadShared(BaseSchema):
     title: str | None = Field(None, description="Job title")
     description: str | None = Field(None, description="Job description")
     location: str | None = Field(None, description="Job location")
@@ -375,14 +405,112 @@ class BaseLead(BaseSchema):
     employment_type: str | None = Field(None, description="Type of employment")
     seniority_level: str | None = Field(None, description="Seniority level")
     education_level: str | None = Field(None, description="Required education level")
-    notes: str | None = Field(None, description="Additional notes")
     hiring_manager: str | None = Field(None, description="Hiring manager")
 
 
-class LeadRead(BaseRead, BaseLead):
-    url: AnyHttpUrl | str | None = Field(None, description="Job posting URL")
+class LeadViewerPermissionsRead(BaseSchema):
+    can_register: bool = Field(False, description="Whether the viewer can register")
+    can_leave_registration: bool = Field(
+        False, description="Whether the viewer can remove their registration"
+    )
+    can_update_registration: bool = Field(
+        False, description="Whether the viewer can edit their registration metadata"
+    )
+    can_update_shared_fields: bool = Field(
+        False, description="Whether the viewer can update shared lead fields"
+    )
+    can_clear_or_overwrite_shared_fields: bool = Field(
+        False,
+        description="Whether the viewer can clear or overwrite populated shared fields",
+    )
+    can_delete_shared_lead: bool = Field(
+        False, description="Whether the viewer can delete the shared lead"
+    )
+    can_view_comments: bool = Field(
+        False, description="Whether the viewer can read comments on the lead"
+    )
+    can_post_comments: bool = Field(
+        False, description="Whether the viewer can post comments on the lead"
+    )
+
+
+class LeadParticipantPublicProfileRead(BaseSchema):
+    user_id: UUID4 = Field(description="User identifier")
+    display_name: str = Field(description="Public display name for the participant")
+    city: str | None = Field(None, description="Participant city")
+    state: str | None = Field(None, description="Participant state")
+    country: str | None = Field(None, description="Participant country")
+    avatar_uri: str | None = Field(None, description="Participant avatar URI")
+
+
+class LeadParticipantSummaryRead(BaseSchema):
+    registered_at: datetime = Field(
+        description="When the participant registered interest in the lead"
+    )
+    public_profile: LeadParticipantPublicProfileRead = Field(
+        description="The participant's exposed public profile"
+    )
+
+
+class LeadRegistrationRead(BaseSchema):
+    lead_id: UUID4 = Field(description="Lead identifier")
+    user_id: UUID4 = Field(description="User identifier")
+    internal_notes: str | None = Field(
+        None, description="Viewer-scoped notes for this registration"
+    )
+    expose_profile: bool = Field(
+        False, description="Whether the viewer exposes their profile to participants"
+    )
+    created_at: datetime = Field(description="When the registration was created")
+    updated_at: datetime = Field(description="When the registration was last updated")
+
+
+class LeadRegistrationUpdate(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
+
+    internal_notes: str | None = Field(
+        None, description="Viewer-scoped notes for this registration"
+    )
+    expose_profile: bool | None = Field(
+        None, description="Whether the viewer exposes their profile to participants"
+    )
+
+    @model_validator(mode="after")
+    def clean_internal_notes(self) -> "LeadRegistrationUpdate":
+        if "internal_notes" in self.model_fields_set:
+            self.internal_notes = _clean_optional_wrapped_text(self.internal_notes)
+        return self
+
+
+class LeadRead(BaseRead, BaseLeadShared):
+    url: str = Field(description="Job posting URL")
+    canonical_url: str = Field(description="Canonical lead URL used for deduplication")
     companies: list[CompanyRead] = Field(
-        [], description="List of companies associated with the lead"
+        default_factory=list,
+        description="List of companies associated with the lead",
+    )
+    interest_count: int = Field(
+        0, description="How many viewers are currently registered on the lead"
+    )
+    comment_count: int = Field(
+        0, description="How many comments and replies exist for the lead"
+    )
+    viewer_is_registered: bool = Field(
+        False, description="Whether the current viewer is registered on the lead"
+    )
+    viewer_permissions: LeadViewerPermissionsRead = Field(
+        default_factory=LeadViewerPermissionsRead,
+        description="Current-viewer permissions for this lead",
+    )
+
+
+class LeadDetailRead(LeadRead):
+    viewer_registration: LeadRegistrationRead | None = Field(
+        None, description="The current viewer's lead registration, if present"
+    )
+    participant_summaries: list[LeadParticipantSummaryRead] = Field(
+        default_factory=list,
+        description="Registered participants who opted to expose their profile",
     )
 
 
@@ -394,22 +522,92 @@ class LeadsPaginatedRead(BaseSchema):
     )
 
 
-class LeadCreate(BaseLead):
+class LeadCreate(BaseLeadShared):
+    model_config = ConfigDict(extra="forbid")
+
     url: str
     company_ids: list[UUID4] | None = Field(None, description="Company IDs")
 
+    @validator("url")
+    def validate_url(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Lead URL is required")
+        utils.canonicalize_lead_url(cleaned)
+        return cleaned
+
     @model_validator(mode="after")
-    def clean_and_wrap_text_fields(self) -> Any:
-        for field in self.model_fields_set:
-            v = getattr(self, field)
-            if isinstance(v, str):
-                cleaned_value = utils.clean_text(v)
-                setattr(self, field, utils.wrap_text(cleaned_value))
-        return self
+    def clean_and_wrap_text_fields(self) -> "LeadCreate":
+        return _normalize_lead_text_fields(self)
 
 
-class LeadUpdate(BaseLead):
-    company_ids: list[UUID4] = Field([], description="Company IDs")
+class LeadSharedUpdate(BaseLeadShared):
+    model_config = ConfigDict(extra="forbid")
+
+    company_ids: list[UUID4] | None = Field(None, description="Company IDs")
+
+    @model_validator(mode="after")
+    def clean_and_wrap_text_fields(self) -> "LeadSharedUpdate":
+        return _normalize_lead_text_fields(self)
+
+
+class LeadUpdate(LeadSharedUpdate):
+    pass
+
+
+class LeadCommentRead(BaseRead):
+    lead_id: UUID4 = Field(description="Lead identifier")
+    parent_comment_id: UUID4 | None = Field(
+        None, description="Parent comment identifier for replies"
+    )
+    content: str = Field(description="Comment content")
+    anonymous: bool = Field(
+        True, description="Whether the comment hides the author's public profile"
+    )
+    author_public_profile: LeadParticipantPublicProfileRead | None = Field(
+        None,
+        description="The author's public profile, when the comment is non-anonymous",
+    )
+    replies: list["LeadCommentRead"] = Field(
+        default_factory=list,
+        description="Replies to this top-level comment",
+    )
+
+
+class LeadCommentCreate(BaseSchema):
+    model_config = ConfigDict(extra="forbid")
+
+    content: str = Field(description="Comment content")
+    anonymous: bool = Field(
+        True, description="Whether the comment hides the author's public profile"
+    )
+
+    @validator("content")
+    def clean_content(cls, value: str) -> str:
+        cleaned = _clean_optional_wrapped_text(value)
+        if not cleaned:
+            raise ValueError("Comment content cannot be empty")
+        return cleaned
+
+
+class LeadExtractDisposition(str, Enum):
+    CREATED = "created"
+    MATCHED_EXISTING_JOINED = "matched_existing_joined"
+    MATCHED_EXISTING_ALREADY_REGISTERED = "matched_existing_already_registered"
+
+
+class LeadExtractResponse(BaseSchema):
+    lead: LeadRead = Field(description="The resulting lead record")
+    disposition: LeadExtractDisposition = Field(
+        description="Whether extraction created a lead or matched an existing one"
+    )
+    submitted_url: str = Field(description="The URL submitted for extraction")
+    normalized_url: str = Field(
+        description="The canonicalized URL used for deduplication"
+    )
+
+
+LeadCommentRead.model_rebuild()
 
 
 class BaseContact(BaseSchema):

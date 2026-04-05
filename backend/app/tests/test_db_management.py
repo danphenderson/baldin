@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from app import models
 from app.core import conf
-from app.core.db import async_engine, create_db_and_tables, session_context
+from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
 from app.main import app
 from app.tests import utils
 
@@ -47,9 +47,8 @@ async def _ensure_db_ready() -> None:
     if _db_ready:
         return
     await async_engine.dispose()
-    if not getattr(app.state, "bootstrap_completed", False):
-        await create_db_and_tables()
-        app.state.bootstrap_completed = True
+    await drop_and_create_db_and_tables()
+    app.state.bootstrap_completed = True
     _db_ready = True
 
 
@@ -72,7 +71,8 @@ def _expected_deleted_records() -> dict[str, int]:
     return {
         "orchestration_events": 1,
         "extractor_examples": 1,
-        "leads_x_users": 1,
+        "lead_registrations": 1,
+        "lead_comments": 1,
         "resumes_x_applications": 1,
         "cover_letters_x_applications": 1,
         "applications": 1,
@@ -96,8 +96,11 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
         user.last_name = "User"
         user.city = "Novigrad"
 
+        lead_url = f"https://example.com/jobs/{utils.random_lower_string(12)}"
+
         lead = models.Lead(
-            url=f"https://example.com/jobs/{utils.random_lower_string(12)}",
+            url=lead_url,
+            canonical_url=utils.app_utils.canonicalize_lead_url(lead_url),
             title="Target Lead",
         )
         skill = models.Skill(name="Python", category="backend", user_id=user_id)
@@ -144,6 +147,12 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
             user_id=user_id,
         )
         application = models.Application(status="submitted", lead=lead, user_id=user_id)
+        lead_comment = models.LeadComment(
+            lead=lead,
+            author=user,
+            content="Target comment",
+            anonymous=True,
+        )
         extractor = models.Extractor(
             name=f"extractor-{utils.random_lower_string(6)}",
             description="Test extractor",
@@ -155,11 +164,12 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
             definition={"step": "test"},
             user_id=user_id,
         )
-        lead.users.append(user)
+        lead.registrations.append(models.LeadRegistration(user=user))
 
         session.add_all(
             [
                 lead,
+                lead_comment,
                 skill,
                 experience,
                 education,
@@ -335,13 +345,13 @@ async def test_db_management_purges_user_data_without_deleting_user() -> None:
             is None
         )
         assert await session.get(models.Lead, target_data["lead_id"]) is not None
-        lead_link = await session.execute(
-            select(models.LeadXUser).where(
-                models.LeadXUser.lead_id == target_data["lead_id"],
-                models.LeadXUser.user_id == target_user_id,
+        lead_registration = await session.execute(
+            select(models.LeadRegistration).where(
+                models.LeadRegistration.lead_id == target_data["lead_id"],
+                models.LeadRegistration.user_id == target_user_id,
             )
         )
-        assert lead_link.scalar_one_or_none() is None
+        assert lead_registration.scalar_one_or_none() is None
         resume_link = await session.execute(
             select(models.ResumeXApplication).where(
                 models.ResumeXApplication.application_id
@@ -419,13 +429,13 @@ async def test_db_management_deletes_user_and_owned_data() -> None:
             is None
         )
         assert await session.get(models.Lead, target_data["lead_id"]) is not None
-        lead_link = await session.execute(
-            select(models.LeadXUser).where(
-                models.LeadXUser.lead_id == target_data["lead_id"],
-                models.LeadXUser.user_id == target_user_id,
+        lead_registration = await session.execute(
+            select(models.LeadRegistration).where(
+                models.LeadRegistration.lead_id == target_data["lead_id"],
+                models.LeadRegistration.user_id == target_user_id,
             )
         )
-        assert lead_link.scalar_one_or_none() is None
+        assert lead_registration.scalar_one_or_none() is None
         assert await session.get(models.Skill, other_skill_id) is not None
 
 

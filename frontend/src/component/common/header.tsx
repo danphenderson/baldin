@@ -15,7 +15,7 @@ import { logout as logoutApi } from '../../service/auth';
 const menuItems = [
   { text: 'Leads', path: '/leads' },
   { text: 'Applications', path: '/applications' },
-  { text: 'Data Orchestration', path: '/data-orchestration' },
+  { text: 'Workflows', path: '/workflows' },
   { text: 'Extractors', path: '/extractor' },
 ];
 

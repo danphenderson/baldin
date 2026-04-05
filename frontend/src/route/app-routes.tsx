@@ -28,6 +28,7 @@ const AppRoutes: React.FC = () => {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/workflows" element={<PipelinesPage />} />
           <Route path="/pipelines" element={<Navigate to="/workflows" replace />} />
+          <Route path="/data-orchestration" element={<Navigate to="/workflows" replace />} />
           <Route path="/companies" element={<CompaniesPage />} />
           <Route path="*" element={<ErrorPage />} />
         </Route>

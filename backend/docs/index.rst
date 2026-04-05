@@ -31,6 +31,8 @@ When the local stack is running, the primary entry points are:
 * ReDoc: ``http://localhost:8004/redoc``
 * Admin: ``http://localhost:8004/admin`` using the bootstrapped ``FIRST_SUPERUSER_EMAIL`` and ``FIRST_SUPERUSER_PASSWORD`` credentials
 
+The admin UI uses an email-based browser session scoped to ``/admin``.
+
 API Reference
 -------------
 

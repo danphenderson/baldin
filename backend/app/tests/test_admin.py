@@ -66,6 +66,18 @@ async def test_admin_redirects_anonymous_users_to_login() -> None:
     assert "/admin/login" in response.headers["location"]
 
 
+async def test_admin_login_page_uses_email_focused_copy() -> None:
+    await _ensure_db_ready()
+
+    async with _client() as client:
+        response = await client.get("/admin/login")
+
+    assert response.status_code == 200
+    assert "Admin sign in" in response.text
+    assert "Email" in response.text
+    assert "Remember me" not in response.text
+
+
 async def test_admin_allows_bootstrapped_style_superuser_login() -> None:
     await _ensure_db_ready()
     email, _ = await _create_user("admin-pass", is_superuser=True)
@@ -123,3 +135,23 @@ async def test_admin_user_view_is_read_only() -> None:
     assert login_response.status_code == 303
     assert create_response.status_code == 403
     assert edit_response.status_code == 403
+
+
+async def test_admin_user_api_exposes_only_curated_fields() -> None:
+    await _ensure_db_ready()
+    email, _ = await _create_user("curated-pass", is_superuser=True)
+
+    async with _client() as client:
+        login_response = await _login_admin(client, email, "curated-pass")
+        response = await client.get("/admin/api/user")
+
+    assert login_response.status_code == 303
+    assert response.status_code == 200
+
+    first_item = response.json()["items"][0]
+    assert "hashed_password" not in first_item
+    assert "phone_number" not in first_item
+    assert "address_line_1" not in first_item
+    assert "applications" not in first_item
+    assert "contacts" not in first_item
+    assert "skills" not in first_item

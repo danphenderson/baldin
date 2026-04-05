@@ -1,9 +1,11 @@
 import uuid
+from pathlib import Path
 
 from fastapi import Request
+from pydantic import EmailStr, TypeAdapter, ValidationError
 from starlette.middleware import Middleware
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import Response
+from starlette.responses import RedirectResponse, Response
 from starlette_admin.auth import AdminConfig, AdminUser, AuthProvider
 from starlette_admin.contrib.sqla import Admin
 from starlette_admin.contrib.sqla.ext.pydantic import ModelView
@@ -15,19 +17,30 @@ from app.core import conf
 from app.core.db import async_engine
 from app.core.security import authenticate_superuser_credentials
 
+ADMIN_TEMPLATES_DIR = Path(__file__).with_name("admin_templates")
 ADMIN_SESSION_KEY = "admin_user_id"
 ADMIN_SESSION_COOKIE = "baldin_admin_session"
-ADMIN_SESSION_MAX_AGE = conf.settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+ADMIN_SESSION_MAX_AGE = 12 * 60 * 60
+ADMIN_EMAIL_ADAPTER = TypeAdapter(EmailStr)
 
 
 class UserAdminView(ModelView):
-    exclude_fields_from_list = ["hashed_password"]
-    exclude_fields_from_detail = ["hashed_password"]
-    exclude_fields_from_create = ["hashed_password"]
-    exclude_fields_from_edit = ["hashed_password"]
+    fields = [
+        "id",
+        "email",
+        "first_name",
+        "last_name",
+        "is_active",
+        "is_superuser",
+        "is_verified",
+        "created_at",
+        "updated_at",
+    ]
     searchable_fields = ["email", "first_name", "last_name"]
     sortable_fields = [
         "email",
+        "first_name",
+        "last_name",
         "created_at",
         "updated_at",
         "is_active",
@@ -37,16 +50,11 @@ class UserAdminView(ModelView):
     export_fields = [
         "id",
         "email",
+        "first_name",
+        "last_name",
         "is_active",
         "is_superuser",
         "is_verified",
-        "first_name",
-        "last_name",
-        "phone_number",
-        "city",
-        "state",
-        "country",
-        "time_zone",
         "created_at",
         "updated_at",
     ]
@@ -62,6 +70,55 @@ class UserAdminView(ModelView):
 
 
 class AdminAuthProvider(AuthProvider):
+    async def render_login(self, request: Request, admin: Admin) -> Response:
+        entered_username = ""
+        if request.method == "GET":
+            return admin.templates.TemplateResponse(
+                request=request,
+                name="login.html",
+                context={
+                    "_is_login_path": True,
+                    "entered_username": entered_username,
+                },
+            )
+
+        form = await request.form()
+        entered_username = str(form.get("username") or "").strip()
+        try:
+            return await self.login(
+                entered_username,
+                str(form.get("password") or ""),
+                False,
+                request,
+                RedirectResponse(
+                    request.query_params.get("next")
+                    or request.url_for(admin.route_name + ":index"),
+                    status_code=303,
+                ),
+            )
+        except FormValidationError as errors:
+            return admin.templates.TemplateResponse(
+                request=request,
+                name="login.html",
+                context={
+                    "form_errors": errors,
+                    "_is_login_path": True,
+                    "entered_username": entered_username,
+                },
+                status_code=422,
+            )
+        except LoginFailed as error:
+            return admin.templates.TemplateResponse(
+                request=request,
+                name="login.html",
+                context={
+                    "error": error.msg,
+                    "_is_login_path": True,
+                    "entered_username": entered_username,
+                },
+                status_code=400,
+            )
+
     async def is_authenticated(self, request: Request) -> bool:
         user_id = request.session.get(ADMIN_SESSION_KEY)
         if user_id is None:
@@ -109,25 +166,27 @@ class AdminAuthProvider(AuthProvider):
         request: Request,
         response: Response,
     ) -> Response:
+        del remember_me
         errors = {}
-        if not username:
+        normalized_email = username.strip().lower()
+        if not normalized_email:
             errors["username"] = "Email is required"
+        else:
+            try:
+                normalized_email = ADMIN_EMAIL_ADAPTER.validate_python(normalized_email)
+            except ValidationError:
+                errors["username"] = "Valid email is required"
         if not password:
             errors["password"] = "Password is required"
         if errors:
             raise FormValidationError(errors)
 
-        user = await authenticate_superuser_credentials(username, password)
+        user = await authenticate_superuser_credentials(normalized_email, password)
         if user is None:
             raise LoginFailed("Invalid admin email or password.")
 
         request.session.clear()
-        request.session.update(
-            {
-                ADMIN_SESSION_KEY: str(user.id),
-                "remember_me": bool(remember_me),
-            }
-        )
+        request.session[ADMIN_SESSION_KEY] = str(user.id)
         request.state.user = user
         return response
 
@@ -136,6 +195,7 @@ admin = Admin(
     async_engine,
     title="Baldin Admin Interface",
     auth_provider=AdminAuthProvider(),
+    templates_dir=str(ADMIN_TEMPLATES_DIR),
     middlewares=[
         Middleware(
             SessionMiddleware,
@@ -143,7 +203,7 @@ admin = Admin(
             session_cookie=ADMIN_SESSION_COOKIE,
             max_age=ADMIN_SESSION_MAX_AGE,
             path="/admin",
-            same_site="lax",
+            same_site="strict",
             https_only=conf.settings.ENVIRONMENT in {"STAGE", "PROD"},
         )
     ],
@@ -172,7 +232,6 @@ admin.add_view(
 admin.add_view(ModelView(models.Certificate, pydantic_model=schemas.CertificateCreate))
 admin.add_view(ModelView(models.Contact, pydantic_model=schemas.ContactCreate))
 
-# DropDown
 admin.add_view(
     DropDown(
         "Useful Links",

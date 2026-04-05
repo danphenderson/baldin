@@ -48,6 +48,7 @@ docker-compose up --build
    - Admin: [http://localhost:8004/admin](http://localhost:8004/admin) using the bootstrapped superuser email and password from `FIRST_SUPERUSER_EMAIL` and `FIRST_SUPERUSER_PASSWORD`
 
 The backend starts in `DEV` mode, creates tables automatically, and bootstraps the default superuser from `backend/.env`.
+The admin UI uses its own browser session under `/admin` and expects email-based sign-in.
 
 ## Architecture
 

@@ -9,6 +9,7 @@ from app.api.routes import (
     companies,
     contacts,
     cover_letters,
+    crawlers,
     data_orchestration,
     db_management,
     education,
@@ -109,4 +110,9 @@ api_router.include_router(
     extractor.router,
     prefix="/extractor",
     tags=["extractor"],
+)
+api_router.include_router(
+    crawlers.router,
+    prefix="/crawlers",
+    tags=["crawlers"],
 )

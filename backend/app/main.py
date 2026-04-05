@@ -4,6 +4,7 @@
 Main FastAPI app instance declaration and admin interface setup.
 """
 
+import asyncio
 import logging
 import tracemalloc
 from time import time
@@ -78,6 +79,10 @@ async def startup_event():
     tracemalloc.start()
     await create_db_and_tables()
     await create_default_superuser()
+    if conf.settings.ENVIRONMENT != "PYTEST":
+        from app.crawler_scheduler import start_crawler_scheduler
+
+        asyncio.create_task(start_crawler_scheduler())
 
 
 @app.on_event("shutdown")

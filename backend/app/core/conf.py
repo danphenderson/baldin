@@ -73,6 +73,15 @@ class Settings(_BaseSettings):
     FIRST_SUPERUSER_EMAIL: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
 
+    # CRAWLER QUEUE SETTINGS
+    # Optional Redis URL. When absent the crawler falls back to inline execution.
+    REDIS_URL: str | None = None
+    # Name of the Redis list used as the crawler job queue.
+    CRAWLER_QUEUE_NAME: str = "crawler_jobs"
+    # Execution mode: "inline" runs crawls in the API process;
+    # "worker" enqueues jobs to Redis for the crawler-worker service.
+    CRAWLER_EXECUTION_MODE: Literal["inline", "worker"] = "inline"
+
     # VALIDATORS
     @validator("BACKEND_CORS_ORIGINS")
     def _assemble_cors_origins(cls, cors_origins: Union[str, list[AnyHttpUrl]]):

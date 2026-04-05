@@ -604,3 +604,116 @@ def model_to_dict(model_instance):
     elif isinstance(model_instance, list):
         return [model_to_dict(item) for item in model_instance]
     return model_instance
+
+
+# ---------------------------------------------------------------------------
+# Crawler execution
+# ---------------------------------------------------------------------------
+
+
+async def _get_or_create_crawler_pipeline(
+    run: models.CrawlerRun,
+    db: AsyncSession,
+) -> models.OrchestrationPipeline:
+    """Return (or lazily create) a pipeline associated with this crawler run's URL."""
+    pipeline_name = f"crawler:{run.url}"
+    result = await db.execute(
+        select(models.OrchestrationPipeline).where(
+            models.OrchestrationPipeline.name == pipeline_name,
+            models.OrchestrationPipeline.user_id == run.user_id,
+        )
+    )
+    pipeline = result.scalars().first()
+    if pipeline:
+        return pipeline
+
+    pipeline = models.OrchestrationPipeline(
+        name=pipeline_name,
+        description=f"Crawler pipeline for {run.url}",
+        user_id=run.user_id,
+    )
+    db.add(pipeline)
+    await db.commit()
+    await db.refresh(pipeline)
+    run.pipeline_id = pipeline.id
+    await db.commit()
+    return pipeline
+
+
+async def execute_crawler_run(
+    run_id: UUID4,
+    user_id: UUID4,
+    db: AsyncSession,
+) -> None:
+    """Execute a crawler run end-to-end.
+
+    This is the single source of truth for crawler execution logic.
+    It is called both by the API (inline mode) and by the crawler-worker
+    (worker mode).  The function is idempotent with respect to terminal
+    runs: if the run is already in a success or failed state it logs a
+    warning and returns immediately.
+    """
+    run = await db.get(models.CrawlerRun, run_id)
+    if run is None:
+        await log.warning(
+            f"execute_crawler_run: CrawlerRun {run_id} not found, skipping"
+        )
+        return
+
+    if run.status in (
+        schemas.CrawlerRunStatus.SUCCESS,
+        schemas.CrawlerRunStatus.FAILED,
+    ):
+        await log.warning(
+            f"execute_crawler_run: CrawlerRun {run_id} is already {run.status}, skipping"
+        )
+        return
+
+    run.status = schemas.CrawlerRunStatus.RUNNING
+    await db.commit()
+
+    pipeline = await _get_or_create_crawler_pipeline(run, db)
+
+    event = await create_orchestration_event(
+        schemas.OrchestrationEventCreate(
+            message=f"Starting crawler run for {run.url}",
+            payload={"url": run.url, "run_id": str(run_id)},
+            environment=conf.settings.ENVIRONMENT,
+            source_uri=schemas.URI(name=run.url, type=schemas.URIType.URL),
+            destination_uri=schemas.URI(
+                name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#crawler_runs",
+                type=schemas.URIType.DATABASE,
+            ),
+            status=schemas.OrchestrationEventStatusType.RUNNING,
+            pipeline_id=pipeline.id,
+        ),
+        db=db,
+    )
+
+    try:
+        text = await extract_text_from_url(run.url)
+        run.result = {"text": text[:4000]}
+        run.status = schemas.CrawlerRunStatus.SUCCESS
+        await update_orchestration_event(
+            event.id,
+            payload=schemas.OrchestrationEventUpdate(
+                message="Crawler run succeeded",
+                status=schemas.OrchestrationEventStatusType.SUCCESS,
+            ),
+            db=db,
+        )
+        await log.info(f"execute_crawler_run: CrawlerRun {run_id} succeeded")
+    except Exception as exc:
+        run.status = schemas.CrawlerRunStatus.FAILED
+        run.result = {"error": str(exc)}
+        await update_orchestration_event(
+            event.id,
+            payload=schemas.OrchestrationEventUpdate(
+                message=f"Crawler run failed: {exc}",
+                status=schemas.OrchestrationEventStatusType.FAILED,
+            ),
+            db=db,
+        )
+        await log.error(f"execute_crawler_run: CrawlerRun {run_id} failed: {exc}")
+    finally:
+        await db.commit()

@@ -60,6 +60,28 @@ class OrchestrationPipeline(Base):
     orchestration_events = relationship(
         "OrchestrationEvent", back_populates="orchestration_pipeline"
     )
+    crawler_runs = relationship("CrawlerRun", back_populates="pipeline")
+
+
+# Crawler models
+
+
+class CrawlerRun(Base):
+    """
+    Represents a single crawler execution run.
+    Tracks the target URL, run status, result payload, and linkage to an
+    orchestration pipeline for event history.
+    Statuses: pending -> running -> success | failed
+    """
+
+    __tablename__ = "crawler_runs"
+    url = Column(String, nullable=False)
+    status = Column(String, default="pending", nullable=False)
+    result = Column(JSON)
+    user_id = Column(UUID, ForeignKey("users.id"))
+    pipeline_id = Column(UUID, ForeignKey("orchestration_pipelines.id"), nullable=True)
+    user = relationship("User", back_populates="crawler_runs")
+    pipeline = relationship("OrchestrationPipeline", back_populates="crawler_runs")
 
 
 # Extractor models
@@ -352,3 +374,4 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     orchestration_pipelines = relationship(
         "OrchestrationPipeline", back_populates="user"
     )
+    crawler_runs = relationship("CrawlerRun", back_populates="user")

@@ -24,6 +24,8 @@ import { UserContext } from '../context/user-context';
 import { logout as logoutApi } from '../service/auth';
 import { useThemeMode } from '../theme/theme-provider';
 import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-header-context';
+import SecondaryNavBar from '../component/common/secondary-nav-bar';
+import { getSecondaryNavItems } from '../route/navigation';
 
 const DRAWER_WIDTH = 260;
 const DRAWER_COLLAPSED = 72;
@@ -56,6 +58,7 @@ const AppLayout: React.FC = () => {
   const drawerWidth = collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH;
   const textTransition = 'opacity 0.2s ease, max-width 0.2s ease';
   const accountRailWidth = isCompactToolbar ? 184 : 270;
+  const secondaryNavItems = getSecondaryNavItems(location.pathname);
 
   const closeAccountDial = () => setIsAccountDialOpen(false);
 
@@ -517,6 +520,8 @@ const AppLayout: React.FC = () => {
             </ClickAwayListener>
           </Toolbar>
         </AppBar>
+
+        {secondaryNavItems && <SecondaryNavBar items={secondaryNavItems} />}
 
         {/* Page content */}
         <Box

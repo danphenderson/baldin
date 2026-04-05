@@ -10,7 +10,6 @@ import {
   WorkOutline as LeadsIcon,
   Assignment as ApplicationsIcon,
   Person as ProfileIcon,
-  Description as DocumentsIcon,
   Hub as PipelinesIcon,
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
@@ -18,27 +17,25 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   AutoAwesome as AutoAwesomeIcon,
-  Business as CompaniesIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import { logout as logoutApi } from '../service/auth';
 import { useThemeMode } from '../theme/theme-provider';
 import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-header-context';
 import SecondaryNavBar from '../component/common/secondary-nav-bar';
-import { getSecondaryNavItems, legacyRedirects } from '../route/navigation';
+import { getSecondaryNavItems, drawerSections } from '../route/navigation';
 
 const DRAWER_WIDTH = 260;
 const DRAWER_COLLAPSED = 72;
 
-const navItems = [
-  { label: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-  { label: 'Leads', icon: <LeadsIcon />, path: '/leads' },
-  { label: 'Applications', icon: <ApplicationsIcon />, path: '/applications' },
-  { label: 'Documents', icon: <DocumentsIcon />, path: '/documents' },
-  { label: 'Companies', icon: <CompaniesIcon />, path: '/companies' },
-  { label: 'Profile', icon: <ProfileIcon />, path: '/profile' },
-  { label: 'Workflows', icon: <PipelinesIcon />, path: '/workflows' },
-];
+/** Maps canonical drawer-item paths to their icons. */
+const drawerIcons: Record<string, React.ReactNode> = {
+  '/': <DashboardIcon />,
+  '/leads': <LeadsIcon />,
+  '/applications': <ApplicationsIcon />,
+  '/me': <ProfileIcon />,
+  '/workflows': <PipelinesIcon />,
+};
 
 const HEADER_ACTION_DIAL_ID = 'header-account-actions';
 const HEADER_ACTION_STAGGER_MS = 70;
@@ -274,66 +271,94 @@ const AppLayout: React.FC = () => {
 
         {/* Nav Items */}
         <List component="nav" aria-label="Main navigation" sx={{ px: 1, py: 1.5, flexGrow: 1 }}>
-          {navItems.map((item) => {
-            const resolved = legacyRedirects[item.path] ?? item.path;
-            const isActive = resolved === '/'
-              ? location.pathname === '/'
-              : location.pathname === resolved || location.pathname.startsWith(`${resolved}/`);
-            return (
-              <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
-                <Tooltip title={item.label} placement="right" disableHoverListener={!collapsed}>
-                  <ListItemButton
-                    onClick={() => navigate(item.path)}
-                    sx={{
-                      borderRadius: 2,
-                      minHeight: 44,
-                      px: collapsed ? 1.75 : 2,
-                      justifyContent: collapsed ? 'center' : 'flex-start',
-                      ...(isActive && {
-                        background: alpha(theme.palette.primary.main, 0.12),
-                        borderLeft: `3px solid ${theme.palette.primary.main}`,
-                        '&:hover': { background: alpha(theme.palette.primary.main, 0.18) },
-                      }),
-                      ...(!isActive && {
-                        '&:hover': { background: alpha(theme.palette.text.primary, 0.04) },
-                      }),
-                    }}
-                  >
-                    <ListItemIcon
+          {drawerSections.map((section) => (
+            <React.Fragment key={section.key}>
+              {section.label != null && (
+                collapsed ? (
+                  <Divider sx={{ my: 1, mx: 0.5, opacity: 0.3 }} />
+                ) : (
+                  <>
+                    <Divider sx={{ my: 0.75, opacity: 0.4 }} />
+                    <Typography
+                      variant="overline"
                       sx={{
-                        minWidth: collapsed ? 'auto' : 40,
-                        color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
-                        justifyContent: 'center',
+                        display: 'block',
+                        px: 2,
+                        pt: 1.5,
+                        pb: 0.5,
+                        color: 'text.secondary',
+                        fontSize: '0.6875rem',
+                        letterSpacing: '0.08em',
+                        lineHeight: 1,
                       }}
                     >
-                      {item.icon}
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={item.label}
-                      sx={{
-                        flex: collapsed ? '0 0 0' : '1 1 auto',
-                        opacity: collapsed ? 0 : 1,
-                        maxWidth: collapsed ? 0 : 160,
-                        overflow: 'hidden',
-                        whiteSpace: 'nowrap',
-                        transition: textTransition,
-                        '& .MuiTypography-root': {
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        },
-                      }}
-                      primaryTypographyProps={{
-                        fontSize: '0.875rem',
-                        fontWeight: isActive ? 600 : 400,
-                        color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
-                      }}
-                    />
-                  </ListItemButton>
-                </Tooltip>
-              </ListItem>
-            );
-          })}
+                      {section.label}
+                    </Typography>
+                  </>
+                )
+              )}
+
+              {section.items.map((item) => {
+                const isActive = item.path === '/'
+                  ? location.pathname === '/'
+                  : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+                return (
+                  <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
+                    <Tooltip title={item.label} placement="right" disableHoverListener={!collapsed}>
+                      <ListItemButton
+                        onClick={() => navigate(item.path)}
+                        sx={{
+                          borderRadius: 2,
+                          minHeight: 44,
+                          px: collapsed ? 1.75 : 2,
+                          justifyContent: collapsed ? 'center' : 'flex-start',
+                          ...(isActive && {
+                            background: alpha(theme.palette.primary.main, 0.12),
+                            borderLeft: `3px solid ${theme.palette.primary.main}`,
+                            '&:hover': { background: alpha(theme.palette.primary.main, 0.18) },
+                          }),
+                          ...(!isActive && {
+                            '&:hover': { background: alpha(theme.palette.text.primary, 0.04) },
+                          }),
+                        }}
+                      >
+                        <ListItemIcon
+                          sx={{
+                            minWidth: collapsed ? 'auto' : 40,
+                            color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {drawerIcons[item.path]}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={item.label}
+                          sx={{
+                            flex: collapsed ? '0 0 0' : '1 1 auto',
+                            opacity: collapsed ? 0 : 1,
+                            maxWidth: collapsed ? 0 : 160,
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                            transition: textTransition,
+                            '& .MuiTypography-root': {
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            },
+                          }}
+                          primaryTypographyProps={{
+                            fontSize: '0.875rem',
+                            fontWeight: isActive ? 600 : 400,
+                            color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                          }}
+                        />
+                      </ListItemButton>
+                    </Tooltip>
+                  </ListItem>
+                );
+              })}
+            </React.Fragment>
+          ))}
         </List>
       </Drawer>
 

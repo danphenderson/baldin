@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { DataGrid, GridColDef  } from '@mui/x-data-grid';
-import { Stack, Typography, Button, Box, Snackbar, Alert, CircularProgress, Drawer } from '@mui/material';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { Stack, Typography, Button, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { UserContext } from '../context/user-context';
+import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 
 import { ExtractorRead, getExtractors } from '../service/extractor';
 
-// Importing in another component
 import ExtractRunModal from '../component/extractor-modal';
 import { ExtractorCreateModal, ExampleCreateModal } from '../component/extractor-modal';
 import RichJsonDisplay from '../component/common/json-modal';
@@ -17,15 +17,12 @@ const ExtractorPage: React.FC = () => {
   const [extractorCreateModalOpen, setCreateExtractorOpen] = useState(false);
   const [extractors, setExtractors] = useState<ExtractorRead[]>([]);
   const [selectedExtractor, setSelectedExtractor] = useState<ExtractorRead | null>(null);
-  // State that requires a selectedExtractor
   const [extractRunnerOpen, setExtractRunnerOpen] = useState(false);
   const [createExtractorExampleOpen, setCreateExtractorExampleOpen] = useState(false);
-  const [extractorExampleDisplayOpen, setExtractorExampleDisplayOpen] = useState(false);
-  const toggleExtractorExampleDisplay = () => setExtractorExampleDisplayOpen(!extractorExampleDisplayOpen);
-  const [extractorJsonSchemaDisplayOpen, setExtractorJsonSchemaDisplayOpen] = useState(false);
-  const toggleExtractorJsonSchemaDisplay = () => setExtractorJsonSchemaDisplayOpen(!extractorJsonSchemaDisplayOpen);
 
-  const fetchExtractors = async () => {
+  usePageToolbarHeader('Extractors', `${extractors.length} configured`);
+
+  const fetchExtractors = useCallback(async () => {
     setLoading(true);
     try {
       if (!token) {
@@ -39,16 +36,16 @@ const ExtractorPage: React.FC = () => {
         return;
       }
       setExtractors(data);
-    } catch (error) {
-      console.error('Failed to fetch extractors:', error);
-      setError(typeof error === 'string' ? error : 'Failed to load extractors');
+    } catch (err) {
+      console.error('Failed to fetch extractors:', err);
+      setError(typeof err === 'string' ? err : 'Failed to load extractors');
     }
     setLoading(false);
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchExtractors();
-  }, []);
+  }, [fetchExtractors]);
 
   const columns: GridColDef[] = [
     { field: 'name', headerName: 'Name', width: 200 },
@@ -57,15 +54,14 @@ const ExtractorPage: React.FC = () => {
   ];
 
   return (
-    <Stack spacing={2}>
-      <Typography variant="h4">Extractor Management</Typography>
+    <Stack spacing={3}>
       {loading ? (
         <>
-          <CircularProgress/>
+          <CircularProgress />
           <Typography variant="body1">Loading extractors...</Typography>
         </>
       ) : (
-        <Stack spacing={2} sx={{ mt: 2 }}>
+        <Stack spacing={2}>
           <Button variant="contained" color="primary" onClick={() => setCreateExtractorOpen(true)}>Create Extractor</Button>
           {extractorCreateModalOpen && (
             <ExtractorCreateModal
@@ -81,19 +77,18 @@ const ExtractorPage: React.FC = () => {
             autoHeight
             checkboxSelection
           />
-          {/* TODO: rows are selectable, but do not allow edits in the table */}
           {selectedExtractor && (
             <Stack spacing={2}>
 
-            {/* Run Extractor */}
-             <Stack spacing={2}>
-              <Button variant="contained" color="primary" onClick={() => setExtractRunnerOpen(true)}>Run Extractor</Button>
-              <ExtractRunModal
-                open={extractRunnerOpen}
-                onClose={() => setExtractRunnerOpen(false)}
-                extractorId={selectedExtractor.id}
-                onSave={() => console.log('Run extractor')}
-              />
+              {/* Run Extractor */}
+              <Stack spacing={2}>
+                <Button variant="contained" color="primary" onClick={() => setExtractRunnerOpen(true)}>Run Extractor</Button>
+                <ExtractRunModal
+                  open={extractRunnerOpen}
+                  onClose={() => setExtractRunnerOpen(false)}
+                  extractorId={selectedExtractor.id}
+                  onSave={() => console.log('Run extractor')}
+                />
               </Stack>
 
               {/* Selected Extractor Details */}
@@ -112,15 +107,15 @@ const ExtractorPage: React.FC = () => {
               {/* Create Example */}
               <Stack spacing={2}>
                 <Button variant="contained" color="primary" onClick={() => setCreateExtractorExampleOpen(true)}>Create Example</Button>
-                  <ExampleCreateModal
-                    open={createExtractorExampleOpen}
-                    extractorId={selectedExtractor.id}
-                    onClose={() => setCreateExtractorExampleOpen(false)}
-                    onSave={() => {
-                      fetchExtractors(); // Or any other logic you intended to run after saving
-                      setCreateExtractorExampleOpen(false); // Ensure the modal is closed here as well
-                    }}
-                  />
+                <ExampleCreateModal
+                  open={createExtractorExampleOpen}
+                  extractorId={selectedExtractor.id}
+                  onClose={() => setCreateExtractorExampleOpen(false)}
+                  onSave={() => {
+                    fetchExtractors();
+                    setCreateExtractorExampleOpen(false);
+                  }}
+                />
               </Stack>
 
               {/* Display Json Schema */}
@@ -133,13 +128,11 @@ const ExtractorPage: React.FC = () => {
         </Stack>
       )}
 
-      {error && (
-        <Snackbar open autoHideDuration={6000}>
-          <Alert severity="error">{error}</Alert>
-        </Snackbar>
-      )}
+      <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)}>
+        <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>
+      </Snackbar>
     </Stack>
   );
-}
+};
 
 export default ExtractorPage;

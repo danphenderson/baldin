@@ -1,9 +1,12 @@
 /**
  * Single source of truth for shell navigation metadata.
  *
- * Drawer groups, secondary-nav items per route group, and legacy redirect
+ * Drawer sections, secondary-nav items per route group, and legacy redirect
  * mappings are all derived from this module so the drawer, SecondaryNavBar,
- * and future redirect routes cannot drift.
+ * and redirect routes cannot drift.
+ *
+ * IMPORTANT: Drawer items must use canonical paths only. If a path appears as
+ * a key in `legacyRedirects`, it is a stale alias — not a valid drawer target.
  */
 
 // ---------------------------------------------------------------------------
@@ -55,7 +58,56 @@ export function getSecondaryNavItems(pathname: string): SecondaryNavItem[] | nul
 }
 
 // ---------------------------------------------------------------------------
-// Legacy redirects (consumed by app-routes.tsx in a later phase)
+// Drawer sections (consumed by AppLayout)
+// ---------------------------------------------------------------------------
+
+export interface DrawerItem {
+  label: string;
+  /** Canonical route path — must NOT appear in legacyRedirects keys. */
+  path: string;
+}
+
+export interface DrawerSection {
+  key: string;
+  /** Visible section label when the drawer is expanded. `null` = unlabelled. */
+  label: string | null;
+  items: DrawerItem[];
+}
+
+export const drawerSections: DrawerSection[] = [
+  {
+    key: 'top',
+    label: null,
+    items: [
+      { label: 'Dashboard', path: '/' },
+    ],
+  },
+  {
+    key: 'pursue',
+    label: 'Pursue',
+    items: [
+      { label: 'Leads', path: '/leads' },
+      { label: 'Applications', path: '/applications' },
+    ],
+  },
+  {
+    key: 'identity',
+    label: 'Identity',
+    items: [
+      { label: 'Profile', path: '/me' },
+    ],
+  },
+  {
+    key: 'automate',
+    label: 'Automate',
+    items: [
+      { label: 'Workflows', path: '/workflows' },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Legacy redirects (consumed by app-routes.tsx)
 // ---------------------------------------------------------------------------
 
 export const legacyRedirects: Record<string, string> = {

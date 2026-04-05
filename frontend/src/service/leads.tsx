@@ -9,9 +9,6 @@ export type LeadCreate = components['schemas']['LeadCreate'];
 export type Pagination = components['schemas']['Pagination'];
 export type LeadsPaginatedRead = components['schemas']['LeadsPaginatedRead'];
 
-// types that are exported from other services
-type OrchestrationEventRead = components['schemas']['OrchestrationEventRead-Output'];
-
 const BASE_URL = `${API_URL}/leads`;
 
 
@@ -95,11 +92,6 @@ export const updateLead = async (token: string, id: string, lead: LeadUpdate): P
 export const deleteLead = async (token: string, id: string): Promise<void> => {
   const requestOptions = createRequestOptions(token, "DELETE");
   await fetchAPI(`${BASE_URL}/${id}`, requestOptions);
-};
-
-export const getLeadOrchestrationEvents = async (token: string, id: string): Promise<OrchestrationEventRead[]> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}/${id}/orchestration_events`, requestOptions);
 };
 
 export const seedLeads = async (token: string): Promise<void> => {

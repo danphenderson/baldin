@@ -562,3 +562,35 @@ class ApplicationCreate(BaseSchema):
 
 class ApplicationUpdate(BaseSchema):
     status: str
+
+
+# Crawler schemas
+
+
+class CrawlerRunStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failed"
+
+
+class BaseCrawlerRun(BaseSchema):
+    url: str = Field(..., description="Target URL to crawl")
+    status: CrawlerRunStatus = Field(
+        CrawlerRunStatus.PENDING, description="Current run status"
+    )
+    result: dict | None = Field(None, description="Crawl result payload")
+
+
+class CrawlerRunRead(BaseCrawlerRun, BaseRead):
+    user_id: UUID4
+    pipeline_id: UUID4 | None = None
+
+
+class CrawlerRunCreate(BaseSchema):
+    url: str = Field(..., description="Target URL to crawl")
+
+
+class CrawlerRunUpdate(BaseSchema):
+    status: CrawlerRunStatus | None = None
+    result: dict | None = None

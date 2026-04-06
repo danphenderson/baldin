@@ -50,15 +50,30 @@ The development stack is composed of the following services:
     [Swagger](http://localhost:8004/docs)
     [(Re)docs](http://localhost:8004/redocs)
 
+| Service          | Description                                                     |
+|------------------|-----------------------------------------------------------------|
+| `db`             | PostgreSQL 15 – primary application database                    |
+| `test_db`        | PostgreSQL 15 – isolated database used by pytest                |
+| `redis`          | Redis 7 – job queue for the crawler worker                      |
+| `web`            | FastAPI backend (API + admin)                                   |
+| `crawler-worker` | Dedicated process that consumes crawler jobs from Redis         |
+| `frontend`       | React frontend                                                  |
+
 
 ### Building and Running
 
 After cloning your forked version of the repository, spin up the development stack with the following steps:
 
-1. Use `backend/.env.example` to create `backend/.env` with a valid `OPEN_API_KEY`.
-**OPTIONAL**: Supply LinkedIn and Glassdoor credentials to accelerate job searching and
-application management.
+1. Copy `backend/.env.example` to `backend/.env` and supply a valid `OPENAI_API_KEY`.
+   **OPTIONAL**: Supply LinkedIn and Glassdoor credentials to accelerate job searching.
+   The `REDIS_URL`, `CRAWLER_QUEUE_NAME`, and `CRAWLER_EXECUTION_MODE` variables are
+   injected automatically by `docker-compose.yml` so you do **not** need to set them
+   manually when running the full stack.
 2. In the root of the repository, run `docker-compose up --build`.
+
+This starts all six services.  Crawler runs triggered via `POST /crawlers/runs` are
+immediately returned to the caller (the run row is created in Postgres) and the actual
+Playwright-based crawl is picked up and executed by the `crawler-worker` container.
 
 ### Contributing
 

@@ -179,3 +179,101 @@ async def test_export_zip_document_falls_back_to_content():
     zf = zipfile.ZipFile(BytesIO(body))
     assert "documents/Text Doc.pdf" in zf.namelist()
     assert zf.read("documents/Text Doc.pdf")[:5] == b"%PDF-"
+
+
+@pytest.mark.asyncio
+async def test_export_zip_uses_fallback_names_when_none():
+    uid = uuid4()
+    app = _fake_app(user_id=uid)
+    user = SimpleNamespace(id=uid)
+
+    resume = SimpleNamespace(name=None, content="resume text")
+    cover_letter = SimpleNamespace(name=None, content="cover letter text")
+    head_version = SimpleNamespace(source_file=None, content="doc text")
+    doc = SimpleNamespace(title=None, head_version=head_version)
+
+    db = _FakeSession([[resume], [cover_letter], [doc]])
+
+    response = await app_routes.export_application_materials(app=app, db=db, user=user)
+
+    body = b""
+    async for chunk in response.body_iterator:
+        if isinstance(chunk, str):
+            chunk = chunk.encode()
+        body += chunk
+
+    zf = zipfile.ZipFile(BytesIO(body))
+    names = zf.namelist()
+    assert "resumes/resume.pdf" in names
+    assert "cover_letters/cover_letter.pdf" in names
+    assert "documents/document.pdf" in names
+
+
+@pytest.mark.asyncio
+async def test_export_zip_document_source_file_value_error_falls_back():
+    """resolve_document_source_path raises ValueError → fall back to content."""
+    uid = uuid4()
+    app = _fake_app(user_id=uid)
+    user = SimpleNamespace(id=uid)
+
+    head_version = SimpleNamespace(
+        source_file="../../etc/passwd", content="safe content"
+    )
+    doc = SimpleNamespace(title="Bad Path Doc", head_version=head_version)
+
+    db = _FakeSession([[], [], [doc]])
+
+    with patch.object(
+        app_routes,
+        "resolve_document_source_path",
+        side_effect=ValueError("path outside uploads root"),
+    ):
+        response = await app_routes.export_application_materials(
+            app=app, db=db, user=user
+        )
+
+    body = b""
+    async for chunk in response.body_iterator:
+        if isinstance(chunk, str):
+            chunk = chunk.encode()
+        body += chunk
+
+    zf = zipfile.ZipFile(BytesIO(body))
+    assert "documents/Bad Path Doc.pdf" in zf.namelist()
+    assert zf.read("documents/Bad Path Doc.pdf")[:5] == b"%PDF-"
+
+
+@pytest.mark.asyncio
+async def test_export_zip_document_source_file_missing_falls_back(tmp_path):
+    """source_file is set but file does not exist → fall back to content."""
+    uid = uuid4()
+    app = _fake_app(user_id=uid)
+    user = SimpleNamespace(id=uid)
+
+    missing = tmp_path / "nonexistent.pdf"
+
+    head_version = SimpleNamespace(
+        source_file="uploads/missing.pdf", content="fallback content"
+    )
+    doc = SimpleNamespace(title="Missing File Doc", head_version=head_version)
+
+    db = _FakeSession([[], [], [doc]])
+
+    with patch.object(
+        app_routes,
+        "resolve_document_source_path",
+        return_value=missing,
+    ):
+        response = await app_routes.export_application_materials(
+            app=app, db=db, user=user
+        )
+
+    body = b""
+    async for chunk in response.body_iterator:
+        if isinstance(chunk, str):
+            chunk = chunk.encode()
+        body += chunk
+
+    zf = zipfile.ZipFile(BytesIO(body))
+    assert "documents/Missing File Doc.pdf" in zf.namelist()
+    assert zf.read("documents/Missing File Doc.pdf")[:5] == b"%PDF-"

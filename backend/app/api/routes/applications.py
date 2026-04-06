@@ -1,6 +1,7 @@
 # Path: app/api/routes/applications.py
 import json
 import zipfile
+from html import escape as html_escape
 from io import BytesIO
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -449,7 +450,7 @@ def _text_to_pdf(text: str) -> bytes:
         topMargin=72,
         bottomMargin=72,
     )
-    doc.build([Paragraph(text.replace("\n", "<br />"), _PDF_STYLE)])
+    doc.build([Paragraph(html_escape(text).replace("\n", "<br />"), _PDF_STYLE)])
     buf.seek(0)
     return buf.read()
 

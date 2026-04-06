@@ -11,6 +11,7 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy import delete, inspect, or_, select
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 from sqlalchemy.schema import CreateColumn
 from sqlalchemy.sql import text
 
@@ -51,6 +52,16 @@ def _build_engine_connect_args() -> dict[str, Any]:
     return {}
 
 
+def _build_async_engine_kwargs() -> dict[str, Any]:
+    kwargs: dict[str, Any] = {
+        "echo": False,
+        "connect_args": _build_engine_connect_args(),
+    }
+    if conf.settings.ENVIRONMENT == "PYTEST":
+        kwargs["poolclass"] = NullPool
+    return kwargs
+
+
 def _pytest_database_runtime_error() -> RuntimeError:
     return RuntimeError(
         "Unable to connect to the PYTEST database at "
@@ -60,11 +71,17 @@ def _pytest_database_runtime_error() -> RuntimeError:
     )
 
 
+async def _dispose_engine_and_raise_pytest_database_runtime_error(
+    exc: BaseException,
+) -> None:
+    await async_engine.dispose()
+    raise _pytest_database_runtime_error() from exc
+
+
 # Create an asynchronous engine for SQLAlchemy
 async_engine = create_async_engine(
     sqlalchemy_database_uri,
-    echo=False,
-    connect_args=_build_engine_connect_args(),
+    **_build_async_engine_kwargs(),
 )
 
 # Create an asynchronous session maker
@@ -152,17 +169,17 @@ async def create_db_and_tables() -> None:
             )
         else:
             await _create_schema()
+    except (asyncio.TimeoutError, asyncio.CancelledError) as exc:
+        if conf.settings.ENVIRONMENT == "PYTEST":
+            await _dispose_engine_and_raise_pytest_database_runtime_error(exc)
+        raise
     except (ConnectionError, OSError, socket.gaierror) as exc:
         if conf.settings.ENVIRONMENT == "PYTEST":
             raise _pytest_database_runtime_error() from exc
         raise
-    except TimeoutError as exc:
-        if conf.settings.ENVIRONMENT == "PYTEST":
-            raise _pytest_database_runtime_error() from exc
-        raise
 
 
-async def drop_and_create_db_and_tables():
+async def drop_and_create_db_and_tables() -> None:
     """
     Asynchronously drop the database and all defined tables, then recreate them.
 
@@ -189,11 +206,11 @@ async def drop_and_create_db_and_tables():
             )
         else:
             await _reset_schema()
-    except (ConnectionError, OSError, socket.gaierror) as exc:
+    except (asyncio.TimeoutError, asyncio.CancelledError) as exc:
         if conf.settings.ENVIRONMENT == "PYTEST":
-            raise _pytest_database_runtime_error() from exc
+            await _dispose_engine_and_raise_pytest_database_runtime_error(exc)
         raise
-    except TimeoutError as exc:
+    except (ConnectionError, OSError, socket.gaierror) as exc:
         if conf.settings.ENVIRONMENT == "PYTEST":
             raise _pytest_database_runtime_error() from exc
         raise

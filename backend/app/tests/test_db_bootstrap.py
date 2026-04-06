@@ -1,10 +1,16 @@
 """Regression tests for local-first bootstrap schema repair."""
 
+import asyncio
+from collections.abc import Awaitable, Callable
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
 import pytest
 from fastapi_users.password import PasswordHelper
 from sqlalchemy import text
 
 from app import models
+from app.core import db as db_module
 from app.core.db import (
     async_engine,
     create_db_and_tables,
@@ -203,3 +209,35 @@ async def test_create_db_and_tables_repairs_existing_local_schema() -> None:
 
         assert repaired_crawler_pipeline is not None
         assert repaired_crawler_pipeline.requires_approval is False
+
+
+@pytest.mark.parametrize(
+    ("bootstrap", "failure"),
+    [
+        (create_db_and_tables, asyncio.TimeoutError()),
+        (drop_and_create_db_and_tables, asyncio.CancelledError()),
+    ],
+)
+async def test_db_bootstrap_disposes_engine_after_wait_for_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    bootstrap: Callable[[], Awaitable[None]],
+    failure: BaseException,
+) -> None:
+    dispose = AsyncMock()
+
+    async def fake_wait_for(operation: Awaitable[None], timeout: float) -> None:
+        assert timeout == db_module.PYTEST_DB_OPERATION_TIMEOUT_SECONDS
+        operation.close()
+        raise failure
+
+    monkeypatch.setattr(
+        db_module,
+        "async_engine",
+        SimpleNamespace(dispose=dispose),
+    )
+    monkeypatch.setattr(db_module.asyncio, "wait_for", fake_wait_for)
+
+    with pytest.raises(RuntimeError, match="Unable to connect to the PYTEST database"):
+        await bootstrap()
+
+    dispose.assert_awaited_once()

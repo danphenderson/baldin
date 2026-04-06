@@ -334,7 +334,18 @@ async def retry_extractor_run(
     user: schemas.UserRead = Depends(get_current_user),
 ) -> schemas.ExtractorResponse:
     """Retry a failed extractor run by re-executing against the same source."""
-    event = await db.get(models.OrchestrationEvent, event_id)
+    event_result = await db.execute(
+        select(models.OrchestrationEvent)
+        .join(
+            models.OrchestrationPipeline,
+            models.OrchestrationEvent.pipeline_id == models.OrchestrationPipeline.id,
+        )
+        .where(
+            models.OrchestrationEvent.id == event_id,
+            models.OrchestrationPipeline.user_id == user.id,
+        )
+    )
+    event = event_result.scalars().first()
     if not event:
         raise HTTPException(status_code=404, detail=f"Event {event_id} not found")
     if event.status != "failure":

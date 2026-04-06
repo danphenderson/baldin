@@ -7,8 +7,7 @@ CrawlerResult — normalized crawler output compatible with LeadCreate payloads.
 
 from __future__ import annotations
 
-from asyncio import ensure_future, get_event_loop, sleep
-from concurrent.futures import Future
+from asyncio import Future, ensure_future, get_event_loop, sleep
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal

@@ -3,13097 +3,9736 @@
  * Do not make direct changes to the file.
  */
 
+
 export interface paths {
-    "/auth/jwt/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Auth:Jwt.Login */
-        post: operations["auth_jwt_login_auth_jwt_login_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/jwt/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Auth:Jwt.Logout */
-        post: operations["auth_jwt_logout_auth_jwt_logout_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/register": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Register:Register */
-        post: operations["register_register_auth_register_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/forgot-password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reset:Forgot Password */
-        post: operations["reset_forgot_password_auth_forgot_password_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/reset-password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reset:Reset Password */
-        post: operations["reset_reset_password_auth_reset_password_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/request-verify-token": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Verify:Request-Token */
-        post: operations["verify_request_token_auth_request_verify_token_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/verify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Verify:Verify */
-        post: operations["verify_verify_auth_verify_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/db-management/list-tables": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Tables */
-        get: operations["list_tables_db_management_list_tables_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/db-management/table-details/{table_name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Table Details */
-        get: operations["get_table_details_db_management_table_details__table_name__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/db-management/users/{user_id}/purge": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Purge User Data */
-        patch: operations["purge_user_data_db_management_users__user_id__purge_patch"];
-        trace?: never;
-    };
-    "/db-management/users/{user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete User */
-        delete: operations["delete_user_db_management_users__user_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Users:Current User */
-        get: operations["users_current_user_users_me_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Users:Patch Current User */
-        patch: operations["users_patch_current_user_users_me_patch"];
-        trace?: never;
-    };
-    "/users/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Users:User */
-        get: operations["users_user_users__id__get"];
-        put?: never;
-        post?: never;
-        /** Users:Delete User */
-        delete: operations["users_delete_user_users__id__delete"];
-        options?: never;
-        head?: never;
-        /** Users:Patch User */
-        patch: operations["users_patch_user_users__id__patch"];
-        trace?: never;
-    };
-    "/users/me/profile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Profile */
-        get: operations["read_profile_users_me_profile_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/placement": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Update Placement
-         * @description Update the current user's placement status.
-         *
-         *     Valid transitions: active → graduated, graduated → alumni.
-         */
-        patch: operations["update_placement_users_me_placement_patch"];
-        trace?: never;
-    };
-    "/users/me/profile/extract": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Extract User Profile
-         * @description Extract all profile sections from one or many sources and persist results.
-         */
-        post: operations["extract_user_profile_users_me_profile_extract_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/seed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Seed Users */
-        post: operations["seed_users_users_seed_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/leads/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Leads */
-        get: operations["read_leads_leads__get"];
-        put?: never;
-        /** Create Job Lead */
-        post: operations["create_job_lead_leads__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/leads/extract": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Extract Lead */
-        post: operations["extract_lead_leads_extract_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/leads/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Lead */
-        get: operations["read_lead_leads__id__get"];
-        put?: never;
-        post?: never;
-        /** Delete Lead */
-        delete: operations["delete_lead_leads__id__delete"];
-        options?: never;
-        head?: never;
-        /** Update Lead */
-        patch: operations["update_lead_leads__id__patch"];
-        trace?: never;
-    };
-    "/leads/{id}/registration": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Create Lead Registration */
-        post: operations["create_lead_registration_leads__id__registration_post"];
-        /** Delete Lead Registration */
-        delete: operations["delete_lead_registration_leads__id__registration_delete"];
-        options?: never;
-        head?: never;
-        /** Update Lead Registration */
-        patch: operations["update_lead_registration_leads__id__registration_patch"];
-        trace?: never;
-    };
-    "/leads/{id}/comments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Lead Comments */
-        get: operations["read_lead_comments_leads__id__comments_get"];
-        put?: never;
-        /** Create Lead Comment */
-        post: operations["create_lead_comment_leads__id__comments_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/leads/{id}/comments/{comment_id}/replies": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Create Lead Comment Reply */
-        post: operations["create_lead_comment_reply_leads__id__comments__comment_id__replies_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/leads/purge": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Purge Leads */
-        delete: operations["purge_leads_leads_purge_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/leads/seed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Seed Leads */
-        post: operations["seed_leads_leads_seed_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/companies/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Company */
-        get: operations["get_company_companies__id__get"];
-        /** Update Company */
-        put: operations["update_company_companies__id__put"];
-        post?: never;
-        /** Delete Company */
-        delete: operations["delete_company_companies__id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/companies/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Companies */
-        get: operations["get_companies_companies__get"];
-        put?: never;
-        /** Create Company */
-        post: operations["create_company_companies__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/companies/{id}/leads": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Company Leads */
-        get: operations["get_company_leads_companies__id__leads_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/companies/extract": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Extract Company */
-        post: operations["extract_company_companies_extract_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/data_orchestration/pipelines": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Orch Pipelines */
-        get: operations["read_orch_pipelines_data_orchestration_pipelines_get"];
-        put?: never;
-        /** Create Orch Pipeline */
-        post: operations["create_orch_pipeline_data_orchestration_pipelines_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/data_orchestration/pipelines/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Orch Pipeline */
-        get: operations["read_orch_pipeline_data_orchestration_pipelines__id__get"];
-        /** Update Orch Pipeline */
-        put: operations["update_orch_pipeline_data_orchestration_pipelines__id__put"];
-        post?: never;
-        /** Delete Orch Pipeline */
-        delete: operations["delete_orch_pipeline_data_orchestration_pipelines__id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/data_orchestration/events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Orch Events */
-        get: operations["read_orch_events_data_orchestration_events_get"];
-        put?: never;
-        /** Create Orch Event */
-        post: operations["create_orch_event_data_orchestration_events_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/data_orchestration/events/prune": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Prune Orchestration Events
-         * @description Delete completed/failed orchestration events older than the specified age.
-         */
-        delete: operations["prune_orchestration_events_data_orchestration_events_prune_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/data_orchestration/events/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Orch Event */
-        get: operations["read_orch_event_data_orchestration_events__id__get"];
-        /** Update Orch Event */
-        put: operations["update_orch_event_data_orchestration_events__id__put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/data_orchestration/events/{event_id}/retry": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Retry Orch Event
-         * @description Retry a failed orchestration event by creating a new event linked to the original.
-         */
-        post: operations["retry_orch_event_data_orchestration_events__event_id__retry_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/contacts/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Current User Contacts */
-        get: operations["get_current_user_contacts_contacts__get"];
-        put?: never;
-        /** Create User Contact */
-        post: operations["create_user_contact_contacts__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/contacts/{contact_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get User Contact */
-        get: operations["get_user_contact_contacts__contact_id__get"];
-        /** Update User Contact */
-        put: operations["update_user_contact_contacts__contact_id__put"];
-        post?: never;
-        /** Delete User Contact */
-        delete: operations["delete_user_contact_contacts__contact_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/contacts/extract": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Extract Contacts */
-        post: operations["extract_contacts_contacts_extract_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/contacts/seed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Seed Contacts */
-        post: operations["seed_contacts_contacts_seed_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/experiences/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Current User Experiences */
-        get: operations["read_current_user_experiences_experiences__get"];
-        put?: never;
-        /** Create User Experience */
-        post: operations["create_user_experience_experiences__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/experiences/{experience_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read User Experience */
-        get: operations["read_user_experience_experiences__experience_id__get"];
-        /** Update User Experience */
-        put: operations["update_user_experience_experiences__experience_id__put"];
-        post?: never;
-        /** Delete User Experience */
-        delete: operations["delete_user_experience_experiences__experience_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/experiences/extract": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Extract User Experiences */
-        post: operations["extract_user_experiences_experiences_extract_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/experiences/seed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Seed Experiences */
-        post: operations["seed_experiences_experiences_seed_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/skills/extract": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Extract User Skills */
-        post: operations["extract_user_skills_skills_extract_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/skills/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Current User Skills */
-        get: operations["get_current_user_skills_skills__get"];
-        put?: never;
-        /** Create User Skill */
-        post: operations["create_user_skill_skills__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/skills/{skill_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get User Skill */
-        get: operations["get_user_skill_skills__skill_id__get"];
-        /** Update User Skill */
-        put: operations["update_user_skill_skills__skill_id__put"];
-        post?: never;
-        /** Delete User Skill */
-        delete: operations["delete_user_skill_skills__skill_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/skills/seed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Seed Skills */
-        post: operations["seed_skills_skills_seed_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/cover_letters/{cover_letter_id}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Download Cover Letter */
-        get: operations["download_cover_letter_cover_letters__cover_letter_id__download_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/cover_letters/generate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Generate User Cover Letter */
-        post: operations["generate_user_cover_letter_cover_letters_generate_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/cover_letters/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Current User Cover Letters */
-        get: operations["get_current_user_cover_letters_cover_letters__get"];
-        put?: never;
-        /** Create User Cover Letter */
-        post: operations["create_user_cover_letter_cover_letters__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/cover_letters/{cover_letter_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Cover Letter By Id */
-        get: operations["get_cover_letter_by_id_cover_letters__cover_letter_id__get"];
-        put?: never;
-        post?: never;
-        /** Delete User Cover Letter */
-        delete: operations["delete_user_cover_letter_cover_letters__cover_letter_id__delete"];
-        options?: never;
-        head?: never;
-        /** Update User Cover Letter */
-        patch: operations["update_user_cover_letter_cover_letters__cover_letter_id__patch"];
-        trace?: never;
-    };
-    "/cover_letters/seed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Seed Cover Letters */
-        post: operations["seed_cover_letters_cover_letters_seed_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/resumes/{resume_id}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Download Resume */
-        get: operations["download_resume_resumes__resume_id__download_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/resumes/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Current User Resumes */
-        get: operations["get_current_user_resumes_resumes__get"];
-        put?: never;
-        /** Create User Resume */
-        post: operations["create_user_resume_resumes__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/resumes/{resume_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get User Resume */
-        get: operations["get_user_resume_resumes__resume_id__get"];
-        put?: never;
-        post?: never;
-        /** Delete User Resume */
-        delete: operations["delete_user_resume_resumes__resume_id__delete"];
-        options?: never;
-        head?: never;
-        /** Update User Resume */
-        patch: operations["update_user_resume_resumes__resume_id__patch"];
-        trace?: never;
-    };
-    "/resumes/seed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Seed Resumes */
-        post: operations["seed_resumes_resumes_seed_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/applications/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Applications
-         * @description Get all applications for the current user.
-         */
-        get: operations["get_applications_applications__get"];
-        put?: never;
-        /** Create Application */
-        post: operations["create_application_applications__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/applications/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Application By Id */
-        get: operations["get_application_by_id_applications__id__get"];
-        put?: never;
-        post?: never;
-        /** Delete Application */
-        delete: operations["delete_application_applications__id__delete"];
-        options?: never;
-        head?: never;
-        /** Update Application */
-        patch: operations["update_application_applications__id__patch"];
-        trace?: never;
-    };
-    "/applications/{id}/resumes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Application Resumes */
-        get: operations["get_application_resumes_applications__id__resumes_get"];
-        put?: never;
-        /** Add Resume To Application */
-        post: operations["add_resume_to_application_applications__id__resumes_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/applications/{id}/cover_letters": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Application Cover Letters */
-        get: operations["get_application_cover_letters_applications__id__cover_letters_get"];
-        put?: never;
-        /** Add Cover Letter To Application */
-        post: operations["add_cover_letter_to_application_applications__id__cover_letters_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/applications/{id}/cover_letters/generate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Generate Cover Letter For Application */
-        post: operations["generate_cover_letter_for_application_applications__id__cover_letters_generate_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/applications/{id}/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Export Application Materials
-         * @description Export all materials linked to an application as a ZIP archive.
-         *
-         *     The archive contains up to three subdirectories — ``resumes/``,
-         *     ``cover_letters/``, and ``documents/`` — each holding PDF files for
-         *     the linked records.
-         */
-        get: operations["export_application_materials_applications__id__export_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/applications/{id}/documents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Application Documents */
-        get: operations["get_application_documents_applications__id__documents_get"];
-        put?: never;
-        /** Add Document To Application */
-        post: operations["add_document_to_application_applications__id__documents_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/applications/{id}/documents/{document_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Detach Document From Application */
-        delete: operations["detach_document_from_application_applications__id__documents__document_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/upload": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Upload Document
-         * @description Upload a PDF file, extract its text, and create a new Document + v1.
-         */
-        post: operations["upload_document_documents_upload_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/pinned": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Pinned Documents
-         * @description Return the user's pinned (active/canonical) documents — at most one per kind.
-         */
-        get: operations["get_pinned_documents_documents_pinned_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Documents */
-        get: operations["list_documents_documents__get"];
-        put?: never;
-        /**
-         * Create Document
-         * @description Create a document with its initial version (v1).
-         */
-        post: operations["create_document_documents__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/shared-with-me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Shared With Me
-         * @description List documents that other users have shared with the current user.
-         */
-        get: operations["list_shared_with_me_documents_shared_with_me_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}/share-candidates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Share Candidates
-         * @description Look up authenticated share candidates for a specific document.
-         */
-        get: operations["list_share_candidates_documents__document_id__share_candidates_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/generate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Generate Document
-         * @description Generate document content via AI and persist as a Document + Version.
-         *
-         *     Supported kinds: ``cover_letter``, ``resume``.  Others return 501.
-         *
-         *     If ``document_id`` is provided the generated content is appended as a new
-         *     version; otherwise a brand-new Document is created.
-         */
-        post: operations["generate_document_documents_generate_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Document Detail */
-        get: operations["get_document_detail_documents__document_id__get"];
-        put?: never;
-        post?: never;
-        /** Delete Document */
-        delete: operations["delete_document_documents__document_id__delete"];
-        options?: never;
-        head?: never;
-        /** Update Document */
-        patch: operations["update_document_documents__document_id__patch"];
-        trace?: never;
-    };
-    "/documents/{document_id}/activity": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Document Activity
-         * @description Read audit-style activity history for a document.
-         */
-        get: operations["list_document_activity_documents__document_id__activity_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}/versions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Versions */
-        get: operations["list_versions_documents__document_id__versions_get"];
-        put?: never;
-        /** Create Version */
-        post: operations["create_version_documents__document_id__versions_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}/versions/{version_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Version */
-        get: operations["get_version_documents__document_id__versions__version_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}/pin": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Pin Document
-         * @description Pin (or unpin) a document as the active/canonical for its kind.
-         *
-         *     When pinning, all other documents of the same kind for this user are
-         *     unpinned first.
-         */
-        post: operations["pin_document_documents__document_id__pin_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}/original": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Download Original
-         * @description Download the original uploaded PDF for the head version.
-         */
-        get: operations["download_original_documents__document_id__original_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Download Document */
-        get: operations["download_document_documents__document_id__download_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}/shares": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Shares
-         * @description List all shares for a document (owner only).
-         */
-        get: operations["list_shares_documents__document_id__shares_get"];
-        put?: never;
-        /**
-         * Create Share
-         * @description Grant another user access to this document (owner only).
-         */
-        post: operations["create_share_documents__document_id__shares_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}/shares/{share_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Delete Share
-         * @description Revoke a share (owner only).
-         */
-        delete: operations["delete_share_documents__document_id__shares__share_id__delete"];
-        options?: never;
-        head?: never;
-        /**
-         * Update Share
-         * @description Update a share's role (owner only).
-         */
-        patch: operations["update_share_documents__document_id__shares__share_id__patch"];
-        trace?: never;
-    };
-    "/education/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Current User Educations */
-        get: operations["read_current_user_educations_education__get"];
-        put?: never;
-        /** Create User Education */
-        post: operations["create_user_education_education__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/education/{education_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read User Education */
-        get: operations["read_user_education_education__education_id__get"];
-        /** Update User Education */
-        put: operations["update_user_education_education__education_id__put"];
-        post?: never;
-        /** Delete User Education */
-        delete: operations["delete_user_education_education__education_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/education/extract": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Extract Education */
-        post: operations["extract_education_education_extract_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/education/seed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Seed Education */
-        post: operations["seed_education_education_seed_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/certificate/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Current User Certificates */
-        get: operations["read_current_user_certificates_certificate__get"];
-        put?: never;
-        /** Create User Certificate */
-        post: operations["create_user_certificate_certificate__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/certificate/{certificate_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read User Certificate */
-        get: operations["read_user_certificate_certificate__certificate_id__get"];
-        /** Update User Certificate */
-        put: operations["update_user_certificate_certificate__certificate_id__put"];
-        post?: never;
-        /** Delete User Certificate */
-        delete: operations["delete_user_certificate_certificate__certificate_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/certificate/extract": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Extract Certificates */
-        post: operations["extract_certificates_certificate_extract_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/certificate/seed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Seed Certificates */
-        post: operations["seed_certificates_certificate_seed_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/extractor/configurables": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Configuration
-         * @description Endpoint to show server configuration.
-         */
-        get: operations["get_configuration_extractor_configurables_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/extractor/suggest": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Suggest Extractor
-         * @description Suggest an extractor based on a description.
-         */
-        post: operations["suggest_extractor_extractor_suggest_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/extractor/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Extractor */
-        get: operations["read_extractor_extractor__id__get"];
-        /** Update Extractor */
-        put: operations["update_extractor_extractor__id__put"];
-        post?: never;
-        /** Delete Extractor */
-        delete: operations["delete_extractor_extractor__id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/extractor/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Extractors */
-        get: operations["read_extractors_extractor__get"];
-        put?: never;
-        /** Create Extractor */
-        post: operations["create_extractor_extractor__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/extractor/{id}/examples": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Extractor Examples */
-        get: operations["get_extractor_examples_extractor__id__examples_get"];
-        put?: never;
-        /** Create Extractor Example */
-        post: operations["create_extractor_example_extractor__id__examples_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/extractor/{id}/versions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Extractor Versions */
-        get: operations["list_extractor_versions_extractor__id__versions_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/extractor/{id}/examples/{example_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete Extractor Example */
-        delete: operations["delete_extractor_example_extractor__id__examples__example_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/extractor/{id}/run": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Extractor Runner
-         * @description Run an extractor on a given payload
-         */
-        post: operations["extractor_runner_extractor__id__run_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/extractor/{id}/run/{event_id}/retry": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Retry Extractor Run
-         * @description Retry a failed extractor run by re-executing against the same source.
-         */
-        post: operations["retry_extractor_run_extractor__id__run__event_id__retry_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crawlers/pipelines": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Crawler Pipelines */
-        get: operations["list_crawler_pipelines_crawlers_pipelines_get"];
-        put?: never;
-        /** Create Crawler Pipeline */
-        post: operations["create_crawler_pipeline_crawlers_pipelines_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crawlers/pipelines/{pipeline_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Crawler Pipeline */
-        get: operations["get_crawler_pipeline_crawlers_pipelines__pipeline_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update Crawler Pipeline */
-        patch: operations["update_crawler_pipeline_crawlers_pipelines__pipeline_id__patch"];
-        trace?: never;
-    };
-    "/crawlers/pipelines/{pipeline_id}/runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Trigger Crawler Run */
-        post: operations["trigger_crawler_run_crawlers_pipelines__pipeline_id__runs_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crawlers/runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Crawler Runs */
-        get: operations["list_crawler_runs_crawlers_runs_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crawlers/runs/prune": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Prune Crawler Runs
-         * @description Delete completed/failed/cancelled crawler runs older than the specified age.
-         */
-        delete: operations["prune_crawler_runs_crawlers_runs_prune_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crawlers/runs/{run_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Crawler Run */
-        get: operations["get_crawler_run_crawlers_runs__run_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crawlers/runs/{run_id}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Cancel Crawler Run */
-        post: operations["cancel_crawler_run_crawlers_runs__run_id__cancel_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crawlers/runs/{run_id}/pause": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Pause Crawler Run */
-        post: operations["pause_crawler_run_crawlers_runs__run_id__pause_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crawlers/runs/{run_id}/resume": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Resume Crawler Run */
-        post: operations["resume_crawler_run_crawlers_runs__run_id__resume_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crawlers/runs/{run_id}/retry": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Retry Crawler Run */
-        post: operations["retry_crawler_run_crawlers_runs__run_id__retry_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/directory/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Directory
-         * @description Paginated, searchable user directory.
-         *
-         *     Only users with ``is_discoverable=True`` and ``is_active=True`` are returned.
-         */
-        get: operations["list_directory_directory__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/directory/{user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read Public Profile
-         * @description View another user's public profile.
-         */
-        get: operations["read_public_profile_directory__user_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/connections/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Connections
-         * @description List connections for the current user (both sent and received).
-         */
-        get: operations["list_connections_connections__get"];
-        put?: never;
-        /**
-         * Send Connection Request
-         * @description Send a connection request to another user.
-         */
-        post: operations["send_connection_request_connections__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/connections/{id}/accept": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Accept Connection
-         * @description Accept a pending connection request. Only the addressee can accept.
-         */
-        patch: operations["accept_connection_connections__id__accept_patch"];
-        trace?: never;
-    };
-    "/connections/{id}/decline": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Decline Connection
-         * @description Decline a pending connection request. Only the addressee can decline.
-         */
-        patch: operations["decline_connection_connections__id__decline_patch"];
-        trace?: never;
-    };
-    "/connections/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Remove Connection
-         * @description Remove an accepted connection or cancel a pending request. Either party can do this.
-         */
-        delete: operations["remove_connection_connections__id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/connections/{id}/block": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Block Connection
-         * @description Block a user via an existing connection record. Sets status to blocked.
-         */
-        post: operations["block_connection_connections__id__block_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/conversations/unread": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Total Unread
-         * @description Total unread message count across all conversations (for sidebar badge).
-         */
-        get: operations["get_total_unread_conversations_unread_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/conversations/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Conversations
-         * @description List the current user's conversations, sorted by most recent message.
-         */
-        get: operations["list_conversations_conversations__get"];
-        put?: never;
-        /**
-         * Create Conversation
-         * @description Create a DM or group conversation.
-         */
-        post: operations["create_conversation_conversations__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/conversations/{conversation_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Conversation
-         * @description Get conversation detail with paginated messages. Auto-marks as read.
-         */
-        get: operations["get_conversation_conversations__conversation_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/conversations/{conversation_id}/messages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Send Message
-         * @description Send a message in a conversation.
-         */
-        post: operations["send_message_conversations__conversation_id__messages_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/conversations/{conversation_id}/messages/{message_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Delete Message
-         * @description Delete your own message (hard delete).
-         */
-        delete: operations["delete_message_conversations__conversation_id__messages__message_id__delete"];
-        options?: never;
-        head?: never;
-        /**
-         * Edit Message
-         * @description Edit your own message.
-         */
-        patch: operations["edit_message_conversations__conversation_id__messages__message_id__patch"];
-        trace?: never;
-    };
-    "/conversations/{conversation_id}/read": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Mark Conversation Read
-         * @description Mark a conversation as read (update last_read_at).
-         */
-        post: operations["mark_conversation_read_conversations__conversation_id__read_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/conversations/{conversation_id}/participants": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Add Participant
-         * @description Add a participant to a group conversation. Only admins can add.
-         */
-        post: operations["add_participant_conversations__conversation_id__participants_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/conversations/{conversation_id}/participants/{target_user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Remove Participant
-         * @description Remove a participant or leave a group. Admins can remove others; anyone can leave.
-         */
-        delete: operations["remove_participant_conversations__conversation_id__participants__target_user_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{document_id}/collaborate/bootstrap": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Request Collaboration Bootstrap */
-        post: operations["request_collaboration_bootstrap_documents__document_id__collaborate_bootstrap_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/action-items/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Action Items */
-        get: operations["list_action_items_action_items__get"];
-        put?: never;
-        /** Create Action Item */
-        post: operations["create_action_item_action_items__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/action-items/reorder": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reorder Action Items
-         * @description Set sort_order for action items based on position in item_ids array.
-         */
-        post: operations["reorder_action_items_action_items_reorder_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/action-items/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Action Item */
-        get: operations["get_action_item_action_items__id__get"];
-        put?: never;
-        post?: never;
-        /** Delete Action Item */
-        delete: operations["delete_action_item_action_items__id__delete"];
-        options?: never;
-        head?: never;
-        /** Update Action Item */
-        patch: operations["update_action_item_action_items__id__patch"];
-        trace?: never;
-    };
-    "/action-items/from-application/{application_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Create Action Item From Application */
-        post: operations["create_action_item_from_application_action_items_from_application__application_id__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/activity-feed/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Activity Feed */
-        get: operations["get_activity_feed_activity_feed__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/activity-feed/summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Command Center Summary */
-        get: operations["get_command_center_summary_activity_feed_summary_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/review/items": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Review Items
-         * @description List all items pending human review.
-         */
-        get: operations["list_review_items_review_items_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/review/items/{item_type}/{item_id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Approve Item */
-        post: operations["approve_item_review_items__item_type___item_id__approve_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/review/items/{item_type}/{item_id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reject Item */
-        post: operations["reject_item_review_items__item_type___item_id__reject_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/review/items/batch": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Batch Review */
-        post: operations["batch_review_review_items_batch_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Root */
-        get: operations["root__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
+  "/auth/jwt/login": {
+    /** Auth:Jwt.Login */
+    post: operations["auth_jwt_login_auth_jwt_login_post"];
+  };
+  "/auth/jwt/logout": {
+    /** Auth:Jwt.Logout */
+    post: operations["auth_jwt_logout_auth_jwt_logout_post"];
+  };
+  "/auth/register": {
+    /** Register:Register */
+    post: operations["register_register_auth_register_post"];
+  };
+  "/auth/forgot-password": {
+    /** Reset:Forgot Password */
+    post: operations["reset_forgot_password_auth_forgot_password_post"];
+  };
+  "/auth/reset-password": {
+    /** Reset:Reset Password */
+    post: operations["reset_reset_password_auth_reset_password_post"];
+  };
+  "/auth/request-verify-token": {
+    /** Verify:Request-Token */
+    post: operations["verify_request_token_auth_request_verify_token_post"];
+  };
+  "/auth/verify": {
+    /** Verify:Verify */
+    post: operations["verify_verify_auth_verify_post"];
+  };
+  "/db-management/list-tables": {
+    /** List Tables */
+    get: operations["list_tables_db_management_list_tables_get"];
+  };
+  "/db-management/table-details/{table_name}": {
+    /** Get Table Details */
+    get: operations["get_table_details_db_management_table_details__table_name__get"];
+  };
+  "/db-management/users/{user_id}/purge": {
+    /** Purge User Data */
+    patch: operations["purge_user_data_db_management_users__user_id__purge_patch"];
+  };
+  "/db-management/users/{user_id}": {
+    /** Delete User */
+    delete: operations["delete_user_db_management_users__user_id__delete"];
+  };
+  "/users/me": {
+    /** Users:Current User */
+    get: operations["users_current_user_users_me_get"];
+    /** Users:Patch Current User */
+    patch: operations["users_patch_current_user_users_me_patch"];
+  };
+  "/users/{id}": {
+    /** Users:User */
+    get: operations["users_user_users__id__get"];
+    /** Users:Delete User */
+    delete: operations["users_delete_user_users__id__delete"];
+    /** Users:Patch User */
+    patch: operations["users_patch_user_users__id__patch"];
+  };
+  "/users/me/profile": {
+    /** Read Profile */
+    get: operations["read_profile_users_me_profile_get"];
+  };
+  "/users/me/placement": {
+    /**
+     * Update Placement
+     * @description Update the current user's placement status.
+     *
+     * Valid transitions: active → graduated, graduated → alumni.
+     */
+    patch: operations["update_placement_users_me_placement_patch"];
+  };
+  "/users/me/profile/extract": {
+    /**
+     * Extract User Profile
+     * @description Extract all profile sections from one or many sources and persist results.
+     */
+    post: operations["extract_user_profile_users_me_profile_extract_post"];
+  };
+  "/users/seed": {
+    /** Seed Users */
+    post: operations["seed_users_users_seed_post"];
+  };
+  "/leads/": {
+    /** Read Leads */
+    get: operations["read_leads_leads__get"];
+    /** Create Job Lead */
+    post: operations["create_job_lead_leads__post"];
+  };
+  "/leads/extract": {
+    /** Extract Lead */
+    post: operations["extract_lead_leads_extract_post"];
+  };
+  "/leads/{id}": {
+    /** Read Lead */
+    get: operations["read_lead_leads__id__get"];
+    /** Delete Lead */
+    delete: operations["delete_lead_leads__id__delete"];
+    /** Update Lead */
+    patch: operations["update_lead_leads__id__patch"];
+  };
+  "/leads/{id}/registration": {
+    /** Create Lead Registration */
+    post: operations["create_lead_registration_leads__id__registration_post"];
+    /** Delete Lead Registration */
+    delete: operations["delete_lead_registration_leads__id__registration_delete"];
+    /** Update Lead Registration */
+    patch: operations["update_lead_registration_leads__id__registration_patch"];
+  };
+  "/leads/{id}/comments": {
+    /** Read Lead Comments */
+    get: operations["read_lead_comments_leads__id__comments_get"];
+    /** Create Lead Comment */
+    post: operations["create_lead_comment_leads__id__comments_post"];
+  };
+  "/leads/{id}/comments/{comment_id}/replies": {
+    /** Create Lead Comment Reply */
+    post: operations["create_lead_comment_reply_leads__id__comments__comment_id__replies_post"];
+  };
+  "/leads/purge": {
+    /** Purge Leads */
+    delete: operations["purge_leads_leads_purge_delete"];
+  };
+  "/leads/seed": {
+    /** Seed Leads */
+    post: operations["seed_leads_leads_seed_post"];
+  };
+  "/companies/{id}": {
+    /** Get Company */
+    get: operations["get_company_companies__id__get"];
+    /** Update Company */
+    put: operations["update_company_companies__id__put"];
+    /** Delete Company */
+    delete: operations["delete_company_companies__id__delete"];
+  };
+  "/companies/": {
+    /** Get Companies */
+    get: operations["get_companies_companies__get"];
+    /** Create Company */
+    post: operations["create_company_companies__post"];
+  };
+  "/companies/{id}/leads": {
+    /** Get Company Leads */
+    get: operations["get_company_leads_companies__id__leads_get"];
+  };
+  "/companies/extract": {
+    /** Extract Company */
+    post: operations["extract_company_companies_extract_post"];
+  };
+  "/data_orchestration/pipelines": {
+    /** Read Orch Pipelines */
+    get: operations["read_orch_pipelines_data_orchestration_pipelines_get"];
+    /** Create Orch Pipeline */
+    post: operations["create_orch_pipeline_data_orchestration_pipelines_post"];
+  };
+  "/data_orchestration/pipelines/{id}": {
+    /** Read Orch Pipeline */
+    get: operations["read_orch_pipeline_data_orchestration_pipelines__id__get"];
+    /** Update Orch Pipeline */
+    put: operations["update_orch_pipeline_data_orchestration_pipelines__id__put"];
+    /** Delete Orch Pipeline */
+    delete: operations["delete_orch_pipeline_data_orchestration_pipelines__id__delete"];
+  };
+  "/data_orchestration/events": {
+    /** Read Orch Events */
+    get: operations["read_orch_events_data_orchestration_events_get"];
+    /** Create Orch Event */
+    post: operations["create_orch_event_data_orchestration_events_post"];
+  };
+  "/data_orchestration/events/prune": {
+    /**
+     * Prune Orchestration Events
+     * @description Delete completed/failed orchestration events older than the specified age.
+     */
+    delete: operations["prune_orchestration_events_data_orchestration_events_prune_delete"];
+  };
+  "/data_orchestration/events/{id}": {
+    /** Read Orch Event */
+    get: operations["read_orch_event_data_orchestration_events__id__get"];
+    /** Update Orch Event */
+    put: operations["update_orch_event_data_orchestration_events__id__put"];
+  };
+  "/data_orchestration/events/{event_id}/retry": {
+    /**
+     * Retry Orch Event
+     * @description Retry a failed orchestration event by creating a new event linked to the original.
+     */
+    post: operations["retry_orch_event_data_orchestration_events__event_id__retry_post"];
+  };
+  "/contacts/": {
+    /** Get Current User Contacts */
+    get: operations["get_current_user_contacts_contacts__get"];
+    /** Create User Contact */
+    post: operations["create_user_contact_contacts__post"];
+  };
+  "/contacts/{contact_id}": {
+    /** Get User Contact */
+    get: operations["get_user_contact_contacts__contact_id__get"];
+    /** Update User Contact */
+    put: operations["update_user_contact_contacts__contact_id__put"];
+    /** Delete User Contact */
+    delete: operations["delete_user_contact_contacts__contact_id__delete"];
+  };
+  "/contacts/extract": {
+    /** Extract Contacts */
+    post: operations["extract_contacts_contacts_extract_post"];
+  };
+  "/contacts/seed": {
+    /** Seed Contacts */
+    post: operations["seed_contacts_contacts_seed_post"];
+  };
+  "/experiences/": {
+    /** Read Current User Experiences */
+    get: operations["read_current_user_experiences_experiences__get"];
+    /** Create User Experience */
+    post: operations["create_user_experience_experiences__post"];
+  };
+  "/experiences/{experience_id}": {
+    /** Read User Experience */
+    get: operations["read_user_experience_experiences__experience_id__get"];
+    /** Update User Experience */
+    put: operations["update_user_experience_experiences__experience_id__put"];
+    /** Delete User Experience */
+    delete: operations["delete_user_experience_experiences__experience_id__delete"];
+  };
+  "/experiences/extract": {
+    /** Extract User Experiences */
+    post: operations["extract_user_experiences_experiences_extract_post"];
+  };
+  "/experiences/seed": {
+    /** Seed Experiences */
+    post: operations["seed_experiences_experiences_seed_post"];
+  };
+  "/skills/extract": {
+    /** Extract User Skills */
+    post: operations["extract_user_skills_skills_extract_post"];
+  };
+  "/skills/": {
+    /** Get Current User Skills */
+    get: operations["get_current_user_skills_skills__get"];
+    /** Create User Skill */
+    post: operations["create_user_skill_skills__post"];
+  };
+  "/skills/{skill_id}": {
+    /** Get User Skill */
+    get: operations["get_user_skill_skills__skill_id__get"];
+    /** Update User Skill */
+    put: operations["update_user_skill_skills__skill_id__put"];
+    /** Delete User Skill */
+    delete: operations["delete_user_skill_skills__skill_id__delete"];
+  };
+  "/skills/seed": {
+    /** Seed Skills */
+    post: operations["seed_skills_skills_seed_post"];
+  };
+  "/cover_letters/{cover_letter_id}/download": {
+    /** Download Cover Letter */
+    get: operations["download_cover_letter_cover_letters__cover_letter_id__download_get"];
+  };
+  "/cover_letters/generate": {
+    /** Generate User Cover Letter */
+    post: operations["generate_user_cover_letter_cover_letters_generate_post"];
+  };
+  "/cover_letters/": {
+    /** Get Current User Cover Letters */
+    get: operations["get_current_user_cover_letters_cover_letters__get"];
+    /** Create User Cover Letter */
+    post: operations["create_user_cover_letter_cover_letters__post"];
+  };
+  "/cover_letters/{cover_letter_id}": {
+    /** Get Cover Letter By Id */
+    get: operations["get_cover_letter_by_id_cover_letters__cover_letter_id__get"];
+    /** Delete User Cover Letter */
+    delete: operations["delete_user_cover_letter_cover_letters__cover_letter_id__delete"];
+    /** Update User Cover Letter */
+    patch: operations["update_user_cover_letter_cover_letters__cover_letter_id__patch"];
+  };
+  "/cover_letters/seed": {
+    /** Seed Cover Letters */
+    post: operations["seed_cover_letters_cover_letters_seed_post"];
+  };
+  "/resumes/{resume_id}/download": {
+    /** Download Resume */
+    get: operations["download_resume_resumes__resume_id__download_get"];
+  };
+  "/resumes/": {
+    /** Get Current User Resumes */
+    get: operations["get_current_user_resumes_resumes__get"];
+    /** Create User Resume */
+    post: operations["create_user_resume_resumes__post"];
+  };
+  "/resumes/{resume_id}": {
+    /** Get User Resume */
+    get: operations["get_user_resume_resumes__resume_id__get"];
+    /** Delete User Resume */
+    delete: operations["delete_user_resume_resumes__resume_id__delete"];
+    /** Update User Resume */
+    patch: operations["update_user_resume_resumes__resume_id__patch"];
+  };
+  "/resumes/seed": {
+    /** Seed Resumes */
+    post: operations["seed_resumes_resumes_seed_post"];
+  };
+  "/applications/": {
+    /**
+     * Get Applications
+     * @description Get all applications for the current user.
+     */
+    get: operations["get_applications_applications__get"];
+    /** Create Application */
+    post: operations["create_application_applications__post"];
+  };
+  "/applications/{id}": {
+    /** Get Application By Id */
+    get: operations["get_application_by_id_applications__id__get"];
+    /** Delete Application */
+    delete: operations["delete_application_applications__id__delete"];
+    /** Update Application */
+    patch: operations["update_application_applications__id__patch"];
+  };
+  "/applications/{id}/resumes": {
+    /** Get Application Resumes */
+    get: operations["get_application_resumes_applications__id__resumes_get"];
+    /** Add Resume To Application */
+    post: operations["add_resume_to_application_applications__id__resumes_post"];
+  };
+  "/applications/{id}/cover_letters": {
+    /** Get Application Cover Letters */
+    get: operations["get_application_cover_letters_applications__id__cover_letters_get"];
+    /** Add Cover Letter To Application */
+    post: operations["add_cover_letter_to_application_applications__id__cover_letters_post"];
+  };
+  "/applications/{id}/cover_letters/generate": {
+    /** Generate Cover Letter For Application */
+    post: operations["generate_cover_letter_for_application_applications__id__cover_letters_generate_post"];
+  };
+  "/applications/{id}/export": {
+    /**
+     * Export Application Materials
+     * @description Export all materials linked to an application as a ZIP archive.
+     *
+     * The archive contains up to three subdirectories — ``resumes/``,
+     * ``cover_letters/``, and ``documents/`` — each holding PDF files for
+     * the linked records.
+     */
+    get: operations["export_application_materials_applications__id__export_get"];
+  };
+  "/applications/{id}/documents": {
+    /** Get Application Documents */
+    get: operations["get_application_documents_applications__id__documents_get"];
+    /** Add Document To Application */
+    post: operations["add_document_to_application_applications__id__documents_post"];
+  };
+  "/applications/{id}/documents/{document_id}": {
+    /** Detach Document From Application */
+    delete: operations["detach_document_from_application_applications__id__documents__document_id__delete"];
+  };
+  "/documents/upload": {
+    /**
+     * Upload Document
+     * @description Upload a PDF file, extract its text, and create a new Document + v1.
+     */
+    post: operations["upload_document_documents_upload_post"];
+  };
+  "/documents/pinned": {
+    /**
+     * Get Pinned Documents
+     * @description Return the user's pinned (active/canonical) documents — at most one per kind.
+     */
+    get: operations["get_pinned_documents_documents_pinned_get"];
+  };
+  "/documents/": {
+    /** List Documents */
+    get: operations["list_documents_documents__get"];
+    /**
+     * Create Document
+     * @description Create a document with its initial version (v1).
+     */
+    post: operations["create_document_documents__post"];
+  };
+  "/documents/shared-with-me": {
+    /**
+     * List Shared With Me
+     * @description List documents that other users have shared with the current user.
+     */
+    get: operations["list_shared_with_me_documents_shared_with_me_get"];
+  };
+  "/documents/{document_id}/share-candidates": {
+    /**
+     * List Share Candidates
+     * @description Look up authenticated share candidates for a specific document.
+     */
+    get: operations["list_share_candidates_documents__document_id__share_candidates_get"];
+  };
+  "/documents/generate": {
+    /**
+     * Generate Document
+     * @description Generate document content via AI and persist as a Document + Version.
+     *
+     * Supported kinds: ``cover_letter``, ``resume``.  Others return 501.
+     *
+     * If ``document_id`` is provided the generated content is appended as a new
+     * version; otherwise a brand-new Document is created.
+     */
+    post: operations["generate_document_documents_generate_post"];
+  };
+  "/documents/{document_id}": {
+    /** Get Document Detail */
+    get: operations["get_document_detail_documents__document_id__get"];
+    /** Delete Document */
+    delete: operations["delete_document_documents__document_id__delete"];
+    /** Update Document */
+    patch: operations["update_document_documents__document_id__patch"];
+  };
+  "/documents/{document_id}/activity": {
+    /**
+     * List Document Activity
+     * @description Read audit-style activity history for a document.
+     */
+    get: operations["list_document_activity_documents__document_id__activity_get"];
+  };
+  "/documents/{document_id}/versions": {
+    /** List Versions */
+    get: operations["list_versions_documents__document_id__versions_get"];
+    /** Create Version */
+    post: operations["create_version_documents__document_id__versions_post"];
+  };
+  "/documents/{document_id}/versions/{version_id}": {
+    /** Get Version */
+    get: operations["get_version_documents__document_id__versions__version_id__get"];
+  };
+  "/documents/{document_id}/pin": {
+    /**
+     * Pin Document
+     * @description Pin (or unpin) a document as the active/canonical for its kind.
+     *
+     * When pinning, all other documents of the same kind for this user are
+     * unpinned first.
+     */
+    post: operations["pin_document_documents__document_id__pin_post"];
+  };
+  "/documents/{document_id}/original": {
+    /**
+     * Download Original
+     * @description Download the original uploaded PDF for the head version.
+     */
+    get: operations["download_original_documents__document_id__original_get"];
+  };
+  "/documents/{document_id}/download": {
+    /** Download Document */
+    get: operations["download_document_documents__document_id__download_get"];
+  };
+  "/documents/{document_id}/shares": {
+    /**
+     * List Shares
+     * @description List all shares for a document (owner only).
+     */
+    get: operations["list_shares_documents__document_id__shares_get"];
+    /**
+     * Create Share
+     * @description Grant another user access to this document (owner only).
+     */
+    post: operations["create_share_documents__document_id__shares_post"];
+  };
+  "/documents/{document_id}/shares/{share_id}": {
+    /**
+     * Delete Share
+     * @description Revoke a share (owner only).
+     */
+    delete: operations["delete_share_documents__document_id__shares__share_id__delete"];
+    /**
+     * Update Share
+     * @description Update a share's role (owner only).
+     */
+    patch: operations["update_share_documents__document_id__shares__share_id__patch"];
+  };
+  "/education/": {
+    /** Read Current User Educations */
+    get: operations["read_current_user_educations_education__get"];
+    /** Create User Education */
+    post: operations["create_user_education_education__post"];
+  };
+  "/education/{education_id}": {
+    /** Read User Education */
+    get: operations["read_user_education_education__education_id__get"];
+    /** Update User Education */
+    put: operations["update_user_education_education__education_id__put"];
+    /** Delete User Education */
+    delete: operations["delete_user_education_education__education_id__delete"];
+  };
+  "/education/extract": {
+    /** Extract Education */
+    post: operations["extract_education_education_extract_post"];
+  };
+  "/education/seed": {
+    /** Seed Education */
+    post: operations["seed_education_education_seed_post"];
+  };
+  "/certificate/": {
+    /** Read Current User Certificates */
+    get: operations["read_current_user_certificates_certificate__get"];
+    /** Create User Certificate */
+    post: operations["create_user_certificate_certificate__post"];
+  };
+  "/certificate/{certificate_id}": {
+    /** Read User Certificate */
+    get: operations["read_user_certificate_certificate__certificate_id__get"];
+    /** Update User Certificate */
+    put: operations["update_user_certificate_certificate__certificate_id__put"];
+    /** Delete User Certificate */
+    delete: operations["delete_user_certificate_certificate__certificate_id__delete"];
+  };
+  "/certificate/extract": {
+    /** Extract Certificates */
+    post: operations["extract_certificates_certificate_extract_post"];
+  };
+  "/certificate/seed": {
+    /** Seed Certificates */
+    post: operations["seed_certificates_certificate_seed_post"];
+  };
+  "/extractor/configurables": {
+    /**
+     * Get Configuration
+     * @description Endpoint to show server configuration.
+     */
+    get: operations["get_configuration_extractor_configurables_get"];
+  };
+  "/extractor/suggest": {
+    /**
+     * Suggest Extractor
+     * @description Suggest an extractor based on a description.
+     */
+    post: operations["suggest_extractor_extractor_suggest_post"];
+  };
+  "/extractor/{id}": {
+    /** Read Extractor */
+    get: operations["read_extractor_extractor__id__get"];
+    /** Update Extractor */
+    put: operations["update_extractor_extractor__id__put"];
+    /** Delete Extractor */
+    delete: operations["delete_extractor_extractor__id__delete"];
+  };
+  "/extractor/": {
+    /** Read Extractors */
+    get: operations["read_extractors_extractor__get"];
+    /** Create Extractor */
+    post: operations["create_extractor_extractor__post"];
+  };
+  "/extractor/{id}/examples": {
+    /** Get Extractor Examples */
+    get: operations["get_extractor_examples_extractor__id__examples_get"];
+    /** Create Extractor Example */
+    post: operations["create_extractor_example_extractor__id__examples_post"];
+  };
+  "/extractor/{id}/versions": {
+    /** List Extractor Versions */
+    get: operations["list_extractor_versions_extractor__id__versions_get"];
+  };
+  "/extractor/{id}/examples/{example_id}": {
+    /** Delete Extractor Example */
+    delete: operations["delete_extractor_example_extractor__id__examples__example_id__delete"];
+  };
+  "/extractor/{id}/run": {
+    /**
+     * Extractor Runner
+     * @description Run an extractor on a given payload
+     */
+    post: operations["extractor_runner_extractor__id__run_post"];
+  };
+  "/extractor/{id}/run/{event_id}/retry": {
+    /**
+     * Retry Extractor Run
+     * @description Retry a failed extractor run by re-executing against the same source.
+     */
+    post: operations["retry_extractor_run_extractor__id__run__event_id__retry_post"];
+  };
+  "/crawlers/pipelines": {
+    /** List Crawler Pipelines */
+    get: operations["list_crawler_pipelines_crawlers_pipelines_get"];
+    /** Create Crawler Pipeline */
+    post: operations["create_crawler_pipeline_crawlers_pipelines_post"];
+  };
+  "/crawlers/pipelines/{pipeline_id}": {
+    /** Get Crawler Pipeline */
+    get: operations["get_crawler_pipeline_crawlers_pipelines__pipeline_id__get"];
+    /** Update Crawler Pipeline */
+    patch: operations["update_crawler_pipeline_crawlers_pipelines__pipeline_id__patch"];
+  };
+  "/crawlers/pipelines/{pipeline_id}/runs": {
+    /** Trigger Crawler Run */
+    post: operations["trigger_crawler_run_crawlers_pipelines__pipeline_id__runs_post"];
+  };
+  "/crawlers/runs": {
+    /** List Crawler Runs */
+    get: operations["list_crawler_runs_crawlers_runs_get"];
+  };
+  "/crawlers/runs/prune": {
+    /**
+     * Prune Crawler Runs
+     * @description Delete completed/failed/cancelled crawler runs older than the specified age.
+     */
+    delete: operations["prune_crawler_runs_crawlers_runs_prune_delete"];
+  };
+  "/crawlers/runs/{run_id}": {
+    /** Get Crawler Run */
+    get: operations["get_crawler_run_crawlers_runs__run_id__get"];
+  };
+  "/crawlers/runs/{run_id}/cancel": {
+    /** Cancel Crawler Run */
+    post: operations["cancel_crawler_run_crawlers_runs__run_id__cancel_post"];
+  };
+  "/crawlers/runs/{run_id}/pause": {
+    /** Pause Crawler Run */
+    post: operations["pause_crawler_run_crawlers_runs__run_id__pause_post"];
+  };
+  "/crawlers/runs/{run_id}/resume": {
+    /** Resume Crawler Run */
+    post: operations["resume_crawler_run_crawlers_runs__run_id__resume_post"];
+  };
+  "/crawlers/runs/{run_id}/retry": {
+    /** Retry Crawler Run */
+    post: operations["retry_crawler_run_crawlers_runs__run_id__retry_post"];
+  };
+  "/directory/": {
+    /**
+     * List Directory
+     * @description Paginated, searchable user directory.
+     *
+     * Only users with ``is_discoverable=True`` and ``is_active=True`` are returned.
+     */
+    get: operations["list_directory_directory__get"];
+  };
+  "/directory/{user_id}": {
+    /**
+     * Read Public Profile
+     * @description View another user's public profile.
+     */
+    get: operations["read_public_profile_directory__user_id__get"];
+  };
+  "/connections/": {
+    /**
+     * List Connections
+     * @description List connections for the current user (both sent and received).
+     */
+    get: operations["list_connections_connections__get"];
+    /**
+     * Send Connection Request
+     * @description Send a connection request to another user.
+     */
+    post: operations["send_connection_request_connections__post"];
+  };
+  "/connections/{id}/accept": {
+    /**
+     * Accept Connection
+     * @description Accept a pending connection request. Only the addressee can accept.
+     */
+    patch: operations["accept_connection_connections__id__accept_patch"];
+  };
+  "/connections/{id}/decline": {
+    /**
+     * Decline Connection
+     * @description Decline a pending connection request. Only the addressee can decline.
+     */
+    patch: operations["decline_connection_connections__id__decline_patch"];
+  };
+  "/connections/{id}": {
+    /**
+     * Remove Connection
+     * @description Remove an accepted connection or cancel a pending request. Either party can do this.
+     */
+    delete: operations["remove_connection_connections__id__delete"];
+  };
+  "/connections/{id}/block": {
+    /**
+     * Block Connection
+     * @description Block a user via an existing connection record. Sets status to blocked.
+     */
+    post: operations["block_connection_connections__id__block_post"];
+  };
+  "/conversations/unread": {
+    /**
+     * Get Total Unread
+     * @description Total unread message count across all conversations (for sidebar badge).
+     */
+    get: operations["get_total_unread_conversations_unread_get"];
+  };
+  "/conversations/": {
+    /**
+     * List Conversations
+     * @description List the current user's conversations, sorted by most recent message.
+     */
+    get: operations["list_conversations_conversations__get"];
+    /**
+     * Create Conversation
+     * @description Create a DM or group conversation.
+     */
+    post: operations["create_conversation_conversations__post"];
+  };
+  "/conversations/{conversation_id}": {
+    /**
+     * Get Conversation
+     * @description Get conversation detail with paginated messages. Auto-marks as read.
+     */
+    get: operations["get_conversation_conversations__conversation_id__get"];
+  };
+  "/conversations/{conversation_id}/messages": {
+    /**
+     * Send Message
+     * @description Send a message in a conversation.
+     */
+    post: operations["send_message_conversations__conversation_id__messages_post"];
+  };
+  "/conversations/{conversation_id}/messages/{message_id}": {
+    /**
+     * Delete Message
+     * @description Delete your own message (hard delete).
+     */
+    delete: operations["delete_message_conversations__conversation_id__messages__message_id__delete"];
+    /**
+     * Edit Message
+     * @description Edit your own message.
+     */
+    patch: operations["edit_message_conversations__conversation_id__messages__message_id__patch"];
+  };
+  "/conversations/{conversation_id}/read": {
+    /**
+     * Mark Conversation Read
+     * @description Mark a conversation as read (update last_read_at).
+     */
+    post: operations["mark_conversation_read_conversations__conversation_id__read_post"];
+  };
+  "/conversations/{conversation_id}/participants": {
+    /**
+     * Add Participant
+     * @description Add a participant to a group conversation. Only admins can add.
+     */
+    post: operations["add_participant_conversations__conversation_id__participants_post"];
+  };
+  "/conversations/{conversation_id}/participants/{target_user_id}": {
+    /**
+     * Remove Participant
+     * @description Remove a participant or leave a group. Admins can remove others; anyone can leave.
+     */
+    delete: operations["remove_participant_conversations__conversation_id__participants__target_user_id__delete"];
+  };
+  "/documents/{document_id}/collaborate/bootstrap": {
+    /** Request Collaboration Bootstrap */
+    post: operations["request_collaboration_bootstrap_documents__document_id__collaborate_bootstrap_post"];
+  };
+  "/action-items/": {
+    /** List Action Items */
+    get: operations["list_action_items_action_items__get"];
+    /** Create Action Item */
+    post: operations["create_action_item_action_items__post"];
+  };
+  "/action-items/reorder": {
+    /**
+     * Reorder Action Items
+     * @description Set sort_order for action items based on position in item_ids array.
+     */
+    post: operations["reorder_action_items_action_items_reorder_post"];
+  };
+  "/action-items/{id}": {
+    /** Get Action Item */
+    get: operations["get_action_item_action_items__id__get"];
+    /** Delete Action Item */
+    delete: operations["delete_action_item_action_items__id__delete"];
+    /** Update Action Item */
+    patch: operations["update_action_item_action_items__id__patch"];
+  };
+  "/action-items/from-application/{application_id}": {
+    /** Create Action Item From Application */
+    post: operations["create_action_item_from_application_action_items_from_application__application_id__post"];
+  };
+  "/activity-feed/": {
+    /** Get Activity Feed */
+    get: operations["get_activity_feed_activity_feed__get"];
+  };
+  "/activity-feed/summary": {
+    /** Get Command Center Summary */
+    get: operations["get_command_center_summary_activity_feed_summary_get"];
+  };
+  "/review/items": {
+    /**
+     * List Review Items
+     * @description List all items pending human review.
+     */
+    get: operations["list_review_items_review_items_get"];
+  };
+  "/review/items/{item_type}/{item_id}/approve": {
+    /** Approve Item */
+    post: operations["approve_item_review_items__item_type___item_id__approve_post"];
+  };
+  "/review/items/{item_type}/{item_id}/reject": {
+    /** Reject Item */
+    post: operations["reject_item_review_items__item_type___item_id__reject_post"];
+  };
+  "/review/items/batch": {
+    /** Batch Review */
+    post: operations["batch_review_review_items_batch_post"];
+  };
+  "/": {
+    /** Root */
+    get: operations["root__get"];
+  };
 }
+
 export type webhooks = Record<string, never>;
+
 export interface components {
-    schemas: {
-        /** ActionItemCreate */
-        ActionItemCreate: {
-            /** Title */
-            title: string;
-            /** Description */
-            description?: string | null;
-            kind: components["schemas"]["ActionItemKind"];
-            /** @default pending */
-            status: components["schemas"]["ActionItemStatus"];
-            /** @default medium */
-            priority: components["schemas"]["ActionItemPriority"];
-            /** Due At */
-            due_at?: string | null;
-            /**
-             * Sort Order
-             * @default 0
-             */
-            sort_order: number;
-            /** Application Id */
-            application_id?: string | null;
-            /** Lead Id */
-            lead_id?: string | null;
-            /** Document Id */
-            document_id?: string | null;
-            /** Conversation Id */
-            conversation_id?: string | null;
-        };
-        /** ActionItemDetailRead */
-        ActionItemDetailRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * User Id
-             * Format: uuid4
-             */
-            user_id: string;
-            /** Title */
-            title: string;
-            /** Description */
-            description?: string | null;
-            kind: components["schemas"]["ActionItemKind"];
-            status: components["schemas"]["ActionItemStatus"];
-            priority: components["schemas"]["ActionItemPriority"];
-            /** Due At */
-            due_at?: string | null;
-            /** Completed At */
-            completed_at?: string | null;
-            /**
-             * Sort Order
-             * @default 0
-             */
-            sort_order: number;
-            /** Application Id */
-            application_id?: string | null;
-            /** Lead Id */
-            lead_id?: string | null;
-            /** Document Id */
-            document_id?: string | null;
-            /** Conversation Id */
-            conversation_id?: string | null;
-            application?: components["schemas"]["ApplicationRead"] | null;
-            lead?: components["schemas"]["LeadRead"] | null;
-            document?: components["schemas"]["DocumentRead"] | null;
-            conversation?: components["schemas"]["ConversationRead"] | null;
-        };
-        /**
-         * ActionItemKind
-         * @enum {string}
-         */
-        ActionItemKind: "follow_up" | "prepare_document" | "send_message" | "review_lead" | "schedule_interview" | "custom";
-        /**
-         * ActionItemPriority
-         * @enum {string}
-         */
-        ActionItemPriority: "low" | "medium" | "high" | "urgent";
-        /** ActionItemRead */
-        ActionItemRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * User Id
-             * Format: uuid4
-             */
-            user_id: string;
-            /** Title */
-            title: string;
-            /** Description */
-            description?: string | null;
-            kind: components["schemas"]["ActionItemKind"];
-            status: components["schemas"]["ActionItemStatus"];
-            priority: components["schemas"]["ActionItemPriority"];
-            /** Due At */
-            due_at?: string | null;
-            /** Completed At */
-            completed_at?: string | null;
-            /**
-             * Sort Order
-             * @default 0
-             */
-            sort_order: number;
-            /** Application Id */
-            application_id?: string | null;
-            /** Lead Id */
-            lead_id?: string | null;
-            /** Document Id */
-            document_id?: string | null;
-            /** Conversation Id */
-            conversation_id?: string | null;
-        };
-        /** ActionItemReorder */
-        ActionItemReorder: {
-            /** Item Ids */
-            item_ids: string[];
-        };
-        /**
-         * ActionItemStatus
-         * @enum {string}
-         */
-        ActionItemStatus: "pending" | "in_progress" | "completed" | "dismissed";
-        /** ActionItemUpdate */
-        ActionItemUpdate: {
-            /** Title */
-            title?: string | null;
-            /** Description */
-            description?: string | null;
-            kind?: components["schemas"]["ActionItemKind"] | null;
-            status?: components["schemas"]["ActionItemStatus"] | null;
-            priority?: components["schemas"]["ActionItemPriority"] | null;
-            /** Due At */
-            due_at?: string | null;
-            /** Sort Order */
-            sort_order?: number | null;
-            /** Application Id */
-            application_id?: string | null;
-            /** Lead Id */
-            lead_id?: string | null;
-            /** Document Id */
-            document_id?: string | null;
-            /** Conversation Id */
-            conversation_id?: string | null;
-        };
-        /** ActivityFeedItem */
-        ActivityFeedItem: {
-            /** Type */
-            type: string;
-            /** Entity Type */
-            entity_type: string;
-            /**
-             * Entity Id
-             * Format: uuid4
-             */
-            entity_id: string;
-            /** Title */
-            title: string;
-            /** Detail */
-            detail?: string | null;
-            /**
-             * Timestamp
-             * Format: date-time
-             */
-            timestamp: string;
-            /** Metadata */
-            metadata?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** ActivityFeedRead */
-        ActivityFeedRead: {
-            /** Items */
-            items: components["schemas"]["ActivityFeedItem"][];
-            /** Total */
-            total: number;
-            /** Page */
-            page: number;
-            /** Page Size */
-            page_size: number;
-        };
-        /** ApplicationCoverLetterAttach */
-        ApplicationCoverLetterAttach: {
-            /**
-             * Cover Letter Id
-             * Format: uuid4
-             */
-            cover_letter_id: string;
-        };
-        /** ApplicationCreate */
-        ApplicationCreate: {
-            /**
-             * Lead Id
-             * Format: uuid4
-             */
-            lead_id: string;
-            /** Status */
-            status: string;
-            /** Notes */
-            notes?: string | null;
-            /** Next Step */
-            next_step?: string | null;
-            /** Next Step Due */
-            next_step_due?: string | null;
-            /** Document Ids */
-            document_ids?: string[] | null;
-        };
-        /** ApplicationDocumentAttach */
-        ApplicationDocumentAttach: {
-            /**
-             * Document Id
-             * Format: uuid4
-             * @description Document to attach
-             */
-            document_id: string;
-            /**
-             * Version Id
-             * @description Specific version to pin for this application (default: head)
-             */
-            version_id?: string | null;
-        };
-        /** ApplicationRead */
-        ApplicationRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Lead Id
-             * Format: uuid4
-             */
-            lead_id: string;
-            /**
-             * User Id
-             * Format: uuid4
-             */
-            user_id: string;
-            lead: components["schemas"]["LeadRead"];
-            user: components["schemas"]["UserRead"];
-            /**
-             * Status
-             * @description Application status
-             */
-            status?: string | null;
-            /**
-             * Notes
-             * @description Free-form user notes
-             */
-            notes?: string | null;
-            /**
-             * Next Step
-             * @description Next action for this application
-             */
-            next_step?: string | null;
-            /**
-             * Next Step Due
-             * @description When the next step is due
-             */
-            next_step_due?: string | null;
-            /**
-             * Status History
-             * @description Append-only log of status transitions
-             * @default []
-             */
-            status_history: {
-                [key: string]: unknown;
-            }[] | null;
-        };
-        /** ApplicationResumeAttach */
-        ApplicationResumeAttach: {
-            /**
-             * Resume Id
-             * Format: uuid4
-             */
-            resume_id: string;
-        };
-        /** ApplicationUpdate */
-        ApplicationUpdate: {
-            /** Status */
-            status?: string | null;
-            /** Notes */
-            notes?: string | null;
-            /** Next Step */
-            next_step?: string | null;
-            /** Next Step Due */
-            next_step_due?: string | null;
-        };
-        /** BearerResponse */
-        BearerResponse: {
-            /** Access Token */
-            access_token: string;
-            /** Token Type */
-            token_type: string;
-        };
-        /** Body_auth_jwt_login_auth_jwt_login_post */
-        Body_auth_jwt_login_auth_jwt_login_post: {
-            /** Grant Type */
-            grant_type?: string | null;
-            /** Username */
-            username: string;
-            /**
-             * Password
-             * Format: password
-             */
-            password: string;
-            /**
-             * Scope
-             * @default
-             */
-            scope: string;
-            /** Client Id */
-            client_id?: string | null;
-            /**
-             * Client Secret
-             * Format: password
-             */
-            client_secret?: string | null;
-        };
-        /** Body_extract_user_profile_users_me_profile_extract_post */
-        Body_extract_user_profile_users_me_profile_extract_post: {
-            /** File */
-            file?: string | null;
-            /**
-             * Mode
-             * @default entire_document
-             */
-            mode: string;
-            /** Text */
-            text?: string | null;
-            /** Url */
-            url?: string | null;
-            /** Llm */
-            llm?: string | null;
-            /** Sources Json */
-            sources_json?: string | null;
-            /**
-             * Source Files
-             * @default []
-             */
-            source_files: string[];
-        };
-        /** Body_extract_user_skills_skills_extract_post */
-        Body_extract_user_skills_skills_extract_post: {
-            /** File */
-            file?: string | null;
-            /** Mode */
-            mode?: string | null;
-            /** Text */
-            text?: string | null;
-            /** Url */
-            url?: string | null;
-            /** Llm */
-            llm?: string | null;
-        };
-        /** Body_extractor_runner_extractor__id__run_post */
-        Body_extractor_runner_extractor__id__run_post: {
-            /** File */
-            file?: string | null;
-            /** Mode */
-            mode?: string | null;
-            /** Text */
-            text?: string | null;
-            /** Url */
-            url?: string | null;
-            /** Llm */
-            llm?: string | null;
-        };
-        /** Body_reset_forgot_password_auth_forgot_password_post */
-        Body_reset_forgot_password_auth_forgot_password_post: {
-            /**
-             * Email
-             * Format: email
-             */
-            email: string;
-        };
-        /** Body_reset_reset_password_auth_reset_password_post */
-        Body_reset_reset_password_auth_reset_password_post: {
-            /** Token */
-            token: string;
-            /** Password */
-            password: string;
-        };
-        /** Body_upload_document_documents_upload_post */
-        Body_upload_document_documents_upload_post: {
-            /** File */
-            file: string;
-            /** Title */
-            title: string;
-            /**
-             * Kind
-             * @default freeform
-             */
-            kind: string;
-        };
-        /** Body_verify_request_token_auth_request_verify_token_post */
-        Body_verify_request_token_auth_request_verify_token_post: {
-            /**
-             * Email
-             * Format: email
-             */
-            email: string;
-        };
-        /** Body_verify_verify_auth_verify_post */
-        Body_verify_verify_auth_verify_post: {
-            /** Token */
-            token: string;
-        };
-        /** CertificateCreate */
-        CertificateCreate: {
-            /**
-             * Title
-             * @description Certificate title
-             */
-            title?: string | null;
-            /**
-             * Issuer
-             * @description Issuer of the certificate
-             */
-            issuer?: string | null;
-            /**
-             * Expiration Date
-             * @description Expiration date of the certificate
-             */
-            expiration_date?: string | null;
-            /**
-             * Issued Date
-             * @description Issued date of the certificate
-             */
-            issued_date?: string | null;
-        };
-        /** CertificateRead */
-        CertificateRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Title
-             * @description Certificate title
-             */
-            title?: string | null;
-            /**
-             * Issuer
-             * @description Issuer of the certificate
-             */
-            issuer?: string | null;
-            /**
-             * Expiration Date
-             * @description Expiration date of the certificate
-             */
-            expiration_date?: string | null;
-            /**
-             * Issued Date
-             * @description Issued date of the certificate
-             */
-            issued_date?: string | null;
-        };
-        /** CertificateUpdate */
-        CertificateUpdate: {
-            /**
-             * Title
-             * @description Certificate title
-             */
-            title?: string | null;
-            /**
-             * Issuer
-             * @description Issuer of the certificate
-             */
-            issuer?: string | null;
-            /**
-             * Expiration Date
-             * @description Expiration date of the certificate
-             */
-            expiration_date?: string | null;
-            /**
-             * Issued Date
-             * @description Issued date of the certificate
-             */
-            issued_date?: string | null;
-        };
-        /** CommandCenterSummary */
-        CommandCenterSummary: {
-            /** Lead Count */
-            lead_count: number;
-            /** Unapplied Lead Count */
-            unapplied_lead_count: number;
-            /** Application Count */
-            application_count: number;
-            /** Active Application Count */
-            active_application_count: number;
-            /** Status Breakdown */
-            status_breakdown: {
-                [key: string]: number;
-            };
-            /** Pending Action Items */
-            pending_action_items: number;
-            /** Overdue Action Items */
-            overdue_action_items: number;
-            /** Action Items Due Today */
-            action_items_due_today: number;
-            /** Pending Connections */
-            pending_connections: number;
-            /** Unread Messages */
-            unread_messages: number;
-            /** Profile Completion */
-            profile_completion: number;
-            /** Documents Count */
-            documents_count: number;
-            /** Draft Documents Count */
-            draft_documents_count: number;
-        };
-        /** CompanyCreate */
-        CompanyCreate: {
-            /**
-             * Name
-             * @description Company name
-             */
-            name?: string | null;
-            /**
-             * Industry
-             * @description Industry of the company
-             */
-            industry?: string | null;
-            /**
-             * Size
-             * @description Size of the company
-             */
-            size?: string | null;
-            /**
-             * Location
-             * @description Location of the company
-             */
-            location?: string | null;
-            /**
-             * Description
-             * @description Description of the company
-             */
-            description?: string | null;
-        };
-        /** CompanyRead */
-        CompanyRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Name
-             * @description Company name
-             */
-            name?: string | null;
-            /**
-             * Industry
-             * @description Industry of the company
-             */
-            industry?: string | null;
-            /**
-             * Size
-             * @description Size of the company
-             */
-            size?: string | null;
-            /**
-             * Location
-             * @description Location of the company
-             */
-            location?: string | null;
-            /**
-             * Description
-             * @description Description of the company
-             */
-            description?: string | null;
-        };
-        /** CompanyUpdate */
-        CompanyUpdate: {
-            /**
-             * Name
-             * @description Company name
-             */
-            name?: string | null;
-            /**
-             * Industry
-             * @description Industry of the company
-             */
-            industry?: string | null;
-            /**
-             * Size
-             * @description Size of the company
-             */
-            size?: string | null;
-            /**
-             * Location
-             * @description Location of the company
-             */
-            location?: string | null;
-            /**
-             * Description
-             * @description Description of the company
-             */
-            description?: string | null;
-        };
-        /**
-         * ConfigurationResponse
-         * @description Response for configuration.
-         */
-        ConfigurationResponse: {
-            /** Available Models */
-            available_models: string[];
-            /** Accepted Mimetypes */
-            accepted_mimetypes: string[];
-            /** Max File Size Mb */
-            max_file_size_mb: number;
-            /** Max Concurrency */
-            max_concurrency: number;
-            /** Max Chunks */
-            max_chunks: number;
-            /** Models */
-            models: {
-                [key: string]: unknown;
-            }[];
-        };
-        /** ConnectionCreate */
-        ConnectionCreate: {
-            /**
-             * Addressee Id
-             * Format: uuid4
-             * @description User to send the connection request to
-             */
-            addressee_id: string;
-            /**
-             * Message
-             * @description Optional note accompanying the request
-             */
-            message?: string | null;
-        };
-        /** ConnectionRead */
-        ConnectionRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /** @description The user who sent the request */
-            requester: components["schemas"]["ConnectionUserSummaryRead"];
-            /** @description The user who received the request */
-            addressee: components["schemas"]["ConnectionUserSummaryRead"];
-            /** @description Connection status */
-            status: components["schemas"]["ConnectionStatus"];
-            /**
-             * Message
-             * @description Optional note from the requester
-             */
-            message?: string | null;
-        };
-        /**
-         * ConnectionStatus
-         * @enum {string}
-         */
-        ConnectionStatus: "pending" | "accepted" | "declined" | "blocked";
-        /** ConnectionUserSummaryRead */
-        ConnectionUserSummaryRead: {
-            /**
-             * User Id
-             * Format: uuid4
-             * @description User identifier
-             */
-            user_id: string;
-            /**
-             * Display Name
-             * @description Public display name
-             */
-            display_name: string;
-            /**
-             * Headline
-             * @description Professional tagline
-             */
-            headline?: string | null;
-            /**
-             * Avatar Uri
-             * @description Avatar URI
-             */
-            avatar_uri?: string | null;
-            /**
-             * City
-             * @description City
-             */
-            city?: string | null;
-            /**
-             * State
-             * @description State
-             */
-            state?: string | null;
-            /**
-             * Country
-             * @description Country
-             */
-            country?: string | null;
-        };
-        /** ConnectionsPaginatedRead */
-        ConnectionsPaginatedRead: {
-            /**
-             * Items
-             * @description Paginated connection records
-             */
-            items?: components["schemas"]["ConnectionRead"][];
-            /**
-             * Total
-             * @description Total matching connections
-             * @default 0
-             */
-            total: number;
-            /**
-             * Page
-             * @description Current page number
-             * @default 1
-             */
-            page: number;
-            /**
-             * Page Size
-             * @description Items per page
-             * @default 20
-             */
-            page_size: number;
-        };
-        /** ContactCreate */
-        ContactCreate: {
-            /**
-             * First Name
-             * @description First name
-             */
-            first_name?: string | null;
-            /**
-             * Last Name
-             * @description Last name
-             */
-            last_name?: string | null;
-            /**
-             * Phone Number
-             * @description Phone number
-             */
-            phone_number?: string | null;
-            /**
-             * Email
-             * @description Email address
-             */
-            email?: string | null;
-            /**
-             * Time Zone
-             * @description Time zone
-             */
-            time_zone?: string | null;
-            /**
-             * Notes
-             * @description Additional notes
-             */
-            notes?: string | null;
-        };
-        /** ContactRead */
-        ContactRead: {
-            /**
-             * First Name
-             * @description First name
-             */
-            first_name?: string | null;
-            /**
-             * Last Name
-             * @description Last name
-             */
-            last_name?: string | null;
-            /**
-             * Phone Number
-             * @description Phone number
-             */
-            phone_number?: string | null;
-            /**
-             * Email
-             * @description Email address
-             */
-            email?: string | null;
-            /**
-             * Time Zone
-             * @description Time zone
-             */
-            time_zone?: string | null;
-            /**
-             * Notes
-             * @description Additional notes
-             */
-            notes?: string | null;
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-        };
-        /** ContactUpdate */
-        ContactUpdate: {
-            /**
-             * First Name
-             * @description First name
-             */
-            first_name?: string | null;
-            /**
-             * Last Name
-             * @description Last name
-             */
-            last_name?: string | null;
-            /**
-             * Phone Number
-             * @description Phone number
-             */
-            phone_number?: string | null;
-            /**
-             * Email
-             * @description Email address
-             */
-            email?: string | null;
-            /**
-             * Time Zone
-             * @description Time zone
-             */
-            time_zone?: string | null;
-            /**
-             * Notes
-             * @description Additional notes
-             */
-            notes?: string | null;
-        };
-        /**
-         * ContentFormat
-         * @enum {string}
-         */
-        ContentFormat: "plain_text" | "tiptap_json";
-        /**
-         * ContentType
-         * @enum {string}
-         */
-        ContentType: "custom" | "generated" | "template";
-        /** ConversationCreate */
-        ConversationCreate: {
-            /**
-             * Participant User Ids
-             * @description User IDs of the other participants (creator is auto-added)
-             */
-            participant_user_ids: string[];
-            /**
-             * @description Conversation type
-             * @default direct
-             */
-            type: components["schemas"]["ConversationType"];
-            /**
-             * Title
-             * @description Title (required for group)
-             */
-            title?: string | null;
-        };
-        /** ConversationDetailRead */
-        ConversationDetailRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /** @description Conversation type */
-            type: components["schemas"]["ConversationType"];
-            /**
-             * Title
-             * @description Conversation title
-             */
-            title?: string | null;
-            /**
-             * Participants
-             * @description Conversation participants
-             */
-            participants?: components["schemas"]["ConversationParticipantRead"][];
-            /**
-             * Messages
-             * @description Paginated messages
-             */
-            messages?: components["schemas"]["MessageRead"][];
-            /**
-             * Total Messages
-             * @description Total message count
-             * @default 0
-             */
-            total_messages: number;
-        };
-        /** ConversationParticipantRead */
-        ConversationParticipantRead: {
-            /**
-             * User Id
-             * Format: uuid4
-             * @description Participant user identifier
-             */
-            user_id: string;
-            /**
-             * Display Name
-             * @description Participant display name
-             */
-            display_name: string;
-            /**
-             * Avatar Uri
-             * @description Participant avatar URI
-             */
-            avatar_uri?: string | null;
-            /** @description Participant role */
-            role: components["schemas"]["ConversationParticipantRole"];
-            /**
-             * Joined At
-             * Format: date-time
-             * @description When the participant joined
-             */
-            joined_at: string;
-        };
-        /**
-         * ConversationParticipantRole
-         * @enum {string}
-         */
-        ConversationParticipantRole: "member" | "admin";
-        /** ConversationRead */
-        ConversationRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /** @description Conversation type */
-            type: components["schemas"]["ConversationType"];
-            /**
-             * Title
-             * @description Conversation title
-             */
-            title?: string | null;
-            /**
-             * Participants
-             * @description Conversation participants
-             */
-            participants?: components["schemas"]["ConversationParticipantRead"][];
-            /** @description Most recent message preview */
-            last_message?: components["schemas"]["MessageRead"] | null;
-            /**
-             * Unread Count
-             * @description Unread messages for current user
-             * @default 0
-             */
-            unread_count: number;
-        };
-        /**
-         * ConversationType
-         * @enum {string}
-         */
-        ConversationType: "direct" | "group";
-        /** ConversationsPaginatedRead */
-        ConversationsPaginatedRead: {
-            /**
-             * Items
-             * @description Paginated conversations
-             */
-            items?: components["schemas"]["ConversationRead"][];
-            /**
-             * Total
-             * @description Total matching conversations
-             * @default 0
-             */
-            total: number;
-            /**
-             * Page
-             * @description Current page number
-             * @default 1
-             */
-            page: number;
-            /**
-             * Page Size
-             * @description Items per page
-             * @default 20
-             */
-            page_size: number;
-        };
-        /** CoverLetterCreate */
-        CoverLetterCreate: {
-            /**
-             * Name
-             * @description Cover letter name
-             */
-            name?: string | null;
-            /**
-             * Content
-             * @description Cover letter content
-             */
-            content?: string | null;
-            /** @description Cover letter content type */
-            content_type?: components["schemas"]["ContentType"] | null;
-        };
-        /** CoverLetterRead */
-        CoverLetterRead: {
-            /**
-             * Name
-             * @description Cover letter name
-             */
-            name?: string | null;
-            /**
-             * Content
-             * @description Cover letter content
-             */
-            content?: string | null;
-            /** @description Cover letter content type */
-            content_type?: components["schemas"]["ContentType"] | null;
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-        };
-        /** CoverLetterUpdate */
-        CoverLetterUpdate: {
-            /**
-             * Name
-             * @description Cover letter name
-             */
-            name?: string | null;
-            /**
-             * Content
-             * @description Cover letter content
-             */
-            content?: string | null;
-            /** @description Cover letter content type */
-            content_type?: components["schemas"]["ContentType"] | null;
-        };
-        /** CrawlerPipelineCreate */
-        CrawlerPipelineCreate: {
-            /**
-             * Name
-             * @description Pipeline name
-             */
-            name: string;
-            /**
-             * Description
-             * @description Pipeline description
-             */
-            description?: string | null;
-            /** @description Crawl source platform */
-            source: components["schemas"]["CrawlerSourceType"];
-            /**
-             * Query Definition
-             * @description Source-specific search parameters
-             */
-            query_definition: {
-                [key: string]: unknown;
-            };
-            /**
-             * Schedule Definition
-             * @description Schedule cadence definition
-             */
-            schedule_definition?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Enabled
-             * @description Whether the pipeline is active
-             * @default true
-             */
-            enabled: boolean;
-            /**
-             * Execution Policy
-             * @description Concurrency, timeouts, headless mode
-             */
-            execution_policy?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Extraction Policy
-             * @description Whether to run LLM extraction on crawled leads
-             */
-            extraction_policy?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Requires Approval
-             * @description Whether runs require human approval
-             * @default false
-             */
-            requires_approval: boolean;
-        };
-        /** CrawlerPipelineRead */
-        CrawlerPipelineRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Name
-             * @description Pipeline name
-             */
-            name: string;
-            /**
-             * Description
-             * @description Pipeline description
-             */
-            description?: string | null;
-            /** @description Crawl source platform */
-            source: components["schemas"]["CrawlerSourceType"];
-            /**
-             * Query Definition
-             * @description Source-specific search parameters
-             */
-            query_definition: {
-                [key: string]: unknown;
-            };
-            /**
-             * Schedule Definition
-             * @description Schedule cadence definition
-             */
-            schedule_definition?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Enabled
-             * @description Whether the pipeline is active
-             */
-            enabled: boolean;
-            /**
-             * Execution Policy
-             * @description Concurrency, timeouts, headless mode
-             */
-            execution_policy?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Extraction Policy
-             * @description Whether to run LLM extraction on crawled leads
-             */
-            extraction_policy?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Requires Approval
-             * @description Whether runs require human approval
-             * @default false
-             */
-            requires_approval: boolean;
-            /**
-             * Created By User Id
-             * Format: uuid4
-             * @description Superuser who created the pipeline
-             */
-            created_by_user_id: string;
-            /** @description Status of the most recent run */
-            last_run_status?: components["schemas"]["CrawlerRunStatus"] | null;
-            /**
-             * Last Run At
-             * @description Timestamp of the most recent run
-             */
-            last_run_at?: string | null;
-            /**
-             * Run Count
-             * @description Total number of runs
-             * @default 0
-             */
-            run_count: number;
-        };
-        /** CrawlerPipelineUpdate */
-        CrawlerPipelineUpdate: {
-            /**
-             * Name
-             * @description Pipeline name
-             */
-            name?: string | null;
-            /**
-             * Description
-             * @description Pipeline description
-             */
-            description?: string | null;
-            /**
-             * Query Definition
-             * @description Source-specific search parameters
-             */
-            query_definition?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Schedule Definition
-             * @description Schedule cadence definition
-             */
-            schedule_definition?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Enabled
-             * @description Whether the pipeline is active
-             */
-            enabled?: boolean | null;
-            /**
-             * Execution Policy
-             * @description Concurrency, timeouts, headless mode
-             */
-            execution_policy?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Extraction Policy
-             * @description Whether to run LLM extraction on crawled leads
-             */
-            extraction_policy?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Requires Approval
-             * @description Whether runs require human approval
-             */
-            requires_approval?: boolean | null;
-        };
-        /**
-         * CrawlerRunDetailRead
-         * @description Extended read schema for single-run detail endpoint with linked events.
-         */
-        CrawlerRunDetailRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Crawler Pipeline Id
-             * Format: uuid4
-             * @description Parent pipeline ID
-             */
-            crawler_pipeline_id: string;
-            /** @description How the run was triggered */
-            trigger_type: components["schemas"]["CrawlerTriggerType"];
-            /** @description Current run status */
-            status: components["schemas"]["CrawlerRunStatus"];
-            /**
-             * Scheduled For
-             * @description When the run was scheduled for
-             */
-            scheduled_for?: string | null;
-            /**
-             * Started At
-             * @description When the run started
-             */
-            started_at?: string | null;
-            /**
-             * Finished At
-             * @description When the run finished
-             */
-            finished_at?: string | null;
-            /**
-             * Stats
-             * @description Run statistics
-             */
-            stats?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Error Summary
-             * @description Error summary if failed
-             */
-            error_summary?: string | null;
-            /**
-             * Retry Of Id
-             * @description ID of the original run this is a retry of
-             */
-            retry_of_id?: string | null;
-            /**
-             * Events
-             * @description Linked orchestration events
-             * @default []
-             */
-            events: components["schemas"]["OrchestrationEventSummary"][];
-        };
-        /** CrawlerRunRead */
-        CrawlerRunRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Crawler Pipeline Id
-             * Format: uuid4
-             * @description Parent pipeline ID
-             */
-            crawler_pipeline_id: string;
-            /** @description How the run was triggered */
-            trigger_type: components["schemas"]["CrawlerTriggerType"];
-            /** @description Current run status */
-            status: components["schemas"]["CrawlerRunStatus"];
-            /**
-             * Scheduled For
-             * @description When the run was scheduled for
-             */
-            scheduled_for?: string | null;
-            /**
-             * Started At
-             * @description When the run started
-             */
-            started_at?: string | null;
-            /**
-             * Finished At
-             * @description When the run finished
-             */
-            finished_at?: string | null;
-            /**
-             * Stats
-             * @description Run statistics
-             */
-            stats?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Error Summary
-             * @description Error summary if failed
-             */
-            error_summary?: string | null;
-            /**
-             * Retry Of Id
-             * @description ID of the original run this is a retry of
-             */
-            retry_of_id?: string | null;
-        };
-        /**
-         * CrawlerRunStatus
-         * @enum {string}
-         */
-        CrawlerRunStatus: "pending" | "running" | "success" | "failed" | "cancelled" | "paused" | "pending_review";
-        /**
-         * CrawlerSourceType
-         * @enum {string}
-         */
-        CrawlerSourceType: "linkedin" | "glassdoor";
-        /**
-         * CrawlerTriggerType
-         * @enum {string}
-         */
-        CrawlerTriggerType: "manual" | "scheduled";
-        /** DocumentActivityRead */
-        DocumentActivityRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Document Id
-             * Format: uuid4
-             * @description Document identifier
-             */
-            document_id: string;
-            /** @description Activity event type */
-            activity_type: components["schemas"]["DocumentActivityType"];
-            /**
-             * Message
-             * @description Human-readable activity summary
-             */
-            message: string;
-            /**
-             * Details
-             * @description Structured activity metadata for UI rendering
-             */
-            details?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Actor User Id
-             * @description User who triggered the activity, when available
-             */
-            actor_user_id?: string | null;
-            /**
-             * Actor Full Name
-             * @description Best-available display label for the actor
-             */
-            actor_full_name?: string | null;
-            /**
-             * Actor Email
-             * @description Actor email address
-             */
-            actor_email?: string | null;
-        };
-        /**
-         * DocumentActivityType
-         * @enum {string}
-         */
-        DocumentActivityType: "document_created" | "document_uploaded" | "version_saved" | "share_created" | "share_updated" | "share_revoked" | "document_archived" | "document_unarchived" | "document_pinned" | "document_unpinned";
-        /** DocumentCollaborationBootstrapRead */
-        DocumentCollaborationBootstrapRead: {
-            /** @description How the client should proceed with collaborative bootstrap */
-            status: components["schemas"]["DocumentCollaborationBootstrapStatus"];
-            /**
-             * Retry After Ms
-             * @description How long the client should wait before retrying bootstrap when another claim is still active
-             */
-            retry_after_ms?: number | null;
-            /**
-             * Content
-             * @description Authoritative rich-text content to seed when the bootstrap status is seed
-             */
-            content?: string | null;
-            /** @description Content format for the collaborative bootstrap payload when the bootstrap status is seed */
-            content_format?: components["schemas"]["ContentFormat"] | null;
-        };
-        /**
-         * DocumentCollaborationBootstrapStatus
-         * @enum {string}
-         */
-        DocumentCollaborationBootstrapStatus: "connect" | "pending" | "seed";
-        /** DocumentCreate */
-        DocumentCreate: {
-            /** @description Document kind discriminator */
-            kind: components["schemas"]["DocumentKind"];
-            /**
-             * Title
-             * @description Document title
-             */
-            title: string;
-            /**
-             * @description Initial lifecycle status
-             * @default draft
-             */
-            status: components["schemas"]["DocumentStatus"];
-            /**
-             * Content
-             * @description Initial version content
-             */
-            content?: string | null;
-            /** @description Content origin type for the initial version */
-            content_type?: components["schemas"]["ContentType"] | null;
-            /**
-             * @description Content format: plain_text or tiptap_json
-             * @default plain_text
-             */
-            content_format: components["schemas"]["ContentFormat"];
-        };
-        /** DocumentDetailRead */
-        DocumentDetailRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /** @description Document kind discriminator */
-            kind: components["schemas"]["DocumentKind"];
-            /**
-             * Title
-             * @description Document title
-             */
-            title: string;
-            /** @description Document lifecycle status */
-            status: components["schemas"]["DocumentStatus"];
-            /**
-             * Is Pinned
-             * @description Whether this is the active document for its kind
-             * @default false
-             */
-            is_pinned: boolean;
-            /** @description Current head version inline */
-            head_version?: components["schemas"]["DocumentVersionRead"] | null;
-            /**
-             * Version Count
-             * @description Total number of versions
-             * @default 0
-             */
-            version_count: number;
-            /** @description Effective share role for the viewer (null means owner) */
-            viewer_role?: components["schemas"]["DocumentShareRole"] | null;
-            /**
-             * Owner User Id
-             * @description Owner identifier when the document is shared with the viewer
-             */
-            owner_user_id?: string | null;
-            /**
-             * Owner Full Name
-             * @description Owner full name when the document is shared with the viewer
-             */
-            owner_full_name?: string | null;
-            /**
-             * Owner Email
-             * @description Owner email when the document is shared with the viewer
-             */
-            owner_email?: string | null;
-            /**
-             * Shared By User Id
-             * @description User who granted access to the viewer
-             */
-            shared_by_user_id?: string | null;
-            /**
-             * Shared By Full Name
-             * @description Full name of the user who granted access to the viewer
-             */
-            shared_by_full_name?: string | null;
-            /**
-             * Shared By Email
-             * @description Email of the user who granted access to the viewer
-             */
-            shared_by_email?: string | null;
-            /**
-             * Shared At
-             * @description Timestamp when the viewer was granted access
-             */
-            shared_at?: string | null;
-            /**
-             * Share Updated At
-             * @description Timestamp when the share was last updated
-             */
-            share_updated_at?: string | null;
-            /**
-             * Versions
-             * @description Full version history, oldest first
-             */
-            versions?: components["schemas"]["DocumentVersionRead"][];
-        };
-        /** DocumentGenerateRequest */
-        DocumentGenerateRequest: {
-            /** @description Document kind to generate */
-            kind: components["schemas"]["DocumentKind"];
-            /**
-             * Lead Id
-             * Format: uuid4
-             * @description Lead to generate content from
-             */
-            lead_id: string;
-            /**
-             * Document Id
-             * @description Existing document to append a new version to (omit to create a new document)
-             */
-            document_id?: string | null;
-            /**
-             * Template Version Id
-             * @description Optional template version to use for generation
-             */
-            template_version_id?: string | null;
-        };
-        /**
-         * DocumentKind
-         * @enum {string}
-         */
-        DocumentKind: "resume" | "cover_letter" | "follow_up" | "reference_sheet" | "freeform";
-        /** DocumentPinRequest */
-        DocumentPinRequest: {
-            /**
-             * Pinned
-             * @description Whether to pin or unpin the document
-             * @default true
-             */
-            pinned: boolean;
-        };
-        /** DocumentRead */
-        DocumentRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /** @description Document kind discriminator */
-            kind: components["schemas"]["DocumentKind"];
-            /**
-             * Title
-             * @description Document title
-             */
-            title: string;
-            /** @description Document lifecycle status */
-            status: components["schemas"]["DocumentStatus"];
-            /**
-             * Is Pinned
-             * @description Whether this is the active document for its kind
-             * @default false
-             */
-            is_pinned: boolean;
-            /** @description Current head version inline */
-            head_version?: components["schemas"]["DocumentVersionRead"] | null;
-            /**
-             * Version Count
-             * @description Total number of versions
-             * @default 0
-             */
-            version_count: number;
-            /** @description Effective share role for the viewer (null means owner) */
-            viewer_role?: components["schemas"]["DocumentShareRole"] | null;
-            /**
-             * Owner User Id
-             * @description Owner identifier when the document is shared with the viewer
-             */
-            owner_user_id?: string | null;
-            /**
-             * Owner Full Name
-             * @description Owner full name when the document is shared with the viewer
-             */
-            owner_full_name?: string | null;
-            /**
-             * Owner Email
-             * @description Owner email when the document is shared with the viewer
-             */
-            owner_email?: string | null;
-            /**
-             * Shared By User Id
-             * @description User who granted access to the viewer
-             */
-            shared_by_user_id?: string | null;
-            /**
-             * Shared By Full Name
-             * @description Full name of the user who granted access to the viewer
-             */
-            shared_by_full_name?: string | null;
-            /**
-             * Shared By Email
-             * @description Email of the user who granted access to the viewer
-             */
-            shared_by_email?: string | null;
-            /**
-             * Shared At
-             * @description Timestamp when the viewer was granted access
-             */
-            shared_at?: string | null;
-            /**
-             * Share Updated At
-             * @description Timestamp when the share was last updated
-             */
-            share_updated_at?: string | null;
-        };
-        /** DocumentShareCandidateRead */
-        DocumentShareCandidateRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description Share candidate identifier
-             */
-            id: string;
-            /**
-             * Full Name
-             * @description Best-available human label for the user
-             */
-            full_name: string;
-            /**
-             * Email
-             * Format: email
-             * @description Candidate email address
-             */
-            email: string;
-            /**
-             * Headline
-             * @description Candidate headline
-             */
-            headline?: string | null;
-            /**
-             * Avatar Uri
-             * @description Candidate avatar URI
-             */
-            avatar_uri?: string | null;
-        };
-        /** DocumentShareCreate */
-        DocumentShareCreate: {
-            /**
-             * Shared With User Id
-             * Format: uuid4
-             * @description User to share the document with
-             */
-            shared_with_user_id: string;
-            /**
-             * @description Access level to grant
-             * @default viewer
-             */
-            role: components["schemas"]["DocumentShareRole"];
-        };
-        /** DocumentShareRead */
-        DocumentShareRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Document Id
-             * Format: uuid4
-             * @description Document identifier
-             */
-            document_id: string;
-            /**
-             * Shared With User Id
-             * Format: uuid4
-             * @description User the document is shared with
-             */
-            shared_with_user_id: string;
-            /**
-             * Shared By User Id
-             * Format: uuid4
-             * @description User who created the share
-             */
-            shared_by_user_id: string;
-            /** @description Access role: viewer or editor */
-            role: components["schemas"]["DocumentShareRole"];
-            /**
-             * Shared With Full Name
-             * @description Best-available name for the shared user
-             */
-            shared_with_full_name: string;
-            /**
-             * Shared With Email
-             * Format: email
-             * @description Email for the shared user
-             */
-            shared_with_email: string;
-            /**
-             * Shared With Headline
-             * @description Headline for the shared user
-             */
-            shared_with_headline?: string | null;
-            /**
-             * Shared By Full Name
-             * @description Best-available name for the sharing user
-             */
-            shared_by_full_name: string;
-            /**
-             * Shared By Email
-             * Format: email
-             * @description Email for the sharing user
-             */
-            shared_by_email: string;
-        };
-        /**
-         * DocumentShareRole
-         * @enum {string}
-         */
-        DocumentShareRole: "viewer" | "editor";
-        /** DocumentShareUpdate */
-        DocumentShareUpdate: {
-            /** @description New access level */
-            role: components["schemas"]["DocumentShareRole"];
-        };
-        /**
-         * DocumentStatus
-         * @enum {string}
-         */
-        DocumentStatus: "draft" | "active" | "archived";
-        /** DocumentUpdate */
-        DocumentUpdate: {
-            /**
-             * Title
-             * @description Updated title
-             */
-            title?: string | null;
-            /** @description Updated lifecycle status */
-            status?: components["schemas"]["DocumentStatus"] | null;
-        };
-        /** DocumentVersionCreate */
-        DocumentVersionCreate: {
-            /**
-             * Name
-             * @description Snapshot title
-             */
-            name?: string | null;
-            /**
-             * Content
-             * @description Version content
-             */
-            content?: string | null;
-            /** @description Content origin type */
-            content_type?: components["schemas"]["ContentType"] | null;
-            /**
-             * @description Content format: plain_text or tiptap_json
-             * @default plain_text
-             */
-            content_format: components["schemas"]["ContentFormat"];
-            /**
-             * Change Summary
-             * @description User or system note for this version
-             */
-            change_summary?: string | null;
-        };
-        /** DocumentVersionRead */
-        DocumentVersionRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Document Id
-             * Format: uuid4
-             * @description Parent document identifier
-             */
-            document_id: string;
-            /**
-             * Version Number
-             * @description Monotonically incrementing version number
-             */
-            version_number: number;
-            /**
-             * Name
-             * @description Snapshot title
-             */
-            name?: string | null;
-            /**
-             * Content
-             * @description Version content
-             */
-            content?: string | null;
-            /** @description Content origin type */
-            content_type?: components["schemas"]["ContentType"] | null;
-            /**
-             * Content Format
-             * @description Content format: plain_text or tiptap_json
-             */
-            content_format?: string | null;
-            /**
-             * Source File
-             * @description Relative path to uploaded source file
-             */
-            source_file?: string | null;
-            /**
-             * Change Summary
-             * @description User or system note for this version
-             */
-            change_summary?: string | null;
-        };
-        /** EducationCreate */
-        EducationCreate: {
-            /**
-             * University
-             * @description University name
-             */
-            university?: string | null;
-            /**
-             * Degree
-             * @description Degree name
-             */
-            degree?: string | null;
-            /**
-             * Gradepoint
-             * @description Grade point
-             */
-            gradePoint?: string | null;
-            /**
-             * Activities
-             * @description Activities involved
-             */
-            activities?: string | null;
-            /**
-             * Achievements
-             * @description Achievements
-             */
-            achievements?: string | null;
-            /**
-             * Start Date
-             * @description Start date of the education
-             */
-            start_date?: string | null;
-            /**
-             * End Date
-             * @description End date of the education
-             */
-            end_date?: string | null;
-        };
-        /** EducationRead */
-        EducationRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * University
-             * @description University name
-             */
-            university?: string | null;
-            /**
-             * Degree
-             * @description Degree name
-             */
-            degree?: string | null;
-            /**
-             * Gradepoint
-             * @description Grade point
-             */
-            gradePoint?: string | null;
-            /**
-             * Activities
-             * @description Activities involved
-             */
-            activities?: string | null;
-            /**
-             * Achievements
-             * @description Achievements
-             */
-            achievements?: string | null;
-            /**
-             * Start Date
-             * @description Start date of the education
-             */
-            start_date?: string | null;
-            /**
-             * End Date
-             * @description End date of the education
-             */
-            end_date?: string | null;
-        };
-        /** EducationUpdate */
-        EducationUpdate: {
-            /**
-             * University
-             * @description University name
-             */
-            university?: string | null;
-            /**
-             * Degree
-             * @description Degree name
-             */
-            degree?: string | null;
-            /**
-             * Gradepoint
-             * @description Grade point
-             */
-            gradePoint?: string | null;
-            /**
-             * Activities
-             * @description Activities involved
-             */
-            activities?: string | null;
-            /**
-             * Achievements
-             * @description Achievements
-             */
-            achievements?: string | null;
-            /**
-             * Start Date
-             * @description Start date of the education
-             */
-            start_date?: string | null;
-            /**
-             * End Date
-             * @description End date of the education
-             */
-            end_date?: string | null;
-        };
-        /** ErrorModel */
-        ErrorModel: {
-            /** Detail */
-            detail: string | {
-                [key: string]: string;
-            };
-        };
-        /** ExperienceCreate */
-        ExperienceCreate: {
-            /**
-             * Title
-             * @description Job title
-             */
-            title?: string | null;
-            /**
-             * Company
-             * @description Company name
-             */
-            company?: string | null;
-            /**
-             * Start Date
-             * @description Start date of the experience
-             */
-            start_date?: string | null;
-            /**
-             * End Date
-             * @description End date of the experience
-             */
-            end_date?: string | null;
-            /**
-             * Description
-             * @description Description of the experience
-             */
-            description?: string | null;
-            /**
-             * Location
-             * @description Location of the experience
-             */
-            location?: string | null;
-            /**
-             * Projects
-             * @description Projects involved
-             */
-            projects?: string | null;
-        };
-        /** ExperienceRead */
-        ExperienceRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Title
-             * @description Job title
-             */
-            title?: string | null;
-            /**
-             * Company
-             * @description Company name
-             */
-            company?: string | null;
-            /**
-             * Start Date
-             * @description Start date of the experience
-             */
-            start_date?: string | null;
-            /**
-             * End Date
-             * @description End date of the experience
-             */
-            end_date?: string | null;
-            /**
-             * Description
-             * @description Description of the experience
-             */
-            description?: string | null;
-            /**
-             * Location
-             * @description Location of the experience
-             */
-            location?: string | null;
-            /**
-             * Projects
-             * @description Projects involved
-             */
-            projects?: string | null;
-        };
-        /** ExperienceUpdate */
-        ExperienceUpdate: {
-            /**
-             * Title
-             * @description Job title
-             */
-            title?: string | null;
-            /**
-             * Company
-             * @description Company name
-             */
-            company?: string | null;
-            /**
-             * Start Date
-             * @description Start date of the experience
-             */
-            start_date?: string | null;
-            /**
-             * End Date
-             * @description End date of the experience
-             */
-            end_date?: string | null;
-            /**
-             * Description
-             * @description Description of the experience
-             */
-            description?: string | null;
-            /**
-             * Location
-             * @description Location of the experience
-             */
-            location?: string | null;
-            /**
-             * Projects
-             * @description Projects involved
-             */
-            projects?: string | null;
-        };
-        /** ExtractorCreate */
-        ExtractorCreate: {
-            /**
-             * Name
-             * @description Extractor name
-             */
-            name?: string | null;
-            /**
-             * Description
-             * @description Extractor description
-             */
-            description?: string | null;
-            /**
-             * Json Schema
-             * @description JSON schema
-             */
-            json_schema?: {
-                [key: string]: unknown;
-            } | string | null;
-            /**
-             * Instruction
-             * @description Extractor instruction
-             */
-            instruction?: string | null;
-            /**
-             * Extractor Examples
-             * @description Extractor examples
-             * @default []
-             */
-            extractor_examples: components["schemas"]["ExtractorExampleRead"][];
-            /**
-             * Requires Approval
-             * @description Whether extraction results require human approval
-             * @default false
-             */
-            requires_approval: boolean;
-        };
-        /**
-         * ExtractorDefinition
-         * @description Define an information extractor to be used in an information extraction system.
-         */
-        ExtractorDefinition: {
-            /**
-             * Json Schema
-             * @description JSON Schema that describes the entity / information that should be extracted. This schema is specified in JSON Schema format.
-             */
-            json_schema: string;
-        };
-        /** ExtractorExampleCreate */
-        ExtractorExampleCreate: {
-            /**
-             * Content
-             * @description Example content
-             */
-            content?: string | null;
-            /**
-             * Output
-             * @description Example output
-             */
-            output?: string | null;
-        };
-        /** ExtractorExampleRead */
-        ExtractorExampleRead: {
-            /**
-             * Content
-             * @description Example content
-             */
-            content?: string | null;
-            /**
-             * Output
-             * @description Example output
-             */
-            output?: string | null;
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-        };
-        /** ExtractorRead */
-        ExtractorRead: {
-            /**
-             * Name
-             * @description Extractor name
-             */
-            name?: string | null;
-            /**
-             * Description
-             * @description Extractor description
-             */
-            description?: string | null;
-            /**
-             * Json Schema
-             * @description JSON schema
-             */
-            json_schema?: {
-                [key: string]: unknown;
-            } | string | null;
-            /**
-             * Instruction
-             * @description Extractor instruction
-             */
-            instruction?: string | null;
-            /**
-             * Extractor Examples
-             * @description Extractor examples
-             * @default []
-             */
-            extractor_examples: components["schemas"]["ExtractorExampleRead"][];
-            /**
-             * Requires Approval
-             * @description Whether extraction results require human approval
-             * @default false
-             */
-            requires_approval: boolean;
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-        };
-        /** ExtractorResponse */
-        ExtractorResponse: {
-            /**
-             * Data
-             * @description Extracted data
-             * @default []
-             */
-            data: unknown[];
-            /**
-             * Content Too Long
-             * @description Content too long to extract
-             * @default false
-             */
-            content_too_long: boolean;
-        };
-        /**
-         * ExtractorRun
-         * @description Request to run an extractor.
-         */
-        ExtractorRun: {
-            /**
-             * Mode
-             * @description Mode to run the extractor in. 'entire_document' extracts information from the entire document. 'retrieval' extracts information from a specific section of the document.
-             * @default entire_document
-             * @enum {string}
-             */
-            mode: "entire_document" | "retrieval";
-            /**
-             * File
-             * @description A file to extract information from. If provided, the file will be processed and the text extracted.
-             */
-            file?: string | null;
-            /**
-             * Text
-             * @description Text to extract information from. If provided, the text will be processed and the information extracted.
-             */
-            text?: string | null;
-            /**
-             * Url
-             * @description A URL to extract information from. If provided, the URL will be processed and the information extracted.
-             */
-            url?: string | null;
-            /**
-             * Llm
-             * @description The language model to use for the extraction.
-             */
-            llm?: string | null;
-            /**
-             * Sources
-             * @description Multiple sources to extract from in a single batch. When provided, url/file/text are ignored.
-             */
-            sources?: components["schemas"]["ProfileExtractSource"][] | null;
-        };
-        /** ExtractorUpdate */
-        ExtractorUpdate: {
-            /**
-             * Name
-             * @description Extractor name
-             */
-            name?: string | null;
-            /**
-             * Description
-             * @description Extractor description
-             */
-            description?: string | null;
-            /**
-             * Json Schema
-             * @description JSON schema
-             */
-            json_schema?: {
-                [key: string]: unknown;
-            } | string | null;
-            /**
-             * Instruction
-             * @description Extractor instruction
-             */
-            instruction?: string | null;
-            /**
-             * Extractor Examples
-             * @description Extractor examples
-             * @default []
-             */
-            extractor_examples: components["schemas"]["ExtractorExampleRead"][];
-            /**
-             * Requires Approval
-             * @description Whether extraction results require human approval
-             * @default false
-             */
-            requires_approval: boolean;
-        };
-        /** ExtractorVersionRead */
-        ExtractorVersionRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Extractor Id
-             * Format: uuid4
-             * @description Parent extractor ID
-             */
-            extractor_id: string;
-            /**
-             * Version Number
-             * @description Version sequence number
-             */
-            version_number: number;
-            /**
-             * Instruction
-             * @description Instruction at this version
-             */
-            instruction?: string | null;
-            /**
-             * Json Schema
-             * @description JSON schema at this version
-             */
-            json_schema?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Version Hash
-             * @description SHA-256 hash of instruction + schema
-             */
-            version_hash: string;
-        };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
-        };
-        /** LeadCommentCreate */
-        LeadCommentCreate: {
-            /**
-             * Content
-             * @description Comment content
-             */
-            content: string;
-            /**
-             * Anonymous
-             * @description Whether the comment hides the author's public profile
-             * @default true
-             */
-            anonymous: boolean;
-        };
-        /** LeadCommentRead */
-        LeadCommentRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Lead Id
-             * Format: uuid4
-             * @description Lead identifier
-             */
-            lead_id: string;
-            /**
-             * Parent Comment Id
-             * @description Parent comment identifier for replies
-             */
-            parent_comment_id?: string | null;
-            /**
-             * Content
-             * @description Comment content
-             */
-            content: string;
-            /**
-             * Anonymous
-             * @description Whether the comment hides the author's public profile
-             * @default true
-             */
-            anonymous: boolean;
-            /** @description The author's public profile, when the comment is non-anonymous */
-            author_public_profile?: components["schemas"]["LeadParticipantPublicProfileRead"] | null;
-            /**
-             * Replies
-             * @description Replies to this top-level comment
-             */
-            replies?: components["schemas"]["LeadCommentRead"][];
-        };
-        /** LeadCreate */
-        LeadCreate: {
-            /**
-             * Title
-             * @description Job title
-             */
-            title?: string | null;
-            /**
-             * Description
-             * @description Job description
-             */
-            description?: string | null;
-            /**
-             * Location
-             * @description Job location
-             */
-            location?: string | null;
-            /**
-             * Salary
-             * @description Salary range
-             */
-            salary?: string | null;
-            /**
-             * Job Function
-             * @description Job function
-             */
-            job_function?: string | null;
-            /**
-             * Employment Type
-             * @description Type of employment
-             */
-            employment_type?: string | null;
-            /**
-             * Seniority Level
-             * @description Seniority level
-             */
-            seniority_level?: string | null;
-            /**
-             * Education Level
-             * @description Required education level
-             */
-            education_level?: string | null;
-            /**
-             * Hiring Manager
-             * @description Hiring manager
-             */
-            hiring_manager?: string | null;
-            /** Url */
-            url: string;
-            /**
-             * Company Ids
-             * @description Company IDs
-             */
-            company_ids?: string[] | null;
-        };
-        /** LeadDetailRead */
-        LeadDetailRead: {
-            /**
-             * Title
-             * @description Job title
-             */
-            title?: string | null;
-            /**
-             * Description
-             * @description Job description
-             */
-            description?: string | null;
-            /**
-             * Location
-             * @description Job location
-             */
-            location?: string | null;
-            /**
-             * Salary
-             * @description Salary range
-             */
-            salary?: string | null;
-            /**
-             * Job Function
-             * @description Job function
-             */
-            job_function?: string | null;
-            /**
-             * Employment Type
-             * @description Type of employment
-             */
-            employment_type?: string | null;
-            /**
-             * Seniority Level
-             * @description Seniority level
-             */
-            seniority_level?: string | null;
-            /**
-             * Education Level
-             * @description Required education level
-             */
-            education_level?: string | null;
-            /**
-             * Hiring Manager
-             * @description Hiring manager
-             */
-            hiring_manager?: string | null;
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Url
-             * @description Job posting URL
-             */
-            url: string;
-            /**
-             * Canonical Url
-             * @description Canonical lead URL used for deduplication
-             */
-            canonical_url: string;
-            /**
-             * Companies
-             * @description List of companies associated with the lead
-             */
-            companies?: components["schemas"]["CompanyRead"][];
-            /**
-             * Interest Count
-             * @description How many viewers are currently registered on the lead
-             * @default 0
-             */
-            interest_count: number;
-            /**
-             * Comment Count
-             * @description How many comments and replies exist for the lead
-             * @default 0
-             */
-            comment_count: number;
-            /**
-             * Viewer Is Registered
-             * @description Whether the current viewer is registered on the lead
-             * @default false
-             */
-            viewer_is_registered: boolean;
-            /** @description Current-viewer permissions for this lead */
-            viewer_permissions?: components["schemas"]["LeadViewerPermissionsRead"];
-            /** @description The current viewer's lead registration, if present */
-            viewer_registration?: components["schemas"]["LeadRegistrationRead"] | null;
-            /**
-             * Participant Summaries
-             * @description Registered participants who opted to expose their profile
-             */
-            participant_summaries?: components["schemas"]["LeadParticipantSummaryRead"][];
-        };
-        /**
-         * LeadExtractDisposition
-         * @enum {string}
-         */
-        LeadExtractDisposition: "created" | "matched_existing_joined" | "matched_existing_already_registered";
-        /** LeadExtractResponse */
-        LeadExtractResponse: {
-            /** @description The resulting lead record */
-            lead: components["schemas"]["LeadRead"];
-            /** @description Whether extraction created a lead or matched an existing one */
-            disposition: components["schemas"]["LeadExtractDisposition"];
-            /**
-             * Submitted Url
-             * @description The URL submitted for extraction
-             */
-            submitted_url: string;
-            /**
-             * Normalized Url
-             * @description The canonicalized URL used for deduplication
-             */
-            normalized_url: string;
-        };
-        /** LeadParticipantPublicProfileRead */
-        LeadParticipantPublicProfileRead: {
-            /**
-             * User Id
-             * Format: uuid4
-             * @description User identifier
-             */
-            user_id: string;
-            /**
-             * Display Name
-             * @description Public display name for the participant
-             */
-            display_name: string;
-            /**
-             * City
-             * @description Participant city
-             */
-            city?: string | null;
-            /**
-             * State
-             * @description Participant state
-             */
-            state?: string | null;
-            /**
-             * Country
-             * @description Participant country
-             */
-            country?: string | null;
-            /**
-             * Avatar Uri
-             * @description Participant avatar URI
-             */
-            avatar_uri?: string | null;
-        };
-        /** LeadParticipantSummaryRead */
-        LeadParticipantSummaryRead: {
-            /**
-             * Registered At
-             * Format: date-time
-             * @description When the participant registered interest in the lead
-             */
-            registered_at: string;
-            /** @description The participant's exposed public profile */
-            public_profile: components["schemas"]["LeadParticipantPublicProfileRead"];
-            /**
-             * Is Connected
-             * @description Whether the viewer has an accepted connection with this participant
-             * @default false
-             */
-            is_connected: boolean;
-            /**
-             * Connection Id
-             * @description Connection record id, if an accepted connection exists
-             */
-            connection_id?: string | null;
-        };
-        /** LeadRead */
-        LeadRead: {
-            /**
-             * Title
-             * @description Job title
-             */
-            title?: string | null;
-            /**
-             * Description
-             * @description Job description
-             */
-            description?: string | null;
-            /**
-             * Location
-             * @description Job location
-             */
-            location?: string | null;
-            /**
-             * Salary
-             * @description Salary range
-             */
-            salary?: string | null;
-            /**
-             * Job Function
-             * @description Job function
-             */
-            job_function?: string | null;
-            /**
-             * Employment Type
-             * @description Type of employment
-             */
-            employment_type?: string | null;
-            /**
-             * Seniority Level
-             * @description Seniority level
-             */
-            seniority_level?: string | null;
-            /**
-             * Education Level
-             * @description Required education level
-             */
-            education_level?: string | null;
-            /**
-             * Hiring Manager
-             * @description Hiring manager
-             */
-            hiring_manager?: string | null;
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Url
-             * @description Job posting URL
-             */
-            url: string;
-            /**
-             * Canonical Url
-             * @description Canonical lead URL used for deduplication
-             */
-            canonical_url: string;
-            /**
-             * Companies
-             * @description List of companies associated with the lead
-             */
-            companies?: components["schemas"]["CompanyRead"][];
-            /**
-             * Interest Count
-             * @description How many viewers are currently registered on the lead
-             * @default 0
-             */
-            interest_count: number;
-            /**
-             * Comment Count
-             * @description How many comments and replies exist for the lead
-             * @default 0
-             */
-            comment_count: number;
-            /**
-             * Viewer Is Registered
-             * @description Whether the current viewer is registered on the lead
-             * @default false
-             */
-            viewer_is_registered: boolean;
-            /** @description Current-viewer permissions for this lead */
-            viewer_permissions?: components["schemas"]["LeadViewerPermissionsRead"];
-        };
-        /** LeadRegistrationRead */
-        LeadRegistrationRead: {
-            /**
-             * Lead Id
-             * Format: uuid4
-             * @description Lead identifier
-             */
-            lead_id: string;
-            /**
-             * User Id
-             * Format: uuid4
-             * @description User identifier
-             */
-            user_id: string;
-            /**
-             * Internal Notes
-             * @description Viewer-scoped notes for this registration
-             */
-            internal_notes?: string | null;
-            /**
-             * Expose Profile
-             * @description Whether the viewer exposes their profile to participants
-             * @default false
-             */
-            expose_profile: boolean;
-            /**
-             * Created At
-             * Format: date-time
-             * @description When the registration was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description When the registration was last updated
-             */
-            updated_at: string;
-        };
-        /** LeadRegistrationUpdate */
-        LeadRegistrationUpdate: {
-            /**
-             * Internal Notes
-             * @description Viewer-scoped notes for this registration
-             */
-            internal_notes?: string | null;
-            /**
-             * Expose Profile
-             * @description Whether the viewer exposes their profile to participants
-             */
-            expose_profile?: boolean | null;
-        };
-        /** LeadSharedUpdate */
-        LeadSharedUpdate: {
-            /**
-             * Title
-             * @description Job title
-             */
-            title?: string | null;
-            /**
-             * Description
-             * @description Job description
-             */
-            description?: string | null;
-            /**
-             * Location
-             * @description Job location
-             */
-            location?: string | null;
-            /**
-             * Salary
-             * @description Salary range
-             */
-            salary?: string | null;
-            /**
-             * Job Function
-             * @description Job function
-             */
-            job_function?: string | null;
-            /**
-             * Employment Type
-             * @description Type of employment
-             */
-            employment_type?: string | null;
-            /**
-             * Seniority Level
-             * @description Seniority level
-             */
-            seniority_level?: string | null;
-            /**
-             * Education Level
-             * @description Required education level
-             */
-            education_level?: string | null;
-            /**
-             * Hiring Manager
-             * @description Hiring manager
-             */
-            hiring_manager?: string | null;
-            /**
-             * Company Ids
-             * @description Company IDs
-             */
-            company_ids?: string[] | null;
-        };
-        /** LeadViewerPermissionsRead */
-        LeadViewerPermissionsRead: {
-            /**
-             * Can Register
-             * @description Whether the viewer can register
-             * @default false
-             */
-            can_register: boolean;
-            /**
-             * Can Leave Registration
-             * @description Whether the viewer can remove their registration
-             * @default false
-             */
-            can_leave_registration: boolean;
-            /**
-             * Can Update Registration
-             * @description Whether the viewer can edit their registration metadata
-             * @default false
-             */
-            can_update_registration: boolean;
-            /**
-             * Can Update Shared Fields
-             * @description Whether the viewer can update shared lead fields
-             * @default false
-             */
-            can_update_shared_fields: boolean;
-            /**
-             * Can Clear Or Overwrite Shared Fields
-             * @description Whether the viewer can clear or overwrite populated shared fields
-             * @default false
-             */
-            can_clear_or_overwrite_shared_fields: boolean;
-            /**
-             * Can Delete Shared Lead
-             * @description Whether the viewer can delete the shared lead
-             * @default false
-             */
-            can_delete_shared_lead: boolean;
-            /**
-             * Can View Comments
-             * @description Whether the viewer can read comments on the lead
-             * @default false
-             */
-            can_view_comments: boolean;
-            /**
-             * Can Post Comments
-             * @description Whether the viewer can post comments on the lead
-             * @default false
-             */
-            can_post_comments: boolean;
-        };
-        /** LeadsPaginatedRead */
-        LeadsPaginatedRead: {
-            /** Leads */
-            leads: components["schemas"]["LeadRead"][];
-            pagination: components["schemas"]["Pagination"];
-            /**
-             * Total Count
-             * @description Total number of leads, if pagination requested
-             */
-            total_count: number | null;
-        };
-        /** MessageAuthorRead */
-        MessageAuthorRead: {
-            /**
-             * User Id
-             * Format: uuid4
-             * @description Author user identifier
-             */
-            user_id: string;
-            /**
-             * Display Name
-             * @description Author display name
-             */
-            display_name: string;
-            /**
-             * Avatar Uri
-             * @description Author avatar URI
-             */
-            avatar_uri?: string | null;
-        };
-        /** MessageCreate */
-        MessageCreate: {
-            /**
-             * Content
-             * @description Message content
-             */
-            content: string;
-            /**
-             * Parent Message Id
-             * @description Parent message ID for threaded replies
-             */
-            parent_message_id?: string | null;
-        };
-        /** MessageEdit */
-        MessageEdit: {
-            /**
-             * Content
-             * @description Updated message content
-             */
-            content: string;
-        };
-        /** MessageRead */
-        MessageRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /** @description Message author */
-            author: components["schemas"]["MessageAuthorRead"];
-            /**
-             * Content
-             * @description Message content
-             */
-            content: string;
-            /**
-             * Edited At
-             * @description When the message was last edited
-             */
-            edited_at?: string | null;
-            /**
-             * Parent Message Id
-             * @description Parent message ID for threaded replies
-             */
-            parent_message_id?: string | null;
-        };
-        /** OrchestrationEventCreate */
-        OrchestrationEventCreate: {
-            /**
-             * Message
-             * @description Error message
-             */
-            message?: string | null;
-            /**
-             * Payload
-             * @description Payload of the triggering event
-             */
-            payload?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Environment
-             * @description Application environment setting
-             */
-            environment?: string | null;
-            /** @description Source of the pipeline */
-            source_uri?: components["schemas"]["URI"] | null;
-            /** @description Destination of the pipeline */
-            destination_uri?: components["schemas"]["URI"] | null;
-            /** @description Status of the event */
-            status?: components["schemas"]["OrchestrationEventStatusType"] | null;
-            /**
-             * Pipeline Id
-             * Format: uuid4
-             */
-            pipeline_id: string;
-        };
-        /** OrchestrationEventPaginatedRead */
-        OrchestrationEventPaginatedRead: {
-            /**
-             * Items
-             * @description Paginated list of orchestration events
-             * @default []
-             */
-            items: components["schemas"]["OrchestrationEventRead-Output"][];
-            /**
-             * Total
-             * @description Total number of matching events
-             * @default 0
-             */
-            total: number;
-            /**
-             * Page
-             * @description Current page number
-             * @default 1
-             */
-            page: number;
-            /**
-             * Page Size
-             * @description Items per page
-             * @default 20
-             */
-            page_size: number;
-        };
-        /** OrchestrationEventRead */
-        "OrchestrationEventRead-Input": {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Message
-             * @description Error message
-             */
-            message?: string | null;
-            /**
-             * Payload
-             * @description Payload of the triggering event
-             */
-            payload?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Environment
-             * @description Application environment setting
-             */
-            environment?: string | null;
-            /** @description Source of the pipeline */
-            source_uri?: components["schemas"]["URI"] | null;
-            /** @description Destination of the pipeline */
-            destination_uri?: components["schemas"]["URI"] | null;
-            /** @description Status of the event */
-            status?: components["schemas"]["OrchestrationEventStatusType"] | null;
-            /**
-             * Pipeline Id
-             * @description Pipeline ID
-             */
-            pipeline_id?: string | null;
-            /**
-             * Version Hash
-             * @description Extractor version hash used for this run
-             */
-            version_hash?: string | null;
-            /**
-             * Retry Of Id
-             * @description ID of the original event this is a retry of
-             */
-            retry_of_id?: string | null;
-        };
-        /** OrchestrationEventRead */
-        "OrchestrationEventRead-Output": {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Message
-             * @description Error message
-             */
-            message?: string | null;
-            /**
-             * Payload
-             * @description Payload of the triggering event
-             */
-            payload?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Environment
-             * @description Application environment setting
-             */
-            environment?: string | null;
-            /** @description Source of the pipeline */
-            source_uri?: components["schemas"]["URI"] | null;
-            /** @description Destination of the pipeline */
-            destination_uri?: components["schemas"]["URI"] | null;
-            /** @description Status of the event */
-            status?: components["schemas"]["OrchestrationEventStatusType"] | null;
-            /**
-             * Pipeline Id
-             * @description Pipeline ID
-             */
-            pipeline_id?: string | null;
-            /**
-             * Version Hash
-             * @description Extractor version hash used for this run
-             */
-            version_hash?: string | null;
-            /**
-             * Retry Of Id
-             * @description ID of the original event this is a retry of
-             */
-            retry_of_id?: string | null;
-        };
-        /**
-         * OrchestrationEventStatusType
-         * @enum {string}
-         */
-        OrchestrationEventStatusType: "pending" | "running" | "success" | "failure" | "pending_review";
-        /**
-         * OrchestrationEventSummary
-         * @description Lightweight summary of an OrchestrationEvent for embedding in CrawlerRunDetailRead.
-         */
-        OrchestrationEventSummary: {
-            /**
-             * Status
-             * @description Event status
-             */
-            status?: string | null;
-            /**
-             * Message
-             * @description Event message
-             */
-            message?: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             * @description When the event was created
-             */
-            created_at: string;
-        };
-        /**
-         * OrchestrationEventUpdate
-         * @description Update schema for orchestration events.
-         *
-         *     pipeline_id is intentionally excluded — runs cannot be reassigned
-         *     to a different workflow after creation.
-         */
-        OrchestrationEventUpdate: {
-            /**
-             * Message
-             * @description Error message
-             */
-            message?: string | null;
-            /**
-             * Payload
-             * @description Payload of the triggering event
-             */
-            payload?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Environment
-             * @description Application environment setting
-             */
-            environment?: string | null;
-            /** @description Source of the pipeline */
-            source_uri?: components["schemas"]["URI"] | null;
-            /** @description Destination of the pipeline */
-            destination_uri?: components["schemas"]["URI"] | null;
-            /** @description Status of the event */
-            status?: components["schemas"]["OrchestrationEventStatusType"] | null;
-        };
-        /** OrchestrationPipelineCreate */
-        OrchestrationPipelineCreate: {
-            /**
-             * Name
-             * @description Name of the pipeline
-             */
-            name?: string | null;
-            /**
-             * Description
-             * @description Description of the pipeline
-             */
-            description?: string | null;
-            /**
-             * Definition
-             * @description Parameters for the pipeline
-             */
-            definition?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** OrchestrationPipelineRead */
-        OrchestrationPipelineRead: {
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-            /**
-             * Name
-             * @description Name of the pipeline
-             */
-            name?: string | null;
-            /**
-             * Description
-             * @description Description of the pipeline
-             */
-            description?: string | null;
-            /**
-             * Definition
-             * @description Parameters for the pipeline
-             */
-            definition?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Orchestration Events
-             * @description Events in the pipeline
-             * @default []
-             */
-            orchestration_events: components["schemas"]["OrchestrationEventRead-Output"][];
-            /**
-             * Run Count
-             * @description Total number of runs
-             * @default 0
-             */
-            run_count: number;
-            /**
-             * Failure Count
-             * @description Number of failed runs
-             * @default 0
-             */
-            failure_count: number;
-            /**
-             * Last Run Status
-             * @description Status of the most recent run
-             */
-            last_run_status?: string | null;
-            /**
-             * Last Run At
-             * @description Timestamp of the most recent run
-             */
-            last_run_at?: string | null;
-        };
-        /** OrchestrationPipelineUpdate */
-        OrchestrationPipelineUpdate: {
-            /**
-             * Name
-             * @description Name of the pipeline
-             */
-            name?: string | null;
-            /**
-             * Description
-             * @description Description of the pipeline
-             */
-            description?: string | null;
-            /**
-             * Definition
-             * @description Parameters for the pipeline
-             */
-            definition?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Events
-             * @description Events in the pipeline
-             * @default []
-             */
-            events: components["schemas"]["OrchestrationEventRead-Input"][];
-        };
-        /** Pagination */
-        Pagination: {
-            /**
-             * Page
-             * @description The page number
-             * @default 1
-             */
-            page: number;
-            /**
-             * Page Size
-             * @description The number of items per page
-             * @default 10
-             */
-            page_size: number;
-            /**
-             * Request Count
-             * @description Request a query for total count
-             * @default false
-             */
-            request_count: boolean;
-        };
-        /**
-         * PlacementStatus
-         * @enum {string}
-         */
-        PlacementStatus: "active" | "graduated" | "alumni";
-        /** PlacementUpdate */
-        PlacementUpdate: {
-            /** @description Target placement status (active, graduated, alumni) */
-            placement_status: components["schemas"]["PlacementStatus"];
-        };
-        /**
-         * ProfileExtractResponse
-         * @description Response from the unified profile extraction endpoint.
-         */
-        ProfileExtractResponse: {
-            /**
-             * User
-             * @description Extracted core user fields (first_name, last_name, etc.)
-             */
-            user?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Skills
-             * @description Extracted and persisted skills
-             * @default []
-             */
-            skills: components["schemas"]["SkillRead"][];
-            /**
-             * Experiences
-             * @description Extracted and persisted experiences
-             * @default []
-             */
-            experiences: components["schemas"]["ExperienceRead"][];
-            /**
-             * Education
-             * @description Extracted and persisted education records
-             * @default []
-             */
-            education: components["schemas"]["EducationRead"][];
-            /**
-             * Certificates
-             * @description Extracted and persisted certificates
-             * @default []
-             */
-            certificates: components["schemas"]["CertificateRead"][];
-            /**
-             * Content Too Long
-             * @description True if any source exceeded extraction limits
-             * @default false
-             */
-            content_too_long: boolean;
-            /**
-             * Sources Count
-             * @description Number of sources that were processed
-             * @default 1
-             */
-            sources_count: number;
-        };
-        /**
-         * ProfileExtractSource
-         * @description A single extraction source — exactly one of url, file, or text.
-         */
-        ProfileExtractSource: {
-            /**
-             * Url
-             * @description URL to extract from
-             */
-            url?: string | null;
-            /**
-             * File
-             * @description File to extract from
-             */
-            file?: string | null;
-            /**
-             * Text
-             * @description Raw text to extract from
-             */
-            text?: string | null;
-        };
-        /** ResumeCreate */
-        ResumeCreate: {
-            /**
-             * Name
-             * @description Resume name
-             */
-            name?: string | null;
-            /**
-             * Content
-             * @description Resume content
-             */
-            content?: string | null;
-            /** @description Resume content type */
-            content_type?: components["schemas"]["ContentType"] | null;
-        };
-        /** ResumeRead */
-        ResumeRead: {
-            /**
-             * Name
-             * @description Resume name
-             */
-            name?: string | null;
-            /**
-             * Content
-             * @description Resume content
-             */
-            content?: string | null;
-            /** @description Resume content type */
-            content_type?: components["schemas"]["ContentType"] | null;
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-        };
-        /** ResumeUpdate */
-        ResumeUpdate: {
-            /**
-             * Name
-             * @description Resume name
-             */
-            name?: string | null;
-            /**
-             * Content
-             * @description Resume content
-             */
-            content?: string | null;
-            /** @description Resume content type */
-            content_type?: components["schemas"]["ContentType"] | null;
-        };
-        /**
-         * ReviewAction
-         * @enum {string}
-         */
-        ReviewAction: "approve" | "reject";
-        /** ReviewBatchItem */
-        ReviewBatchItem: {
-            /** @description Type of review item */
-            item_type: components["schemas"]["ReviewItemType"];
-            /**
-             * Item Id
-             * Format: uuid4
-             * @description Item ID
-             */
-            item_id: string;
-            /** @description approve or reject */
-            action: components["schemas"]["ReviewAction"];
-        };
-        /** ReviewBatchRequest */
-        ReviewBatchRequest: {
-            /**
-             * Items
-             * @description Batch of review actions
-             */
-            items: components["schemas"]["ReviewBatchItem"][];
-        };
-        /** ReviewBatchResponse */
-        ReviewBatchResponse: {
-            /**
-             * Processed
-             * @description Number of items processed
-             */
-            processed: number;
-            /**
-             * Errors
-             * @description Errors encountered
-             * @default []
-             */
-            errors: string[];
-        };
-        /** ReviewItemRead */
-        ReviewItemRead: {
-            /** @description Type of review item */
-            item_type: components["schemas"]["ReviewItemType"];
-            /**
-             * Item Id
-             * Format: uuid4
-             * @description ID of the item
-             */
-            item_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description When the item was created
-             */
-            created_at: string;
-            /**
-             * Summary
-             * @description Brief summary of the item
-             */
-            summary?: string | null;
-            /**
-             * Detail
-             * @description Additional context
-             */
-            detail?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /**
-         * ReviewItemType
-         * @enum {string}
-         */
-        ReviewItemType: "crawler_run" | "extraction_event" | "lead";
-        /** SkillCreate */
-        SkillCreate: {
-            /**
-             * Name
-             * @description Name of the skill
-             */
-            name?: string | null;
-            /**
-             * Category
-             * @description Category of the skill
-             */
-            category?: string | null;
-            /**
-             * Yoe
-             * @description Years of Experience
-             */
-            yoe?: number | null;
-            /**
-             * Subskills
-             * @description Sub-Skills
-             */
-            subskills?: string | null;
-        };
-        /** SkillRead */
-        SkillRead: {
-            /**
-             * Name
-             * @description Name of the skill
-             */
-            name?: string | null;
-            /**
-             * Category
-             * @description Category of the skill
-             */
-            category?: string | null;
-            /**
-             * Yoe
-             * @description Years of Experience
-             */
-            yoe?: number | null;
-            /**
-             * Subskills
-             * @description Sub-Skills
-             */
-            subskills?: string | null;
-            /**
-             * Id
-             * Format: uuid4
-             * @description The unique uuid4 record identifier.
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             * @description The time the item was created
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             * @description The time the item was last updated
-             */
-            updated_at: string;
-        };
-        /** SkillUpdate */
-        SkillUpdate: {
-            /**
-             * Name
-             * @description Name of the skill
-             */
-            name?: string | null;
-            /**
-             * Category
-             * @description Category of the skill
-             */
-            category?: string | null;
-            /**
-             * Yoe
-             * @description Years of Experience
-             */
-            yoe?: number | null;
-            /**
-             * Subskills
-             * @description Sub-Skills
-             */
-            subskills?: string | null;
-        };
-        /**
-         * SubscriptionTier
-         * @enum {string}
-         */
-        SubscriptionTier: "free" | "starter" | "pro";
-        /**
-         * SuggestExtractor
-         * @description A request to create an extractor from a text sample.
-         */
-        SuggestExtractor: {
-            /**
-             * Description
-             * @description A description of the extractor.
-             * @default
-             */
-            description: string;
-            /**
-             * Json Schema
-             * @description Existing JSON schema that describes the entity information that should be extracted.
-             */
-            json_schema?: string | null;
-        };
-        /** URI */
-        URI: {
-            /** Name */
-            name: string;
-            type: components["schemas"]["URIType"];
-        };
-        /**
-         * URIType
-         * @enum {string}
-         */
-        URIType: "filepath" | "datalake" | "database" | "api" | "url";
-        /** UnreadCountRead */
-        UnreadCountRead: {
-            /**
-             * Total Unread
-             * @description Total unread messages across conversations
-             */
-            total_unread: number;
-        };
-        /** UserCreate */
-        UserCreate: {
-            /**
-             * First Name
-             * @description First name
-             */
-            first_name?: string | null;
-            /**
-             * Last Name
-             * @description Last name
-             */
-            last_name?: string | null;
-            /**
-             * Phone Number
-             * @description Phone number
-             */
-            phone_number?: string | null;
-            /**
-             * Address Line 1
-             * @description Address line 1
-             */
-            address_line_1?: string | null;
-            /**
-             * Address Line 2
-             * @description Address line 2
-             */
-            address_line_2?: string | null;
-            /**
-             * City
-             * @description City
-             */
-            city?: string | null;
-            /**
-             * State
-             * @description State
-             */
-            state?: string | null;
-            /**
-             * Zip Code
-             * @description Zip code
-             */
-            zip_code?: string | null;
-            /**
-             * Country
-             * @description Country
-             */
-            country?: string | null;
-            /**
-             * Time Zone
-             * @description Time zone
-             */
-            time_zone?: string | null;
-            /** @description Avatar URI */
-            avatar_uri?: components["schemas"]["URI"] | null;
-            /**
-             * Headline
-             * @description Short professional tagline
-             */
-            headline?: string | null;
-            /**
-             * Bio
-             * @description Longer about-me blurb
-             */
-            bio?: string | null;
-            /**
-             * Is Discoverable
-             * @description Whether the user appears in the directory
-             * @default true
-             */
-            is_discoverable: boolean;
-            /**
-             * @description Subscription tier
-             * @default free
-             */
-            subscription_tier: components["schemas"]["SubscriptionTier"];
-            /**
-             * Subscription Expires At
-             * @description When the current subscription expires
-             */
-            subscription_expires_at?: string | null;
-            /**
-             * @description Job-seeker lifecycle status
-             * @default active
-             */
-            placement_status: components["schemas"]["PlacementStatus"];
-            /**
-             * Placement Date
-             * @description Date when the user transitioned to graduated/alumni
-             */
-            placement_date?: string | null;
-            /**
-             * Email
-             * Format: email
-             */
-            email: string;
-            /** Password */
-            password: string;
-            /**
-             * Is Active
-             * @default true
-             */
-            is_active: boolean | null;
-            /**
-             * Is Superuser
-             * @default false
-             */
-            is_superuser: boolean | null;
-            /**
-             * Is Verified
-             * @default false
-             */
-            is_verified: boolean | null;
-        };
-        /** UserDataOperationResult */
-        UserDataOperationResult: {
-            /**
-             * User Id
-             * Format: uuid4
-             * @description User affected by the data-management operation
-             */
-            user_id: string;
-            /**
-             * User Deleted
-             * @description Whether the user row was removed
-             */
-            user_deleted: boolean;
-            /**
-             * Cleared Profile Fields
-             * @description Number of profile fields cleared from the retained user
-             * @default 0
-             */
-            cleared_profile_fields: number;
-            /**
-             * Deleted Records
-             * @description Deleted record counts grouped by table or association
-             */
-            deleted_records?: {
-                [key: string]: number;
-            };
-        };
-        /** UserDirectoryPaginatedRead */
-        UserDirectoryPaginatedRead: {
-            /**
-             * Items
-             * @description Paginated user directory entries
-             */
-            items?: components["schemas"]["UserDirectoryRead"][];
-            /**
-             * Total
-             * @description Total matching users
-             * @default 0
-             */
-            total: number;
-            /**
-             * Page
-             * @description Current page number
-             * @default 1
-             */
-            page: number;
-            /**
-             * Page Size
-             * @description Items per page
-             * @default 20
-             */
-            page_size: number;
-        };
-        /** UserDirectoryRead */
-        UserDirectoryRead: {
-            /**
-             * User Id
-             * Format: uuid4
-             * @description User identifier
-             */
-            user_id: string;
-            /**
-             * Display Name
-             * @description Public display name
-             */
-            display_name: string;
-            /**
-             * Headline
-             * @description Professional tagline
-             */
-            headline?: string | null;
-            /**
-             * Avatar Uri
-             * @description Avatar URI
-             */
-            avatar_uri?: string | null;
-            /**
-             * City
-             * @description City
-             */
-            city?: string | null;
-            /**
-             * State
-             * @description State
-             */
-            state?: string | null;
-            /**
-             * Country
-             * @description Country
-             */
-            country?: string | null;
-            /** @description Lifecycle status */
-            placement_status: components["schemas"]["PlacementStatus"];
-            /** @description Subscription tier */
-            subscription_tier: components["schemas"]["SubscriptionTier"];
-            /**
-             * Skills Summary
-             * @description Top skill names
-             */
-            skills_summary?: string[];
-        };
-        /** UserProfileRead */
-        UserProfileRead: {
-            /**
-             * Skills
-             * @description User's skills
-             * @default []
-             */
-            skills: components["schemas"]["SkillRead"][];
-            /**
-             * Experiences
-             * @description User's professional experiences
-             * @default []
-             */
-            experiences: components["schemas"]["ExperienceRead"][];
-            /**
-             * Education
-             * @description User's educational background
-             * @default []
-             */
-            education: components["schemas"]["EducationRead"][];
-            /**
-             * Certificates
-             * @description User's certificates
-             * @default []
-             */
-            certificates: components["schemas"]["CertificateRead"][];
-        };
-        /** UserPublicProfileRead */
-        UserPublicProfileRead: {
-            /**
-             * User Id
-             * Format: uuid4
-             * @description User identifier
-             */
-            user_id: string;
-            /**
-             * Display Name
-             * @description Public display name
-             */
-            display_name: string;
-            /**
-             * Headline
-             * @description Professional tagline
-             */
-            headline?: string | null;
-            /**
-             * Bio
-             * @description About-me blurb
-             */
-            bio?: string | null;
-            /**
-             * Avatar Uri
-             * @description Avatar URI
-             */
-            avatar_uri?: string | null;
-            /**
-             * City
-             * @description City
-             */
-            city?: string | null;
-            /**
-             * State
-             * @description State
-             */
-            state?: string | null;
-            /**
-             * Country
-             * @description Country
-             */
-            country?: string | null;
-            /** @description Lifecycle status */
-            placement_status: components["schemas"]["PlacementStatus"];
-            /**
-             * Skills
-             * @description User skills
-             */
-            skills?: components["schemas"]["SkillRead"][];
-            /**
-             * Experiences
-             * @description Work experiences
-             */
-            experiences?: components["schemas"]["ExperienceRead"][];
-        };
-        /** UserRead */
-        UserRead: {
-            /**
-             * First Name
-             * @description First name
-             */
-            first_name?: string | null;
-            /**
-             * Last Name
-             * @description Last name
-             */
-            last_name?: string | null;
-            /**
-             * Phone Number
-             * @description Phone number
-             */
-            phone_number?: string | null;
-            /**
-             * Address Line 1
-             * @description Address line 1
-             */
-            address_line_1?: string | null;
-            /**
-             * Address Line 2
-             * @description Address line 2
-             */
-            address_line_2?: string | null;
-            /**
-             * City
-             * @description City
-             */
-            city?: string | null;
-            /**
-             * State
-             * @description State
-             */
-            state?: string | null;
-            /**
-             * Zip Code
-             * @description Zip code
-             */
-            zip_code?: string | null;
-            /**
-             * Country
-             * @description Country
-             */
-            country?: string | null;
-            /**
-             * Time Zone
-             * @description Time zone
-             */
-            time_zone?: string | null;
-            /** @description Avatar URI */
-            avatar_uri?: components["schemas"]["URI"] | null;
-            /**
-             * Headline
-             * @description Short professional tagline
-             */
-            headline?: string | null;
-            /**
-             * Bio
-             * @description Longer about-me blurb
-             */
-            bio?: string | null;
-            /**
-             * Is Discoverable
-             * @description Whether the user appears in the directory
-             * @default true
-             */
-            is_discoverable: boolean;
-            /**
-             * @description Subscription tier
-             * @default free
-             */
-            subscription_tier: components["schemas"]["SubscriptionTier"];
-            /**
-             * Subscription Expires At
-             * @description When the current subscription expires
-             */
-            subscription_expires_at?: string | null;
-            /**
-             * @description Job-seeker lifecycle status
-             * @default active
-             */
-            placement_status: components["schemas"]["PlacementStatus"];
-            /**
-             * Placement Date
-             * @description Date when the user transitioned to graduated/alumni
-             */
-            placement_date?: string | null;
-            /**
-             * Id
-             * Format: uuid4
-             */
-            id: string;
-            /**
-             * Email
-             * Format: email
-             */
-            email: string;
-            /**
-             * Is Active
-             * @default true
-             */
-            is_active: boolean;
-            /**
-             * Is Superuser
-             * @default false
-             */
-            is_superuser: boolean;
-            /**
-             * Is Verified
-             * @default false
-             */
-            is_verified: boolean;
-        };
-        /** UserUpdate */
-        UserUpdate: {
-            /**
-             * First Name
-             * @description First name
-             */
-            first_name?: string | null;
-            /**
-             * Last Name
-             * @description Last name
-             */
-            last_name?: string | null;
-            /**
-             * Phone Number
-             * @description Phone number
-             */
-            phone_number?: string | null;
-            /**
-             * Address Line 1
-             * @description Address line 1
-             */
-            address_line_1?: string | null;
-            /**
-             * Address Line 2
-             * @description Address line 2
-             */
-            address_line_2?: string | null;
-            /**
-             * City
-             * @description City
-             */
-            city?: string | null;
-            /**
-             * State
-             * @description State
-             */
-            state?: string | null;
-            /**
-             * Zip Code
-             * @description Zip code
-             */
-            zip_code?: string | null;
-            /**
-             * Country
-             * @description Country
-             */
-            country?: string | null;
-            /**
-             * Time Zone
-             * @description Time zone
-             */
-            time_zone?: string | null;
-            /** @description Avatar URI */
-            avatar_uri?: components["schemas"]["URI"] | null;
-            /**
-             * Headline
-             * @description Short professional tagline
-             */
-            headline?: string | null;
-            /**
-             * Bio
-             * @description Longer about-me blurb
-             */
-            bio?: string | null;
-            /**
-             * Is Discoverable
-             * @description Whether the user appears in the directory
-             * @default true
-             */
-            is_discoverable: boolean;
-            /**
-             * @description Subscription tier
-             * @default free
-             */
-            subscription_tier: components["schemas"]["SubscriptionTier"];
-            /**
-             * Subscription Expires At
-             * @description When the current subscription expires
-             */
-            subscription_expires_at?: string | null;
-            /**
-             * @description Job-seeker lifecycle status
-             * @default active
-             */
-            placement_status: components["schemas"]["PlacementStatus"];
-            /**
-             * Placement Date
-             * @description Date when the user transitioned to graduated/alumni
-             */
-            placement_date?: string | null;
-            /** Password */
-            password?: string | null;
-            /** Email */
-            email?: string | null;
-            /** Is Active */
-            is_active?: boolean | null;
-            /** Is Superuser */
-            is_superuser?: boolean | null;
-            /** Is Verified */
-            is_verified?: boolean | null;
-        };
-        /** ValidationError */
-        ValidationError: {
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
-        };
+  schemas: {
+    /** ActionItemCreate */
+    ActionItemCreate: {
+      /** Title */
+      title: string;
+      /** Description */
+      description?: string | null;
+      kind: components["schemas"]["ActionItemKind"];
+      /** @default pending */
+      status?: components["schemas"]["ActionItemStatus"];
+      /** @default medium */
+      priority?: components["schemas"]["ActionItemPriority"];
+      /** Due At */
+      due_at?: string | null;
+      /**
+       * Sort Order
+       * @default 0
+       */
+      sort_order?: number;
+      /** Application Id */
+      application_id?: string | null;
+      /** Lead Id */
+      lead_id?: string | null;
+      /** Document Id */
+      document_id?: string | null;
+      /** Conversation Id */
+      conversation_id?: string | null;
     };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    /** ActionItemDetailRead */
+    ActionItemDetailRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+      /** Title */
+      title: string;
+      /** Description */
+      description?: string | null;
+      kind: components["schemas"]["ActionItemKind"];
+      status: components["schemas"]["ActionItemStatus"];
+      priority: components["schemas"]["ActionItemPriority"];
+      /** Due At */
+      due_at?: string | null;
+      /** Completed At */
+      completed_at?: string | null;
+      /**
+       * Sort Order
+       * @default 0
+       */
+      sort_order?: number;
+      /** Application Id */
+      application_id?: string | null;
+      /** Lead Id */
+      lead_id?: string | null;
+      /** Document Id */
+      document_id?: string | null;
+      /** Conversation Id */
+      conversation_id?: string | null;
+      application?: components["schemas"]["ApplicationRead"] | null;
+      lead?: components["schemas"]["LeadRead"] | null;
+      document?: components["schemas"]["DocumentRead"] | null;
+      conversation?: components["schemas"]["ConversationRead"] | null;
+    };
+    /**
+     * ActionItemKind
+     * @enum {string}
+     */
+    ActionItemKind: "follow_up" | "prepare_document" | "send_message" | "review_lead" | "schedule_interview" | "custom";
+    /**
+     * ActionItemPriority
+     * @enum {string}
+     */
+    ActionItemPriority: "low" | "medium" | "high" | "urgent";
+    /** ActionItemRead */
+    ActionItemRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+      /** Title */
+      title: string;
+      /** Description */
+      description?: string | null;
+      kind: components["schemas"]["ActionItemKind"];
+      status: components["schemas"]["ActionItemStatus"];
+      priority: components["schemas"]["ActionItemPriority"];
+      /** Due At */
+      due_at?: string | null;
+      /** Completed At */
+      completed_at?: string | null;
+      /**
+       * Sort Order
+       * @default 0
+       */
+      sort_order?: number;
+      /** Application Id */
+      application_id?: string | null;
+      /** Lead Id */
+      lead_id?: string | null;
+      /** Document Id */
+      document_id?: string | null;
+      /** Conversation Id */
+      conversation_id?: string | null;
+    };
+    /** ActionItemReorder */
+    ActionItemReorder: {
+      /** Item Ids */
+      item_ids: string[];
+    };
+    /**
+     * ActionItemStatus
+     * @enum {string}
+     */
+    ActionItemStatus: "pending" | "in_progress" | "completed" | "dismissed";
+    /** ActionItemUpdate */
+    ActionItemUpdate: {
+      /** Title */
+      title?: string | null;
+      /** Description */
+      description?: string | null;
+      kind?: components["schemas"]["ActionItemKind"] | null;
+      status?: components["schemas"]["ActionItemStatus"] | null;
+      priority?: components["schemas"]["ActionItemPriority"] | null;
+      /** Due At */
+      due_at?: string | null;
+      /** Sort Order */
+      sort_order?: number | null;
+      /** Application Id */
+      application_id?: string | null;
+      /** Lead Id */
+      lead_id?: string | null;
+      /** Document Id */
+      document_id?: string | null;
+      /** Conversation Id */
+      conversation_id?: string | null;
+    };
+    /** ActivityFeedItem */
+    ActivityFeedItem: {
+      /** Type */
+      type: string;
+      /** Entity Type */
+      entity_type: string;
+      /**
+       * Entity Id
+       * Format: uuid4
+       */
+      entity_id: string;
+      /** Title */
+      title: string;
+      /** Detail */
+      detail?: string | null;
+      /**
+       * Timestamp
+       * Format: date-time
+       */
+      timestamp: string;
+      /** Metadata */
+      metadata?: {
+        [key: string]: unknown;
+      } | null;
+    };
+    /** ActivityFeedRead */
+    ActivityFeedRead: {
+      /** Items */
+      items: components["schemas"]["ActivityFeedItem"][];
+      /** Total */
+      total: number;
+      /** Page */
+      page: number;
+      /** Page Size */
+      page_size: number;
+    };
+    /** ApplicationCoverLetterAttach */
+    ApplicationCoverLetterAttach: {
+      /**
+       * Cover Letter Id
+       * Format: uuid4
+       */
+      cover_letter_id: string;
+    };
+    /** ApplicationCreate */
+    ApplicationCreate: {
+      /**
+       * Lead Id
+       * Format: uuid4
+       */
+      lead_id: string;
+      /** Status */
+      status: string;
+      /** Notes */
+      notes?: string | null;
+      /** Next Step */
+      next_step?: string | null;
+      /** Next Step Due */
+      next_step_due?: string | null;
+      /** Document Ids */
+      document_ids?: string[] | null;
+    };
+    /** ApplicationDocumentAttach */
+    ApplicationDocumentAttach: {
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Document to attach
+       */
+      document_id: string;
+      /**
+       * Version Id
+       * @description Specific version to pin for this application (default: head)
+       */
+      version_id?: string | null;
+    };
+    /** ApplicationRead */
+    ApplicationRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Lead Id
+       * Format: uuid4
+       */
+      lead_id: string;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+      lead: components["schemas"]["LeadRead"];
+      user: components["schemas"]["UserRead"];
+      /**
+       * Status
+       * @description Application status
+       */
+      status?: string | null;
+      /**
+       * Notes
+       * @description Free-form user notes
+       */
+      notes?: string | null;
+      /**
+       * Next Step
+       * @description Next action for this application
+       */
+      next_step?: string | null;
+      /**
+       * Next Step Due
+       * @description When the next step is due
+       */
+      next_step_due?: string | null;
+      /**
+       * Status History
+       * @description Append-only log of status transitions
+       * @default []
+       */
+      status_history?: {
+          [key: string]: unknown;
+        }[] | null;
+    };
+    /** ApplicationResumeAttach */
+    ApplicationResumeAttach: {
+      /**
+       * Resume Id
+       * Format: uuid4
+       */
+      resume_id: string;
+    };
+    /** ApplicationUpdate */
+    ApplicationUpdate: {
+      /** Status */
+      status?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /** Next Step */
+      next_step?: string | null;
+      /** Next Step Due */
+      next_step_due?: string | null;
+    };
+    /** BearerResponse */
+    BearerResponse: {
+      /** Access Token */
+      access_token: string;
+      /** Token Type */
+      token_type: string;
+    };
+    /** Body_auth_jwt_login_auth_jwt_login_post */
+    Body_auth_jwt_login_auth_jwt_login_post: {
+      /** Grant Type */
+      grant_type?: string | null;
+      /** Username */
+      username: string;
+      /**
+       * Password
+       * Format: password
+       */
+      password: string;
+      /**
+       * Scope
+       * @default
+       */
+      scope?: string;
+      /** Client Id */
+      client_id?: string | null;
+      /**
+       * Client Secret
+       * Format: password
+       */
+      client_secret?: string | null;
+    };
+    /** Body_extract_user_profile_users_me_profile_extract_post */
+    Body_extract_user_profile_users_me_profile_extract_post: {
+      /** File */
+      file?: string | null;
+      /**
+       * Mode
+       * @default entire_document
+       */
+      mode?: string;
+      /** Text */
+      text?: string | null;
+      /** Url */
+      url?: string | null;
+      /** Llm */
+      llm?: string | null;
+      /** Sources Json */
+      sources_json?: string | null;
+      /**
+       * Source Files
+       * @default []
+       */
+      source_files?: string[];
+    };
+    /** Body_extract_user_skills_skills_extract_post */
+    Body_extract_user_skills_skills_extract_post: {
+      /** File */
+      file?: string | null;
+      /** Mode */
+      mode?: string | null;
+      /** Text */
+      text?: string | null;
+      /** Url */
+      url?: string | null;
+      /** Llm */
+      llm?: string | null;
+    };
+    /** Body_extractor_runner_extractor__id__run_post */
+    Body_extractor_runner_extractor__id__run_post: {
+      /** File */
+      file?: string | null;
+      /** Mode */
+      mode?: string | null;
+      /** Text */
+      text?: string | null;
+      /** Url */
+      url?: string | null;
+      /** Llm */
+      llm?: string | null;
+    };
+    /** Body_reset_forgot_password_auth_forgot_password_post */
+    Body_reset_forgot_password_auth_forgot_password_post: {
+      /**
+       * Email
+       * Format: email
+       */
+      email: string;
+    };
+    /** Body_reset_reset_password_auth_reset_password_post */
+    Body_reset_reset_password_auth_reset_password_post: {
+      /** Token */
+      token: string;
+      /** Password */
+      password: string;
+    };
+    /** Body_upload_document_documents_upload_post */
+    Body_upload_document_documents_upload_post: {
+      /** File */
+      file: string;
+      /** Title */
+      title: string;
+      /**
+       * Kind
+       * @default freeform
+       */
+      kind?: string;
+    };
+    /** Body_verify_request_token_auth_request_verify_token_post */
+    Body_verify_request_token_auth_request_verify_token_post: {
+      /**
+       * Email
+       * Format: email
+       */
+      email: string;
+    };
+    /** Body_verify_verify_auth_verify_post */
+    Body_verify_verify_auth_verify_post: {
+      /** Token */
+      token: string;
+    };
+    /** CertificateCreate */
+    CertificateCreate: {
+      /**
+       * Title
+       * @description Certificate title
+       */
+      title?: string | null;
+      /**
+       * Issuer
+       * @description Issuer of the certificate
+       */
+      issuer?: string | null;
+      /**
+       * Expiration Date
+       * @description Expiration date of the certificate
+       */
+      expiration_date?: string | null;
+      /**
+       * Issued Date
+       * @description Issued date of the certificate
+       */
+      issued_date?: string | null;
+    };
+    /** CertificateRead */
+    CertificateRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Title
+       * @description Certificate title
+       */
+      title?: string | null;
+      /**
+       * Issuer
+       * @description Issuer of the certificate
+       */
+      issuer?: string | null;
+      /**
+       * Expiration Date
+       * @description Expiration date of the certificate
+       */
+      expiration_date?: string | null;
+      /**
+       * Issued Date
+       * @description Issued date of the certificate
+       */
+      issued_date?: string | null;
+    };
+    /** CertificateUpdate */
+    CertificateUpdate: {
+      /**
+       * Title
+       * @description Certificate title
+       */
+      title?: string | null;
+      /**
+       * Issuer
+       * @description Issuer of the certificate
+       */
+      issuer?: string | null;
+      /**
+       * Expiration Date
+       * @description Expiration date of the certificate
+       */
+      expiration_date?: string | null;
+      /**
+       * Issued Date
+       * @description Issued date of the certificate
+       */
+      issued_date?: string | null;
+    };
+    /** CommandCenterSummary */
+    CommandCenterSummary: {
+      /** Lead Count */
+      lead_count: number;
+      /** Unapplied Lead Count */
+      unapplied_lead_count: number;
+      /** Application Count */
+      application_count: number;
+      /** Active Application Count */
+      active_application_count: number;
+      /** Status Breakdown */
+      status_breakdown: {
+        [key: string]: number;
+      };
+      /** Pending Action Items */
+      pending_action_items: number;
+      /** Overdue Action Items */
+      overdue_action_items: number;
+      /** Action Items Due Today */
+      action_items_due_today: number;
+      /** Pending Connections */
+      pending_connections: number;
+      /** Unread Messages */
+      unread_messages: number;
+      /** Profile Completion */
+      profile_completion: number;
+      /** Documents Count */
+      documents_count: number;
+      /** Draft Documents Count */
+      draft_documents_count: number;
+    };
+    /** CompanyCreate */
+    CompanyCreate: {
+      /**
+       * Name
+       * @description Company name
+       */
+      name?: string | null;
+      /**
+       * Industry
+       * @description Industry of the company
+       */
+      industry?: string | null;
+      /**
+       * Size
+       * @description Size of the company
+       */
+      size?: string | null;
+      /**
+       * Location
+       * @description Location of the company
+       */
+      location?: string | null;
+      /**
+       * Description
+       * @description Description of the company
+       */
+      description?: string | null;
+    };
+    /** CompanyRead */
+    CompanyRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Name
+       * @description Company name
+       */
+      name?: string | null;
+      /**
+       * Industry
+       * @description Industry of the company
+       */
+      industry?: string | null;
+      /**
+       * Size
+       * @description Size of the company
+       */
+      size?: string | null;
+      /**
+       * Location
+       * @description Location of the company
+       */
+      location?: string | null;
+      /**
+       * Description
+       * @description Description of the company
+       */
+      description?: string | null;
+    };
+    /** CompanyUpdate */
+    CompanyUpdate: {
+      /**
+       * Name
+       * @description Company name
+       */
+      name?: string | null;
+      /**
+       * Industry
+       * @description Industry of the company
+       */
+      industry?: string | null;
+      /**
+       * Size
+       * @description Size of the company
+       */
+      size?: string | null;
+      /**
+       * Location
+       * @description Location of the company
+       */
+      location?: string | null;
+      /**
+       * Description
+       * @description Description of the company
+       */
+      description?: string | null;
+    };
+    /**
+     * ConfigurationResponse
+     * @description Response for configuration.
+     */
+    ConfigurationResponse: {
+      /** Available Models */
+      available_models: string[];
+      /** Accepted Mimetypes */
+      accepted_mimetypes: string[];
+      /** Max File Size Mb */
+      max_file_size_mb: number;
+      /** Max Concurrency */
+      max_concurrency: number;
+      /** Max Chunks */
+      max_chunks: number;
+      /** Models */
+      models: {
+          [key: string]: unknown;
+        }[];
+    };
+    /** ConnectionCreate */
+    ConnectionCreate: {
+      /**
+       * Addressee Id
+       * Format: uuid4
+       * @description User to send the connection request to
+       */
+      addressee_id: string;
+      /**
+       * Message
+       * @description Optional note accompanying the request
+       */
+      message?: string | null;
+    };
+    /** ConnectionRead */
+    ConnectionRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description The user who sent the request */
+      requester: components["schemas"]["ConnectionUserSummaryRead"];
+      /** @description The user who received the request */
+      addressee: components["schemas"]["ConnectionUserSummaryRead"];
+      /** @description Connection status */
+      status: components["schemas"]["ConnectionStatus"];
+      /**
+       * Message
+       * @description Optional note from the requester
+       */
+      message?: string | null;
+    };
+    /**
+     * ConnectionStatus
+     * @enum {string}
+     */
+    ConnectionStatus: "pending" | "accepted" | "declined" | "blocked";
+    /** ConnectionUserSummaryRead */
+    ConnectionUserSummaryRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Public display name
+       */
+      display_name: string;
+      /**
+       * Headline
+       * @description Professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
+      /**
+       * City
+       * @description City
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description State
+       */
+      state?: string | null;
+      /**
+       * Country
+       * @description Country
+       */
+      country?: string | null;
+    };
+    /** ConnectionsPaginatedRead */
+    ConnectionsPaginatedRead: {
+      /**
+       * Items
+       * @description Paginated connection records
+       */
+      items?: components["schemas"]["ConnectionRead"][];
+      /**
+       * Total
+       * @description Total matching connections
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** ContactCreate */
+    ContactCreate: {
+      /**
+       * First Name
+       * @description First name
+       */
+      first_name?: string | null;
+      /**
+       * Last Name
+       * @description Last name
+       */
+      last_name?: string | null;
+      /**
+       * Phone Number
+       * @description Phone number
+       */
+      phone_number?: string | null;
+      /**
+       * Email
+       * @description Email address
+       */
+      email?: string | null;
+      /**
+       * Time Zone
+       * @description Time zone
+       */
+      time_zone?: string | null;
+      /**
+       * Notes
+       * @description Additional notes
+       */
+      notes?: string | null;
+    };
+    /** ContactRead */
+    ContactRead: {
+      /**
+       * First Name
+       * @description First name
+       */
+      first_name?: string | null;
+      /**
+       * Last Name
+       * @description Last name
+       */
+      last_name?: string | null;
+      /**
+       * Phone Number
+       * @description Phone number
+       */
+      phone_number?: string | null;
+      /**
+       * Email
+       * @description Email address
+       */
+      email?: string | null;
+      /**
+       * Time Zone
+       * @description Time zone
+       */
+      time_zone?: string | null;
+      /**
+       * Notes
+       * @description Additional notes
+       */
+      notes?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+    };
+    /** ContactUpdate */
+    ContactUpdate: {
+      /**
+       * First Name
+       * @description First name
+       */
+      first_name?: string | null;
+      /**
+       * Last Name
+       * @description Last name
+       */
+      last_name?: string | null;
+      /**
+       * Phone Number
+       * @description Phone number
+       */
+      phone_number?: string | null;
+      /**
+       * Email
+       * @description Email address
+       */
+      email?: string | null;
+      /**
+       * Time Zone
+       * @description Time zone
+       */
+      time_zone?: string | null;
+      /**
+       * Notes
+       * @description Additional notes
+       */
+      notes?: string | null;
+    };
+    /**
+     * ContentFormat
+     * @enum {string}
+     */
+    ContentFormat: "plain_text" | "tiptap_json";
+    /**
+     * ContentType
+     * @enum {string}
+     */
+    ContentType: "custom" | "generated" | "template";
+    /** ConversationCreate */
+    ConversationCreate: {
+      /**
+       * Participant User Ids
+       * @description User IDs of the other participants (creator is auto-added)
+       */
+      participant_user_ids: string[];
+      /**
+       * @description Conversation type
+       * @default direct
+       */
+      type?: components["schemas"]["ConversationType"];
+      /**
+       * Title
+       * @description Title (required for group)
+       */
+      title?: string | null;
+    };
+    /** ConversationDetailRead */
+    ConversationDetailRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Conversation type */
+      type: components["schemas"]["ConversationType"];
+      /**
+       * Title
+       * @description Conversation title
+       */
+      title?: string | null;
+      /**
+       * Participants
+       * @description Conversation participants
+       */
+      participants?: components["schemas"]["ConversationParticipantRead"][];
+      /**
+       * Messages
+       * @description Paginated messages
+       */
+      messages?: components["schemas"]["MessageRead"][];
+      /**
+       * Total Messages
+       * @description Total message count
+       * @default 0
+       */
+      total_messages?: number;
+    };
+    /** ConversationParticipantRead */
+    ConversationParticipantRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description Participant user identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Participant display name
+       */
+      display_name: string;
+      /**
+       * Avatar Uri
+       * @description Participant avatar URI
+       */
+      avatar_uri?: string | null;
+      /** @description Participant role */
+      role: components["schemas"]["ConversationParticipantRole"];
+      /**
+       * Joined At
+       * Format: date-time
+       * @description When the participant joined
+       */
+      joined_at: string;
+    };
+    /**
+     * ConversationParticipantRole
+     * @enum {string}
+     */
+    ConversationParticipantRole: "member" | "admin";
+    /** ConversationRead */
+    ConversationRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Conversation type */
+      type: components["schemas"]["ConversationType"];
+      /**
+       * Title
+       * @description Conversation title
+       */
+      title?: string | null;
+      /**
+       * Participants
+       * @description Conversation participants
+       */
+      participants?: components["schemas"]["ConversationParticipantRead"][];
+      /** @description Most recent message preview */
+      last_message?: components["schemas"]["MessageRead"] | null;
+      /**
+       * Unread Count
+       * @description Unread messages for current user
+       * @default 0
+       */
+      unread_count?: number;
+    };
+    /**
+     * ConversationType
+     * @enum {string}
+     */
+    ConversationType: "direct" | "group";
+    /** ConversationsPaginatedRead */
+    ConversationsPaginatedRead: {
+      /**
+       * Items
+       * @description Paginated conversations
+       */
+      items?: components["schemas"]["ConversationRead"][];
+      /**
+       * Total
+       * @description Total matching conversations
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** CoverLetterCreate */
+    CoverLetterCreate: {
+      /**
+       * Name
+       * @description Cover letter name
+       */
+      name?: string | null;
+      /**
+       * Content
+       * @description Cover letter content
+       */
+      content?: string | null;
+      /** @description Cover letter content type */
+      content_type?: components["schemas"]["ContentType"] | null;
+    };
+    /** CoverLetterRead */
+    CoverLetterRead: {
+      /**
+       * Name
+       * @description Cover letter name
+       */
+      name?: string | null;
+      /**
+       * Content
+       * @description Cover letter content
+       */
+      content?: string | null;
+      /** @description Cover letter content type */
+      content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+    };
+    /** CoverLetterUpdate */
+    CoverLetterUpdate: {
+      /**
+       * Name
+       * @description Cover letter name
+       */
+      name?: string | null;
+      /**
+       * Content
+       * @description Cover letter content
+       */
+      content?: string | null;
+      /** @description Cover letter content type */
+      content_type?: components["schemas"]["ContentType"] | null;
+    };
+    /** CrawlerPipelineCreate */
+    CrawlerPipelineCreate: {
+      /**
+       * Name
+       * @description Pipeline name
+       */
+      name: string;
+      /**
+       * Description
+       * @description Pipeline description
+       */
+      description?: string | null;
+      /** @description Crawl source platform */
+      source: components["schemas"]["CrawlerSourceType"];
+      /**
+       * Query Definition
+       * @description Source-specific search parameters
+       */
+      query_definition: {
+        [key: string]: unknown;
+      };
+      /**
+       * Schedule Definition
+       * @description Schedule cadence definition
+       */
+      schedule_definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Enabled
+       * @description Whether the pipeline is active
+       * @default true
+       */
+      enabled?: boolean;
+      /**
+       * Execution Policy
+       * @description Concurrency, timeouts, headless mode
+       */
+      execution_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Extraction Policy
+       * @description Whether to run LLM extraction on crawled leads
+       */
+      extraction_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Requires Approval
+       * @description Whether runs require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
+    };
+    /** CrawlerPipelineRead */
+    CrawlerPipelineRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Name
+       * @description Pipeline name
+       */
+      name: string;
+      /**
+       * Description
+       * @description Pipeline description
+       */
+      description?: string | null;
+      /** @description Crawl source platform */
+      source: components["schemas"]["CrawlerSourceType"];
+      /**
+       * Query Definition
+       * @description Source-specific search parameters
+       */
+      query_definition: {
+        [key: string]: unknown;
+      };
+      /**
+       * Schedule Definition
+       * @description Schedule cadence definition
+       */
+      schedule_definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Enabled
+       * @description Whether the pipeline is active
+       */
+      enabled: boolean;
+      /**
+       * Execution Policy
+       * @description Concurrency, timeouts, headless mode
+       */
+      execution_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Extraction Policy
+       * @description Whether to run LLM extraction on crawled leads
+       */
+      extraction_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Requires Approval
+       * @description Whether runs require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
+      /**
+       * Created By User Id
+       * Format: uuid4
+       * @description Superuser who created the pipeline
+       */
+      created_by_user_id: string;
+      /** @description Status of the most recent run */
+      last_run_status?: components["schemas"]["CrawlerRunStatus"] | null;
+      /**
+       * Last Run At
+       * @description Timestamp of the most recent run
+       */
+      last_run_at?: string | null;
+      /**
+       * Run Count
+       * @description Total number of runs
+       * @default 0
+       */
+      run_count?: number;
+    };
+    /** CrawlerPipelineUpdate */
+    CrawlerPipelineUpdate: {
+      /**
+       * Name
+       * @description Pipeline name
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Pipeline description
+       */
+      description?: string | null;
+      /**
+       * Query Definition
+       * @description Source-specific search parameters
+       */
+      query_definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Schedule Definition
+       * @description Schedule cadence definition
+       */
+      schedule_definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Enabled
+       * @description Whether the pipeline is active
+       */
+      enabled?: boolean | null;
+      /**
+       * Execution Policy
+       * @description Concurrency, timeouts, headless mode
+       */
+      execution_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Extraction Policy
+       * @description Whether to run LLM extraction on crawled leads
+       */
+      extraction_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Requires Approval
+       * @description Whether runs require human approval
+       */
+      requires_approval?: boolean | null;
+    };
+    /**
+     * CrawlerRunDetailRead
+     * @description Extended read schema for single-run detail endpoint with linked events.
+     */
+    CrawlerRunDetailRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Crawler Pipeline Id
+       * Format: uuid4
+       * @description Parent pipeline ID
+       */
+      crawler_pipeline_id: string;
+      /** @description How the run was triggered */
+      trigger_type: components["schemas"]["CrawlerTriggerType"];
+      /** @description Current run status */
+      status: components["schemas"]["CrawlerRunStatus"];
+      /**
+       * Scheduled For
+       * @description When the run was scheduled for
+       */
+      scheduled_for?: string | null;
+      /**
+       * Started At
+       * @description When the run started
+       */
+      started_at?: string | null;
+      /**
+       * Finished At
+       * @description When the run finished
+       */
+      finished_at?: string | null;
+      /**
+       * Stats
+       * @description Run statistics
+       */
+      stats?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Error Summary
+       * @description Error summary if failed
+       */
+      error_summary?: string | null;
+      /**
+       * Retry Of Id
+       * @description ID of the original run this is a retry of
+       */
+      retry_of_id?: string | null;
+      /**
+       * Events
+       * @description Linked orchestration events
+       * @default []
+       */
+      events?: components["schemas"]["OrchestrationEventSummary"][];
+    };
+    /** CrawlerRunRead */
+    CrawlerRunRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Crawler Pipeline Id
+       * Format: uuid4
+       * @description Parent pipeline ID
+       */
+      crawler_pipeline_id: string;
+      /** @description How the run was triggered */
+      trigger_type: components["schemas"]["CrawlerTriggerType"];
+      /** @description Current run status */
+      status: components["schemas"]["CrawlerRunStatus"];
+      /**
+       * Scheduled For
+       * @description When the run was scheduled for
+       */
+      scheduled_for?: string | null;
+      /**
+       * Started At
+       * @description When the run started
+       */
+      started_at?: string | null;
+      /**
+       * Finished At
+       * @description When the run finished
+       */
+      finished_at?: string | null;
+      /**
+       * Stats
+       * @description Run statistics
+       */
+      stats?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Error Summary
+       * @description Error summary if failed
+       */
+      error_summary?: string | null;
+      /**
+       * Retry Of Id
+       * @description ID of the original run this is a retry of
+       */
+      retry_of_id?: string | null;
+    };
+    /**
+     * CrawlerRunStatus
+     * @enum {string}
+     */
+    CrawlerRunStatus: "pending" | "running" | "success" | "failed" | "cancelled" | "paused" | "pending_review";
+    /**
+     * CrawlerSourceType
+     * @enum {string}
+     */
+    CrawlerSourceType: "linkedin" | "glassdoor";
+    /**
+     * CrawlerTriggerType
+     * @enum {string}
+     */
+    CrawlerTriggerType: "manual" | "scheduled";
+    /** DocumentActivityRead */
+    DocumentActivityRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Document identifier
+       */
+      document_id: string;
+      /** @description Activity event type */
+      activity_type: components["schemas"]["DocumentActivityType"];
+      /**
+       * Message
+       * @description Human-readable activity summary
+       */
+      message: string;
+      /**
+       * Details
+       * @description Structured activity metadata for UI rendering
+       */
+      details?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Actor User Id
+       * @description User who triggered the activity, when available
+       */
+      actor_user_id?: string | null;
+      /**
+       * Actor Full Name
+       * @description Best-available display label for the actor
+       */
+      actor_full_name?: string | null;
+      /**
+       * Actor Email
+       * @description Actor email address
+       */
+      actor_email?: string | null;
+    };
+    /**
+     * DocumentActivityType
+     * @enum {string}
+     */
+    DocumentActivityType: "document_created" | "document_uploaded" | "version_saved" | "share_created" | "share_updated" | "share_revoked" | "document_archived" | "document_unarchived" | "document_pinned" | "document_unpinned";
+    /** DocumentCollaborationBootstrapRead */
+    DocumentCollaborationBootstrapRead: {
+      /** @description How the client should proceed with collaborative bootstrap */
+      status: components["schemas"]["DocumentCollaborationBootstrapStatus"];
+      /**
+       * Retry After Ms
+       * @description How long the client should wait before retrying bootstrap when another claim is still active
+       */
+      retry_after_ms?: number | null;
+      /**
+       * Content
+       * @description Authoritative rich-text content to seed when the bootstrap status is seed
+       */
+      content?: string | null;
+      /** @description Content format for the collaborative bootstrap payload when the bootstrap status is seed */
+      content_format?: components["schemas"]["ContentFormat"] | null;
+    };
+    /**
+     * DocumentCollaborationBootstrapStatus
+     * @enum {string}
+     */
+    DocumentCollaborationBootstrapStatus: "connect" | "pending" | "seed";
+    /** DocumentCreate */
+    DocumentCreate: {
+      /** @description Document kind discriminator */
+      kind: components["schemas"]["DocumentKind"];
+      /**
+       * Title
+       * @description Document title
+       */
+      title: string;
+      /**
+       * @description Initial lifecycle status
+       * @default draft
+       */
+      status?: components["schemas"]["DocumentStatus"];
+      /**
+       * Content
+       * @description Initial version content
+       */
+      content?: string | null;
+      /** @description Content origin type for the initial version */
+      content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * @description Content format: plain_text or tiptap_json
+       * @default plain_text
+       */
+      content_format?: components["schemas"]["ContentFormat"];
+    };
+    /** DocumentDetailRead */
+    DocumentDetailRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Document kind discriminator */
+      kind: components["schemas"]["DocumentKind"];
+      /**
+       * Title
+       * @description Document title
+       */
+      title: string;
+      /** @description Document lifecycle status */
+      status: components["schemas"]["DocumentStatus"];
+      /**
+       * Is Pinned
+       * @description Whether this is the active document for its kind
+       * @default false
+       */
+      is_pinned?: boolean;
+      /** @description Current head version inline */
+      head_version?: components["schemas"]["DocumentVersionRead"] | null;
+      /**
+       * Version Count
+       * @description Total number of versions
+       * @default 0
+       */
+      version_count?: number;
+      /** @description Effective share role for the viewer (null means owner) */
+      viewer_role?: components["schemas"]["DocumentShareRole"] | null;
+      /**
+       * Owner User Id
+       * @description Owner identifier when the document is shared with the viewer
+       */
+      owner_user_id?: string | null;
+      /**
+       * Owner Full Name
+       * @description Owner full name when the document is shared with the viewer
+       */
+      owner_full_name?: string | null;
+      /**
+       * Owner Email
+       * @description Owner email when the document is shared with the viewer
+       */
+      owner_email?: string | null;
+      /**
+       * Shared By User Id
+       * @description User who granted access to the viewer
+       */
+      shared_by_user_id?: string | null;
+      /**
+       * Shared By Full Name
+       * @description Full name of the user who granted access to the viewer
+       */
+      shared_by_full_name?: string | null;
+      /**
+       * Shared By Email
+       * @description Email of the user who granted access to the viewer
+       */
+      shared_by_email?: string | null;
+      /**
+       * Shared At
+       * @description Timestamp when the viewer was granted access
+       */
+      shared_at?: string | null;
+      /**
+       * Share Updated At
+       * @description Timestamp when the share was last updated
+       */
+      share_updated_at?: string | null;
+      /**
+       * Versions
+       * @description Full version history, oldest first
+       */
+      versions?: components["schemas"]["DocumentVersionRead"][];
+    };
+    /** DocumentGenerateRequest */
+    DocumentGenerateRequest: {
+      /** @description Document kind to generate */
+      kind: components["schemas"]["DocumentKind"];
+      /**
+       * Lead Id
+       * Format: uuid4
+       * @description Lead to generate content from
+       */
+      lead_id: string;
+      /**
+       * Document Id
+       * @description Existing document to append a new version to (omit to create a new document)
+       */
+      document_id?: string | null;
+      /**
+       * Template Version Id
+       * @description Optional template version to use for generation
+       */
+      template_version_id?: string | null;
+    };
+    /**
+     * DocumentKind
+     * @enum {string}
+     */
+    DocumentKind: "resume" | "cover_letter" | "follow_up" | "reference_sheet" | "freeform";
+    /** DocumentPinRequest */
+    DocumentPinRequest: {
+      /**
+       * Pinned
+       * @description Whether to pin or unpin the document
+       * @default true
+       */
+      pinned?: boolean;
+    };
+    /** DocumentRead */
+    DocumentRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Document kind discriminator */
+      kind: components["schemas"]["DocumentKind"];
+      /**
+       * Title
+       * @description Document title
+       */
+      title: string;
+      /** @description Document lifecycle status */
+      status: components["schemas"]["DocumentStatus"];
+      /**
+       * Is Pinned
+       * @description Whether this is the active document for its kind
+       * @default false
+       */
+      is_pinned?: boolean;
+      /** @description Current head version inline */
+      head_version?: components["schemas"]["DocumentVersionRead"] | null;
+      /**
+       * Version Count
+       * @description Total number of versions
+       * @default 0
+       */
+      version_count?: number;
+      /** @description Effective share role for the viewer (null means owner) */
+      viewer_role?: components["schemas"]["DocumentShareRole"] | null;
+      /**
+       * Owner User Id
+       * @description Owner identifier when the document is shared with the viewer
+       */
+      owner_user_id?: string | null;
+      /**
+       * Owner Full Name
+       * @description Owner full name when the document is shared with the viewer
+       */
+      owner_full_name?: string | null;
+      /**
+       * Owner Email
+       * @description Owner email when the document is shared with the viewer
+       */
+      owner_email?: string | null;
+      /**
+       * Shared By User Id
+       * @description User who granted access to the viewer
+       */
+      shared_by_user_id?: string | null;
+      /**
+       * Shared By Full Name
+       * @description Full name of the user who granted access to the viewer
+       */
+      shared_by_full_name?: string | null;
+      /**
+       * Shared By Email
+       * @description Email of the user who granted access to the viewer
+       */
+      shared_by_email?: string | null;
+      /**
+       * Shared At
+       * @description Timestamp when the viewer was granted access
+       */
+      shared_at?: string | null;
+      /**
+       * Share Updated At
+       * @description Timestamp when the share was last updated
+       */
+      share_updated_at?: string | null;
+    };
+    /** DocumentShareCandidateRead */
+    DocumentShareCandidateRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description Share candidate identifier
+       */
+      id: string;
+      /**
+       * Full Name
+       * @description Best-available human label for the user
+       */
+      full_name: string;
+      /**
+       * Email
+       * Format: email
+       * @description Candidate email address
+       */
+      email: string;
+      /**
+       * Headline
+       * @description Candidate headline
+       */
+      headline?: string | null;
+      /**
+       * Avatar Uri
+       * @description Candidate avatar URI
+       */
+      avatar_uri?: string | null;
+    };
+    /** DocumentShareCreate */
+    DocumentShareCreate: {
+      /**
+       * Shared With User Id
+       * Format: uuid4
+       * @description User to share the document with
+       */
+      shared_with_user_id: string;
+      /**
+       * @description Access level to grant
+       * @default viewer
+       */
+      role?: components["schemas"]["DocumentShareRole"];
+    };
+    /** DocumentShareRead */
+    DocumentShareRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Document identifier
+       */
+      document_id: string;
+      /**
+       * Shared With User Id
+       * Format: uuid4
+       * @description User the document is shared with
+       */
+      shared_with_user_id: string;
+      /**
+       * Shared By User Id
+       * Format: uuid4
+       * @description User who created the share
+       */
+      shared_by_user_id: string;
+      /** @description Access role: viewer or editor */
+      role: components["schemas"]["DocumentShareRole"];
+      /**
+       * Shared With Full Name
+       * @description Best-available name for the shared user
+       */
+      shared_with_full_name: string;
+      /**
+       * Shared With Email
+       * Format: email
+       * @description Email for the shared user
+       */
+      shared_with_email: string;
+      /**
+       * Shared With Headline
+       * @description Headline for the shared user
+       */
+      shared_with_headline?: string | null;
+      /**
+       * Shared By Full Name
+       * @description Best-available name for the sharing user
+       */
+      shared_by_full_name: string;
+      /**
+       * Shared By Email
+       * Format: email
+       * @description Email for the sharing user
+       */
+      shared_by_email: string;
+    };
+    /**
+     * DocumentShareRole
+     * @enum {string}
+     */
+    DocumentShareRole: "viewer" | "editor";
+    /** DocumentShareUpdate */
+    DocumentShareUpdate: {
+      /** @description New access level */
+      role: components["schemas"]["DocumentShareRole"];
+    };
+    /**
+     * DocumentStatus
+     * @enum {string}
+     */
+    DocumentStatus: "draft" | "active" | "archived";
+    /** DocumentUpdate */
+    DocumentUpdate: {
+      /**
+       * Title
+       * @description Updated title
+       */
+      title?: string | null;
+      /** @description Updated lifecycle status */
+      status?: components["schemas"]["DocumentStatus"] | null;
+    };
+    /** DocumentVersionCreate */
+    DocumentVersionCreate: {
+      /**
+       * Name
+       * @description Snapshot title
+       */
+      name?: string | null;
+      /**
+       * Content
+       * @description Version content
+       */
+      content?: string | null;
+      /** @description Content origin type */
+      content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * @description Content format: plain_text or tiptap_json
+       * @default plain_text
+       */
+      content_format?: components["schemas"]["ContentFormat"];
+      /**
+       * Change Summary
+       * @description User or system note for this version
+       */
+      change_summary?: string | null;
+    };
+    /** DocumentVersionRead */
+    DocumentVersionRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Parent document identifier
+       */
+      document_id: string;
+      /**
+       * Version Number
+       * @description Monotonically incrementing version number
+       */
+      version_number: number;
+      /**
+       * Name
+       * @description Snapshot title
+       */
+      name?: string | null;
+      /**
+       * Content
+       * @description Version content
+       */
+      content?: string | null;
+      /** @description Content origin type */
+      content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * Content Format
+       * @description Content format: plain_text or tiptap_json
+       */
+      content_format?: string | null;
+      /**
+       * Source File
+       * @description Relative path to uploaded source file
+       */
+      source_file?: string | null;
+      /**
+       * Change Summary
+       * @description User or system note for this version
+       */
+      change_summary?: string | null;
+    };
+    /** EducationCreate */
+    EducationCreate: {
+      /**
+       * University
+       * @description University name
+       */
+      university?: string | null;
+      /**
+       * Degree
+       * @description Degree name
+       */
+      degree?: string | null;
+      /**
+       * Gradepoint
+       * @description Grade point
+       */
+      gradePoint?: string | null;
+      /**
+       * Activities
+       * @description Activities involved
+       */
+      activities?: string | null;
+      /**
+       * Achievements
+       * @description Achievements
+       */
+      achievements?: string | null;
+      /**
+       * Start Date
+       * @description Start date of the education
+       */
+      start_date?: string | null;
+      /**
+       * End Date
+       * @description End date of the education
+       */
+      end_date?: string | null;
+    };
+    /** EducationRead */
+    EducationRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * University
+       * @description University name
+       */
+      university?: string | null;
+      /**
+       * Degree
+       * @description Degree name
+       */
+      degree?: string | null;
+      /**
+       * Gradepoint
+       * @description Grade point
+       */
+      gradePoint?: string | null;
+      /**
+       * Activities
+       * @description Activities involved
+       */
+      activities?: string | null;
+      /**
+       * Achievements
+       * @description Achievements
+       */
+      achievements?: string | null;
+      /**
+       * Start Date
+       * @description Start date of the education
+       */
+      start_date?: string | null;
+      /**
+       * End Date
+       * @description End date of the education
+       */
+      end_date?: string | null;
+    };
+    /** EducationUpdate */
+    EducationUpdate: {
+      /**
+       * University
+       * @description University name
+       */
+      university?: string | null;
+      /**
+       * Degree
+       * @description Degree name
+       */
+      degree?: string | null;
+      /**
+       * Gradepoint
+       * @description Grade point
+       */
+      gradePoint?: string | null;
+      /**
+       * Activities
+       * @description Activities involved
+       */
+      activities?: string | null;
+      /**
+       * Achievements
+       * @description Achievements
+       */
+      achievements?: string | null;
+      /**
+       * Start Date
+       * @description Start date of the education
+       */
+      start_date?: string | null;
+      /**
+       * End Date
+       * @description End date of the education
+       */
+      end_date?: string | null;
+    };
+    /** ErrorModel */
+    ErrorModel: {
+      /** Detail */
+      detail: string | {
+        [key: string]: string;
+      };
+    };
+    /** ExperienceCreate */
+    ExperienceCreate: {
+      /**
+       * Title
+       * @description Job title
+       */
+      title?: string | null;
+      /**
+       * Company
+       * @description Company name
+       */
+      company?: string | null;
+      /**
+       * Start Date
+       * @description Start date of the experience
+       */
+      start_date?: string | null;
+      /**
+       * End Date
+       * @description End date of the experience
+       */
+      end_date?: string | null;
+      /**
+       * Description
+       * @description Description of the experience
+       */
+      description?: string | null;
+      /**
+       * Location
+       * @description Location of the experience
+       */
+      location?: string | null;
+      /**
+       * Projects
+       * @description Projects involved
+       */
+      projects?: string | null;
+    };
+    /** ExperienceRead */
+    ExperienceRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Title
+       * @description Job title
+       */
+      title?: string | null;
+      /**
+       * Company
+       * @description Company name
+       */
+      company?: string | null;
+      /**
+       * Start Date
+       * @description Start date of the experience
+       */
+      start_date?: string | null;
+      /**
+       * End Date
+       * @description End date of the experience
+       */
+      end_date?: string | null;
+      /**
+       * Description
+       * @description Description of the experience
+       */
+      description?: string | null;
+      /**
+       * Location
+       * @description Location of the experience
+       */
+      location?: string | null;
+      /**
+       * Projects
+       * @description Projects involved
+       */
+      projects?: string | null;
+    };
+    /** ExperienceUpdate */
+    ExperienceUpdate: {
+      /**
+       * Title
+       * @description Job title
+       */
+      title?: string | null;
+      /**
+       * Company
+       * @description Company name
+       */
+      company?: string | null;
+      /**
+       * Start Date
+       * @description Start date of the experience
+       */
+      start_date?: string | null;
+      /**
+       * End Date
+       * @description End date of the experience
+       */
+      end_date?: string | null;
+      /**
+       * Description
+       * @description Description of the experience
+       */
+      description?: string | null;
+      /**
+       * Location
+       * @description Location of the experience
+       */
+      location?: string | null;
+      /**
+       * Projects
+       * @description Projects involved
+       */
+      projects?: string | null;
+    };
+    /** ExtractorCreate */
+    ExtractorCreate: {
+      /**
+       * Name
+       * @description Extractor name
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Extractor description
+       */
+      description?: string | null;
+      /**
+       * Json Schema
+       * @description JSON schema
+       */
+      json_schema?: {
+        [key: string]: unknown;
+      } | string | null;
+      /**
+       * Instruction
+       * @description Extractor instruction
+       */
+      instruction?: string | null;
+      /**
+       * Extractor Examples
+       * @description Extractor examples
+       * @default []
+       */
+      extractor_examples?: components["schemas"]["ExtractorExampleRead"][];
+      /**
+       * Requires Approval
+       * @description Whether extraction results require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
+    };
+    /**
+     * ExtractorDefinition
+     * @description Define an information extractor to be used in an information extraction system.
+     */
+    ExtractorDefinition: {
+      /**
+       * Json Schema
+       * @description JSON Schema that describes the entity / information that should be extracted. This schema is specified in JSON Schema format.
+       */
+      json_schema: string;
+    };
+    /** ExtractorExampleCreate */
+    ExtractorExampleCreate: {
+      /**
+       * Content
+       * @description Example content
+       */
+      content?: string | null;
+      /**
+       * Output
+       * @description Example output
+       */
+      output?: string | null;
+    };
+    /** ExtractorExampleRead */
+    ExtractorExampleRead: {
+      /**
+       * Content
+       * @description Example content
+       */
+      content?: string | null;
+      /**
+       * Output
+       * @description Example output
+       */
+      output?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+    };
+    /** ExtractorRead */
+    ExtractorRead: {
+      /**
+       * Name
+       * @description Extractor name
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Extractor description
+       */
+      description?: string | null;
+      /**
+       * Json Schema
+       * @description JSON schema
+       */
+      json_schema?: {
+        [key: string]: unknown;
+      } | string | null;
+      /**
+       * Instruction
+       * @description Extractor instruction
+       */
+      instruction?: string | null;
+      /**
+       * Extractor Examples
+       * @description Extractor examples
+       * @default []
+       */
+      extractor_examples?: components["schemas"]["ExtractorExampleRead"][];
+      /**
+       * Requires Approval
+       * @description Whether extraction results require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+    };
+    /** ExtractorResponse */
+    ExtractorResponse: {
+      /**
+       * Data
+       * @description Extracted data
+       * @default []
+       */
+      data?: unknown[];
+      /**
+       * Content Too Long
+       * @description Content too long to extract
+       * @default false
+       */
+      content_too_long?: boolean;
+    };
+    /**
+     * ExtractorRun
+     * @description Request to run an extractor.
+     */
+    ExtractorRun: {
+      /**
+       * Mode
+       * @description Mode to run the extractor in. 'entire_document' extracts information from the entire document. 'retrieval' extracts information from a specific section of the document.
+       * @default entire_document
+       * @enum {string}
+       */
+      mode?: "entire_document" | "retrieval";
+      /**
+       * File
+       * @description A file to extract information from. If provided, the file will be processed and the text extracted.
+       */
+      file?: string | null;
+      /**
+       * Text
+       * @description Text to extract information from. If provided, the text will be processed and the information extracted.
+       */
+      text?: string | null;
+      /**
+       * Url
+       * @description A URL to extract information from. If provided, the URL will be processed and the information extracted.
+       */
+      url?: string | null;
+      /**
+       * Llm
+       * @description The language model to use for the extraction.
+       */
+      llm?: string | null;
+      /**
+       * Sources
+       * @description Multiple sources to extract from in a single batch. When provided, url/file/text are ignored.
+       */
+      sources?: components["schemas"]["ProfileExtractSource"][] | null;
+    };
+    /** ExtractorUpdate */
+    ExtractorUpdate: {
+      /**
+       * Name
+       * @description Extractor name
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Extractor description
+       */
+      description?: string | null;
+      /**
+       * Json Schema
+       * @description JSON schema
+       */
+      json_schema?: {
+        [key: string]: unknown;
+      } | string | null;
+      /**
+       * Instruction
+       * @description Extractor instruction
+       */
+      instruction?: string | null;
+      /**
+       * Extractor Examples
+       * @description Extractor examples
+       * @default []
+       */
+      extractor_examples?: components["schemas"]["ExtractorExampleRead"][];
+      /**
+       * Requires Approval
+       * @description Whether extraction results require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
+    };
+    /** ExtractorVersionRead */
+    ExtractorVersionRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Extractor Id
+       * Format: uuid4
+       * @description Parent extractor ID
+       */
+      extractor_id: string;
+      /**
+       * Version Number
+       * @description Version sequence number
+       */
+      version_number: number;
+      /**
+       * Instruction
+       * @description Instruction at this version
+       */
+      instruction?: string | null;
+      /**
+       * Json Schema
+       * @description JSON schema at this version
+       */
+      json_schema?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Version Hash
+       * @description SHA-256 hash of instruction + schema
+       */
+      version_hash: string;
+    };
+    /** HTTPValidationError */
+    HTTPValidationError: {
+      /** Detail */
+      detail?: components["schemas"]["ValidationError"][];
+    };
+    /** LeadCommentCreate */
+    LeadCommentCreate: {
+      /**
+       * Content
+       * @description Comment content
+       */
+      content: string;
+      /**
+       * Anonymous
+       * @description Whether the comment hides the author's public profile
+       * @default true
+       */
+      anonymous?: boolean;
+    };
+    /** LeadCommentRead */
+    LeadCommentRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Lead Id
+       * Format: uuid4
+       * @description Lead identifier
+       */
+      lead_id: string;
+      /**
+       * Parent Comment Id
+       * @description Parent comment identifier for replies
+       */
+      parent_comment_id?: string | null;
+      /**
+       * Content
+       * @description Comment content
+       */
+      content: string;
+      /**
+       * Anonymous
+       * @description Whether the comment hides the author's public profile
+       * @default true
+       */
+      anonymous?: boolean;
+      /** @description The author's public profile, when the comment is non-anonymous */
+      author_public_profile?: components["schemas"]["LeadParticipantPublicProfileRead"] | null;
+      /**
+       * Replies
+       * @description Replies to this top-level comment
+       */
+      replies?: components["schemas"]["LeadCommentRead"][];
+    };
+    /** LeadCreate */
+    LeadCreate: {
+      /**
+       * Title
+       * @description Job title
+       */
+      title?: string | null;
+      /**
+       * Description
+       * @description Job description
+       */
+      description?: string | null;
+      /**
+       * Location
+       * @description Job location
+       */
+      location?: string | null;
+      /**
+       * Salary
+       * @description Salary range
+       */
+      salary?: string | null;
+      /**
+       * Job Function
+       * @description Job function
+       */
+      job_function?: string | null;
+      /**
+       * Employment Type
+       * @description Type of employment
+       */
+      employment_type?: string | null;
+      /**
+       * Seniority Level
+       * @description Seniority level
+       */
+      seniority_level?: string | null;
+      /**
+       * Education Level
+       * @description Required education level
+       */
+      education_level?: string | null;
+      /**
+       * Hiring Manager
+       * @description Hiring manager
+       */
+      hiring_manager?: string | null;
+      /** Url */
+      url: string;
+      /**
+       * Company Ids
+       * @description Company IDs
+       */
+      company_ids?: string[] | null;
+    };
+    /** LeadDetailRead */
+    LeadDetailRead: {
+      /**
+       * Title
+       * @description Job title
+       */
+      title?: string | null;
+      /**
+       * Description
+       * @description Job description
+       */
+      description?: string | null;
+      /**
+       * Location
+       * @description Job location
+       */
+      location?: string | null;
+      /**
+       * Salary
+       * @description Salary range
+       */
+      salary?: string | null;
+      /**
+       * Job Function
+       * @description Job function
+       */
+      job_function?: string | null;
+      /**
+       * Employment Type
+       * @description Type of employment
+       */
+      employment_type?: string | null;
+      /**
+       * Seniority Level
+       * @description Seniority level
+       */
+      seniority_level?: string | null;
+      /**
+       * Education Level
+       * @description Required education level
+       */
+      education_level?: string | null;
+      /**
+       * Hiring Manager
+       * @description Hiring manager
+       */
+      hiring_manager?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Url
+       * @description Job posting URL
+       */
+      url: string;
+      /**
+       * Canonical Url
+       * @description Canonical lead URL used for deduplication
+       */
+      canonical_url: string;
+      /**
+       * Companies
+       * @description List of companies associated with the lead
+       */
+      companies?: components["schemas"]["CompanyRead"][];
+      /**
+       * Interest Count
+       * @description How many viewers are currently registered on the lead
+       * @default 0
+       */
+      interest_count?: number;
+      /**
+       * Comment Count
+       * @description How many comments and replies exist for the lead
+       * @default 0
+       */
+      comment_count?: number;
+      /**
+       * Viewer Is Registered
+       * @description Whether the current viewer is registered on the lead
+       * @default false
+       */
+      viewer_is_registered?: boolean;
+      /** @description Current-viewer permissions for this lead */
+      viewer_permissions?: components["schemas"]["LeadViewerPermissionsRead"];
+      /** @description The current viewer's lead registration, if present */
+      viewer_registration?: components["schemas"]["LeadRegistrationRead"] | null;
+      /**
+       * Participant Summaries
+       * @description Registered participants who opted to expose their profile
+       */
+      participant_summaries?: components["schemas"]["LeadParticipantSummaryRead"][];
+    };
+    /**
+     * LeadExtractDisposition
+     * @enum {string}
+     */
+    LeadExtractDisposition: "created" | "matched_existing_joined" | "matched_existing_already_registered";
+    /** LeadExtractResponse */
+    LeadExtractResponse: {
+      /** @description The resulting lead record */
+      lead: components["schemas"]["LeadRead"];
+      /** @description Whether extraction created a lead or matched an existing one */
+      disposition: components["schemas"]["LeadExtractDisposition"];
+      /**
+       * Submitted Url
+       * @description The URL submitted for extraction
+       */
+      submitted_url: string;
+      /**
+       * Normalized Url
+       * @description The canonicalized URL used for deduplication
+       */
+      normalized_url: string;
+    };
+    /** LeadParticipantPublicProfileRead */
+    LeadParticipantPublicProfileRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Public display name for the participant
+       */
+      display_name: string;
+      /**
+       * City
+       * @description Participant city
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description Participant state
+       */
+      state?: string | null;
+      /**
+       * Country
+       * @description Participant country
+       */
+      country?: string | null;
+      /**
+       * Avatar Uri
+       * @description Participant avatar URI
+       */
+      avatar_uri?: string | null;
+    };
+    /** LeadParticipantSummaryRead */
+    LeadParticipantSummaryRead: {
+      /**
+       * Registered At
+       * Format: date-time
+       * @description When the participant registered interest in the lead
+       */
+      registered_at: string;
+      /** @description The participant's exposed public profile */
+      public_profile: components["schemas"]["LeadParticipantPublicProfileRead"];
+      /**
+       * Is Connected
+       * @description Whether the viewer has an accepted connection with this participant
+       * @default false
+       */
+      is_connected?: boolean;
+      /**
+       * Connection Id
+       * @description Connection record id, if an accepted connection exists
+       */
+      connection_id?: string | null;
+    };
+    /** LeadRead */
+    LeadRead: {
+      /**
+       * Title
+       * @description Job title
+       */
+      title?: string | null;
+      /**
+       * Description
+       * @description Job description
+       */
+      description?: string | null;
+      /**
+       * Location
+       * @description Job location
+       */
+      location?: string | null;
+      /**
+       * Salary
+       * @description Salary range
+       */
+      salary?: string | null;
+      /**
+       * Job Function
+       * @description Job function
+       */
+      job_function?: string | null;
+      /**
+       * Employment Type
+       * @description Type of employment
+       */
+      employment_type?: string | null;
+      /**
+       * Seniority Level
+       * @description Seniority level
+       */
+      seniority_level?: string | null;
+      /**
+       * Education Level
+       * @description Required education level
+       */
+      education_level?: string | null;
+      /**
+       * Hiring Manager
+       * @description Hiring manager
+       */
+      hiring_manager?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Url
+       * @description Job posting URL
+       */
+      url: string;
+      /**
+       * Canonical Url
+       * @description Canonical lead URL used for deduplication
+       */
+      canonical_url: string;
+      /**
+       * Companies
+       * @description List of companies associated with the lead
+       */
+      companies?: components["schemas"]["CompanyRead"][];
+      /**
+       * Interest Count
+       * @description How many viewers are currently registered on the lead
+       * @default 0
+       */
+      interest_count?: number;
+      /**
+       * Comment Count
+       * @description How many comments and replies exist for the lead
+       * @default 0
+       */
+      comment_count?: number;
+      /**
+       * Viewer Is Registered
+       * @description Whether the current viewer is registered on the lead
+       * @default false
+       */
+      viewer_is_registered?: boolean;
+      /** @description Current-viewer permissions for this lead */
+      viewer_permissions?: components["schemas"]["LeadViewerPermissionsRead"];
+    };
+    /** LeadRegistrationRead */
+    LeadRegistrationRead: {
+      /**
+       * Lead Id
+       * Format: uuid4
+       * @description Lead identifier
+       */
+      lead_id: string;
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Internal Notes
+       * @description Viewer-scoped notes for this registration
+       */
+      internal_notes?: string | null;
+      /**
+       * Expose Profile
+       * @description Whether the viewer exposes their profile to participants
+       * @default false
+       */
+      expose_profile?: boolean;
+      /**
+       * Created At
+       * Format: date-time
+       * @description When the registration was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description When the registration was last updated
+       */
+      updated_at: string;
+    };
+    /** LeadRegistrationUpdate */
+    LeadRegistrationUpdate: {
+      /**
+       * Internal Notes
+       * @description Viewer-scoped notes for this registration
+       */
+      internal_notes?: string | null;
+      /**
+       * Expose Profile
+       * @description Whether the viewer exposes their profile to participants
+       */
+      expose_profile?: boolean | null;
+    };
+    /** LeadSharedUpdate */
+    LeadSharedUpdate: {
+      /**
+       * Title
+       * @description Job title
+       */
+      title?: string | null;
+      /**
+       * Description
+       * @description Job description
+       */
+      description?: string | null;
+      /**
+       * Location
+       * @description Job location
+       */
+      location?: string | null;
+      /**
+       * Salary
+       * @description Salary range
+       */
+      salary?: string | null;
+      /**
+       * Job Function
+       * @description Job function
+       */
+      job_function?: string | null;
+      /**
+       * Employment Type
+       * @description Type of employment
+       */
+      employment_type?: string | null;
+      /**
+       * Seniority Level
+       * @description Seniority level
+       */
+      seniority_level?: string | null;
+      /**
+       * Education Level
+       * @description Required education level
+       */
+      education_level?: string | null;
+      /**
+       * Hiring Manager
+       * @description Hiring manager
+       */
+      hiring_manager?: string | null;
+      /**
+       * Company Ids
+       * @description Company IDs
+       */
+      company_ids?: string[] | null;
+    };
+    /** LeadViewerPermissionsRead */
+    LeadViewerPermissionsRead: {
+      /**
+       * Can Register
+       * @description Whether the viewer can register
+       * @default false
+       */
+      can_register?: boolean;
+      /**
+       * Can Leave Registration
+       * @description Whether the viewer can remove their registration
+       * @default false
+       */
+      can_leave_registration?: boolean;
+      /**
+       * Can Update Registration
+       * @description Whether the viewer can edit their registration metadata
+       * @default false
+       */
+      can_update_registration?: boolean;
+      /**
+       * Can Update Shared Fields
+       * @description Whether the viewer can update shared lead fields
+       * @default false
+       */
+      can_update_shared_fields?: boolean;
+      /**
+       * Can Clear Or Overwrite Shared Fields
+       * @description Whether the viewer can clear or overwrite populated shared fields
+       * @default false
+       */
+      can_clear_or_overwrite_shared_fields?: boolean;
+      /**
+       * Can Delete Shared Lead
+       * @description Whether the viewer can delete the shared lead
+       * @default false
+       */
+      can_delete_shared_lead?: boolean;
+      /**
+       * Can View Comments
+       * @description Whether the viewer can read comments on the lead
+       * @default false
+       */
+      can_view_comments?: boolean;
+      /**
+       * Can Post Comments
+       * @description Whether the viewer can post comments on the lead
+       * @default false
+       */
+      can_post_comments?: boolean;
+    };
+    /** LeadsPaginatedRead */
+    LeadsPaginatedRead: {
+      /** Leads */
+      leads: components["schemas"]["LeadRead"][];
+      pagination: components["schemas"]["Pagination"];
+      /**
+       * Total Count
+       * @description Total number of leads, if pagination requested
+       */
+      total_count: number | null;
+    };
+    /** MessageAuthorRead */
+    MessageAuthorRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description Author user identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Author display name
+       */
+      display_name: string;
+      /**
+       * Avatar Uri
+       * @description Author avatar URI
+       */
+      avatar_uri?: string | null;
+    };
+    /** MessageCreate */
+    MessageCreate: {
+      /**
+       * Content
+       * @description Message content
+       */
+      content: string;
+      /**
+       * Parent Message Id
+       * @description Parent message ID for threaded replies
+       */
+      parent_message_id?: string | null;
+    };
+    /** MessageEdit */
+    MessageEdit: {
+      /**
+       * Content
+       * @description Updated message content
+       */
+      content: string;
+    };
+    /** MessageRead */
+    MessageRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Message author */
+      author: components["schemas"]["MessageAuthorRead"];
+      /**
+       * Content
+       * @description Message content
+       */
+      content: string;
+      /**
+       * Edited At
+       * @description When the message was last edited
+       */
+      edited_at?: string | null;
+      /**
+       * Parent Message Id
+       * @description Parent message ID for threaded replies
+       */
+      parent_message_id?: string | null;
+    };
+    /** OrchestrationEventCreate */
+    OrchestrationEventCreate: {
+      /**
+       * Message
+       * @description Error message
+       */
+      message?: string | null;
+      /**
+       * Payload
+       * @description Payload of the triggering event
+       */
+      payload?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Environment
+       * @description Application environment setting
+       */
+      environment?: string | null;
+      /** @description Source of the pipeline */
+      source_uri?: components["schemas"]["URI"] | null;
+      /** @description Destination of the pipeline */
+      destination_uri?: components["schemas"]["URI"] | null;
+      /** @description Status of the event */
+      status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+      /**
+       * Pipeline Id
+       * Format: uuid4
+       */
+      pipeline_id: string;
+    };
+    /** OrchestrationEventPaginatedRead */
+    OrchestrationEventPaginatedRead: {
+      /**
+       * Items
+       * @description Paginated list of orchestration events
+       * @default []
+       */
+      items?: components["schemas"]["OrchestrationEventRead-Output"][];
+      /**
+       * Total
+       * @description Total number of matching events
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** OrchestrationEventRead */
+    "OrchestrationEventRead-Input": {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Message
+       * @description Error message
+       */
+      message?: string | null;
+      /**
+       * Payload
+       * @description Payload of the triggering event
+       */
+      payload?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Environment
+       * @description Application environment setting
+       */
+      environment?: string | null;
+      /** @description Source of the pipeline */
+      source_uri?: components["schemas"]["URI"] | null;
+      /** @description Destination of the pipeline */
+      destination_uri?: components["schemas"]["URI"] | null;
+      /** @description Status of the event */
+      status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+      /**
+       * Pipeline Id
+       * @description Pipeline ID
+       */
+      pipeline_id?: string | null;
+      /**
+       * Version Hash
+       * @description Extractor version hash used for this run
+       */
+      version_hash?: string | null;
+      /**
+       * Retry Of Id
+       * @description ID of the original event this is a retry of
+       */
+      retry_of_id?: string | null;
+    };
+    /** OrchestrationEventRead */
+    "OrchestrationEventRead-Output": {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Message
+       * @description Error message
+       */
+      message?: string | null;
+      /**
+       * Payload
+       * @description Payload of the triggering event
+       */
+      payload?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Environment
+       * @description Application environment setting
+       */
+      environment?: string | null;
+      /** @description Source of the pipeline */
+      source_uri?: components["schemas"]["URI"] | null;
+      /** @description Destination of the pipeline */
+      destination_uri?: components["schemas"]["URI"] | null;
+      /** @description Status of the event */
+      status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+      /**
+       * Pipeline Id
+       * @description Pipeline ID
+       */
+      pipeline_id?: string | null;
+      /**
+       * Version Hash
+       * @description Extractor version hash used for this run
+       */
+      version_hash?: string | null;
+      /**
+       * Retry Of Id
+       * @description ID of the original event this is a retry of
+       */
+      retry_of_id?: string | null;
+    };
+    /**
+     * OrchestrationEventStatusType
+     * @enum {string}
+     */
+    OrchestrationEventStatusType: "pending" | "running" | "success" | "failure" | "pending_review";
+    /**
+     * OrchestrationEventSummary
+     * @description Lightweight summary of an OrchestrationEvent for embedding in CrawlerRunDetailRead.
+     */
+    OrchestrationEventSummary: {
+      /**
+       * Status
+       * @description Event status
+       */
+      status?: string | null;
+      /**
+       * Message
+       * @description Event message
+       */
+      message?: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       * @description When the event was created
+       */
+      created_at: string;
+    };
+    /**
+     * OrchestrationEventUpdate
+     * @description Update schema for orchestration events.
+     *
+     * pipeline_id is intentionally excluded — runs cannot be reassigned
+     * to a different workflow after creation.
+     */
+    OrchestrationEventUpdate: {
+      /**
+       * Message
+       * @description Error message
+       */
+      message?: string | null;
+      /**
+       * Payload
+       * @description Payload of the triggering event
+       */
+      payload?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Environment
+       * @description Application environment setting
+       */
+      environment?: string | null;
+      /** @description Source of the pipeline */
+      source_uri?: components["schemas"]["URI"] | null;
+      /** @description Destination of the pipeline */
+      destination_uri?: components["schemas"]["URI"] | null;
+      /** @description Status of the event */
+      status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+    };
+    /** OrchestrationPipelineCreate */
+    OrchestrationPipelineCreate: {
+      /**
+       * Name
+       * @description Name of the pipeline
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Description of the pipeline
+       */
+      description?: string | null;
+      /**
+       * Definition
+       * @description Parameters for the pipeline
+       */
+      definition?: {
+        [key: string]: unknown;
+      } | null;
+    };
+    /** OrchestrationPipelineRead */
+    OrchestrationPipelineRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Name
+       * @description Name of the pipeline
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Description of the pipeline
+       */
+      description?: string | null;
+      /**
+       * Definition
+       * @description Parameters for the pipeline
+       */
+      definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Orchestration Events
+       * @description Events in the pipeline
+       * @default []
+       */
+      orchestration_events?: components["schemas"]["OrchestrationEventRead-Output"][];
+      /**
+       * Run Count
+       * @description Total number of runs
+       * @default 0
+       */
+      run_count?: number;
+      /**
+       * Failure Count
+       * @description Number of failed runs
+       * @default 0
+       */
+      failure_count?: number;
+      /**
+       * Last Run Status
+       * @description Status of the most recent run
+       */
+      last_run_status?: string | null;
+      /**
+       * Last Run At
+       * @description Timestamp of the most recent run
+       */
+      last_run_at?: string | null;
+    };
+    /** OrchestrationPipelineUpdate */
+    OrchestrationPipelineUpdate: {
+      /**
+       * Name
+       * @description Name of the pipeline
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Description of the pipeline
+       */
+      description?: string | null;
+      /**
+       * Definition
+       * @description Parameters for the pipeline
+       */
+      definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Events
+       * @description Events in the pipeline
+       * @default []
+       */
+      events?: components["schemas"]["OrchestrationEventRead-Input"][];
+    };
+    /** Pagination */
+    Pagination: {
+      /**
+       * Page
+       * @description The page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description The number of items per page
+       * @default 10
+       */
+      page_size?: number;
+      /**
+       * Request Count
+       * @description Request a query for total count
+       * @default false
+       */
+      request_count?: boolean;
+    };
+    /**
+     * PlacementStatus
+     * @enum {string}
+     */
+    PlacementStatus: "active" | "graduated" | "alumni";
+    /** PlacementUpdate */
+    PlacementUpdate: {
+      /** @description Target placement status (active, graduated, alumni) */
+      placement_status: components["schemas"]["PlacementStatus"];
+    };
+    /**
+     * ProfileExtractResponse
+     * @description Response from the unified profile extraction endpoint.
+     */
+    ProfileExtractResponse: {
+      /**
+       * User
+       * @description Extracted core user fields (first_name, last_name, etc.)
+       */
+      user?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Skills
+       * @description Extracted and persisted skills
+       * @default []
+       */
+      skills?: components["schemas"]["SkillRead"][];
+      /**
+       * Experiences
+       * @description Extracted and persisted experiences
+       * @default []
+       */
+      experiences?: components["schemas"]["ExperienceRead"][];
+      /**
+       * Education
+       * @description Extracted and persisted education records
+       * @default []
+       */
+      education?: components["schemas"]["EducationRead"][];
+      /**
+       * Certificates
+       * @description Extracted and persisted certificates
+       * @default []
+       */
+      certificates?: components["schemas"]["CertificateRead"][];
+      /**
+       * Content Too Long
+       * @description True if any source exceeded extraction limits
+       * @default false
+       */
+      content_too_long?: boolean;
+      /**
+       * Sources Count
+       * @description Number of sources that were processed
+       * @default 1
+       */
+      sources_count?: number;
+    };
+    /**
+     * ProfileExtractSource
+     * @description A single extraction source — exactly one of url, file, or text.
+     */
+    ProfileExtractSource: {
+      /**
+       * Url
+       * @description URL to extract from
+       */
+      url?: string | null;
+      /**
+       * File
+       * @description File to extract from
+       */
+      file?: string | null;
+      /**
+       * Text
+       * @description Raw text to extract from
+       */
+      text?: string | null;
+    };
+    /** ResumeCreate */
+    ResumeCreate: {
+      /**
+       * Name
+       * @description Resume name
+       */
+      name?: string | null;
+      /**
+       * Content
+       * @description Resume content
+       */
+      content?: string | null;
+      /** @description Resume content type */
+      content_type?: components["schemas"]["ContentType"] | null;
+    };
+    /** ResumeRead */
+    ResumeRead: {
+      /**
+       * Name
+       * @description Resume name
+       */
+      name?: string | null;
+      /**
+       * Content
+       * @description Resume content
+       */
+      content?: string | null;
+      /** @description Resume content type */
+      content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+    };
+    /** ResumeUpdate */
+    ResumeUpdate: {
+      /**
+       * Name
+       * @description Resume name
+       */
+      name?: string | null;
+      /**
+       * Content
+       * @description Resume content
+       */
+      content?: string | null;
+      /** @description Resume content type */
+      content_type?: components["schemas"]["ContentType"] | null;
+    };
+    /**
+     * ReviewAction
+     * @enum {string}
+     */
+    ReviewAction: "approve" | "reject";
+    /** ReviewBatchItem */
+    ReviewBatchItem: {
+      /** @description Type of review item */
+      item_type: components["schemas"]["ReviewItemType"];
+      /**
+       * Item Id
+       * Format: uuid4
+       * @description Item ID
+       */
+      item_id: string;
+      /** @description approve or reject */
+      action: components["schemas"]["ReviewAction"];
+    };
+    /** ReviewBatchRequest */
+    ReviewBatchRequest: {
+      /**
+       * Items
+       * @description Batch of review actions
+       */
+      items: components["schemas"]["ReviewBatchItem"][];
+    };
+    /** ReviewBatchResponse */
+    ReviewBatchResponse: {
+      /**
+       * Processed
+       * @description Number of items processed
+       */
+      processed: number;
+      /**
+       * Errors
+       * @description Errors encountered
+       * @default []
+       */
+      errors?: string[];
+    };
+    /** ReviewItemRead */
+    ReviewItemRead: {
+      /** @description Type of review item */
+      item_type: components["schemas"]["ReviewItemType"];
+      /**
+       * Item Id
+       * Format: uuid4
+       * @description ID of the item
+       */
+      item_id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description When the item was created
+       */
+      created_at: string;
+      /**
+       * Summary
+       * @description Brief summary of the item
+       */
+      summary?: string | null;
+      /**
+       * Detail
+       * @description Additional context
+       */
+      detail?: {
+        [key: string]: unknown;
+      } | null;
+    };
+    /**
+     * ReviewItemType
+     * @enum {string}
+     */
+    ReviewItemType: "crawler_run" | "extraction_event" | "lead";
+    /** SkillCreate */
+    SkillCreate: {
+      /**
+       * Name
+       * @description Name of the skill
+       */
+      name?: string | null;
+      /**
+       * Category
+       * @description Category of the skill
+       */
+      category?: string | null;
+      /**
+       * Yoe
+       * @description Years of Experience
+       */
+      yoe?: number | null;
+      /**
+       * Subskills
+       * @description Sub-Skills
+       */
+      subskills?: string | null;
+    };
+    /** SkillRead */
+    SkillRead: {
+      /**
+       * Name
+       * @description Name of the skill
+       */
+      name?: string | null;
+      /**
+       * Category
+       * @description Category of the skill
+       */
+      category?: string | null;
+      /**
+       * Yoe
+       * @description Years of Experience
+       */
+      yoe?: number | null;
+      /**
+       * Subskills
+       * @description Sub-Skills
+       */
+      subskills?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+    };
+    /** SkillUpdate */
+    SkillUpdate: {
+      /**
+       * Name
+       * @description Name of the skill
+       */
+      name?: string | null;
+      /**
+       * Category
+       * @description Category of the skill
+       */
+      category?: string | null;
+      /**
+       * Yoe
+       * @description Years of Experience
+       */
+      yoe?: number | null;
+      /**
+       * Subskills
+       * @description Sub-Skills
+       */
+      subskills?: string | null;
+    };
+    /**
+     * SubscriptionTier
+     * @enum {string}
+     */
+    SubscriptionTier: "free" | "starter" | "pro";
+    /**
+     * SuggestExtractor
+     * @description A request to create an extractor from a text sample.
+     */
+    SuggestExtractor: {
+      /**
+       * Description
+       * @description A description of the extractor.
+       * @default
+       */
+      description?: string;
+      /**
+       * Json Schema
+       * @description Existing JSON schema that describes the entity information that should be extracted.
+       */
+      json_schema?: string | null;
+    };
+    /** URI */
+    URI: {
+      /** Name */
+      name: string;
+      type: components["schemas"]["URIType"];
+    };
+    /**
+     * URIType
+     * @enum {string}
+     */
+    URIType: "filepath" | "datalake" | "database" | "api" | "url";
+    /** UnreadCountRead */
+    UnreadCountRead: {
+      /**
+       * Total Unread
+       * @description Total unread messages across conversations
+       */
+      total_unread: number;
+    };
+    /** UserCreate */
+    UserCreate: {
+      /**
+       * First Name
+       * @description First name
+       */
+      first_name?: string | null;
+      /**
+       * Last Name
+       * @description Last name
+       */
+      last_name?: string | null;
+      /**
+       * Phone Number
+       * @description Phone number
+       */
+      phone_number?: string | null;
+      /**
+       * Address Line 1
+       * @description Address line 1
+       */
+      address_line_1?: string | null;
+      /**
+       * Address Line 2
+       * @description Address line 2
+       */
+      address_line_2?: string | null;
+      /**
+       * City
+       * @description City
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description State
+       */
+      state?: string | null;
+      /**
+       * Zip Code
+       * @description Zip code
+       */
+      zip_code?: string | null;
+      /**
+       * Country
+       * @description Country
+       */
+      country?: string | null;
+      /**
+       * Time Zone
+       * @description Time zone
+       */
+      time_zone?: string | null;
+      /** @description Avatar URI */
+      avatar_uri?: components["schemas"]["URI"] | null;
+      /**
+       * Headline
+       * @description Short professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Bio
+       * @description Longer about-me blurb
+       */
+      bio?: string | null;
+      /**
+       * Is Discoverable
+       * @description Whether the user appears in the directory
+       * @default true
+       */
+      is_discoverable?: boolean;
+      /**
+       * @description Subscription tier
+       * @default free
+       */
+      subscription_tier?: components["schemas"]["SubscriptionTier"];
+      /**
+       * Subscription Expires At
+       * @description When the current subscription expires
+       */
+      subscription_expires_at?: string | null;
+      /**
+       * @description Job-seeker lifecycle status
+       * @default active
+       */
+      placement_status?: components["schemas"]["PlacementStatus"];
+      /**
+       * Placement Date
+       * @description Date when the user transitioned to graduated/alumni
+       */
+      placement_date?: string | null;
+      /**
+       * Email
+       * Format: email
+       */
+      email: string;
+      /** Password */
+      password: string;
+      /**
+       * Is Active
+       * @default true
+       */
+      is_active?: boolean | null;
+      /**
+       * Is Superuser
+       * @default false
+       */
+      is_superuser?: boolean | null;
+      /**
+       * Is Verified
+       * @default false
+       */
+      is_verified?: boolean | null;
+    };
+    /** UserDataOperationResult */
+    UserDataOperationResult: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User affected by the data-management operation
+       */
+      user_id: string;
+      /**
+       * User Deleted
+       * @description Whether the user row was removed
+       */
+      user_deleted: boolean;
+      /**
+       * Cleared Profile Fields
+       * @description Number of profile fields cleared from the retained user
+       * @default 0
+       */
+      cleared_profile_fields?: number;
+      /**
+       * Deleted Records
+       * @description Deleted record counts grouped by table or association
+       */
+      deleted_records?: {
+        [key: string]: number;
+      };
+    };
+    /** UserDirectoryPaginatedRead */
+    UserDirectoryPaginatedRead: {
+      /**
+       * Items
+       * @description Paginated user directory entries
+       */
+      items?: components["schemas"]["UserDirectoryRead"][];
+      /**
+       * Total
+       * @description Total matching users
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** UserDirectoryRead */
+    UserDirectoryRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Public display name
+       */
+      display_name: string;
+      /**
+       * Headline
+       * @description Professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
+      /**
+       * City
+       * @description City
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description State
+       */
+      state?: string | null;
+      /**
+       * Country
+       * @description Country
+       */
+      country?: string | null;
+      /** @description Lifecycle status */
+      placement_status: components["schemas"]["PlacementStatus"];
+      /** @description Subscription tier */
+      subscription_tier: components["schemas"]["SubscriptionTier"];
+      /**
+       * Skills Summary
+       * @description Top skill names
+       */
+      skills_summary?: string[];
+    };
+    /** UserProfileRead */
+    UserProfileRead: {
+      /**
+       * Skills
+       * @description User's skills
+       * @default []
+       */
+      skills?: components["schemas"]["SkillRead"][];
+      /**
+       * Experiences
+       * @description User's professional experiences
+       * @default []
+       */
+      experiences?: components["schemas"]["ExperienceRead"][];
+      /**
+       * Education
+       * @description User's educational background
+       * @default []
+       */
+      education?: components["schemas"]["EducationRead"][];
+      /**
+       * Certificates
+       * @description User's certificates
+       * @default []
+       */
+      certificates?: components["schemas"]["CertificateRead"][];
+    };
+    /** UserPublicProfileRead */
+    UserPublicProfileRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Public display name
+       */
+      display_name: string;
+      /**
+       * Headline
+       * @description Professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Bio
+       * @description About-me blurb
+       */
+      bio?: string | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
+      /**
+       * City
+       * @description City
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description State
+       */
+      state?: string | null;
+      /**
+       * Country
+       * @description Country
+       */
+      country?: string | null;
+      /** @description Lifecycle status */
+      placement_status: components["schemas"]["PlacementStatus"];
+      /**
+       * Skills
+       * @description User skills
+       */
+      skills?: components["schemas"]["SkillRead"][];
+      /**
+       * Experiences
+       * @description Work experiences
+       */
+      experiences?: components["schemas"]["ExperienceRead"][];
+    };
+    /** UserRead */
+    UserRead: {
+      /**
+       * First Name
+       * @description First name
+       */
+      first_name?: string | null;
+      /**
+       * Last Name
+       * @description Last name
+       */
+      last_name?: string | null;
+      /**
+       * Phone Number
+       * @description Phone number
+       */
+      phone_number?: string | null;
+      /**
+       * Address Line 1
+       * @description Address line 1
+       */
+      address_line_1?: string | null;
+      /**
+       * Address Line 2
+       * @description Address line 2
+       */
+      address_line_2?: string | null;
+      /**
+       * City
+       * @description City
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description State
+       */
+      state?: string | null;
+      /**
+       * Zip Code
+       * @description Zip code
+       */
+      zip_code?: string | null;
+      /**
+       * Country
+       * @description Country
+       */
+      country?: string | null;
+      /**
+       * Time Zone
+       * @description Time zone
+       */
+      time_zone?: string | null;
+      /** @description Avatar URI */
+      avatar_uri?: components["schemas"]["URI"] | null;
+      /**
+       * Headline
+       * @description Short professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Bio
+       * @description Longer about-me blurb
+       */
+      bio?: string | null;
+      /**
+       * Is Discoverable
+       * @description Whether the user appears in the directory
+       * @default true
+       */
+      is_discoverable?: boolean;
+      /**
+       * @description Subscription tier
+       * @default free
+       */
+      subscription_tier?: components["schemas"]["SubscriptionTier"];
+      /**
+       * Subscription Expires At
+       * @description When the current subscription expires
+       */
+      subscription_expires_at?: string | null;
+      /**
+       * @description Job-seeker lifecycle status
+       * @default active
+       */
+      placement_status?: components["schemas"]["PlacementStatus"];
+      /**
+       * Placement Date
+       * @description Date when the user transitioned to graduated/alumni
+       */
+      placement_date?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       */
+      id: string;
+      /**
+       * Email
+       * Format: email
+       */
+      email: string;
+      /**
+       * Is Active
+       * @default true
+       */
+      is_active?: boolean;
+      /**
+       * Is Superuser
+       * @default false
+       */
+      is_superuser?: boolean;
+      /**
+       * Is Verified
+       * @default false
+       */
+      is_verified?: boolean;
+    };
+    /** UserUpdate */
+    UserUpdate: {
+      /**
+       * First Name
+       * @description First name
+       */
+      first_name?: string | null;
+      /**
+       * Last Name
+       * @description Last name
+       */
+      last_name?: string | null;
+      /**
+       * Phone Number
+       * @description Phone number
+       */
+      phone_number?: string | null;
+      /**
+       * Address Line 1
+       * @description Address line 1
+       */
+      address_line_1?: string | null;
+      /**
+       * Address Line 2
+       * @description Address line 2
+       */
+      address_line_2?: string | null;
+      /**
+       * City
+       * @description City
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description State
+       */
+      state?: string | null;
+      /**
+       * Zip Code
+       * @description Zip code
+       */
+      zip_code?: string | null;
+      /**
+       * Country
+       * @description Country
+       */
+      country?: string | null;
+      /**
+       * Time Zone
+       * @description Time zone
+       */
+      time_zone?: string | null;
+      /** @description Avatar URI */
+      avatar_uri?: components["schemas"]["URI"] | null;
+      /**
+       * Headline
+       * @description Short professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Bio
+       * @description Longer about-me blurb
+       */
+      bio?: string | null;
+      /**
+       * Is Discoverable
+       * @description Whether the user appears in the directory
+       * @default true
+       */
+      is_discoverable?: boolean;
+      /**
+       * @description Subscription tier
+       * @default free
+       */
+      subscription_tier?: components["schemas"]["SubscriptionTier"];
+      /**
+       * Subscription Expires At
+       * @description When the current subscription expires
+       */
+      subscription_expires_at?: string | null;
+      /**
+       * @description Job-seeker lifecycle status
+       * @default active
+       */
+      placement_status?: components["schemas"]["PlacementStatus"];
+      /**
+       * Placement Date
+       * @description Date when the user transitioned to graduated/alumni
+       */
+      placement_date?: string | null;
+      /** Password */
+      password?: string | null;
+      /** Email */
+      email?: string | null;
+      /** Is Active */
+      is_active?: boolean | null;
+      /** Is Superuser */
+      is_superuser?: boolean | null;
+      /** Is Verified */
+      is_verified?: boolean | null;
+    };
+    /** ValidationError */
+    ValidationError: {
+      /** Location */
+      loc: (string | number)[];
+      /** Message */
+      msg: string;
+      /** Error Type */
+      type: string;
+      /** Input */
+      input?: unknown;
+      /** Context */
+      ctx?: Record<string, never>;
+    };
+  };
+  responses: never;
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
+
 export type $defs = Record<string, never>;
+
+export type external = Record<string, never>;
+
 export interface operations {
-    auth_jwt_login_auth_jwt_login_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/x-www-form-urlencoded": components["schemas"]["Body_auth_jwt_login_auth_jwt_login_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiOTIyMWZmYzktNjQwZi00MzcyLTg2ZDMtY2U2NDJjYmE1NjAzIiwiYXVkIjoiZmFzdGFwaS11c2VyczphdXRoIiwiZXhwIjoxNTcxNTA0MTkzfQ.M10bjOe45I5Ncu_uXvOmVV8QxnL-nZfcH96U90JaocI",
-                     *       "token_type": "bearer"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["BearerResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorModel"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    auth_jwt_logout_auth_jwt_logout_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Missing token or inactive user. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    register_register_auth_register_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserRead"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorModel"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    reset_forgot_password_auth_forgot_password_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Body_reset_forgot_password_auth_forgot_password_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    reset_reset_password_auth_reset_password_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Body_reset_reset_password_auth_reset_password_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorModel"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    verify_request_token_auth_request_verify_token_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Body_verify_request_token_auth_request_verify_token_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    verify_verify_auth_verify_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Body_verify_verify_auth_verify_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserRead"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorModel"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_tables_db_management_list_tables_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string[];
-                };
-            };
-        };
-    };
-    get_table_details_db_management_table_details__table_name__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                table_name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    purge_user_data_db_management_users__user_id__purge_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserDataOperationResult"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_user_db_management_users__user_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserDataOperationResult"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    users_current_user_users_me_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserRead"];
-                };
-            };
-            /** @description Missing token or inactive user. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    users_patch_current_user_users_me_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserRead"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorModel"];
-                };
-            };
-            /** @description Missing token or inactive user. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    users_user_users__id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserRead"];
-                };
-            };
-            /** @description Missing token or inactive user. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Not a superuser. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description The user does not exist. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    users_delete_user_users__id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Missing token or inactive user. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Not a superuser. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description The user does not exist. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    users_patch_user_users__id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserRead"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorModel"];
-                };
-            };
-            /** @description Missing token or inactive user. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Not a superuser. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description The user does not exist. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_profile_users_me_profile_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserProfileRead"];
-                };
-            };
-        };
-    };
-    update_placement_users_me_placement_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PlacementUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    extract_user_profile_users_me_profile_extract_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_extract_user_profile_users_me_profile_extract_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProfileExtractResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    seed_users_users_seed_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string;
-                };
-            };
-        };
-    };
-    read_leads_leads__get: {
-        parameters: {
-            query?: {
-                /** @description Page number starting from 1 */
-                page?: number;
-                /** @description Number of records per page */
-                page_size?: number;
-                /** @description Return total count of records */
-                request_count?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadsPaginatedRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_job_lead_leads__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LeadCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    extract_lead_leads_extract_post: {
-        parameters: {
-            query: {
-                extraction_url: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadExtractResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_lead_leads__id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadDetailRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_lead_leads__id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_lead_leads__id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LeadSharedUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_lead_registration_leads__id__registration_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadRegistrationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_lead_registration_leads__id__registration_delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_lead_registration_leads__id__registration_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LeadRegistrationUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadRegistrationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_lead_comments_leads__id__comments_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadCommentRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_lead_comment_leads__id__comments_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LeadCommentCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadCommentRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_lead_comment_reply_leads__id__comments__comment_id__replies_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                comment_id: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LeadCommentCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadCommentRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    purge_leads_leads_purge_delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    seed_leads_leads_seed_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_company_companies__id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_company_companies__id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CompanyUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_company_companies__id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_companies_companies__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyRead"][];
-                };
-            };
-        };
-    };
-    create_company_companies__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CompanyCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_company_leads_companies__id__leads_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    extract_company_companies_extract_post: {
-        parameters: {
-            query: {
-                /** @description URL for data extraction */
-                extraction_url: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_orch_pipelines_data_orchestration_pipelines_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrchestrationPipelineRead"][];
-                };
-            };
-        };
-    };
-    create_orch_pipeline_data_orchestration_pipelines_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OrchestrationPipelineCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrchestrationPipelineRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_orch_pipeline_data_orchestration_pipelines__id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrchestrationPipelineRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_orch_pipeline_data_orchestration_pipelines__id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OrchestrationPipelineUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrchestrationPipelineRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_orch_pipeline_data_orchestration_pipelines__id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_orch_events_data_orchestration_events_get: {
-        parameters: {
-            query?: {
-                /** @description Filter by run status */
-                status?: components["schemas"]["OrchestrationEventStatusType"] | null;
-                /** @description Filter by workflow ID */
-                pipeline_id?: string | null;
-                /** @description Page number */
-                page?: number;
-                /** @description Items per page */
-                page_size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrchestrationEventPaginatedRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_orch_event_data_orchestration_events_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OrchestrationEventCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrchestrationEventRead-Output"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    prune_orchestration_events_data_orchestration_events_prune_delete: {
-        parameters: {
-            query?: {
-                /** @description Delete events older than N days */
-                older_than_days?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_orch_event_data_orchestration_events__id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrchestrationEventRead-Output"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_orch_event_data_orchestration_events__id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OrchestrationEventUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrchestrationEventRead-Output"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    retry_orch_event_data_orchestration_events__event_id__retry_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                event_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrchestrationEventRead-Output"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_current_user_contacts_contacts__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContactRead"][];
-                };
-            };
-        };
-    };
-    create_user_contact_contacts__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ContactCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContactRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_user_contact_contacts__contact_id__get: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContactRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_user_contact_contacts__contact_id__put: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ContactUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContactRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_user_contact_contacts__contact_id__delete: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    extract_contacts_contacts_extract_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExtractorRun"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContactRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    seed_contacts_contacts_seed_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string;
-                };
-            };
-        };
-    };
-    read_current_user_experiences_experiences__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExperienceRead"][];
-                };
-            };
-        };
-    };
-    create_user_experience_experiences__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExperienceCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExperienceRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_user_experience_experiences__experience_id__get: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExperienceRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_user_experience_experiences__experience_id__put: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExperienceUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExperienceRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_user_experience_experiences__experience_id__delete: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    extract_user_experiences_experiences_extract_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExtractorRun"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExperienceRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    seed_experiences_experiences_seed_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string;
-                };
-            };
-        };
-    };
-    extract_user_skills_skills_extract_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_extract_user_skills_skills_extract_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_current_user_skills_skills__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SkillRead"][];
-                };
-            };
-        };
-    };
-    create_user_skill_skills__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SkillCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SkillRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_user_skill_skills__skill_id__get: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SkillRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_user_skill_skills__skill_id__put: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SkillUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SkillRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_user_skill_skills__skill_id__delete: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    seed_skills_skills_seed_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string;
-                };
-            };
-        };
-    };
-    download_cover_letter_cover_letters__cover_letter_id__download_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                cover_letter_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    generate_user_cover_letter_cover_letters_generate_post: {
-        parameters: {
-            query: {
-                lead_id: string;
-                /** @description Template ID for the cover letter */
-                template_id?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoverLetterRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_current_user_cover_letters_cover_letters__get: {
-        parameters: {
-            query?: {
-                /** @description Filter by content type */
-                content_type?: components["schemas"]["ContentType"] | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoverLetterRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_user_cover_letter_cover_letters__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CoverLetterCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoverLetterRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_cover_letter_by_id_cover_letters__cover_letter_id__get: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoverLetterRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_user_cover_letter_cover_letters__cover_letter_id__delete: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_user_cover_letter_cover_letters__cover_letter_id__patch: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CoverLetterUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoverLetterRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    seed_cover_letters_cover_letters_seed_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string;
-                };
-            };
-        };
-    };
-    download_resume_resumes__resume_id__download_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                resume_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_current_user_resumes_resumes__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ResumeRead"][];
-                };
-            };
-        };
-    };
-    create_user_resume_resumes__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ResumeCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ResumeRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_user_resume_resumes__resume_id__get: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ResumeRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_user_resume_resumes__resume_id__delete: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_user_resume_resumes__resume_id__patch: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ResumeUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ResumeRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    seed_resumes_resumes_seed_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string;
-                };
-            };
-        };
-    };
-    get_applications_applications__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApplicationRead"][];
-                };
-            };
-        };
-    };
-    create_application_applications__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ApplicationCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApplicationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_application_by_id_applications__id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApplicationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_application_applications__id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_application_applications__id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ApplicationUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApplicationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_application_resumes_applications__id__resumes_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ResumeRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    add_resume_to_application_applications__id__resumes_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ApplicationResumeAttach"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ResumeRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_application_cover_letters_applications__id__cover_letters_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoverLetterRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    add_cover_letter_to_application_applications__id__cover_letters_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ApplicationCoverLetterAttach"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoverLetterRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    generate_cover_letter_for_application_applications__id__cover_letters_generate_post: {
-        parameters: {
-            query?: {
-                /** @description Template ID for cover letter generation */
-                template_id?: string | null;
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoverLetterRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    export_application_materials_applications__id__export_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_application_documents_applications__id__documents_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    add_document_to_application_applications__id__documents_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ApplicationDocumentAttach"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    detach_document_from_application_applications__id__documents__document_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    upload_document_documents_upload_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_upload_document_documents_upload_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentDetailRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_pinned_documents_documents_pinned_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentRead"][];
-                };
-            };
-        };
-    };
-    list_documents_documents__get: {
-        parameters: {
-            query?: {
-                /** @description Filter by kind */
-                kind?: components["schemas"]["DocumentKind"] | null;
-                /** @description Filter by status */
-                status?: components["schemas"]["DocumentStatus"] | null;
-                /** @description Filter by pinned state */
-                is_pinned?: boolean | null;
-                /** @description Search by title (case-insensitive) */
-                search?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_document_documents__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DocumentCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentDetailRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_shared_with_me_documents_shared_with_me_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentRead"][];
-                };
-            };
-        };
-    };
-    list_share_candidates_documents__document_id__share_candidates_get: {
-        parameters: {
-            query?: {
-                /** @description Search by name, email, or headline */
-                q?: string;
-                /** @description Maximum candidates to return */
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentShareCandidateRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    generate_document_documents_generate_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DocumentGenerateRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentDetailRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_document_detail_documents__document_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentDetailRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_document_documents__document_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_document_documents__document_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DocumentUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_document_activity_documents__document_id__activity_get: {
-        parameters: {
-            query?: {
-                /** @description Maximum activity rows to return */
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentActivityRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_versions_documents__document_id__versions_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentVersionRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_version_documents__document_id__versions_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DocumentVersionCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentVersionRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_version_documents__document_id__versions__version_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-                version_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentVersionRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    pin_document_documents__document_id__pin_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["DocumentPinRequest"] | null;
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    download_original_documents__document_id__original_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    download_document_documents__document_id__download_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_shares_documents__document_id__shares_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentShareRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_share_documents__document_id__shares_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DocumentShareCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentShareRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_share_documents__document_id__shares__share_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-                share_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_share_documents__document_id__shares__share_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-                share_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DocumentShareUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentShareRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_current_user_educations_education__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EducationRead"][];
-                };
-            };
-        };
-    };
-    create_user_education_education__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EducationCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EducationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_user_education_education__education_id__get: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EducationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_user_education_education__education_id__put: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EducationUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EducationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_user_education_education__education_id__delete: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EducationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    extract_education_education_extract_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExtractorRun"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EducationRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    seed_education_education_seed_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string;
-                };
-            };
-        };
-    };
-    read_current_user_certificates_certificate__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CertificateRead"][];
-                };
-            };
-        };
-    };
-    create_user_certificate_certificate__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CertificateCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CertificateRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_user_certificate_certificate__certificate_id__get: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CertificateRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_user_certificate_certificate__certificate_id__put: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CertificateUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CertificateRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_user_certificate_certificate__certificate_id__delete: {
-        parameters: {
-            query: {
-                id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CertificateRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    extract_certificates_certificate_extract_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExtractorRun"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CertificateRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    seed_certificates_certificate_seed_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string;
-                };
-            };
-        };
-    };
-    get_configuration_extractor_configurables_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConfigurationResponse"];
-                };
-            };
-        };
-    };
-    suggest_extractor_extractor_suggest_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SuggestExtractor"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExtractorDefinition"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_extractor_extractor__id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExtractorRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_extractor_extractor__id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExtractorUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExtractorRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_extractor_extractor__id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_extractors_extractor__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExtractorRead"][];
-                };
-            };
-        };
-    };
-    create_extractor_extractor__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExtractorCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExtractorRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_extractor_examples_extractor__id__examples_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExtractorExampleRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_extractor_example_extractor__id__examples_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExtractorExampleCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExtractorExampleRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_extractor_versions_extractor__id__versions_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExtractorVersionRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_extractor_example_extractor__id__examples__example_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                example_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    extractor_runner_extractor__id__run_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_extractor_runner_extractor__id__run_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExtractorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    retry_extractor_run_extractor__id__run__event_id__retry_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                event_id: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExtractorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_crawler_pipelines_crawlers_pipelines_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrawlerPipelineRead"][];
-                };
-            };
-        };
-    };
-    create_crawler_pipeline_crawlers_pipelines_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CrawlerPipelineCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrawlerPipelineRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_crawler_pipeline_crawlers_pipelines__pipeline_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                pipeline_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrawlerPipelineRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_crawler_pipeline_crawlers_pipelines__pipeline_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                pipeline_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CrawlerPipelineUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrawlerPipelineRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trigger_crawler_run_crawlers_pipelines__pipeline_id__runs_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                pipeline_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrawlerRunRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_crawler_runs_crawlers_runs_get: {
-        parameters: {
-            query?: {
-                /** @description Filter by pipeline source */
-                source?: string | null;
-                /** @description Filter by run status */
-                status?: string | null;
-                /** @description Filter by pipeline ID */
-                pipeline_id?: string | null;
-                /** @description Filter by trigger type */
-                trigger_type?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrawlerRunRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    prune_crawler_runs_crawlers_runs_prune_delete: {
-        parameters: {
-            query?: {
-                /** @description Delete runs older than N days */
-                older_than_days?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_crawler_run_crawlers_runs__run_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrawlerRunDetailRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    cancel_crawler_run_crawlers_runs__run_id__cancel_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrawlerRunRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    pause_crawler_run_crawlers_runs__run_id__pause_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrawlerRunRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    resume_crawler_run_crawlers_runs__run_id__resume_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrawlerRunRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    retry_crawler_run_crawlers_runs__run_id__retry_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrawlerRunRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_directory_directory__get: {
-        parameters: {
-            query?: {
-                /** @description Search by name or headline */
-                q?: string | null;
-                /** @description Filter by placement status */
-                placement_status?: components["schemas"]["PlacementStatus"] | null;
-                /** @description Filter by city/state/country */
-                location?: string | null;
-                /** @description Page number starting from 1 */
-                page?: number;
-                /** @description Number of records per page */
-                page_size?: number;
-                /** @description Return total count of records */
-                request_count?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserDirectoryPaginatedRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_public_profile_directory__user_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserPublicProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_connections_connections__get: {
-        parameters: {
-            query?: {
-                /** @description Filter by connection status */
-                status?: string | null;
-                /** @description Page number starting from 1 */
-                page?: number;
-                /** @description Number of records per page */
-                page_size?: number;
-                /** @description Return total count of records */
-                request_count?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConnectionsPaginatedRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    send_connection_request_connections__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ConnectionCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConnectionRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    accept_connection_connections__id__accept_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConnectionRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    decline_connection_connections__id__decline_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConnectionRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    remove_connection_connections__id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    block_connection_connections__id__block_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConnectionRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_total_unread_conversations_unread_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UnreadCountRead"];
-                };
-            };
-        };
-    };
-    list_conversations_conversations__get: {
-        parameters: {
-            query?: {
-                page?: number;
-                page_size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConversationsPaginatedRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_conversation_conversations__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ConversationCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConversationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_conversation_conversations__conversation_id__get: {
-        parameters: {
-            query?: {
-                page?: number;
-                page_size?: number;
-            };
-            header?: never;
-            path: {
-                conversation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConversationDetailRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    send_message_conversations__conversation_id__messages_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                conversation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MessageCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_message_conversations__conversation_id__messages__message_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                conversation_id: string;
-                message_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    edit_message_conversations__conversation_id__messages__message_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                conversation_id: string;
-                message_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MessageEdit"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    mark_conversation_read_conversations__conversation_id__read_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                conversation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    add_participant_conversations__conversation_id__participants_post: {
-        parameters: {
-            query: {
-                /** @description User ID to add */
-                user_id: string;
-            };
-            header?: never;
-            path: {
-                conversation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConversationParticipantRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    remove_participant_conversations__conversation_id__participants__target_user_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                conversation_id: string;
-                target_user_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    request_collaboration_bootstrap_documents__document_id__collaborate_bootstrap_post: {
-        parameters: {
-            query: {
-                token: string;
-            };
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentCollaborationBootstrapRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_action_items_action_items__get: {
-        parameters: {
-            query?: {
-                status?: components["schemas"]["ActionItemStatus"] | null;
-                kind?: components["schemas"]["ActionItemKind"] | null;
-                priority?: components["schemas"]["ActionItemPriority"] | null;
-                due_before?: string | null;
-                due_after?: string | null;
-                page?: number;
-                page_size?: number;
-                request_count?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActionItemDetailRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_action_item_action_items__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ActionItemCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActionItemRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    reorder_action_items_action_items_reorder_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ActionItemReorder"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_action_item_action_items__id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActionItemDetailRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_action_item_action_items__id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_action_item_action_items__id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ActionItemUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActionItemRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_action_item_from_application_action_items_from_application__application_id__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                application_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActionItemRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_activity_feed_activity_feed__get: {
-        parameters: {
-            query?: {
-                page?: number;
-                page_size?: number;
-                since?: string | null;
-                entity_type?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActivityFeedRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_command_center_summary_activity_feed_summary_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommandCenterSummary"];
-                };
-            };
-        };
-    };
-    list_review_items_review_items_get: {
-        parameters: {
-            query?: {
-                /** @description Filter by item type */
-                item_type?: components["schemas"]["ReviewItemType"] | null;
-                page?: number;
-                page_size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReviewItemRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    approve_item_review_items__item_type___item_id__approve_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                item_type: components["schemas"]["ReviewItemType"];
-                item_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    reject_item_review_items__item_type___item_id__reject_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                item_type: components["schemas"]["ReviewItemType"];
-                item_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    batch_review_review_items_batch_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReviewBatchRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReviewBatchResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    root__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
+
+  /** Auth:Jwt.Login */
+  auth_jwt_login_auth_jwt_login_post: {
+    requestBody: {
+      content: {
+        "application/x-www-form-urlencoded": components["schemas"]["Body_auth_jwt_login_auth_jwt_login_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["BearerResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        content: {
+          "application/json": components["schemas"]["ErrorModel"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Auth:Jwt.Logout */
+  auth_jwt_logout_auth_jwt_logout_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Missing token or inactive user. */
+      401: {
+        content: never;
+      };
+    };
+  };
+  /** Register:Register */
+  register_register_auth_register_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UserCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["UserRead"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        content: {
+          "application/json": components["schemas"]["ErrorModel"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Reset:Forgot Password */
+  reset_forgot_password_auth_forgot_password_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Body_reset_forgot_password_auth_forgot_password_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Reset:Reset Password */
+  reset_reset_password_auth_reset_password_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Body_reset_reset_password_auth_reset_password_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        content: {
+          "application/json": components["schemas"]["ErrorModel"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Verify:Request-Token */
+  verify_request_token_auth_request_verify_token_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Body_verify_request_token_auth_request_verify_token_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Verify:Verify */
+  verify_verify_auth_verify_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Body_verify_verify_auth_verify_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserRead"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        content: {
+          "application/json": components["schemas"]["ErrorModel"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Tables */
+  list_tables_db_management_list_tables_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string[];
+        };
+      };
+    };
+  };
+  /** Get Table Details */
+  get_table_details_db_management_table_details__table_name__get: {
+    parameters: {
+      path: {
+        table_name: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: string;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Purge User Data */
+  purge_user_data_db_management_users__user_id__purge_patch: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserDataOperationResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User */
+  delete_user_db_management_users__user_id__delete: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserDataOperationResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Users:Current User */
+  users_current_user_users_me_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserRead"];
+        };
+      };
+      /** @description Missing token or inactive user. */
+      401: {
+        content: never;
+      };
+    };
+  };
+  /** Users:Patch Current User */
+  users_patch_current_user_users_me_patch: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UserUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserRead"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        content: {
+          "application/json": components["schemas"]["ErrorModel"];
+        };
+      };
+      /** @description Missing token or inactive user. */
+      401: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Users:User */
+  users_user_users__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserRead"];
+        };
+      };
+      /** @description Missing token or inactive user. */
+      401: {
+        content: never;
+      };
+      /** @description Not a superuser. */
+      403: {
+        content: never;
+      };
+      /** @description The user does not exist. */
+      404: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Users:Delete User */
+  users_delete_user_users__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Missing token or inactive user. */
+      401: {
+        content: never;
+      };
+      /** @description Not a superuser. */
+      403: {
+        content: never;
+      };
+      /** @description The user does not exist. */
+      404: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Users:Patch User */
+  users_patch_user_users__id__patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UserUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserRead"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        content: {
+          "application/json": components["schemas"]["ErrorModel"];
+        };
+      };
+      /** @description Missing token or inactive user. */
+      401: {
+        content: never;
+      };
+      /** @description Not a superuser. */
+      403: {
+        content: never;
+      };
+      /** @description The user does not exist. */
+      404: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Profile */
+  read_profile_users_me_profile_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserProfileRead"];
+        };
+      };
+    };
+  };
+  /**
+   * Update Placement
+   * @description Update the current user's placement status.
+   *
+   * Valid transitions: active → graduated, graduated → alumni.
+   */
+  update_placement_users_me_placement_patch: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PlacementUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Extract User Profile
+   * @description Extract all profile sections from one or many sources and persist results.
+   */
+  extract_user_profile_users_me_profile_extract_post: {
+    requestBody?: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_extract_user_profile_users_me_profile_extract_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProfileExtractResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Users */
+  seed_users_users_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
+        };
+      };
+    };
+  };
+  /** Read Leads */
+  read_leads_leads__get: {
+    parameters: {
+      query?: {
+        /** @description Page number starting from 1 */
+        page?: number;
+        /** @description Number of records per page */
+        page_size?: number;
+        /** @description Return total count of records */
+        request_count?: boolean;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadsPaginatedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Job Lead */
+  create_job_lead_leads__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["LeadRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract Lead */
+  extract_lead_leads_extract_post: {
+    parameters: {
+      query: {
+        extraction_url: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadExtractResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Lead */
+  read_lead_leads__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Lead */
+  delete_lead_leads__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Lead */
+  update_lead_leads__id__patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadSharedUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Lead Registration */
+  create_lead_registration_leads__id__registration_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRegistrationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Lead Registration */
+  delete_lead_registration_leads__id__registration_delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Lead Registration */
+  update_lead_registration_leads__id__registration_patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadRegistrationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRegistrationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Lead Comments */
+  read_lead_comments_leads__id__comments_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadCommentRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Lead Comment */
+  create_lead_comment_leads__id__comments_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadCommentCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["LeadCommentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Lead Comment Reply */
+  create_lead_comment_reply_leads__id__comments__comment_id__replies_post: {
+    parameters: {
+      path: {
+        comment_id: string;
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadCommentCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["LeadCommentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Purge Leads */
+  purge_leads_leads_purge_delete: {
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+    };
+  };
+  /** Seed Leads */
+  seed_leads_leads_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
+  /** Get Company */
+  get_company_companies__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Company */
+  update_company_companies__id__put: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Company */
+  delete_company_companies__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Companies */
+  get_companies_companies__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"][];
+        };
+      };
+    };
+  };
+  /** Create Company */
+  create_company_companies__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Company Leads */
+  get_company_leads_companies__id__leads_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract Company */
+  extract_company_companies_extract_post: {
+    parameters: {
+      query: {
+        /** @description URL for data extraction */
+        extraction_url: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanyRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Orch Pipelines */
+  read_orch_pipelines_data_orchestration_pipelines_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationPipelineRead"][];
+        };
+      };
+    };
+  };
+  /** Create Orch Pipeline */
+  create_orch_pipeline_data_orchestration_pipelines_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrchestrationPipelineCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Orch Pipeline */
+  read_orch_pipeline_data_orchestration_pipelines__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Orch Pipeline */
+  update_orch_pipeline_data_orchestration_pipelines__id__put: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrchestrationPipelineUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Orch Pipeline */
+  delete_orch_pipeline_data_orchestration_pipelines__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Orch Events */
+  read_orch_events_data_orchestration_events_get: {
+    parameters: {
+      query?: {
+        /** @description Filter by run status */
+        status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+        /** @description Filter by workflow ID */
+        pipeline_id?: string | null;
+        /** @description Page number */
+        page?: number;
+        /** @description Items per page */
+        page_size?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventPaginatedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Orch Event */
+  create_orch_event_data_orchestration_events_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrchestrationEventCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Prune Orchestration Events
+   * @description Delete completed/failed orchestration events older than the specified age.
+   */
+  prune_orchestration_events_data_orchestration_events_prune_delete: {
+    parameters: {
+      query?: {
+        /** @description Delete events older than N days */
+        older_than_days?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Orch Event */
+  read_orch_event_data_orchestration_events__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Orch Event */
+  update_orch_event_data_orchestration_events__id__put: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrchestrationEventUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retry Orch Event
+   * @description Retry a failed orchestration event by creating a new event linked to the original.
+   */
+  retry_orch_event_data_orchestration_events__event_id__retry_post: {
+    parameters: {
+      path: {
+        event_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Current User Contacts */
+  get_current_user_contacts_contacts__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ContactRead"][];
+        };
+      };
+    };
+  };
+  /** Create User Contact */
+  create_user_contact_contacts__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ContactCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ContactRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get User Contact */
+  get_user_contact_contacts__contact_id__get: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ContactRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Contact */
+  update_user_contact_contacts__contact_id__put: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ContactUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ContactRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User Contact */
+  delete_user_contact_contacts__contact_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract Contacts */
+  extract_contacts_contacts_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ContactRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Contacts */
+  seed_contacts_contacts_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
+        };
+      };
+    };
+  };
+  /** Read Current User Experiences */
+  read_current_user_experiences_experiences__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"][];
+        };
+      };
+    };
+  };
+  /** Create User Experience */
+  create_user_experience_experiences__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExperienceCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read User Experience */
+  read_user_experience_experiences__experience_id__get: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Experience */
+  update_user_experience_experiences__experience_id__put: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExperienceUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User Experience */
+  delete_user_experience_experiences__experience_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract User Experiences */
+  extract_user_experiences_experiences_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Experiences */
+  seed_experiences_experiences_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
+        };
+      };
+    };
+  };
+  /** Extract User Skills */
+  extract_user_skills_skills_extract_post: {
+    requestBody?: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_extract_user_skills_skills_extract_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: string;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Current User Skills */
+  get_current_user_skills_skills__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"][];
+        };
+      };
+    };
+  };
+  /** Create User Skill */
+  create_user_skill_skills__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SkillCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get User Skill */
+  get_user_skill_skills__skill_id__get: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Skill */
+  update_user_skill_skills__skill_id__put: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SkillUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User Skill */
+  delete_user_skill_skills__skill_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Skills */
+  seed_skills_skills_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
+        };
+      };
+    };
+  };
+  /** Download Cover Letter */
+  download_cover_letter_cover_letters__cover_letter_id__download_get: {
+    parameters: {
+      path: {
+        cover_letter_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Generate User Cover Letter */
+  generate_user_cover_letter_cover_letters_generate_post: {
+    parameters: {
+      query: {
+        lead_id: string;
+        /** @description Template ID for the cover letter */
+        template_id?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Current User Cover Letters */
+  get_current_user_cover_letters_cover_letters__get: {
+    parameters: {
+      query?: {
+        /** @description Filter by content type */
+        content_type?: components["schemas"]["ContentType"] | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create User Cover Letter */
+  create_user_cover_letter_cover_letters__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CoverLetterCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Cover Letter By Id */
+  get_cover_letter_by_id_cover_letters__cover_letter_id__get: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User Cover Letter */
+  delete_user_cover_letter_cover_letters__cover_letter_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Cover Letter */
+  update_user_cover_letter_cover_letters__cover_letter_id__patch: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CoverLetterUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Cover Letters */
+  seed_cover_letters_cover_letters_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
+        };
+      };
+    };
+  };
+  /** Download Resume */
+  download_resume_resumes__resume_id__download_get: {
+    parameters: {
+      path: {
+        resume_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Current User Resumes */
+  get_current_user_resumes_resumes__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"][];
+        };
+      };
+    };
+  };
+  /** Create User Resume */
+  create_user_resume_resumes__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResumeCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get User Resume */
+  get_user_resume_resumes__resume_id__get: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User Resume */
+  delete_user_resume_resumes__resume_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Resume */
+  update_user_resume_resumes__resume_id__patch: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResumeUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Resumes */
+  seed_resumes_resumes_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
+        };
+      };
+    };
+  };
+  /**
+   * Get Applications
+   * @description Get all applications for the current user.
+   */
+  get_applications_applications__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"][];
+        };
+      };
+    };
+  };
+  /** Create Application */
+  create_application_applications__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Application By Id */
+  get_application_by_id_applications__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Application */
+  delete_application_applications__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Application */
+  update_application_applications__id__patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ApplicationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Application Resumes */
+  get_application_resumes_applications__id__resumes_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Add Resume To Application */
+  add_resume_to_application_applications__id__resumes_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationResumeAttach"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ResumeRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Application Cover Letters */
+  get_application_cover_letters_applications__id__cover_letters_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Add Cover Letter To Application */
+  add_cover_letter_to_application_applications__id__cover_letters_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationCoverLetterAttach"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Generate Cover Letter For Application */
+  generate_cover_letter_for_application_applications__id__cover_letters_generate_post: {
+    parameters: {
+      query?: {
+        /** @description Template ID for cover letter generation */
+        template_id?: string | null;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Export Application Materials
+   * @description Export all materials linked to an application as a ZIP archive.
+   *
+   * The archive contains up to three subdirectories — ``resumes/``,
+   * ``cover_letters/``, and ``documents/`` — each holding PDF files for
+   * the linked records.
+   */
+  export_application_materials_applications__id__export_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Application Documents */
+  get_application_documents_applications__id__documents_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Add Document To Application */
+  add_document_to_application_applications__id__documents_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationDocumentAttach"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Detach Document From Application */
+  detach_document_from_application_applications__id__documents__document_id__delete: {
+    parameters: {
+      path: {
+        document_id: string;
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Upload Document
+   * @description Upload a PDF file, extract its text, and create a new Document + v1.
+   */
+  upload_document_documents_upload_post: {
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_upload_document_documents_upload_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Pinned Documents
+   * @description Return the user's pinned (active/canonical) documents — at most one per kind.
+   */
+  get_pinned_documents_documents_pinned_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"][];
+        };
+      };
+    };
+  };
+  /** List Documents */
+  list_documents_documents__get: {
+    parameters: {
+      query?: {
+        /** @description Filter by kind */
+        kind?: components["schemas"]["DocumentKind"] | null;
+        /** @description Filter by status */
+        status?: components["schemas"]["DocumentStatus"] | null;
+        /** @description Filter by pinned state */
+        is_pinned?: boolean | null;
+        /** @description Search by title (case-insensitive) */
+        search?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Create Document
+   * @description Create a document with its initial version (v1).
+   */
+  create_document_documents__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Shared With Me
+   * @description List documents that other users have shared with the current user.
+   */
+  list_shared_with_me_documents_shared_with_me_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"][];
+        };
+      };
+    };
+  };
+  /**
+   * List Share Candidates
+   * @description Look up authenticated share candidates for a specific document.
+   */
+  list_share_candidates_documents__document_id__share_candidates_get: {
+    parameters: {
+      query?: {
+        /** @description Search by name, email, or headline */
+        q?: string;
+        /** @description Maximum candidates to return */
+        limit?: number;
+      };
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentShareCandidateRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Generate Document
+   * @description Generate document content via AI and persist as a Document + Version.
+   *
+   * Supported kinds: ``cover_letter``, ``resume``.  Others return 501.
+   *
+   * If ``document_id`` is provided the generated content is appended as a new
+   * version; otherwise a brand-new Document is created.
+   */
+  generate_document_documents_generate_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentGenerateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Document Detail */
+  get_document_detail_documents__document_id__get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Document */
+  delete_document_documents__document_id__delete: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Document */
+  update_document_documents__document_id__patch: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Document Activity
+   * @description Read audit-style activity history for a document.
+   */
+  list_document_activity_documents__document_id__activity_get: {
+    parameters: {
+      query?: {
+        /** @description Maximum activity rows to return */
+        limit?: number;
+      };
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentActivityRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Versions */
+  list_versions_documents__document_id__versions_get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentVersionRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Version */
+  create_version_documents__document_id__versions_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentVersionCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentVersionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Version */
+  get_version_documents__document_id__versions__version_id__get: {
+    parameters: {
+      path: {
+        document_id: string;
+        version_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentVersionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Pin Document
+   * @description Pin (or unpin) a document as the active/canonical for its kind.
+   *
+   * When pinning, all other documents of the same kind for this user are
+   * unpinned first.
+   */
+  pin_document_documents__document_id__pin_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DocumentPinRequest"] | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Download Original
+   * @description Download the original uploaded PDF for the head version.
+   */
+  download_original_documents__document_id__original_get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Download Document */
+  download_document_documents__document_id__download_get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Shares
+   * @description List all shares for a document (owner only).
+   */
+  list_shares_documents__document_id__shares_get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentShareRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Create Share
+   * @description Grant another user access to this document (owner only).
+   */
+  create_share_documents__document_id__shares_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentShareCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentShareRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Delete Share
+   * @description Revoke a share (owner only).
+   */
+  delete_share_documents__document_id__shares__share_id__delete: {
+    parameters: {
+      path: {
+        document_id: string;
+        share_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Update Share
+   * @description Update a share's role (owner only).
+   */
+  update_share_documents__document_id__shares__share_id__patch: {
+    parameters: {
+      path: {
+        document_id: string;
+        share_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentShareUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentShareRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Current User Educations */
+  read_current_user_educations_education__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"][];
+        };
+      };
+    };
+  };
+  /** Create User Education */
+  create_user_education_education__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EducationCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read User Education */
+  read_user_education_education__education_id__get: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Education */
+  update_user_education_education__education_id__put: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EducationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User Education */
+  delete_user_education_education__education_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract Education */
+  extract_education_education_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Education */
+  seed_education_education_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
+        };
+      };
+    };
+  };
+  /** Read Current User Certificates */
+  read_current_user_certificates_certificate__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"][];
+        };
+      };
+    };
+  };
+  /** Create User Certificate */
+  create_user_certificate_certificate__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CertificateCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read User Certificate */
+  read_user_certificate_certificate__certificate_id__get: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Certificate */
+  update_user_certificate_certificate__certificate_id__put: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CertificateUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User Certificate */
+  delete_user_certificate_certificate__certificate_id__delete: {
+    parameters: {
+      query: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Extract Certificates */
+  extract_certificates_certificate_extract_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Certificates */
+  seed_certificates_certificate_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": string;
+        };
+      };
+    };
+  };
+  /**
+   * Get Configuration
+   * @description Endpoint to show server configuration.
+   */
+  get_configuration_extractor_configurables_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConfigurationResponse"];
+        };
+      };
+    };
+  };
+  /**
+   * Suggest Extractor
+   * @description Suggest an extractor based on a description.
+   */
+  suggest_extractor_extractor_suggest_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SuggestExtractor"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorDefinition"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Extractor */
+  read_extractor_extractor__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Extractor */
+  update_extractor_extractor__id__put: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Extractor */
+  delete_extractor_extractor__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Extractors */
+  read_extractors_extractor__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorRead"][];
+        };
+      };
+    };
+  };
+  /** Create Extractor */
+  create_extractor_extractor__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Extractor Examples */
+  get_extractor_examples_extractor__id__examples_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorExampleRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Extractor Example */
+  create_extractor_example_extractor__id__examples_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtractorExampleCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorExampleRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Extractor Versions */
+  list_extractor_versions_extractor__id__versions_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorVersionRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Extractor Example */
+  delete_extractor_example_extractor__id__examples__example_id__delete: {
+    parameters: {
+      path: {
+        id: string;
+        example_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Extractor Runner
+   * @description Run an extractor on a given payload
+   */
+  extractor_runner_extractor__id__run_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_extractor_runner_extractor__id__run_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retry Extractor Run
+   * @description Retry a failed extractor run by re-executing against the same source.
+   */
+  retry_extractor_run_extractor__id__run__event_id__retry_post: {
+    parameters: {
+      path: {
+        event_id: string;
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Crawler Pipelines */
+  list_crawler_pipelines_crawlers_pipelines_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerPipelineRead"][];
+        };
+      };
+    };
+  };
+  /** Create Crawler Pipeline */
+  create_crawler_pipeline_crawlers_pipelines_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CrawlerPipelineCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Crawler Pipeline */
+  get_crawler_pipeline_crawlers_pipelines__pipeline_id__get: {
+    parameters: {
+      path: {
+        pipeline_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Crawler Pipeline */
+  update_crawler_pipeline_crawlers_pipelines__pipeline_id__patch: {
+    parameters: {
+      path: {
+        pipeline_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CrawlerPipelineUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Trigger Crawler Run */
+  trigger_crawler_run_crawlers_pipelines__pipeline_id__runs_post: {
+    parameters: {
+      path: {
+        pipeline_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Crawler Runs */
+  list_crawler_runs_crawlers_runs_get: {
+    parameters: {
+      query?: {
+        /** @description Filter by pipeline source */
+        source?: string | null;
+        /** @description Filter by run status */
+        status?: string | null;
+        /** @description Filter by pipeline ID */
+        pipeline_id?: string | null;
+        /** @description Filter by trigger type */
+        trigger_type?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Prune Crawler Runs
+   * @description Delete completed/failed/cancelled crawler runs older than the specified age.
+   */
+  prune_crawler_runs_crawlers_runs_prune_delete: {
+    parameters: {
+      query?: {
+        /** @description Delete runs older than N days */
+        older_than_days?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Crawler Run */
+  get_crawler_run_crawlers_runs__run_id__get: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Cancel Crawler Run */
+  cancel_crawler_run_crawlers_runs__run_id__cancel_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Pause Crawler Run */
+  pause_crawler_run_crawlers_runs__run_id__pause_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Resume Crawler Run */
+  resume_crawler_run_crawlers_runs__run_id__resume_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Retry Crawler Run */
+  retry_crawler_run_crawlers_runs__run_id__retry_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Directory
+   * @description Paginated, searchable user directory.
+   *
+   * Only users with ``is_discoverable=True`` and ``is_active=True`` are returned.
+   */
+  list_directory_directory__get: {
+    parameters: {
+      query?: {
+        /** @description Search by name or headline */
+        q?: string | null;
+        /** @description Filter by placement status */
+        placement_status?: components["schemas"]["PlacementStatus"] | null;
+        /** @description Filter by city/state/country */
+        location?: string | null;
+        /** @description Page number starting from 1 */
+        page?: number;
+        /** @description Number of records per page */
+        page_size?: number;
+        /** @description Return total count of records */
+        request_count?: boolean;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserDirectoryPaginatedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Read Public Profile
+   * @description View another user's public profile.
+   */
+  read_public_profile_directory__user_id__get: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserPublicProfileRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Connections
+   * @description List connections for the current user (both sent and received).
+   */
+  list_connections_connections__get: {
+    parameters: {
+      query?: {
+        /** @description Filter by connection status */
+        status?: string | null;
+        /** @description Page number starting from 1 */
+        page?: number;
+        /** @description Number of records per page */
+        page_size?: number;
+        /** @description Return total count of records */
+        request_count?: boolean;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConnectionsPaginatedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Send Connection Request
+   * @description Send a connection request to another user.
+   */
+  send_connection_request_connections__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ConnectionCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ConnectionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Accept Connection
+   * @description Accept a pending connection request. Only the addressee can accept.
+   */
+  accept_connection_connections__id__accept_patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConnectionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Decline Connection
+   * @description Decline a pending connection request. Only the addressee can decline.
+   */
+  decline_connection_connections__id__decline_patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConnectionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Remove Connection
+   * @description Remove an accepted connection or cancel a pending request. Either party can do this.
+   */
+  remove_connection_connections__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Block Connection
+   * @description Block a user via an existing connection record. Sets status to blocked.
+   */
+  block_connection_connections__id__block_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConnectionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Total Unread
+   * @description Total unread message count across all conversations (for sidebar badge).
+   */
+  get_total_unread_conversations_unread_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UnreadCountRead"];
+        };
+      };
+    };
+  };
+  /**
+   * List Conversations
+   * @description List the current user's conversations, sorted by most recent message.
+   */
+  list_conversations_conversations__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConversationsPaginatedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Create Conversation
+   * @description Create a DM or group conversation.
+   */
+  create_conversation_conversations__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ConversationCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ConversationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Conversation
+   * @description Get conversation detail with paginated messages. Auto-marks as read.
+   */
+  get_conversation_conversations__conversation_id__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+      path: {
+        conversation_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConversationDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Send Message
+   * @description Send a message in a conversation.
+   */
+  send_message_conversations__conversation_id__messages_post: {
+    parameters: {
+      path: {
+        conversation_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MessageCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["MessageRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Delete Message
+   * @description Delete your own message (hard delete).
+   */
+  delete_message_conversations__conversation_id__messages__message_id__delete: {
+    parameters: {
+      path: {
+        conversation_id: string;
+        message_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Edit Message
+   * @description Edit your own message.
+   */
+  edit_message_conversations__conversation_id__messages__message_id__patch: {
+    parameters: {
+      path: {
+        conversation_id: string;
+        message_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MessageEdit"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MessageRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Mark Conversation Read
+   * @description Mark a conversation as read (update last_read_at).
+   */
+  mark_conversation_read_conversations__conversation_id__read_post: {
+    parameters: {
+      path: {
+        conversation_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Add Participant
+   * @description Add a participant to a group conversation. Only admins can add.
+   */
+  add_participant_conversations__conversation_id__participants_post: {
+    parameters: {
+      query: {
+        /** @description User ID to add */
+        user_id: string;
+      };
+      path: {
+        conversation_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ConversationParticipantRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Remove Participant
+   * @description Remove a participant or leave a group. Admins can remove others; anyone can leave.
+   */
+  remove_participant_conversations__conversation_id__participants__target_user_id__delete: {
+    parameters: {
+      path: {
+        conversation_id: string;
+        target_user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Request Collaboration Bootstrap */
+  request_collaboration_bootstrap_documents__document_id__collaborate_bootstrap_post: {
+    parameters: {
+      query: {
+        token: string;
+      };
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentCollaborationBootstrapRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Action Items */
+  list_action_items_action_items__get: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["ActionItemStatus"] | null;
+        kind?: components["schemas"]["ActionItemKind"] | null;
+        priority?: components["schemas"]["ActionItemPriority"] | null;
+        due_before?: string | null;
+        due_after?: string | null;
+        page?: number;
+        page_size?: number;
+        request_count?: boolean;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActionItemDetailRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Action Item */
+  create_action_item_action_items__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActionItemCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ActionItemRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Reorder Action Items
+   * @description Set sort_order for action items based on position in item_ids array.
+   */
+  reorder_action_items_action_items_reorder_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActionItemReorder"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Action Item */
+  get_action_item_action_items__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActionItemDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Action Item */
+  delete_action_item_action_items__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Action Item */
+  update_action_item_action_items__id__patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActionItemUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActionItemRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Action Item From Application */
+  create_action_item_from_application_action_items_from_application__application_id__post: {
+    parameters: {
+      path: {
+        application_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ActionItemRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Activity Feed */
+  get_activity_feed_activity_feed__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+        since?: string | null;
+        entity_type?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActivityFeedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Command Center Summary */
+  get_command_center_summary_activity_feed_summary_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CommandCenterSummary"];
+        };
+      };
+    };
+  };
+  /**
+   * List Review Items
+   * @description List all items pending human review.
+   */
+  list_review_items_review_items_get: {
+    parameters: {
+      query?: {
+        /** @description Filter by item type */
+        item_type?: components["schemas"]["ReviewItemType"] | null;
+        page?: number;
+        page_size?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ReviewItemRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Approve Item */
+  approve_item_review_items__item_type___item_id__approve_post: {
+    parameters: {
+      path: {
+        item_type: components["schemas"]["ReviewItemType"];
+        item_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Reject Item */
+  reject_item_review_items__item_type___item_id__reject_post: {
+    parameters: {
+      path: {
+        item_type: components["schemas"]["ReviewItemType"];
+        item_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Batch Review */
+  batch_review_review_items_batch_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReviewBatchRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ReviewBatchResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Root */
+  root__get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
 }

@@ -1058,6 +1058,51 @@ class UserUpdate(schemas.BaseUserUpdate, BaseUser):
     pass
 
 
+# ---------------------------------------------------------------------------
+# MFA (Two-Factor Authentication) schemas
+# ---------------------------------------------------------------------------
+
+class MFASetupResponse(BaseSchema):
+    """Returned when the user requests MFA setup (before verification)."""
+
+    secret: str = Field(..., description="Base-32 encoded TOTP secret")
+    provisioning_uri: str = Field(
+        ..., description="otpauth:// URI for import into an authenticator app"
+    )
+
+
+class MFAVerifyRequest(BaseSchema):
+    """Payload for verifying a TOTP code (setup confirmation or login)."""
+
+    code: str = Field(
+        ..., min_length=6, max_length=6, description="6-digit TOTP code"
+    )
+
+
+class MFAStatusResponse(BaseSchema):
+    """Current MFA enrolment status."""
+
+    mfa_enabled: bool = Field(..., description="Whether MFA is currently active")
+
+
+class MFALoginRequired(BaseSchema):
+    """Returned at login when MFA verification is still needed."""
+
+    mfa_required: bool = Field(True, description="Always True")
+    mfa_token: str = Field(
+        ..., description="Short-lived token to present with the TOTP code"
+    )
+
+
+class MFALoginVerifyRequest(BaseSchema):
+    """Payload for the second step of MFA login."""
+
+    mfa_token: str = Field(..., description="MFA challenge token from login response")
+    code: str = Field(
+        ..., min_length=6, max_length=6, description="6-digit TOTP code"
+    )
+
+
 class PlacementUpdate(BaseSchema):
     model_config = ConfigDict(extra="forbid")
 

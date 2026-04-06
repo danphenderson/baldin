@@ -730,6 +730,15 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     )
     placement_date = Column(DateTime)
 
+    # MFA / Two-Factor Authentication
+    mfa_secret = Column(String, nullable=True)
+    mfa_enabled = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        server_default=text("false"),
+    )
+
     lead_registrations = relationship(
         "LeadRegistration",
         back_populates="user",

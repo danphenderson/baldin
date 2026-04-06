@@ -25,6 +25,7 @@ def test_normalize_status_history_preserves_existing_timestamps() -> None:
             "changed_at": "2026-01-03T04:05:06Z",
         },
         {"from": "interview", "to": "offer", "changed_at": "not-a-timestamp"},
+        {"from": "offer", "to": "accepted"},
     ]
 
     normalized = _normalize_status_history(history)
@@ -33,4 +34,5 @@ def test_normalize_status_history_preserves_existing_timestamps() -> None:
         {"from": None, "to": "applied", "changed_at": "2026-01-02T03:04:05Z"},
         {"from": "applied", "to": "interview", "changed_at": "2026-01-03T04:05:06Z"},
         {"from": "interview", "to": "offer", "changed_at": "not-a-timestamp"},
+        {"from": "offer", "to": "accepted"},
     ]

@@ -65,7 +65,7 @@ async def get_activity_feed(
                         entity_id=app.id,
                         title=lead_title,
                         detail=f"{entry.get('from', 'none')} → {entry.get('to', 'unknown')}",
-                        timestamp=ensure_utc(changed_at),
+                        timestamp=changed_at,
                     )
                 )
 

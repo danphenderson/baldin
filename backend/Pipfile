@@ -48,6 +48,7 @@ gunicorn = "==21.0.1"
 itsdangerous = "*"
 slowapi = "*"
 ypy-websocket = "*"
+pyotp = "*"
 
 [dev-packages]
 ipython = "*"

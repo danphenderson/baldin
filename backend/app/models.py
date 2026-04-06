@@ -14,6 +14,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
     func,
     text,
 )
@@ -711,9 +712,9 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     bio = Column(Text)
     is_discoverable = Column(
         Boolean,
-        default=True,
+        default=False,
         nullable=False,
-        server_default=text("true"),
+        server_default=text("false"),
     )
     subscription_tier = Column(
         String,
@@ -729,6 +730,15 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
         server_default=text("'active'"),
     )
     placement_date = Column(DateTime)
+
+    # MFA / Two-Factor Authentication
+    mfa_secret = Column(String, nullable=True)
+    mfa_enabled = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        server_default=text("false"),
+    )
 
     lead_registrations = relationship(
         "LeadRegistration",
@@ -777,6 +787,12 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
         back_populates="addressee",
         cascade="all, delete-orphan",
     )
+
+
+@event.listens_for(User, "before_insert")
+def _apply_user_visibility_defaults(_mapper, _connection, target: User) -> None:
+    if target.is_superuser and target.is_discoverable is None:
+        target.is_discoverable = True
 
 
 class Connection(Base):

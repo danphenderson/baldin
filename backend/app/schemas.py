@@ -1018,7 +1018,7 @@ class BaseUser(BaseSchema):
     headline: str | None = Field(None, description="Short professional tagline")
     bio: str | None = Field(None, description="Longer about-me blurb")
     is_discoverable: bool = Field(
-        True, description="Whether the user appears in the directory"
+        False, description="Whether the user appears in the directory"
     )
     subscription_tier: SubscriptionTier = Field(
         SubscriptionTier.FREE, description="Subscription tier"
@@ -1051,11 +1051,73 @@ class UserProfileRead(BaseSchema):
 
 
 class UserCreate(schemas.BaseUserCreate, BaseUser):
-    pass
+    @model_validator(mode="after")
+    def default_superuser_discoverability(self) -> "UserCreate":
+        if self.is_superuser and "is_discoverable" not in self.model_fields_set:
+            self.is_discoverable = True
+        return self
 
 
 class UserUpdate(schemas.BaseUserUpdate, BaseUser):
     pass
+
+
+# ---------------------------------------------------------------------------
+# MFA (Two-Factor Authentication) schemas
+# ---------------------------------------------------------------------------
+
+
+class MFASetupResponse(BaseSchema):
+    """Returned when the user requests MFA setup (before verification)."""
+
+    secret: str = Field(..., description="Base-32 encoded TOTP secret")
+    provisioning_uri: str = Field(
+        ..., description="otpauth:// URI for import into an authenticator app"
+    )
+
+
+class MFAVerifyRequest(BaseSchema):
+    """Payload for verifying a TOTP code (setup confirmation or login)."""
+
+    code: str = Field(..., min_length=6, max_length=6, description="6-digit TOTP code")
+
+
+class MFAStatusResponse(BaseSchema):
+    """Current MFA enrolment status."""
+
+    mfa_enabled: bool = Field(..., description="Whether MFA is currently active")
+
+
+class BearerResponse(BaseSchema):
+    """Returned when password auth completes without an MFA challenge."""
+
+    access_token: str = Field(..., description="JWT access token")
+    token_type: str = Field("bearer", description="Bearer token type")
+
+
+class MFALoginRequired(BaseSchema):
+    """Returned at login when MFA verification is still needed."""
+
+    mfa_required: bool = Field(True, description="Always True")
+    mfa_token: str = Field(
+        ..., description="Short-lived token to present with the TOTP code"
+    )
+
+
+class MFALoginVerifyRequest(BaseSchema):
+    """Payload for the second step of MFA login."""
+
+    mfa_token: str = Field(..., description="MFA challenge token from login response")
+    code: str = Field(..., min_length=6, max_length=6, description="6-digit TOTP code")
+
+
+class MFAAdminResetResponse(BaseSchema):
+    """Returned when a superuser resets MFA for another account."""
+
+    user_id: UUID4 = Field(..., description="User whose MFA state was reset")
+    mfa_enabled: bool = Field(
+        False, description="Always false after a successful admin reset"
+    )
 
 
 class PlacementUpdate(BaseSchema):
@@ -1069,6 +1131,7 @@ class PlacementUpdate(BaseSchema):
 class UserDirectoryRead(BaseSchema):
     user_id: UUID4 = Field(description="User identifier")
     display_name: str = Field(description="Public display name")
+    is_superuser: bool = Field(description="Whether the user is a Baldin superuser")
     headline: str | None = Field(None, description="Professional tagline")
     avatar_uri: str | None = Field(None, description="Avatar URI")
     city: str | None = Field(None, description="City")
@@ -1093,6 +1156,7 @@ class UserDirectoryPaginatedRead(BaseSchema):
 class UserPublicProfileRead(BaseSchema):
     user_id: UUID4 = Field(description="User identifier")
     display_name: str = Field(description="Public display name")
+    is_superuser: bool = Field(description="Whether the user is a Baldin superuser")
     headline: str | None = Field(None, description="Professional tagline")
     bio: str | None = Field(None, description="About-me blurb")
     avatar_uri: str | None = Field(None, description="Avatar URI")
@@ -1244,6 +1308,7 @@ class ConnectionCreate(BaseSchema):
 class ConnectionUserSummaryRead(BaseSchema):
     user_id: UUID4 = Field(description="User identifier")
     display_name: str = Field(description="Public display name")
+    is_superuser: bool = Field(description="Whether the user is a Baldin superuser")
     headline: str | None = Field(None, description="Professional tagline")
     avatar_uri: str | None = Field(None, description="Avatar URI")
     city: str | None = Field(None, description="City")

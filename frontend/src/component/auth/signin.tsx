@@ -17,9 +17,13 @@ const SignIn: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const accessToken = await login(email, password);
-      setToken(accessToken);
-      navigate('/'); // Navigate to home after successful login
+      const result = await login(email, password);
+      if (result.mfa_required && result.mfa_token) {
+        setErrorMessage("MFA required. Please use the main login page.");
+      } else if (result.access_token) {
+        setToken(result.access_token);
+        navigate('/');
+      }
     } catch (error) {
       if (error instanceof Error) {
         setErrorMessage(error.message || "Login request failed");

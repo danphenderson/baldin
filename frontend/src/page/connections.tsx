@@ -16,9 +16,11 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
+  AutoAwesome as AutoAwesomeIcon,
   Check as AcceptIcon,
   Close as DeclineIcon,
   Delete as RemoveIcon,
+  Lock as LockIcon,
   Mail as MessageIcon,
   Search as SearchIcon,
   People as PeopleIcon,
@@ -36,7 +38,6 @@ import {
 import { avatarUrl } from '../service/users';
 import { createConversation } from '../service/messages';
 import EmptyState from '../component/common/empty-state';
-import TierGate from '../component/tier-gate';
 
 const PAGE_SIZE = 12;
 
@@ -59,7 +60,7 @@ const statusChipColor = (status: string): 'warning' | 'success' | 'default' | 'e
 };
 
 const ConnectionsPage: React.FC = () => {
-  const { token, user } = useContext(UserContext);
+  const { token, user, canAccessTier } = useContext(UserContext);
   const navigate = useNavigate();
 
   const [connections, setConnections] = useState<ConnectionRead[]>([]);
@@ -188,7 +189,6 @@ const ConnectionsPage: React.FC = () => {
   };
 
   return (
-    <TierGate requiredTier="starter">
     <Box>
       {/* Search + filter */}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }} alignItems={{ sm: 'center' }}>
@@ -223,7 +223,12 @@ const ConnectionsPage: React.FC = () => {
           <EmptyState
             icon={<PeopleIcon />}
             title="No connections yet"
-            description="Visit the Directory to find and connect with other job seekers."
+            description="Visit the Directory to find other job seekers or browse the dedicated superuser view."
+            action={{
+              label: 'Browse Superusers',
+              onClick: () => navigate('/network/directory?superusers_only=true'),
+              icon: <AutoAwesomeIcon />,
+            }}
           />
         ) : (
           <EmptyState
@@ -243,10 +248,16 @@ const ConnectionsPage: React.FC = () => {
             const isPendingSent = connection.status === 'pending' && connection.requester.user_id === currentUserId;
             const isAccepted = connection.status === 'accepted';
             const acting = actingId === connection.id;
+            const canMessage = canAccessTier('starter');
 
             return (
               <Grid key={connection.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                <Card sx={{ height: '100%' }}>
+                <Card
+                  sx={{
+                    height: '100%',
+                    border: otherUser.is_superuser ? (theme) => `1px solid ${theme.palette.warning.light}` : undefined,
+                  }}
+                >
                   <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
                     <Stack spacing={1.5}>
                       <Stack direction="row" spacing={1.5} alignItems="center">
@@ -254,7 +265,18 @@ const ConnectionsPage: React.FC = () => {
                           {otherUser.display_name.charAt(0)}
                         </Avatar>
                         <Box sx={{ minWidth: 0, flex: 1 }}>
-                          <Typography variant="body1" fontWeight={700} noWrap>{otherUser.display_name}</Typography>
+                          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                            <Typography variant="body1" fontWeight={700} noWrap>{otherUser.display_name}</Typography>
+                            {otherUser.is_superuser && (
+                              <Chip
+                                icon={<AutoAwesomeIcon fontSize="small" />}
+                                label="Superuser"
+                                size="small"
+                                color="warning"
+                                variant="outlined"
+                              />
+                            )}
+                          </Stack>
                           {otherUser.headline && (
                             <Typography variant="body2" color="text.secondary" noWrap>{otherUser.headline}</Typography>
                           )}
@@ -317,15 +339,26 @@ const ConnectionsPage: React.FC = () => {
                         )}
                         {isAccepted && (
                           <>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              startIcon={acting ? <CircularProgress size={14} color="inherit" /> : <MessageIcon />}
-                              disabled={acting}
-                              onClick={() => handleMessage(otherUser.user_id)}
-                            >
-                              Message
-                            </Button>
+                            {canMessage ? (
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={acting ? <CircularProgress size={14} color="inherit" /> : <MessageIcon />}
+                                disabled={acting}
+                                onClick={() => handleMessage(otherUser.user_id)}
+                              >
+                                Message
+                              </Button>
+                            ) : (
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<LockIcon />}
+                                onClick={() => navigate('/settings/subscription')}
+                              >
+                                Unlock Messages
+                              </Button>
+                            )}
                             <Button
                               size="small"
                               variant="outlined"
@@ -377,7 +410,6 @@ const ConnectionsPage: React.FC = () => {
         </Alert>
       </Snackbar>
     </Box>
-    </TierGate>
   );
 };
 

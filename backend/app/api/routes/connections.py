@@ -1,5 +1,7 @@
 # app/api/routes/connections.py
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import UUID4
 from sqlalchemy import func, or_, select
@@ -12,17 +14,34 @@ from app.api.deps import (
     get_current_user,
     get_pagination_params,
     models,
-    require_tier,
     schemas,
 )
 
 router: APIRouter = APIRouter()
+
+_TIER_ORDER = {
+    schemas.SubscriptionTier.FREE: 0,
+    schemas.SubscriptionTier.STARTER: 1,
+    schemas.SubscriptionTier.PRO: 2,
+}
+
+
+def _has_active_tier(
+    user: models.User,
+    minimum: schemas.SubscriptionTier,
+) -> bool:
+    user_tier = schemas.SubscriptionTier(user.subscription_tier)
+    if user_tier != schemas.SubscriptionTier.FREE and user.subscription_expires_at:
+        if user.subscription_expires_at < datetime.utcnow():
+            user_tier = schemas.SubscriptionTier.FREE
+    return _TIER_ORDER[user_tier] >= _TIER_ORDER[minimum]
 
 
 def _serialize_connection_user(user: models.User) -> schemas.ConnectionUserSummaryRead:
     return schemas.ConnectionUserSummaryRead(
         user_id=user.id,
         display_name=utils.build_user_display_name(user),
+        is_superuser=bool(user.is_superuser),
         headline=user.headline,
         avatar_uri=user.avatar_uri,
         city=user.city,
@@ -51,9 +70,13 @@ def _serialize_connection(conn: models.Connection) -> schemas.ConnectionRead:
 async def send_connection_request(
     payload: schemas.ConnectionCreate,
     db: AsyncSession = Depends(get_async_session),
-    user: models.User = Depends(require_tier(schemas.SubscriptionTier.STARTER)),
+    user: models.User = Depends(get_current_user),
 ):
-    """Send a connection request to another user."""
+    """Send a connection request to another user.
+
+    Requests to superusers are available to all authenticated users. Requests to
+    non-superusers still require a Starter subscription or above.
+    """
     if payload.addressee_id == user.id:
         raise HTTPException(status_code=400, detail="Cannot connect to yourself")
 
@@ -61,6 +84,17 @@ async def send_connection_request(
     addressee = await db.get(models.User, payload.addressee_id)
     if addressee is None:
         raise HTTPException(status_code=404, detail="User not found")
+
+    if not addressee.is_superuser and not _has_active_tier(
+        user, schemas.SubscriptionTier.STARTER
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Starter is required to connect with other users. "
+                "Connections to superusers are available on any authenticated account."
+            ),
+        )
 
     # Check for existing connection in either direction
     existing_query = select(models.Connection).where(

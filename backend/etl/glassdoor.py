@@ -3,6 +3,22 @@ Glassdoor crawler adapter.
 
 Preserves selector knowledge from the legacy Glassdoor class and normalizes
 output to CrawlerResult instances for downstream LeadCreate construction.
+
+Credential Configuration
+------------------------
+Glassdoor crawling may require environment variables for authenticated access:
+
+    GLASSDOOR_USERNAME : str
+        Glassdoor account email for login. Leave empty for guest browsing.
+    GLASSDOOR_PASSWORD : str
+        Glassdoor account password for login. Leave empty for guest browsing.
+
+These variables are loaded via Pydantic settings from the backend/.env file.
+See app/core/conf.py for the Glassdoor settings class.
+
+Note: The current implementation primarily uses guest browsing with modal
+bypass. Full authentication support can be added if needed for protected
+content access.
 """
 
 from __future__ import annotations
@@ -10,7 +26,7 @@ from __future__ import annotations
 from typing import AsyncIterator
 
 from app.logging import get_logger
-from etl.base import CrawlerBase, CrawlerResult
+from etl.base import CrawlerBase, CrawlerResult, DEFAULT_MAX_RETRIES
 
 logger = get_logger(__name__)
 
@@ -58,6 +74,18 @@ class GlassdoorCrawler(CrawlerBase):
         Geographic search filter.
     headless : bool
         Browser headless mode (default True).
+    max_retries : int
+        Maximum retry attempts for navigation failures (default: 3).
+
+    Credential Requirements
+    -----------------------
+    Set these environment variables for authenticated access (optional):
+        - GLASSDOOR_USERNAME: Account email
+        - GLASSDOOR_PASSWORD: Account password
+
+    The current implementation primarily uses guest browsing with automatic
+    login modal bypass. Credentials are only needed for accessing protected
+    content that requires authentication.
     """
 
     def __init__(
@@ -65,15 +93,22 @@ class GlassdoorCrawler(CrawlerBase):
         keywords: str = "",
         location: str = "",
         headless: bool = True,
+        max_retries: int = DEFAULT_MAX_RETRIES,
     ) -> None:
         super().__init__(headless=headless)
         self.keywords = keywords
         self.location = location
+        self.max_retries = max_retries
 
     # -- authentication / modals ---------------------------------------------
 
     async def login(self) -> None:
-        """Submit Glassdoor credentials if a login wall appears."""
+        """Submit Glassdoor credentials if a login wall appears.
+
+        Note: Currently bypasses the login modal for guest browsing.
+        For authenticated access, set GLASSDOOR_USERNAME and
+        GLASSDOOR_PASSWORD environment variables and extend this method.
+        """
         # Glassdoor uses email/password but in many flows the modal intercepts.
         # For now, bypass the modal; extend here if full auth is required.
         await self.bypass_login_modal()
@@ -96,12 +131,30 @@ class GlassdoorCrawler(CrawlerBase):
         self,
         keywords: str | None = None,
         location: str | None = None,
+        validate_results: bool = True,
     ) -> AsyncIterator[CrawlerResult]:
-        """Search Glassdoor and yield CrawlerResult for each listing found."""
+        """Search Glassdoor and yield CrawlerResult for each listing found.
+
+        Parameters
+        ----------
+        keywords : str, optional
+            Search keywords, overrides constructor value if provided.
+        location : str, optional
+            Location filter, overrides constructor value if provided.
+        validate_results : bool
+            If True, log warnings for invalid results but still yield them.
+
+        Yields
+        ------
+        CrawlerResult
+            Normalized job posting data for each listing found.
+        """
         kw = keywords if keywords is not None else self.keywords
         loc = location if location is not None else self.location
 
-        await self.navigate(GLASSDOOR_SEARCH_URL)
+        await self.navigate_with_retry(
+            GLASSDOOR_SEARCH_URL, max_retries=self.max_retries
+        )
 
         # Fill search form.
         page = self._require_page()
@@ -124,6 +177,16 @@ class GlassdoorCrawler(CrawlerBase):
         for listing in listings:
             try:
                 result = await self.scrape_job(listing)
+                if validate_results:
+                    validation = result.validate()
+                    if not validation.is_valid:
+                        logger.warning(
+                            "Invalid Glassdoor result: %s", validation.errors
+                        )
+                    elif validation.warnings:
+                        logger.debug(
+                            "Glassdoor result warnings: %s", validation.warnings
+                        )
                 yield result
             except Exception:
                 logger.exception("Error scraping Glassdoor listing")
@@ -132,7 +195,18 @@ class GlassdoorCrawler(CrawlerBase):
     # -- single-listing scraper ----------------------------------------------
 
     async def scrape_job(self, element) -> CrawlerResult:
-        """Click a listing element, expand, and extract structured fields."""
+        """Click a listing element, expand, and extract structured fields.
+
+        Parameters
+        ----------
+        element
+            Playwright locator for the job listing element to scrape.
+
+        Returns
+        -------
+        CrawlerResult
+            Extracted job data. Use result.validate() to check completeness.
+        """
         await element.click()
         await self.wait_for_load_state()
 

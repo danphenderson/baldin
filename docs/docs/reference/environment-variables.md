@@ -22,6 +22,7 @@ Copy `backend/.env.example` to `backend/.env` for local development.
 | Variable | Purpose |
 |----------|---------|
 | `SECRET_KEY` | Application secret key for JWT signing |
+| `MFA_ENCRYPTION_KEY` | Optional dedicated key source for MFA secret encryption at rest; if unset, Baldin derives one from `SECRET_KEY` |
 | `FIRST_SUPERUSER_EMAIL` | Bootstrap admin email (created on first startup) |
 | `FIRST_SUPERUSER_PASSWORD` | Bootstrap admin password |
 
@@ -50,7 +51,7 @@ Copy `backend/.env.example` to `backend/.env` for local development.
 | `MAX_CONCURRENCY` | `8` | Extraction concurrency limit |
 | `MAX_CHUNKS` | `-1` | Maximum extraction chunks (-1 = unlimited) |
 | `LOGGING_LEVEL` | `DEBUG` | Python logging level |
-| `PUBLIC_ASSETS_DIR` | `public` | Root directory for uploads, logs, seeds, and other local persisted assets |
+| `PUBLIC_ASSETS_DIR` | `public` | Root directory for uploads, `var/logs`, seeds, and other local persisted assets |
 
 ### AI / Extraction
 

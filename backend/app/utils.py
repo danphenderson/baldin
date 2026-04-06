@@ -305,5 +305,5 @@ def validate_json_schema(schema: dict[str, Any]) -> None:
     """Validate a JSON schema."""
     try:
         Draft202012Validator.check_schema(schema)
-    except exceptions.ValidationError as e:
+    except (exceptions.ValidationError, exceptions.SchemaError) as e:
         raise ValueError(f"Invalid schema: {e.message}")

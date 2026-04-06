@@ -50,6 +50,7 @@ export const secondaryNavByGroup: Record<string, SecondaryNavItem[]> = {
   ],
   '/settings': [
     { label: 'Subscription', path: '/settings/subscription' },
+    { label: 'Discoverability', path: '/settings/discoverability' },
     { label: 'Graduation', path: '/settings/graduation' },
   ],
 };
@@ -133,6 +134,7 @@ export const drawerSections: DrawerSection[] = [
     label: 'Settings',
     items: [
       { label: 'Subscription', path: '/settings/subscription' },
+      { label: 'Discoverability', path: '/settings/discoverability' },
       { label: 'Graduation', path: '/settings/graduation' },
     ],
   },

@@ -96,7 +96,7 @@ jobs:
       TEST_DATABASE_PORT: 5432
       TEST_DATABASE_DB: test_db
       FIRST_SUPERUSER_EMAIL: ci-admin@example.com
-      FIRST_SUPERUSER_PASSWORD: ci-admin-password
+      FIRST_SUPERUSER_PASSWORD: CiAdmin1Pass
       OPENAI_API_KEY: test-openai-key
     steps:
       - uses: actions/checkout@v4
@@ -115,7 +115,7 @@ jobs:
             --cov=app \
             --cov=etl \
             --cov-report=term-missing \
-            --cov-fail-under=40
+            --cov-fail-under=60
 
   frontend-tests:
     name: Frontend tests
@@ -201,7 +201,7 @@ jobs:
       TEST_DATABASE_PORT: 5432
       TEST_DATABASE_DB: test_db
       FIRST_SUPERUSER_EMAIL: ci-admin@example.com
-      FIRST_SUPERUSER_PASSWORD: ci-admin-password
+      FIRST_SUPERUSER_PASSWORD: CiAdmin1Pass
       OPENAI_API_KEY: test-openai-key
       SCHEMA_UPDATE_FORCE: "1"
     steps:

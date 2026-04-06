@@ -32,6 +32,7 @@ class _BaseSettings(BaseSettings):
 class Settings(_BaseSettings):
     # CORE SETTINGS
     SECRET_KEY: str
+    MFA_ENCRYPTION_KEY: str | None = None
     ENVIRONMENT: Literal["DEV", "PYTEST", "STAGE", "PROD"]
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     BACKEND_CORS_ORIGINS: Union[str, list[AnyHttpUrl]]
@@ -116,6 +117,18 @@ class Settings(_BaseSettings):
     @property
     def SEEDS_PATH(self) -> Path:
         return Path(self.PUBLIC_ASSETS_DIR) / "seeds"
+
+    @property
+    def LOGS_PATH(self) -> Path:
+        return Path(self.PUBLIC_ASSETS_DIR) / "var" / "logs"
+
+    @property
+    def SHOULD_LOG_API_TO_CONSOLE(self) -> bool:
+        return self.ENVIRONMENT == "DEV"
+
+    @property
+    def SHOULD_LOG_API_TO_FILE(self) -> bool:
+        return self.ENVIRONMENT == "DEV"
 
     CRAWLER_SCHEDULER_ENABLED: bool = True
     RUN_REAPER_ENABLED: bool = True

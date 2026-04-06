@@ -46,6 +46,7 @@ from app.core.document_storage import (
     remove_avatar_files,
     save_avatar_file,
 )
+from app.core.datetime_utils import now_utc_naive
 from app.core.url_parsers import extract_text_from_url_smart
 from app.core.url_safety import UnsafeFetchUrlError
 from app.extractor.parsing import parse_binary_input
@@ -231,8 +232,6 @@ async def update_placement(
 
     Valid transitions: active → graduated, graduated → alumni.
     """
-    from datetime import datetime as _dt
-
     current = schemas.PlacementStatus(current_user.placement_status)
     target = payload.placement_status
 
@@ -250,7 +249,7 @@ async def update_placement(
 
     current_user.placement_status = target.value  # type: ignore
     if target in (schemas.PlacementStatus.GRADUATED, schemas.PlacementStatus.ALUMNI):
-        current_user.placement_date = _dt.utcnow()  # type: ignore
+        current_user.placement_date = now_utc_naive()  # type: ignore
 
     db.add(current_user)
     await db.commit()

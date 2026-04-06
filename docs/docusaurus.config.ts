@@ -70,14 +70,24 @@ const config: Config = {
           title: 'Start Here Next',
           items: [
             {label: 'Start Here', to: '/getting-started/overview'},
+            {label: 'Explore Features', to: '/features/command-center'},
             {label: 'Understand The System', to: '/architecture/system-overview'},
             {label: 'Build, Validate, Release', to: '/engineering/local-development'},
-            {label: 'Look Up Details', to: '/reference/api-reference'},
+          ],
+        },
+        {
+          title: 'Look Up Details',
+          items: [
+            {label: 'API Reference', to: '/reference/api-reference'},
+            {label: 'Documentation Resources', to: '/reference/resources'},
+            {label: 'Environment Variables', to: '/reference/environment-variables'},
+            {label: 'Glossary', to: '/reference/glossary'},
           ],
         },
         {
           title: 'Community',
           items: [
+            {label: 'GitHub', href: 'https://github.com/danphenderson/baldin'},
             {label: 'Issues', href: 'https://github.com/danphenderson/baldin/issues'},
             {label: 'Pull Requests', href: 'https://github.com/danphenderson/baldin/pulls'},
           ],

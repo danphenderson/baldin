@@ -28,6 +28,7 @@ import { EditDialog } from './components/EditDialog';
 import { DeleteDialog } from './components/DeleteDialog';
 import { DocumentsSummary } from './components/DocumentsSummary';
 import ProfileImportModal from '../../component/profile-import-modal';
+import MFASetupCard from '../../component/mfa-setup-card';
 
 const MotionBox = motion.create(Box);
 
@@ -385,6 +386,9 @@ const ProfilePage: React.FC = () => {
 
         {/* ── Documents Summary ────────────────────────────────────────── */}
         <DocumentsSummary token={token} />
+
+        {/* ── Security (MFA) ──────────────────────────────────────────── */}
+        <MFASetupCard />
       </Stack>
 
       {/* ── Edit / Create Dialog ─────────────────────────────────────── */}

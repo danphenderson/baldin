@@ -3,14 +3,18 @@ ETL crawler base classes.
 
 CrawlerBase — async context manager owning the Playwright browser lifecycle.
 CrawlerResult — normalized crawler output compatible with LeadCreate payloads.
+
+Retry and validation utilities are included to harden LinkedIn/Glassdoor crawlers.
 """
 
 from __future__ import annotations
 
+import random
 from asyncio import Future, ensure_future, get_event_loop, sleep
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Callable, Literal, TypeVar
+from urllib.parse import urlparse
 
 from aiofiles import open as aopen
 from bs4 import BeautifulSoup
@@ -33,10 +37,112 @@ from app.logging import get_logger
 
 logger = get_logger(__name__)
 
+T = TypeVar("T")
+
+# ---------------------------------------------------------------------------
+# Retry configuration defaults
+# ---------------------------------------------------------------------------
+
+DEFAULT_MAX_RETRIES = 3
+DEFAULT_BASE_DELAY = 1.0  # seconds
+DEFAULT_MAX_DELAY = 30.0  # seconds
+DEFAULT_JITTER = 0.5  # ±50% jitter
+
+# Playwright and network errors that warrant a retry
+RETRYABLE_EXCEPTIONS = (
+    TimeoutError,
+    ConnectionError,
+    OSError,
+)
+
+
+async def async_retry(
+    coro_func: Callable[..., Any],
+    *args: Any,
+    max_retries: int = DEFAULT_MAX_RETRIES,
+    base_delay: float = DEFAULT_BASE_DELAY,
+    max_delay: float = DEFAULT_MAX_DELAY,
+    jitter: float = DEFAULT_JITTER,
+    retryable_exceptions: tuple = RETRYABLE_EXCEPTIONS,
+    **kwargs: Any,
+) -> Any:
+    """Execute an async function with exponential backoff retry logic.
+
+    Parameters
+    ----------
+    coro_func : Callable
+        The async function to call (not awaited yet).
+    *args
+        Positional arguments forwarded to coro_func.
+    max_retries : int
+        Maximum number of retry attempts (default: 3).
+    base_delay : float
+        Initial delay in seconds before first retry (default: 1.0).
+    max_delay : float
+        Cap on delay to prevent excessive waits (default: 30.0).
+    jitter : float
+        Random jitter factor (0.5 = ±50%) to spread retries (default: 0.5).
+    retryable_exceptions : tuple
+        Exception types that should trigger a retry.
+    **kwargs
+        Keyword arguments forwarded to coro_func.
+
+    Returns
+    -------
+    Any
+        The return value from coro_func on success.
+
+    Raises
+    ------
+    Exception
+        The last exception encountered after all retries are exhausted.
+    """
+    last_exception: Exception | None = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            return await coro_func(*args, **kwargs)
+        except retryable_exceptions as exc:
+            last_exception = exc
+            if attempt >= max_retries:
+                logger.warning(
+                    "Retry exhausted after %d attempts: %s", attempt + 1, exc
+                )
+                raise
+
+            # Exponential backoff with jitter
+            delay = min(base_delay * (2**attempt), max_delay)
+            jitter_range = delay * jitter
+            actual_delay = delay + random.uniform(-jitter_range, jitter_range)
+            actual_delay = max(0.1, actual_delay)  # ensure positive
+
+            logger.info(
+                "Attempt %d/%d failed (%s), retrying in %.2fs",
+                attempt + 1,
+                max_retries + 1,
+                type(exc).__name__,
+                actual_delay,
+            )
+            await sleep(actual_delay)
+
+    # Should not reach here, but raise last exception if we somehow do
+    if last_exception:
+        raise last_exception
+    raise RuntimeError("Retry loop completed without success or exception")
+
 
 # ---------------------------------------------------------------------------
 # New abstractions
 # ---------------------------------------------------------------------------
+
+
+@dataclass
+class CrawlerResultValidation:
+    """Validation result from CrawlerResult.validate()."""
+
+    is_valid: bool
+    errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -57,6 +163,59 @@ class CrawlerResult:
     seniority_level: str | None = None
     education_level: str | None = None
     company_name: str | None = None
+
+    def validate(self) -> CrawlerResultValidation:
+        """Validate the crawler result for completeness and correctness.
+
+        Returns a CrawlerResultValidation object with is_valid=True if the
+        result meets minimum requirements for lead creation.
+
+        Validation rules:
+        - url is required and must be a valid HTTP(S) URL
+        - At least one of title/description should be non-empty (warning if both empty)
+
+        Returns
+        -------
+        CrawlerResultValidation
+            Object containing is_valid bool, errors list, and warnings list.
+        """
+        errors: list[str] = []
+        warnings: list[str] = []
+
+        # URL is required
+        if not self.url:
+            errors.append("url is required but empty")
+        elif not self._is_valid_url(self.url):
+            errors.append(f"url is not a valid HTTP(S) URL: {self.url[:100]}")
+
+        # Warn if no meaningful content
+        has_title = bool(self.title and self.title.strip())
+        has_description = bool(self.description and self.description.strip())
+        if not has_title and not has_description:
+            warnings.append("Both title and description are empty")
+
+        # Warn if description looks like an error message
+        if self.description and len(self.description.strip()) < 20:
+            warnings.append("Description is suspiciously short (< 20 chars)")
+
+        return CrawlerResultValidation(
+            is_valid=len(errors) == 0,
+            errors=errors,
+            warnings=warnings,
+        )
+
+    def is_valid(self) -> bool:
+        """Convenience method: returns True if validate().is_valid is True."""
+        return self.validate().is_valid
+
+    @staticmethod
+    def _is_valid_url(url: str) -> bool:
+        """Check if URL is a valid HTTP or HTTPS URL."""
+        try:
+            parsed = urlparse(url)
+            return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+        except Exception:
+            return False
 
 
 class CrawlerBase:
@@ -134,6 +293,32 @@ class CrawlerBase:
         logger.info("Navigating to %s", url)
         await page.goto(url, wait_until=wait_until)
 
+    async def navigate_with_retry(
+        self,
+        url: str,
+        wait_until: str = "domcontentloaded",
+        max_retries: int = DEFAULT_MAX_RETRIES,
+    ) -> None:
+        """Navigate to URL with automatic retry on transient failures.
+
+        Uses exponential backoff for retries on timeout and network errors.
+
+        Parameters
+        ----------
+        url : str
+            The URL to navigate to.
+        wait_until : str
+            Wait condition ('domcontentloaded', 'load', 'networkidle').
+        max_retries : int
+            Maximum retry attempts (default: 3).
+        """
+        await async_retry(
+            self.navigate,
+            url,
+            wait_until=wait_until,
+            max_retries=max_retries,
+        )
+
     async def wait_for_selector(self, selector: str, *, timeout: int = 10_000) -> None:
         page = self._require_page()
         await page.wait_for_selector(selector, timeout=timeout)
@@ -142,9 +327,44 @@ class CrawlerBase:
         page = self._require_page()
         await page.click(selector)
 
+    async def click_with_retry(
+        self,
+        selector: str,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+    ) -> None:
+        """Click an element with automatic retry on transient failures.
+
+        Parameters
+        ----------
+        selector : str
+            CSS selector for the element to click.
+        max_retries : int
+            Maximum retry attempts (default: 3).
+        """
+        await async_retry(self.click, selector, max_retries=max_retries)
+
     async def fill(self, selector: str, value: str) -> None:
         page = self._require_page()
         await page.fill(selector, value)
+
+    async def fill_with_retry(
+        self,
+        selector: str,
+        value: str,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+    ) -> None:
+        """Fill an input field with automatic retry on transient failures.
+
+        Parameters
+        ----------
+        selector : str
+            CSS selector for the input element.
+        value : str
+            Value to fill in.
+        max_retries : int
+            Maximum retry attempts (default: 3).
+        """
+        await async_retry(self.fill, selector, value, max_retries=max_retries)
 
     async def get_text(self, selector: str) -> str:
         page = self._require_page()

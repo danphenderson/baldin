@@ -3,6 +3,21 @@ LinkedIn crawler adapter.
 
 Preserves selector knowledge from the legacy Linkedin class and normalizes
 output to CrawlerResult instances for downstream LeadCreate construction.
+
+Credential Configuration
+------------------------
+LinkedIn crawling requires environment variables for authenticated access:
+
+    LINKEDIN_USERNAME : str
+        LinkedIn account email/phone for login. Leave empty to use guest API only.
+    LINKEDIN_PASSWORD : str
+        LinkedIn account password for login. Leave empty to use guest API only.
+
+These variables are loaded via Pydantic settings from the backend/.env file.
+See app/core/conf.py for the Linkedin settings class.
+
+Note: The guest API (search_jobs) works without credentials for public job
+listings. Login is only required for accessing protected content.
 """
 
 from __future__ import annotations
@@ -14,7 +29,7 @@ from bs4 import BeautifulSoup
 
 from app.core import conf
 from app.logging import get_logger
-from etl.base import CrawlerBase, CrawlerResult
+from etl.base import CrawlerBase, CrawlerResult, DEFAULT_MAX_RETRIES
 
 logger = get_logger(__name__)
 
@@ -36,7 +51,7 @@ LINKEDIN_JOB_CARD_SELECTOR = "a.base-card__full-link"
 
 # XPath: "See more" button that expands the full job description.
 LINKEDIN_EXPAND_BUTTON_XPATH = (
-    '//*[@id="main-content"]' "/section[1]/div/div/section[1]/div/div/section/button[1]"
+    '//*[@id="main-content"]/section[1]/div/div/section[1]/div/div/section/button[1]'
 )
 
 # XPath: container holding the full job description after expansion.
@@ -75,6 +90,16 @@ class LinkedInCrawler(CrawlerBase):
         Inclusive range of search pages to crawl.
     headless : bool
         Browser headless mode (default True for CI / pipeline use).
+    max_retries : int
+        Maximum retry attempts for navigation failures (default: 3).
+
+    Credential Requirements
+    -----------------------
+    Set these environment variables for authenticated access:
+        - LINKEDIN_USERNAME: Account email/phone
+        - LINKEDIN_PASSWORD: Account password
+
+    Guest API access (search_jobs without login) does not require credentials.
     """
 
     def __init__(
@@ -84,21 +109,50 @@ class LinkedInCrawler(CrawlerBase):
         page_start: int = 1,
         page_end: int = 5,
         headless: bool = True,
+        max_retries: int = DEFAULT_MAX_RETRIES,
     ) -> None:
         super().__init__(headless=headless)
         self.keywords = keywords or []
         self.location = location
         self.page_start = page_start
         self.page_end = page_end
+        self.max_retries = max_retries
 
     # -- authentication ------------------------------------------------------
 
     async def login(self) -> None:
-        """Navigate to LinkedIn login and submit credentials from conf."""
-        await self.navigate(LINKEDIN_LOGIN_URL)
-        await self.fill('input[name="session_key"]', conf.linkedin.USERNAME)
-        await self.fill('input[name="session_password"]', conf.linkedin.PASSWORD)
-        await self.click('button[type="submit"]')
+        """Navigate to LinkedIn login and submit credentials from conf.
+
+        Uses credentials from environment variables:
+            - LINKEDIN_USERNAME: Email or phone number
+            - LINKEDIN_PASSWORD: Account password
+
+        Raises
+        ------
+        RuntimeError
+            If browser page is not initialized.
+        TimeoutError
+            If login page or elements fail to load within timeout.
+        """
+        if not conf.linkedin.USERNAME or not conf.linkedin.PASSWORD:
+            logger.warning(
+                "LinkedIn credentials not configured — login may fail. "
+                "Set LINKEDIN_USERNAME and LINKEDIN_PASSWORD environment variables."
+            )
+        await self.navigate_with_retry(LINKEDIN_LOGIN_URL, max_retries=self.max_retries)
+        await self.fill_with_retry(
+            'input[name="session_key"]',
+            conf.linkedin.USERNAME,
+            max_retries=self.max_retries,
+        )
+        await self.fill_with_retry(
+            'input[name="session_password"]',
+            conf.linkedin.PASSWORD,
+            max_retries=self.max_retries,
+        )
+        await self.click_with_retry(
+            'button[type="submit"]', max_retries=self.max_retries
+        )
         await self.wait_for_load_state("networkidle")
         logger.info("LinkedIn login submitted")
 
@@ -127,10 +181,30 @@ class LinkedInCrawler(CrawlerBase):
         location: str | None = None,
         start_page: int | None = None,
         end_page: int | None = None,
+        validate_results: bool = True,
     ) -> AsyncIterator[CrawlerResult]:
         """Iterate through LinkedIn guest search pages and yield results.
 
         Falls back to constructor parameters when arguments are omitted.
+        Uses retry logic for navigation failures.
+
+        Parameters
+        ----------
+        keywords : list[str], optional
+            Search keywords, overrides constructor value if provided.
+        location : str, optional
+            Location filter, overrides constructor value if provided.
+        start_page : int, optional
+            Starting page number (1-indexed).
+        end_page : int, optional
+            Ending page number (inclusive).
+        validate_results : bool
+            If True, log warnings for invalid results but still yield them.
+
+        Yields
+        ------
+        CrawlerResult
+            Normalized job posting data for each listing found.
         """
         resolved_keywords = keywords if keywords is not None else self.keywords
         loc = location if location is not None else self.location
@@ -151,9 +225,15 @@ class LinkedInCrawler(CrawlerBase):
             logger.info("Fetching search page %d (offset %d)", page_num, offset)
 
             try:
-                await self.navigate(url, wait_until="domcontentloaded")
+                await self.navigate_with_retry(
+                    url,
+                    wait_until="domcontentloaded",
+                    max_retries=self.max_retries,
+                )
             except Exception:
-                logger.exception("Failed to load search page %d", page_num)
+                logger.exception(
+                    "Failed to load search page %d after retries", page_num
+                )
                 continue
 
             job_urls = await self._extract_job_urls()
@@ -162,6 +242,20 @@ class LinkedInCrawler(CrawlerBase):
             for job_url in job_urls:
                 try:
                     result = await self.scrape_job(job_url)
+                    if validate_results:
+                        validation = result.validate()
+                        if not validation.is_valid:
+                            logger.warning(
+                                "Invalid result from %s: %s",
+                                job_url,
+                                validation.errors,
+                            )
+                        elif validation.warnings:
+                            logger.debug(
+                                "Result warnings for %s: %s",
+                                job_url,
+                                validation.warnings,
+                            )
                     yield result
                 except Exception:
                     logger.exception("Error scraping job %s", job_url)
@@ -183,8 +277,21 @@ class LinkedInCrawler(CrawlerBase):
     # -- single-job scraper --------------------------------------------------
 
     async def scrape_job(self, url: str) -> CrawlerResult:
-        """Navigate to a job posting, expand, and extract structured fields."""
-        await self.navigate(url, wait_until="domcontentloaded")
+        """Navigate to a job posting, expand, and extract structured fields.
+
+        Parameters
+        ----------
+        url : str
+            Full URL to the LinkedIn job posting.
+
+        Returns
+        -------
+        CrawlerResult
+            Extracted job data. Use result.validate() to check completeness.
+        """
+        await self.navigate_with_retry(
+            url, wait_until="domcontentloaded", max_retries=self.max_retries
+        )
 
         # Attempt to expand the full description.
         try:

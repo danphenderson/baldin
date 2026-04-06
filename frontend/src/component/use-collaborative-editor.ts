@@ -129,14 +129,6 @@ export function useCollaborativeEditor(
       }, delayMs);
     });
 
-    const buildConnectBootstrapResponse = (): DocumentCollaborationBootstrapRead => ({
-      status: 'connect',
-      collaboration_token: null,
-      retry_after_ms: null,
-      content: null,
-      content_format: null,
-    });
-
     const resolveBootstrap = async (): Promise<DocumentCollaborationBootstrapRead | null> => {
       let attempt = 0;
 
@@ -156,7 +148,7 @@ export function useCollaborativeEditor(
             return null;
           }
 
-          return buildConnectBootstrapResponse();
+          return null;
         }
       }
 

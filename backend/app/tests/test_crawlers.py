@@ -27,6 +27,7 @@ def test_queue_disabled_in_pytest():
 
 def test_queue_disabled_without_redis_url(monkeypatch):
     """Queue must be disabled when REDIS_URL is not configured."""
+    monkeypatch.setattr(conf.settings, "ENVIRONMENT", "DEV")
     monkeypatch.setattr(conf.settings, "REDIS_URL", None)
     monkeypatch.setattr(conf.settings, "CRAWLER_EXECUTION_MODE", "worker")
     assert _queue_enabled() is False
@@ -34,9 +35,9 @@ def test_queue_disabled_without_redis_url(monkeypatch):
 
 def test_queue_disabled_in_inline_mode(monkeypatch):
     """Queue must be disabled when CRAWLER_EXECUTION_MODE is 'inline'."""
+    monkeypatch.setattr(conf.settings, "ENVIRONMENT", "DEV")
     monkeypatch.setattr(conf.settings, "REDIS_URL", "redis://localhost:6379/0")
     monkeypatch.setattr(conf.settings, "CRAWLER_EXECUTION_MODE", "inline")
-    # ENVIRONMENT is still PYTEST which is the first guard
     assert _queue_enabled() is False
 
 
@@ -64,23 +65,28 @@ async def test_execute_crawler_run_skips_missing_run(db: AsyncSession):
 
 @pytest.mark.asyncio
 async def test_execute_crawler_run_skips_terminal_run(db: AsyncSession, default_user):
-    """execute_crawler_run must skip runs that are already success or failed."""
+    """execute_crawler_run must skip runs that are already success, failed, or running."""
     from app.api.deps import execute_crawler_run
 
-    run = models.CrawlerRun(
-        url="https://example.com",
-        user_id=default_user.id,
-        status=schemas.CrawlerRunStatus.SUCCESS,
-    )
-    db.add(run)
-    await db.commit()
-    await db.refresh(run)
+    for terminal_status in (
+        schemas.CrawlerRunStatus.SUCCESS,
+        schemas.CrawlerRunStatus.FAILED,
+        schemas.CrawlerRunStatus.RUNNING,
+    ):
+        run = models.CrawlerRun(
+            url="https://example.com",
+            user_id=default_user.id,
+            status=terminal_status,
+        )
+        db.add(run)
+        await db.commit()
+        await db.refresh(run)
 
-    await execute_crawler_run(run.id, default_user.id, db)
+        await execute_crawler_run(run.id, default_user.id, db)
 
-    # Status should remain SUCCESS – not reset to running
-    await db.refresh(run)
-    assert run.status == schemas.CrawlerRunStatus.SUCCESS
+        # Status must remain unchanged — execute_crawler_run must not proceed
+        await db.refresh(run)
+        assert run.status == terminal_status
 
 
 @pytest.mark.asyncio
@@ -88,13 +94,15 @@ async def test_execute_crawler_run_marks_failed_on_bad_url(
     db: AsyncSession, default_user, monkeypatch
 ):
     """execute_crawler_run sets status=failed when the URL fetch fails."""
+    import app.api.deps as deps_module
     from app.api.deps import execute_crawler_run
-    from app.core import langchain as lc_module
 
     async def _raise(*_a, **_kw):
         raise RuntimeError("connection refused")
 
-    monkeypatch.setattr(lc_module, "extract_text_from_url", _raise)
+    # Patch the name bound in the deps module, not the source module, so the
+    # stub actually intercepts the call inside execute_crawler_run.
+    monkeypatch.setattr(deps_module, "extract_text_from_url", _raise)
 
     run = models.CrawlerRun(
         url="https://unreachable.invalid",
@@ -123,13 +131,14 @@ async def test_create_crawler_run_returns_201(
     test_client: AsyncClient, default_user, db: AsyncSession, monkeypatch
 ):
     """POST /crawlers/runs should create a run and return 201."""
-    from app.core import langchain as lc_module
+    import app.api.deps as deps_module
 
-    # Stub out the actual URL fetch so the test does not hit the network
+    # Stub out the actual URL fetch so the test does not hit the network.
+    # Patch in the deps module namespace so execute_crawler_run picks it up.
     async def _stub_text(url: str) -> str:
         return f"<html>stub content for {url}</html>"
 
-    monkeypatch.setattr(lc_module, "extract_text_from_url", _stub_text)
+    monkeypatch.setattr(deps_module, "extract_text_from_url", _stub_text)
 
     # Obtain a JWT token
     login_res = await test_client.post(

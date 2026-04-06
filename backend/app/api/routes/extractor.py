@@ -175,8 +175,8 @@ async def _create_extractor_version_snapshot(
 async def suggest_extractor(
     request: Request, suggest_extractor: SuggestExtractor
 ) -> ExtractorDefinition:
-    # TODO: Have this take a bool query parameter signaling to create a new extractor
     """Suggest an extractor based on a description."""
+    # TODO: Have this take a bool query parameter signaling to create a new extractor
     if suggest_extractor.json_schema:
         res = await UPDATE_CHAIN.ainvoke(
             {

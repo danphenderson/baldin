@@ -4,6 +4,7 @@ Tests for structured JSON logging and correlation ID middleware.
 
 import json
 import logging
+import sys
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -106,11 +107,8 @@ def test_structured_json_formatter_includes_exception():
             lineno=0,
             msg="failure",
             args=(),
-            exc_info=True,
+            exc_info=None,
         )
-        # LogRecord with exc_info=True captures sys.exc_info() automatically
-        import sys
-
         record.exc_info = sys.exc_info()
 
     output = formatter.format(record)

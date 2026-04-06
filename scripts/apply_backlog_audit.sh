@@ -46,7 +46,7 @@ close_comment() {
 echo "============================================"
 echo "Backlog Audit: Applying PR #130 Review"
 echo "Repository: ${REPO}"
-echo "Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo "Date: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 echo "============================================"
 echo ""
 

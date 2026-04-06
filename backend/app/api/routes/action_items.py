@@ -148,14 +148,16 @@ async def reorder_action_items(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Set sort_order for action items based on position in item_ids array."""
-    for idx, item_id in enumerate(payload.item_ids):
-        result = await db.execute(
-            select(models.ActionItem).where(
-                models.ActionItem.id == item_id,
-                models.ActionItem.user_id == user.id,
-            )
+    result = await db.execute(
+        select(models.ActionItem).where(
+            models.ActionItem.user_id == user.id,
+            models.ActionItem.id.in_(payload.item_ids),
         )
-        item = result.scalars().first()
+    )
+    items_by_id = {item.id: item for item in result.scalars().all()}
+
+    for idx, item_id in enumerate(payload.item_ids):
+        item = items_by_id.get(item_id)
         if item:
             item.sort_order = idx
     await db.commit()

@@ -50,7 +50,7 @@ Copy `backend/.env.example` to `backend/.env` for local development.
 | `MAX_CONCURRENCY` | `8` | Extraction concurrency limit |
 | `MAX_CHUNKS` | `-1` | Maximum extraction chunks (-1 = unlimited) |
 | `LOGGING_LEVEL` | `DEBUG` | Python logging level |
-| `PUBLIC_ASSETS_DIR` | `public` | Root directory for uploads, logs, seeds, and other local persisted assets |
+| `PUBLIC_ASSETS_DIR` | `public` | Root directory for uploads, `var/logs`, seeds, and other local persisted assets |
 
 ### AI / Extraction
 

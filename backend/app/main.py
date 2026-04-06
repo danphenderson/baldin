@@ -138,8 +138,8 @@ if conf.settings.BACKEND_CORS_ORIGINS:
 app.add_middleware(CorrelationIdMiddleware)
 
 
-# Log to console if in development
-if conf.settings.ENVIRONMENT == "DEV":
+# Log to console if configured for development
+if conf.settings.SHOULD_LOG_API_TO_CONSOLE:
 
     @app.middleware("http")
     async def console_log_requests(request: Request, call_next):
@@ -158,20 +158,22 @@ if conf.settings.ENVIRONMENT == "DEV":
         return response
 
 
-# Log all requests to the application asynchronously
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    start_time = time()
-    response: Response = await call_next(request)
-    process_time = (time() - start_time) * 1000
-    await logger.info(
-        "%s %s completed in %.1fms, status=%s",
-        request.method,
-        request.url.path,
-        process_time,
-        response.status_code,
-    )
-    return response
+# Log all requests to the application asynchronously when file logging is enabled
+if conf.settings.SHOULD_LOG_API_TO_FILE:
+
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        start_time = time()
+        response: Response = await call_next(request)
+        process_time = (time() - start_time) * 1000
+        await logger.info(
+            "%s %s completed in %.1fms, status=%s",
+            request.method,
+            request.url.path,
+            process_time,
+            response.status_code,
+        )
+        return response
 
 
 app.include_router(api_router)

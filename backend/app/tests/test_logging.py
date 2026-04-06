@@ -5,10 +5,12 @@ Tests for structured JSON logging and correlation ID middleware.
 import json
 import logging
 import sys
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+import app.logging as app_logging
 from app.core import conf
 from app.core.correlation_id import (
     REQUEST_ID_HEADER,
@@ -17,14 +19,12 @@ from app.core.correlation_id import (
 from app.logging import StructuredJSONFormatter
 from app.main import app
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
-
-
 # ---------------------------------------------------------------------------
 # CorrelationIdMiddleware
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio(loop_scope="module")
 async def test_response_contains_x_request_id_header():
     """Every HTTP response must carry the X-Request-ID header."""
     transport = ASGITransport(app=app)
@@ -38,6 +38,7 @@ async def test_response_contains_x_request_id_header():
         }, f"Missing {REQUEST_ID_HEADER} header in response"
 
 
+@pytest.mark.asyncio(loop_scope="module")
 async def test_correlation_id_is_hex_uuid():
     """The correlation ID should be a 32-char hex string (uuid4 without hyphens)."""
     transport = ASGITransport(app=app)
@@ -51,6 +52,7 @@ async def test_correlation_id_is_hex_uuid():
         assert all(c in "0123456789abcdef" for c in request_id)
 
 
+@pytest.mark.asyncio(loop_scope="module")
 async def test_each_request_gets_unique_id():
     """Two sequential requests should receive different correlation IDs."""
     transport = ASGITransport(app=app)
@@ -135,3 +137,42 @@ def test_structured_json_formatter_captures_correlation_id():
         assert parsed["correlation_id"] == "test-request-abc123"
     finally:
         correlation_id.reset(token)
+
+
+def test_logs_path_uses_public_var_logs():
+    assert (
+        conf.settings.LOGS_PATH
+        == Path(conf.settings.PUBLIC_ASSETS_DIR) / "var" / "logs"
+    )
+
+
+def test_api_file_logging_is_dev_only():
+    base_config = conf.settings.model_dump()
+    dev_settings = conf.get_settings(**(base_config | {"ENVIRONMENT": "DEV"}))
+    stage_settings = conf.get_settings(**(base_config | {"ENVIRONMENT": "STAGE"}))
+
+    assert dev_settings.SHOULD_LOG_API_TO_FILE is True
+    assert dev_settings.SHOULD_LOG_API_TO_CONSOLE is True
+    assert stage_settings.SHOULD_LOG_API_TO_FILE is False
+    assert stage_settings.SHOULD_LOG_API_TO_CONSOLE is False
+
+
+def test_get_async_logger_skips_file_creation_outside_dev(monkeypatch, tmp_path):
+    base_config = conf.settings.model_dump()
+    stage_settings = conf.get_settings(
+        **(
+            base_config
+            | {
+                "ENVIRONMENT": "STAGE",
+                "PUBLIC_ASSETS_DIR": str(tmp_path),
+            }
+        )
+    )
+
+    monkeypatch.setattr(conf, "settings", stage_settings)
+    monkeypatch.setattr(app_logging.conf, "settings", stage_settings)
+
+    logger = app_logging.get_async_logger("stage_logger")
+
+    assert logger.filepath is None
+    assert not (tmp_path / "var" / "logs" / "stage_logger.json").exists()

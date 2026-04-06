@@ -48,6 +48,8 @@ class AsyncJSONFileLogger:
         self.logger = logging.getLogger(name)
         self.logger.setLevel(conf.settings.LOGGING_LEVEL)
         self.filepath = filepath
+        if not conf.settings.SHOULD_LOG_API_TO_FILE:
+            return
         handler = TimedRotatingFileHandler(
             filepath, backupCount=backupcount, when=interval, encoding=encoding
         )
@@ -78,6 +80,8 @@ class AsyncJSONFileLogger:
 
     async def read(self):
         async with _lock:
+            if self.filepath is None:
+                raise RuntimeError("File logging is disabled.")
             with open(self.filepath, "r") as f:
                 return json.load(f)
 
@@ -86,7 +90,7 @@ _lock = asyncio.Lock()
 
 
 def _get_logger_filepath(name: str) -> Path:
-    filepath = Path(conf.settings.PUBLIC_ASSETS_DIR) / "logs" / f"{name}.json"
+    filepath = conf.settings.LOGS_PATH / f"{name}.json"
     if not filepath.exists():
         filepath.parent.mkdir(parents=True, exist_ok=True)
     return filepath
@@ -96,14 +100,17 @@ def get_async_logger(
     name, backupcount=None, interval="D", encoding="utf-8"
 ) -> AsyncJSONFileLogger:
     backupcount = backupcount or 5
-    return AsyncJSONFileLogger(
-        name, _get_logger_filepath(name), backupcount, interval, encoding
-    )
+    filepath = None
+    if conf.settings.SHOULD_LOG_API_TO_FILE:
+        filepath = _get_logger_filepath(name)
+    return AsyncJSONFileLogger(name, filepath, backupcount, interval, encoding)
 
 
 def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(conf.settings.LOGGING_LEVEL)
+    if not conf.settings.SHOULD_LOG_API_TO_FILE:
+        return logger
     handler = TimedRotatingFileHandler(
         _get_logger_filepath(name),
         backupCount=5,

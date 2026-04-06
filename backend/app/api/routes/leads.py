@@ -34,7 +34,7 @@ router: APIRouter = APIRouter()
 
 
 async def _create_seed_lead(
-    record: dict[str, object],
+    record: dict[str, Any],
     db: AsyncSession,
     user: models.User,
 ) -> Any:

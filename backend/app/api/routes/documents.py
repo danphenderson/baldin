@@ -1245,7 +1245,10 @@ async def embed_document(
 
     chunks = chunk_text(text_content)
     if not chunks:
-        raise HTTPException(status_code=400, detail="No embeddable text after chunking")
+        raise HTTPException(
+            status_code=400,
+            detail="Document text is too short or malformed to generate embeddings",
+        )
 
     await store.add_texts(
         chunks,

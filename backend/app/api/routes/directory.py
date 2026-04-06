@@ -48,7 +48,7 @@ async def list_directory(
     db: AsyncSession = Depends(get_async_session),
     pagination: schemas.Pagination = Depends(get_pagination_params),
     _current_user: models.User = Depends(get_current_user),
-    q: str | None = Query(None, description="Search by name, headline, or skill"),
+    q: str | None = Query(None, description="Search by name or headline"),
     placement_status: schemas.PlacementStatus | None = Query(
         None, description="Filter by placement status"
     ),

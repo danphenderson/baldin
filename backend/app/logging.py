@@ -47,9 +47,10 @@ class AsyncJSONFileLogger:
     def __init__(self, name, filepath, backupcount=5, interval="D", encoding="utf-8"):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(conf.settings.LOGGING_LEVEL)
-        self.filepath = filepath
-        if not conf.settings.SHOULD_LOG_API_TO_FILE:
+        if not conf.settings.SHOULD_LOG_API_TO_FILE or filepath is None:
+            self.filepath = None
             return
+        self.filepath = filepath
         handler = TimedRotatingFileHandler(
             filepath, backupCount=backupcount, when=interval, encoding=encoding
         )
@@ -81,7 +82,7 @@ class AsyncJSONFileLogger:
     async def read(self):
         async with _lock:
             if self.filepath is None:
-                raise RuntimeError("File logging is disabled.")
+                raise RuntimeError("Cannot read logs: file logging is disabled.")
             with open(self.filepath, "r") as f:
                 return json.load(f)
 

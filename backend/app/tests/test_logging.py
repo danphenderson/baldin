@@ -157,7 +157,9 @@ def test_api_file_logging_is_dev_only():
     assert stage_settings.SHOULD_LOG_API_TO_CONSOLE is False
 
 
-def test_get_async_logger_skips_file_creation_outside_dev(monkeypatch, tmp_path):
+def test_get_async_logger_skips_file_creation_when_file_logging_disabled(
+    monkeypatch, tmp_path
+):
     base_config = conf.settings.model_dump()
     stage_settings = conf.get_settings(
         **(

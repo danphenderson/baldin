@@ -29,62 +29,125 @@ async def list_review_items(
     page_size: int = Query(20, ge=1, le=100),
 ):
     """List all items pending human review."""
-    items: list[schemas.ReviewItemRead] = []
     offset = (page - 1) * page_size
 
-    if item_type is None or item_type == schemas.ReviewItemType.CRAWLER_RUN:
+    if item_type == schemas.ReviewItemType.CRAWLER_RUN:
         result = await db.execute(
             select(models.CrawlerRun)
             .where(models.CrawlerRun.status == "pending_review")
             .order_by(models.CrawlerRun.created_at.desc())
+            .offset(offset)
+            .limit(page_size)
         )
-        for run in result.scalars().all():
-            items.append(
-                schemas.ReviewItemRead(
-                    item_type=schemas.ReviewItemType.CRAWLER_RUN,
-                    item_id=run.id,
-                    created_at=run.created_at,
-                    summary=f"Crawler run ({run.trigger_type}) for pipeline {run.crawler_pipeline_id}",
-                    detail=run.stats,
-                )
+        return [
+            schemas.ReviewItemRead(
+                item_type=schemas.ReviewItemType.CRAWLER_RUN,
+                item_id=run.id,
+                created_at=run.created_at,
+                summary=f"Crawler run ({run.trigger_type}) for pipeline {run.crawler_pipeline_id}",
+                detail=run.stats,
             )
+            for run in result.scalars().all()
+        ]
 
-    if item_type is None or item_type == schemas.ReviewItemType.EXTRACTION_EVENT:
+    if item_type == schemas.ReviewItemType.EXTRACTION_EVENT:
         result = await db.execute(
             select(models.OrchestrationEvent)
             .where(models.OrchestrationEvent.status == "pending_review")
             .order_by(models.OrchestrationEvent.created_at.desc())
+            .offset(offset)
+            .limit(page_size)
         )
-        for event in result.scalars().all():
-            items.append(
-                schemas.ReviewItemRead(
-                    item_type=schemas.ReviewItemType.EXTRACTION_EVENT,
-                    item_id=event.id,
-                    created_at=event.created_at,
-                    summary=event.message,
-                    detail=event.payload,
-                )
+        return [
+            schemas.ReviewItemRead(
+                item_type=schemas.ReviewItemType.EXTRACTION_EVENT,
+                item_id=event.id,
+                created_at=event.created_at,
+                summary=event.message,
+                detail=event.payload,
             )
+            for event in result.scalars().all()
+        ]
 
-    if item_type is None or item_type == schemas.ReviewItemType.LEAD:
+    if item_type == schemas.ReviewItemType.LEAD:
         result = await db.execute(
             select(models.Lead)
             .where(models.Lead.review_status == "pending_review")
             .order_by(models.Lead.created_at.desc())
+            .offset(offset)
+            .limit(page_size)
         )
-        for lead in result.scalars().all():
-            items.append(
-                schemas.ReviewItemRead(
-                    item_type=schemas.ReviewItemType.LEAD,
-                    item_id=lead.id,
-                    created_at=lead.created_at,
-                    summary=lead.title or lead.url,
-                    detail={"url": lead.url, "location": lead.location},
-                )
+        return [
+            schemas.ReviewItemRead(
+                item_type=schemas.ReviewItemType.LEAD,
+                item_id=lead.id,
+                created_at=lead.created_at,
+                summary=lead.title or lead.url,
+                detail={"url": lead.url, "location": lead.location},
             )
+            for lead in result.scalars().all()
+        ]
 
-    # Sort by created_at desc and paginate
-    items.sort(key=lambda x: x.created_at, reverse=True)
+    fetch_limit = offset + page_size
+    items: list[schemas.ReviewItemRead] = []
+
+    crawler_result = await db.execute(
+        select(models.CrawlerRun)
+        .where(models.CrawlerRun.status == "pending_review")
+        .order_by(models.CrawlerRun.created_at.desc())
+        .limit(fetch_limit)
+    )
+    items.extend(
+        schemas.ReviewItemRead(
+            item_type=schemas.ReviewItemType.CRAWLER_RUN,
+            item_id=run.id,
+            created_at=run.created_at,
+            summary=f"Crawler run ({run.trigger_type}) for pipeline {run.crawler_pipeline_id}",
+            detail=run.stats,
+        )
+        for run in crawler_result.scalars().all()
+    )
+
+    extraction_result = await db.execute(
+        select(models.OrchestrationEvent)
+        .where(models.OrchestrationEvent.status == "pending_review")
+        .order_by(models.OrchestrationEvent.created_at.desc())
+        .limit(fetch_limit)
+    )
+    items.extend(
+        schemas.ReviewItemRead(
+            item_type=schemas.ReviewItemType.EXTRACTION_EVENT,
+            item_id=event.id,
+            created_at=event.created_at,
+            summary=event.message,
+            detail=event.payload,
+        )
+        for event in extraction_result.scalars().all()
+    )
+
+    lead_result = await db.execute(
+        select(models.Lead)
+        .where(models.Lead.review_status == "pending_review")
+        .order_by(models.Lead.created_at.desc())
+        .limit(fetch_limit)
+    )
+    items.extend(
+        schemas.ReviewItemRead(
+            item_type=schemas.ReviewItemType.LEAD,
+            item_id=lead.id,
+            created_at=lead.created_at,
+            summary=lead.title or lead.url,
+            detail={"url": lead.url, "location": lead.location},
+        )
+        for lead in lead_result.scalars().all()
+    )
+
+    # Deterministic merge for the mixed feed, then paginate in memory
+    # over the bounded result set rather than over full table scans.
+    items.sort(
+        key=lambda x: (x.created_at, x.item_type.value, str(x.item_id)),
+        reverse=True,
+    )
     return items[offset : offset + page_size]
 
 

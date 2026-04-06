@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Box, Card, CardContent, Typography, TextField, Button, Link, Alert, CircularProgress,
-  useTheme, alpha, InputAdornment, IconButton,
+  useTheme, alpha, InputAdornment, IconButton, LinearProgress, Stack,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
-import { AutoAwesome as LogoIcon, Visibility, VisibilityOff, Email, Lock, Person } from '@mui/icons-material';
+import {
+  AutoAwesome as LogoIcon, Visibility, VisibilityOff, Email, Lock, Person,
+  Check as CheckIcon, Close as CloseIcon,
+} from '@mui/icons-material';
 import { register } from '../service/auth';
+
+// Must stay in sync with backend MIN_PASSWORD_LENGTH / _PASSWORD_RULES
+const PASSWORD_RULES = [
+  { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
+  { label: 'One uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
+  { label: 'One lowercase letter', test: (p: string) => /[a-z]/.test(p) },
+  { label: 'One digit', test: (p: string) => /\d/.test(p) },
+];
 
 const RegisterPage: React.FC = () => {
   const theme = useTheme();
@@ -19,8 +30,20 @@ const RegisterPage: React.FC = () => {
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
+  const ruleResults = useMemo(
+    () => PASSWORD_RULES.map((r) => ({ ...r, passed: r.test(form.password) })),
+    [form.password],
+  );
+  const passedCount = ruleResults.filter((r) => r.passed).length;
+  const allPassed = passedCount === PASSWORD_RULES.length;
+  const strengthPercent = (passedCount / PASSWORD_RULES.length) * 100;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!allPassed) {
+      setError('Password does not meet the requirements below.');
+      return;
+    }
     if (form.password !== form.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -77,6 +100,40 @@ const RegisterPage: React.FC = () => {
                 endAdornment: <InputAdornment position="end"><IconButton size="small" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}</IconButton></InputAdornment>,
               }}
             />
+
+            {/* Password strength indicator */}
+            {form.password.length > 0 && (
+              <Box sx={{ mt: 1.5 }}>
+                <LinearProgress
+                  variant="determinate"
+                  value={strengthPercent}
+                  sx={{
+                    height: 6, borderRadius: 3,
+                    backgroundColor: alpha(theme.palette.error.main, 0.15),
+                    '& .MuiLinearProgress-bar': {
+                      borderRadius: 3,
+                      backgroundColor: allPassed
+                        ? theme.palette.success.main
+                        : passedCount >= 2
+                          ? theme.palette.warning.main
+                          : theme.palette.error.main,
+                    },
+                  }}
+                />
+                <Stack spacing={0.25} sx={{ mt: 1 }}>
+                  {ruleResults.map((r) => (
+                    <Typography
+                      key={r.label} variant="caption"
+                      sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: r.passed ? 'success.main' : 'text.secondary' }}
+                    >
+                      {r.passed ? <CheckIcon sx={{ fontSize: 14 }} /> : <CloseIcon sx={{ fontSize: 14 }} />}
+                      {r.label}
+                    </Typography>
+                  ))}
+                </Stack>
+              </Box>
+            )}
+
             <TextField fullWidth label="Confirm password" type="password" value={form.confirmPassword} onChange={set('confirmPassword')} required sx={{ mt: 2, mb: 3 }} />
             <Button fullWidth type="submit" variant="contained" size="large" disabled={loading}
               sx={{

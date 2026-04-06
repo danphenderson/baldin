@@ -18,6 +18,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.admin import admin
 from app.api.api import api_router
 from app.core import conf
+from app.core.correlation_id import CorrelationIdMiddleware, correlation_id
 from app.core.db import create_db_and_tables
 from app.core.document_collaboration import (
     ensure_document_collaboration_server_started,
@@ -140,29 +141,46 @@ if conf.settings.BACKEND_CORS_ORIGINS:
         allow_headers=["*"],
     )
 
-# Log to console if in development
-if conf.settings.ENVIRONMENT == "DEV":
+# Correlation ID middleware (outermost — runs first on every request)
+app.add_middleware(CorrelationIdMiddleware)
+
+
+# Log to console if configured for development
+if conf.settings.SHOULD_LOG_API_TO_CONSOLE:
 
     @app.middleware("http")
     async def console_log_requests(request: Request, call_next):
         start_time = time()
         response: Response = await call_next(request)
         process_time = (time() - start_time) * 1000
-        console_log.info(f"\tcompleted in {process_time}ms")
+        req_id = correlation_id.get("")
+        console_log.info(
+            "%s %s -> %s (%.1fms) [%s]",
+            request.method,
+            request.url.path,
+            response.status_code,
+            process_time,
+            req_id,
+        )
         return response
 
 
-# Log all requests to the application asychronously
-# else: Not neccesarry to log in developement, alllowing us to check in public assets dir to github
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    start_time = time()
-    response: Response = await call_next(request)
-    process_time = (time() - start_time) * 1000
-    await logger.info(
-        f"Request: {request.url} completed in {process_time}ms, status code: {response.status_code}"
-    )
-    return response
+# Log all requests to the application asynchronously when file logging is enabled
+if conf.settings.SHOULD_LOG_API_TO_FILE:
+
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        start_time = time()
+        response: Response = await call_next(request)
+        process_time = (time() - start_time) * 1000
+        await logger.info(
+            "%s %s completed in %.1fms, status=%s",
+            request.method,
+            request.url.path,
+            process_time,
+            response.status_code,
+        )
+        return response
 
 
 app.include_router(api_router)

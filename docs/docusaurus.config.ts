@@ -67,11 +67,12 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Start Here Next',
           items: [
-            {label: 'Getting Started', to: '/getting-started/overview'},
-            {label: 'Architecture', to: '/architecture/system-overview'},
-            {label: 'Engineering', to: '/engineering/local-development'},
+            {label: 'Start Here', to: '/getting-started/overview'},
+            {label: 'Understand The System', to: '/architecture/system-overview'},
+            {label: 'Build, Validate, Release', to: '/engineering/local-development'},
+            {label: 'Look Up Details', to: '/reference/api-reference'},
           ],
         },
         {

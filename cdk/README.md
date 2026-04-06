@@ -2,9 +2,9 @@
 # Deployment Notes
 
 This directory contains partially restored AWS infrastructure code. It is no longer treated as a
-public architecture sample, but it is also not yet the approved production deployment contract for Baldin.
+general architecture sample, but it is also not yet the approved production deployment contract for Baldin.
 
-The repo is private again and is regaining deployment ownership. The near-term goal is to reuse only the
+This repository is regaining direct deployment ownership. The near-term goal is to reuse only the
 useful parts of this CDK app while rebuilding a smaller, safer release path inside this repository.
 
 ## Current Role of This Directory
@@ -26,7 +26,7 @@ Several current behaviors are explicitly under review before any deployment path
 - destructive removal policies
 - broad IAM scopes and long-lived machine-user patterns
 - open or overly broad database ingress
-- disabled helper paths that were written for the old public-repo boundary
+- disabled helper paths that were written for an older repository boundary
 
 ## Current Artifact Contract
 

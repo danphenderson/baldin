@@ -121,3 +121,21 @@ def test_parse_binary_input_supports_tex_uploads() -> None:
 
     assert len(documents) == 1
     assert "Python" in documents[0].page_content
+
+
+@pytest.mark.asyncio
+async def test_get_extractor_run_payload_rejects_unsafe_url() -> None:
+    app = _build_test_app()
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/extract",
+            json={
+                "mode": "entire_document",
+                "url": "http://127.0.0.1/internal",
+            },
+        )
+
+    assert response.status_code == 422
+    assert any(error["loc"][-1] == "url" for error in response.json().get("detail", []))

@@ -6,7 +6,6 @@ that are held in `pending_review` status across crawlers, extractors,
 and leads.
 """
 
-import asyncio
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -167,14 +166,16 @@ async def _approve_item(
         run.status = "pending"
         await db.commit()
         # Launch execution
-        from app.api.deps import execute_crawler_run_background
+        from app.api.deps import schedule_crawler_run_execution
 
         pipeline = await db.get(models.CrawlerPipeline, run.crawler_pipeline_id)
         user_id = pipeline.created_by_user_id if pipeline else None
-        if user_id and background_tasks:
-            background_tasks.add_task(execute_crawler_run_background, run.id, user_id)
-        elif user_id:
-            asyncio.create_task(execute_crawler_run_background(run.id, user_id))
+        if user_id:
+            schedule_crawler_run_execution(
+                run.id,
+                user_id,
+                background_tasks=background_tasks,
+            )
         return f"Crawler run {item_id} approved and execution started"
 
     elif item_type == schemas.ReviewItemType.EXTRACTION_EVENT:

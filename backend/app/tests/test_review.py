@@ -7,13 +7,13 @@ crawler runs, extraction events, and leads, and batch operations.
 
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, patch
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
 
-from app import models, schemas
+from app import models
 from app.core import conf
 from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
 from app.main import app

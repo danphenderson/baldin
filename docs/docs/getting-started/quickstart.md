@@ -1,10 +1,15 @@
 ---
 sidebar_position: 2
 slug: /getting-started/quickstart
-title: Quickstart
+title: Boot The Stack
+description: Boot the local stack quickly, then jump to workflow, API access, and configuration details.
 ---
 
-# Local Quickstart
+<!-- last-verified: 2026-04-06 -->
+
+# Boot The Stack
+
+This is the shortest path to a working local Baldin stack. For day-to-day iteration details after first boot, use [Work Locally](../engineering/local-development.md).
 
 ## Requirements
 
@@ -27,7 +32,8 @@ Optional local toolchain if you want to work outside containers:
    | Variable | Purpose |
    |----------|---------|
    | `OPENAI_API_KEY` | Enables AI-assisted extraction and automation features |
-   | `LINKEDIN_*` / `GLASSDOOR_*` | Optional crawler credentials |
+   | `LINKEDIN_USERNAME` / `LINKEDIN_PASSWORD` | Optional LinkedIn crawler credentials |
+   | `GLASSDOOR_USERNAME` / `GLASSDOOR_PASSWORD` | Optional Glassdoor crawler credentials |
    | `FIRST_SUPERUSER_EMAIL` | Bootstrap admin email for local stack |
    | `FIRST_SUPERUSER_PASSWORD` | Bootstrap admin password for local stack |
 
@@ -65,6 +71,13 @@ The backend starts in `DEV` mode and:
 
 1. Creates database tables automatically via `create_db_and_tables()`.
 2. Bootstraps the default superuser from `backend/.env`.
-3. Optionally starts the crawler scheduler if `SHOULD_RUN_CRAWLER_SCHEDULER` is enabled.
+3. Starts background helpers according to runtime settings such as `CRAWLER_SCHEDULER_ENABLED` and `RUN_REAPER_ENABLED`.
 
 The admin UI uses its own browser session under `/admin` and expects email-based sign-in.
+
+## Start Here Next
+
+- For local service topology and outside-container workflows: [Work Locally](../engineering/local-development.md)
+- For live endpoint access after startup: [Open The API Docs](../reference/api-reference.md)
+- For environment details: [Look Up Settings](../reference/environment-variables.md)
+- For contributor expectations: [Contribute Safely](./contributing.md)

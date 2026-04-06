@@ -8901,7 +8901,7 @@ export interface operations {
   list_directory_directory__get: {
     parameters: {
       query?: {
-        /** @description Search by name, headline, or skill */
+        /** @description Search by name or headline */
         q?: string | null;
         /** @description Filter by placement status */
         placement_status?: components["schemas"]["PlacementStatus"] | null;

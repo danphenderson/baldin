@@ -1,12 +1,15 @@
 ---
 sidebar_position: 2
 slug: /engineering/ci-pipeline
-title: CI Pipeline
+title: See Merge Gates
+description: See merge gates, contract freshness checks, and candidate artifact builds.
 ---
 
-# CI Pipeline
+<!-- last-verified: 2026-04-06 -->
 
-Baldin uses two GitHub Actions workflows: **CI** (quality gates) and **Build** (artifact generation).
+# See Merge Gates
+
+Baldin uses two GitHub Actions workflows: **CI** for integration-quality gates and **Build Candidate Artifacts** for release inputs.
 
 ## CI Workflow (`.github/workflows/ci.yml`)
 
@@ -32,7 +35,7 @@ flowchart TD
 | **frontend-build** | `npm run build` | Production build with `VITE_API_URL=https://api.preview.invalid` |
 | **schema-freshness** | Contract regeneration guard | Regenerates `openapi.json` and `schema.d.ts`, fails if output differs from committed |
 
-All jobs depend on **lint** passing first.
+All quality-gate jobs depend on **lint** passing first.
 
 ### Concurrency
 
@@ -46,12 +49,12 @@ concurrency:
 
 ## Build Workflow (`.github/workflows/build.yml`)
 
-Triggers on push to `main`, pull requests, and manual dispatch. Produces two artifacts:
+The build workflow is named **Build Candidate Artifacts**. It triggers on push to `main`, pull requests, and manual dispatch, and produces two candidate artifacts:
 
 | Artifact | Source | Output |
 |----------|--------|--------|
-| **Backend image** | `docker build -f backend/Dockerfile` | Image metadata JSON |
-| **Frontend bundle** | `npm run build` in `frontend/` | `frontend/dist/` uploaded as artifact |
+| **Backend image metadata** | `docker build -f backend/Dockerfile` | `build-artifacts/backend` |
+| **Frontend static bundle** | `npm run build` in `frontend/` | `frontend/dist/` uploaded as artifact |
 
 The frontend build uses `VITE_API_URL=https://api.preview.invalid` as a placeholder origin.
 
@@ -64,3 +67,16 @@ The frontend build uses `VITE_API_URL=https://api.preview.invalid` as a placehol
 - No force pushes or deletions allowed.
 
 Check names must match the CI job names exactly. See `.github/branch-protection.md` for the documented rules.
+
+## Why This Split Exists
+
+- **CI** is the merge gate.
+- **Build Candidate Artifacts** proves the branch can still produce the backend image and frontend bundle that later release automation would promote.
+
+For release-path context, see [Track Release Readiness](./release-roadmap.md).
+
+## Related Docs
+
+- [Run The Right Checks](./testing.md)
+- [Regenerate API Contracts](./contract-management.md)
+- [Track Release Readiness](./release-roadmap.md)

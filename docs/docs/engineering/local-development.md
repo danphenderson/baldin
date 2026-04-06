@@ -1,10 +1,13 @@
 ---
 sidebar_position: 1
 slug: /engineering/local-development
-title: Local Development
+title: Work Locally
+description: Work locally with Docker Compose or outside-container loops and the shortest next steps.
 ---
 
-# Local Development
+<!-- last-verified: 2026-04-06 -->
+
+# Work Locally
 
 Baldin uses Docker Compose as the local-first entry point. All four services start with a single command.
 
@@ -24,6 +27,8 @@ docker-compose up --build
 ```
 
 The backend mounts `./backend` as a volume and runs Uvicorn with `--reload`, so Python changes take effect immediately. The frontend mounts `./frontend` and uses Vite's HMR.
+
+Use [Boot The Stack](../getting-started/quickstart.md) for first boot. This page is the day-two reference once the stack already makes sense to you.
 
 ## Resetting Databases
 
@@ -62,6 +67,21 @@ npm run dev
 ```
 
 Requires `VITE_API_URL` to be set (defaults to `http://localhost:8004` for local development).
+
+## Related Local Tasks
+
+| Task | Command |
+| --- | --- |
+| Reset local databases | `./scripts/reset_local_db.sh` |
+| Regenerate API contracts | `./scripts/update_frontend_schemas.sh` |
+| Build docs site | `npm --prefix docs run build` |
+
+## Related Docs
+
+- [Boot The Stack](../getting-started/quickstart.md)
+- [Run The Right Checks](./testing.md)
+- [Regenerate API Contracts](./contract-management.md)
+- [Look Up Settings](../reference/environment-variables.md)
 
 ## Useful Local URLs
 

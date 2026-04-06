@@ -1,5 +1,7 @@
 # Path: app/core/db.py
 
+import asyncio
+import socket
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
 from uuid import UUID
@@ -30,6 +32,8 @@ USER_PROFILE_FIELDS = (
     "avatar_uri",
 )
 
+PYTEST_DB_OPERATION_TIMEOUT_SECONDS = 5
+
 # Determine the appropriate SQLAlchemy database URI based on the environment
 if conf.settings.ENVIRONMENT == "PYTEST":
     sqlalchemy_database_uri = str(conf.settings.TEST_SQLALCHEMY_DATABASE_URI)
@@ -38,8 +42,30 @@ else:
         conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI
     )  # Use string conversion as a workaround
 
+
+def _build_engine_connect_args() -> dict[str, Any]:
+    if conf.settings.ENVIRONMENT == "PYTEST":
+        # Fail fast when the local test_db service is not running instead of
+        # leaving pytest to appear hung during connection attempts.
+        return {"timeout": 5}
+    return {}
+
+
+def _pytest_database_runtime_error() -> RuntimeError:
+    return RuntimeError(
+        "Unable to connect to the PYTEST database at "
+        f"{conf.settings.TEST_DATABASE_HOSTNAME}:{conf.settings.TEST_DATABASE_PORT}. "
+        "Start the local test_db service with `docker compose up -d test_db` "
+        "or update backend/.env TEST_DATABASE_* settings."
+    )
+
+
 # Create an asynchronous engine for SQLAlchemy
-async_engine = create_async_engine(sqlalchemy_database_uri, echo=False)
+async_engine = create_async_engine(
+    sqlalchemy_database_uri,
+    echo=False,
+    connect_args=_build_engine_connect_args(),
+)
 
 # Create an asynchronous session maker
 async_session_maker = async_sessionmaker(bind=async_engine, expire_on_commit=False)
@@ -88,6 +114,19 @@ def _create_and_sync_schema(connection: Connection) -> None:
     _sync_missing_columns(connection)
 
 
+async def _terminate_other_test_db_sessions(conn: AsyncSession | Any) -> None:
+    await conn.execute(
+        text(
+            """
+            SELECT pg_terminate_backend(pid)
+            FROM pg_stat_activity
+            WHERE datname = current_database()
+              AND pid <> pg_backend_pid()
+            """
+        )
+    )
+
+
 async def create_db_and_tables() -> None:
     """
     Asynchronously create the database tables and repair additive local schema drift.
@@ -101,8 +140,26 @@ async def create_db_and_tables() -> None:
     until the user manually reset the database. This sync step only adds missing
     columns and does not attempt destructive migrations.
     """
-    async with async_engine.begin() as conn:
-        await conn.run_sync(_create_and_sync_schema)
+
+    async def _create_schema() -> None:
+        async with async_engine.begin() as conn:
+            await conn.run_sync(_create_and_sync_schema)
+
+    try:
+        if conf.settings.ENVIRONMENT == "PYTEST":
+            await asyncio.wait_for(
+                _create_schema(), timeout=PYTEST_DB_OPERATION_TIMEOUT_SECONDS
+            )
+        else:
+            await _create_schema()
+    except (ConnectionError, OSError, socket.gaierror) as exc:
+        if conf.settings.ENVIRONMENT == "PYTEST":
+            raise _pytest_database_runtime_error() from exc
+        raise
+    except TimeoutError as exc:
+        if conf.settings.ENVIRONMENT == "PYTEST":
+            raise _pytest_database_runtime_error() from exc
+        raise
 
 
 async def drop_and_create_db_and_tables():
@@ -114,12 +171,32 @@ async def drop_and_create_db_and_tables():
 
     # TODO: This function should be removed once we have alembic migrations in place.
     """
-    async with async_engine.begin() as conn:
-        await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
-        await conn.execute(text("CREATE SCHEMA public"))
-        await conn.execute(text("GRANT ALL ON SCHEMA public TO postgres"))
-        await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
-        await conn.run_sync(_create_and_sync_schema)
+
+    async def _reset_schema() -> None:
+        async with async_engine.begin() as conn:
+            if conf.settings.ENVIRONMENT == "PYTEST":
+                await _terminate_other_test_db_sessions(conn)
+            await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+            await conn.execute(text("CREATE SCHEMA public"))
+            await conn.execute(text("GRANT ALL ON SCHEMA public TO postgres"))
+            await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
+            await conn.run_sync(_create_and_sync_schema)
+
+    try:
+        if conf.settings.ENVIRONMENT == "PYTEST":
+            await asyncio.wait_for(
+                _reset_schema(), timeout=PYTEST_DB_OPERATION_TIMEOUT_SECONDS
+            )
+        else:
+            await _reset_schema()
+    except (ConnectionError, OSError, socket.gaierror) as exc:
+        if conf.settings.ENVIRONMENT == "PYTEST":
+            raise _pytest_database_runtime_error() from exc
+        raise
+    except TimeoutError as exc:
+        if conf.settings.ENVIRONMENT == "PYTEST":
+            raise _pytest_database_runtime_error() from exc
+        raise
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:

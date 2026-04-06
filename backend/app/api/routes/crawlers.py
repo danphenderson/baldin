@@ -1,6 +1,6 @@
 # app/api/routes/crawlers.py
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import UUID4
@@ -67,12 +67,16 @@ async def trigger_crawler_run(
     user=Depends(get_current_superuser),
 ):
     from app.api.deps import create_crawler_run as _create_run
-    from app.api.deps import execute_crawler_run_background
     from app.api.deps import get_crawler_pipeline as _get
+    from app.api.deps import schedule_crawler_run_execution
 
     pipeline = await _get(pipeline_id, db)
     run = await _create_run(pipeline, "manual", db)
-    background_tasks.add_task(execute_crawler_run_background, run.id, user.id)
+    schedule_crawler_run_execution(
+        run.id,
+        user.id,
+        background_tasks=background_tasks,
+    )
     return run
 
 
@@ -158,7 +162,7 @@ async def cancel_crawler_run(
         )
     run.status = "cancelled"
     if not run.finished_at:
-        run.finished_at = datetime.now(timezone.utc)
+        run.finished_at = datetime.utcnow()
     await db.commit()
     await db.refresh(run)
     return run
@@ -190,8 +194,8 @@ async def resume_crawler_run(
     db: AsyncSession = Depends(get_async_session),
     user=Depends(get_current_superuser),
 ):
-    from app.api.deps import execute_crawler_run_background
     from app.api.deps import get_crawler_run as _get
+    from app.api.deps import schedule_crawler_run_execution
 
     run = await _get(run_id, db)
     if run.status != "paused":
@@ -202,7 +206,11 @@ async def resume_crawler_run(
     run.status = "running"
     await db.commit()
     await db.refresh(run)
-    background_tasks.add_task(execute_crawler_run_background, run.id, user.id)
+    schedule_crawler_run_execution(
+        run.id,
+        user.id,
+        background_tasks=background_tasks,
+    )
     return run
 
 
@@ -214,8 +222,8 @@ async def retry_crawler_run(
     user=Depends(get_current_superuser),
 ):
     from app.api.deps import create_crawler_run as _create_run
-    from app.api.deps import execute_crawler_run_background
     from app.api.deps import get_crawler_run as _get
+    from app.api.deps import schedule_crawler_run_execution
 
     run = await _get(run_id, db)
     if run.status not in ("failed", "cancelled"):
@@ -247,5 +255,9 @@ async def retry_crawler_run(
     await db.commit()
     await db.refresh(new_run)
 
-    background_tasks.add_task(execute_crawler_run_background, new_run.id, user.id)
+    schedule_crawler_run_execution(
+        new_run.id,
+        user.id,
+        background_tasks=background_tasks,
+    )
     return new_run

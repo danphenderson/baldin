@@ -243,6 +243,18 @@ async def test_extract_lead_returns_created_joined_and_already_registered_dispos
     assert created_body["normalized_url"] == "https://example.com/jobs/extract-me"
 
 
+async def test_extract_lead_rejects_unsafe_url_before_extractor_lookup() -> None:
+    with pytest.raises(HTTPException) as exc_info:
+        await lead_routes.extract_lead(
+            "http://127.0.0.1/internal",
+            db=None,
+            user=SimpleNamespace(id=uuid4()),
+        )
+
+    assert exc_info.value.status_code == 422
+    assert "non-public IP" in str(exc_info.value.detail)
+
+
 async def test_lead_detail_scopes_registration_notes_and_exposed_participants() -> None:
     await _ensure_db_ready()
     async with _client() as client:

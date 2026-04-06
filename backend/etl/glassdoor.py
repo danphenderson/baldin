@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import AsyncIterator
 
-from app.core import conf
 from app.logging import get_logger
 from etl.base import CrawlerBase, CrawlerResult
 

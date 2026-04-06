@@ -1,21 +1,26 @@
 ---
 sidebar_position: 1
 slug: /getting-started/overview
-title: Overview
+title: Orient Yourself
+description: Start with product scope, repo layout, and the next docs most people need first.
 ---
 
-# Baldin
+<!-- last-verified: 2026-04-06 -->
 
-Baldin is a developer-preview workspace for exploring job-search automation locally. It combines a FastAPI backend, a React/Vite frontend, PostgreSQL, and a set of experimental extraction and orchestration flows for leads, applications, resumes, cover letters, and candidate profile data.
+# Orient Yourself
+
+Baldin is a private engineering monorepo for a local-first, developer-preview job-search automation workspace. It combines a FastAPI backend, a React/Vite frontend, PostgreSQL, and a set of experimental extraction, orchestration, collaboration, and networking features that are still being hardened.
 
 :::note
-Baldin is **local-first** right now. The repository is meant for local evaluation, architecture exploration, and contribution. It is not positioned as a production-hardened SaaS or a finished deployment blueprint.
+Baldin is **local-first** right now. This private repository is Baldin's main engineering workspace for local development, contributor workflows, architecture review, and release-path planning. It is not positioned as a production-hardened SaaS or a finished deployment blueprint.
 :::
 
 ## What You Can Explore
 
 - **Track** companies, leads, applications, resumes, cover letters, contacts, education, experience, and skills.
 - **Exercise** extraction and orchestration workflows against a local stack.
+- **Edit** versioned documents with rich-text collaboration and sharing.
+- **Explore** the network layer for directory profiles, connections, conversations, activity, and action items.
 - **Inspect** the FastAPI surface through Swagger and the admin UI.
 - **Develop** against both the main Postgres database and the separate test database defined in `docker-compose.yml`.
 
@@ -30,6 +35,15 @@ Baldin is **local-first** right now. The repository is meant for local evaluatio
 | `docs/` | This documentation site |
 | `scripts/` | Developer utility scripts (DB reset, schema sync, S3 deploy — some intentionally disabled) |
 | `plans/` | Execution plan and project roadmap |
+
+## Start Here Next
+
+- For setup: [Boot The Stack](./quickstart.md)
+- For architecture: [See System Boundaries](../architecture/system-overview.md)
+- For backend boundaries: [Map The Data Model](../architecture/data-model.md) and [Browse API Routes](../architecture/api-surface.md)
+- For document editor work: [Understand Document Collaboration](../architecture/document-collaboration.md)
+- For configuration details: [Look Up Settings](../reference/environment-variables.md)
+- For contributor workflow: [Contribute Safely](./contributing.md)
 
 ## Project Status
 

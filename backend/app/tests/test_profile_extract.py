@@ -5,9 +5,12 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
+from fastapi.exceptions import RequestValidationError
 
 from app import schemas
 from app.api.routes import users as user_routes
+from app.core.url_safety import UnsafeFetchUrlError
 
 
 class _FakeDB:
@@ -129,3 +132,47 @@ async def test_extract_user_profile_serializes_shared_session_work(
     assert db.user.first_name == "Dana"
     assert db.user.last_name == "Henderson"
     assert guard.max_active == 1
+
+
+@pytest.mark.asyncio
+async def test_get_profile_extract_payload_rejects_unsafe_source_url() -> None:
+    with pytest.raises(RequestValidationError) as exc_info:
+        await user_routes.get_profile_extract_payload(
+            sources_json='[{"url": "http://127.0.0.1/internal"}]'
+        )
+
+    assert any(error["loc"][-1] == "url" for error in exc_info.value.errors())
+
+
+@pytest.mark.asyncio
+async def test_profile_extract_url_resolution_returns_422_for_unsafe_redirect_target(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_extract_text_from_url_smart(url: str) -> str:
+        raise UnsafeFetchUrlError(
+            "Fetch URL redirect target 'http://127.0.0.1/internal' is unsafe"
+        )
+
+    monkeypatch.setattr(
+        user_routes,
+        "extract_text_from_url_smart",
+        fake_extract_text_from_url_smart,
+    )
+
+    with pytest.raises(HTTPException) as payload_exc:
+        await user_routes._extract_text_from_payload(
+            schemas.ExtractorRun(
+                mode="entire_document",
+                url="https://example.com/profile",
+            )
+        )
+
+    with pytest.raises(HTTPException) as source_exc:
+        await user_routes._resolve_source_text(
+            schemas.ProfileExtractSource(url="https://example.com/profile")
+        )
+
+    assert payload_exc.value.status_code == 422
+    assert source_exc.value.status_code == 422
+    assert "redirect target" in str(payload_exc.value.detail)
+    assert "redirect target" in str(source_exc.value.detail)

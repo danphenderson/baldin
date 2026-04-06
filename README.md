@@ -1,22 +1,21 @@
 # Baldin
 
-Baldin is a developer-preview workspace for exploring job-search automation locally. It combines a FastAPI backend, a React/Vite frontend, PostgreSQL, and a set of experimental extraction and orchestration flows for leads, applications, resumes, cover letters, and candidate profile data.
+Baldin is a private, local-first engineering monorepo for a developer-preview job-search automation workspace. It contains the FastAPI backend, the React/Vite frontend, the local Docker integration surface, the Docusaurus docs, and the release-path planning material that currently defines how the system is being hardened.
 
 > Baldin is local-first right now.
-> The public repository is meant for local evaluation, architecture exploration, and contribution. It is not positioned as a production-hardened SaaS or a finished deployment blueprint.
+> This repository is the main engineering workspace for the product. It supports local development, contributor workflows, architecture review, and release-path planning, but it is not a production deployment blueprint.
 
-## Documentation
+## Start Here
 
-Full documentation is available at **[danphenderson.github.io/baldin](https://danphenderson.github.io/baldin/)**.
+- Local setup: [docs/docs/getting-started/quickstart.md](docs/docs/getting-started/quickstart.md)
+- Contributor workflow: [docs/docs/getting-started/contributing.md](docs/docs/getting-started/contributing.md)
+- Architecture: [docs/docs/architecture/system-overview.md](docs/docs/architecture/system-overview.md), [docs/docs/architecture/data-model.md](docs/docs/architecture/data-model.md), [docs/docs/architecture/api-surface.md](docs/docs/architecture/api-surface.md), [docs/docs/architecture/frontend-architecture.md](docs/docs/architecture/frontend-architecture.md)
+- Document editor and collaboration: [docs/docs/architecture/document-collaboration.md](docs/docs/architecture/document-collaboration.md)
+- Networking and messaging: [docs/docs/architecture/networking-and-messaging.md](docs/docs/architecture/networking-and-messaging.md)
+- Testing and CI: [docs/docs/engineering/testing.md](docs/docs/engineering/testing.md), [docs/docs/engineering/ci-pipeline.md](docs/docs/engineering/ci-pipeline.md)
+- Release posture: [docs/docs/engineering/release-roadmap.md](docs/docs/engineering/release-roadmap.md) and [plans/REPO_EXECUTION_PLAN.md](plans/REPO_EXECUTION_PLAN.md)
 
-The docs cover architecture, engineering workflows, the data model, CI pipeline, contract management, and environment configuration.
-
-## What You Can Explore
-
-- Track companies, leads, applications, resumes, cover letters, contacts, education, experience, and skills.
-- Exercise extraction and orchestration workflows against a local stack.
-- Inspect the FastAPI surface through Swagger and the admin UI.
-- Develop against both the main Postgres database and the separate test database defined in `docker-compose.yml`.
+If you use the published docs site, the same material is available at **[danphenderson.github.io/baldin](https://danphenderson.github.io/baldin/)**.
 
 ## Local Quickstart
 
@@ -25,21 +24,11 @@ The docs cover architecture, engineering workflows, the data model, CI pipeline,
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 
-Optional local toolchain if you want to work outside containers:
-
-- [Node.js](https://nodejs.org/en/download/)
-- [Python 3.11](https://www.python.org/downloads/)
-- [pipenv](https://pipenv.pypa.io/en/latest/)
-- [Playwright](https://playwright.dev/docs/intro)
-
 ### Setup
 
 1. Clone the repository.
 2. Copy `backend/.env.example` to `backend/.env`.
-3. Review the values in `backend/.env`:
-   - `OPENAI_API_KEY` enables AI-assisted extraction and automation features.
-   - `LINKEDIN_*` and `GLASSDOOR_*` credentials are optional.
-   - `FIRST_SUPERUSER_EMAIL` and `FIRST_SUPERUSER_PASSWORD` control the local admin bootstrap user.
+3. Review the backend environment variables you need for local development.
 4. Start the local stack from the repository root:
 
 ```bash
@@ -59,42 +48,27 @@ If you hit local schema drift after pulling breaking model changes, reset the de
    - ReDoc: [http://localhost:8004/redoc](http://localhost:8004/redoc)
    - Admin: [http://localhost:8004/admin](http://localhost:8004/admin) using the bootstrapped superuser email and password from `FIRST_SUPERUSER_EMAIL` and `FIRST_SUPERUSER_PASSWORD`
 
-The backend starts in `DEV` mode, creates tables automatically, and bootstraps the default superuser from `backend/.env`.
-The admin UI uses its own browser session under `/admin` and expects email-based sign-in.
-
-## Architecture
-
-Baldin is split into a few clear pieces:
-
-- `backend/`: FastAPI application, Starlette Admin, authentication, extractors, orchestration flows, and tests.
-- `frontend/`: React/Vite client that talks to the backend through `VITE_API_URL`.
-- `docker-compose.yml`: the local-first entry point for the API, frontend, Postgres, and the separate test Postgres service.
-- `docs/`: project documentation (Docusaurus site, deployed to GitHub Pages).
-
-For deeper backend details, including the data model and future migration workflows, see [backend/README.md](backend/README.md).
-
-## Project Status
-
-Baldin is still early. Expect rough edges, evolving APIs, documentation gaps, breaking changes to data model and unfinished automation workflows.
-
-If you hit something confusing or broken, open an issue in the [issue tracker](https://github.com/danphenderson/baldin/issues).
+For deeper setup, service topology, and environment details, use [docs/docs/getting-started/quickstart.md](docs/docs/getting-started/quickstart.md), [docs/docs/engineering/local-development.md](docs/docs/engineering/local-development.md), and [docs/docs/reference/environment-variables.md](docs/docs/reference/environment-variables.md).
 
 ## Contributing
 
-Contributions are welcome, especially around frontend polish, workflow reliability, and documentation.
-
-1. Create a branch for your change.
-2. Make the change and run the relevant checks.
-3. Push your branch.
-4. Open a pull request.
-
-Before your first commit, install the hooks:
+Use the normal branch-and-pull-request flow against `main`, and install hooks before your first commit:
 
 ```bash
 pre-commit install
 ```
 
-TODO: relocate to CONTRIBUTING.md and reference from herein.
+If you change backend API routes or schemas, regenerate contracts with `./scripts/update_frontend_schemas.sh` instead of editing `openapi.json` or `frontend/src/schema.d.ts` by hand. The canonical contributor workflow lives in [docs/docs/getting-started/contributing.md](docs/docs/getting-started/contributing.md).
+
+## Status And Caveats
+
+Baldin is still early. Expect rough edges, evolving APIs, breaking data-model changes, and unfinished automation workflows.
+
+The supported development path today is the local Docker Compose stack. The material under [cdk/](cdk/) is reference-only while Baldin narrows and rebuilds its deployment path inside this repository.
+
+Launch sequencing, release-boundary work, and remaining runtime hardening are tracked in [plans/REPO_EXECUTION_PLAN.md](plans/REPO_EXECUTION_PLAN.md).
+
+If you hit something confusing or broken, open an issue in the [issue tracker](https://github.com/danphenderson/baldin/issues).
 
 ## License
 

@@ -7,7 +7,6 @@ import pytest
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
 
-from app import models
 from app.core import conf
 from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
 from app.main import app
@@ -126,7 +125,7 @@ async def test_create_group_conversation_pro_only() -> None:
         email_b, uid_b = await _create_user("msg-grp-b", tier="pro")
         email_c, uid_c = await _create_user("msg-grp-c", tier="pro")
         headers_a = await _auth_headers(client, email_a, "msg-grp-a")
-        headers_b = await _auth_headers(client, email_b, "msg-grp-b")
+        await _auth_headers(client, email_b, "msg-grp-b")
 
         # Pro user can create group
         response = await client.post(

@@ -1,14 +1,17 @@
 ---
 sidebar_position: 4
 slug: /engineering/copilot-prompt-cookbook
-title: Copilot Prompt Cookbook
+title: Prompt The Right Agent
+description: Choose the right agent, scope prompts cleanly, and require consistent handbacks.
 ---
 
-# Copilot Prompt Cookbook
+<!-- last-verified: 2026-04-06 -->
+
+# Prompt The Right Agent
 
 Use this page when prompting Baldin's workspace agents. The goal is to start with the smallest correct owner, keep scope explicit, and make handoffs obvious when work crosses backend, frontend, contracts, docs, CI, or deployment boundaries.
 
-Need concrete before-and-after wording examples? See [Good Prompt vs Bad Prompt](/engineering/copilot-prompt-examples).
+Need concrete before-and-after wording examples? See [Rewrite Weak Prompts](./copilot-prompt-examples.md).
 
 ## Recommended Operating Model
 
@@ -151,14 +154,7 @@ Validation:
 - add or update targeted backend tests if behavior changes materially
 
 Return:
-- Status: complete, partial, or blocked.
-- Summary: what changed, delegated, or decided and why.
-- Files touched or reviewed.
-- Commands run and result summary.
-- Whether API routes or schemas changed.
-- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
-- Risks, blockers, or assumptions.
-- Recommended next owner, if any.
+- use the Standard Handback schema from this cookbook.
 
 Stop and hand off if frontend changes, schema regeneration ownership, or other cross-stack work is required.
 ```
@@ -199,14 +195,7 @@ Validation:
 - add or update targeted frontend tests if behavior changes materially
 
 Return:
-- Status: complete, partial, or blocked.
-- Summary: what changed, delegated, or decided and why.
-- Files touched or reviewed.
-- Commands run and result summary.
-- Whether API routes or schemas changed.
-- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
-- Risks, blockers, or assumptions.
-- Recommended next owner, if any.
+- use the Standard Handback schema from this cookbook.
 
 Stop and hand off if a missing or incorrect API contract is the real problem.
 ```
@@ -244,14 +233,7 @@ Validation:
 - validate docs, CI, or docker-compose changes when touched
 
 Return:
-- Status: complete, partial, or blocked.
-- Summary: what changed, delegated, or decided and why.
-- Files touched or reviewed.
-- Commands run and result summary.
-- Whether API routes or schemas changed.
-- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
-- Risks, blockers, or assumptions.
-- Recommended next owner, if any.
+- use the Standard Handback schema from this cookbook.
 
 Delegate isolated backend-only and frontend-only slices by default, but keep contract and integration ownership here.
 ```
@@ -406,3 +388,10 @@ Do not implement yet unless this is obviously a tiny single-owner fix.
 - Do not ask Baldin Backend Agent to patch frontend, docs, or CI as a hidden side quest.
 - Do not use Baldin Lead Full-Stack Architect for a plainly backend-only or frontend-only task when a smaller owner would do.
 - Do not give any agent a fuzzy “just handle everything automatically” prompt without a stop condition, validation expectations, and a named owner.
+
+## Related Docs
+
+- [Contribute Safely](../getting-started/contributing.md)
+- [Run The Right Checks](./testing.md)
+- [Regenerate API Contracts](./contract-management.md)
+- [Rewrite Weak Prompts](./copilot-prompt-examples.md)

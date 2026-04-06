@@ -15,6 +15,7 @@ from app.api.deps import (
     run_extractor,
     schemas,
 )
+from app.core.url_safety import validate_url_safe_for_fetch
 
 router: APIRouter = APIRouter()
 
@@ -100,6 +101,11 @@ async def extract_company(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
+    try:
+        validate_url_safe_for_fetch(extraction_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     logger.warning(f"User {user.id} triggered company extraction for {extraction_url}")
     # Get extractor, create one if it doesn't exist
     try:
@@ -135,6 +141,8 @@ async def extract_company(
         res = await run_extractor(
             schemas.ExtractorRead(**extractor.__dict__), payload, user, db
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error running extractor: {extractor}")
         logger.error(e)

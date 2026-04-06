@@ -3,7 +3,6 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import UUID4
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import selectinload
 

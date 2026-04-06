@@ -7,15 +7,11 @@ ETL adapter normalization, and scheduler guard.
 """
 
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
-from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
 
 from app import models, schemas
 from app.api import deps as api_deps
@@ -502,7 +498,7 @@ async def test_resume_completed_run_returns_409():
 # ---------------------------------------------------------------------------
 
 
-def test_crawler_result_to_lead_create_produces_valid_payload():
+async def test_crawler_result_to_lead_create_produces_valid_payload():
     """crawler_result_to_lead_create converts CrawlerResult to LeadCreate."""
     result = CrawlerResult(
         url="https://example.com/jobs/123",
@@ -526,7 +522,7 @@ def test_crawler_result_to_lead_create_produces_valid_payload():
     assert lead_create.company_ids is None
 
 
-def test_crawler_result_to_lead_create_no_company():
+async def test_crawler_result_to_lead_create_no_company():
     """When company_name is None, description is not prefixed."""
     result = CrawlerResult(
         url="https://example.com/jobs/456",
@@ -537,7 +533,7 @@ def test_crawler_result_to_lead_create_no_company():
     assert lead_create.description == "Design things"
 
 
-def test_crawler_result_to_lead_create_empty_description_with_company():
+async def test_crawler_result_to_lead_create_empty_description_with_company():
     """When description is empty but company_name exists, description is just the company."""
     result = CrawlerResult(
         url="https://example.com/jobs/789",
@@ -592,7 +588,7 @@ async def test_create_lead_deduplication_via_canonical_url():
 # ---------------------------------------------------------------------------
 
 
-def test_linkedin_crawler_can_be_instantiated():
+async def test_linkedin_crawler_can_be_instantiated():
     """LinkedInCrawler can be instantiated without network."""
     from etl.linkedin import LinkedInCrawler
 
@@ -605,7 +601,7 @@ def test_linkedin_crawler_can_be_instantiated():
     assert crawler.page_end == 2
 
 
-def test_glassdoor_crawler_can_be_instantiated():
+async def test_glassdoor_crawler_can_be_instantiated():
     """GlassdoorCrawler can be instantiated without network."""
     from etl.glassdoor import GlassdoorCrawler
 
@@ -614,7 +610,7 @@ def test_glassdoor_crawler_can_be_instantiated():
     assert crawler.location == "Remote"
 
 
-def test_crawler_result_fields_map_to_lead_create():
+async def test_crawler_result_fields_map_to_lead_create():
     """All CrawlerResult fields map correctly to LeadCreate."""
     result = CrawlerResult(
         url="https://example.com/job/test-mapping",
@@ -645,7 +641,7 @@ def test_crawler_result_fields_map_to_lead_create():
 # ---------------------------------------------------------------------------
 
 
-def test_scheduler_disabled_in_pytest_environment():
+async def test_scheduler_disabled_in_pytest_environment():
     """SHOULD_RUN_CRAWLER_SCHEDULER is False when ENVIRONMENT=PYTEST."""
     assert conf.settings.ENVIRONMENT == "PYTEST"
     assert conf.settings.SHOULD_RUN_CRAWLER_SCHEDULER is False

@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from app import schemas, utils
+from app import utils
 from app.core import conf, openai
 from app.etl.base import Job
 from app.logging import console_log

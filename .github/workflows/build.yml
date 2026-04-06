@@ -1,4 +1,4 @@
-name: Build Public Preview Artifacts
+name: Build Candidate Artifacts
 
 on:
   workflow_dispatch:
@@ -20,13 +20,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build backend container image
-        run: docker build -f backend/Dockerfile -t baldin-api-preview:${{ github.sha }} backend
+        run: docker build -f backend/Dockerfile -t baldin-api-candidate:${{ github.sha }} backend
 
       - name: Capture backend build metadata
         run: |
           mkdir -p build-artifacts/backend
-          docker image inspect baldin-api-preview:${GITHUB_SHA} > build-artifacts/backend/image-inspect.json
-          printf '%s\n' "baldin-api-preview:${GITHUB_SHA}" > build-artifacts/backend/image-name.txt
+          docker image inspect baldin-api-candidate:${GITHUB_SHA} > build-artifacts/backend/image-inspect.json
+          printf '%s\n' "baldin-api-candidate:${GITHUB_SHA}" > build-artifacts/backend/image-name.txt
 
       - name: Upload backend build metadata
         uses: actions/upload-artifact@v4

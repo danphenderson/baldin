@@ -1,10 +1,13 @@
 ---
 sidebar_position: 3
 slug: /engineering/contract-management
-title: Contract Management
+title: Regenerate API Contracts
+description: Regenerate OpenAPI and frontend types without drifting from the backend contract.
 ---
 
-# Contract Management
+<!-- last-verified: 2026-04-06 -->
+
+# Regenerate API Contracts
 
 The API contract is the formal interface between the backend and frontend. It flows in one direction: **backend → contract → frontend**.
 
@@ -31,7 +34,7 @@ SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh
 
 ### What the script does
 
-1. **Gate check:** Exits early unless `backend/app/schemas.py` or `backend/app/api/*.py` files are staged in git (or `SCHEMA_UPDATE_FORCE=1` is set).
+1. **Gate check:** Exits early unless `backend/app/schemas.py` or `backend/app/api/**/*.py` files are staged in git (or `SCHEMA_UPDATE_FORCE=1` is set).
 2. **Generate OpenAPI:** Runs Python to extract `app.openapi()` and writes `openapi.json`.
 3. **Generate TypeScript:** Runs `npm exec openapi-typescript` to produce `frontend/src/schema.d.ts`.
 4. **Stage artifacts:** Adds both files to the git index.
@@ -42,7 +45,8 @@ Regenerate the contract whenever you change:
 
 - `backend/app/schemas.py` — Pydantic models that define request/response shapes
 - `backend/app/api/routes/*.py` — Route definitions that affect endpoint signatures
-- `backend/app/models.py` — SQLAlchemy models (if they influence schema fields)
+
+Model-only changes do not automatically trigger regeneration unless they also change the FastAPI schema surface. If a model change is reflected through route responses or request models, update the schema layer and then regenerate.
 
 ### CI guard
 
@@ -51,7 +55,14 @@ The **schema-freshness** CI job regenerates the contract in a clean environment 
 ## Common Issues
 
 **Script exits without doing anything:**
-The script only runs when it detects staged backend schema or API route files. Set `SCHEMA_UPDATE_FORCE=1` when validating unstaged changes.
+The script only runs when it detects staged backend schema or API route files. Set `SCHEMA_UPDATE_FORCE=1` when validating unstaged changes or broader backend work.
 
 **TypeScript errors after backend changes:**
 Regenerate the contract and verify that frontend service modules still match the updated types.
+
+## Related Docs
+
+- [Browse API Routes](../architecture/api-surface.md)
+- [See Frontend Boundaries](../architecture/frontend-architecture.md)
+- [Run The Right Checks](./testing.md)
+- [See Merge Gates](./ci-pipeline.md)

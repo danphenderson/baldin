@@ -6,6 +6,8 @@ from typing import Any
 
 from aiofiles import open as aopen
 from fastapi import Depends, File, Form, HTTPException, UploadFile
+from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
@@ -30,8 +32,8 @@ from app.api.deps import (
     run_extractor,
     schemas,
 )
-from app.core.langchain import extract_text_from_url
 from app.core.url_parsers import extract_text_from_url_smart
+from app.core.url_safety import UnsafeFetchUrlError
 from app.extractor.parsing import parse_binary_input
 
 router = fastapi_users.get_users_router(schemas.UserRead, schemas.UserUpdate)
@@ -54,11 +56,16 @@ async def get_profile_extract_payload(
 
     Single-source: standard ``file``/``url``/``text`` fields.
     """
-    _strip = lambda v: (
-        None
-        if not v or not v.strip() or v.strip().lower() in ("null", "undefined")
-        else v.strip()
-    )  # noqa: E731
+
+    def _strip(value: str | None) -> str | None:
+        if not value:
+            return None
+
+        stripped_value = value.strip()
+        if not stripped_value or stripped_value.lower() in ("null", "undefined"):
+            return None
+
+        return stripped_value
 
     if sources_json and _strip(sources_json):
         try:
@@ -76,24 +83,37 @@ async def get_profile_extract_payload(
             src_file: UploadFile | None = None
             if file_idx is not None and 0 <= int(file_idx) < len(source_files):
                 src_file = source_files[int(file_idx)]
-            parsed.append(
-                schemas.ProfileExtractSource(url=src_url, text=src_text, file=src_file)
-            )
+            try:
+                parsed.append(
+                    schemas.ProfileExtractSource(
+                        url=src_url,
+                        text=src_text,
+                        file=src_file,
+                    )
+                )
+            except ValidationError as exc:
+                raise RequestValidationError(exc.errors()) from exc
 
-        return schemas.ExtractorRun(
-            mode=mode,
-            llm=_strip(llm),
-            sources=parsed,
-        )
+        try:
+            return schemas.ExtractorRun(
+                mode=mode,
+                llm=_strip(llm),
+                sources=parsed,
+            )
+        except ValidationError as exc:
+            raise RequestValidationError(exc.errors()) from exc
 
     # Single-source fallback
-    return schemas.ExtractorRun(
-        mode=mode,
-        file=file,
-        text=_strip(text),
-        url=_strip(url),
-        llm=_strip(llm),
-    )
+    try:
+        return schemas.ExtractorRun(
+            mode=mode,
+            file=file,
+            text=_strip(text),
+            url=_strip(url),
+            llm=_strip(llm),
+        )
+    except ValidationError as exc:
+        raise RequestValidationError(exc.errors()) from exc
 
 
 @router.get("/me/profile", response_model=schemas.UserProfileRead)
@@ -258,7 +278,10 @@ async def _resolve_source_text(
     if source.text:
         return source.text
     if source.url:
-        return await extract_text_from_url_smart(str(source.url))
+        try:
+            return await extract_text_from_url_smart(str(source.url))
+        except UnsafeFetchUrlError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     if source.file:
         documents = parse_binary_input(
             source.file.file,
@@ -279,7 +302,10 @@ async def _extract_text_from_payload(
     if payload.text:
         return payload.text
     if payload.url:
-        return await extract_text_from_url_smart(str(payload.url))
+        try:
+            return await extract_text_from_url_smart(str(payload.url))
+        except UnsafeFetchUrlError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     if payload.file:
         documents = parse_binary_input(
             payload.file.file,

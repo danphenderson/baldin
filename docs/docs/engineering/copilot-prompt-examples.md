@@ -1,12 +1,15 @@
 ---
 sidebar_position: 5
 slug: /engineering/copilot-prompt-examples
-title: Good Prompt vs Bad Prompt
+title: Rewrite Weak Prompts
+description: Turn vague prompts into scoped requests with validation and handback rules.
 ---
 
-# Good Prompt vs Bad Prompt
+<!-- last-verified: 2026-04-06 -->
 
-Use this page as a companion to the [Copilot Prompt Cookbook](/engineering/copilot-prompt-cookbook). The fastest way to get better results from Baldin's agents is to be explicit about owner, scope, validation, the standard handback, and when to stop and hand off.
+# Rewrite Weak Prompts
+
+Use this page as a companion to [Prompt The Right Agent](./copilot-prompt-cookbook.md). The fastest way to get better results from Baldin's agents is to be explicit about owner, scope, validation, the standard handback, and when to stop and hand off.
 
 ## What Usually Separates A Good Prompt From A Bad One
 
@@ -91,14 +94,7 @@ Validation:
 - add a regression test
 
 Return:
-- Status: complete, partial, or blocked.
-- Summary: what changed, delegated, or decided and why.
-- Files touched or reviewed.
-- Commands run and result summary.
-- Whether API routes or schemas changed.
-- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
-- Risks, blockers, or assumptions.
-- Recommended next owner, if any.
+- use the Standard Handback fields from the Copilot Prompt Cookbook.
 
 Stop and hand off if this changes the public API contract.
 ```
@@ -142,14 +138,7 @@ Validation:
 - run ./node_modules/.bin/tsc --noEmit
 
 Return:
-- Status: complete, partial, or blocked.
-- Summary: what changed, delegated, or decided and why.
-- Files touched or reviewed.
-- Commands run and result summary.
-- Whether API routes or schemas changed.
-- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
-- Risks, blockers, or assumptions.
-- Recommended next owner, if any.
+- use the Standard Handback fields from the Copilot Prompt Cookbook.
 
 Stop and hand off if the needed state is not available from the current API contract.
 ```
@@ -191,14 +180,7 @@ Validation:
 - run ./scripts/update_frontend_schemas.sh
 
 Return:
-- Status: complete, partial, or blocked.
-- Summary: what changed, delegated, or decided and why.
-- Files touched or reviewed.
-- Commands run and result summary.
-- Whether API routes or schemas changed.
-- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
-- Risks, blockers, or assumptions.
-- Recommended next owner, if any.
+- use the Standard Handback fields from the Copilot Prompt Cookbook.
 
 Delegate isolated backend-only and frontend-only slices by default, but keep contract ownership here.
 ```
@@ -282,14 +264,7 @@ Validation:
 - run ./scripts/update_frontend_schemas.sh
 
 Return:
-- Status: complete, partial, or blocked.
-- Summary: what changed, delegated, or decided and why.
-- Files touched or reviewed.
-- Commands run and result summary.
-- Whether API routes or schemas changed.
-- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
-- Risks, blockers, or assumptions.
-- Recommended next owner, if any.
+- use the Standard Handback fields from the Copilot Prompt Cookbook.
 
 Do not widen the task beyond this slice without stating why and naming the next owner.
 ```
@@ -346,3 +321,9 @@ Own cross-stack design, delegation, and integration across backend, frontend, an
 - Ask for the standard handback fields whenever an agent is expected to implement or validate changes.
 - Ask for generated-artifact status whenever API routes or schemas might move.
 - Ask for validation evidence every time.
+
+## Related Docs
+
+- [Prompt The Right Agent](./copilot-prompt-cookbook.md)
+- [Contribute Safely](../getting-started/contributing.md)
+- [Run The Right Checks](./testing.md)

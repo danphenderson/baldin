@@ -30,6 +30,7 @@ from app.api.deps import (
     schemas,
 )
 from app.core.db import session_context
+from app.core.url_safety import validate_url_safe_for_fetch
 
 logger = logging.get_logger(__name__)
 
@@ -364,6 +365,7 @@ async def extract_lead(
     logger.info(f"User {user.id} triggered lead extraction for {submitted_url}")
     try:
         utils.canonicalize_lead_url(submitted_url)
+        validate_url_safe_for_fetch(submitted_url)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

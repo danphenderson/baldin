@@ -18,6 +18,8 @@ from app.api.deps import (  # noqa
     schemas,
     update_orchestration_event_for_current_user,
 )
+from app.core.document_storage import remove_extractor_run_source_files
+from app.core.extractor_retry import get_extractor_event_file_source_paths
 
 router: APIRouter = APIRouter()
 
@@ -49,7 +51,9 @@ async def create_orch_pipeline(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    pipeline_model = models.OrchestrationPipeline(**pipeline.dict(), user_id=user.id)
+    pipeline_model = models.OrchestrationPipeline(
+        **pipeline.model_dump(), user_id=user.id
+    )
     db.add(pipeline_model)
     await db.commit()
     return await get_orchestration_pipeline(pipeline_model.id, db, user)
@@ -62,7 +66,9 @@ async def update_orch_pipeline(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    for field, value in payload.dict(exclude_unset=True, exclude={"events"}).items():
+    for field, value in payload.model_dump(
+        exclude_unset=True, exclude={"events"}
+    ).items():
         setattr(pipeline, field, value)
     await db.commit()
     return await get_orchestration_pipeline(pipeline.id, db, user)
@@ -144,13 +150,29 @@ async def prune_orchestration_events(
     """Delete completed/failed orchestration events older than the specified age."""
     cutoff = datetime.utcnow() - timedelta(days=older_than_days)
     result = await db.execute(
-        delete(models.OrchestrationEvent).where(
+        select(models.OrchestrationEvent).where(
             models.OrchestrationEvent.status.in_(["success", "failure"]),
             models.OrchestrationEvent.created_at < cutoff,
         )
     )
+    events = result.scalars().all()
+    event_ids = [event.id for event in events]
+    stored_source_paths: list[str] = []
+    for event in events:
+        stored_source_paths.extend(get_extractor_event_file_source_paths(event.payload))
+
+    deleted_count = 0
+    if event_ids:
+        delete_result = await db.execute(
+            delete(models.OrchestrationEvent).where(
+                models.OrchestrationEvent.id.in_(event_ids)
+            )
+        )
+        deleted_count = delete_result.rowcount or 0
+
     await db.commit()
-    return {"deleted": result.rowcount}
+    remove_extractor_run_source_files(stored_source_paths)
+    return {"deleted": deleted_count}
 
 
 @router.get(
@@ -173,7 +195,7 @@ async def create_orch_event(
     user: schemas.UserRead = Depends(get_current_user),
 ):
     await get_orchestration_pipeline(event.pipeline_id, db, user)
-    event_model = models.OrchestrationEvent(**event.dict())
+    event_model = models.OrchestrationEvent(**event.model_dump())
     db.add(event_model)
     await db.commit()
     await db.refresh(event_model)

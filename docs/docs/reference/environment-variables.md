@@ -1,10 +1,17 @@
 ---
 sidebar_position: 2
 slug: /reference/environment-variables
-title: Environment Variables
+title: Look Up Settings
+description: Look up runtime configuration, derived startup behavior, and the settings most likely to matter.
 ---
 
-# Environment Variables
+<!-- last-verified: 2026-04-06 -->
+
+# Look Up Settings
+
+This page documents the environment surface currently read by `backend/app/core/conf.py` and the frontend build configuration. Some behaviors that look like settings elsewhere in the docs are actually derived properties, not standalone environment variables.
+
+Use this page as the reference source for configuration. If you are setting up the stack for the first time, start with [Boot The Stack](../getting-started/quickstart.md) instead of treating this as a setup checklist.
 
 ## Backend (`backend/.env`)
 
@@ -20,51 +27,62 @@ Copy `backend/.env.example` to `backend/.env` for local development.
 
 ### Database
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
+| Variable | Local example | Purpose |
+|----------|---------------|---------|
 | `DEFAULT_DATABASE_HOSTNAME` | `db` | Main database host |
 | `DEFAULT_DATABASE_PORT` | `5432` | Main database port |
 | `DEFAULT_DATABASE_DB` | `db` | Main database name |
 | `DEFAULT_DATABASE_USER` | `postgres` | Main database user |
 | `DEFAULT_DATABASE_PASSWORD` | `postgres` | Main database password |
 | `TEST_DATABASE_HOSTNAME` | `test_db` | Test database host |
-| `TEST_DATABASE_PORT` | `5432` | Test database port |
+| `TEST_DATABASE_PORT` | `5431` | Test database port |
 | `TEST_DATABASE_DB` | `test_db` | Test database name |
 | `TEST_DATABASE_USER` | `postgres` | Test database user |
 | `TEST_DATABASE_PASSWORD` | `postgres` | Test database password |
 
 ### Application
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `ENVIRONMENT` | `DEV` | Runtime environment (`DEV`, `PYTEST`, `STAGING`, `PRODUCTION`) |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | JWT token lifetime |
-| `BACKEND_CORS_ORIGINS` | `http://localhost:5173` | Allowed CORS origins (comma-separated) |
-| `MAX_CONCURRENCY` | `1` | Extraction concurrency limit |
+| Variable | Local example | Purpose |
+|----------|---------------|---------|
+| `ENVIRONMENT` | `DEV` | Runtime environment (`DEV`, `PYTEST`, `STAGE`, `PROD`) |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `11520` | JWT token lifetime |
+| `BACKEND_CORS_ORIGINS` | `http://localhost:5173,http://localhost:8004` | Allowed CORS origins (comma-separated) |
+| `MAX_CONCURRENCY` | `8` | Extraction concurrency limit |
 | `MAX_CHUNKS` | `-1` | Maximum extraction chunks (-1 = unlimited) |
-| `LOGGING_LEVEL` | `INFO` | Python logging level |
+| `LOGGING_LEVEL` | `DEBUG` | Python logging level |
+| `PUBLIC_ASSETS_DIR` | `public` | Root directory for uploads, logs, seeds, and other local persisted assets |
 
 ### AI / Extraction
 
 | Variable | Purpose |
 |----------|---------|
 | `OPENAI_API_KEY` | Enables AI-assisted extraction and automation features |
+| `OPENAI_COMPLETION_MODEL` | Optional override for the completion model |
+| `OPENAI_DEFAULT_MODEL` | Optional override for the default chat model |
 
 ### Crawlers (Optional)
 
 | Variable | Purpose |
 |----------|---------|
-| `LINKEDIN_EMAIL` | LinkedIn crawler authentication |
+| `LINKEDIN_USERNAME` | LinkedIn crawler authentication |
 | `LINKEDIN_PASSWORD` | LinkedIn crawler authentication |
-| `GLASSDOOR_EMAIL` | Glassdoor crawler authentication |
+| `GLASSDOOR_USERNAME` | Glassdoor crawler authentication |
 | `GLASSDOOR_PASSWORD` | Glassdoor crawler authentication |
 
 ### Startup Behavior
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `SHOULD_BOOTSTRAP_ON_STARTUP` | `True` | Create tables and default superuser on startup |
-| `SHOULD_RUN_CRAWLER_SCHEDULER` | `False` | Start the background crawler scheduler |
+| Setting | Source | Meaning |
+|----------|--------|---------|
+| `SHOULD_BOOTSTRAP_ON_STARTUP` | Derived from `ENVIRONMENT` | `True` in `DEV` and `PYTEST`; controls local schema/bootstrap behavior |
+| `SHOULD_RUN_CRAWLER_SCHEDULER` | Derived from `ENVIRONMENT` + `CRAWLER_SCHEDULER_ENABLED` | Disabled in `PYTEST`; otherwise follows the runtime toggle |
+| `SHOULD_RUN_REAPER` | Derived from `ENVIRONMENT` + `RUN_REAPER_ENABLED` | Disabled in `PYTEST`; otherwise follows the runtime toggle |
+
+Related runtime toggles exposed through settings:
+
+| Variable | Code default | Purpose |
+|----------|--------------|---------|
+| `CRAWLER_SCHEDULER_ENABLED` | `True` | Enables the crawler scheduler outside `PYTEST` |
+| `RUN_REAPER_ENABLED` | `True` | Enables the background reaper outside `PYTEST` |
 
 ## Frontend
 
@@ -76,9 +94,18 @@ For local development, `VITE_API_URL` is typically set to `http://localhost:8004
 
 ## CI Environment
 
-CI jobs set their own scoped environment variables. See [CI Pipeline](../engineering/ci-pipeline.md) for the full list. Key differences from local:
+CI jobs set their own scoped environment variables. See [See Merge Gates](../engineering/ci-pipeline.md) for the full list. Key differences from local:
 
 - `ENVIRONMENT=PYTEST`
 - `SECRET_KEY=ci-secret-key`
 - Database points to the CI PostgreSQL service on `127.0.0.1:5432`
 - `OPENAI_API_KEY=test-openai-key` (non-functional placeholder)
+
+The frontend production-style build used in CI also sets `VITE_API_URL=https://api.preview.invalid`.
+
+## Start Here Next
+
+- For first-time local setup: [Boot The Stack](../getting-started/quickstart.md)
+- For day-to-day local workflow: [Work Locally](../engineering/local-development.md)
+- For validation and build commands that depend on these settings: [Run The Right Checks](../engineering/testing.md)
+- For release-path implications of runtime settings: [Track Release Readiness](../engineering/release-roadmap.md)

@@ -4,7 +4,7 @@ const sidebars: SidebarsConfig = {
   docs: [
     {
       type: 'category',
-      label: 'Getting Started',
+      label: 'Start Here',
       collapsed: false,
       items: [
         'getting-started/overview',
@@ -14,18 +14,20 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'Architecture',
+      label: 'Understand The System',
       items: [
         'architecture/system-overview',
         'architecture/data-model',
         'architecture/api-surface',
-        'architecture/extraction-pipeline',
         'architecture/frontend-architecture',
+        'architecture/extraction-pipeline',
+        'architecture/document-collaboration',
+        'architecture/networking-and-messaging',
       ],
     },
     {
       type: 'category',
-      label: 'Engineering',
+      label: 'Build, Validate, Release',
       items: [
         'engineering/local-development',
         'engineering/ci-pipeline',
@@ -33,16 +35,16 @@ const sidebars: SidebarsConfig = {
         'engineering/copilot-prompt-cookbook',
         'engineering/copilot-prompt-examples',
         'engineering/testing',
-        'engineering/deployment-status',
+        'engineering/release-roadmap',
       ],
     },
     {
       type: 'category',
-      label: 'Reference',
+      label: 'Look Up Details',
       items: [
         'reference/api-reference',
         'reference/environment-variables',
-        'reference/project-status',
+        'reference/glossary',
       ],
     },
   ],

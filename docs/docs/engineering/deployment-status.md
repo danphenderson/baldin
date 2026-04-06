@@ -5,15 +5,15 @@ title: Deployment Status
 ---
 
 # Deployment Status
-
-Baldin is in developer preview. Deployment automation is being rebuilt — the local Docker Compose stack is the primary supported workflow today.
+title: Track Release Readiness Instead (Archived)
+description: Archived link target preserved for older links. Use Track Release Readiness instead.
 
 ## Current Artifact Contract
-
+# Track Release Readiness Instead (Archived)
 The deployment path starts from two application artifacts:
 
 | Artifact | Source | Output |
-|----------|--------|--------|
+The canonical deployment and release summary now lives at [Track Release Readiness](./release-roadmap.md).
 | Backend container image | `backend/Dockerfile` | Docker image |
 | Frontend static bundle | `frontend/scripts/build-static.mjs` | `frontend/dist/` |
 
@@ -36,7 +36,7 @@ The `cdk/` directory contains partially restored AWS infrastructure code (VPC, E
 - Destructive removal policies
 - Broad IAM scopes and long-lived machine-user patterns
 - Open or overly broad database ingress
-- Disabled helper paths from the old public-repo boundary
+- Disabled helper paths from an earlier repository boundary
 
 ### Safe use right now
 
@@ -52,7 +52,7 @@ Treat this as review and synthesis only.
 
 ## Disabled Paths
 
-**`scripts/sync_frontend_to_s3.sh`** — Intentionally disabled. Outputs an error message directing users to build locally. The public S3 sync was removed when the repo went private.
+**`scripts/sync_frontend_to_s3.sh`** — Intentionally disabled. Outputs an error message directing users to build locally. The legacy S3 sync path was removed when deployment ownership was pulled back into this repository.
 
 ## Schema Management
 

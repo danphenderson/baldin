@@ -5,8 +5,8 @@ from typing import Literal, Union
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
-from pydantic import AnyHttpUrl, AnyUrl, EmailStr, validator
-from pydantic_settings import BaseSettings
+from pydantic import AnyHttpUrl, AnyUrl, EmailStr, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from toml import load as toml_load
 
 PROJECT_DIR = Path(__file__).parent.parent.parent
@@ -18,11 +18,12 @@ PYPROJECT_CONTENT = toml_load(f"{PROJECT_DIR}/pyproject.toml")["project"]
 
 
 class _BaseSettings(BaseSettings):
-    class Config:
-        case_sensitive = False
-        env_file = PROJECT_DIR / ".env"
-        env_file_encoding = "utf-8"
-        extra = "allow"
+    model_config = SettingsConfigDict(
+        case_sensitive=False,
+        env_file=PROJECT_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="allow",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -74,37 +75,39 @@ class Settings(_BaseSettings):
     FIRST_SUPERUSER_PASSWORD: str
 
     # VALIDATORS
-    @validator("BACKEND_CORS_ORIGINS")
-    def _assemble_cors_origins(cls, cors_origins: Union[str, list[AnyHttpUrl]]):
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def _assemble_cors_origins(
+        cls, cors_origins: Union[str, list[AnyHttpUrl]]
+    ) -> Union[str, list[AnyHttpUrl]]:
         if isinstance(cors_origins, str):
             return [item.strip() for item in cors_origins.split(",")]
         return cors_origins
 
-    @validator("DEFAULT_SQLALCHEMY_DATABASE_URI")
-    def _assemble_default_db_connection(cls, v, values):
-        return str(
+    @model_validator(mode="after")
+    def _assemble_db_connections(self) -> "Settings":
+        self.DEFAULT_SQLALCHEMY_DATABASE_URI = str(
             AnyUrl.build(
                 scheme="postgresql+asyncpg",
-                username=values["DEFAULT_DATABASE_USER"],
-                password=values["DEFAULT_DATABASE_PASSWORD"],
-                host=values["DEFAULT_DATABASE_HOSTNAME"],
-                port=values["DEFAULT_DATABASE_PORT"],
-                path=values["DEFAULT_DATABASE_DB"],
+                username=self.DEFAULT_DATABASE_USER,
+                password=self.DEFAULT_DATABASE_PASSWORD,
+                host=self.DEFAULT_DATABASE_HOSTNAME,
+                port=self.DEFAULT_DATABASE_PORT,
+                path=self.DEFAULT_DATABASE_DB,
             )
         )
 
-    @validator("TEST_SQLALCHEMY_DATABASE_URI")
-    def _assemble_test_db_connection(cls, v, values):
-        return str(
+        self.TEST_SQLALCHEMY_DATABASE_URI = str(
             AnyUrl.build(
                 scheme="postgresql+asyncpg",
-                username=values["TEST_DATABASE_USER"],
-                password=values["TEST_DATABASE_PASSWORD"],
-                host=values["TEST_DATABASE_HOSTNAME"],
-                port=int(values["TEST_DATABASE_PORT"]),
-                path=values["TEST_DATABASE_DB"],
+                username=self.TEST_DATABASE_USER,
+                password=self.TEST_DATABASE_PASSWORD,
+                host=self.TEST_DATABASE_HOSTNAME,
+                port=int(self.TEST_DATABASE_PORT),
+                path=self.TEST_DATABASE_DB,
             )
         )
+        return self
 
     @property
     def DATALAKE_PATH(self) -> Path:

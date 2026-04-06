@@ -759,7 +759,7 @@ async def update_document(
     doc = await get_document(document_id, db, user)
     _require_role(doc, {"owner"})
     previous_status = doc.status
-    data = payload.dict(exclude_unset=True)
+    data = payload.model_dump(exclude_unset=True)
     for field, value in data.items():
         if isinstance(value, schemas.DocumentStatus):
             value = value.value

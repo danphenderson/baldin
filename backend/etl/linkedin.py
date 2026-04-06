@@ -104,13 +104,20 @@ class LinkedInCrawler(CrawlerBase):
 
     # -- search orchestration ------------------------------------------------
 
-    def _build_search_url(self, start: int = 0) -> str:
+    def _build_search_url(
+        self,
+        start: int = 0,
+        keywords: list[str] | None = None,
+        location: str | None = None,
+    ) -> str:
         """Build the guest search API URL with query parameters."""
         params: list[str] = []
-        if self.keywords:
-            params.append(f"keywords={'+'.join(self.keywords)}")
-        if self.location:
-            params.append(f"location={self.location}")
+        resolved_keywords = self.keywords if keywords is None else keywords
+        resolved_location = self.location if location is None else location
+        if resolved_keywords:
+            params.append(f"keywords={'+'.join(resolved_keywords)}")
+        if resolved_location:
+            params.append(f"location={resolved_location}")
         params.append(f"start={start}")
         return f"{LINKEDIN_GUEST_SEARCH_API}?{'&'.join(params)}"
 
@@ -125,7 +132,7 @@ class LinkedInCrawler(CrawlerBase):
 
         Falls back to constructor parameters when arguments are omitted.
         """
-        kw = keywords or self.keywords
+        resolved_keywords = keywords if keywords is not None else self.keywords
         loc = location if location is not None else self.location
         sp = start_page if start_page is not None else self.page_start
         ep = end_page if end_page is not None else self.page_end
@@ -136,7 +143,11 @@ class LinkedInCrawler(CrawlerBase):
                 logger.info("Reached max offset (%d), stopping", LINKEDIN_MAX_OFFSET)
                 break
 
-            url = self._build_search_url(start=offset)
+            url = self._build_search_url(
+                start=offset,
+                keywords=resolved_keywords,
+                location=loc,
+            )
             logger.info("Fetching search page %d (offset %d)", page_num, offset)
 
             try:
@@ -210,7 +221,6 @@ class LinkedInCrawler(CrawlerBase):
         seniority = criteria[0] if len(criteria) > 0 else None
         employment_type = criteria[1] if len(criteria) > 1 else None
         job_function = criteria[2] if len(criteria) > 2 else None
-        industries = criteria[3] if len(criteria) > 3 else None
 
         return CrawlerResult(
             url=url,

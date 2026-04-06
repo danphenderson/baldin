@@ -1,19 +1,30 @@
 ---
 sidebar_position: 3
 slug: /getting-started/contributing
-title: Contributing
+title: Contribute Safely
+description: Choose the right workflow, validation, and ownership rules before opening a pull request.
 ---
 
-# Contributing
+<!-- last-verified: 2026-04-06 -->
+
+# Contribute Safely
 
 Contributions are welcome, especially around frontend polish, workflow reliability, and documentation.
 
-## Workflow
+## Default Workflow
 
 1. Create a branch for your change.
-2. Make the change and run the relevant checks.
-3. Push your branch.
-4. Open a pull request against `main`.
+2. Make the smallest complete change that fits the current repo boundaries.
+3. Run the relevant checks for the surface you changed.
+4. Push your branch.
+5. Open a pull request against `main`.
+
+## Source-Of-Truth Rules
+
+- Edit docs source under `docs/docs/`, not `docs/build/`.
+- Do not hand-edit generated contract artifacts such as `openapi.json` or `frontend/src/schema.d.ts`.
+- If backend routes or schemas change, regenerate contracts with `./scripts/update_frontend_schemas.sh`.
+- Prefer the Docusaurus site as the canonical documentation surface. Keep the root README and backend README as pointers, not competing references.
 
 ## Copilot-Assisted Workflow
 
@@ -30,7 +41,20 @@ If you use Baldin's Copilot setup, prefer this sequence:
 5. Open the pull request and, if useful, request Copilot review as a secondary reviewer.
 6. Keep human approval as the final merge gate.
 
-See [Copilot Prompt Cookbook](../engineering/copilot-prompt-cookbook.md) for prompt templates and [Good Prompt vs Bad Prompt](../engineering/copilot-prompt-examples.md) for concrete examples.
+See [Prompt The Right Agent](../engineering/copilot-prompt-cookbook.md) for prompt templates and [Rewrite Weak Prompts](../engineering/copilot-prompt-examples.md) for concrete examples.
+
+## Validation Expectations
+
+Run the narrowest relevant validation for the surface you touched:
+
+| Surface | Expected validation |
+| --- | --- |
+| Backend Python | pre-commit hooks plus backend tests |
+| Frontend | tests, typecheck, and production-style build when behavior changed |
+| Docs | `npm --prefix docs run build` |
+| Backend API/schema | contract regeneration plus any affected frontend checks |
+
+See [Run The Right Checks](../engineering/testing.md) and [See Merge Gates](../engineering/ci-pipeline.md) for the current command set and job coverage.
 
 ## Pre-commit Hooks
 
@@ -44,18 +68,7 @@ The pre-commit suite runs `isort`, `black`, and `flake8` scoped to `backend/`.
 
 ## Required CI Checks
 
-Pull requests must pass these checks before merge:
-
-| Check | What it validates |
-|-------|-------------------|
-| **Pre-commit hooks** | Python formatting and linting (isort, black, flake8) |
-| **Backend tests** | `pytest` with 40% coverage gate |
-| **Frontend tests** | `vitest` suite |
-| **Frontend typecheck** | `tsc --noEmit` |
-| **Frontend build** | Vite production build with non-localhost `VITE_API_URL` |
-| **Schema freshness** | OpenAPI contract regeneration guard |
-
-See [CI Pipeline](../engineering/ci-pipeline.md) for details on each job.
+Pull requests must pass the required status checks documented in [See Merge Gates](../engineering/ci-pipeline.md). In practice that means formatting and linting, backend tests with coverage, frontend tests, frontend typecheck, production-style frontend build validation, and API contract freshness when the schema surface changes.
 
 ## Branch Protection
 
@@ -65,3 +78,17 @@ See [CI Pipeline](../engineering/ci-pipeline.md) for details on each job.
 - No force pushes or deletions.
 
 Copilot review can help catch routine issues, but it does not replace human review or the required CI checks.
+
+## Scope And Ownership Guidelines
+
+- Backend-only work belongs in `backend/app` or `backend/etl`.
+- Frontend product work belongs in `frontend/src`.
+- Cross-stack contract, docs, CI, and release-boundary work should update all affected surfaces together.
+- Avoid speculative abstractions or parallel systems. Baldin is still local-first and developer-preview.
+
+## Start Here Next
+
+- For exact validation commands: [Run The Right Checks](../engineering/testing.md)
+- For CI and merge-gate behavior: [See Merge Gates](../engineering/ci-pipeline.md)
+- For contract regeneration rules: [Regenerate API Contracts](../engineering/contract-management.md)
+- For agent prompting and handback patterns: [Prompt The Right Agent](../engineering/copilot-prompt-cookbook.md)

@@ -1,9 +1,9 @@
 # Deployment Control Plane Transition Note
 
 This document is retained as a historical marker for the period when Baldin treated deployment as
-an external private boundary. That assumption is now superseded.
+an external control-plane boundary. That assumption is now superseded.
 
-The repository is private again and is regaining deployment ownership so the team can move faster
+This repository now carries deployment ownership so the team can move faster
 without splitting core product and release work across separate codebases.
 
 ## Current Direction
@@ -18,7 +18,7 @@ without splitting core product and release work across separate codebases.
 This file should be read as a caution against blindly restoring the old deployment story, not as the
 active operating model.
 
-The team should not re-enable legacy deployment paths just because the repo is private again.
+The team should not re-enable legacy deployment paths just because deployment ownership has returned to this repository.
 Any renewed deployment path still needs a current environment model, approval gates, rollback,
 and explicit operator guidance.
 

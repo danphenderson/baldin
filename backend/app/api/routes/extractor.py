@@ -23,6 +23,7 @@ from app.api.deps import (
     schemas,
 )
 from app.core import conf
+from app.core.extractor_retry import rehydrate_extractor_run
 from app.core.rate_limit import limiter
 
 router: APIRouter = APIRouter()
@@ -177,7 +178,10 @@ async def read_extractors(
         result = await db.execute(query)
         extractors = result.scalars().all()
 
-        return [schemas.ExtractorRead.from_orm(extractor) for extractor in extractors]
+        return [
+            schemas.ExtractorRead.model_validate(extractor, from_attributes=True)
+            for extractor in extractors
+        ]
     except Exception as e:
         # Log the exception for debugging
         raise HTTPException(status_code=500, detail=str(e))
@@ -191,7 +195,7 @@ async def create_extractor(
 ) -> schemas.ExtractorRead:
     from app.utils import compute_version_hash
 
-    extractor = models.Extractor(**extractor_in.dict(), user_id=user.id)
+    extractor = models.Extractor(**extractor_in.model_dump(), user_id=user.id)
     db.add(extractor)
     await db.flush()
 
@@ -215,7 +219,7 @@ async def update_extractor(
 ) -> schemas.ExtractorRead:
     from app.utils import compute_version_hash
 
-    changed_fields = payload.dict(exclude_unset=True)
+    changed_fields = payload.model_dump(exclude_unset=True)
     needs_version = "instruction" in changed_fields or "json_schema" in changed_fields
 
     for field, value in changed_fields.items():
@@ -245,7 +249,7 @@ async def update_extractor(
 
     await db.commit()
     await db.refresh(extractor)
-    return schemas.ExtractorRead.from_orm(extractor)
+    return schemas.ExtractorRead.model_validate(extractor, from_attributes=True)
 
 
 @router.delete("/{id}", status_code=204)
@@ -297,7 +301,9 @@ async def create_extractor_example(
     extractor: schemas.ExtractorRead = Depends(get_extractor),
     db: AsyncSession = Depends(get_async_session),
 ) -> schemas.ExtractorExampleRead:
-    example = models.ExtractorExample(**example_in.dict(), extractor_id=extractor.id)
+    example = models.ExtractorExample(
+        **example_in.model_dump(), extractor_id=extractor.id
+    )
     db.add(example)
     await db.commit()
     return example
@@ -366,11 +372,14 @@ async def retry_extractor_run(
     if existing.scalars().first():
         raise HTTPException(status_code=409, detail="An active retry already exists.")
 
-    # Reconstruct the payload from the original event
-    original_payload = event.payload or {}
-    retry_payload = schemas.ExtractorRun(
-        text=original_payload.get("text"),
-        mode=original_payload.get("mode", "entire_document"),
-        llm=original_payload.get("llm"),
-    )
-    return await run_extractor(extractor, retry_payload, user, db)
+    try:
+        retry_payload = rehydrate_extractor_run(event.payload)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Stored retry source is missing for event {event_id}.",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    return await run_extractor(extractor, retry_payload, user, db, retry_of_id=event.id)

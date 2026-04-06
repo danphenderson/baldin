@@ -1,12 +1,15 @@
 ---
 sidebar_position: 1
 slug: /architecture/system-overview
-title: System Overview
+title: See System Boundaries
+description: See the service topology, runtime boundaries, and main product domains.
 ---
 
-# System Overview
+<!-- last-verified: 2026-04-06 -->
 
-Baldin is a full-stack workspace for job-search automation. The system is composed of four services orchestrated through Docker Compose for local development.
+# See System Boundaries
+
+Baldin is a full-stack local-first workspace for job-search automation. The system is developed primarily through Docker Compose, with the frontend, backend, main Postgres database, and separate test database forming the core local topology.
 
 ## Service Topology
 
@@ -34,6 +37,8 @@ graph TB
 | `test_db` | `postgres:15` | 5431 | Isolated test database |
 | `web` | `backend/Dockerfile.dev` | 8004→8000 | FastAPI backend with Uvicorn (hot reload) |
 | `frontend` | `frontend/Dockerfile` | 5173 | React/Vite dev server |
+
+The docs site is intentionally separate from the runtime stack. It is built from `docs/` and does not participate in normal local application startup.
 
 ## Technology Stack
 
@@ -63,3 +68,12 @@ graph TB
 - The **frontend** is a pure client that talks to the backend through `VITE_API_URL`. It never accesses the database directly.
 - The **contract** (`openapi.json` → `schema.d.ts`) is the formal interface between backend and frontend. Changes flow backend → contract → frontend, never the reverse.
 - The **ETL layer** (`backend/etl/`) contains crawler and pipeline code (LinkedIn, Glassdoor). It is not part of the user-triggered extraction runtime path.
+
+## Main Product Domains
+
+- Profile and job-search records
+- Versioned documents and collaboration
+- Extraction, orchestration, and crawler automation
+- Networking, messaging, activity, and action items
+
+Those domains are documented in more detail in [Map The Data Model](./data-model.md), [Understand Document Collaboration](./document-collaboration.md), and [Follow Network Flows](./networking-and-messaging.md).

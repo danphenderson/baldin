@@ -31,7 +31,7 @@ def code(problem: str, context: str = "", language: str = "Python") -> str:
     # see if context is a module in app/
     python_modles = Path("app").rglob("*.py")
     context_msg = ""
-    context_list = context.split(',')
+    context_list = context.split(",")
     for module in python_modles:
         for context in context_list:
             if context.strip() in str(module):
@@ -109,12 +109,10 @@ async def find(query: str, url: str) -> str:
     return html.find(query) | str_output_parser
 
 
-async def docs_codegen(problem, docs_url):
-    ...
+async def docs_codegen(problem, docs_url): ...
 
 
-async def docs_qa(question, docs_url):
-    ...
+async def docs_qa(question, docs_url): ...
 
 
 if __name__ == "__main__":

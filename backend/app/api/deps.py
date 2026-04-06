@@ -1,8 +1,10 @@
 # Path: app/api/deps.py
+import asyncio
 import json
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path  # noqa
 from typing import Any, Sequence
 
@@ -30,6 +32,14 @@ from app.core.db import (  # noqa
     get_async_session,
     session_context,
 )
+from app.core.document_storage import (
+    build_extractor_run_source_path,
+    save_extractor_run_source_file,
+)
+from app.core.extractor_retry import (
+    build_extractor_event_payload,
+    build_extractor_source_uri,
+)
 from app.core.langchain import (  # noqa
     extract_text_from_url,
     generate_cover_letter,
@@ -41,6 +51,7 @@ from app.core.security import (  # noqa
     get_current_superuser,
     get_current_user,
 )
+from app.core.url_safety import UnsafeFetchUrlError
 from app.extractor.extraction_runnable import extract_entire_document  # noqa
 from app.extractor.parsing import (  # noqa
     MAX_FILE_SIZE_MB,
@@ -463,7 +474,7 @@ async def update_orchestration_event(
         or event.orchestration_pipeline.user_id != user.id
     ):
         raise await _403(user.id, event, id)
-    for var, value in payload.dict(exclude_unset=True).items():
+    for var, value in payload.model_dump(exclude_unset=True).items():
         setattr(event, var, value)
     await db.commit()
     await db.refresh(event)
@@ -485,8 +496,10 @@ async def create_orchestration_event(
     db: AsyncSession = Depends(get_async_session),
 ) -> models.OrchestrationEvent:
     # Seralize URIS to JSON stings (for database)
-    setattr(payload, "source_uri", payload.source_uri.json())
-    setattr(payload, "destination_uri", payload.destination_uri.json())
+    if payload.source_uri is not None:
+        setattr(payload, "source_uri", payload.source_uri.json())
+    if payload.destination_uri is not None:
+        setattr(payload, "destination_uri", payload.destination_uri.json())
     # Create new event record in database
     event = models.OrchestrationEvent(**payload.__dict__)
     db.add(event)
@@ -515,7 +528,7 @@ async def create_skill(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Skill:
-    skill = models.Skill(**payload.dict(), user_id=user.id)
+    skill = models.Skill(**payload.model_dump(), user_id=user.id)
     db.add(skill)
     await db.commit()
     await db.refresh(skill)
@@ -528,7 +541,7 @@ async def create_cover_letter(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.CoverLetter:
-    cover_letter = models.CoverLetter(**payload.dict(), user_id=user.id)
+    cover_letter = models.CoverLetter(**payload.model_dump(), user_id=user.id)
     db.add(cover_letter)
     await db.commit()
     await db.refresh(cover_letter)
@@ -541,7 +554,7 @@ async def create_resume(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Resume:
-    resume = models.Resume(**payload.dict(), user_id=user.id)
+    resume = models.Resume(**payload.model_dump(), user_id=user.id)
     db.add(resume)
     await db.commit()
     await db.refresh(resume)
@@ -605,7 +618,7 @@ async def create_experience(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Experience:
-    experience = models.Experience(**payload.dict(), user_id=user.id)
+    experience = models.Experience(**payload.model_dump(), user_id=user.id)
     db.add(experience)
     await db.commit()
     await db.refresh(experience)
@@ -646,7 +659,7 @@ async def create_contact(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Contact:
-    contact = models.Contact(**payload.dict(), user_id=user.id)
+    contact = models.Contact(**payload.model_dump(), user_id=user.id)
     db.add(contact)
     await db.commit()
     await db.refresh(contact)
@@ -701,7 +714,7 @@ async def create_education(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Education:
-    education = models.Education(**payload.dict(), user_id=user.id)
+    education = models.Education(**payload.model_dump(), user_id=user.id)
     db.add(education)
     await db.commit()
     await db.refresh(education)
@@ -728,7 +741,7 @@ async def create_certificate(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Certificate:
-    certificate = models.Certificate(**payload.dict(), user_id=user.id)
+    certificate = models.Certificate(**payload.model_dump(), user_id=user.id)
     db.add(certificate)
     await db.commit()
     await db.refresh(certificate)
@@ -782,7 +795,7 @@ async def create_orchestration_pipeline(
     user: schemas.UserRead,
     db: AsyncSession = Depends(get_async_session),
 ) -> models.OrchestrationPipeline:
-    pipeline = models.OrchestrationPipeline(**payload.dict(), user_id=user.id)
+    pipeline = models.OrchestrationPipeline(**payload.model_dump(), user_id=user.id)
     db.add(pipeline)
     await db.commit()
     await db.refresh(pipeline)
@@ -832,7 +845,7 @@ async def create_extractor(
     user: schemas.UserRead,
     db: AsyncSession = Depends(get_async_session),
 ) -> models.Extractor:
-    extractor = models.Extractor(**payload.dict(), user_id=user.id)
+    extractor = models.Extractor(**payload.model_dump(), user_id=user.id)
     db.add(extractor)
     await db.commit()
     await db.refresh(extractor)
@@ -845,6 +858,7 @@ async def run_extractor(
     payload: schemas.ExtractorRun,
     user: schemas.UserRead,
     db: AsyncSession = Depends(get_async_session),
+    retry_of_id: UUID4 | None = None,
 ) -> schemas.ExtractorResponse:
 
     await log.info(f"Running extractor {extractor.name} with payload {payload}")
@@ -868,17 +882,29 @@ async def run_extractor(
 
     # Load text to run extraction on
     text = payload.text
+    file_source_path: str | None = None
     if text:
         pass
     elif payload.url:
-        text = await extract_text_from_url(str(payload.url))
+        try:
+            text = await extract_text_from_url(str(payload.url))
+        except UnsafeFetchUrlError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     elif payload.file:
+        file_bytes = await payload.file.read()
         documents = parse_binary_input(
-            payload.file.file,
+            BytesIO(file_bytes),
             file_name=payload.file.filename,
             content_type=payload.file.content_type,
         )
         text = "\n".join([document.page_content for document in documents])
+        if text:
+            file_source_path = build_extractor_run_source_path(
+                user.id,
+                uuid.uuid4(),
+                file_name=payload.file.filename,
+            )
+            save_extractor_run_source_file(file_source_path, file_bytes)
 
     if not text:
         raise HTTPException(
@@ -887,24 +913,19 @@ async def run_extractor(
         )
 
     # Create a new event for this extraction run
-    source_uri_name = str(payload.url) or str(payload.file)
-    source_uri_type = (
-        schemas.URIType.URL if "http" in source_uri_name else schemas.URIType.FILE
-    )
     event = await create_orchestration_event(
         schemas.OrchestrationEventCreate(
             message=f"Running extractor {extractor.name} with payload {payload}",
-            payload={
-                "mode": payload.mode,
-                "llm": payload.llm,
-                "text": (
-                    text[:200] if text else None
-                ),  # FIXME: Add slicing to prevent very long text
-                "file": payload.file.filename if payload.file else None,
-            },
+            payload=build_extractor_event_payload(
+                payload,
+                file_source_path=file_source_path,
+            ),
             # type: ignore
             environment=conf.settings.ENVIRONMENT,
-            source_uri=schemas.URI(name=source_uri_name, type=source_uri_type),
+            source_uri=build_extractor_source_uri(
+                payload,
+                file_source_path=file_source_path,
+            ),
             destination_uri=schemas.URI(
                 name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#leads",
                 type=schemas.URIType.DATABASE,
@@ -924,6 +945,8 @@ async def run_extractor(
             getattr(extractor, "instruction", None),
             getattr(extractor, "json_schema", None),
         )
+        if retry_of_id is not None:
+            event_obj.retry_of_id = retry_of_id
         await db.flush()
 
     # Run the extraction event, TODO, cleanup
@@ -1070,7 +1093,9 @@ async def create_crawler_pipeline(
     user: schemas.UserRead,
     db: AsyncSession = Depends(get_async_session),
 ) -> models.CrawlerPipeline:
-    pipeline = models.CrawlerPipeline(**payload.dict(), created_by_user_id=user.id)
+    pipeline = models.CrawlerPipeline(
+        **payload.model_dump(), created_by_user_id=user.id
+    )
     db.add(pipeline)
     await db.commit()
     await db.refresh(pipeline)
@@ -1083,7 +1108,7 @@ async def update_crawler_pipeline(
     payload: schemas.CrawlerPipelineUpdate,
     db: AsyncSession = Depends(get_async_session),
 ) -> models.CrawlerPipeline:
-    for field, value in payload.dict(exclude_unset=True).items():
+    for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(pipeline, field, value)
     await db.commit()
     await db.refresh(pipeline)
@@ -1366,3 +1391,26 @@ async def execute_crawler_run_background(run_id: uuid.UUID, user_id: uuid.UUID) 
             await db.commit()
             return
         await execute_crawler_run(run, db, user)
+
+
+def schedule_crawler_run_execution(
+    run_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    background_tasks: BackgroundTasks | None = None,
+) -> None:
+    """Schedule crawler execution unless the app is running under PYTEST.
+
+    ASGITransport-backed integration tests wait for response background tasks,
+    so launching the real crawler there would pull Playwright and external
+    network work into request assertions. In PYTEST we keep the run in its
+    queued state and let tests mutate statuses explicitly when needed.
+    """
+    if conf.settings.ENVIRONMENT == "PYTEST":
+        return
+
+    if background_tasks is not None:
+        background_tasks.add_task(execute_crawler_run_background, run_id, user_id)
+        return
+
+    asyncio.create_task(execute_crawler_run_background(run_id, user_id))

@@ -5,6 +5,7 @@ from uuid import UUID
 from app.core import conf
 
 UPLOADS_SUBDIR = "uploads"
+EXTRACTOR_RUNS_SUBDIR = "extractor-runs"
 MAX_DOCUMENT_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
@@ -26,13 +27,28 @@ def build_document_source_path(
     return f"{UPLOADS_SUBDIR}/{user_id}/{document_id}/v{version_number}{suffix}"
 
 
+def build_extractor_run_source_path(
+    user_id: UUID | str,
+    source_id: UUID | str,
+    *,
+    file_name: str | None = None,
+) -> str:
+    suffix = Path(file_name or "").suffix
+    return (
+        f"{UPLOADS_SUBDIR}/{EXTRACTOR_RUNS_SUBDIR}/{user_id}/{source_id}"
+        f"/source{suffix}"
+    )
+
+
 def resolve_document_source_path(relative_path: str) -> Path:
     absolute_path = (public_assets_root() / relative_path).resolve()
     uploads_root = document_uploads_root()
     try:
         absolute_path.relative_to(uploads_root)
     except ValueError as exc:
-        raise ValueError("Document source file path must stay under the uploads root") from exc
+        raise ValueError(
+            "Document source file path must stay under the uploads root"
+        ) from exc
     return absolute_path
 
 
@@ -41,6 +57,14 @@ def save_document_source_file(relative_path: str, file_bytes: bytes) -> Path:
     absolute_path.parent.mkdir(parents=True, exist_ok=True)
     absolute_path.write_bytes(file_bytes)
     return absolute_path
+
+
+def resolve_extractor_run_source_path(relative_path: str) -> Path:
+    return resolve_document_source_path(relative_path)
+
+
+def save_extractor_run_source_file(relative_path: str, file_bytes: bytes) -> Path:
+    return save_document_source_file(relative_path, file_bytes)
 
 
 def remove_document_source_files(relative_paths: Iterable[str | None]) -> None:
@@ -67,3 +91,7 @@ def remove_document_source_files(relative_paths: Iterable[str | None]) -> None:
             except OSError:
                 break
             current = current.parent
+
+
+def remove_extractor_run_source_files(relative_paths: Iterable[str | None]) -> None:
+    remove_document_source_files(relative_paths)

@@ -10,17 +10,19 @@ from fastapi import UploadFile
 from fastapi_users import schemas
 from pydantic import UUID4, AnyHttpUrl
 from pydantic import BaseModel as _BaseModel
-from pydantic import ConfigDict, EmailStr, Field, model_validator, validator
+from pydantic import ConfigDict, EmailStr, Field, field_validator, model_validator
 from PyPDF2 import PdfReader
 
 from app import utils
+from app.core.url_safety import validate_url_safe_for_fetch
 
 
 # Base Model
 class BaseSchema(_BaseModel):
-    class Config:
-        from_attributes = True
-        protected_namespaces = ()  # Setting protected namespaces to empty
+    model_config = ConfigDict(
+        from_attributes=True,
+        protected_namespaces=(),
+    )
 
 
 # Types, properties, and shared models
@@ -85,12 +87,8 @@ class URI(BaseSchema):
     name: str
     type: URIType
 
-    class Config:
-        json_encoders = {
-            "URI": lambda v: v.dict(),
-        }
-
-    @validator("type", pre=True)  # Not sure if pre=True is neccessary?
+    @field_validator("type", mode="before")
+    @classmethod
     def validate_type(cls, v: str) -> URIType:
         return URIType(v)
 
@@ -169,7 +167,8 @@ class BaseOrchestrationEvent(BaseSchema):
     )
     pipeline_id: UUID4 | None = Field(None, description="Pipeline ID")
 
-    @validator("source_uri", "destination_uri", pre=True)
+    @field_validator("source_uri", "destination_uri", mode="before")
+    @classmethod
     def validate_uri(cls, v: Any) -> URI | None:
         if isinstance(v, str):
             return URI(**json.loads(v))
@@ -186,8 +185,9 @@ class OrchestrationEventRead(BaseOrchestrationEvent, BaseRead):
         None, description="ID of the original event this is a retry of"
     )
 
-    @validator("payload", pre=True)
-    def load_json(cls, v):
+    @field_validator("payload", mode="before")
+    @classmethod
+    def load_json(cls, v: Any) -> Any:
         if isinstance(v, str):
             try:
                 return json.loads(v)
@@ -216,7 +216,8 @@ class OrchestrationEventUpdate(BaseSchema):
         None, description="Status of the event"
     )
 
-    @validator("source_uri", "destination_uri", pre=True)
+    @field_validator("source_uri", "destination_uri", mode="before")
+    @classmethod
     def validate_uri(cls, v: Any) -> URI | None:
         if isinstance(v, str):
             return URI(**json.loads(v))
@@ -243,7 +244,8 @@ class ExtractorRequest(BaseSchema):
     json_schema: dict | None = Field(None, description="JSON schema", alias="schema")
     text: str | None = Field(None, description="Text to extract from")
 
-    @validator("json_schema")
+    @field_validator("json_schema")
+    @classmethod
     def validate_schema(cls, v: Any) -> dict[str, Any]:
         """Validate the schema."""
         utils.validate_json_schema(v)
@@ -261,8 +263,9 @@ class BaseSkill(BaseSchema):
     yoe: int | None = Field(None, description="Years of Experience")
     subskills: str | None = Field(None, description="Sub-Skills")
 
-    @validator("yoe", pre=True)
-    def validate_yoe(cls, v) -> int:
+    @field_validator("yoe", mode="before")
+    @classmethod
+    def validate_yoe(cls, v: Any) -> Any:
         if v:
             v = int(v)
             if v < 0:
@@ -293,12 +296,14 @@ class BaseExperience(BaseSchema):
     location: str | None = Field(None, description="Location of the experience")
     projects: str | None = Field(None, description="Projects involved")
 
-    @validator("start_date", "end_date", pre=True)
-    def parse_date(cls, value):
+    @field_validator("start_date", "end_date", mode="before")
+    @classmethod
+    def parse_date(cls, value: Any) -> Any:
         if isinstance(value, str):
             value = datetime.fromisoformat(value.replace("Z", "+00:00"))
         if isinstance(value, datetime):
             return value.replace(tzinfo=None) if value.tzinfo else value
+        return value
 
 
 class ExperienceRead(BaseExperience, BaseRead):
@@ -306,10 +311,11 @@ class ExperienceRead(BaseExperience, BaseRead):
 
 
 class ExperienceCreate(BaseExperience):
-    @validator("projects", pre=True)
-    def parse_projects(cls, value):
+    @field_validator("projects", mode="before")
+    @classmethod
+    def parse_projects(cls, value: Any) -> Any:
         if not value:
-            return
+            return value
         elif isinstance(value, list):
             value = ", ".join(value)
         return utils.wrap_text(value)
@@ -328,12 +334,14 @@ class BaseEducation(BaseSchema):
     start_date: datetime | None = Field(None, description="Start date of the education")
     end_date: datetime | None = Field(None, description="End date of the education")
 
-    @validator("start_date", "end_date", pre=True)
-    def parse_date(cls, value):
+    @field_validator("start_date", "end_date", mode="before")
+    @classmethod
+    def parse_date(cls, value: Any) -> Any:
         if isinstance(value, str):
             value = datetime.fromisoformat(value.replace("Z", "+00:00"))
         if isinstance(value, datetime):
             return value.replace(tzinfo=None) if value.tzinfo else value
+        return value
 
 
 class EducationRead(BaseEducation, BaseRead):
@@ -341,10 +349,11 @@ class EducationRead(BaseEducation, BaseRead):
 
 
 class EducationCreate(BaseEducation):
-    @validator("achievements", "activities", pre=True)
-    def parse_achievements(cls, value):
+    @field_validator("achievements", "activities", mode="before")
+    @classmethod
+    def parse_achievements(cls, value: Any) -> Any:
         if not value:
-            return
+            return value
         elif isinstance(value, list):
             value = ", ".join(value)
         return utils.wrap_text(value)
@@ -364,12 +373,14 @@ class BaseCertificate(BaseSchema):
         None, description="Issued date of the certificate"
     )
 
-    @validator("expiration_date", "issued_date", pre=True)
-    def parse_date(cls, value):
+    @field_validator("expiration_date", "issued_date", mode="before")
+    @classmethod
+    def parse_date(cls, value: Any) -> Any:
         if isinstance(value, str):
             value = datetime.fromisoformat(value.replace("Z", "+00:00"))
         if isinstance(value, datetime):
             return value.replace(tzinfo=None) if value.tzinfo else value
+        return value
 
 
 class CertificateRead(BaseCertificate, BaseRead):
@@ -574,7 +585,8 @@ class LeadCreate(BaseLeadShared):
     url: str
     company_ids: list[UUID4] | None = Field(None, description="Company IDs")
 
-    @validator("url")
+    @field_validator("url")
+    @classmethod
     def validate_url(cls, value: str) -> str:
         cleaned = value.strip()
         if not cleaned:
@@ -628,7 +640,8 @@ class LeadCommentCreate(BaseSchema):
         True, description="Whether the comment hides the author's public profile"
     )
 
-    @validator("content")
+    @field_validator("content")
+    @classmethod
     def clean_content(cls, value: str) -> str:
         cleaned = _clean_optional_wrapped_text(value)
         if not cleaned:
@@ -1389,6 +1402,15 @@ class ProfileExtractSource(BaseSchema):
     file: UploadFile | None = Field(None, description="File to extract from")
     text: str | None = Field(None, description="Raw text to extract from")
 
+    @field_validator("url")
+    @classmethod
+    def validate_fetch_url(cls, value: AnyHttpUrl | None) -> AnyHttpUrl | None:
+        if value is None:
+            return value
+
+        validate_url_safe_for_fetch(str(value))
+        return value
+
 
 class ProfileExtractResponse(BaseSchema):
     """Response from the unified profile extraction endpoint."""
@@ -1454,8 +1476,9 @@ class BaseExtractor(BaseSchema):
         False, description="Whether extraction results require human approval"
     )
 
-    @validator("json_schema")
-    def validate_schema(cls, v: Any) -> dict[str, Any]:
+    @field_validator("json_schema", mode="before")
+    @classmethod
+    def validate_schema(cls, v: Any) -> dict[str, Any] | None:
         """Validate the schema."""
         if isinstance(v, str):
             v = json.loads(v)
@@ -1511,6 +1534,15 @@ class ExtractorRun(BaseSchema):
         None,
         description="Multiple sources to extract from in a single batch. When provided, url/file/text are ignored.",
     )
+
+    @field_validator("url")
+    @classmethod
+    def validate_fetch_url(cls, value: AnyHttpUrl | None) -> AnyHttpUrl | None:
+        if value is None:
+            return value
+
+        validate_url_safe_for_fetch(str(value))
+        return value
 
 
 class ApplicationRead(BaseRead):

@@ -7,6 +7,7 @@ Main FastAPI app instance declaration and admin interface setup.
 import asyncio
 import logging
 import tracemalloc
+from contextlib import asynccontextmanager
 from time import time
 
 from fastapi import FastAPI, Request, Response
@@ -30,12 +31,91 @@ logging.basicConfig()
 
 logger = get_async_logger(__name__)
 
+
+async def _startup(app: FastAPI) -> None:
+    console_log.info("Starting up...")
+    tracemalloc.start()
+    await ensure_document_collaboration_server_started()
+    if getattr(app.state, "bootstrap_completed", False):
+        console_log.info("Startup bootstrap already completed for this process.")
+        return
+    if conf.settings.SHOULD_BOOTSTRAP_ON_STARTUP:
+        await create_db_and_tables()
+        await create_default_superuser()
+        app.state.bootstrap_completed = True
+        console_log.info("Development bootstrap completed.")
+    else:
+        console_log.info(
+            "Skipping automatic schema creation and default superuser bootstrap outside DEV/PYTEST."
+        )
+
+    # Start crawler scheduler if enabled
+    if conf.settings.SHOULD_RUN_CRAWLER_SCHEDULER:
+        from app.crawler_scheduler import crawler_scheduler_loop
+
+        app.state.crawler_scheduler_task = asyncio.create_task(crawler_scheduler_loop())
+        console_log.info("Crawler scheduler started.")
+    else:
+        console_log.info("Crawler scheduler disabled for this environment.")
+
+    # Start run reaper if enabled
+    if conf.settings.SHOULD_RUN_REAPER:
+        from app.run_reaper import run_reaper_loop
+
+        app.state.reaper_task = asyncio.create_task(run_reaper_loop())
+        console_log.info("Run reaper started.")
+    else:
+        console_log.info("Run reaper disabled for this environment.")
+
+
+async def _cancel_background_task(
+    app: FastAPI, task_name: str, stop_message: str
+) -> None:
+    task = getattr(app.state, task_name, None)
+    if task is None:
+        return
+
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+    console_log.info(stop_message)
+
+
+async def _shutdown(app: FastAPI) -> None:
+    await _cancel_background_task(
+        app,
+        "crawler_scheduler_task",
+        "Crawler scheduler stopped.",
+    )
+    await _cancel_background_task(
+        app,
+        "reaper_task",
+        "Run reaper stopped.",
+    )
+
+    await stop_document_collaboration_server()
+    tracemalloc.stop()
+    console_log.info("Shutting down...")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await _startup(app)
+    try:
+        yield
+    finally:
+        await _shutdown(app)
+
+
 app = FastAPI(
     title=conf.settings.PROJECT_NAME.title(),
     version=conf.settings.VERSION,
     description=conf.settings.DESCRIPTION,
     openapi_url="/openapi.json",
     docs_url="/docs",
+    lifespan=lifespan,
 )
 
 app.state.limiter = limiter
@@ -79,72 +159,6 @@ async def log_requests(request: Request, call_next):
 app.include_router(api_router)
 
 admin.mount_to(app)
-
-
-# FIXME: The setup is currently for development, we need to add a production setup
-# TODO: Abstract startup & shutdown event defs to conditionally act based on the conf.settings.ENVIRONMENT
-@app.on_event("startup")  # noqa
-async def startup_event():
-    console_log.info("Starting up...")
-    tracemalloc.start()
-    await ensure_document_collaboration_server_started()
-    if getattr(app.state, "bootstrap_completed", False):
-        console_log.info("Startup bootstrap already completed for this process.")
-        return
-    if conf.settings.SHOULD_BOOTSTRAP_ON_STARTUP:
-        await create_db_and_tables()
-        await create_default_superuser()
-        app.state.bootstrap_completed = True
-        console_log.info("Development bootstrap completed.")
-    else:
-        console_log.info(
-            "Skipping automatic schema creation and default superuser bootstrap outside DEV/PYTEST."
-        )
-
-    # Start crawler scheduler if enabled
-    if conf.settings.SHOULD_RUN_CRAWLER_SCHEDULER:
-        from app.crawler_scheduler import crawler_scheduler_loop
-
-        app.state.crawler_scheduler_task = asyncio.create_task(crawler_scheduler_loop())
-        console_log.info("Crawler scheduler started.")
-    else:
-        console_log.info("Crawler scheduler disabled for this environment.")
-
-    # Start run reaper if enabled
-    if conf.settings.SHOULD_RUN_REAPER:
-        from app.run_reaper import run_reaper_loop
-
-        app.state.reaper_task = asyncio.create_task(run_reaper_loop())
-        console_log.info("Run reaper started.")
-    else:
-        console_log.info("Run reaper disabled for this environment.")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    # Cancel crawler scheduler if running
-    scheduler_task = getattr(app.state, "crawler_scheduler_task", None)
-    if scheduler_task is not None:
-        scheduler_task.cancel()
-        try:
-            await scheduler_task
-        except asyncio.CancelledError:
-            pass
-        console_log.info("Crawler scheduler stopped.")
-
-    # Cancel reaper if running
-    reaper_task = getattr(app.state, "reaper_task", None)
-    if reaper_task is not None:
-        reaper_task.cancel()
-        try:
-            await reaper_task
-        except asyncio.CancelledError:
-            pass
-        console_log.info("Run reaper stopped.")
-
-    await stop_document_collaboration_server()
-    tracemalloc.stop()
-    console_log.info("Shutting down...")
 
 
 @app.get("/")

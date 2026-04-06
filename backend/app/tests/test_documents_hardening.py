@@ -9,7 +9,6 @@ from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
 from reportlab.pdfgen import canvas
 
-from app import models
 from app.core import conf
 from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
 from app.core.document_storage import resolve_document_source_path

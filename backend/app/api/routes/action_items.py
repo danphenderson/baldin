@@ -83,7 +83,7 @@ async def create_action_item(
     await _validate_entity_fks(payload, user.id, db)
 
     item = models.ActionItem(
-        **payload.dict(exclude_unset=True),
+        **payload.model_dump(exclude_unset=True),
         user_id=user.id,
     )
     db.add(item)
@@ -202,7 +202,7 @@ async def update_action_item(
 
     await _validate_entity_fks(payload, user.id, db)
 
-    update_data = payload.dict(exclude_unset=True)
+    update_data = payload.model_dump(exclude_unset=True)
     new_status = update_data.get("status")
 
     # Auto-manage completed_at

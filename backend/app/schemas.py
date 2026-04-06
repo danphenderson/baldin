@@ -8,9 +8,16 @@ from typing import Any, Literal, Optional, Sequence, TypeVar
 
 from fastapi import UploadFile
 from fastapi_users import schemas
-from pydantic import UUID4, AnyHttpUrl
+from pydantic import (
+    UUID4,
+    AnyHttpUrl,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
 from pydantic import BaseModel as _BaseModel
-from pydantic import ConfigDict, EmailStr, Field, field_validator, model_validator
 from PyPDF2 import PdfReader
 
 from app import utils
@@ -744,7 +751,9 @@ class CoverLetterCreate(BaseCoverLetter):
         for page_num in range(len(reader.pages)):
             page = reader.pages[page_num]
             text_content.append(page.or_text())
-        return cls(name=name, content=text_content[0], content_type=ContentType.GENERATED)  # type: ignore
+        return cls(
+            name=name, content=text_content[0], content_type=ContentType.GENERATED
+        )  # type: ignore
 
 
 class CoverLetterUpdate(BaseCoverLetter):

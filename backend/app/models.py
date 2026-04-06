@@ -210,7 +210,6 @@ class ExtractorVersion(Base):
 
 
 class LeadXCompany(Base):
-
     __tablename__ = "leads_x_companies"
     lead_id = Column(UUID, ForeignKey("leads.id"), primary_key=True)
     company_id = Column(UUID, ForeignKey("companies.id"), primary_key=True)

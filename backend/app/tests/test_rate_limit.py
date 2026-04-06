@@ -94,8 +94,8 @@ async def test_suggest_extractor_rate_limit_returns_429():
                 )
                 statuses.append(resp.status_code)
 
-            assert (
-                429 in statuses
-            ), f"Expected at least one 429 response, got: {statuses}"
+            assert 429 in statuses, (
+                f"Expected at least one 429 response, got: {statuses}"
+            )
             # The first 5 should succeed (200), the rest should be 429
             assert statuses.count(429) >= 1

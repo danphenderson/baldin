@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
 
+from app.etl.base import Job
+
 from app import utils
 from app.core import conf, openai
-from app.etl.base import Job
 from app.logging import console_log
 
 

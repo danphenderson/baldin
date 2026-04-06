@@ -36,7 +36,7 @@ LINKEDIN_JOB_CARD_SELECTOR = "a.base-card__full-link"
 
 # XPath: "See more" button that expands the full job description.
 LINKEDIN_EXPAND_BUTTON_XPATH = (
-    '//*[@id="main-content"]' "/section[1]/div/div/section[1]/div/div/section/button[1]"
+    '//*[@id="main-content"]/section[1]/div/div/section[1]/div/div/section/button[1]'
 )
 
 # XPath: container holding the full job description after expansion.

@@ -28,7 +28,7 @@ flowchart TD
 
 | Job | What it does | Key details |
 |-----|-------------|-------------|
-| **lint** | Runs pre-commit hooks | `isort`, `black`, `flake8` — Python 3.11.2 |
+| **lint** | Runs pre-commit hooks | `ruff check --fix`, `ruff format` — Python 3.11.2 |
 | **backend-tests** | `pytest` with coverage gate | PostgreSQL 15 service, 40% minimum coverage on `app/` and `etl/` |
 | **frontend-tests** | `npm run test` | Vitest suite |
 | **frontend-typecheck** | `npx tsc --noEmit` | Strict TypeScript validation |

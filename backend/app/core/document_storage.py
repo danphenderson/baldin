@@ -35,8 +35,7 @@ def build_extractor_run_source_path(
 ) -> str:
     suffix = Path(file_name or "").suffix
     return (
-        f"{UPLOADS_SUBDIR}/{EXTRACTOR_RUNS_SUBDIR}/{user_id}/{source_id}"
-        f"/source{suffix}"
+        f"{UPLOADS_SUBDIR}/{EXTRACTOR_RUNS_SUBDIR}/{user_id}/{source_id}/source{suffix}"
     )
 
 

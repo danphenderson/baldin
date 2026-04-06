@@ -24,8 +24,10 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
 
 from app import logging, models, schemas, utils  # noqa
-from app.core import conf  # noqa
-from app.core import security  # noqa
+from app.core import (
+    conf,  # noqa
+    security,  # noqa
+)
 from app.core.db import (  # noqa
     AsyncSession,
     DataBaseManager,
@@ -962,7 +964,7 @@ async def run_extractor(
             )
     except Exception as e:
         error_message = (
-            f"Failure running extractor {extractor.name}: " f"{type(e).__name__}: {e}"
+            f"Failure running extractor {extractor.name}: {type(e).__name__}: {e}"
         )
         await log.exception(error_message)
         await update_orchestration_event(
@@ -1242,7 +1244,6 @@ async def execute_crawler_run(
     user: models.User,
 ) -> models.CrawlerRun:
     """Execute a crawler run: instantiate adapter, crawl, persist leads, update stats."""
-    from etl import base as etl_base  # noqa: local import to avoid circular deps
 
     stats = {
         "leads_found": 0,

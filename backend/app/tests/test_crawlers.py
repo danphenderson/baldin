@@ -118,9 +118,9 @@ async def test_unauthenticated_user_gets_401_on_crawler_routes():
         ]
         for method, path in endpoints:
             resp = await client.request(method, path)
-            assert (
-                resp.status_code == 401
-            ), f"{method} {path} returned {resp.status_code}, expected 401"
+            assert resp.status_code == 401, (
+                f"{method} {path} returned {resp.status_code}, expected 401"
+            )
 
 
 async def test_non_superuser_gets_403_on_crawler_routes():
@@ -144,9 +144,9 @@ async def test_non_superuser_gets_403_on_crawler_routes():
         ]
         for method, path in endpoints:
             resp = await client.request(method, path, headers=headers)
-            assert (
-                resp.status_code == 403
-            ), f"{method} {path} returned {resp.status_code}, expected 403"
+            assert resp.status_code == 403, (
+                f"{method} {path} returned {resp.status_code}, expected 403"
+            )
 
 
 # ---------------------------------------------------------------------------

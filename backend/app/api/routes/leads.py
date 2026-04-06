@@ -9,9 +9,9 @@ from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app import utils
-from app.api.deps import AsyncSession, conf
-from app.api.deps import console_log as log
 from app.api.deps import (
+    AsyncSession,
+    conf,
     create_extractor,
     create_lead,
     create_orchestration_event,
@@ -29,6 +29,7 @@ from app.api.deps import (
     run_extractor,
     schemas,
 )
+from app.api.deps import console_log as log
 from app.core.db import session_context
 from app.core.url_safety import validate_url_safe_for_fetch
 

@@ -10,6 +10,7 @@ API access to perform various tasks, e.g.
 - Generate code snippets
 - Generate synthetic seed data
 """
+
 from pathlib import Path
 
 from langchain_community.document_loaders import AsyncChromiumLoader, AsyncHtmlLoader

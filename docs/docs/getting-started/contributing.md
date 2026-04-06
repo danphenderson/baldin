@@ -64,7 +64,7 @@ Before your first commit, install the hooks:
 pre-commit install
 ```
 
-The pre-commit suite runs `isort`, `black`, and `flake8` scoped to `backend/`.
+The pre-commit suite runs `ruff check --fix` and `ruff format` scoped to `backend/`.
 
 ## Required CI Checks
 

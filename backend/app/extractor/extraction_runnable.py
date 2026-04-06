@@ -76,8 +76,7 @@ def _make_prompt_template(
     prompt_components.append(
         (
             "human",
-            "I need to extract information from "
-            "the following text: ```\n{text}\n```\n",
+            "I need to extract information from the following text: ```\n{text}\n```\n",
         ),  # type: ignore
     )
     return ChatPromptTemplate.from_messages(prompt_components)
@@ -192,10 +191,10 @@ async def extract_entire_document(
         content_too_long = False
 
     # Run extractions which may potentially yield duplicate results
-    extract_responses: Sequence[schemas.ExtractorResponse] = (
-        await extraction_runnable.abatch(
-            extraction_requests, {"max_concurrency": settings.MAX_CONCURRENCY}
-        )
+    extract_responses: Sequence[
+        schemas.ExtractorResponse
+    ] = await extraction_runnable.abatch(
+        extraction_requests, {"max_concurrency": settings.MAX_CONCURRENCY}
     )
     # Deduplicate the results
     return {

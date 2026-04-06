@@ -384,19 +384,19 @@ class DataBaseManager:
         }
 
         if pipeline_ids:
-            deleted_records[models.OrchestrationEvent.__tablename__] = (
-                await self._delete_rows(
-                    models.OrchestrationEvent,
-                    models.OrchestrationEvent.pipeline_id.in_(pipeline_ids),
-                )
+            deleted_records[
+                models.OrchestrationEvent.__tablename__
+            ] = await self._delete_rows(
+                models.OrchestrationEvent,
+                models.OrchestrationEvent.pipeline_id.in_(pipeline_ids),
             )
 
         if extractor_ids:
-            deleted_records[models.ExtractorExample.__tablename__] = (
-                await self._delete_rows(
-                    models.ExtractorExample,
-                    models.ExtractorExample.extractor_id.in_(extractor_ids),
-                )
+            deleted_records[
+                models.ExtractorExample.__tablename__
+            ] = await self._delete_rows(
+                models.ExtractorExample,
+                models.ExtractorExample.extractor_id.in_(extractor_ids),
             )
 
         resume_link_conditions: list[Any] = []
@@ -408,10 +408,10 @@ class DataBaseManager:
             resume_link_conditions.append(
                 models.ResumeXApplication.resume_id.in_(resume_ids)
             )
-        deleted_records[models.ResumeXApplication.__tablename__] = (
-            await self._delete_rows_matching_any(
-                models.ResumeXApplication, resume_link_conditions
-            )
+        deleted_records[
+            models.ResumeXApplication.__tablename__
+        ] = await self._delete_rows_matching_any(
+            models.ResumeXApplication, resume_link_conditions
         )
 
         cover_letter_link_conditions: list[Any] = []
@@ -423,16 +423,16 @@ class DataBaseManager:
             cover_letter_link_conditions.append(
                 models.CoverLetterXApplication.cover_letter_id.in_(cover_letter_ids)
             )
-        deleted_records[models.CoverLetterXApplication.__tablename__] = (
-            await self._delete_rows_matching_any(
-                models.CoverLetterXApplication, cover_letter_link_conditions
-            )
+        deleted_records[
+            models.CoverLetterXApplication.__tablename__
+        ] = await self._delete_rows_matching_any(
+            models.CoverLetterXApplication, cover_letter_link_conditions
         )
 
-        deleted_records[models.LeadRegistration.__tablename__] = (
-            await self._delete_rows(
-                models.LeadRegistration, models.LeadRegistration.user_id == user_id
-            )
+        deleted_records[
+            models.LeadRegistration.__tablename__
+        ] = await self._delete_rows(
+            models.LeadRegistration, models.LeadRegistration.user_id == user_id
         )
         deleted_records[models.LeadComment.__tablename__] = await self._delete_rows(
             models.LeadComment, models.LeadComment.author_user_id == user_id
@@ -465,11 +465,11 @@ class DataBaseManager:
         deleted_records[models.Extractor.__tablename__] = await self._delete_rows(
             models.Extractor, models.Extractor.user_id == user_id
         )
-        deleted_records[models.OrchestrationPipeline.__tablename__] = (
-            await self._delete_rows(
-                models.OrchestrationPipeline,
-                models.OrchestrationPipeline.user_id == user_id,
-            )
+        deleted_records[
+            models.OrchestrationPipeline.__tablename__
+        ] = await self._delete_rows(
+            models.OrchestrationPipeline,
+            models.OrchestrationPipeline.user_id == user_id,
         )
 
         return deleted_records

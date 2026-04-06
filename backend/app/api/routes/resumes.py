@@ -11,9 +11,9 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy import select
 
-from app.api.deps import AsyncSession, conf
-from app.api.deps import console_log as log
 from app.api.deps import (
+    AsyncSession,
+    conf,
     create_orchestration_event,
     create_orchestration_pipeline,
     create_resume,
@@ -24,6 +24,7 @@ from app.api.deps import (
     models,
     schemas,
 )
+from app.api.deps import console_log as log
 
 router: APIRouter = APIRouter()
 

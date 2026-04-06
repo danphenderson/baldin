@@ -5,9 +5,9 @@ from aiofiles import open as aopen
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
-from app.api.deps import AsyncSession, conf
-from app.api.deps import console_log as log
 from app.api.deps import (
+    AsyncSession,
+    conf,
     create_contact,
     create_extractor,
     create_orchestration_event,
@@ -21,6 +21,7 @@ from app.api.deps import (
     run_extractor,
     schemas,
 )
+from app.api.deps import console_log as log
 
 router: APIRouter = APIRouter()
 

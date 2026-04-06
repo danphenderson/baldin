@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 import pytest
@@ -14,6 +15,7 @@ pytestmark = pytest.mark.asyncio(loop_scope="module")
 
 password_helper = PasswordHelper()
 _db_ready = False
+_db_ready_lock = asyncio.Lock()
 
 
 @asynccontextmanager
@@ -29,10 +31,11 @@ async def _client() -> AsyncClient:
 
 async def _ensure_db_ready() -> None:
     global _db_ready
-    if _db_ready:
-        return
-    await create_db_and_tables()
-    _db_ready = True
+    async with _db_ready_lock:
+        if _db_ready:
+            return
+        await create_db_and_tables()
+        _db_ready = True
 
 
 async def _create_user(password: str, *, is_superuser: bool = False) -> tuple[str, str]:

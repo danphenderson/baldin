@@ -17,6 +17,7 @@ def ensure_utc(value: datetime) -> datetime:
 
 
 def parse_utc_datetime(value: str | datetime | None) -> datetime | None:
+    """Parse strings/datetimes as UTC, assuming naive inputs are already UTC."""
     if value is None:
         return None
     if isinstance(value, datetime):
@@ -32,6 +33,7 @@ def format_utc_datetime(value: datetime) -> str:
 
 
 def normalize_utc_datetime(value: str | datetime | None) -> str | None:
+    """Return a canonical UTC ISO string with Z suffix, or None if unparseable."""
     parsed = parse_utc_datetime(value)
     if parsed is None:
         return None

@@ -25,6 +25,7 @@ router: APIRouter = APIRouter()
 
 
 def _normalize_status_history(history: list[dict] | None) -> list[dict]:
+    """Normalize status-history timestamps to UTC Z strings when they parse cleanly."""
     normalized_history: list[dict] = []
     for entry in history or []:
         normalized_entry = dict(entry)

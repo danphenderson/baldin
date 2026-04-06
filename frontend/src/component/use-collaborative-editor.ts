@@ -184,6 +184,9 @@ export function useCollaborativeEditor(
       }
 
       if (!bootstrap.collaboration_token) {
+        console.warn(
+          'Collaboration bootstrap did not return a session token; skipping realtime connection.',
+        );
         return;
       }
 

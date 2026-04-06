@@ -19,6 +19,7 @@ from app.logging import get_async_logger
 log = get_async_logger(__name__)
 
 POLL_INTERVAL_SECONDS = 60
+# Stable, app-specific advisory lock key for the in-process crawler scheduler.
 _SCHEDULER_ADVISORY_LOCK_ID = 64127831
 
 

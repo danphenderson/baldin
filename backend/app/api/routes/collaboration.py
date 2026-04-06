@@ -23,6 +23,8 @@ from app.models import Document, DocumentShare, User
 
 router: APIRouter = APIRouter()
 COLLABORATION_TOKEN_AUDIENCE = "document-collaboration"
+# Keep collaboration session keys short-lived to limit the impact of URL logging
+# while still allowing brief reconnect windows during editor bootstrap.
 COLLABORATION_TOKEN_EXPIRE_MINUTES = 5
 
 

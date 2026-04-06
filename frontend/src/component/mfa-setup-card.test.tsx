@@ -19,6 +19,23 @@ vi.mock('../service/auth', async () => {
 const mockedMfaStatus = vi.mocked(authService.mfaStatus);
 const mockedMfaSetup = vi.mocked(authService.mfaSetup);
 
+function renderCard(token: string | null = 'token-123') {
+  render(
+    <UserContext.Provider
+      value={{
+        user: null,
+        setUser: vi.fn(),
+        token,
+        setToken: vi.fn(),
+        loading: false,
+        canAccessTier: vi.fn(() => true),
+      }}
+    >
+      <MFASetupCard />
+    </UserContext.Provider>,
+  );
+}
+
 describe('MFASetupCard', () => {
   beforeEach(() => {
     mockedMfaStatus.mockReset();
@@ -35,20 +52,7 @@ describe('MFASetupCard', () => {
   });
 
   it('requires an explicit recovery warning acknowledgement before setup starts', async () => {
-    render(
-      <UserContext.Provider
-        value={{
-          user: null,
-          setUser: vi.fn(),
-          token: 'token-123',
-          setToken: vi.fn(),
-          loading: false,
-          canAccessTier: vi.fn(() => true),
-        }}
-      >
-        <MFASetupCard />
-      </UserContext.Provider>,
-    );
+    renderCard();
 
     expect(await screen.findByText('Disabled')).toBeInTheDocument();
     expect(
@@ -67,5 +71,12 @@ describe('MFASetupCard', () => {
     await waitFor(() => {
       expect(mockedMfaSetup).toHaveBeenCalledWith('token-123');
     });
+  });
+
+  it('renders without a loading spinner when no token is available yet', async () => {
+    renderCard(null);
+
+    expect(await screen.findByText('Disabled')).toBeInTheDocument();
+    expect(mockedMfaStatus).not.toHaveBeenCalled();
   });
 });

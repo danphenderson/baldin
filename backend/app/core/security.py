@@ -58,9 +58,15 @@ MFA_TOKEN_AUDIENCE = "baldin:mfa"
 
 @lru_cache(maxsize=1)
 def _get_mfa_fernet() -> Fernet:
-    key_material = hashlib.sha256(
-        f"{conf.settings.SECRET_KEY}:mfa".encode("utf-8")
-    ).digest()
+    """Derive the MFA-at-rest encryption key from a dedicated override or SECRET_KEY.
+
+    Rotating the effective source key invalidates decryption of previously stored MFA
+    secrets until an administrator resets MFA for affected accounts.
+    """
+    encryption_seed = (
+        conf.settings.MFA_ENCRYPTION_KEY or f"{conf.settings.SECRET_KEY}:mfa"
+    )
+    key_material = hashlib.sha256(encryption_seed.encode("utf-8")).digest()
     return Fernet(base64.urlsafe_b64encode(key_material))
 
 

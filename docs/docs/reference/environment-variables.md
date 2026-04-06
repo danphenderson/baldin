@@ -22,6 +22,7 @@ Copy `backend/.env.example` to `backend/.env` for local development.
 | Variable | Purpose |
 |----------|---------|
 | `SECRET_KEY` | Application secret key for JWT signing |
+| `MFA_ENCRYPTION_KEY` | Optional dedicated key source for MFA secret encryption at rest; if unset, Baldin derives one from `SECRET_KEY` |
 | `FIRST_SUPERUSER_EMAIL` | Bootstrap admin email (created on first startup) |
 | `FIRST_SUPERUSER_PASSWORD` | Bootstrap admin password |
 

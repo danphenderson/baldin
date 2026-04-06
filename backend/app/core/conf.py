@@ -32,6 +32,7 @@ class _BaseSettings(BaseSettings):
 class Settings(_BaseSettings):
     # CORE SETTINGS
     SECRET_KEY: str
+    MFA_ENCRYPTION_KEY: str | None = None
     ENVIRONMENT: Literal["DEV", "PYTEST", "STAGE", "PROD"]
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     BACKEND_CORS_ORIGINS: Union[str, list[AnyHttpUrl]]

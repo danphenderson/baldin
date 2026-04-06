@@ -33,7 +33,11 @@ const MFASetupCard: React.FC = () => {
   const [showRecoveryNotice, setShowRecoveryNotice] = useState(false);
 
   const fetchStatus = useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      setEnabled(false);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const isEnabled = await mfaStatus(token);

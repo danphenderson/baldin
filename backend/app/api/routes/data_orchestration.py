@@ -1,6 +1,6 @@
 # app/api/routes/data_orchestration.py
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import UUID4
@@ -18,6 +18,7 @@ from app.api.deps import (  # noqa
     schemas,
     update_orchestration_event_for_current_user,
 )
+from app.core.datetime_utils import now_utc_naive
 from app.core.document_storage import remove_extractor_run_source_files
 from app.core.extractor_retry import get_extractor_event_file_source_paths
 
@@ -148,7 +149,7 @@ async def prune_orchestration_events(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Delete completed/failed orchestration events older than the specified age."""
-    cutoff = datetime.utcnow() - timedelta(days=older_than_days)
+    cutoff = now_utc_naive() - timedelta(days=older_than_days)
     result = await db.execute(
         select(models.OrchestrationEvent).where(
             models.OrchestrationEvent.status.in_(["success", "failure"]),

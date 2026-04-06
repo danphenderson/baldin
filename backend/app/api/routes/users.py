@@ -38,10 +38,9 @@ router = fastapi_users.get_users_router(schemas.UserRead, schemas.UserUpdate)
 
 async def _create_seed_user(
     record: dict[str, Any],
-    db: AsyncSession,
-    user: models.User,
+    _db: AsyncSession,
+    _user: models.User,
 ) -> None:
-    del db, user
     await create_user(schemas.UserCreate(**record))
 
 

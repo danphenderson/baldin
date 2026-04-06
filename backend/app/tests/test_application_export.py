@@ -158,9 +158,14 @@ async def test_export_zip_with_document_source_file(tmp_path):
     head_version = SimpleNamespace(
         source_file="uploads/test.pdf", content="fallback text"
     )
-    doc = SimpleNamespace(title="Uploaded Doc", head_version=head_version, versions=[])
-    link = SimpleNamespace(document_id=uuid4(), version_id=None)
-    doc.id = link.document_id
+    doc_id = uuid4()
+    doc = SimpleNamespace(
+        id=doc_id,
+        title="Uploaded Doc",
+        head_version=head_version,
+        versions=[],
+    )
+    link = SimpleNamespace(document_id=doc_id, version_id=None)
 
     db = _FakeSession([[], [], [link], [doc]])
 
@@ -191,9 +196,14 @@ async def test_export_zip_document_falls_back_to_content():
     user = SimpleNamespace(id=uid)
 
     head_version = SimpleNamespace(source_file=None, content="Some text content")
-    doc = SimpleNamespace(title="Text Doc", head_version=head_version, versions=[])
-    link = SimpleNamespace(document_id=uuid4(), version_id=None)
-    doc.id = link.document_id
+    doc_id = uuid4()
+    doc = SimpleNamespace(
+        id=doc_id,
+        title="Text Doc",
+        head_version=head_version,
+        versions=[],
+    )
+    link = SimpleNamespace(document_id=doc_id, version_id=None)
 
     db = _FakeSession([[], [], [link], [doc]])
 
@@ -219,9 +229,9 @@ async def test_export_zip_uses_fallback_names_when_none():
     resume = SimpleNamespace(name=None, content="resume text")
     cover_letter = SimpleNamespace(name=None, content="cover letter text")
     head_version = SimpleNamespace(source_file=None, content="doc text")
-    doc = SimpleNamespace(title=None, head_version=head_version, versions=[])
-    link = SimpleNamespace(document_id=uuid4(), version_id=None)
-    doc.id = link.document_id
+    doc_id = uuid4()
+    doc = SimpleNamespace(id=doc_id, title=None, head_version=head_version, versions=[])
+    link = SimpleNamespace(document_id=doc_id, version_id=None)
 
     db = _FakeSession([[resume], [cover_letter], [link], [doc]])
 
@@ -250,9 +260,14 @@ async def test_export_zip_document_source_file_value_error_falls_back():
     head_version = SimpleNamespace(
         source_file="../../etc/passwd", content="safe content"
     )
-    doc = SimpleNamespace(title="Bad Path Doc", head_version=head_version, versions=[])
-    link = SimpleNamespace(document_id=uuid4(), version_id=None)
-    doc.id = link.document_id
+    doc_id = uuid4()
+    doc = SimpleNamespace(
+        id=doc_id,
+        title="Bad Path Doc",
+        head_version=head_version,
+        versions=[],
+    )
+    link = SimpleNamespace(document_id=doc_id, version_id=None)
 
     db = _FakeSession([[], [], [link], [doc]])
 
@@ -288,13 +303,14 @@ async def test_export_zip_document_source_file_missing_falls_back(tmp_path):
     head_version = SimpleNamespace(
         source_file="uploads/missing.pdf", content="fallback content"
     )
+    doc_id = uuid4()
     doc = SimpleNamespace(
+        id=doc_id,
         title="Missing File Doc",
         head_version=head_version,
         versions=[],
     )
-    link = SimpleNamespace(document_id=uuid4(), version_id=None)
-    doc.id = link.document_id
+    link = SimpleNamespace(document_id=doc_id, version_id=None)
 
     db = _FakeSession([[], [], [link], [doc]])
 

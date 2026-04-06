@@ -12,11 +12,15 @@ Two-Factor Authentication (TOTP) management endpoints.
 import pyotp
 from fastapi import APIRouter, Depends, HTTPException
 from jwt import PyJWTError
+from pydantic import UUID4
 
 from app import models, schemas
 from app.core.conf import settings
 from app.core.security import (
     AUTH_BACKEND,
+    decrypt_mfa_secret,
+    encrypt_mfa_secret,
+    get_current_superuser,
     get_current_user,
     get_jwt_strategy,
     verify_mfa_token,
@@ -61,7 +65,7 @@ async def mfa_setup(
         user = await session.get(models.User, current_user.id)
         if user is None:
             raise HTTPException(status_code=404, detail="User not found.")
-        user.mfa_secret = secret
+        user.mfa_secret = encrypt_mfa_secret(secret)
         session.add(user)
         await session.commit()
 
@@ -82,12 +86,13 @@ async def mfa_verify_setup(
     """
     if current_user.mfa_enabled:
         raise HTTPException(status_code=400, detail="MFA is already enabled.")
-    if not current_user.mfa_secret:
+    secret, _ = decrypt_mfa_secret(current_user.mfa_secret)
+    if not secret:
         raise HTTPException(
             status_code=400, detail="Call /setup first to generate a secret."
         )
 
-    totp = pyotp.TOTP(current_user.mfa_secret)
+    totp = pyotp.TOTP(secret)
     if not totp.verify(body.code):
         raise HTTPException(status_code=400, detail="Invalid TOTP code.")
 
@@ -98,6 +103,7 @@ async def mfa_verify_setup(
         if user is None:
             raise HTTPException(status_code=404, detail="User not found.")
         user.mfa_enabled = True
+        user.mfa_secret = encrypt_mfa_secret(secret)
         session.add(user)
         await session.commit()
 
@@ -113,7 +119,11 @@ async def mfa_disable(
     if not current_user.mfa_enabled:
         raise HTTPException(status_code=400, detail="MFA is not enabled.")
 
-    totp = pyotp.TOTP(current_user.mfa_secret)
+    secret, _ = decrypt_mfa_secret(current_user.mfa_secret)
+    if not secret:
+        raise HTTPException(status_code=400, detail="MFA is not enabled.")
+
+    totp = pyotp.TOTP(secret)
     if not totp.verify(body.code):
         raise HTTPException(status_code=400, detail="Invalid TOTP code.")
 
@@ -131,7 +141,27 @@ async def mfa_disable(
     return schemas.MFAStatusResponse(mfa_enabled=False)
 
 
-@router.post("/login-verify")
+@router.post("/admin-reset/{user_id}", response_model=schemas.MFAAdminResetResponse)
+async def mfa_admin_reset(
+    user_id: UUID4,
+    _current_superuser: models.User = Depends(get_current_superuser),
+):
+    """Reset MFA for a user when they have lost access to their authenticator."""
+    from app.core.db import session_context
+
+    async with session_context() as session:
+        user = await session.get(models.User, user_id)
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found.")
+        user.mfa_enabled = False
+        user.mfa_secret = None
+        session.add(user)
+        await session.commit()
+
+    return schemas.MFAAdminResetResponse(user_id=user_id, mfa_enabled=False)
+
+
+@router.post("/login-verify", response_model=schemas.BearerResponse)
 async def mfa_login_verify(body: schemas.MFALoginVerifyRequest):
     """Complete the MFA login challenge.
 
@@ -149,12 +179,18 @@ async def mfa_login_verify(body: schemas.MFALoginVerifyRequest):
         user = await session.get(models.User, user_id)
         if user is None or not user.is_active:
             raise HTTPException(status_code=400, detail="Invalid or expired MFA token.")
-        if not user.mfa_enabled or not user.mfa_secret:
+        secret, was_encrypted = decrypt_mfa_secret(user.mfa_secret)
+        if not user.mfa_enabled or not secret:
             raise HTTPException(status_code=400, detail="MFA is not enabled.")
 
-        totp = pyotp.TOTP(user.mfa_secret)
+        totp = pyotp.TOTP(secret)
         if not totp.verify(body.code):
             raise HTTPException(status_code=400, detail="Invalid TOTP code.")
+
+        if not was_encrypted:
+            user.mfa_secret = encrypt_mfa_secret(secret)
+            session.add(user)
+            await session.commit()
 
     strategy = get_jwt_strategy()
     response = await AUTH_BACKEND.login(strategy, user)

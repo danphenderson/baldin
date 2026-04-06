@@ -8,9 +8,15 @@ import pytest
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
 
+from app import models
 from app.core import conf
 from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.core.security import create_mfa_token, verify_mfa_token
+from app.core.security import (
+    create_mfa_token,
+    decrypt_mfa_secret,
+    encrypt_mfa_secret,
+    verify_mfa_token,
+)
 from app.main import app
 from app.tests import utils
 
@@ -40,13 +46,16 @@ async def _ensure_db_ready() -> None:
     _db_ready = True
 
 
-async def _create_user(password: str) -> tuple[str, UUID]:
+async def _create_user(
+    password: str, *, is_superuser: bool = False
+) -> tuple[str, UUID]:
     email = utils.random_email()
     async with session_context() as session:
         user = await utils.create_db_user(
             email,
             password_helper.hash(password),
             session,
+            is_superuser=is_superuser,
         )
         await session.commit()
     return email, user.id
@@ -192,6 +201,23 @@ async def test_mfa_setup_returns_secret_and_uri() -> None:
     body = resp.json()
     assert "secret" in body
     assert body["provisioning_uri"].startswith("otpauth://totp/")
+
+
+async def test_mfa_setup_persists_secret_encrypted_at_rest() -> None:
+    """The TOTP secret should not be stored in plaintext in the database."""
+    await _ensure_db_ready()
+    email, user_id = await _create_user("Mfa1Encrypt")
+    async with _client() as client:
+        headers = await _auth_headers(client, email, "Mfa1Encrypt")
+        resp = await client.post("/auth/mfa/setup", headers=headers)
+
+    secret = resp.json()["secret"]
+
+    async with session_context() as session:
+        user = await session.get(models.User, user_id)
+        assert user is not None
+        assert user.mfa_secret != secret
+        assert decrypt_mfa_secret(user.mfa_secret) == (secret, True)
 
 
 async def test_mfa_verify_activates_mfa() -> None:
@@ -367,6 +393,32 @@ async def test_mfa_login_verify_bad_token_rejected() -> None:
     assert resp.status_code == 400
 
 
+async def test_mfa_admin_reset_disables_target_user() -> None:
+    """A superuser can reset MFA for a locked-out user."""
+    await _ensure_db_ready()
+    email, user_id = await _create_user("Mfa1Target")
+    admin_email, _ = await _create_user("Admin1Reset", is_superuser=True)
+
+    async with _client() as client:
+        headers = await _auth_headers(client, email, "Mfa1Target")
+        await _enable_mfa(client, headers)
+        admin_headers = await _auth_headers(client, admin_email, "Admin1Reset")
+
+        reset_resp = await client.post(
+            f"/auth/mfa/admin-reset/{user_id}", headers=admin_headers
+        )
+        login_resp = await client.post(
+            "/auth/jwt/login",
+            data={"username": email, "password": "Mfa1Target"},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+
+    assert reset_resp.status_code == 200
+    assert reset_resp.json() == {"user_id": str(user_id), "mfa_enabled": False}
+    assert login_resp.status_code == 200
+    assert "access_token" in login_resp.json()
+
+
 # ---------------------------------------------------------------------------
 # Part 5 – MFA token unit tests
 # ---------------------------------------------------------------------------
@@ -379,3 +431,10 @@ async def test_mfa_token_roundtrip() -> None:
     uid = uuid.uuid4()
     token = create_mfa_token(uid)
     assert verify_mfa_token(token) == uid
+
+
+async def test_mfa_secret_decryption_supports_legacy_plaintext() -> None:
+    """Legacy plaintext MFA secrets remain readable until they are rotated."""
+    secret = "JBSWY3DPEHPK3PXP"
+    assert decrypt_mfa_secret(secret) == (secret, False)
+    assert decrypt_mfa_secret(encrypt_mfa_secret(secret)) == (secret, True)

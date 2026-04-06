@@ -1084,6 +1084,13 @@ class MFAStatusResponse(BaseSchema):
     mfa_enabled: bool = Field(..., description="Whether MFA is currently active")
 
 
+class BearerResponse(BaseSchema):
+    """Returned when password auth completes without an MFA challenge."""
+
+    access_token: str = Field(..., description="JWT access token")
+    token_type: str = Field("bearer", description="Bearer token type")
+
+
 class MFALoginRequired(BaseSchema):
     """Returned at login when MFA verification is still needed."""
 
@@ -1098,6 +1105,15 @@ class MFALoginVerifyRequest(BaseSchema):
 
     mfa_token: str = Field(..., description="MFA challenge token from login response")
     code: str = Field(..., min_length=6, max_length=6, description="6-digit TOTP code")
+
+
+class MFAAdminResetResponse(BaseSchema):
+    """Returned when a superuser resets MFA for another account."""
+
+    user_id: UUID4 = Field(..., description="User whose MFA state was reset")
+    mfa_enabled: bool = Field(
+        False, description="Always false after a successful admin reset"
+    )
 
 
 class PlacementUpdate(BaseSchema):

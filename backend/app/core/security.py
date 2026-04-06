@@ -14,13 +14,17 @@ UserManager class is core fastapi users class with customizable attrs and method
 https://fastapi-users.github.io/fastapi-users/configuration/user-manager/
 """
 
+import base64
 import contextlib
+import hashlib
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from typing import Optional
 
 import jwt
+from cryptography.fernet import Fernet, InvalidToken
 from fastapi import Depends, Request
 from fastapi_users import (
     BaseUserManager,
@@ -50,6 +54,14 @@ _PASSWORD_RULES = [
 
 MFA_TOKEN_EXPIRE_MINUTES = 5
 MFA_TOKEN_AUDIENCE = "baldin:mfa"
+
+
+@lru_cache(maxsize=1)
+def _get_mfa_fernet() -> Fernet:
+    key_material = hashlib.sha256(
+        f"{conf.settings.SECRET_KEY}:mfa".encode("utf-8")
+    ).digest()
+    return Fernet(base64.urlsafe_b64encode(key_material))
 
 
 def get_jwt_strategy() -> JWTStrategy:
@@ -191,6 +203,21 @@ def create_mfa_token(user_id: uuid.UUID) -> str:
         "exp": datetime.now(timezone.utc) + timedelta(minutes=MFA_TOKEN_EXPIRE_MINUTES),
     }
     return jwt.encode(payload, conf.settings.SECRET_KEY, algorithm="HS256")
+
+
+def encrypt_mfa_secret(secret: str) -> str:
+    return _get_mfa_fernet().encrypt(secret.encode("utf-8")).decode("utf-8")
+
+
+def decrypt_mfa_secret(secret: str | None) -> tuple[str | None, bool]:
+    if not secret:
+        return None, False
+
+    try:
+        decrypted = _get_mfa_fernet().decrypt(secret.encode("utf-8")).decode("utf-8")
+        return decrypted, True
+    except InvalidToken:
+        return secret, False
 
 
 def verify_mfa_token(token: str) -> uuid.UUID:

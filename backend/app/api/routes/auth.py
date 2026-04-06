@@ -25,7 +25,7 @@ router = APIRouter()
 _get_current_user_token = fastapi_users.authenticator.current_user_token(active=True)
 
 
-@router.post("/login")
+@router.post("/login", response_model=schemas.BearerResponse | schemas.MFALoginRequired)
 async def login(
     request: Request,
     credentials: OAuth2PasswordRequestForm = Depends(),

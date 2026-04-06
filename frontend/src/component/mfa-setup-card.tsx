@@ -30,6 +30,7 @@ const MFASetupCard: React.FC = () => {
   const [showDisable, setShowDisable] = useState(false);
   const [disableCode, setDisableCode] = useState('');
   const [disableLoading, setDisableLoading] = useState(false);
+  const [showRecoveryNotice, setShowRecoveryNotice] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     if (!token) return;
@@ -137,11 +138,18 @@ const MFASetupCard: React.FC = () => {
             </Box>
             <Switch
               checked={enabled}
-              onChange={() => enabled ? setShowDisable(true) : handleSetup()}
+              onChange={() => enabled ? setShowDisable(true) : setShowRecoveryNotice(true)}
               disabled={setupLoading}
               color="primary"
             />
           </Stack>
+
+          {!enabled && (
+            <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
+              If you lose access to your authenticator app, a Baldin superuser must reset MFA
+              before you can sign in again.
+            </Alert>
+          )}
 
           {/* ── Setup flow ─────────────────────────────────────────── */}
           {setupData && !enabled && (
@@ -186,6 +194,34 @@ const MFASetupCard: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={showRecoveryNotice}
+        onClose={() => setShowRecoveryNotice(false)}
+      >
+        <DialogTitle>Before you enable two-factor authentication</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Save your authenticator app before you verify setup. If you later lose access to
+            that app, you cannot recover this account yourself.
+          </Typography>
+          <Alert severity="warning" sx={{ borderRadius: 2 }}>
+            A Baldin superuser must reset MFA for your account before you can sign in again.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowRecoveryNotice(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={async () => {
+              setShowRecoveryNotice(false);
+              await handleSetup();
+            }}
+          >
+            Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ── Disable confirmation dialog ────────────────────────────── */}
       <Dialog open={showDisable} onClose={() => { setShowDisable(false); setDisableCode(''); setError(''); }}>

@@ -6,6 +6,7 @@ def now_utc() -> datetime:
 
 
 def now_utc_naive() -> datetime:
+    """Return a naive UTC datetime for legacy DB columns stored without tzinfo."""
     return now_utc().replace(tzinfo=None)
 
 

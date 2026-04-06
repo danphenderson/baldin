@@ -16,6 +16,10 @@ def test_normalize_utc_datetime_emits_z_suffix() -> None:
     assert normalized == "2026-01-02T03:04:05Z"
 
 
+def test_parse_utc_datetime_returns_none_for_invalid_values() -> None:
+    assert parse_utc_datetime("not-a-timestamp") is None
+
+
 def test_normalize_status_history_preserves_existing_timestamps() -> None:
     history = [
         {"from": None, "to": "applied", "changed_at": "2026-01-02T03:04:05"},

@@ -32,6 +32,8 @@ async def get_activity_feed(
     else:
         since = ensure_utc(since)
 
+    # Database timestamp columns are stored as naive UTC datetimes today, so
+    # query cutoffs need to drop tzinfo after normalizing the instant to UTC.
     db_since = since.replace(tzinfo=None)
 
     items: list[schemas.ActivityFeedItem] = []

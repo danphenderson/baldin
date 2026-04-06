@@ -48,6 +48,9 @@ DEFAULT_BASE_DELAY = 1.0  # seconds
 DEFAULT_MAX_DELAY = 30.0  # seconds
 DEFAULT_JITTER = 0.5  # ±50% jitter
 
+# Validation thresholds
+MIN_DESCRIPTION_LENGTH = 20  # Characters below this trigger a warning
+
 # Playwright and network errors that warrant a retry
 RETRYABLE_EXCEPTIONS = (
     TimeoutError,
@@ -195,8 +198,10 @@ class CrawlerResult:
             warnings.append("Both title and description are empty")
 
         # Warn if description looks like an error message
-        if self.description and len(self.description.strip()) < 20:
-            warnings.append("Description is suspiciously short (< 20 chars)")
+        if self.description and len(self.description.strip()) < MIN_DESCRIPTION_LENGTH:
+            warnings.append(
+                f"Description is suspiciously short (< {MIN_DESCRIPTION_LENGTH} chars)"
+            )
 
         return CrawlerResultValidation(
             is_valid=len(errors) == 0,

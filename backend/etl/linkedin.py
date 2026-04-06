@@ -50,6 +50,8 @@ LINKEDIN_LOGIN_URL = "https://www.linkedin.com/login"
 LINKEDIN_JOB_CARD_SELECTOR = "a.base-card__full-link"
 
 # XPath: "See more" button that expands the full job description.
+# This targets the first button in the description section's nested structure.
+# If LinkedIn changes their DOM layout, this path will need to be updated.
 LINKEDIN_EXPAND_BUTTON_XPATH = (
     '//*[@id="main-content"]/section[1]/div/div/section[1]/div/div/section/button[1]'
 )
@@ -133,11 +135,16 @@ class LinkedInCrawler(CrawlerBase):
             If browser page is not initialized.
         TimeoutError
             If login page or elements fail to load within timeout.
+
+        Note
+        ----
+        Credentials are only required for authenticated access. Guest API
+        access via search_jobs() does not require login.
         """
         if not conf.linkedin.USERNAME or not conf.linkedin.PASSWORD:
-            logger.warning(
-                "LinkedIn credentials not configured — login may fail. "
-                "Set LINKEDIN_USERNAME and LINKEDIN_PASSWORD environment variables."
+            logger.debug(
+                "LinkedIn credentials not configured — using guest access only. "
+                "Set LINKEDIN_USERNAME and LINKEDIN_PASSWORD for authenticated access."
             )
         await self.navigate_with_retry(LINKEDIN_LOGIN_URL, max_retries=self.max_retries)
         await self.fill_with_retry(

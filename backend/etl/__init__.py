@@ -7,6 +7,7 @@ from .base import (
     DEFAULT_JITTER,
     DEFAULT_MAX_DELAY,
     DEFAULT_MAX_RETRIES,
+    MIN_DESCRIPTION_LENGTH,
     RETRYABLE_EXCEPTIONS,
 )
 from .glassdoor import GlassdoorCrawler
@@ -23,5 +24,6 @@ __all__ = [
     "DEFAULT_JITTER",
     "DEFAULT_MAX_DELAY",
     "DEFAULT_MAX_RETRIES",
+    "MIN_DESCRIPTION_LENGTH",
     "RETRYABLE_EXCEPTIONS",
 ]

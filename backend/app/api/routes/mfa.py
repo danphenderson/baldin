@@ -17,7 +17,6 @@ from app import models, schemas
 from app.core.conf import settings
 from app.core.security import (
     AUTH_BACKEND,
-    create_mfa_token,
     get_current_user,
     get_jwt_strategy,
     verify_mfa_token,

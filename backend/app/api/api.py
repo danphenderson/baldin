@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.deps import fastapi_users, schemas, security
+from app.api.deps import fastapi_users, schemas
 from app.api.routes import (
     action_items,
     activity_feed,

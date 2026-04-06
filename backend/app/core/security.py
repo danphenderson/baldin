@@ -22,7 +22,12 @@ from typing import Optional
 
 import jwt
 from fastapi import Depends, Request
-from fastapi_users import BaseUserManager, FastAPIUsers, InvalidPasswordException, UUIDIDMixin
+from fastapi_users import (
+    BaseUserManager,
+    FastAPIUsers,
+    InvalidPasswordException,
+    UUIDIDMixin,
+)
 from fastapi_users.authentication import (
     AuthenticationBackend,
     BearerTransport,
@@ -73,9 +78,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[models.User, uuid.UUID]):  # type
     ) -> None:
         reasons: list[str] = []
         if len(password) < MIN_PASSWORD_LENGTH:
-            reasons.append(
-                f"at least {MIN_PASSWORD_LENGTH} characters"
-            )
+            reasons.append(f"at least {MIN_PASSWORD_LENGTH} characters")
         for pattern, label in _PASSWORD_RULES:
             if not pattern.search(password):
                 reasons.append(label)
@@ -185,8 +188,7 @@ def create_mfa_token(user_id: uuid.UUID) -> str:
     payload = {
         "sub": str(user_id),
         "aud": MFA_TOKEN_AUDIENCE,
-        "exp": datetime.now(timezone.utc)
-        + timedelta(minutes=MFA_TOKEN_EXPIRE_MINUTES),
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=MFA_TOKEN_EXPIRE_MINUTES),
     }
     return jwt.encode(payload, conf.settings.SECRET_KEY, algorithm="HS256")
 

@@ -1,5 +1,6 @@
-import React, { useContext, useEffect, useState, useCallback } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
+  Alert,
   Avatar,
   Box,
   Button,
@@ -7,8 +8,6 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  Snackbar,
-  Alert,
   Stack,
   Typography,
 } from '@mui/material';
@@ -30,6 +29,7 @@ import {
 import { createConnection, getConnections } from '../service/connections';
 import { createConversation } from '../service/messages';
 import { avatarUrl } from '../service/users';
+import { useNotification } from '../context/notification-context';
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -44,13 +44,7 @@ const UserProfilePage: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [messaging, setMessaging] = useState(false);
 
-  const [snack, setSnack] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success',
-  });
-
-  const notify = useCallback((message: string, severity: 'success' | 'error' = 'success') => {
-    setSnack({ open: true, message, severity });
-  }, []);
+  const { notify } = useNotification();
 
   useEffect(() => {
     if (!token || !userId) return;
@@ -284,22 +278,6 @@ const UserProfilePage: React.FC = () => {
           </CardContent>
         </Card>
       )}
-
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={4000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnack((s) => ({ ...s, open: false }))}
-          severity={snack.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snack.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

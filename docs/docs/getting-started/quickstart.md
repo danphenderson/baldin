@@ -65,6 +65,8 @@ If you hit schema drift after pulling breaking model changes, reset the develope
 
 This stops Docker Compose, clears the `backend/public/db` and `backend/public/test_db` volumes, and restarts the stack with fresh databases.
 
+If you instead see a PostgreSQL `collation version mismatch` warning and want to preserve local data, use `./scripts/repair_local_db_collation.sh` from the repo root.
+
 ## What Happens on Startup
 
 The backend starts in `DEV` mode and:

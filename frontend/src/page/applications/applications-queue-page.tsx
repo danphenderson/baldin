@@ -15,6 +15,7 @@ import {
   Explore as ExploreIcon,
   SearchOff as SearchOffIcon,
   Warning as WarningIcon,
+  Description as DocIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
@@ -60,6 +61,7 @@ const ApplicationsQueuePage: React.FC = () => {
   const {
     applications, loading, error, success, setError, setSuccess,
     handleAdvance, handleDelete, confirmDelete, deleteTarget, setDeleteTarget,
+    appDocMeta, appDocMetaLoading,
   } = useApplications(token);
 
   /* ---- Local UI state ---- */
@@ -68,6 +70,8 @@ const ApplicationsQueuePage: React.FC = () => {
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [sortKey, setSortKey] = useState<SortKey>('updated');
+  const [resumeFilter, setResumeFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [coverLetterFilter, setCoverLetterFilter] = useState<'all' | 'yes' | 'no'>('all');
 
   /* ---- Metrics ---- */
   const totalCount = applications.length;
@@ -113,9 +117,22 @@ const ApplicationsQueuePage: React.FC = () => {
         (activeFilter === 'active' && stage !== 'rejected') ||
         (activeFilter === 'closed' && stage === 'rejected');
 
-      return matchesSearch && matchesStage && matchesActive;
+      const docMeta = appDocMeta.get(app.id);
+      const matchesResume =
+        resumeFilter === 'all' ||
+        !docMeta ||
+        (resumeFilter === 'yes' && docMeta.hasResume) ||
+        (resumeFilter === 'no' && !docMeta.hasResume);
+
+      const matchesCoverLetter =
+        coverLetterFilter === 'all' ||
+        !docMeta ||
+        (coverLetterFilter === 'yes' && docMeta.hasCoverLetter) ||
+        (coverLetterFilter === 'no' && !docMeta.hasCoverLetter);
+
+      return matchesSearch && matchesStage && matchesActive && matchesResume && matchesCoverLetter;
     });
-  }, [deferredSearch, stageFilter, activeFilter, applications]);
+  }, [deferredSearch, stageFilter, activeFilter, applications, resumeFilter, coverLetterFilter, appDocMeta]);
 
   const sorted = useMemo(() => {
     const copy = [...filtered];
@@ -328,7 +345,24 @@ const ApplicationsQueuePage: React.FC = () => {
             onClick={() => setActiveFilter(key)}
           />
         ))}
-        {/* TODO: Add "Has Resume" and "Has Cover Letter" filters once the list endpoint returns attached document metadata */}
+        <Chip
+          icon={<DocIcon sx={{ fontSize: '0.85rem !important' }} />}
+          label="Has Resume"
+          size="small"
+          variant={resumeFilter === 'yes' ? 'filled' : 'outlined'}
+          color={resumeFilter === 'yes' ? 'success' : 'default'}
+          disabled={appDocMetaLoading}
+          onClick={() => setResumeFilter(resumeFilter === 'yes' ? 'all' : 'yes')}
+        />
+        <Chip
+          icon={<DocIcon sx={{ fontSize: '0.85rem !important' }} />}
+          label="Has Cover Letter"
+          size="small"
+          variant={coverLetterFilter === 'yes' ? 'filled' : 'outlined'}
+          color={coverLetterFilter === 'yes' ? 'success' : 'default'}
+          disabled={appDocMetaLoading}
+          onClick={() => setCoverLetterFilter(coverLetterFilter === 'yes' ? 'all' : 'yes')}
+        />
       </Stack>
 
       {/* ── Application list ── */}
@@ -347,8 +381,8 @@ const ApplicationsQueuePage: React.FC = () => {
         applications.length === 0 ? (
           <EmptyState
             icon={<WorkIcon />}
-            title="No applications yet"
-            description="Track your first application by applying through a lead on the Leads page."
+            title="No applications tracked"
+            description="Apply to a lead to start tracking your application progress."
             action={{
               label: 'Browse Leads',
               onClick: () => navigate('/leads'),
@@ -358,8 +392,8 @@ const ApplicationsQueuePage: React.FC = () => {
         ) : (
           <EmptyState
             icon={<SearchOffIcon />}
-            title="No matches"
-            description="Try adjusting your search or filter criteria."
+            title="No results match your filters"
+            description="Try adjusting your search or clearing filters."
           />
         )
       ) : (

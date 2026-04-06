@@ -11,6 +11,7 @@ import {
   Description as DocIcon,
   Download as DownloadIcon,
   AutoAwesome as AIIcon,
+  NoteAdd as NoteAddIcon,
   OpenInNew as OpenIcon,
   Warning as WarningIcon,
   PlaylistAdd as PlaylistAddIcon,
@@ -20,14 +21,13 @@ import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import {
   getApplications, updateApplication, deleteApplication,
-  getApplicationCoverLetters, generatecoverLetter, getApplicationResumes,
-  createApplicationResume, createApplicationCoverLetter,
   getApplicationDocuments, addApplicationDocument, detachApplicationDocument,
   type ApplicationRead,
 } from '../../service/applications';
-import { getDocuments, downloadDocument } from '../../service/documents';
-import { getCoverLetters, downloadCoverLetter, type CoverLetterRead } from '../../service/cover-letters';
-import { getResumes, downloadResume, type ResumeRead } from '../../service/resumes';
+import {
+  getDocuments, downloadDocument, generateDocument,
+  type DocumentRead, type DocumentGenerateRequest,
+} from '../../service/documents';
 import { COLUMNS, relativeDate } from './use-applications';
 import CreateActionItemDialog from '../../component/create-action-item-dialog';
 import type { ActionItemRead, ActionItemCreate } from '../../service/action-items';
@@ -49,20 +49,13 @@ const ApplicationDetailPage: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  /* document state */
-  const [appResumes, setAppResumes] = useState<ResumeRead[]>([]);
-  const [appCoverLetters, setAppCoverLetters] = useState<CoverLetterRead[]>([]);
-  const [allResumes, setAllResumes] = useState<ResumeRead[]>([]);
-  const [allCoverLetters, setAllCoverLetters] = useState<CoverLetterRead[]>([]);
-  const [templates, setTemplates] = useState<CoverLetterRead[]>([]);
+  /* document state (unified) */
+  const [appDocuments, setAppDocuments] = useState<DocumentRead[]>([]);
+  const [allDocuments, setAllDocuments] = useState<DocumentRead[]>([]);
+  const [templates, setTemplates] = useState<DocumentRead[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [generating, setGenerating] = useState(false);
-
-  /* unified document state */
-  type DocumentRead = Awaited<ReturnType<typeof getApplicationDocuments>>[number];
-  const [appDocuments, setAppDocuments] = useState<DocumentRead[]>([]);
-  const [allDocuments, setAllDocuments] = useState<DocumentRead[]>([]);
 
   /* delete confirmation */
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -121,22 +114,14 @@ const ApplicationDetailPage: React.FC = () => {
     const loadDocs = async () => {
       setLoadingDocs(true);
       try {
-        const [cls, resData, letters, res, appDocs, allDocs] = await Promise.all([
-          getApplicationCoverLetters(token, app.id),
-          getApplicationResumes(token, app.id),
-          getCoverLetters(token),
-          getResumes(token),
+        const [appDocs, allDocs] = await Promise.all([
           getApplicationDocuments(token, app.id),
           getDocuments(token),
         ]);
         if (cancelled) return;
-        setAppCoverLetters(cls || []);
-        setAppResumes(Array.isArray(resData) ? resData : []);
-        setAllCoverLetters(letters || []);
-        setTemplates((letters || []).filter((t: CoverLetterRead) => t.content_type === 'template'));
-        setAllResumes(res || []);
         setAppDocuments(appDocs || []);
         setAllDocuments(allDocs || []);
+        setTemplates((allDocs || []).filter((d) => d.kind === 'cover_letter' && d.status !== 'archived'));
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load documents');
       }
@@ -169,7 +154,7 @@ const ApplicationDetailPage: React.FC = () => {
   }, []);
 
   /* status change */
-  const handleStatusChange = async (newStatus: string) => {
+  const handleStatusChange = async (newStatus: ApplicationRead['status']) => {
     if (!token || !app) return;
     const prev = app.status;
     setApp((a) => a ? { ...a, status: newStatus } : a);
@@ -236,45 +221,59 @@ const ApplicationDetailPage: React.FC = () => {
     setDeleteOpen(false);
   };
 
-  /* attach resume */
-  const handleAttachResume = async (resumeId: string) => {
+  /* attach resume (via unified documents) */
+  const handleAttachResume = async (docId: string) => {
     if (!token || !app) return;
     try {
-      await createApplicationResume(token, app.id, resumeId);
-      const resData = await getApplicationResumes(token, app.id);
-      setAppResumes(Array.isArray(resData) ? resData : []);
+      await addApplicationDocument(token, app.id, docId);
+      const docs = await getApplicationDocuments(token, app.id);
+      setAppDocuments(docs || []);
       showSuccess('Resume attached');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to attach resume');
     }
   };
 
-  /* attach cover letter */
-  const handleAttachCoverLetter = async (clId: string) => {
+  /* attach cover letter (via unified documents) */
+  const handleAttachCoverLetter = async (docId: string) => {
     if (!token || !app) return;
     try {
-      await createApplicationCoverLetter(token, app.id, clId);
-      const cls = await getApplicationCoverLetters(token, app.id);
-      setAppCoverLetters(cls || []);
+      await addApplicationDocument(token, app.id, docId);
+      const docs = await getApplicationDocuments(token, app.id);
+      setAppDocuments(docs || []);
       showSuccess('Cover letter attached');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to attach cover letter');
     }
   };
 
-  /* generate cover letter */
+  /* generate cover letter via unified document API */
   const handleGenerate = async () => {
     if (!token || !app) return;
-    const templateId = selectedTemplate || (templates.length > 0 ? templates[0].id : null);
-    if (!templateId) {
+    const leadId = lead?.id;
+    if (!leadId) {
+      setError('No lead associated with this application.');
+      return;
+    }
+    const templateDoc = selectedTemplate
+      ? templates.find((t) => t.id === selectedTemplate)
+      : templates[0];
+    if (!templateDoc) {
       setError('No cover letter template available. Create one in Documents first.');
       return;
     }
     setGenerating(true);
     try {
-      await generatecoverLetter(token, app.id, templateId);
-      const cls = await getApplicationCoverLetters(token, app.id);
-      setAppCoverLetters(cls || []);
+      const payload: DocumentGenerateRequest = {
+        kind: 'cover_letter',
+        lead_id: leadId,
+        template_version_id: templateDoc.head_version?.id ?? null,
+      };
+      const generated = await generateDocument(token, payload);
+      // Attach the newly generated document to this application
+      await addApplicationDocument(token, app.id, generated.id);
+      const docs = await getApplicationDocuments(token, app.id);
+      setAppDocuments(docs || []);
       showSuccess('Cover letter generated');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Generation failed');
@@ -282,11 +281,13 @@ const ApplicationDetailPage: React.FC = () => {
     setGenerating(false);
   };
 
-  const availableResumes = allResumes.filter(
-    (r) => !appResumes.some((attached) => attached.id === r.id),
+  const appResumes = appDocuments.filter((d) => d.kind === 'resume');
+  const appCoverLetters = appDocuments.filter((d) => d.kind === 'cover_letter');
+  const availableResumes = allDocuments.filter(
+    (d) => d.kind === 'resume' && !appDocuments.some((attached) => attached.id === d.id),
   );
-  const availableCoverLetters = allCoverLetters.filter(
-    (cl) => !appCoverLetters.some((attached) => attached.id === cl.id),
+  const availableCoverLetters = allDocuments.filter(
+    (d) => d.kind === 'cover_letter' && !appDocuments.some((attached) => attached.id === d.id),
   );
   const availableDocuments = allDocuments.filter(
     (d) => !appDocuments.some((attached) => attached.id === d.id),
@@ -553,9 +554,20 @@ const ApplicationDetailPage: React.FC = () => {
 
         {/* -------- Documents (Unified) -------- */}
         <Box sx={{ px: 3, py: 3 }}>
-          <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-            Documents
-          </Typography>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+            <Typography variant="subtitle1" fontWeight={700}>
+              Documents
+            </Typography>
+            <Button
+              variant="text"
+              size="small"
+              startIcon={<NoteAddIcon />}
+              onClick={() => navigate('/documents/new')}
+              sx={{ textTransform: 'none' }}
+            >
+              New Document
+            </Button>
+          </Stack>
 
           {loadingDocs ? (
             <Stack spacing={1}>{[0, 1].map((i) => <Skeleton key={i} variant="rounded" height={40} />)}</Stack>
@@ -635,10 +647,10 @@ const ApplicationDetailPage: React.FC = () => {
                   }}
                 >
                   <DocIcon fontSize="small" color="primary" />
-                  <Typography variant="body2" sx={{ flexGrow: 1, minWidth: 0 }} noWrap>{r.name || 'Untitled'}</Typography>
-                  <Chip label={r.content_type || 'custom'} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 22 }} />
+                  <Typography variant="body2" sx={{ flexGrow: 1, minWidth: 0 }} noWrap>{r.title || 'Untitled'}</Typography>
+                  <Chip label={r.status || 'draft'} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 22 }} />
                   <Tooltip title="Download">
-                    <IconButton size="small" onClick={() => token && downloadResume(token, r.id)} aria-label="Download resume">
+                    <IconButton size="small" onClick={() => token && downloadDocument(token, r.id)} aria-label="Download resume">
                       <DownloadIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
@@ -658,7 +670,7 @@ const ApplicationDetailPage: React.FC = () => {
                 onChange={(e) => handleAttachResume(e.target.value)}
               >
                 {availableResumes.map((r) => (
-                  <MenuItem key={r.id} value={r.id}>{r.name || 'Untitled'} ({r.content_type || 'custom'})</MenuItem>
+                  <MenuItem key={r.id} value={r.id}>{r.title || 'Untitled'} ({r.status || 'draft'})</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -689,10 +701,10 @@ const ApplicationDetailPage: React.FC = () => {
                   }}
                 >
                   <DocIcon fontSize="small" color="secondary" />
-                  <Typography variant="body2" sx={{ flexGrow: 1, minWidth: 0 }} noWrap>{cl.name || 'Untitled'}</Typography>
-                  <Chip label={cl.content_type || 'generated'} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 22 }} />
+                  <Typography variant="body2" sx={{ flexGrow: 1, minWidth: 0 }} noWrap>{cl.title || 'Untitled'}</Typography>
+                  <Chip label={cl.status || 'draft'} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 22 }} />
                   <Tooltip title="Download">
-                    <IconButton size="small" onClick={() => token && downloadCoverLetter(token, cl.id)} aria-label="Download cover letter">
+                    <IconButton size="small" onClick={() => token && downloadDocument(token, cl.id)} aria-label="Download cover letter">
                       <DownloadIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
@@ -713,7 +725,7 @@ const ApplicationDetailPage: React.FC = () => {
                     onChange={(e) => setSelectedTemplate(e.target.value)}
                   >
                     {templates.map((t) => (
-                      <MenuItem key={t.id} value={t.id}>{t.name || 'Untitled'}</MenuItem>
+                      <MenuItem key={t.id} value={t.id}>{t.title || 'Untitled'}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -740,7 +752,7 @@ const ApplicationDetailPage: React.FC = () => {
                   >
                     {availableCoverLetters.map((letter) => (
                       <MenuItem key={letter.id} value={letter.id}>
-                        {letter.name || 'Untitled'} ({letter.content_type || 'custom'})
+                        {letter.title || 'Untitled'} ({letter.status || 'draft'})
                       </MenuItem>
                     ))}
                   </Select>

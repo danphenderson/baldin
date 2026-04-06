@@ -15,7 +15,9 @@ router = APIRouter(dependencies=[Depends(get_current_superuser)])
 
 
 @router.post("/pipelines", response_model=schemas.CrawlerPipelineRead)
+@limiter.limit("10/minute")
 async def create_crawler_pipeline(
+    request: Request,
     payload: schemas.CrawlerPipelineCreate,
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_superuser),

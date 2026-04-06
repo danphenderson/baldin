@@ -5,8 +5,9 @@ product codebase with partially restored but stale infrastructure to a
 controlled market launch.
 
 The repository is now private. It remains the main engineering workspace for
-local development, but it is also regaining deployment ownership so Baldin can
-ship faster without exposing IP or operational details outside the team.
+local development, and it is the planning surface for rebuilding a narrower
+release path inside the repo without implying that production deployment is
+already active here.
 
 ## Status Legend
 
@@ -18,8 +19,9 @@ ship faster without exposing IP or operational details outside the team.
 
 - The old public-preview and separate-private-control-plane framing is superseded.
 - Phase 1 is complete.
-- Phases 2 through 7 are planned and not yet started.
-- Phase 2 is the next blocking phase.
+- Phase 2 is in progress: the repo-side CI gate is in place, and the
+  remaining gap is GitHub branch-protection enforcement.
+- Phases 3 through 7 are planned and not yet started.
 
 ## Phase 1: Reset the Baseline and Repo Posture
 
@@ -28,8 +30,8 @@ Status: `[x]` Complete
 Objective:
 
 - Replace the stale public-repo execution story with a private launch program
-  that treats this repository as both the product source and the deployment
-  control plane.
+  that treats this repository as the product source and the planning surface
+  for a future in-repo release path.
 
 Completed work:
 
@@ -45,8 +47,8 @@ Completed work:
 Checklist:
 
 - [x] Archive the old public-preview and external-control-plane assumptions.
-- [x] Treat this private repo as both the source of truth and the deployment
-  control surface again.
+- [x] Treat this private repo as the source of truth and the place where the
+  next release path will be rebuilt.
 - [x] Reframe the top-level docs around a fast, controlled launch instead of
   public positioning.
 - [x] Mark the restored CDK app as input material for a narrower release path,
@@ -66,21 +68,30 @@ Exit criteria:
 
 ## Phase 2: Turn CI Into a Real Integration Gate
 
-Status: `[ ]` Not started
+Status: `[~]` In progress
 
 Objective:
 
 - Make `main` a reviewed integration branch with meaningful required checks.
 
+Current state:
+
+- `.github/workflows/ci.yml` already defines the repo-side CI jobs, including
+  backend tests with a 60% coverage gate, frontend test and typecheck jobs,
+  frontend build validation, and schema freshness checks.
+- `.github/branch-protection.md` documents the required GitHub settings, but
+  those settings still have to be applied in GitHub before reviews and checks
+  block merges on `main`.
+
 Checklist:
 
-- [ ] Keep linting as a fast-fail job, but stop treating it as the only gate.
-- [ ] Add backend test execution to CI.
-- [ ] Add backend coverage reporting or a minimum backend quality threshold.
-- [ ] Add frontend install and build validation to CI.
-- [ ] Add frontend test execution to CI.
-- [ ] Add a frontend type check such as `tsc --noEmit`.
-- [ ] Add an API contract or schema freshness guard.
+- [x] Keep linting as a fast-fail job, but stop treating it as the only gate.
+- [x] Add backend test execution to CI.
+- [x] Add backend coverage reporting or a minimum backend quality threshold.
+- [x] Add frontend install and build validation to CI.
+- [x] Add frontend test execution to CI.
+- [x] Add a frontend type check such as `tsc --noEmit`.
+- [x] Add an API contract or schema freshness guard.
 - [ ] Configure branch protection so pull request review is required for `main`.
 - [ ] Configure branch protection so required checks must pass before merge.
 

@@ -24,8 +24,11 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
 
 from app import logging, models, schemas, utils  # noqa
-from app.core import conf  # noqa
-from app.core import security  # noqa
+from app.core import (
+    conf,  # noqa
+    security,  # noqa
+)
+from app.core import orchestration as orchestration_core  # noqa
 from app.core.db import (  # noqa
     AsyncSession,
     DataBaseManager,
@@ -457,29 +460,7 @@ async def update_orchestration_event(
     db: AsyncSession,
     user: schemas.UserRead | None = None,
 ) -> models.OrchestrationEvent:
-    if user is None:
-        event = await db.get(models.OrchestrationEvent, id)
-    else:
-        query = (
-            select(models.OrchestrationEvent)
-            .where(models.OrchestrationEvent.id == id)
-            .options(selectinload(models.OrchestrationEvent.orchestration_pipeline))
-        )
-        result = await db.execute(query)
-        event = result.scalars().first()
-    if not event:
-        raise await _404(event, id)
-    if user is not None and (
-        not event.orchestration_pipeline
-        or event.orchestration_pipeline.user_id != user.id
-    ):
-        raise await _403(user.id, event, id)
-    for var, value in payload.model_dump(exclude_unset=True).items():
-        setattr(event, var, value)
-    await db.commit()
-    await db.refresh(event)
-    await log.info(f"update_orchestration_event: {event}")
-    return event
+    return await orchestration_core.update_orchestration_event(id, payload, db, user)
 
 
 async def update_orchestration_event_for_current_user(
@@ -495,18 +476,7 @@ async def create_orchestration_event(
     payload: schemas.OrchestrationEventCreate,
     db: AsyncSession = Depends(get_async_session),
 ) -> models.OrchestrationEvent:
-    # Seralize URIS to JSON stings (for database)
-    if payload.source_uri is not None:
-        setattr(payload, "source_uri", payload.source_uri.json())
-    if payload.destination_uri is not None:
-        setattr(payload, "destination_uri", payload.destination_uri.json())
-    # Create new event record in database
-    event = models.OrchestrationEvent(**payload.__dict__)
-    db.add(event)
-    await db.commit()
-    await db.refresh(event)
-    await log.info(f"create_orchestration_event: {event}")
-    return event
+    return await orchestration_core.create_orchestration_event(payload, db)
 
 
 async def get_skill(
@@ -774,20 +744,7 @@ async def get_orchestration_pipeline_by_name(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.OrchestrationPipeline:
-    query = (
-        select(models.OrchestrationPipeline)
-        .where(
-            models.OrchestrationPipeline.name == name,
-            models.OrchestrationPipeline.user_id == user.id,
-        )
-        .options(selectinload(models.OrchestrationPipeline.orchestration_events))
-    )
-    result = await db.execute(query)
-    pipeline = result.scalars().first()
-    if not pipeline:
-        raise await _404(pipeline, name)
-    await log.info(f"get_orchestration_pipeline: {pipeline}")
-    return pipeline
+    return await orchestration_core.get_orchestration_pipeline_by_name(name, db, user)
 
 
 async def create_orchestration_pipeline(
@@ -795,12 +752,7 @@ async def create_orchestration_pipeline(
     user: schemas.UserRead,
     db: AsyncSession = Depends(get_async_session),
 ) -> models.OrchestrationPipeline:
-    pipeline = models.OrchestrationPipeline(**payload.model_dump(), user_id=user.id)
-    db.add(pipeline)
-    await db.commit()
-    await db.refresh(pipeline)
-    await log.info(f"create_orchestration_pipeline: {pipeline}")
-    return pipeline
+    return await orchestration_core.create_orchestration_pipeline(payload, user, db)
 
 
 async def get_extractor(
@@ -868,7 +820,7 @@ async def run_extractor(
         pipeline = await get_orchestration_pipeline_by_name(
             getattr(extractor, "name", ""), db, user
         )
-    except HTTPException as _:  # noqa
+    except HTTPException as _:
         # Create a new pipeline for this extractor
         pipeline = models.OrchestrationPipeline(
             name=extractor.name,
@@ -949,7 +901,7 @@ async def run_extractor(
             event_obj.retry_of_id = retry_of_id
         await db.flush()
 
-    # Run the extraction event, TODO, cleanup
+    # Run the extraction event
     try:
         llm = payload.llm or conf.openai.COMPLETION_MODEL
         if payload.mode == "entire_document":
@@ -962,7 +914,7 @@ async def run_extractor(
             )
     except Exception as e:
         error_message = (
-            f"Failure running extractor {extractor.name}: " f"{type(e).__name__}: {e}"
+            f"Failure running extractor {extractor.name}: {type(e).__name__}: {e}"
         )
         await log.exception(error_message)
         await update_orchestration_event(
@@ -1242,7 +1194,6 @@ async def execute_crawler_run(
     user: models.User,
 ) -> models.CrawlerRun:
     """Execute a crawler run: instantiate adapter, crawl, persist leads, update stats."""
-    from etl import base as etl_base  # noqa: local import to avoid circular deps
 
     stats = {
         "leads_found": 0,

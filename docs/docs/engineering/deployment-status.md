@@ -1,19 +1,20 @@
 ---
 sidebar_position: 5
 slug: /engineering/deployment-status
-title: Deployment Status
----
-
-# Deployment Status
 title: Track Release Readiness Instead (Archived)
 description: Archived link target preserved for older links. Use Track Release Readiness instead.
+---
+
+# Track Release Readiness Instead (Archived)
+
+The canonical deployment and release summary now lives at [Track Release Readiness](./release-roadmap.md).
 
 ## Current Artifact Contract
-# Track Release Readiness Instead (Archived)
+
 The deployment path starts from two application artifacts:
 
 | Artifact | Source | Output |
-The canonical deployment and release summary now lives at [Track Release Readiness](./release-roadmap.md).
+|----------|--------|--------|
 | Backend container image | `backend/Dockerfile` | Docker image |
 | Frontend static bundle | `frontend/scripts/build-static.mjs` | `frontend/dist/` |
 

@@ -28,10 +28,14 @@ export interface ConnectedUser {
   color?: string;
 }
 
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+
 export interface CollaborativeEditorState {
   ydoc: Y.Doc | null;
   provider: WebsocketProvider | null;
   connected: boolean;
+  /** Granular connection lifecycle: disconnected → connecting → connected. */
+  connectionStatus: ConnectionStatus;
   connectedUsers: ConnectedUser[];
   localUser: Required<Pick<ConnectedUser, 'name' | 'color'>>;
 }
@@ -86,6 +90,7 @@ export function useCollaborativeEditor(
   const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
   const [provider, setProvider] = useState<WebsocketProvider | null>(null);
   const [connected, setConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [connectedUsers, setConnectedUsers] = useState<ConnectedUser[]>([]);
 
   const userColor = useMemo(() => randomColor(), []);
@@ -102,6 +107,7 @@ export function useCollaborativeEditor(
     setYdoc(null);
     setProvider(null);
     setConnected(false);
+    setConnectionStatus('disconnected');
     setConnectedUsers([]);
   }, [documentId, enabled, token]);
 
@@ -192,6 +198,13 @@ export function useCollaborativeEditor(
 
       providerInstance.on('status', (event: { status: string }) => {
         setConnected(event.status === 'connected');
+        if (event.status === 'connected') {
+          setConnectionStatus('connected');
+        } else if (event.status === 'connecting') {
+          setConnectionStatus('connecting');
+        } else {
+          setConnectionStatus('disconnected');
+        }
       });
 
       providerInstance.awareness.setLocalStateField('user', localUser);
@@ -235,6 +248,7 @@ export function useCollaborativeEditor(
       setYdoc(null);
       setProvider(null);
       setConnected(false);
+      setConnectionStatus('disconnected');
       setConnectedUsers([]);
     };
   }, [documentId, token, enabled, localUser]);
@@ -243,6 +257,7 @@ export function useCollaborativeEditor(
     ydoc,
     provider,
     connected,
+    connectionStatus,
     connectedUsers,
     localUser,
   };

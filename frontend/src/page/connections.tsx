@@ -8,8 +8,7 @@ import {
   Chip,
   CircularProgress,
   Pagination as MuiPagination,
-  Snackbar,
-  Alert,
+  Skeleton,
   Stack,
   TextField,
   Typography,
@@ -38,6 +37,7 @@ import {
 import { avatarUrl } from '../service/users';
 import { createConversation } from '../service/messages';
 import EmptyState from '../component/common/empty-state';
+import { useNotification } from '../context/notification-context';
 
 const PAGE_SIZE = 12;
 
@@ -73,13 +73,7 @@ const ConnectionsPage: React.FC = () => {
 
   const [actingId, setActingId] = useState<string | null>(null);
 
-  const [snack, setSnack] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success',
-  });
-
-  const notify = useCallback((message: string, severity: 'success' | 'error' = 'success') => {
-    setSnack({ open: true, message, severity });
-  }, []);
+  const { notify } = useNotification();
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -215,17 +209,29 @@ const ConnectionsPage: React.FC = () => {
 
       {/* Cards */}
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-          <CircularProgress />
-        </Box>
+        <Grid container spacing={2.5}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Grid key={i} size={{ xs: 12, sm: 6 }}>
+              <Card sx={{ height: 140 }}>
+                <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <Skeleton variant="circular" width={48} height={48} />
+                  <Box sx={{ flex: 1 }}>
+                    <Skeleton variant="text" width="50%" height={24} />
+                    <Skeleton variant="text" width="70%" height={18} sx={{ mt: 0.5 }} />
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       ) : paged.length === 0 ? (
         connections.length === 0 ? (
           <EmptyState
             icon={<PeopleIcon />}
             title="No connections yet"
-            description="Visit the Directory to find other job seekers or browse the dedicated superuser view."
+            description="Connect with other users to share documents and collaborate."
             action={{
-              label: 'Browse Superusers',
+              label: 'Browse the Directory',
               onClick: () => navigate('/network/directory?superusers_only=true'),
               icon: <AutoAwesomeIcon />,
             }}
@@ -233,8 +239,8 @@ const ConnectionsPage: React.FC = () => {
         ) : (
           <EmptyState
             icon={<SearchIcon />}
-            title="No matches"
-            description="Try adjusting your search or filter criteria."
+            title="No results match your filters"
+            description="Try adjusting your search or clearing filters."
           />
         )
       ) : (
@@ -393,22 +399,6 @@ const ConnectionsPage: React.FC = () => {
           />
         </Box>
       )}
-
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={4000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnack((s) => ({ ...s, open: false }))}
-          severity={snack.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snack.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

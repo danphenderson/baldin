@@ -9,8 +9,7 @@ import {
   Chip,
   CircularProgress,
   Pagination as MuiPagination,
-  Snackbar,
-  Alert,
+  Skeleton,
   Stack,
   TextField,
   Tooltip,
@@ -34,6 +33,7 @@ import {
 import { createConnection } from '../service/connections';
 import { avatarUrl } from '../service/users';
 import EmptyState from '../component/common/empty-state';
+import { useNotification } from '../context/notification-context';
 
 const PAGE_SIZE = 12;
 
@@ -56,13 +56,7 @@ const DirectoryPage: React.FC = () => {
 
   const [connectingId, setConnectingId] = useState<string | null>(null);
 
-  const [snack, setSnack] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success',
-  });
-
-  const notify = useCallback((message: string, severity: 'success' | 'error' = 'success') => {
-    setSnack({ open: true, message, severity });
-  }, []);
+  const { notify } = useNotification();
 
   const setSuperuserView = useCallback((nextValue: boolean) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -202,17 +196,28 @@ const DirectoryPage: React.FC = () => {
 
       {/* Cards */}
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-          <CircularProgress />
-        </Box>
+        <Grid container spacing={2.5}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Grid key={i} size={{ xs: 12, sm: 6, md: 4 }}>
+              <Card sx={{ height: 200 }}>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <Skeleton variant="circular" width={56} height={56} />
+                  <Skeleton variant="text" width="60%" height={24} sx={{ mt: 1.5 }} />
+                  <Skeleton variant="text" width="80%" height={18} sx={{ mt: 0.5 }} />
+                  <Skeleton variant="text" width="40%" height={18} sx={{ mt: 0.5 }} />
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       ) : paged.length === 0 ? (
         users.length === 0 ? (
           <EmptyState
             icon={<PeopleIcon />}
-            title={superusersOnly ? 'No discoverable superusers yet' : 'No users in the directory'}
+            title={superusersOnly ? 'No discoverable superusers yet' : 'No users in the directory yet'}
             description={superusersOnly
-              ? 'When a superuser keeps their network profile visible, they will appear here for individual requests.'
-              : 'When users make their profiles discoverable they will appear here.'}
+              ? 'When mentors and advisors enable directory visibility, they\u0027ll appear here.'
+              : 'The directory shows discoverable members of the Baldin community.'}
             action={superusersOnly
               ? { label: 'Show Everyone', onClick: () => setSuperuserView(false) }
               : undefined}
@@ -220,8 +225,8 @@ const DirectoryPage: React.FC = () => {
         ) : (
           <EmptyState
             icon={<SearchIcon />}
-            title="No matches"
-            description="Try adjusting your search or filter criteria."
+            title="No results match your filters"
+            description="Try adjusting your search or clearing filters."
           />
         )
       ) : (
@@ -326,22 +331,6 @@ const DirectoryPage: React.FC = () => {
           />
         </Box>
       )}
-
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={4000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnack((s) => ({ ...s, open: false }))}
-          severity={snack.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snack.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { timeAgo as relativeDate, timeAgoShort, statusLabel } from '../util/format';
 import {
   Box, Card, CardContent, Typography, Button, Chip, IconButton,
   useTheme, alpha, Stack, TextField, Dialog, DialogTitle,
@@ -14,6 +15,7 @@ import {
   SwapHoriz as StatusChangeIcon,
   MailOutline as MailIcon,
   Description as DescriptionIcon,
+  NoteAdd as NoteAddIcon,
   PersonAdd as PersonAddIcon,
   CheckCircle as CheckCircleIcon,
   Close as DismissIcon,
@@ -101,22 +103,6 @@ const FEED_ICONS: Record<string, React.ReactElement> = {
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function relativeDate(iso: string): string {
-  const now = Date.now();
-  const then = new Date(iso).getTime();
-  const diff = now - then;
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return `${Math.floor(months / 12)}y ago`;
-}
-
 function isOverdue(item: ActionItemDetailRead): boolean {
   return Boolean(
     item.due_at &&
@@ -136,10 +122,6 @@ function todayFormatted(): string {
   return new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
-function statusLabel(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 function linkedEntityLabel(item: ActionItemDetailRead): { text: string; path: string } | null {
   if (item.application_id) {
     const label = item.application?.lead?.title || 'Application';
@@ -151,7 +133,7 @@ function linkedEntityLabel(item: ActionItemDetailRead): { text: string; path: st
   }
   if (item.document_id) {
     const label = item.document?.title || 'Document';
-    return { text: `Doc: ${label}`, path: `/me/documents/${item.document_id}` };
+    return { text: `Doc: ${label}`, path: `/documents/${item.document_id}` };
   }
   if (item.conversation_id) {
     return { text: 'Chat: Conversation', path: `/network/messages/${item.conversation_id}` };
@@ -181,19 +163,12 @@ function formatLongDate(): string {
   });
 }
 
-/* ---- Relative time-ago for last-refresh ---- */
-function timeAgoShort(ts: number): string {
-  const diff = Math.floor((Date.now() - ts) / 60_000);
-  if (diff < 1) return 'just now';
-  return `${diff}m ago`;
-}
-
 function feedEntityPath(item: ActivityFeedItem): string | null {
   const t = item.entity_type;
   const id = item.entity_id;
   if (t === 'application') return `/applications/${id}`;
   if (t === 'conversation') return `/network/messages/${id}`;
-  if (t === 'document') return `/me/documents/${id}`;
+  if (t === 'document') return `/documents/${id}`;
   if (t === 'connection') return '/network/connections';
   if (t === 'action_item') return '/';
   return null;
@@ -429,7 +404,7 @@ const CommandCenterPage: React.FC = () => {
   const [statusMenuItem, setStatusMenuItem] = useState<ActionItemDetailRead | null>(null);
 
   /* ---- page header ---- */
-  usePageToolbarHeader('Command Center', todayFormatted());
+  usePageToolbarHeader('Dashboard', todayFormatted());
 
   /* ---- data fetch ---- */
   const refresh = useCallback(async () => {
@@ -452,7 +427,7 @@ const CommandCenterPage: React.FC = () => {
       setLastRefresh(Date.now());
     } catch (e) {
       console.error(e);
-      setError('Unable to load command center data. Please try again.');
+      setError('Unable to load dashboard data. Please try again.');
     }
     setLoading(false);
   }, [token]);
@@ -726,7 +701,7 @@ const CommandCenterPage: React.FC = () => {
   /* ---- loading skeleton ---- */
   if (loading) {
     return (
-      <Box sx={{ maxWidth: 1200, mx: 'auto' }} aria-busy="true" aria-label="Loading command center">
+      <Box sx={{ maxWidth: 1200, mx: 'auto' }} aria-busy="true" aria-label="Loading dashboard">
         <Stack direction="row" spacing={1} sx={{ mb: 3, justifyContent: 'flex-end' }}>
           <Skeleton variant="rounded" width={120} height={36} sx={{ borderRadius: 2 }} />
           <Skeleton variant="rounded" width={120} height={36} sx={{ borderRadius: 2 }} />
@@ -779,44 +754,70 @@ const CommandCenterPage: React.FC = () => {
 
       {/* ── Onboarding quick-start (no apps AND no leads) ── */}
       {summary && summary.application_count === 0 && summary.lead_count === 0 && (
-        <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', gap: 2 }}>
-          <Card
-            sx={{ flex: '1 1 200px', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
-            onClick={() => setExtractDialogOpen(true)}
-          >
-            <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
-              <LeadsIcon color="primary" />
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Import a Lead</Typography>
-                <Typography variant="caption" color="text.secondary">Extract from a job URL</Typography>
-              </Box>
-            </CardContent>
-          </Card>
-          <Card
-            sx={{ flex: '1 1 200px', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
-            onClick={() => navigate('/me')}
-          >
-            <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
-              <PersonOutlineIcon color="primary" />
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Complete Your Profile</Typography>
-                <Typography variant="caption" color="text.secondary">Add your details</Typography>
-              </Box>
-            </CardContent>
-          </Card>
-          <Card
-            sx={{ flex: '1 1 200px', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
-            onClick={() => navigate('/network/directory')}
-          >
-            <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
-              <PeopleOutlineIcon color="primary" />
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Browse Directory</Typography>
-                <Typography variant="caption" color="text.secondary">Discover people</Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Stack>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>Welcome to Baldin</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Your job search command center. Start by importing a lead, building your profile, or browsing the community.
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Card
+                sx={{ height: '100%', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
+                onClick={() => setExtractDialogOpen(true)}
+              >
+                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
+                  <LeadsIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Import a Lead</Typography>
+                    <Typography variant="caption" color="text.secondary">Extract from a job URL</Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Card
+                sx={{ height: '100%', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
+                onClick={() => navigate('/me')}
+              >
+                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
+                  <PersonOutlineIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Complete Your Profile</Typography>
+                    <Typography variant="caption" color="text.secondary">Add your details</Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Card
+                sx={{ height: '100%', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
+                onClick={() => navigate('/network/directory')}
+              >
+                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
+                  <PeopleOutlineIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Browse Directory</Typography>
+                    <Typography variant="caption" color="text.secondary">Discover people</Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Card
+                sx={{ height: '100%', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
+                onClick={() => navigate('/documents/new')}
+              >
+                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
+                  <NoteAddIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Create a Document</Typography>
+                    <Typography variant="caption" color="text.secondary">Write a resume or cover letter</Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </Box>
       )}
 
       {/* ── Top action buttons + last-refreshed ── */}
@@ -890,6 +891,9 @@ const CommandCenterPage: React.FC = () => {
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       No action items match this filter.
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      Action items help you track follow-ups, deadlines, and next steps for your applications.
                     </Typography>
                   </Box>
                 ) : (
@@ -1107,6 +1111,9 @@ const CommandCenterPage: React.FC = () => {
                     <ActionIcon sx={{ fontSize: 36, color: alpha(theme.palette.primary.main, 0.3), mb: 1 }} />
                     <Typography variant="body2" color="text.secondary">
                       No recent activity
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      Your recent activity across leads, applications, and documents will appear here.
                     </Typography>
                   </Box>
                 ) : (

@@ -332,51 +332,96 @@ export interface paths {
     post: operations["seed_skills_skills_seed_post"];
   };
   "/cover_letters/{cover_letter_id}/download": {
-    /** Download Cover Letter */
+    /**
+     * Download Cover Letter
+     * @deprecated
+     */
     get: operations["download_cover_letter_cover_letters__cover_letter_id__download_get"];
   };
   "/cover_letters/generate": {
-    /** Generate User Cover Letter */
+    /**
+     * Generate User Cover Letter
+     * @deprecated
+     */
     post: operations["generate_user_cover_letter_cover_letters_generate_post"];
   };
   "/cover_letters/": {
-    /** Get Current User Cover Letters */
+    /**
+     * Get Current User Cover Letters
+     * @deprecated
+     */
     get: operations["get_current_user_cover_letters_cover_letters__get"];
-    /** Create User Cover Letter */
+    /**
+     * Create User Cover Letter
+     * @deprecated
+     */
     post: operations["create_user_cover_letter_cover_letters__post"];
   };
   "/cover_letters/{cover_letter_id}": {
-    /** Get Cover Letter By Id */
+    /**
+     * Get Cover Letter By Id
+     * @deprecated
+     */
     get: operations["get_cover_letter_by_id_cover_letters__cover_letter_id__get"];
-    /** Delete User Cover Letter */
+    /**
+     * Delete User Cover Letter
+     * @deprecated
+     */
     delete: operations["delete_user_cover_letter_cover_letters__cover_letter_id__delete"];
-    /** Update User Cover Letter */
+    /**
+     * Update User Cover Letter
+     * @deprecated
+     */
     patch: operations["update_user_cover_letter_cover_letters__cover_letter_id__patch"];
   };
   "/cover_letters/seed": {
-    /** Seed Cover Letters */
+    /**
+     * Seed Cover Letters
+     * @deprecated
+     */
     post: operations["seed_cover_letters_cover_letters_seed_post"];
   };
   "/resumes/{resume_id}/download": {
-    /** Download Resume */
+    /**
+     * Download Resume
+     * @deprecated
+     */
     get: operations["download_resume_resumes__resume_id__download_get"];
   };
   "/resumes/": {
-    /** Get Current User Resumes */
+    /**
+     * Get Current User Resumes
+     * @deprecated
+     */
     get: operations["get_current_user_resumes_resumes__get"];
-    /** Create User Resume */
+    /**
+     * Create User Resume
+     * @deprecated
+     */
     post: operations["create_user_resume_resumes__post"];
   };
   "/resumes/{resume_id}": {
-    /** Get User Resume */
+    /**
+     * Get User Resume
+     * @deprecated
+     */
     get: operations["get_user_resume_resumes__resume_id__get"];
-    /** Delete User Resume */
+    /**
+     * Delete User Resume
+     * @deprecated
+     */
     delete: operations["delete_user_resume_resumes__resume_id__delete"];
-    /** Update User Resume */
+    /**
+     * Update User Resume
+     * @deprecated
+     */
     patch: operations["update_user_resume_resumes__resume_id__patch"];
   };
   "/resumes/seed": {
-    /** Seed Resumes */
+    /**
+     * Seed Resumes
+     * @deprecated
+     */
     post: operations["seed_resumes_resumes_seed_post"];
   };
   "/applications/": {
@@ -397,19 +442,34 @@ export interface paths {
     patch: operations["update_application_applications__id__patch"];
   };
   "/applications/{id}/resumes": {
-    /** Get Application Resumes */
+    /**
+     * Get Application Resumes
+     * @deprecated
+     */
     get: operations["get_application_resumes_applications__id__resumes_get"];
-    /** Add Resume To Application */
+    /**
+     * Add Resume To Application
+     * @deprecated
+     */
     post: operations["add_resume_to_application_applications__id__resumes_post"];
   };
   "/applications/{id}/cover_letters": {
-    /** Get Application Cover Letters */
+    /**
+     * Get Application Cover Letters
+     * @deprecated
+     */
     get: operations["get_application_cover_letters_applications__id__cover_letters_get"];
-    /** Add Cover Letter To Application */
+    /**
+     * Add Cover Letter To Application
+     * @deprecated
+     */
     post: operations["add_cover_letter_to_application_applications__id__cover_letters_post"];
   };
   "/applications/{id}/cover_letters/generate": {
-    /** Generate Cover Letter For Application */
+    /**
+     * Generate Cover Letter For Application
+     * @deprecated
+     */
     post: operations["generate_cover_letter_for_application_applications__id__cover_letters_generate_post"];
   };
   "/applications/{id}/export": {
@@ -1154,8 +1214,7 @@ export interface components {
        * Format: uuid4
        */
       lead_id: string;
-      /** Status */
-      status: string;
+      status: components["schemas"]["ApplicationStatus"];
       /** Notes */
       notes?: string | null;
       /** Next Step */
@@ -1211,11 +1270,8 @@ export interface components {
       user_id: string;
       lead: components["schemas"]["LeadRead"];
       user: components["schemas"]["UserRead"];
-      /**
-       * Status
-       * @description Application status
-       */
-      status?: string | null;
+      /** @description Application status */
+      status?: components["schemas"]["ApplicationStatus"] | null;
       /**
        * Notes
        * @description Free-form user notes
@@ -1248,10 +1304,14 @@ export interface components {
        */
       resume_id: string;
     };
+    /**
+     * ApplicationStatus
+     * @enum {string}
+     */
+    ApplicationStatus: "applied" | "screening" | "interview" | "offer" | "rejected" | "withdrawn";
     /** ApplicationUpdate */
     ApplicationUpdate: {
-      /** Status */
-      status?: string | null;
+      status?: components["schemas"]["ApplicationStatus"] | null;
       /** Notes */
       notes?: string | null;
       /** Next Step */
@@ -7536,7 +7596,10 @@ export interface operations {
       };
     };
   };
-  /** Download Cover Letter */
+  /**
+   * Download Cover Letter
+   * @deprecated
+   */
   download_cover_letter_cover_letters__cover_letter_id__download_get: {
     parameters: {
       path: {
@@ -7556,7 +7619,10 @@ export interface operations {
       };
     };
   };
-  /** Generate User Cover Letter */
+  /**
+   * Generate User Cover Letter
+   * @deprecated
+   */
   generate_user_cover_letter_cover_letters_generate_post: {
     parameters: {
       query: {
@@ -7580,7 +7646,10 @@ export interface operations {
       };
     };
   };
-  /** Get Current User Cover Letters */
+  /**
+   * Get Current User Cover Letters
+   * @deprecated
+   */
   get_current_user_cover_letters_cover_letters__get: {
     parameters: {
       query?: {
@@ -7603,7 +7672,10 @@ export interface operations {
       };
     };
   };
-  /** Create User Cover Letter */
+  /**
+   * Create User Cover Letter
+   * @deprecated
+   */
   create_user_cover_letter_cover_letters__post: {
     requestBody: {
       content: {
@@ -7625,7 +7697,10 @@ export interface operations {
       };
     };
   };
-  /** Get Cover Letter By Id */
+  /**
+   * Get Cover Letter By Id
+   * @deprecated
+   */
   get_cover_letter_by_id_cover_letters__cover_letter_id__get: {
     parameters: {
       query: {
@@ -7647,7 +7722,10 @@ export interface operations {
       };
     };
   };
-  /** Delete User Cover Letter */
+  /**
+   * Delete User Cover Letter
+   * @deprecated
+   */
   delete_user_cover_letter_cover_letters__cover_letter_id__delete: {
     parameters: {
       query: {
@@ -7667,7 +7745,10 @@ export interface operations {
       };
     };
   };
-  /** Update User Cover Letter */
+  /**
+   * Update User Cover Letter
+   * @deprecated
+   */
   update_user_cover_letter_cover_letters__cover_letter_id__patch: {
     parameters: {
       query: {
@@ -7694,7 +7775,10 @@ export interface operations {
       };
     };
   };
-  /** Seed Cover Letters */
+  /**
+   * Seed Cover Letters
+   * @deprecated
+   */
   seed_cover_letters_cover_letters_seed_post: {
     responses: {
       /** @description Successful Response */
@@ -7705,7 +7789,10 @@ export interface operations {
       };
     };
   };
-  /** Download Resume */
+  /**
+   * Download Resume
+   * @deprecated
+   */
   download_resume_resumes__resume_id__download_get: {
     parameters: {
       path: {
@@ -7725,7 +7812,10 @@ export interface operations {
       };
     };
   };
-  /** Get Current User Resumes */
+  /**
+   * Get Current User Resumes
+   * @deprecated
+   */
   get_current_user_resumes_resumes__get: {
     responses: {
       /** @description Successful Response */
@@ -7736,7 +7826,10 @@ export interface operations {
       };
     };
   };
-  /** Create User Resume */
+  /**
+   * Create User Resume
+   * @deprecated
+   */
   create_user_resume_resumes__post: {
     requestBody: {
       content: {
@@ -7758,7 +7851,10 @@ export interface operations {
       };
     };
   };
-  /** Get User Resume */
+  /**
+   * Get User Resume
+   * @deprecated
+   */
   get_user_resume_resumes__resume_id__get: {
     parameters: {
       query: {
@@ -7780,7 +7876,10 @@ export interface operations {
       };
     };
   };
-  /** Delete User Resume */
+  /**
+   * Delete User Resume
+   * @deprecated
+   */
   delete_user_resume_resumes__resume_id__delete: {
     parameters: {
       query: {
@@ -7800,7 +7899,10 @@ export interface operations {
       };
     };
   };
-  /** Update User Resume */
+  /**
+   * Update User Resume
+   * @deprecated
+   */
   update_user_resume_resumes__resume_id__patch: {
     parameters: {
       query: {
@@ -7827,7 +7929,10 @@ export interface operations {
       };
     };
   };
-  /** Seed Resumes */
+  /**
+   * Seed Resumes
+   * @deprecated
+   */
   seed_resumes_resumes_seed_post: {
     responses: {
       /** @description Successful Response */
@@ -7943,7 +8048,10 @@ export interface operations {
       };
     };
   };
-  /** Get Application Resumes */
+  /**
+   * Get Application Resumes
+   * @deprecated
+   */
   get_application_resumes_applications__id__resumes_get: {
     parameters: {
       path: {
@@ -7965,7 +8073,10 @@ export interface operations {
       };
     };
   };
-  /** Add Resume To Application */
+  /**
+   * Add Resume To Application
+   * @deprecated
+   */
   add_resume_to_application_applications__id__resumes_post: {
     parameters: {
       path: {
@@ -7992,7 +8103,10 @@ export interface operations {
       };
     };
   };
-  /** Get Application Cover Letters */
+  /**
+   * Get Application Cover Letters
+   * @deprecated
+   */
   get_application_cover_letters_applications__id__cover_letters_get: {
     parameters: {
       path: {
@@ -8014,7 +8128,10 @@ export interface operations {
       };
     };
   };
-  /** Add Cover Letter To Application */
+  /**
+   * Add Cover Letter To Application
+   * @deprecated
+   */
   add_cover_letter_to_application_applications__id__cover_letters_post: {
     parameters: {
       path: {
@@ -8041,7 +8158,10 @@ export interface operations {
       };
     };
   };
-  /** Generate Cover Letter For Application */
+  /**
+   * Generate Cover Letter For Application
+   * @deprecated
+   */
   generate_cover_letter_for_application_applications__id__cover_letters_generate_post: {
     parameters: {
       query?: {

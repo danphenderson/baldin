@@ -126,7 +126,7 @@ async def extract_company(
         else:
             raise e
 
-    # Buld the payload and run the extractor
+    # Build the payload and run the extractor
     payload = schemas.ExtractorRun(
         mode="entire_document",
         file=None,
@@ -135,11 +135,12 @@ async def extract_company(
         llm=None,
     )
 
-    # FIXME: Clean up the debugging code
     try:
-        # A bit of a hack below to convert the extractor to a read schema
         res = await run_extractor(
-            schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+            schemas.ExtractorRead.model_validate(extractor, from_attributes=True),
+            payload,
+            user,
+            db,
         )
     except HTTPException:
         raise
@@ -151,7 +152,7 @@ async def extract_company(
     logger.info(f"Successful Extraction, result: {res}")
 
     try:
-        company = models.Company(**res.data[0])  # TOOD: Handle multiple results
+        company = models.Company(**res.data[0])  # TODO: Handle multiple results
         db.add(company)
         await db.commit()
         await db.refresh(company)

@@ -2,35 +2,30 @@
 
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
-import { ResumeRead, ResumeCreate, ResumeUpdate } from '../service/resumes';  // Adjust import path as necessary
+import { DocumentRead, DocumentCreate, DocumentUpdate } from '../service/documents';
 
 interface ResumeModalProps {
   open: boolean;
   onClose: () => void;
-  onSave: (resume: ResumeCreate | ResumeUpdate) => void;
-  initialData?: ResumeRead;
+  onSave: (resume: DocumentCreate | DocumentUpdate) => void;
+  initialData?: DocumentRead;
 }
 
 const ResumeModal: React.FC<ResumeModalProps> = ({ open, onClose, onSave, initialData }) => {
-  const defaultResumeData: ResumeCreate = {
-    // Assuming these are the fields in ResumeCreate, adjust as per actual schema
-    name: "string",
-    content: "string",
-    content_type: "custom"
+  const defaultResumeData: Record<string, string> = {
+    kind: 'resume',
+    title: '',
+    content: '',
   };
 
-  const [resumeData, setResumeData] = useState<ResumeCreate | ResumeUpdate>(defaultResumeData);
+  const [resumeData, setResumeData] = useState<Record<string, string>>(defaultResumeData);
   const [isEdited, setIsEdited] = useState(false);
 
   useEffect(() => {
     if (initialData) {
-      // Assuming ResumeRead and ResumeUpdate have similar fields
-      const updateData: ResumeUpdate = {
-        name: initialData.name || defaultResumeData.name,
-        content: initialData.content || defaultResumeData.content,
-        content_type: initialData.content_type || defaultResumeData.content_type
-      };
-      setResumeData(updateData);
+      setResumeData({
+        title: initialData.title || '',
+      });
       setIsEdited(true);
     } else {
       setResumeData(defaultResumeData);
@@ -47,9 +42,12 @@ const ResumeModal: React.FC<ResumeModalProps> = ({ open, onClose, onSave, initia
   };
 
   const handleSave = () => {
-    onSave(resumeData);
+    onSave(isEdited
+      ? { title: resumeData.title } as DocumentUpdate
+      : { kind: 'resume', title: resumeData.title, content: resumeData.content } as DocumentCreate,
+    );
     onClose();
-    setResumeData(defaultResumeData);  // Reset form state
+    setResumeData(defaultResumeData);
   };
 
   const formatLabel = (key: string) => key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
@@ -64,7 +62,7 @@ const ResumeModal: React.FC<ResumeModalProps> = ({ open, onClose, onSave, initia
               key={key}
               name={key}
               label={formatLabel(key)}
-              value={resumeData[key as keyof ResumeCreate]}
+              value={resumeData[key] ?? ''}
               onChange={handleChange}
               margin="normal"
               fullWidth

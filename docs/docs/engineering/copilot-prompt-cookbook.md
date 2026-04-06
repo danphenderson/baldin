@@ -44,6 +44,24 @@ The Executive Summary review supports a local-first operating model for Baldin: 
 | Unclear ownership, multi-stream work, or sequencing and handoffs | Baldin Project Manager |
 | Read-only scouting before assigning a real owner | Explore |
 
+## Workspace Skills
+
+Use workspace skills for repeated Baldin workflows that are narrower than a full implementation handoff.
+
+- `/baldin-contract-regen-resolver` for stale or missing `openapi.json` and `frontend/src/schema.d.ts`, `./scripts/update_frontend_schemas.sh` exits, `SCHEMA_UPDATE_FORCE`, and backend-to-frontend contract fallout.
+- `/baldin-docs-drift-auditor` when docs, plans, or `.github/**` guidance may no longer match the current repo.
+
+## Reusable Prompt Files
+
+If you already know the task shape, use these workspace prompts from chat with `/` instead of rewriting the same Baldin context each time.
+
+| Prompt | Use when |
+|--------|----------|
+| `Hard-Gate PR Review` | You want a concrete pre-merge review of the active PR or current branch focused on merge risk. |
+| `API Contract Change Orchestrator` | You changed routes, schemas, response shapes, or generated frontend types and need contract ownership, regeneration, and downstream validation. |
+| `Change-Aware Validation Sequence` | You want the exact ordered Baldin checks for a specific backend, frontend, docs, CI, or contract change. |
+| `Plan Slice Kickoff` | You want a plan section turned into a bounded work slice with the correct owner, scope, stop conditions, and validation. |
+
 ## Prompt Shape
 
 Use this structure for most requests:

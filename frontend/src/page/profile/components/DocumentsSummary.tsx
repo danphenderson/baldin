@@ -94,7 +94,7 @@ export const DocumentsSummary: React.FC<DocumentsSummaryProps> = ({ token }) => 
 
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
-              Documents Studio
+              Documents
             </Typography>
             {loading ? (
               <Skeleton width={140} height={18} />
@@ -108,10 +108,10 @@ export const DocumentsSummary: React.FC<DocumentsSummaryProps> = ({ token }) => 
           <Button
             size="small"
             endIcon={<ArrowIcon />}
-            onClick={() => navigate('/me/documents')}
+            onClick={() => navigate('/documents')}
             sx={{ textTransform: 'none', fontWeight: 600, flexShrink: 0 }}
           >
-            Open Studio
+            Open Documents
           </Button>
         </CardContent>
       </Card>

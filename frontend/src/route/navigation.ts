@@ -33,10 +33,6 @@ export const secondaryNavByGroup: Record<string, SecondaryNavItem[]> = {
     { label: 'All Applications', path: '/applications' },
     { label: 'Board', path: '/applications/board' },
   ],
-  '/me': [
-    { label: 'Profile', path: '/me' },
-    { label: 'Studio', path: '/me/documents' },
-  ],
   '/workflows': [
     { label: 'Pipelines', path: '/workflows' },
     { label: 'Extractors', path: '/workflows/extractors' },
@@ -49,9 +45,7 @@ export const secondaryNavByGroup: Record<string, SecondaryNavItem[]> = {
     { label: 'Messages', path: '/network/messages' },
   ],
   '/settings': [
-    { label: 'Subscription', path: '/settings/subscription' },
-    { label: 'Discoverability', path: '/settings/discoverability' },
-    { label: 'Graduation', path: '/settings/graduation' },
+    { label: 'Account', path: '/settings' },
   ],
 };
 
@@ -94,23 +88,29 @@ export const drawerSections: DrawerSection[] = [
     key: 'top',
     label: null,
     items: [
-      { label: 'Command Center', path: '/' },
+      { label: 'Dashboard', path: '/' },
     ],
   },
   {
-    key: 'pursue',
-    label: 'Pursue',
+    key: 'jobs',
+    label: 'Jobs',
     items: [
       { label: 'Leads', path: '/leads' },
       { label: 'Applications', path: '/applications' },
     ],
   },
   {
-    key: 'identity',
-    label: 'Identity',
+    key: 'documents',
+    label: 'Documents',
+    items: [
+      { label: 'Documents', path: '/documents' },
+    ],
+  },
+  {
+    key: 'profile',
+    label: 'Profile',
     items: [
       { label: 'Profile', path: '/me' },
-      { label: 'Studio', path: '/me/documents' },
     ],
   },
   {
@@ -123,19 +123,17 @@ export const drawerSections: DrawerSection[] = [
     ],
   },
   {
-    key: 'automate',
-    label: 'Automate',
+    key: 'workflows',
+    label: 'Workflows',
     items: [
-      { label: 'Workflows', path: '/workflows' },
+      { label: 'Pipelines', path: '/workflows' },
     ],
   },
   {
     key: 'settings',
     label: 'Settings',
     items: [
-      { label: 'Subscription', path: '/settings/subscription' },
-      { label: 'Discoverability', path: '/settings/discoverability' },
-      { label: 'Graduation', path: '/settings/graduation' },
+      { label: 'Settings', path: '/settings' },
     ],
   },
 ];
@@ -146,7 +144,6 @@ export const drawerSections: DrawerSection[] = [
 
 export const legacyRedirects: Record<string, string> = {
   '/companies': '/leads/companies',
-  '/documents': '/me/documents',
   '/profile': '/me',
   '/pipelines': '/workflows',
   '/data-orchestration': '/workflows',

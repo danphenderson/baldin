@@ -157,6 +157,7 @@ const ProfilePage: React.FC = () => {
         completionPercent={completionPercent}
         onAvatarSelected={handleAvatarSelected}
         avatarUploading={avatarUploading}
+        onImportProfile={() => data.setShowImportModal(true)}
       />
 
       {/* ── Profile Builder Panel ──────────────────────────────────── */}

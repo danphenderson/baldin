@@ -1,4 +1,5 @@
 # Path: app/models.py
+import enum
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
@@ -6,6 +7,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     Column,
     DateTime,
     ForeignKey,
@@ -19,8 +21,38 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
+
+# ---------------------------------------------------------------------------
+#  Native Postgres enum types
+# ---------------------------------------------------------------------------
+
+
+class ApplicationStatus(str, enum.Enum):
+    APPLIED = "applied"
+    SCREENING = "screening"
+    INTERVIEW = "interview"
+    OFFER = "offer"
+    REJECTED = "rejected"
+    WITHDRAWN = "withdrawn"
+
+
+class LeadReviewStatus(str, enum.Enum):
+    PENDING_REVIEW = "pending_review"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class CrawlerRunStatus(str, enum.Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    PAUSED = "paused"
+    PENDING_REVIEW = "pending_review"
 
 
 class Base(DeclarativeBase):
@@ -70,6 +102,7 @@ class OrchestrationPipeline(Base):
     """
 
     __tablename__ = "orchestration_pipelines"
+    __table_args__ = (UniqueConstraint("user_id", "name"),)
     name = Column(String, index=True, nullable=False)
     description = Column(Text)
     definition = Column(JSON)
@@ -122,7 +155,11 @@ class CrawlerRun(Base):
         UUID, ForeignKey("crawler_pipelines.id"), nullable=False, index=True
     )
     trigger_type = Column(String, nullable=False)
-    status = Column(String, nullable=False, default="pending")
+    status = Column(
+        SAEnum(CrawlerRunStatus, name="crawlerrunstatus", native_enum=True),
+        nullable=False,
+        default=CrawlerRunStatus.PENDING,
+    )
     scheduled_for = Column(DateTime)
     started_at = Column(DateTime)
     finished_at = Column(DateTime)
@@ -212,7 +249,6 @@ class ExtractorVersion(Base):
 
 
 class LeadXCompany(Base):
-
     __tablename__ = "leads_x_companies"
     lead_id = Column(UUID, ForeignKey("leads.id"), primary_key=True)
     company_id = Column(UUID, ForeignKey("companies.id"), primary_key=True)
@@ -271,7 +307,10 @@ class Lead(Base):
     seniority_level = Column(String)
     education_level = Column(String)
     hiring_manager = Column(String)
-    review_status = Column(String, nullable=True)
+    review_status = Column(
+        SAEnum(LeadReviewStatus, name="leadreviewstatus", native_enum=True),
+        nullable=True,
+    )
 
     application = relationship("Application", back_populates="lead")
     companies = relationship(
@@ -395,7 +434,10 @@ class Application(Base):
     """
 
     __tablename__ = "applications"
-    status = Column(String)
+    status = Column(
+        SAEnum(ApplicationStatus, name="applicationstatus", native_enum=True),
+        nullable=True,
+    )
     notes = Column(Text)
     next_step = Column(String)
     next_step_due = Column(DateTime)
@@ -705,6 +747,17 @@ class ActionItem(Base):
     """
 
     __tablename__ = "action_items"
+    __table_args__ = (
+        CheckConstraint(
+            "("
+            "(application_id IS NOT NULL)::int + "
+            "(lead_id IS NOT NULL)::int + "
+            "(document_id IS NOT NULL)::int + "
+            "(conversation_id IS NOT NULL)::int"
+            ") = 1",
+            name="ck_action_items_exactly_one_fk",
+        ),
+    )
 
     user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
     title = Column(String, nullable=False)

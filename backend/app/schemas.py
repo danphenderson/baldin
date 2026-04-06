@@ -3,18 +3,26 @@ import json
 from datetime import datetime
 from enum import Enum
 from io import BytesIO
-from pathlib import Path  # TODO: Use Literal for performance improvement
+from pathlib import Path
 from typing import Any, Literal, Optional, Sequence, TypeVar
 
 from fastapi import UploadFile
 from fastapi_users import schemas
-from pydantic import UUID4, AnyHttpUrl
+from pydantic import (
+    UUID4,
+    AnyHttpUrl,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
 from pydantic import BaseModel as _BaseModel
-from pydantic import ConfigDict, EmailStr, Field, field_validator, model_validator
 from PyPDF2 import PdfReader
 
 from app import utils
 from app.core.url_safety import validate_url_safe_for_fetch
+from app.models import ApplicationStatus, CrawlerRunStatus, LeadReviewStatus
 
 
 # Base Model
@@ -753,7 +761,9 @@ class CoverLetterCreate(BaseCoverLetter):
         for page_num in range(len(reader.pages)):
             page = reader.pages[page_num]
             text_content.append(page.or_text())
-        return cls(name=name, content=text_content[0], content_type=ContentType.GENERATED)  # type: ignore
+        return cls(
+            name=name, content=text_content[0], content_type=ContentType.GENERATED
+        )  # type: ignore
 
 
 class CoverLetterUpdate(BaseCoverLetter):
@@ -1701,7 +1711,7 @@ class ApplicationRead(BaseRead):
     user_id: UUID4
     lead: LeadRead
     user: UserRead
-    status: str | None = Field(None, description="Application status")
+    status: ApplicationStatus | None = Field(None, description="Application status")
     notes: str | None = Field(None, description="Free-form user notes")
     next_step: str | None = Field(None, description="Next action for this application")
     next_step_due: datetime | None = Field(
@@ -1714,7 +1724,7 @@ class ApplicationRead(BaseRead):
 
 class ApplicationCreate(BaseSchema):
     lead_id: UUID4
-    status: str
+    status: ApplicationStatus
     notes: str | None = None
     next_step: str | None = None
     next_step_due: datetime | None = None
@@ -1722,7 +1732,7 @@ class ApplicationCreate(BaseSchema):
 
 
 class ApplicationUpdate(BaseSchema):
-    status: str | None = None
+    status: ApplicationStatus | None = None
     notes: str | None = None
     next_step: str | None = None
     next_step_due: datetime | None = None
@@ -1752,20 +1762,12 @@ class CrawlerTriggerType(str, Enum):
     SCHEDULED = "scheduled"
 
 
-class CrawlerRunStatus(str, Enum):
-    PENDING = "pending"
-    RUNNING = "running"
-    SUCCESS = "success"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-    PAUSED = "paused"
-    PENDING_REVIEW = "pending_review"
+# Re-export CrawlerRunStatus from models for schema use
+CrawlerRunStatus = CrawlerRunStatus
 
 
-class ReviewStatus(str, Enum):
-    PENDING_REVIEW = "pending_review"
-    APPROVED = "approved"
-    REJECTED = "rejected"
+# Re-export LeadReviewStatus from models as ReviewStatus for schema use
+ReviewStatus = LeadReviewStatus
 
 
 class CrawlerPipelineCreate(BaseSchema):

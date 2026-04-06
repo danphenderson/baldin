@@ -9,7 +9,7 @@ description: See current release posture, remaining launch phases, and deploymen
 
 # Track Release Readiness
 
-Baldin is still in developer preview. The supported workflow today is the local Docker Compose stack, while CI, deployment automation, and runtime hardening are being rebuilt inside this repository.
+Baldin is still in developer preview. The supported workflow today is the local Docker Compose stack. Repository-side CI and candidate-build workflows exist, but merge-blocking enforcement and later deployment automation are still being rebuilt, with branch protection remaining a GitHub settings step outside the repo.
 
 The canonical execution plan lives in [`plans/REPO_EXECUTION_PLAN.md`](https://github.com/danphenderson/baldin/blob/main/plans/REPO_EXECUTION_PLAN.md). This page is the documentation summary for readers who need the current posture without reading the full plan first.
 
@@ -42,7 +42,7 @@ Those artifact boundaries should remain stable unless the release topology itsel
 | Phase | Title | Status |
 | --- | --- | --- |
 | 1 | Reset the Baseline and Repo Posture | Complete |
-| 2 | Turn CI Into a Real Integration Gate | Not started |
+| 2 | Turn CI Into a Real Integration Gate | Partial |
 | 3 | Choose the Minimal Production Topology | Not started |
 | 4 | Rebuild Deployment Automation | Not started |
 | 5 | Remove Runtime Launch Blockers | Not started |
@@ -53,7 +53,7 @@ Those artifact boundaries should remain stable unless the release topology itsel
 
 ### Phase 2: CI as an integration gate
 
-Make `main` a reviewed integration branch with meaningful required checks: backend tests, coverage, frontend tests, typecheck, build validation, and API contract freshness.
+The repository side of this phase is in place: `.github/workflows/ci.yml` already defines six CI jobs, including the backend coverage gate and API contract freshness check. The remaining gap is to apply the documented branch-protection settings in GitHub so reviews and required checks actually block merges on `main`.
 
 ### Phase 3: Minimal production topology
 

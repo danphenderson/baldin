@@ -163,7 +163,7 @@ const DocumentDetailPage: React.FC = () => {
     setDeleting(true);
     try {
       await deleteDocument(token, id);
-      navigate('/me/documents');
+      navigate('/documents');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Delete failed');
     }
@@ -209,7 +209,7 @@ const DocumentDetailPage: React.FC = () => {
 
   const handleNavigateCompare = () => {
     if (compareSelection.length === 2 && id) {
-      navigate(`/me/documents/${id}/compare?left=${compareSelection[0]}&right=${compareSelection[1]}`);
+      navigate(`/documents/${id}/compare?left=${compareSelection[0]}&right=${compareSelection[1]}`);
     }
   };
 
@@ -227,7 +227,7 @@ const DocumentDetailPage: React.FC = () => {
   if (!doc) {
     return (
       <Box>
-        <Button startIcon={<BackIcon />} onClick={() => navigate('/me/documents')} aria-label="Back to documents">
+        <Button startIcon={<BackIcon />} onClick={() => navigate('/documents')} aria-label="Back to documents">
           Back
         </Button>
         <Alert severity="error" sx={{ mt: 2 }}>{error || 'Document not found'}</Alert>
@@ -294,7 +294,7 @@ const DocumentDetailPage: React.FC = () => {
       {/* ── Back button ─────────────────────────────────────────── */}
       <Button
         startIcon={<BackIcon />}
-        onClick={() => navigate('/me/documents')}
+        onClick={() => navigate('/documents')}
         sx={{ mb: 2 }}
         aria-label="Back to documents"
       >
@@ -372,7 +372,7 @@ const DocumentDetailPage: React.FC = () => {
             )}
             <Button
               variant="outlined" size="small" startIcon={<EditIcon />}
-              onClick={() => navigate(`/me/documents/${id}/edit`)}
+              onClick={() => navigate(`/documents/${id}/edit`)}
               disabled={viewerRole === 'viewer'}
               aria-label="Edit document"
             >

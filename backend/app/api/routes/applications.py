@@ -4,7 +4,7 @@ import zipfile
 from html import escape as html_escape
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 from pydantic import UUID4
 from reportlab.lib.pagesizes import letter
@@ -31,6 +31,12 @@ from app.core.datetime_utils import format_utc_datetime, normalize_utc_datetime,
 from app.core.document_storage import resolve_document_source_path
 
 router: APIRouter = APIRouter()
+
+
+async def _inject_legacy_deprecation_headers(response: Response) -> None:
+    """Inject RFC 8594 Deprecation + Sunset headers on legacy resume/cover-letter sub-routes."""
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "2026-06-01"
 
 
 def _normalize_status_history(history: list[dict] | None) -> list[dict]:
@@ -220,7 +226,12 @@ async def delete_application(
     return {"message": "Application deleted successfully"}
 
 
-@router.get("/{id}/resumes", response_model=list[schemas.ResumeRead])
+@router.get(
+    "/{id}/resumes",
+    response_model=list[schemas.ResumeRead],
+    deprecated=True,
+    dependencies=[Depends(_inject_legacy_deprecation_headers)],
+)
 async def get_application_resumes(
     app: schemas.ApplicationRead = Depends(get_application),
     db: AsyncSession = Depends(get_async_session),
@@ -244,7 +255,12 @@ async def get_application_resumes(
     return resumes
 
 
-@router.get("/{id}/cover_letters", response_model=list[schemas.CoverLetterRead])
+@router.get(
+    "/{id}/cover_letters",
+    response_model=list[schemas.CoverLetterRead],
+    deprecated=True,
+    dependencies=[Depends(_inject_legacy_deprecation_headers)],
+)
 async def get_application_cover_letters(
     app: schemas.ApplicationRead = Depends(get_application),
     db: AsyncSession = Depends(get_async_session),
@@ -268,7 +284,13 @@ async def get_application_cover_letters(
     return cover_letters
 
 
-@router.post("/{id}/resumes", status_code=201, response_model=schemas.ResumeRead)
+@router.post(
+    "/{id}/resumes",
+    status_code=201,
+    response_model=schemas.ResumeRead,
+    deprecated=True,
+    dependencies=[Depends(_inject_legacy_deprecation_headers)],
+)
 async def add_resume_to_application(
     payload: schemas.ApplicationResumeAttach,
     application: models.Application = Depends(get_application),
@@ -293,7 +315,11 @@ async def add_resume_to_application(
 
 
 @router.post(
-    "/{id}/cover_letters", status_code=201, response_model=schemas.CoverLetterRead
+    "/{id}/cover_letters",
+    status_code=201,
+    response_model=schemas.CoverLetterRead,
+    deprecated=True,
+    dependencies=[Depends(_inject_legacy_deprecation_headers)],
 )
 async def add_cover_letter_to_application(
     payload: schemas.ApplicationCoverLetterAttach,
@@ -322,6 +348,8 @@ async def add_cover_letter_to_application(
     "/{id}/cover_letters/generate",
     status_code=201,
     response_model=schemas.CoverLetterRead,
+    deprecated=True,
+    dependencies=[Depends(_inject_legacy_deprecation_headers)],
 )
 async def generate_cover_letter_for_application(
     id: UUID4,

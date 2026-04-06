@@ -2,7 +2,7 @@
 import json
 from io import BytesIO
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import UUID4
 from reportlab.lib.pagesizes import letter
@@ -30,7 +30,14 @@ from app.api.routes.seed_tasks import (
 )
 from app.logging import console_log as log
 
-router: APIRouter = APIRouter()
+
+async def _inject_deprecation_headers(response: Response) -> None:
+    """Inject RFC 8594 Deprecation + Sunset headers on every response."""
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "2026-06-01"
+
+
+router: APIRouter = APIRouter(dependencies=[Depends(_inject_deprecation_headers)])
 
 COVER_LETTER_SEED_OPERATION = SeedOperation(
     pipeline_name="seed_cover_letters",
@@ -41,7 +48,7 @@ COVER_LETTER_SEED_OPERATION = SeedOperation(
 )
 
 
-@router.get("/{cover_letter_id}/download", response_class=FileResponse)
+@router.get("/{cover_letter_id}/download", response_class=FileResponse, deprecated=True)
 async def download_cover_letter(
     cover_letter_id: UUID4,
     db: AsyncSession = Depends(get_async_session),
@@ -99,7 +106,7 @@ async def download_cover_letter(
     return response
 
 
-@router.post("/generate", response_model=schemas.CoverLetterRead)
+@router.post("/generate", response_model=schemas.CoverLetterRead, deprecated=True)
 async def generate_user_cover_letter(
     lead_id: UUID4,
     template_id: str | None = Query(
@@ -163,7 +170,7 @@ async def generate_user_cover_letter(
     return new_cover_letter
 
 
-@router.get("/", response_model=list[schemas.CoverLetterRead])
+@router.get("/", response_model=list[schemas.CoverLetterRead], deprecated=True)
 async def get_current_user_cover_letters(
     content_type: schemas.ContentType | None = Query(
         None, description="Filter by content type"
@@ -179,14 +186,18 @@ async def get_current_user_cover_letters(
     return cover_letters
 
 
-@router.get("/{cover_letter_id}", response_model=schemas.CoverLetterRead)
+@router.get(
+    "/{cover_letter_id}", response_model=schemas.CoverLetterRead, deprecated=True
+)
 async def get_cover_letter_by_id(
     cover_letter: schemas.CoverLetterRead = Depends(get_cover_letter),
 ):
     return cover_letter
 
 
-@router.post("/", status_code=201, response_model=schemas.CoverLetterRead)
+@router.post(
+    "/", status_code=201, response_model=schemas.CoverLetterRead, deprecated=True
+)
 async def create_user_cover_letter(
     payload: schemas.CoverLetterCreate,
     user: schemas.UserRead = Depends(get_current_user),
@@ -199,7 +210,9 @@ async def create_user_cover_letter(
     return cover_letter
 
 
-@router.patch("/{cover_letter_id}", response_model=schemas.CoverLetterRead)
+@router.patch(
+    "/{cover_letter_id}", response_model=schemas.CoverLetterRead, deprecated=True
+)
 async def update_user_cover_letter(
     payload: schemas.CoverLetterUpdate,
     cover_letter: schemas.CoverLetterRead = Depends(get_cover_letter),
@@ -212,7 +225,7 @@ async def update_user_cover_letter(
     return cover_letter
 
 
-@router.delete("/{cover_letter_id}", status_code=204)
+@router.delete("/{cover_letter_id}", status_code=204, deprecated=True)
 async def delete_user_cover_letter(
     cover_letter: schemas.CoverLetterRead = Depends(get_cover_letter),
     db: AsyncSession = Depends(get_async_session),
@@ -222,7 +235,12 @@ async def delete_user_cover_letter(
     return
 
 
-@router.post("/seed", status_code=202, response_model=schemas.SeedOperationAccepted)
+@router.post(
+    "/seed",
+    status_code=202,
+    response_model=schemas.SeedOperationAccepted,
+    deprecated=True,
+)
 async def seed_cover_letters(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),

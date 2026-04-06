@@ -35,10 +35,10 @@ pipenv run pytest --cov=app --cov=etl --cov-report=term-missing
 
 ### Coverage gate
 
-CI enforces a **40% minimum coverage** threshold across `app/` and `etl/`:
+CI enforces a **60% minimum coverage** threshold across `app/` and `etl/`:
 
 ```bash
-pytest --cov=app --cov=etl --cov-report=term-missing --cov-fail-under=40
+pytest --cov=app --cov=etl --cov-report=term-missing --cov-fail-under=60
 ```
 
 ### Test database

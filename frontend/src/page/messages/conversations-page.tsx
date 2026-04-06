@@ -8,10 +8,8 @@ import {
   Card,
   CardActionArea,
   CardContent,
-  CircularProgress,
   Pagination as MuiPagination,
-  Snackbar,
-  Alert,
+  Skeleton,
   Stack,
   TextField,
   Typography,
@@ -31,6 +29,7 @@ import {
 import { avatarUrl } from '../../service/users';
 import EmptyState from '../../component/common/empty-state';
 import NewConversationDialog from '../../component/new-conversation-dialog';
+import { useNotification } from '../../context/notification-context';
 
 const PAGE_SIZE = 20;
 
@@ -62,13 +61,7 @@ const ConversationsPage: React.FC = () => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const [snack, setSnack] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success',
-  });
-
-  const notify = useCallback((message: string, severity: 'success' | 'error' = 'success') => {
-    setSnack({ open: true, message, severity });
-  }, []);
+  const { notify } = useNotification();
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -137,22 +130,32 @@ const ConversationsPage: React.FC = () => {
       </Stack>
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-          <CircularProgress />
-        </Box>
+        <Stack spacing={1.5}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} sx={{ height: 80 }}>
+              <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Skeleton variant="circular" width={40} height={40} />
+                <Box sx={{ flex: 1 }}>
+                  <Skeleton variant="text" width="40%" height={22} />
+                  <Skeleton variant="text" width="60%" height={16} sx={{ mt: 0.5 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          ))}
+        </Stack>
       ) : filtered.length === 0 ? (
         conversations.length === 0 ? (
           <EmptyState
             icon={<ChatIcon />}
             title="No conversations yet"
-            description="Start a conversation with one of your connections."
+            description="Start a conversation from a connection's profile or the directory."
             action={{ label: 'New Message', onClick: () => setDialogOpen(true), icon: <AddIcon /> }}
           />
         ) : (
           <EmptyState
             icon={<SearchIcon />}
-            title="No matches"
-            description="Try adjusting your search."
+            title="No results match your filters"
+            description="Try adjusting your search or clearing filters."
           />
         )
       ) : (
@@ -243,22 +246,6 @@ const ConversationsPage: React.FC = () => {
         onClose={() => setDialogOpen(false)}
         onCreated={handleCreated}
       />
-
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={4000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnack((s) => ({ ...s, open: false }))}
-          severity={snack.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snack.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

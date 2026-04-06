@@ -71,21 +71,21 @@ erDiagram
 		uuid id PK
 		uuid user_id FK
 		uuid lead_id FK
-		string status
+		enum status
 	}
-	RESUME {
+	RESUME["RESUME (deprecated)"] {
 		uuid id PK
 		uuid user_id FK
 	}
-	RESUME_X_APPLICATION {
+	RESUME_X_APPLICATION["RESUME_X_APPLICATION (deprecated)"] {
 		uuid application_id PK_FK
 		uuid resume_id PK_FK
 	}
-	COVER_LETTER {
+	COVER_LETTER["COVER_LETTER (deprecated)"] {
 		uuid id PK
 		uuid user_id FK
 	}
-	COVER_LETTER_X_APPLICATION {
+	COVER_LETTER_X_APPLICATION["COVER_LETTER_X_APPLICATION (deprecated)"] {
 		uuid application_id PK_FK
 		uuid cover_letter_id PK_FK
 	}
@@ -262,15 +262,15 @@ erDiagram
 
 | Tables | Purpose |
 | --- | --- |
-| `resumes`, `cover_letters` | Legacy document tables still used by older attachment flows |
-| `resumes_x_applications`, `cover_letters_x_applications` | Legacy attachment bridges |
-| `documents` | Versioned multi-kind document record with status, pinning, and persisted Yjs state |
+| `documents` | Versioned multi-kind document record with status, pinning, and persisted Yjs state. Supports `kind` values: resume, cover_letter, follow_up, reference_sheet, freeform. |
 | `document_versions` | Immutable snapshots of document content |
 | `documents_x_applications` | Application attachment bridge for versioned documents |
 | `document_shares` | Per-user viewer/editor access grants |
 | `document_activities` | Audit-style document events |
+| `resumes`, `cover_letters` | **Deprecated.** Legacy flat document tables. Routes return `Deprecation: true` and `Sunset: 2026-06-01` headers. Frontend has migrated to the unified Document API. |
+| `resumes_x_applications`, `cover_letters_x_applications` | **Deprecated.** Legacy attachment bridges. Use `documents_x_applications` instead. |
 
-The codebase currently carries both the legacy resume and cover-letter tables and the newer versioned `Document` model. Documentation should treat the versioned document system as the primary direction, while still acknowledging the legacy tables that remain in the API and UI.
+The unified `Document` model is the primary direction. All frontend code now uses the Document API exclusively, filtering by `kind` (resume, cover_letter, etc.) where needed. Legacy resume and cover-letter routes remain functional but are marked deprecated in OpenAPI and will be removed after the sunset date.
 
 ### Automation and Review
 
@@ -306,8 +306,11 @@ The activity feed shown in the frontend is not backed by a dedicated event-log t
 - `documents.head_version_id` points at the current immutable `document_versions` row instead of mutating content in place.
 - `documents.yjs_state` stores the authoritative collaboration snapshot once real-time editing has persisted changes.
 - `users.subscription_tier` and `users.placement_status` drive several route-level guards in `backend/app/api/deps.py`.
+- `applications.status` uses a Postgres-native enum (`ApplicationStatus`: applied, screening, interview, offer, rejected, withdrawn).
+- `leads.review_status` uses a Postgres-native enum (`LeadReviewStatus`: pending_review, approved, rejected).
+- `crawler_runs.status` uses a Postgres-native enum (`CrawlerRunStatus`: pending, running, success, failed, cancelled, paused, pending_review).
 - `applications.status_history` is JSONB and doubles as an input to the activity feed.
-- `action_items` uses nullable foreign keys to support multiple parent types without introducing one table per task context.
+- `action_items` uses nullable foreign keys to support multiple parent types without introducing one table per task context. A CHECK constraint (`ck_action_items_exactly_one_fk`) ensures exactly one FK is non-null.
 
 ## Schema Management
 

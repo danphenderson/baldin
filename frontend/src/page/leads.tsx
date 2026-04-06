@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo, useDeferredValue } from 'react';
 import {
-  Box, Typography, Skeleton, Snackbar, Alert,
+  Box, Typography, Skeleton,
   Pagination as MuiPagination,
   Stack,
   Chip,
@@ -33,6 +33,7 @@ import LeadExtractionBar from '../component/lead-extraction-bar';
 import LeadSearchBar from '../component/lead-search-bar';
 import ConfirmDialog from '../component/common/confirm-dialog';
 import EmptyState from '../component/common/empty-state';
+import { useNotification } from '../context/notification-context';
 
 function isValidUrl(str: string): boolean {
   try {
@@ -110,13 +111,7 @@ const LeadsPage: React.FC = () => {
   const [applyingId, setApplyingId] = useState<string | null>(null);
 
   // Feedback
-  const [snack, setSnack] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success',
-  });
-
-  const notify = useCallback((message: string, severity: 'success' | 'error' = 'success') => {
-    setSnack({ open: true, message, severity });
-  }, []);
+  const { notify } = useNotification();
 
   /* ---- Data fetching ---- */
 
@@ -307,15 +302,15 @@ const LeadsPage: React.FC = () => {
         leads.length === 0 ? (
           <EmptyState
             icon={<BoltIcon />}
-            title="No leads yet"
-            description="Paste a job posting URL above to auto-extract your first lead, or add one manually."
-            action={{ label: 'Add Lead Manually', onClick: openCreate, icon: <AddIcon /> }}
+            title="No leads imported yet"
+            description="Import a job lead from LinkedIn, Glassdoor, or paste a URL to get started."
+            action={{ label: 'Import a Lead', onClick: openCreate, icon: <AddIcon /> }}
           />
         ) : (
           <EmptyState
             icon={<SearchIcon />}
-            title="No matches"
-            description="Try adjusting your search or filter criteria."
+            title="No results match your filters"
+            description="Try adjusting your search or clearing filters."
           />
         )
       ) : (
@@ -390,23 +385,6 @@ const LeadsPage: React.FC = () => {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
-
-      {/* ── Snackbar (transient feedback) ── */}
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={4000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnack((s) => ({ ...s, open: false }))}
-          severity={snack.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snack.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

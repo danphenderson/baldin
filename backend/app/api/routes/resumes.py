@@ -1,7 +1,7 @@
 # app/api/routes/resumes.py
 from io import BytesIO
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import UUID4
 from reportlab.lib.pagesizes import letter
@@ -9,9 +9,8 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy import select
 
-from app.api.deps import AsyncSession
-from app.api.deps import console_log as log
 from app.api.deps import (
+    AsyncSession,
     create_resume,
     get_async_session,
     get_current_user,
@@ -19,13 +18,21 @@ from app.api.deps import (
     models,
     schemas,
 )
+from app.api.deps import console_log as log
 from app.api.routes.seed_tasks import (
     SeedOperation,
     build_user_seed_creator,
     schedule_seed_operation,
 )
 
-router: APIRouter = APIRouter()
+
+async def _inject_deprecation_headers(response: Response) -> None:
+    """Inject RFC 8594 Deprecation + Sunset headers on every response."""
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "2026-06-01"
+
+
+router: APIRouter = APIRouter(dependencies=[Depends(_inject_deprecation_headers)])
 
 RESUME_SEED_OPERATION = SeedOperation(
     pipeline_name="seed_resumes",
@@ -36,7 +43,7 @@ RESUME_SEED_OPERATION = SeedOperation(
 )
 
 
-@router.get("/{resume_id}/download", response_class=FileResponse)
+@router.get("/{resume_id}/download", response_class=FileResponse, deprecated=True)
 async def download_resume(
     resume_id: UUID4,
     db: AsyncSession = Depends(get_async_session),
@@ -94,7 +101,7 @@ async def download_resume(
     return response
 
 
-@router.get("/", response_model=list[schemas.ResumeRead])
+@router.get("/", response_model=list[schemas.ResumeRead], deprecated=True)
 async def get_current_user_resumes(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
@@ -106,7 +113,7 @@ async def get_current_user_resumes(
     return resumes
 
 
-@router.post("/", status_code=201, response_model=schemas.ResumeRead)
+@router.post("/", status_code=201, response_model=schemas.ResumeRead, deprecated=True)
 async def create_user_resume(
     payload: schemas.ResumeCreate,
     user: schemas.UserRead = Depends(get_current_user),
@@ -119,14 +126,14 @@ async def create_user_resume(
     return resume
 
 
-@router.get("/{resume_id}", response_model=schemas.ResumeRead)
+@router.get("/{resume_id}", response_model=schemas.ResumeRead, deprecated=True)
 async def get_user_resume(
     resume: schemas.ResumeRead = Depends(get_resume),
 ):
     return resume
 
 
-@router.patch("/{resume_id}", response_model=schemas.ResumeRead)
+@router.patch("/{resume_id}", response_model=schemas.ResumeRead, deprecated=True)
 async def update_user_resume(
     payload: schemas.ResumeUpdate,
     resume: schemas.ResumeRead = Depends(get_resume),
@@ -140,7 +147,7 @@ async def update_user_resume(
     return resume
 
 
-@router.delete("/{resume_id}", status_code=204)
+@router.delete("/{resume_id}", status_code=204, deprecated=True)
 async def delete_user_resume(
     resume: schemas.ResumeRead = Depends(get_resume),
     db: AsyncSession = Depends(get_async_session),
@@ -150,7 +157,12 @@ async def delete_user_resume(
     return None
 
 
-@router.post("/seed", status_code=202, response_model=schemas.SeedOperationAccepted)
+@router.post(
+    "/seed",
+    status_code=202,
+    response_model=schemas.SeedOperationAccepted,
+    deprecated=True,
+)
 async def seed_resumes(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),

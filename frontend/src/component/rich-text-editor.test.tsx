@@ -33,6 +33,7 @@ describe('RichTextEditor', () => {
       ydoc: null,
       provider: null,
       connected: false,
+      connectionStatus: 'disconnected',
       connectedUsers: [],
       localUser: { name: 'Test User', color: '#336699' },
     });
@@ -88,6 +89,7 @@ describe('RichTextEditor', () => {
         ydoc: sharedDoc,
         provider: sharedProvider,
         connected: true,
+        connectionStatus: 'connected',
         connectedUsers: [{ clientId: 1, name: 'Alice', color: '#000000' }],
         localUser,
       })
@@ -95,6 +97,7 @@ describe('RichTextEditor', () => {
         ydoc: sharedDoc,
         provider: sharedProvider,
         connected: true,
+        connectionStatus: 'connected',
         connectedUsers: [
           { clientId: 1, name: 'Alice', color: '#000000' },
           { clientId: 2, name: 'Bob', color: '#ffffff' },

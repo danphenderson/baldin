@@ -177,7 +177,7 @@ const DocumentEditorPage: React.FC = () => {
           content_format: contentFormat,
         };
         const created = await createDocument(token, payload);
-        navigate(`/me/documents/${created.id}`);
+        navigate(`/documents/${created.id}`);
       } else {
         const payload: DocumentVersionCreate & { content_format?: string } = {
           content: persistedContent || undefined,
@@ -186,7 +186,7 @@ const DocumentEditorPage: React.FC = () => {
           content_format: contentFormat,
         };
         await createVersion(token, id!, payload);
-        navigate(`/me/documents/${id}`);
+        navigate(`/documents/${id}`);
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Save failed');
@@ -217,6 +217,16 @@ const DocumentEditorPage: React.FC = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 200px)' }}>
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+
+      {/* ── Back link ── */}
+      <Button
+        startIcon={<BackIcon />}
+        onClick={() => navigate(isCreate ? '/documents' : `/documents/${id}`)}
+        sx={{ mb: 2, alignSelf: 'flex-start' }}
+        aria-label={isCreate ? 'Back to documents' : 'Back to document'}
+      >
+        {isCreate ? 'Back to Documents' : 'Back to Document'}
+      </Button>
 
       {!isCreate && sourceFileName && (
         <Alert severity="info" sx={{ mb: 2 }}>
@@ -447,7 +457,7 @@ const DocumentEditorPage: React.FC = () => {
         <Box sx={{ flex: 1 }} />
 
         <Button
-          variant="outlined" onClick={() => navigate(isCreate ? '/me/documents' : `/me/documents/${id}`)}
+          variant="outlined" onClick={() => navigate(isCreate ? '/documents' : `/documents/${id}`)}
           disabled={saving}
           startIcon={<BackIcon />}
           aria-label="Cancel editing"

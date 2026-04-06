@@ -28,8 +28,8 @@ flowchart TD
 
 | Job | What it does | Key details |
 |-----|-------------|-------------|
-| **lint** | Runs pre-commit hooks | `isort`, `black`, `flake8` — Python 3.11.2 |
-| **backend-tests** | `pytest` with coverage gate | PostgreSQL 15 service, 40% minimum coverage on `app/` and `etl/` |
+| **lint** | Runs pre-commit hooks | `ruff check --fix`, `ruff format` — Python 3.11.2 |
+| **backend-tests** | `pytest` with coverage gate | PostgreSQL 15 service, 60% minimum coverage on `app/` and `etl/` |
 | **frontend-tests** | `npm run test` | Vitest suite |
 | **frontend-typecheck** | `npx tsc --noEmit` | Strict TypeScript validation |
 | **frontend-build** | `npm run build` | Production build with `VITE_API_URL=https://api.preview.invalid` |
@@ -60,17 +60,17 @@ The frontend build uses `VITE_API_URL=https://api.preview.invalid` as a placehol
 
 ## Branch Protection
 
-`main` is configured with branch protection rules:
+`main` should use the branch-protection baseline documented in `.github/branch-protection.md`, but those rules still have to be configured in GitHub because repository code cannot enforce them by itself.
 
 - Requires at least 1 approving review.
-- All required status checks must pass.
+- All six CI jobs must pass, and branches should be up to date before merge.
 - No force pushes or deletions allowed.
 
 Check names must match the CI job names exactly. See `.github/branch-protection.md` for the documented rules.
 
 ## Why This Split Exists
 
-- **CI** is the merge gate.
+- **CI** defines the repository-side checks that GitHub branch protection should enforce at merge time.
 - **Build Candidate Artifacts** proves the branch can still produce the backend image and frontend bundle that later release automation would promote.
 
 For release-path context, see [Track Release Readiness](./release-roadmap.md).

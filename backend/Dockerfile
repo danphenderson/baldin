@@ -1,57 +1,67 @@
-# pull official base image
+# Consolidated multi-stage Dockerfile for the Baldin API.
+#
+# Targets:
+#   dev  — single-user, hot-reload via uvicorn --reload (docker-compose default)
+#   prod — non-root user, gunicorn with uvicorn workers
+#
+# Build examples:
+#   docker build --target dev  -t baldin-api:dev  .
+#   docker build --target prod -t baldin-api:prod .
+
+# ── Base stage ────────────────────────────────────────────────────────
 FROM python:3.11-slim-bookworm AS base
 
-# set environment variables bytecode generation and needlessly buffering
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    TERM=xterm-256color
 
-# create working directory for app
-RUN mkdir -p /home/backend/
+WORKDIR /usr/src/app
 
-# set the build working directory
-WORKDIR /home/backend/
-
-# Install system dependencies
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends netcat-traditional gcc libmagic1 postgresql-client \
+    && apt-get install -y --no-install-recommends gcc libmagic1 netcat-traditional postgresql-client \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --upgrade pip
 
-# Dependency image
+# ── Dependency stage ──────────────────────────────────────────────────
 FROM base AS dependencies
 
-# Copy the Pipfile and Pipfile.lock into the image
 COPY Pipfile Pipfile.lock ./
 
-# Install Python dependencies
 RUN pip install pipenv \
-    && pipenv install --system --skip-lock
+    && pipenv install --system --deploy --ignore-pipfile
 
-# Final stage
-FROM base AS final
+# ── Dev target ────────────────────────────────────────────────────────
+FROM base AS dev
 
-# Copy virtual environment from dependencies stage
 COPY --from=dependencies /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=dependencies /usr/local/bin /usr/local/bin
 
-# Install Playwright browsers and native dependencies in the runtime image.
 RUN playwright install --with-deps chromium \
     && chmod -R a+rX /ms-playwright \
     && rm -rf /var/lib/apt/lists/*
 
-
-# Set environment variables specific to the application
-ENV HOME=/home/ \
-    APP_HOME=/home/backend/ \
-    TERM=xterm-256color
-
-
-# Set working directory
-WORKDIR $APP_HOME
-
-# Copy application code (and other necessary files) to container
 COPY . .
 
-# Set command to run the application using gunicorn with Uvicorn workers
-CMD ["uvicorn", "app.main:app", "--reload", "--workers", "2", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+
+# ── Prod target ───────────────────────────────────────────────────────
+FROM base AS prod
+
+RUN addgroup --system app \
+    && adduser --system --group app
+
+COPY --from=dependencies /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=dependencies /usr/local/bin /usr/local/bin
+
+RUN playwright install --with-deps chromium \
+    && chmod -R a+rX /ms-playwright \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY . .
+
+RUN chown -R app:app /usr/src/app
+
+USER app
+
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app.main:app", "-k", "uvicorn.workers.UvicornWorker", "--log-level", "info"]

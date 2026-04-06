@@ -28,7 +28,10 @@ import { useThemeMode } from '../theme/theme-provider';
 import { avatarUrl } from '../service/users';
 import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-header-context';
 import SecondaryNavBar from '../component/common/secondary-nav-bar';
+import ErrorBoundary from '../component/common/error-boundary';
+import UserAvatar from '../component/common/user-avatar';
 import { getSecondaryNavItems, drawerSections } from '../route/navigation';
+import { userInitials as getUserInitials } from '../util/format';
 
 const DRAWER_WIDTH = 260;
 const DRAWER_COLLAPSED = 72;
@@ -140,8 +143,8 @@ const AppLayout: React.FC = () => {
     closeAccountDial();
   };
 
-  const userInitials = user
-    ? `${(user as any).first_name?.[0] || ''}${(user as any).last_name?.[0] || ''}`.toUpperCase() || user.email[0].toUpperCase()
+  const computedUserInitials = user
+    ? getUserInitials((user as any).first_name, (user as any).last_name, user.email)
     : '?';
 
   const userAvatarSrc = user
@@ -591,8 +594,12 @@ const AppLayout: React.FC = () => {
                           },
                       }}
                     >
-                      <Avatar
-                        src={userAvatarSrc}
+                      <UserAvatar
+                        userId={user?.id}
+                        avatarUri={(user as any)?.avatar_uri}
+                        firstName={(user as any)?.first_name}
+                        lastName={(user as any)?.last_name}
+                        email={user?.email}
                         sx={{
                           width: 36,
                           height: 36,
@@ -602,9 +609,7 @@ const AppLayout: React.FC = () => {
                             ? undefined
                             : `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
                         }}
-                      >
-                        {userInitials}
-                      </Avatar>
+                      />
                     </Badge>
                   </IconButton>
                 </Tooltip>
@@ -627,7 +632,9 @@ const AppLayout: React.FC = () => {
           }}
         >
           <ToolbarHeaderContext.Provider value={setToolbarHeader}>
-            <Outlet />
+            <ErrorBoundary>
+              <Outlet />
+            </ErrorBoundary>
           </ToolbarHeaderContext.Provider>
         </Box>
       </Box>

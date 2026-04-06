@@ -81,11 +81,19 @@ export const updatePlacement = async (token: string, data: PlacementUpdate): Pro
   return await fetchApi(`${BASE_URL}/placement`, requestOptions);
 };
 
+const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
 /**
  * Upload or replace the current user's avatar image.
- * Accepts JPEG, PNG, WebP, or GIF up to 2 MB.
+ * Accepts JPEG, PNG, WebP, or GIF up to 5 MB.
  */
 export const uploadAvatar = async (token: string, file: File): Promise<UserRead> => {
+  if (file.size > MAX_AVATAR_SIZE_BYTES) {
+    throw new Error(
+      `Avatar file exceeds the 5 MB size limit (${(file.size / 1024 / 1024).toFixed(1)} MB).`,
+    );
+  }
+
   const formData = new FormData();
   formData.append('file', file);
 

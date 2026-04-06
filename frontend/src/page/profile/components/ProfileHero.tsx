@@ -6,7 +6,7 @@ import {
 import Grid from '@mui/material/Grid';
 import {
   Edit as EditIcon, Close as CloseIcon, Save as SaveIcon,
-  CameraAlt as CameraIcon,
+  CameraAlt as CameraIcon, FileUpload as ImportIcon,
 } from '@mui/icons-material';
 import type { UserRead, UserUpdate } from '../../../service/users';
 import { avatarUrl } from '../../../service/users';
@@ -35,6 +35,7 @@ interface ProfileHeroProps {
   completionPercent?: number;
   onAvatarSelected?: (file: File) => void;
   avatarUploading?: boolean;
+  onImportProfile?: () => void;
 }
 
 export const ProfileHero: React.FC<ProfileHeroProps> = ({
@@ -53,6 +54,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
   completionPercent,
   onAvatarSelected,
   avatarUploading,
+  onImportProfile,
 }) => {
   const theme = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -209,6 +211,17 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                 >
                   Edit
                 </Button>
+                {onImportProfile && (
+                  <Button
+                    variant="text"
+                    size="small"
+                    startIcon={<ImportIcon />}
+                    onClick={onImportProfile}
+                    sx={{ flexShrink: 0, color: 'text.secondary', fontWeight: 500 }}
+                  >
+                    Import Profile
+                  </Button>
+                )}
               </Box>
 
               <Stack

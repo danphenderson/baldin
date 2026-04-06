@@ -11,6 +11,11 @@ from app.tests import utils
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
 
+def _valid_password(seed: str) -> str:
+    normalized = "".join(ch for ch in seed if ch.isalnum()) or "testuser"
+    return f"{normalized}Aa1!"
+
+
 @asynccontextmanager
 async def _client() -> AsyncClient:
     await async_engine.dispose()
@@ -27,7 +32,7 @@ async def _register_user(client: AsyncClient, password: str) -> str:
     email = utils.random_email()
     response = await client.post(
         "/auth/register",
-        json={"email": email, "password": password},
+        json={"email": email, "password": _valid_password(password)},
     )
     assert response.status_code in {200, 201}
     return email
@@ -38,7 +43,7 @@ async def _auth_headers(
 ) -> dict[str, str]:
     response = await client.post(
         "/auth/jwt/login",
-        data={"username": email, "password": password},
+        data={"username": email, "password": _valid_password(password)},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     assert response.status_code == 200
@@ -132,6 +137,37 @@ async def test_created_pipeline_is_owned_by_current_user() -> None:
 
     assert owner_response.status_code == 200
     assert other_response.status_code == 403
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_create_pipeline_rejects_duplicate_name_for_same_user() -> None:
+    async with _client() as client:
+        email = await _register_user(client, "dup-pass")
+        headers = await _auth_headers(client, email, "dup-pass")
+        name = f"duplicate-{utils.random_lower_string(8)}"
+
+        first_response = await client.post(
+            "/data_orchestration/pipelines",
+            json={
+                "name": name,
+                "description": "First pipeline",
+                "definition": {"step": "first"},
+            },
+            headers=headers,
+        )
+        second_response = await client.post(
+            "/data_orchestration/pipelines",
+            json={
+                "name": name,
+                "description": "Duplicate pipeline",
+                "definition": {"step": "second"},
+            },
+            headers=headers,
+        )
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 409
+    assert "already exists" in second_response.json()["detail"].lower()
 
 
 @pytest.mark.asyncio(loop_scope="module")

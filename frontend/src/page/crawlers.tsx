@@ -755,8 +755,8 @@ const CrawlersPage: React.FC = () => {
       {!loading && pipelines.length === 0 && (
         <EmptyState
           icon={<CrawlerIcon />}
-          title="No crawler pipelines"
-          description="Create a pipeline to start crawling job sources."
+          title="No crawler pipelines configured"
+          description="Set up automated job crawlers to discover leads automatically."
           action={{ label: 'New Pipeline', onClick: () => { setFormState(INITIAL_FORM); setCreateOpen(true); }, icon: <AddIcon /> }}
         />
       )}

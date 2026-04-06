@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import (  # noqa
     AsyncSession,
+    create_orchestration_pipeline,
     get_async_session,
     get_current_superuser,
     get_current_user,
@@ -52,11 +53,7 @@ async def create_orch_pipeline(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    pipeline_model = models.OrchestrationPipeline(
-        **pipeline.model_dump(), user_id=user.id
-    )
-    db.add(pipeline_model)
-    await db.commit()
+    pipeline_model = await create_orchestration_pipeline(pipeline, user, db)
     return await get_orchestration_pipeline(pipeline_model.id, db, user)
 
 

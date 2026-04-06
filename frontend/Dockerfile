@@ -8,7 +8,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install npm dependencies
-RUN npm install --legacy-peer-deps
+RUN npm install
 
 # Copy the frontend source code into the container
 COPY . .

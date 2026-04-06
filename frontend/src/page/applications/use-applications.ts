@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getApplications, updateApplication, deleteApplication,
+  getApplicationDocuments,
   type ApplicationRead,
 } from '../../service/applications';
 
@@ -42,10 +43,10 @@ export function relativeDate(iso: string): string {
   return `${Math.floor(months / 12)}y ago`;
 }
 
-export function nextStatus(current: string): string | null {
+export function nextStatus(current: string): ApplicationRead['status'] | null {
   const idx = COLUMNS.findIndex((c) => c.key === current);
   if (idx < 0 || idx >= COLUMNS.length - 2) return null;
-  return COLUMNS[idx + 1].key;
+  return COLUMNS[idx + 1].key as ApplicationRead['status'];
 }
 
 /* ------------------------------------------------------------------ */
@@ -60,13 +61,16 @@ export interface UseApplicationsReturn {
   setError: (msg: string) => void;
   setSuccess: (msg: string) => void;
   refresh: () => Promise<void>;
-  handleStatusChange: (appId: string, newStatus: string) => Promise<void>;
+  handleStatusChange: (appId: string, newStatus: ApplicationRead['status']) => Promise<void>;
   handleAdvance: (app: ApplicationRead) => void;
   handleDelete: (app: ApplicationRead) => void;
   confirmDelete: () => Promise<void>;
   deleteTarget: ApplicationRead | null;
   setDeleteTarget: (app: ApplicationRead | null) => void;
   buckets: Map<string, ApplicationRead[]>;
+  /** Map of application ID → { hasResume, hasCoverLetter }. Empty while loading. */
+  appDocMeta: Map<string, { hasResume: boolean; hasCoverLetter: boolean }>;
+  appDocMetaLoading: boolean;
 }
 
 export function useApplications(token: string | null): UseApplicationsReturn {
@@ -76,6 +80,10 @@ export function useApplications(token: string | null): UseApplicationsReturn {
   const [success, setSuccess] = useState('');
 
   const [deleteTarget, setDeleteTarget] = useState<ApplicationRead | null>(null);
+
+  /* ---- Document metadata for filters ---- */
+  const [appDocMeta, setAppDocMeta] = useState<Map<string, { hasResume: boolean; hasCoverLetter: boolean }>>(new Map());
+  const [appDocMetaLoading, setAppDocMetaLoading] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -91,6 +99,41 @@ export function useApplications(token: string | null): UseApplicationsReturn {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  /* ---- Fetch document metadata for each application ---- */
+  useEffect(() => {
+    if (!token || applications.length === 0) {
+      setAppDocMeta(new Map());
+      return;
+    }
+
+    let cancelled = false;
+    setAppDocMetaLoading(true);
+
+    const load = async () => {
+      const meta = new Map<string, { hasResume: boolean; hasCoverLetter: boolean }>();
+      await Promise.all(
+        applications.map(async (app) => {
+          try {
+            const docs = await getApplicationDocuments(token, app.id);
+            meta.set(app.id, {
+              hasResume: Array.isArray(docs) && docs.some((d) => d.kind === 'resume'),
+              hasCoverLetter: Array.isArray(docs) && docs.some((d) => d.kind === 'cover_letter'),
+            });
+          } catch {
+            meta.set(app.id, { hasResume: false, hasCoverLetter: false });
+          }
+        }),
+      );
+      if (!cancelled) {
+        setAppDocMeta(meta);
+        setAppDocMetaLoading(false);
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [token, applications]);
+
   const buckets = useMemo(() => {
     const map = new Map<string, ApplicationRead[]>();
     for (const col of COLUMNS) map.set(col.key, []);
@@ -103,7 +146,7 @@ export function useApplications(token: string | null): UseApplicationsReturn {
     return map;
   }, [applications]);
 
-  const handleStatusChange = async (appId: string, newStatus: string) => {
+  const handleStatusChange = async (appId: string, newStatus: ApplicationRead['status']) => {
     if (!token) return;
     const previousStatus = applications.find((app) => app.id === appId)?.status ?? null;
     setApplications((prev) =>
@@ -165,5 +208,7 @@ export function useApplications(token: string | null): UseApplicationsReturn {
     deleteTarget,
     setDeleteTarget,
     buckets,
+    appDocMeta,
+    appDocMetaLoading,
   };
 }

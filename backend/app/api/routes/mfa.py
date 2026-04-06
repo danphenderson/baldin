@@ -10,12 +10,13 @@ Two-Factor Authentication (TOTP) management endpoints.
 """
 
 import pyotp
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from jwt import PyJWTError
 from pydantic import UUID4
 
 from app import models, schemas
 from app.core.conf import settings
+from app.core.rate_limit import limiter
 from app.core.security import (
     AUTH_BACKEND,
     decrypt_mfa_secret,
@@ -76,7 +77,9 @@ async def mfa_setup(
 
 
 @router.post("/verify", response_model=schemas.MFAStatusResponse)
+@limiter.limit("10/minute")
 async def mfa_verify_setup(
+    request: Request,
     body: schemas.MFAVerifyRequest,
     current_user: models.User = Depends(get_current_user),
 ):
@@ -162,7 +165,8 @@ async def mfa_admin_reset(
 
 
 @router.post("/login-verify", response_model=schemas.BearerResponse)
-async def mfa_login_verify(body: schemas.MFALoginVerifyRequest):
+@limiter.limit("10/minute")
+async def mfa_login_verify(request: Request, body: schemas.MFALoginVerifyRequest):
     """Complete the MFA login challenge.
 
     Accepts the short-lived ``mfa_token`` returned by ``POST /auth/jwt/login``

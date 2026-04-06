@@ -192,16 +192,16 @@ export const ProfileBuilderPanel: React.FC<ProfileBuilderPanelProps> = ({
           </Button>
         </Box>
 
-        {/* ── Documents Studio CTA ─── */}
+        {/* ── Documents CTA ─── */}
         <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
           <Button
             size="small"
             variant="text"
             endIcon={<ArrowForwardIcon sx={{ fontSize: 16 }} />}
-            onClick={() => navigate('/me/documents')}
+            onClick={() => navigate('/documents')}
             sx={{ fontWeight: 600, fontSize: '0.8rem', color: 'text.secondary' }}
           >
-            Open Documents Studio
+            Open Documents
           </Button>
         </Box>
       </CardContent>

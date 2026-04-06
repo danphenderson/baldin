@@ -4,6 +4,8 @@
 Client for interacting with the Langchain API.
 """
 
+from typing import Any, TypeVar
+
 import httpx
 from bs4 import BeautifulSoup
 from langchain_community.document_transformers import BeautifulSoupTransformer
@@ -13,6 +15,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import async_playwright
+from pydantic import BaseModel
 
 from app.core import conf
 from app.core.url_safety import (
@@ -23,10 +26,8 @@ from app.core.url_safety import (
 from app.logging import get_logger
 from app.utils import clean_text
 
-llm = conf.openai.get_model()
 logger = get_logger(__name__)
-
-str_output_parser = StrOutputParser()
+StructuredOutputModel = TypeVar("StructuredOutputModel", bound=BaseModel)
 
 _FETCH_HEADERS = {
     # Keep a desktop browser UA for sites that block default requests.
@@ -167,6 +168,8 @@ async def extract_text_from_url(url: str) -> str:
 
 
 def generate_cover_letter(profile, job, template) -> str:
+    model = conf.openai.get_model()
+    parser = StrOutputParser()
     generation_template = ChatPromptTemplate.from_messages(
         [
             (
@@ -181,11 +184,13 @@ def generate_cover_letter(profile, job, template) -> str:
             ("user", "Awesome! Here are the job details:\n{job}"),
         ]
     )
-    chain = generation_template | llm | str_output_parser
+    chain = generation_template | model | parser
     return chain.invoke({"profile": profile, "job": job, "template": template})
 
 
 def generate_resume(profile, job, template) -> str:
+    model = conf.openai.get_model()
+    parser = StrOutputParser()
     generation_template = ChatPromptTemplate.from_messages(
         [
             (
@@ -200,8 +205,23 @@ def generate_resume(profile, job, template) -> str:
             ("user", "Awesome! Here are the job details:\n{job}"),
         ]
     )
-    chain = generation_template | llm | str_output_parser
+    chain = generation_template | model | parser
     return chain.invoke({"profile": profile, "job": job, "template": template})
+
+
+async def ainvoke_structured_prompt(
+    prompt: ChatPromptTemplate,
+    variables: dict[str, Any],
+    schema: type[StructuredOutputModel],
+    *,
+    model_name: str | None = None,
+) -> StructuredOutputModel:
+    model = conf.openai.get_model(model_name)
+    runnable = prompt | model.with_structured_output(
+        schema=schema,
+        method="function_calling",
+    )
+    return await runnable.ainvoke(variables)
 
 
 # ---------------------------------------------------------------------------
@@ -221,84 +241,3 @@ def chunk_text(text: str) -> list[str]:
     if not text or not text.strip():
         return []
     return _text_splitter.split_text(text)
-
-
-# ---------------------------------------------------------------------------
-#  RAG chains
-# ---------------------------------------------------------------------------
-
-
-def enrich_lead(lead_description: str, context_chunks: list[str]) -> str:
-    """Enrich a lead description using relevant document context."""
-    context = "\n---\n".join(context_chunks)
-    template = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                "You are a career research assistant. Use the provided context "
-                "from the user's documents to enrich and analyze the following "
-                "job lead. Highlight key qualifications the user already has, "
-                "gaps to address, and actionable next steps.",
-            ),
-            (
-                "user",
-                "Context from my documents:\n{context}\n\n"
-                "Job lead details:\n{lead_description}",
-            ),
-        ]
-    )
-    chain = template | llm | str_output_parser
-    return chain.invoke(
-        {"context": context, "lead_description": lead_description},
-    )
-
-
-def rank_leads(
-    leads: list[dict],
-    context_chunks: list[str],
-) -> str:
-    """Rank a list of leads by relevance to the user's profile and documents."""
-    context = "\n---\n".join(context_chunks)
-    leads_text = "\n\n".join(
-        f"Lead {i + 1}: {lead.get('title', 'Untitled')} — {lead.get('description', '')}"
-        for i, lead in enumerate(leads)
-    )
-    template = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                "You are a career advisor. Rank the following job leads from "
-                "most to least relevant based on the user's background documents. "
-                "For each lead, provide a relevance score (1-10) and a brief "
-                "explanation. Return the results as a structured list.",
-            ),
-            (
-                "user",
-                "Context from my documents:\n{context}\n\n"
-                "Job leads to rank:\n{leads_text}",
-            ),
-        ]
-    )
-    chain = template | llm | str_output_parser
-    return chain.invoke({"context": context, "leads_text": leads_text})
-
-
-def summarize_company_website(url: str, page_text: str) -> str:
-    """Summarize a company website page for lead research."""
-    template = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                "You are a company research assistant. Summarize the following "
-                "company website content. Focus on: company mission, products/"
-                "services, culture, recent news, and potential job opportunities. "
-                "Be concise but thorough.",
-            ),
-            (
-                "user",
-                "Website URL: {url}\n\nPage content:\n{page_text}",
-            ),
-        ]
-    )
-    chain = template | llm | str_output_parser
-    return chain.invoke({"url": url, "page_text": page_text})

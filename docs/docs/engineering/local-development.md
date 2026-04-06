@@ -43,6 +43,14 @@ This script:
 2. Clears `backend/public/db` and `backend/public/test_db`.
 3. Restarts the stack with fresh databases.
 
+If startup logs show a PostgreSQL `collation version mismatch` warning after a Docker image or base-OS change and you want to keep local data, repair the local clusters in place:
+
+```bash
+./scripts/repair_local_db_collation.sh
+```
+
+This reindexes `postgres`, `template1`, and the app database in both local Postgres clusters, then refreshes PostgreSQL's stored collation version metadata. If you do not need to preserve local data, `./scripts/reset_local_db.sh` remains the simpler option.
+
 ## Working Outside Containers
 
 You can also run backend or frontend outside Docker:

@@ -21,46 +21,10 @@ import {
 } from '../service/companies';
 import { createApplication } from '../service/applications';
 import { components } from '../schema';
+import { timeAgo, monogram, monogramColor } from '../util/format';
+import EmptyState from '../component/common/empty-state';
 
 type LeadRead = components['schemas']['LeadRead'];
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                           */
-/* ------------------------------------------------------------------ */
-
-/** Relative-time label, e.g. "3 days ago" */
-const timeAgo = (iso: string): string => {
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  return `${months}mo ago`;
-};
-
-/** Two-letter monogram from a company name */
-const monogram = (name: string | null | undefined): string => {
-  if (!name) return '??';
-  const words = name.trim().split(/\s+/);
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-};
-
-/** Stable colour derived from a string, using theme palette accents */
-const MONOGRAM_HUES = [
-  '#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e',
-  '#3b82f6', '#ec4899', '#14b8a6', '#a855f7', '#0ea5e9',
-];
-const monogramColor = (name: string | null | undefined): string => {
-  const s = name ?? '';
-  let hash = 0;
-  for (let i = 0; i < s.length; i++) hash = s.charCodeAt(i) + ((hash << 5) - hash);
-  return MONOGRAM_HUES[Math.abs(hash) % MONOGRAM_HUES.length];
-};
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                         */
@@ -411,30 +375,20 @@ const CompaniesPage: React.FC = () => {
         </Grid>
       ) : filtered.length === 0 ? (
         /* -- Empty state ------------------------------------------- */
-        <Box sx={{ textAlign: 'center', py: 10 }}>
-          <CompanyIcon
-            sx={{
-              fontSize: 72,
-              color: alpha(theme.palette.text.primary, 0.08),
-              mb: 2,
-            }}
+        companies.length === 0 ? (
+          <EmptyState
+            icon={<CompanyIcon />}
+            title="No companies discovered"
+            description="Companies are captured automatically when you import leads."
+            action={{ label: 'Add a Company', onClick: openCreateDialog, icon: <AddIcon /> }}
           />
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-            {companies.length === 0
-              ? 'No companies yet'
-              : 'No matches'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 360, mx: 'auto' }}>
-            {companies.length === 0
-              ? 'Extract a company from a URL using AI or add one manually to start tracking employers.'
-              : 'Try a different search term or clear your filters.'}
-          </Typography>
-          {companies.length === 0 && (
-            <Button variant="outlined" startIcon={<AddIcon />} onClick={openCreateDialog}>
-              Add your first company
-            </Button>
-          )}
-        </Box>
+        ) : (
+          <EmptyState
+            icon={<SearchIcon />}
+            title="No results match your filters"
+            description="Try adjusting your search or clearing filters."
+          />
+        )
       ) : (
         /* -- Company card grid ------------------------------------ */
         <Grid container spacing={2}>

@@ -56,6 +56,27 @@ MFA_TOKEN_EXPIRE_MINUTES = 5
 MFA_TOKEN_AUDIENCE = "baldin:mfa"
 
 
+def _password_validation_reason(password: str) -> str | None:
+    reasons: list[str] = []
+    if len(password) < MIN_PASSWORD_LENGTH:
+        reasons.append(f"at least {MIN_PASSWORD_LENGTH} characters")
+    for pattern, label in _PASSWORD_RULES:
+        if not pattern.search(password):
+            reasons.append(label)
+    if reasons:
+        return f"Password must contain {', '.join(reasons)}."
+    return None
+
+
+def _invalid_default_superuser_password_error(reason: str) -> RuntimeError:
+    message = (
+        "Configured FIRST_SUPERUSER_PASSWORD is invalid for automatic startup bootstrap. "
+        f"{reason} Update backend/.env and restart the docker-compose stack."
+    )
+    console_log.error(message)
+    return RuntimeError(message)
+
+
 @lru_cache(maxsize=1)
 def _get_mfa_fernet() -> Fernet:
     """Derive the MFA-at-rest encryption key from a dedicated override or SECRET_KEY.
@@ -94,16 +115,9 @@ class UserManager(UUIDIDMixin, BaseUserManager[models.User, uuid.UUID]):  # type
     async def validate_password(
         self, password: str, user: models.User | schemas.UserCreate
     ) -> None:
-        reasons: list[str] = []
-        if len(password) < MIN_PASSWORD_LENGTH:
-            reasons.append(f"at least {MIN_PASSWORD_LENGTH} characters")
-        for pattern, label in _PASSWORD_RULES:
-            if not pattern.search(password):
-                reasons.append(label)
-        if reasons:
-            raise InvalidPasswordException(
-                reason=f"Password must contain {', '.join(reasons)}."
-            )
+        reason = _password_validation_reason(password)
+        if reason:
+            raise InvalidPasswordException(reason=reason)
 
     async def on_after_register(
         self, user: models.User, request: Optional[Request] = None
@@ -175,6 +189,16 @@ async def authenticate_superuser_credentials(
     return user
 
 
+async def get_user_by_email(email: str) -> Optional[models.User]:
+    async with get_async_session_context() as session:
+        async with get_user_db_context(session) as user_db:
+            async with get_user_manager_context(user_db) as user_manager:
+                try:
+                    return await user_manager.get_by_email(email)
+                except UserNotExists:
+                    return None
+
+
 async def create_user(schema: schemas.UserCreate):
     try:
         async with get_async_session_context() as session:
@@ -187,13 +211,40 @@ async def create_user(schema: schemas.UserCreate):
 
 
 async def create_default_superuser():
+    existing_user = await get_user_by_email(conf.settings.FIRST_SUPERUSER_EMAIL)
+    if existing_user is not None:
+        if existing_user.is_superuser:
+            console_log.info(
+                "Default superuser already exists for %s; skipping bootstrap.",
+                conf.settings.FIRST_SUPERUSER_EMAIL,
+            )
+        else:
+            console_log.warning(
+                "Configured FIRST_SUPERUSER_EMAIL %s already exists but is not a superuser; leaving account unchanged.",
+                conf.settings.FIRST_SUPERUSER_EMAIL,
+            )
+        return
+
+    reason = _password_validation_reason(conf.settings.FIRST_SUPERUSER_PASSWORD)
+    if reason:
+        raise _invalid_default_superuser_password_error(reason)
+
     default_superuser_payload = schemas.UserCreate(
         email=conf.settings.FIRST_SUPERUSER_EMAIL,
         password=conf.settings.FIRST_SUPERUSER_PASSWORD,
         is_discoverable=True,
         is_superuser=True,  # type: ignore
     )
-    await create_user(default_superuser_payload)
+    try:
+        await create_user(default_superuser_payload)
+    except InvalidPasswordException as exc:
+        raise _invalid_default_superuser_password_error(
+            getattr(
+                exc,
+                "reason",
+                "Password does not satisfy the configured policy.",
+            )
+        ) from exc
 
 
 # ---------------------------------------------------------------------------

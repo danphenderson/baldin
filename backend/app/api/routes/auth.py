@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app import models, schemas
+from app.core.rate_limit import limiter
 from app.core.security import (
     AUTH_BACKEND,
     create_mfa_token,
@@ -26,6 +27,7 @@ _get_current_user_token = fastapi_users.authenticator.current_user_token(active=
 
 
 @router.post("/login", response_model=schemas.BearerResponse | schemas.MFALoginRequired)
+@limiter.limit("10/minute")
 async def login(
     request: Request,
     credentials: OAuth2PasswordRequestForm = Depends(),

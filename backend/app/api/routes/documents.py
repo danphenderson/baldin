@@ -1284,21 +1284,10 @@ async def enrich_lead_endpoint(
     Retrieve relevant document chunks and use them to enrich a job lead
     description with personalized analysis.
     """
-    from app.core.langchain import enrich_lead
-    from app.core.vector_store import PGVectorStore
+    from app.core.rag.service import RagWorkflowService
 
-    store = PGVectorStore(db)
-    results = await store.similarity_search(
-        body.lead_description, user_id=user.id, k=body.k
-    )
-    context_chunks = [r["chunk_text"] for r in results]
-    if not context_chunks:
-        raise HTTPException(
-            status_code=400,
-            detail="No embedded documents found. Embed documents first.",
-        )
-    enrichment = enrich_lead(body.lead_description, context_chunks)
-    return schemas.LeadEnrichResponse(enrichment=enrichment)
+    service = RagWorkflowService(db)
+    return await service.enrich_lead(body, user)
 
 
 @router.post(
@@ -1312,22 +1301,10 @@ async def rank_leads_endpoint(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Rank job leads based on the user's embedded document context."""
-    from app.core.langchain import rank_leads
-    from app.core.vector_store import PGVectorStore
+    from app.core.rag.service import RagWorkflowService
 
-    combined_text = " ".join(
-        lead.get("title", "") + " " + lead.get("description", "") for lead in body.leads
-    )
-    store = PGVectorStore(db)
-    results = await store.similarity_search(combined_text, user_id=user.id, k=body.k)
-    context_chunks = [r["chunk_text"] for r in results]
-    if not context_chunks:
-        raise HTTPException(
-            status_code=400,
-            detail="No embedded documents found. Embed documents first.",
-        )
-    ranking = rank_leads(body.leads, context_chunks)
-    return schemas.LeadRankResponse(ranking=ranking)
+    service = RagWorkflowService(db)
+    return await service.rank_leads(body, user)
 
 
 @router.post(
@@ -1338,14 +1315,10 @@ async def rank_leads_endpoint(
 async def summarize_company_endpoint(
     body: schemas.CompanySummarizeRequest,
     user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Load a company website, extract text, and return an AI summary."""
-    from app.core.langchain import extract_text_from_url, summarize_company_website
+    from app.core.rag.service import RagWorkflowService
 
-    page_text = await extract_text_from_url(body.url)
-    if not page_text.strip():
-        raise HTTPException(
-            status_code=400, detail="Could not extract text from the URL"
-        )
-    summary = summarize_company_website(body.url, page_text)
-    return schemas.CompanySummarizeResponse(url=body.url, summary=summary)
+    service = RagWorkflowService(db)
+    return await service.summarize_company(body, user)

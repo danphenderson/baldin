@@ -9,7 +9,8 @@ import {
   AutoAwesome as LogoIcon, Visibility, VisibilityOff, Email, Lock, Person,
   Check as CheckIcon, Close as CloseIcon,
 } from '@mui/icons-material';
-import { register } from '../service/auth';
+import { register, login } from '../service/auth';
+import { UserContext } from '../context/user-context';
 
 // Must stay in sync with backend MIN_PASSWORD_LENGTH / _PASSWORD_RULES
 const PASSWORD_RULES = [
@@ -22,6 +23,7 @@ const PASSWORD_RULES = [
 const RegisterPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { setToken } = React.useContext(UserContext);
   const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', first_name: '', last_name: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -52,7 +54,22 @@ const RegisterPage: React.FC = () => {
     setError('');
     try {
       await register({ email: form.email, password: form.password, first_name: form.first_name, last_name: form.last_name } as any);
-      navigate('/login');
+      // Auto-login after successful registration
+      try {
+        const result = await login(form.email, form.password);
+        if (result.mfa_required) {
+          // MFA is enabled — user must complete MFA on the login page
+          navigate('/login');
+        } else if (result.access_token) {
+          setToken(result.access_token);
+          navigate('/');
+        } else {
+          navigate('/login');
+        }
+      } catch {
+        // Login failed for any reason — fall back to login page
+        navigate('/login');
+      }
     } catch (err: any) {
       setError(err.message || 'Registration failed');
     } finally {

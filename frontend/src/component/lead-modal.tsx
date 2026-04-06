@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { timeAgo } from '../util/format';
 import {
   Alert,
   Avatar,
@@ -125,20 +126,6 @@ const EMPTY_COMMENT_DRAFT: CommentDraft = { content: '', anonymous: true };
 const normalizeText = (value?: string | null): string => value ?? '';
 
 const hasText = (value?: string | null): boolean => Boolean(value?.trim());
-
-const timeAgo = (dateStr: string): string => {
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return `${Math.floor(months / 12)}y ago`;
-};
 
 const sortIds = (ids: string[]): string[] => [...ids].sort((left, right) => left.localeCompare(right));
 

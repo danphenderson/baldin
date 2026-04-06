@@ -18,6 +18,7 @@ import {
   Circle as CircleIcon,
 } from '@mui/icons-material';
 import { useCollaborativeEditor } from './use-collaborative-editor';
+import ConnectionStatusBanner from './connection-status-banner';
 import { getTiptapEditorContent } from './document-content';
 import type { DocumentContentFormat } from '../service/documents';
 
@@ -263,11 +264,26 @@ const TiptapEditorInner: React.FC<Omit<RichTextEditorProps, 'contentFormat'>> = 
           <>
             <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto' }}>
-              <CircleIcon sx={{ fontSize: 10, color: collab.connected ? 'success.main' : 'text.disabled' }} />
-              <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                {collab.connected
+              <CircleIcon
+                sx={{
+                  fontSize: 10,
+                  color: collab.connectionStatus === 'connected'
+                    ? 'success.main'
+                    : collab.connectionStatus === 'connecting'
+                      ? 'warning.main'
+                      : 'error.main',
+                }}
+              />
+              <Typography
+                variant="caption"
+                color={collab.connectionStatus === 'disconnected' ? 'error' : 'text.secondary'}
+                sx={{ whiteSpace: 'nowrap', fontWeight: collab.connectionStatus !== 'connected' ? 600 : 400 }}
+              >
+                {collab.connectionStatus === 'connected'
                   ? `Connected (${collab.connectedUsers.length} user${collab.connectedUsers.length !== 1 ? 's' : ''})`
-                  : 'Connecting…'}
+                  : collab.connectionStatus === 'connecting'
+                    ? 'Reconnecting…'
+                    : 'Offline'}
               </Typography>
               {collab.connectedUsers.filter(u => u.color).map(u => (
                 <Tooltip key={u.clientId} title={u.name ?? 'User'} arrow>
@@ -283,6 +299,7 @@ const TiptapEditorInner: React.FC<Omit<RichTextEditorProps, 'contentFormat'>> = 
 
   return (
     <Box>
+      {collaborative && <ConnectionStatusBanner status={collab.connectionStatus} />}
       {toolbar}
       <Box
         sx={{

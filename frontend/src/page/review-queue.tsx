@@ -237,8 +237,8 @@ const ReviewQueuePage: React.FC = () => {
       ) : items.length === 0 ? (
         <EmptyState
           icon={<RateReviewIcon />}
-          title="No items pending review"
-          description="All automation outputs have been reviewed."
+          title="Review queue is clear"
+          description="Items requiring your review will appear here."
         />
       ) : (
         <TableContainer component={Paper} variant="outlined">

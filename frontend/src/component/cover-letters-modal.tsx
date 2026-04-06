@@ -2,35 +2,30 @@
 
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
-import { CoverLetterRead, CoverLetterCreate, CoverLetterUpdate } from '../service/cover-letters';  // Adjust import path as necessary
+import { DocumentRead, DocumentCreate, DocumentUpdate } from '../service/documents';
 
 interface CoverLetterModalProps {
   open: boolean;
   onClose: () => void;
-  onSave: (coverLetter: CoverLetterCreate | CoverLetterUpdate) => void;
-  initialData?: CoverLetterRead;
+  onSave: (coverLetter: DocumentCreate | DocumentUpdate) => void;
+  initialData?: DocumentRead;
 }
 
 const CoverLetterModal: React.FC<CoverLetterModalProps> = ({ open, onClose, onSave, initialData }) => {
-  const defaultCoverLetterData: CoverLetterCreate = {
-    // Assuming these are the fields in CoverLetterCreate, adjust as per actual schema
-    name: "",
-    content: "",
-    content_type: "template"
+  const defaultCoverLetterData: Record<string, string> = {
+    kind: 'cover_letter',
+    title: '',
+    content: '',
   };
 
-  const [coverLetterData, setCoverLetterData] = useState<CoverLetterCreate | CoverLetterUpdate>(defaultCoverLetterData);
+  const [coverLetterData, setCoverLetterData] = useState<Record<string, string>>(defaultCoverLetterData);
   const [isEdited, setIsEdited] = useState(false);
 
   useEffect(() => {
     if (initialData) {
-      // Assuming CoverLetterRead and CoverLetterUpdate have similar fields
-      const updateData: CoverLetterUpdate = {
-        name: initialData.name || defaultCoverLetterData.name,
-        content: initialData.content || defaultCoverLetterData.content,
-        content_type: initialData.content_type || defaultCoverLetterData.content_type
-      };
-      setCoverLetterData(updateData);
+      setCoverLetterData({
+        title: initialData.title || '',
+      });
       setIsEdited(true);
     } else {
       setCoverLetterData(defaultCoverLetterData);
@@ -47,9 +42,12 @@ const CoverLetterModal: React.FC<CoverLetterModalProps> = ({ open, onClose, onSa
   };
 
   const handleSave = () => {
-    onSave(coverLetterData);
+    onSave(isEdited
+      ? { title: coverLetterData.title } as DocumentUpdate
+      : { kind: 'cover_letter', title: coverLetterData.title, content: coverLetterData.content } as DocumentCreate,
+    );
     onClose();
-    setCoverLetterData(defaultCoverLetterData);  // Reset form state
+    setCoverLetterData(defaultCoverLetterData);
   };
 
   const formatLabel = (key: string) => key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
@@ -64,7 +62,7 @@ const CoverLetterModal: React.FC<CoverLetterModalProps> = ({ open, onClose, onSa
               key={key}
               name={key}
               label={formatLabel(key)}
-              value={coverLetterData[key as keyof (CoverLetterCreate | CoverLetterUpdate)]}
+              value={coverLetterData[key] ?? ''}
               onChange={handleChange}
               margin="normal"
               fullWidth

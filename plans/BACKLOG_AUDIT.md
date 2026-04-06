@@ -12,9 +12,10 @@
 
 | Category | Count |
 |----------|-------|
-| Recommended for closure (implemented/superseded) | 20 |
-| Recommended for closure (no longer aligned) | 6 |
-| Updated for implementation (still active) | 12 |
+| Recommended for closure (implemented/superseded) | 14 |
+| Recommended for closure (no longer aligned) | 7 |
+| Updated for implementation (still active) | 13 |
+| Needs human follow-up | 4 |
 | **Total** | **38** |
 
 ---
@@ -49,6 +50,7 @@
 | #90 | Fix: Beta Release registration token | Not aligned | The current direction is local-first developer-preview with Docker Compose, not gated beta access; FastAPI-Users handles auth |
 | #74 | Chore: create Button common component | Not aligned | The frontend redesign uses MUI components directly; wrapper components add unnecessary abstraction for the current architecture |
 | #70 | Feat: package backend etl and app individually | Not aligned | The backend is a single deployable unit via Docker; splitting packages adds complexity without benefit for local-first development |
+| #66 | Feat: add Search & AutoComplete common components | Not aligned | MUI DataGrid has built-in column filtering; lead-search-bar.tsx handles lead-specific search; generic wrappers add unnecessary abstraction |
 | #99 | Feat: /enrich API | Not aligned | LLM-powered extraction is handled by the extractor API; a separate enrichment endpoint duplicates the existing pattern without clear value for the current release direction |
 
 ---

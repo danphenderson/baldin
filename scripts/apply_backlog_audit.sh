@@ -230,6 +230,10 @@ LLM-powered data extraction and enrichment is handled by the extractor API (\`/e
 
 A separate \`/enrich\` endpoint would duplicate this pattern. Lead enrichment logic exists in \`etl/leads/enrich.py\` for batch processing. If specific enrichment workflows are needed, they should be added as extractor configurations, not a parallel API surface. Recommend closing."
 
+close_comment 66 "**Closure recommendation: No longer aligned with current direction**
+
+The frontend redesign uses MUI DataGrid with built-in column filtering and sorting, and \`lead-search-bar.tsx\` provides lead-specific search with filters and pagination. Creating generic Search and AutoComplete wrapper components would add an abstraction layer over MUI's existing capabilities without clear benefit for the current architecture. Recommend closing."
+
 echo ""
 echo "--- Issue Updates (Implementation-Ready Rewrites) ---"
 echo ""
@@ -824,9 +828,9 @@ echo "Audit complete. All 38 issues processed."
 echo "============================================"
 echo ""
 echo "Summary:"
-echo "  - 20 issues commented for closure (implemented/superseded)"
-echo "  -  6 issues commented for closure (not aligned)"
-echo "  - 12 issues updated with implementation-ready content"
+echo "  - 14 issues commented for closure (implemented/superseded)"
+echo "  -  7 issues commented for closure (not aligned)"
+echo "  - 13 issues updated with implementation-ready content"
 echo "  -  4 issues flagged for human follow-up"
 echo ""
 echo "Note: No issues were closed. All closure recommendations"

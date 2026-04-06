@@ -6,14 +6,13 @@ that are held in `pending_review` status across crawlers, extractors,
 and leads.
 """
 
-from datetime import datetime
-
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import UUID4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_async_session, get_current_superuser, models, schemas
+from app.core.datetime_utils import now_utc_naive
 
 router = APIRouter(dependencies=[Depends(get_current_superuser)])
 
@@ -212,7 +211,7 @@ async def _reject_item(
                 404, f"Crawler run {item_id} not found or not pending review"
             )
         run.status = "cancelled"
-        run.finished_at = datetime.utcnow()
+        run.finished_at = now_utc_naive()
         run.error_summary = "Rejected during human review"
         await db.commit()
         return f"Crawler run {item_id} rejected"

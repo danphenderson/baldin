@@ -1,6 +1,5 @@
 # Path: app/api/routes/applications.py
 import json
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import UUID4
@@ -20,8 +19,32 @@ from app.api.deps import (
     models,
     schemas,
 )
+from app.core.datetime_utils import format_utc_datetime, normalize_utc_datetime, now_utc
 
 router: APIRouter = APIRouter()
+
+
+def _normalize_status_history(history: list[dict] | None) -> list[dict]:
+    normalized_history: list[dict] = []
+    for entry in history or []:
+        normalized_entry = dict(entry)
+        changed_at = normalized_entry.get("changed_at")
+        if changed_at is not None:
+            normalized_changed_at = normalize_utc_datetime(changed_at)
+            if normalized_changed_at is not None:
+                normalized_entry["changed_at"] = normalized_changed_at
+        normalized_history.append(normalized_entry)
+    return normalized_history
+
+
+def _build_status_history_entry(
+    previous_status: str | None, next_status: str | None
+) -> dict:
+    return {
+        "from": previous_status,
+        "to": next_status,
+        "changed_at": format_utc_datetime(now_utc()),
+    }
 
 
 @router.post("/", status_code=201, response_model=schemas.ApplicationRead)
@@ -51,11 +74,7 @@ async def create_application(
         "user_id": user.id,
     }
     application_data["status_history"] = [
-        {
-            "from": None,
-            "to": payload.status,
-            "changed_at": datetime.utcnow().isoformat(),
-        }
+        _build_status_history_entry(None, payload.status)
     ]
 
     application = models.Application(**application_data)
@@ -148,14 +167,8 @@ async def update_application(
     update_data = payload.dict(exclude_unset=True)
     new_status = update_data.get("status")
     if new_status is not None and new_status != application.status:
-        history = list(application.status_history or [])
-        history.append(
-            {
-                "from": application.status,
-                "to": new_status,
-                "changed_at": datetime.utcnow().isoformat(),
-            }
-        )
+        history = _normalize_status_history(application.status_history)
+        history.append(_build_status_history_entry(application.status, new_status))
         application.status_history = history
 
     for var, value in update_data.items():

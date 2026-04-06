@@ -8,6 +8,12 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.api.deps import AsyncSession, get_async_session, get_current_user
+from app.core.datetime_utils import (
+    ensure_utc,
+    now_utc,
+    now_utc_naive,
+    parse_utc_datetime,
+)
 
 router: APIRouter = APIRouter()
 
@@ -22,7 +28,11 @@ async def get_activity_feed(
     db: AsyncSession = Depends(get_async_session),
 ):
     if since is None:
-        since = datetime.utcnow() - timedelta(days=7)
+        since = now_utc() - timedelta(days=7)
+    else:
+        since = ensure_utc(since)
+
+    db_since = since.replace(tzinfo=None)
 
     items: list[schemas.ActivityFeedItem] = []
 
@@ -40,9 +50,8 @@ async def get_activity_feed(
                 changed_at_raw = entry.get("changed_at")
                 if not changed_at_raw:
                     continue
-                try:
-                    changed_at = datetime.fromisoformat(changed_at_raw)
-                except (ValueError, TypeError):
+                changed_at = parse_utc_datetime(changed_at_raw)
+                if changed_at is None:
                     continue
                 if changed_at < since:
                     continue
@@ -56,7 +65,7 @@ async def get_activity_feed(
                         entity_id=app.id,
                         title=lead_title,
                         detail=f"{entry.get('from', 'none')} → {entry.get('to', 'unknown')}",
-                        timestamp=changed_at,
+                        timestamp=ensure_utc(changed_at),
                     )
                 )
 
@@ -72,7 +81,7 @@ async def get_activity_feed(
             .options(selectinload(models.Message.author))
             .where(
                 models.ConversationParticipant.user_id == user.id,
-                models.Message.created_at >= since,
+                models.Message.created_at >= db_since,
             )
         )
         messages = result.scalars().unique().all()
@@ -89,7 +98,7 @@ async def get_activity_feed(
                     entity_id=msg.conversation_id,
                     title=author_name,
                     detail=msg.content[:100] if msg.content else None,
-                    timestamp=msg.created_at,
+                    timestamp=ensure_utc(msg.created_at),
                 )
             )
 
@@ -106,7 +115,7 @@ async def get_activity_feed(
             )
             .where(
                 models.Document.user_id == user.id,
-                models.DocumentVersion.created_at >= since,
+                models.DocumentVersion.created_at >= db_since,
             )
         )
         versions = result.scalars().all()
@@ -119,7 +128,7 @@ async def get_activity_feed(
                     entity_id=doc.id,
                     title=doc.title,
                     detail=f"Version {ver.version_number}",
-                    timestamp=ver.created_at,
+                    timestamp=ensure_utc(ver.created_at),
                 )
             )
 
@@ -131,7 +140,7 @@ async def get_activity_feed(
                     models.Connection.requester_id == user.id,
                     models.Connection.addressee_id == user.id,
                 ),
-                models.Connection.updated_at >= since,
+                models.Connection.updated_at >= db_since,
             )
         )
         connections = result.scalars().all()
@@ -143,7 +152,7 @@ async def get_activity_feed(
                     entity_id=conn.id,
                     title="Connection request",
                     detail=conn.status,
-                    timestamp=conn.updated_at,
+                    timestamp=ensure_utc(conn.updated_at),
                 )
             )
 
@@ -153,7 +162,7 @@ async def get_activity_feed(
             select(models.ActionItem).where(
                 models.ActionItem.user_id == user.id,
                 models.ActionItem.status == "completed",
-                models.ActionItem.completed_at >= since,
+                models.ActionItem.completed_at >= db_since,
             )
         )
         completed_items = result.scalars().all()
@@ -164,7 +173,7 @@ async def get_activity_feed(
                     entity_type="action_item",
                     entity_id=ai.id,
                     title=ai.title,
-                    timestamp=ai.completed_at,
+                    timestamp=ensure_utc(ai.completed_at),
                 )
             )
 
@@ -189,7 +198,7 @@ async def get_command_center_summary(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    now = datetime.utcnow()
+    now = now_utc_naive()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
 

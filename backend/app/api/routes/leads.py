@@ -41,10 +41,11 @@ async def _create_seed_lead(
     """Create a lead from checked-in seed data after dropping legacy keys no longer accepted by LeadCreate.
 
     The committed `backend/public/seeds/leads.json` fixture still carries historical
-    metadata fields (`company`, `industries`, and `notes`) that are not part of the
-    current `schemas.LeadCreate` contract, which now expects canonical lead data plus
-    optional `company_ids`. Filtering those keys preserves compatibility with the seed
-    file while keeping API validation strict for normal callers.
+    LinkedIn-import metadata fields (`company`, `industries`, and `notes`) that are
+    not part of the current `schemas.LeadCreate` contract, which now expects canonical
+    lead data plus optional `company_ids`. Filtering those keys preserves compatibility
+    with the checked-in seed fixture while keeping API validation strict for normal
+    callers.
     """
     seed_payload = {
         key: value

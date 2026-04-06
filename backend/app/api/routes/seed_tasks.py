@@ -86,11 +86,11 @@ async def _run_seed_operation(
             if user is None:
                 raise RuntimeError(f"User {user_id} not found for seed operation")
 
-            event.status = schemas.OrchestrationEventStatusType.RUNNING
-            await db.commit()
-
             async with aopen(operation.seed_path, "r") as file_handle:
                 seed_data = json.loads(await file_handle.read())
+
+            event.status = schemas.OrchestrationEventStatusType.RUNNING
+            await db.commit()
 
             for record in seed_data:
                 await operation.creator(record, db, user)

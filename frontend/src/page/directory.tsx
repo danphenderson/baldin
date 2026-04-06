@@ -32,6 +32,7 @@ import {
   type UserDirectoryRead,
 } from '../service/directory';
 import { createConnection } from '../service/connections';
+import { avatarUrl } from '../service/users';
 import EmptyState from '../component/common/empty-state';
 
 const PAGE_SIZE = 12;
@@ -237,7 +238,7 @@ const DirectoryPage: React.FC = () => {
                     <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
                       <Stack spacing={1.5}>
                         <Stack direction="row" spacing={1.5} alignItems="center">
-                          <Avatar src={u.avatar_uri || undefined} sx={{ width: 48, height: 48 }}>
+                          <Avatar src={avatarUrl(u.user_id, u.avatar_uri)} sx={{ width: 48, height: 48 }}>
                             {u.display_name.charAt(0)}
                           </Avatar>
                           <Box sx={{ minWidth: 0, flex: 1 }}>

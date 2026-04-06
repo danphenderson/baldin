@@ -53,6 +53,7 @@ import ConfirmDialog from './common/confirm-dialog';
 import CreateActionItemDialog from './create-action-item-dialog';
 import type { ActionItemRead, ActionItemCreate } from '../service/action-items';
 import type { CompanyRead } from '../service/companies';
+import { avatarUrl } from '../service/users';
 import {
   createLeadComment,
   createLeadCommentReply,
@@ -360,7 +361,12 @@ const CommentThread: React.FC<{
       <Stack spacing={1.25}>
         <Stack direction="row" spacing={1.25} alignItems="flex-start">
           <Avatar
-            src={item.anonymous ? undefined : item.author_public_profile?.avatar_uri || undefined}
+            src={item.anonymous
+              ? undefined
+              : avatarUrl(
+                item.author_public_profile?.user_id,
+                item.author_public_profile?.avatar_uri,
+              )}
             sx={{ width: nested ? 32 : 38, height: nested ? 32 : 38 }}
           >
             {commentDisplayName(item).charAt(0)}
@@ -1147,7 +1153,7 @@ const LeadModal: React.FC<LeadModalProps> = ({
                     <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
                       <Stack spacing={1.5}>
                         <Stack direction="row" spacing={1.25} alignItems="center">
-                          <Avatar src={profile.avatar_uri || undefined} sx={{ width: 48, height: 48 }}>
+                          <Avatar src={avatarUrl(profile.user_id, profile.avatar_uri)} sx={{ width: 48, height: 48 }}>
                             {profile.display_name.charAt(0)}
                           </Avatar>
                           <Box sx={{ minWidth: 0, flex: 1 }}>

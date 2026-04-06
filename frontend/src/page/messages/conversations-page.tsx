@@ -28,6 +28,7 @@ import {
   getConversations,
   type ConversationRead,
 } from '../../service/messages';
+import { avatarUrl } from '../../service/users';
 import EmptyState from '../../component/common/empty-state';
 import NewConversationDialog from '../../component/new-conversation-dialog';
 
@@ -174,13 +175,13 @@ const ConversationsPage: React.FC = () => {
                         overlap="circular"
                       >
                         {others.length === 1 ? (
-                          <Avatar src={others[0].avatar_uri || undefined} sx={{ width: 48, height: 48 }}>
+                          <Avatar src={avatarUrl(others[0].user_id, others[0].avatar_uri)} sx={{ width: 48, height: 48 }}>
                             {others[0].display_name.charAt(0)}
                           </Avatar>
                         ) : (
                           <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 36, height: 36, fontSize: 14 } }}>
                             {others.map((p) => (
-                              <Avatar key={p.user_id} src={p.avatar_uri || undefined}>
+                              <Avatar key={p.user_id} src={avatarUrl(p.user_id, p.avatar_uri)}>
                                 {p.display_name.charAt(0)}
                               </Avatar>
                             ))}

@@ -25,6 +25,7 @@ import { UserContext } from '../context/user-context';
 import { logout as logoutApi } from '../service/auth';
 import { getUnreadCount } from '../service/messages';
 import { useThemeMode } from '../theme/theme-provider';
+import { avatarUrl } from '../service/users';
 import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-header-context';
 import SecondaryNavBar from '../component/common/secondary-nav-bar';
 import { getSecondaryNavItems, drawerSections } from '../route/navigation';
@@ -142,6 +143,10 @@ const AppLayout: React.FC = () => {
   const userInitials = user
     ? `${(user as any).first_name?.[0] || ''}${(user as any).last_name?.[0] || ''}`.toUpperCase() || user.email[0].toUpperCase()
     : '?';
+
+  const userAvatarSrc = user
+    ? avatarUrl(user.id, (user as any).avatar_uri)
+    : undefined;
 
   const accountActions = [
     {
@@ -587,12 +592,15 @@ const AppLayout: React.FC = () => {
                       }}
                     >
                       <Avatar
+                        src={userAvatarSrc}
                         sx={{
                           width: 36,
                           height: 36,
                           fontSize: '0.875rem',
                           fontWeight: 700,
-                          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                          background: userAvatarSrc
+                            ? undefined
+                            : `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
                         }}
                       >
                         {userInitials}

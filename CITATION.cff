@@ -11,11 +11,18 @@ authors:
   - given-names: Daniel P. Henderson
     email: me@danhenderson.dev
 repository-code: 'https://github.com/danphenderson/baldin'
-url: 'https://github.com/danphenderson/baldin'
-abstract: Developer-preview, local-first job-search automation workspace.
+url: 'https://danphenderson.github.io/baldin/'
+abstract: >-
+  AI-Powered Employment Autopilot. A local-first, open-source job-search
+  automation workspace for tracking applications, extracting leads,
+  collaborating on documents, and managing your professional network.
 keywords:
   - baldin
   - job-search-automation
   - local-first
   - developer-preview
+  - employment-autopilot
+  - career-tools
+  - application-tracker
+  - ai-job-search
 license: MIT

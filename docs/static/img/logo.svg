@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0e7490"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="arrow" x1="200" y1="340" x2="360" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- Stylized "B" as interconnected paths — representing automation and flow -->
+  <path d="M160 120 h80 q72 0 72 64 q0 48 -40 60 q56 12 56 68 q0 80 -88 80 H160 Z"
+        fill="none" stroke="url(#arrow)" stroke-width="36" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- Upward arrow integrated into the B — representing career trajectory -->
+  <path d="M340 280 L340 180 L306 214" fill="none" stroke="#22d3ee" stroke-width="28"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M340 180 L374 214" fill="none" stroke="#22d3ee" stroke-width="28"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Small pulse dot — representing live automation -->
+  <circle cx="380" cy="148" r="16" fill="#22d3ee" opacity="0.85"/>
+</svg>

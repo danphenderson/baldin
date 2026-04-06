@@ -1,5 +1,17 @@
 # Baldin
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/danphenderson/baldin/actions/workflows/ci.yml/badge.svg)](https://github.com/danphenderson/baldin/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-live-06b6d4)](https://danphenderson.github.io/baldin/)
+
+**AI-Powered Employment Autopilot** — a local-first, open-source job-search automation workspace.
+
+> Take control of your job search. Track applications, extract leads, collaborate on documents, and manage your network — all running locally under your control.
+
+**[Landing Page](https://danphenderson.github.io/baldin/)** · **[Documentation](https://danphenderson.github.io/baldin/docs)** · **[Issues](https://github.com/danphenderson/baldin/issues)**
+
+---
+
 Baldin is a private, local-first engineering monorepo for a developer-preview job-search automation workspace. It contains the FastAPI backend, the React/Vite frontend, the local Docker integration surface, the Docusaurus docs, and the release-path planning material that currently defines how the system is being hardened.
 
 > Baldin is local-first right now.
@@ -15,7 +27,7 @@ Baldin is a private, local-first engineering monorepo for a developer-preview jo
 - Testing and CI: [docs/docs/engineering/testing.md](docs/docs/engineering/testing.md), [docs/docs/engineering/ci-pipeline.md](docs/docs/engineering/ci-pipeline.md)
 - Release posture: [docs/docs/engineering/release-roadmap.md](docs/docs/engineering/release-roadmap.md) and [plans/REPO_EXECUTION_PLAN.md](plans/REPO_EXECUTION_PLAN.md)
 
-If you use the published docs site, the same material is available at **[danphenderson.github.io/baldin](https://danphenderson.github.io/baldin/)**.
+If you use the published docs site, the same material is available at **[danphenderson.github.io/baldin/docs](https://danphenderson.github.io/baldin/docs)**.
 
 ## Local Quickstart
 

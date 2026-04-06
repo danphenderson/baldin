@@ -8,6 +8,29 @@ title: Copilot Prompt Cookbook
 
 Use this page when prompting Baldin's workspace agents. The goal is to start with the smallest correct owner, keep scope explicit, and make handoffs obvious when work crosses backend, frontend, contracts, docs, CI, or deployment boundaries.
 
+Need concrete before-and-after wording examples? See [Good Prompt vs Bad Prompt](/engineering/copilot-prompt-examples).
+
+## Recommended Operating Model
+
+The Executive Summary review supports a local-first operating model for Baldin: keep most work inside the repo with clear specialist ownership, use asynchronous cloud-style workflows only for bounded tasks, and treat automated review as an extra check instead of a merge authority.
+
+| Workflow | When to prefer it | Baldin guidance |
+|----------|-------------------|-----------------|
+| Local-first workspace agents | Day-to-day features, fixes, and investigations | Default path. Start with Baldin Project Manager if ownership is unclear, then hand work to the smallest correct specialist. |
+| Async issue or PR agent work | Well-scoped backlog items or long-running tasks | Good for bounded follow-up work, but keep the prompt explicit and review the resulting branch or PR like any other change. |
+| Copilot code review | Pull-request review and missed-routine-issue detection | Recommended as a second reviewer, not a replacement for human approval. |
+| Explore scouting | Read-only repository discovery before implementation | Use it to reduce search overhead and confirm ownership, not to make edits. |
+
+### Suggested team loop
+
+1. Start with a clear issue or task statement.
+2. Choose the smallest correct owner, or ask Baldin Project Manager to choose.
+3. Ask for implementation plus validation, not just code.
+4. Review diffs, generated artifacts, and test results.
+5. Open or update the pull request.
+6. Optionally request Copilot review as a secondary reviewer.
+7. Keep human approval as the final merge decision.
+
 ## Start Here
 
 | Need | Best starting agent |
@@ -338,9 +361,20 @@ Do not implement yet unless this is obviously a tiny single-owner fix.
 - Ask for the recommended next owner in every non-trivial task.
 - Ask for validation evidence, not just a summary.
 
+## Trust, Review, And Safety
+
+- Prefer a scoped planning step before broad autopilot or background-agent execution, especially for tasks that touch more than one layer.
+- Keep prompts concrete. Vague one-shot requests are the fastest way to get low-signal changes and unnecessary scope creep.
+- Never merge AI-generated code without human review.
+- Treat tests, type checks, builds, and generated-artifact status as part of the deliverable, not optional cleanup.
+- If you use Copilot CLI outside VS Code, prefer safe mode or a sandboxed environment rather than broad unattended tool access.
+- Keep custom agent boundaries tight. Overlapping owners are an anti-pattern for Baldin's stack.
+- Do not let agent speed replace normal engineering process: keep issues, PR descriptions, architecture discussion, and docs updates in the loop.
+
 ## Prompting Mistakes To Avoid
 
 - Do not ask Baldin Project Manager to be the default implementation owner for real code changes.
 - Do not ask Baldin Frontend Agent to own backend-driven contract regeneration unless you want a deliberate cross-stack assignment.
 - Do not ask Baldin Backend Agent to patch frontend, docs, or CI as a hidden side quest.
 - Do not use Baldin Lead Full-Stack Architect for a plainly backend-only or frontend-only task when a smaller owner would do.
+- Do not give any agent a fuzzy “just handle everything automatically” prompt without a stop condition, validation expectations, and a named owner.

@@ -19,4 +19,5 @@ Welcome to the Baldin documentation. Baldin is a developer-preview, local-first 
 - **[Local Development](engineering/local-development)** — Docker Compose workflow and developer URLs
 - **[CI Pipeline](engineering/ci-pipeline)** — CI jobs, required checks, and branch protection
 - **[Copilot Prompt Cookbook](engineering/copilot-prompt-cookbook)** — Copy-paste prompt templates for Baldin's workspace agents
+- **[Good Prompt vs Bad Prompt](engineering/copilot-prompt-examples)** — Practical before-and-after examples for prompting Baldin's agents
 - **[Environment Variables](reference/environment-variables)** — Full list of backend and frontend configuration

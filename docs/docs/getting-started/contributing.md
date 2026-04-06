@@ -15,6 +15,23 @@ Contributions are welcome, especially around frontend polish, workflow reliabili
 3. Push your branch.
 4. Open a pull request against `main`.
 
+## Copilot-Assisted Workflow
+
+If you use Baldin's Copilot setup, prefer this sequence:
+
+1. Start with a clear issue or task statement.
+2. Use the smallest correct owner.
+	- Baldin Backend Agent for backend-only work.
+	- Baldin Frontend Agent for frontend-only work.
+	- Baldin Lead Full-Stack Architect for cross-stack or contract work.
+	- Baldin Project Manager when ownership is unclear.
+3. Ask for validation evidence and generated-artifact status where relevant.
+4. Review the diff before pushing.
+5. Open the pull request and, if useful, request Copilot review as a secondary reviewer.
+6. Keep human approval as the final merge gate.
+
+See [Copilot Prompt Cookbook](../engineering/copilot-prompt-cookbook.md) for prompt templates and [Good Prompt vs Bad Prompt](../engineering/copilot-prompt-examples.md) for concrete examples.
+
 ## Pre-commit Hooks
 
 Before your first commit, install the hooks:
@@ -46,3 +63,5 @@ See [CI Pipeline](../engineering/ci-pipeline.md) for details on each job.
 - At least one approving review.
 - All required status checks to pass.
 - No force pushes or deletions.
+
+Copilot review can help catch routine issues, but it does not replace human review or the required CI checks.

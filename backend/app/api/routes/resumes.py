@@ -1,9 +1,7 @@
 # app/api/routes/resumes.py
-import json
 from io import BytesIO
 
-from aiofiles import open as aopen
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import UUID4
 from reportlab.lib.pagesizes import letter
@@ -11,21 +9,31 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy import select
 
-from app.api.deps import AsyncSession, conf
+from app.api.deps import AsyncSession
 from app.api.deps import console_log as log
 from app.api.deps import (
-    create_orchestration_event,
-    create_orchestration_pipeline,
     create_resume,
     get_async_session,
     get_current_user,
-    get_orchestration_pipeline_by_name,
     get_resume,
     models,
     schemas,
 )
+from app.api.routes.seed_tasks import (
+    SeedOperation,
+    build_user_seed_creator,
+    schedule_seed_operation,
+)
 
 router: APIRouter = APIRouter()
+
+RESUME_SEED_OPERATION = SeedOperation(
+    pipeline_name="seed_resumes",
+    resource_name="Resumes",
+    seed_filename="resumes.json",
+    destination_table="resumes",
+    creator=build_user_seed_creator(schemas.ResumeCreate, create_resume),
+)
 
 
 @router.get("/{resume_id}/download", response_class=FileResponse)
@@ -142,67 +150,12 @@ async def delete_user_resume(
     return None
 
 
-@router.post("/seed", response_model=str)
+@router.post("/seed", status_code=202, response_model=schemas.SeedOperationAccepted)
 async def seed_resumes(
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
-) -> str:
-    seed_path = conf.settings.SEEDS_PATH / "resumes.json"
-    log.info(f"Seeding Resumes table with initial data from {seed_path}")
-
-    # Fetch orchestration pipeline, create a new one if not found
-    try:
-        pipeline = await get_orchestration_pipeline_by_name("seed_resumes", db, user)
-    except HTTPException as e:
-        if e.status_code == 404:
-            log.warning("Seed Resumes pipeline not found, creating a new one")
-            pipeline = await create_orchestration_pipeline(
-                schemas.OrchestrationPipelineCreate(
-                    name="seed_resumes",
-                    description="Seed Resumes table with initial data",
-                    definition={"action": "Insert initial data into Resumes table"},
-                ),
-                user,
-                db,
-            )
-        else:
-            raise e
-
-    # Create orchestration event
-    event = await create_orchestration_event(
-        schemas.OrchestrationEventCreate(
-            message="Seeding Resumes table with initial data",
-            environment=conf.settings.ENVIRONMENT,
-            pipeline_id=pipeline.id,
-            status=schemas.OrchestrationEventStatusType.PENDING,
-            payload={},
-            source_uri=schemas.URI(name=str(seed_path), type=schemas.URIType.FILE),
-            destination_uri=schemas.URI(
-                name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#resumes",
-                type=schemas.URIType.DATABASE,
-            ),
-        ),
-        db=db,
+):
+    return await schedule_seed_operation(
+        background_tasks, db, user, RESUME_SEED_OPERATION
     )
-
-    # Run the orchestration event
-    try:
-        async with aopen(seed_path, "r") as f:
-            resumes_data = json.loads(await f.read())
-        for cover_letter in resumes_data:
-            await create_resume(
-                schemas.ResumeCreate(**cover_letter),
-                db=db,
-                user=user,
-            )
-    except Exception as e:
-        log.error(f"Error seeding Resumes table: {e}")
-        setattr(event, "status", schemas.OrchestrationEventStatusType.FAILED)
-        setattr(event, "message", str(e))
-        await db.commit()
-        raise HTTPException(status_code=500, detail=str(e))
-
-    setattr(event, "status", schemas.OrchestrationEventStatusType.SUCCESS)
-    await db.commit()
-    log.info(f"Seeded Resumes table with {len(resumes_data)} records.")
-    return f"Seeded Resumes table with {len(resumes_data)} records."

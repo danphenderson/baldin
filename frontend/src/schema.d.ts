@@ -5043,6 +5043,28 @@ export interface components {
      * @enum {string}
      */
     ReviewItemType: "crawler_run" | "extraction_event" | "lead";
+    /** SeedOperationAccepted */
+    SeedOperationAccepted: {
+      /**
+       * Event Id
+       * Format: uuid4
+       * @description Accepted orchestration event ID
+       */
+      event_id: string;
+      /**
+       * Pipeline Id
+       * Format: uuid4
+       * @description Seed orchestration pipeline ID
+       */
+      pipeline_id: string;
+      /** @description Current orchestration event status */
+      status: components["schemas"]["OrchestrationEventStatusType"];
+      /**
+       * Poll Url
+       * @description Relative URL to poll for event status
+       */
+      poll_url: string;
+    };
     /** SkillCreate */
     SkillCreate: {
       /**
@@ -6390,9 +6412,9 @@ export interface operations {
   seed_users_users_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -6700,9 +6722,9 @@ export interface operations {
   seed_leads_leads_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": unknown;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -7235,9 +7257,9 @@ export interface operations {
   seed_contacts_contacts_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -7370,9 +7392,9 @@ export interface operations {
   seed_experiences_experiences_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -7507,9 +7529,9 @@ export interface operations {
   seed_skills_skills_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -7676,9 +7698,9 @@ export interface operations {
   seed_cover_letters_cover_letters_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -7809,9 +7831,9 @@ export interface operations {
   seed_resumes_resumes_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -8936,9 +8958,9 @@ export interface operations {
   seed_education_education_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -9073,9 +9095,9 @@ export interface operations {
   seed_certificates_certificate_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };

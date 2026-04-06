@@ -1,31 +1,34 @@
 # app/api/routes/certificate.py
-import json
-
-from aiofiles import open as aopen
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import select
 
-from app.api.deps import AsyncSession, conf
-from app.api.deps import console_log as log
 from app.api.deps import (
+    AsyncSession,
     create_certificate,
     create_extractor,
-    create_orchestration_event,
-    create_orchestration_pipeline,
     get_async_session,
     get_certificate,
     get_current_user,
     get_extractor_by_name,
-    get_orchestration_pipeline_by_name,
-    logging,
     models,
     run_extractor,
     schemas,
 )
-
-logger = logging.get_logger(__name__)
+from app.api.routes.seed_tasks import (
+    SeedOperation,
+    build_user_seed_creator,
+    schedule_seed_operation,
+)
 
 router: APIRouter = APIRouter()
+
+CERTIFICATE_SEED_OPERATION = SeedOperation(
+    pipeline_name="seed_certificates",
+    resource_name="Certificates",
+    seed_filename="certificates.json",
+    destination_table="certificates",
+    creator=build_user_seed_creator(schemas.CertificateCreate, create_certificate),
+)
 
 
 @router.get("/", response_model=list[schemas.CertificateRead])
@@ -119,71 +122,12 @@ async def extract_certificates(
     ]
 
 
-@router.post("/seed", response_model=str)
+@router.post("/seed", status_code=202, response_model=schemas.SeedOperationAccepted)
 async def seed_certificates(
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
-) -> str:
-    seed_path = conf.settings.SEEDS_PATH / "certificates.json"
-    log.info(f"Seeding Certificates table with initial data from {seed_path}")
-
-    # Fetch or create an orchestration pipeline
-    try:
-        pipeline = await get_orchestration_pipeline_by_name(
-            "seed_certificates", db, user
-        )
-    except HTTPException as e:
-        if e.status_code == 404:
-            log.warning("Seed Certificates pipeline not found, creating a new one")
-            pipeline = await create_orchestration_pipeline(
-                schemas.OrchestrationPipelineCreate(
-                    name="seed_certificates",
-                    description="Seed Certificates table with initial data",
-                    definition={
-                        "action": "Insert initial data into Certificates table"
-                    },
-                ),
-                user,
-                db,
-            )
-        else:
-            raise e
-
-    # Create an orchestration event
-    event = await create_orchestration_event(
-        schemas.OrchestrationEventCreate(
-            message="Seeding Certificates table with initial data",
-            environment=conf.settings.ENVIRONMENT,
-            pipeline_id=pipeline.id,
-            status=schemas.OrchestrationEventStatusType.PENDING,
-            payload={},
-            source_uri=schemas.URI(name=str(seed_path), type=schemas.URIType.FILE),
-            destination_uri=schemas.URI(
-                name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#certificates",
-                type=schemas.URIType.DATABASE,
-            ),
-        ),
-        db=db,
+):
+    return await schedule_seed_operation(
+        background_tasks, db, user, CERTIFICATE_SEED_OPERATION
     )
-
-    # Run the orchestration event
-    try:
-        async with aopen(seed_path, "r") as f:
-            certificates_data = json.loads(await f.read())
-        for certificate_entry in certificates_data:
-            await create_certificate(
-                schemas.CertificateCreate(**certificate_entry),
-                db=db,
-                user=user,
-            )
-    except Exception as e:
-        log.error(f"Error seeding Certificates table: {e}")
-        setattr(event, "status", schemas.OrchestrationEventStatusType.FAILED)
-        setattr(event, "message", str(e))
-        await db.commit()
-        raise HTTPException(status_code=500, detail=str(e))
-
-    setattr(event, "status", schemas.OrchestrationEventStatusType.SUCCESS)
-    await db.commit()
-    log.info(f"Seeded Certificates table with {len(certificates_data)} records.")
-    return f"Seeded Certificates table with {len(certificates_data)} records."

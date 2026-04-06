@@ -235,6 +235,15 @@ class OrchestrationEventPaginatedRead(BaseSchema):
     page_size: int = Field(20, ge=1, description="Items per page")
 
 
+class SeedOperationAccepted(BaseSchema):
+    event_id: UUID4 = Field(description="Accepted orchestration event ID")
+    pipeline_id: UUID4 = Field(description="Seed orchestration pipeline ID")
+    status: OrchestrationEventStatusType = Field(
+        description="Current orchestration event status"
+    )
+    poll_url: str = Field(description="Relative URL to poll for event status")
+
+
 class ExtractorRequest(BaseSchema):
     llm_name: str | None = Field("gpt-3.5-turbo", description="Model name")
     examples: list["ExtractorExampleRead"] = Field(

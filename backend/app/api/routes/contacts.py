@@ -1,28 +1,34 @@
 # app/api/routes/contacts.py
-import json
-
-from aiofiles import open as aopen
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import select
 
-from app.api.deps import AsyncSession, conf
-from app.api.deps import console_log as log
 from app.api.deps import (
+    AsyncSession,
     create_contact,
     create_extractor,
-    create_orchestration_event,
-    create_orchestration_pipeline,
     get_async_session,
     get_contact,
     get_current_user,
     get_extractor_by_name,
-    get_orchestration_pipeline_by_name,
     models,
     run_extractor,
     schemas,
 )
+from app.api.routes.seed_tasks import (
+    SeedOperation,
+    build_user_seed_creator,
+    schedule_seed_operation,
+)
 
 router: APIRouter = APIRouter()
+
+CONTACT_SEED_OPERATION = SeedOperation(
+    pipeline_name="seed_contacts",
+    resource_name="Contacts",
+    seed_filename="contacts.json",
+    destination_table="contacts",
+    creator=build_user_seed_creator(schemas.ContactCreate, create_contact),
+)
 
 
 @router.get("/", response_model=list[schemas.ContactRead])
@@ -115,62 +121,12 @@ async def extract_contacts(
     ]
 
 
-@router.post("/seed", response_model=str)
+@router.post("/seed", status_code=202, response_model=schemas.SeedOperationAccepted)
 async def seed_contacts(
+    background_tasks: BackgroundTasks,
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    seed_path = conf.settings.SEEDS_PATH / "contacts.json"
-    log.info(f"Seeding Contacts table with initial data from {seed_path}")
-
-    # Fetch or create an orchestration pipeline
-    try:
-        pipeline = await get_orchestration_pipeline_by_name("seed_contacts", db, user)
-    except HTTPException as e:
-        if e.status_code == 404:
-            pipeline = await create_orchestration_pipeline(
-                schemas.OrchestrationPipelineCreate(
-                    name="seed_contacts",
-                    description="Seed contacts table with initial data",
-                    definition={"action": "Insert initial data into Contacts table"},
-                ),
-                db=db,
-                user=user,
-            )
-        else:
-            raise e
-
-    # Create an orchestration event
-    event = await create_orchestration_event(
-        schemas.OrchestrationEventCreate(
-            message="Seed Contacts table with initial data",
-            environment=conf.settings.ENVIRONMENT,
-            pipeline_id=pipeline.id,  # type: ignore
-            status=schemas.OrchestrationEventStatusType.PENDING,
-            payload={"seed_path": str(seed_path)},
-            source_uri=schemas.URI(name=str(seed_path), type=schemas.URIType.FILE),
-            destination_uri=schemas.URI(
-                name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#contacts",
-                type=schemas.URIType.DATABASE,
-            ),
-        ),
-        db=db,
+    return await schedule_seed_operation(
+        background_tasks, db, user, CONTACT_SEED_OPERATION
     )
-
-    # Run the orchestration event
-    try:
-        async with aopen(seed_path, mode="r") as f:
-            data = json.loads(await f.read())
-        for contact in data:
-            await create_contact(schemas.ContactCreate(**contact), db=db, user=user)
-    except Exception as e:
-        log.error(f"Error seeding Contacts table: {e}")
-        setattr(event, "status", "failed")
-        setattr(event, "message", f"Error seeding Contacts table: {e}")
-        await db.commit()
-        return f"Error seeding Contacts table: {e}"
-
-    setattr(event, "status", "success")
-    await db.commit()
-    log.info(f"Contacts table seeded successfully with {len(data)} records")
-    return f"Contacts table seeded successfully with {len(data)} records"

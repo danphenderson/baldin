@@ -1,5 +1,7 @@
 # Path: app/api/routes/leads.py
 
+from typing import Any
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import UUID4
 from sqlalchemy import delete, func, or_, select
@@ -35,7 +37,7 @@ async def _create_seed_lead(
     record: dict[str, object],
     db: AsyncSession,
     user: models.User,
-):
+) -> Any:
     """Create a lead from seed data after dropping legacy fields unsupported by LeadCreate."""
     seed_payload = {
         key: value

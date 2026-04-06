@@ -1,6 +1,7 @@
 import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from aiofiles import open as aopen
@@ -33,7 +34,7 @@ class SeedOperation:
     creator: SeedCreateCallable
 
     @property
-    def seed_path(self):
+    def seed_path(self) -> Path:
         return conf.settings.SEEDS_PATH / self.seed_filename
 
     @property

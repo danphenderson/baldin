@@ -65,19 +65,23 @@ async def create_application(
 
     # Bulk-attach documents when IDs are provided
     if payload.document_ids:
-        for doc_id in payload.document_ids:
-            result = await db.execute(
-                select(models.Document).where(
-                    models.Document.id == doc_id,
-                    models.Document.user_id == user.id,
-                )
+        result = await db.execute(
+            select(models.Document).where(
+                models.Document.id.in_(payload.document_ids),
+                models.Document.user_id == user.id,
             )
-            doc = result.scalars().first()
-            if doc:
-                link = models.DocumentXApplication(
-                    document_id=doc.id, application_id=application.id
-                )
-                db.add(link)
+        )
+        valid_document_ids = {doc.id for doc in result.scalars().all()}
+
+        links = [
+            models.DocumentXApplication(
+                document_id=doc_id, application_id=application.id
+            )
+            for doc_id in payload.document_ids
+            if doc_id in valid_document_ids
+        ]
+        if links:
+            db.add_all(links)
         await db.commit()
 
     # Eagerly load related objects (lead and user) for serialization

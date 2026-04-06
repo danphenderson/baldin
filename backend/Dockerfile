@@ -29,7 +29,7 @@ RUN pip install pipenv \
     && pipenv install --system --skip-lock
 
 # Final stage
-FROM base AS fina
+FROM base AS final
 
 # Copy virtual environment from dependencies stage
 COPY --from=dependencies /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages

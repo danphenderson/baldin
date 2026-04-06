@@ -1,7 +1,7 @@
 # app/api/routes/resumes.py
 from io import BytesIO
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import UUID4
 from reportlab.lib.pagesizes import letter
@@ -156,4 +156,6 @@ async def seed_resumes(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    return await schedule_seed_operation(background_tasks, db, user, RESUME_SEED_OPERATION)
+    return await schedule_seed_operation(
+        background_tasks, db, user, RESUME_SEED_OPERATION
+    )

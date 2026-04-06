@@ -4,14 +4,13 @@ import json
 from asyncio import gather
 from typing import Any
 
-from aiofiles import open as aopen
 from fastapi import BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import AsyncSession, conf
+from app.api.deps import AsyncSession
 from app.api.deps import console_log as log
 from app.api.deps import (
     create_certificate,
@@ -503,4 +502,6 @@ async def seed_users(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_superuser),
 ):
-    return await schedule_seed_operation(background_tasks, db, user, USER_SEED_OPERATION)
+    return await schedule_seed_operation(
+        background_tasks, db, user, USER_SEED_OPERATION
+    )

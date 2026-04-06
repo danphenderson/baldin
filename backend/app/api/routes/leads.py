@@ -1,16 +1,13 @@
 # Path: app/api/routes/leads.py
 
-import json
-
-from aiofiles import open as aopen
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import UUID4
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app import utils
-from app.api.deps import AsyncSession
 from app.api.deps import (
+    AsyncSession,
     create_extractor,
     create_lead,
     get_async_session,
@@ -25,11 +22,7 @@ from app.api.deps import (
     run_extractor,
     schemas,
 )
-from app.api.routes.seed_tasks import (
-    SeedOperation,
-    build_user_seed_creator,
-    schedule_seed_operation,
-)
+from app.api.routes.seed_tasks import SeedOperation, schedule_seed_operation
 from app.core.db import session_context
 from app.core.url_safety import validate_url_safe_for_fetch
 
@@ -37,12 +30,26 @@ logger = logging.get_logger(__name__)
 
 router: APIRouter = APIRouter()
 
+
+async def _create_seed_lead(
+    record: dict[str, object],
+    db: AsyncSession,
+    user: models.User,
+):
+    seed_payload = {
+        key: value
+        for key, value in record.items()
+        if key not in {"company", "industries", "notes"}
+    }
+    return await create_lead(schemas.LeadCreate(**seed_payload), db=db, user=user)
+
+
 LEAD_SEED_OPERATION = SeedOperation(
     pipeline_name="seed_leads",
     resource_name="Leads",
     seed_filename="leads.json",
     destination_table="leads",
-    creator=build_user_seed_creator(schemas.LeadCreate, create_lead),
+    creator=_create_seed_lead,
 )
 
 
@@ -741,4 +748,6 @@ async def seed_leads(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    return await schedule_seed_operation(background_tasks, db, user, LEAD_SEED_OPERATION)
+    return await schedule_seed_operation(
+        background_tasks, db, user, LEAD_SEED_OPERATION
+    )

@@ -154,4 +154,6 @@ async def seed_skills(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    return await schedule_seed_operation(background_tasks, db, user, SKILL_SEED_OPERATION)
+    return await schedule_seed_operation(
+        background_tasks, db, user, SKILL_SEED_OPERATION
+    )

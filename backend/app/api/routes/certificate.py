@@ -2,8 +2,8 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import select
 
-from app.api.deps import AsyncSession
 from app.api.deps import (
+    AsyncSession,
     create_certificate,
     create_extractor,
     get_async_session,

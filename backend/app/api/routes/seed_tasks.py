@@ -122,7 +122,9 @@ async def schedule_seed_operation(
             schemas.OrchestrationPipelineCreate(
                 name=operation.pipeline_name,
                 description=operation.description,
-                definition={"action": f"Insert initial data into {operation.resource_name} table"},
+                definition={
+                    "action": f"Insert initial data into {operation.resource_name} table"
+                },
             ),
             user,
             db,

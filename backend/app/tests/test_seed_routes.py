@@ -1,9 +1,11 @@
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import pytest
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
+from pytest import MonkeyPatch
 
 from app import models, schemas
 from app.api.routes.seed_tasks import SeedOperation, _run_seed_operation
@@ -117,7 +119,7 @@ async def test_superuser_seed_route_returns_accepted_polling_payload() -> None:
 
 
 async def test_background_seed_failure_marks_event_failed(
-    tmp_path, monkeypatch
+    tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     async with _test_client_with_fresh_db():
         seeds_dir = tmp_path / "seeds"

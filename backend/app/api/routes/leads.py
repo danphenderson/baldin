@@ -38,7 +38,14 @@ async def _create_seed_lead(
     db: AsyncSession,
     user: models.User,
 ) -> Any:
-    """Create a lead from checked-in seed data after dropping legacy fields not accepted by LeadCreate."""
+    """Create a lead from checked-in seed data after dropping legacy keys no longer accepted by LeadCreate.
+
+    The committed `backend/public/seeds/leads.json` fixture still carries historical
+    metadata fields (`company`, `industries`, and `notes`) that are not part of the
+    current `schemas.LeadCreate` contract, which now expects canonical lead data plus
+    optional `company_ids`. Filtering those keys preserves compatibility with the seed
+    file while keeping API validation strict for normal callers.
+    """
     seed_payload = {
         key: value
         for key, value in record.items()

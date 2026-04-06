@@ -65,7 +65,14 @@ async def _run_seed_operation(
     event_id: UUID4,
     user_id: UUID4,
 ) -> None:
-    """Execute a seed operation in the background and update orchestration status."""
+    """Execute queued seed work in its own session and maintain event lifecycle state.
+
+    This background task opens a fresh database session via `session_context()`,
+    marks the orchestration event as RUNNING, processes each seed record, and then
+    updates the event to SUCCESS or FAILED. Any exception is caught, logged, and
+    recorded on the event so clients polling the event can observe the terminal
+    failure state.
+    """
     async with session_context() as db:
         event = await db.get(models.OrchestrationEvent, event_id)
         if event is None:
@@ -108,7 +115,13 @@ async def schedule_seed_operation(
     user: schemas.UserRead,
     operation: SeedOperation,
 ) -> schemas.SeedOperationAccepted:
-    """Create a pending orchestration event, enqueue the seed work, and return polling metadata."""
+    """Create or reuse the seed pipeline, persist a pending event, and return polling metadata.
+
+    This function uses the caller's request-scoped session to look up or create the
+    orchestration pipeline, then inserts the pending event that represents the seed
+    request. The actual seed inserts are deferred to `_run_seed_operation`, which
+    executes later in a background task with its own separate session.
+    """
     log.info(
         f"Seeding {operation.resource_name} table with initial data from {operation.seed_path}"
     )

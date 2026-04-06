@@ -78,11 +78,11 @@ Your job is to own backend implementation work in Baldin and return focused, val
 
 ## Required Handback
 - Status: complete, partial, or blocked.
-- Summary: what changed and why.
+- Summary: what changed, delegated, or decided and why.
 - Files touched or reviewed.
-- Validations run and result summary.
+- Commands run and result summary.
 - Whether API routes or schemas changed.
-- Whether contract regeneration is required.
+- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
 - Risks, blockers, or assumptions.
 - Recommended next owner, if any.
 

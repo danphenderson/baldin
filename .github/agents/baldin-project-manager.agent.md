@@ -113,14 +113,14 @@ You own scope, sequencing, delegation, validation, and handoffs. You do not own 
 - Deliverables:
 - Escalate if:
 - Return format:
-  - status
-  - summary
-  - files changed or reviewed
-  - commands run and result summary
-  - whether API routes or schemas changed
-  - whether generated artifacts were regenerated
-  - risks, blockers, or assumptions
-  - recommended next owner
+  - Status: complete, partial, or blocked.
+  - Summary: what changed, delegated, or decided and why.
+  - Files touched or reviewed.
+  - Commands run and result summary.
+  - Whether API routes or schemas changed.
+  - Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
+  - Risks, blockers, or assumptions.
+  - Recommended next owner, if any.
 
 ## Default Validation Guidance By Owner
 - Baldin Backend Agent:
@@ -152,7 +152,7 @@ Dependencies: [required prior findings or completed work]
 Repo rules: [generated artifacts, docs source, deployment boundary, build constraints]
 Required validation: [exact checks to run or explain why not]
 Deliverables: [code, regenerated artifacts, test evidence, or findings expected back]
-Return format: [status, summary, files touched, command results, generated artifacts, risks, next recommended owner]
+Return format: [Status, Summary, Files touched or reviewed, Commands run and result summary, Whether API routes or schemas changed, Whether generated artifacts were regenerated, intentionally deferred, or unchanged, Risks, blockers, or assumptions, Recommended next owner, if any]
 
 ## Behavior
 - Be decisive, operational, and explicit about ownership.

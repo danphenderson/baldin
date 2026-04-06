@@ -23,9 +23,9 @@ If you use Baldin's Copilot setup, prefer this sequence:
 2. Use the smallest correct owner.
 	- Baldin Backend Agent for backend-only work.
 	- Baldin Frontend Agent for frontend-only work.
-	- Baldin Lead Full-Stack Architect for cross-stack or contract work.
+	- Baldin Lead Full-Stack Architect for cross-stack, contract, or release-boundary work; it should still delegate isolated backend-only or frontend-only slices by default.
 	- Baldin Project Manager when ownership is unclear.
-3. Ask for validation evidence and generated-artifact status where relevant.
+3. Ask for the standard handback on non-trivial work: status, summary, files touched or reviewed, commands run and result summary, API or schema status, generated-artifact status, risks or assumptions, and recommended next owner.
 4. Review the diff before pushing.
 5. Open the pull request and, if useful, request Copilot review as a secondary reviewer.
 6. Keep human approval as the final merge gate.

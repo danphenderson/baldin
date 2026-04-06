@@ -6,7 +6,7 @@ title: Good Prompt vs Bad Prompt
 
 # Good Prompt vs Bad Prompt
 
-Use this page as a companion to the [Copilot Prompt Cookbook](/engineering/copilot-prompt-cookbook). The fastest way to get better results from Baldin's agents is to be explicit about owner, scope, validation, and when to stop and hand off.
+Use this page as a companion to the [Copilot Prompt Cookbook](/engineering/copilot-prompt-cookbook). The fastest way to get better results from Baldin's agents is to be explicit about owner, scope, validation, the standard handback, and when to stop and hand off.
 
 ## What Usually Separates A Good Prompt From A Bad One
 
@@ -14,7 +14,7 @@ Use this page as a companion to the [Copilot Prompt Cookbook](/engineering/copil
 |---------------------|-----------------------|
 | asks an agent to "fix it" without saying what layer owns the problem | names the right owner or asks the Project Manager to choose one |
 | mixes backend, frontend, CI, and docs in one sentence without boundaries | states what is in scope and what is out of scope |
-| asks for a feature without saying how success should be validated | asks for tests, type checks, builds, or generated-artifact status |
+| asks for a feature without saying how success should be validated | asks for tests, type checks, builds, generated-artifact status, and the standard handback |
 | leaves cross-stack fallout implicit | tells the agent when to stop and who should take over |
 | asks for polish without describing the product problem | describes the user-facing issue and expected outcome |
 
@@ -45,6 +45,8 @@ The bug might be in frontend state updates, backend aggregation, or both.
 
 Validation:
 Return owner selection, workstreams, generated-artifact needs, and the exact checks each owner should run.
+
+Require every implementation owner to return the standard handback fields from the Copilot Prompt Cookbook.
 
 Do not implement yet unless this is obviously a tiny single-owner fix.
 ```
@@ -89,12 +91,14 @@ Validation:
 - add a regression test
 
 Return:
-- status
-- files changed
-- tests run
-- whether API routes or schemas changed
-- whether contract regeneration is required
-- recommended next owner if follow-on work is needed
+- Status: complete, partial, or blocked.
+- Summary: what changed, delegated, or decided and why.
+- Files touched or reviewed.
+- Commands run and result summary.
+- Whether API routes or schemas changed.
+- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
+- Risks, blockers, or assumptions.
+- Recommended next owner, if any.
 
 Stop and hand off if this changes the public API contract.
 ```
@@ -138,11 +142,14 @@ Validation:
 - run ./node_modules/.bin/tsc --noEmit
 
 Return:
-- status
-- files changed
-- validations run
-- whether the backend contract was sufficient
-- recommended next owner if blocked by API changes
+- Status: complete, partial, or blocked.
+- Summary: what changed, delegated, or decided and why.
+- Files touched or reviewed.
+- Commands run and result summary.
+- Whether API routes or schemas changed.
+- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
+- Risks, blockers, or assumptions.
+- Recommended next owner, if any.
 
 Stop and hand off if the needed state is not available from the current API contract.
 ```
@@ -170,7 +177,7 @@ Why it is weak:
 Good prompt:
 
 ```text
-Own this end to end across backend, frontend, and contract surfaces.
+Own cross-stack design, delegation, and integration across backend, frontend, and contract surfaces.
 
 Objective:
 Add a company health score that is stored in backend responses and displayed in the frontend.
@@ -184,21 +191,23 @@ Validation:
 - run ./scripts/update_frontend_schemas.sh
 
 Return:
-- architectural approach
-- generated-artifact status
-- files changed
-- validations run
-- remaining risks
-- next owner if any follow-on work remains
+- Status: complete, partial, or blocked.
+- Summary: what changed, delegated, or decided and why.
+- Files touched or reviewed.
+- Commands run and result summary.
+- Whether API routes or schemas changed.
+- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
+- Risks, blockers, or assumptions.
+- Recommended next owner, if any.
 
-Delegate isolated slices if useful, but keep contract ownership here.
+Delegate isolated backend-only and frontend-only slices by default, but keep contract ownership here.
 ```
 
 Why it works:
 
-- It gives Baldin Lead Full-Stack Architect a real cross-stack charter.
+- It gives Baldin Lead Full-Stack Architect a real cross-stack charter without turning it into the default owner for isolated slices.
 - It makes generated artifacts part of the task, not an afterthought.
-- It asks for architecture plus verification.
+- It asks for the same handback schema the implementation agents now use everywhere else.
 
 ## Example 5: Read-Only Scouting
 
@@ -273,12 +282,14 @@ Validation:
 - run ./scripts/update_frontend_schemas.sh
 
 Return:
-- architectural approach
-- files changed
-- generated-artifact status
-- validations run
-- remaining risks
-- next owner if docs or CI follow-on is still needed
+- Status: complete, partial, or blocked.
+- Summary: what changed, delegated, or decided and why.
+- Files touched or reviewed.
+- Commands run and result summary.
+- Whether API routes or schemas changed.
+- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
+- Risks, blockers, or assumptions.
+- Recommended next owner, if any.
 
 Do not widen the task beyond this slice without stating why and naming the next owner.
 ```
@@ -324,7 +335,7 @@ Handle this feature end to end.
 Better:
 
 ```text
-Own this end to end across backend, frontend, and generated contracts. Add the new field, run schema regeneration, validate both surfaces, and name any follow-on owner if docs or CI updates are deferred.
+Own cross-stack design, delegation, and integration across backend, frontend, and generated contracts. Add the new field, run schema regeneration, validate both surfaces, and name any follow-on owner if docs or CI updates are deferred.
 ```
 
 ## Rules Of Thumb
@@ -332,5 +343,6 @@ Own this end to end across backend, frontend, and generated contracts. Add the n
 - If ownership is unclear, start with Baldin Project Manager.
 - If the task is obviously backend-only or frontend-only, start with that specialist directly.
 - If the task changes backend responses consumed by the frontend, either start with Baldin Lead Full-Stack Architect or explicitly require a next-owner handoff.
+- Ask for the standard handback fields whenever an agent is expected to implement or validate changes.
 - Ask for generated-artifact status whenever API routes or schemas might move.
 - Ask for validation evidence every time.

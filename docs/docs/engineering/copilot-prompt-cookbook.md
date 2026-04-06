@@ -65,6 +65,24 @@ Stop and hand off if:
 [what should trigger a next owner instead of silent scope creep]
 ```
 
+## Standard Handback
+
+For non-trivial backend, frontend, or full-stack work, ask the implementation owner to return this exact schema:
+
+```text
+Return:
+- Status: complete, partial, or blocked.
+- Summary: what changed, delegated, or decided and why.
+- Files touched or reviewed.
+- Commands run and result summary.
+- Whether API routes or schemas changed.
+- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
+- Risks, blockers, or assumptions.
+- Recommended next owner, if any.
+```
+
+Baldin Project Manager should require this schema in handoff packets, and the backend, frontend, and architect agents should return it verbatim.
+
 ## Baldin Project Manager
 
 Use when the task crosses boundaries or you are not sure who should own it.
@@ -93,6 +111,8 @@ Return:
 - generated-artifact requirements
 - handoff packets
 - validation requirements
+
+Require every implementation handoff packet to use the Standard Handback schema above.
 
 Do not implement unless this is a tiny coordination-only edit.
 ```
@@ -131,12 +151,14 @@ Validation:
 - add or update targeted backend tests if behavior changes materially
 
 Return:
-- status
-- files changed
-- tests run
-- whether API routes or schemas changed
-- whether contract regeneration is required
-- recommended next owner if follow-on work is needed
+- Status: complete, partial, or blocked.
+- Summary: what changed, delegated, or decided and why.
+- Files touched or reviewed.
+- Commands run and result summary.
+- Whether API routes or schemas changed.
+- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
+- Risks, blockers, or assumptions.
+- Recommended next owner, if any.
 
 Stop and hand off if frontend changes, schema regeneration ownership, or other cross-stack work is required.
 ```
@@ -177,11 +199,14 @@ Validation:
 - add or update targeted frontend tests if behavior changes materially
 
 Return:
-- status
-- files changed
-- validations run
-- whether the backend contract was sufficient
-- recommended next owner if blocked by API changes
+- Status: complete, partial, or blocked.
+- Summary: what changed, delegated, or decided and why.
+- Files touched or reviewed.
+- Commands run and result summary.
+- Whether API routes or schemas changed.
+- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
+- Risks, blockers, or assumptions.
+- Recommended next owner, if any.
 
 Stop and hand off if a missing or incorrect API contract is the real problem.
 ```
@@ -198,7 +223,7 @@ Best for:
 Use when the task genuinely spans backend, frontend, generated contracts, scripts, CI, docs, or local integration.
 
 ```text
-Own this end to end across the required Baldin layers.
+Own cross-stack design, delegation, and integration across the required Baldin layers.
 
 Objective:
 [cross-stack outcome]
@@ -219,14 +244,16 @@ Validation:
 - validate docs, CI, or docker-compose changes when touched
 
 Return:
-- architectural approach
-- files changed
-- validations run
-- generated-artifact status
-- remaining risks
-- next owner if any follow-on work remains
+- Status: complete, partial, or blocked.
+- Summary: what changed, delegated, or decided and why.
+- Files touched or reviewed.
+- Commands run and result summary.
+- Whether API routes or schemas changed.
+- Whether generated artifacts were regenerated, intentionally deferred, or unchanged.
+- Risks, blockers, or assumptions.
+- Recommended next owner, if any.
 
-Delegate isolated backend-only or frontend-only slices when that reduces overlap, but keep contract and integration ownership here.
+Delegate isolated backend-only and frontend-only slices by default, but keep contract and integration ownership here.
 ```
 
 Best for:
@@ -318,7 +345,7 @@ Stop and hand off if the needed state is not available from the current API cont
 Start with Baldin Lead Full-Stack Architect.
 
 ```text
-Own this end to end across backend, frontend, and contract surfaces.
+Own cross-stack design, delegation, and integration across backend, frontend, and contract surfaces.
 
 Objective:
 Add a company health score that is stored in backend responses and displayed in the frontend.
@@ -331,7 +358,7 @@ Validation:
 - run relevant frontend tests and typecheck
 - run ./scripts/update_frontend_schemas.sh
 
-Delegate isolated slices if useful, but keep contract ownership here.
+Delegate isolated backend-only and frontend-only slices by default, but keep contract ownership here.
 ```
 
 ### Unclear stale-data issue
@@ -357,6 +384,7 @@ Do not implement yet unless this is obviously a tiny single-owner fix.
 
 - Start single-owner unless you already know the task spans multiple layers.
 - State the stop condition so agents do not silently widen scope.
+- Use the Standard Handback field names in every non-trivial implementation prompt.
 - Ask for generated-artifact status whenever backend routes or schemas might move.
 - Ask for the recommended next owner in every non-trivial task.
 - Ask for validation evidence, not just a summary.

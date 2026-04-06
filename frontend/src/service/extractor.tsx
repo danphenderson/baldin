@@ -118,3 +118,10 @@ export const runExtractor = async (token: string, id: string, runner: ExtractorR
   const requestOptions = createRequestOptions(token, "POST", runner, isFileUpload);
   return fetchAPI(`${BASE_URL}/${id}/run`, requestOptions);
 };
+
+export type ExtractorVersionRead = components['schemas']['ExtractorVersionRead'];
+
+export const getExtractorVersions = async (token: string, id: string): Promise<ExtractorVersionRead[]> => {
+  const requestOptions = createRequestOptions(token, "GET");
+  return fetchAPI(`${BASE_URL}/${id}/versions`, requestOptions);
+};

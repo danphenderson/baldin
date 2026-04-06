@@ -16,6 +16,8 @@
 export interface SecondaryNavItem {
   label: string;
   path: string;
+  /** When true the item is only visible to superusers. */
+  superuserOnly?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -38,7 +40,8 @@ export const secondaryNavByGroup: Record<string, SecondaryNavItem[]> = {
   '/workflows': [
     { label: 'Pipelines', path: '/workflows' },
     { label: 'Extractors', path: '/workflows/extractors' },
-    { label: 'Crawlers', path: '/workflows/crawlers' },
+    { label: 'Review Queue', path: '/workflows/review', superuserOnly: true },
+    { label: 'Crawlers', path: '/workflows/crawlers', superuserOnly: true },
   ],
   '/network': [
     { label: 'Directory', path: '/network/directory' },
@@ -90,7 +93,7 @@ export const drawerSections: DrawerSection[] = [
     key: 'top',
     label: null,
     items: [
-      { label: 'Dashboard', path: '/' },
+      { label: 'Command Center', path: '/' },
     ],
   },
   {

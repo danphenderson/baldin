@@ -11,14 +11,18 @@ import {
   ExpandMore as ExpandIcon, ExpandLess as CollapseIcon,
   Article as ResumeIcon, Mail as LetterIcon, Replay as FollowUpIcon,
   MenuBook as RefSheetIcon, TextSnippet as FreeformIcon,
+  PictureAsPdf as PdfIcon, Share as ShareIcon,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
+import RichTextEditor from '../../component/rich-text-editor';
 import {
-  getDocument, updateDocument, deleteDocument, downloadDocument, pinDocument,
-  type DocumentDetailRead, type DocumentVersionRead, type DocumentKind, type DocumentStatus,
+  getDocument, updateDocument, deleteDocument, downloadDocument, pinDocument, downloadOriginal,
+  getDocumentActivity,
+  type DocumentActivityRead, type DocumentActivityType, type DocumentDetailRead, type DocumentVersionRead, type DocumentKind, type DocumentStatus,
 } from '../../service/documents';
+import ShareDocumentDialog from '../../component/share-document-dialog';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -57,6 +61,39 @@ function accentForKind(kind: DocumentKind, palette: Record<string, { main: strin
   return (palette as Record<string, { main: string }>)[key]?.main ?? palette.primary.main;
 }
 
+function formatPersonLabel(fullName?: string | null, email?: string | null, fallback = 'Unknown user'): string {
+  return fullName?.trim() || email?.trim() || fallback;
+}
+
+function formatPersonSecondary(fullName?: string | null, email?: string | null): string | null {
+  if (email?.trim() && email !== fullName) return email;
+  return null;
+}
+
+function getSourceFileName(sourceFile?: string | null): string | null {
+  if (!sourceFile) return null;
+  const segments = sourceFile.split('/').filter(Boolean);
+  return segments[segments.length - 1] ?? sourceFile;
+}
+
+function getActivityBadgeLabels(activity: DocumentActivityRead): string[] {
+  const details = activity.details as Record<string, unknown> | undefined;
+  const labels: string[] = [];
+  const versionNumber = details?.version_number;
+  if (typeof versionNumber === 'number' || typeof versionNumber === 'string') {
+    labels.push(`v${versionNumber}`);
+  }
+  const sharedWith =
+    (typeof details?.shared_with_full_name === 'string' && details.shared_with_full_name)
+    || (typeof details?.shared_with_email === 'string' && details.shared_with_email)
+    || null;
+  if (sharedWith) labels.push(sharedWith);
+  if (typeof details?.role === 'string') {
+    labels.push(`${details.role.charAt(0).toUpperCase() + details.role.slice(1)} access`);
+  }
+  return labels.slice(0, 3);
+}
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -74,6 +111,10 @@ const DocumentDetailPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
   const [compareSelection, setCompareSelection] = useState<string[]>([]);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [activity, setActivity] = useState<DocumentActivityRead[]>([]);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [activityError, setActivityError] = useState('');
 
   usePageToolbarHeader(
     doc?.title ?? 'Document Detail',
@@ -87,13 +128,31 @@ const DocumentDetailPage: React.FC = () => {
   const refresh = useCallback(async () => {
     if (!token || !id) return;
     setLoading(true);
-    try {
-      const data = await getDocument(token, id);
-      setDoc(data);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load document');
+    setActivityLoading(true);
+    setActivityError('');
+    setError('');
+    const [documentResult, activityResult] = await Promise.allSettled([
+      getDocument(token, id),
+      getDocumentActivity(token, id, { limit: 20 }),
+    ]);
+
+    if (documentResult.status === 'fulfilled') {
+      setDoc(documentResult.value);
+    } else {
+      const reason = documentResult.reason;
+      setError(reason instanceof Error ? reason.message : 'Failed to load document');
     }
+
+    if (activityResult.status === 'fulfilled') {
+      setActivity(activityResult.value ?? []);
+    } else {
+      setActivity([]);
+      const reason = activityResult.reason;
+      setActivityError(reason instanceof Error ? reason.message : 'Failed to load activity');
+    }
+
     setLoading(false);
+    setActivityLoading(false);
   }, [token, id]);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -132,6 +191,12 @@ const DocumentDetailPage: React.FC = () => {
       await updateDocument(token, doc.id, { status: newStatus });
       refresh();
     } catch (e: unknown) { setError(e instanceof Error ? e.message : 'Status update failed'); }
+  };
+
+  const handleDownloadOriginal = async () => {
+    if (!token || !id) return;
+    try { await downloadOriginal(token, id); }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : 'Download original failed'); }
   };
 
   const handleCompareToggle = (versionId: string) => {
@@ -174,6 +239,53 @@ const DocumentDetailPage: React.FC = () => {
   const meta = KIND_META[doc.kind] ?? KIND_META.freeform;
   const statusMeta = STATUS_META[doc.status] ?? STATUS_META.draft;
   const versions = [...(doc.versions ?? [])].sort((a, b) => b.version_number - a.version_number);
+  const viewerRole = doc.viewer_role;
+  const isOwner = !viewerRole;
+  const ownerLabel = formatPersonLabel(doc.owner_full_name, doc.owner_email, 'Document owner');
+  const ownerSecondary = formatPersonSecondary(doc.owner_full_name, doc.owner_email);
+  const sharedByLabel = formatPersonLabel(doc.shared_by_full_name, doc.shared_by_email, 'Unknown sharer');
+  const sharedBySecondary = formatPersonSecondary(doc.shared_by_full_name, doc.shared_by_email);
+  const sourceFileName = getSourceFileName(doc.head_version?.source_file);
+
+  const activityColor = (activityType: DocumentActivityType): string => {
+    switch (activityType) {
+      case 'document_created':
+      case 'version_saved':
+        return theme.palette.primary.main;
+      case 'document_uploaded':
+        return theme.palette.info.main;
+      case 'share_created':
+      case 'share_updated':
+      case 'share_revoked':
+        return theme.palette.secondary.main;
+      case 'document_archived':
+      case 'document_unarchived':
+        return theme.palette.warning.main;
+      case 'document_pinned':
+      case 'document_unpinned':
+        return accent;
+    }
+  };
+
+  const activityIcon = (activityType: DocumentActivityType): React.ReactElement => {
+    switch (activityType) {
+      case 'document_uploaded':
+        return <PdfIcon fontSize="small" />;
+      case 'share_created':
+      case 'share_updated':
+      case 'share_revoked':
+        return <ShareIcon fontSize="small" />;
+      case 'document_archived':
+        return <ArchiveIcon fontSize="small" />;
+      case 'document_unarchived':
+        return <UnarchiveIcon fontSize="small" />;
+      case 'document_pinned':
+      case 'document_unpinned':
+        return <PushPinIcon fontSize="small" />;
+      default:
+        return <EditIcon fontSize="small" />;
+    }
+  };
 
   return (
     <Box>
@@ -209,26 +321,59 @@ const DocumentDetailPage: React.FC = () => {
                 label={`v${doc.version_count ?? 0}`} size="small" variant="outlined"
                 sx={{ fontWeight: 600 }}
               />
+              {Boolean((doc.head_version as Record<string, unknown> | undefined)?.source_file) && (
+                <Chip
+                  icon={<PdfIcon sx={{ fontSize: 16 }} />}
+                  label="PDF Import"
+                  size="small"
+                  variant="outlined"
+                  color="info"
+                  sx={{ fontWeight: 600 }}
+                />
+              )}
+              {!isOwner && viewerRole && (
+                <Chip
+                  label={`Shared · ${viewerRole.charAt(0).toUpperCase() + viewerRole.slice(1)}`}
+                  size="small"
+                  color="info"
+                  sx={{ fontWeight: 600 }}
+                />
+              )}
             </Stack>
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
               Created {formatDate(doc.created_at)} · Updated {formatDate(doc.updated_at)}
+              {!isOwner && doc.shared_at ? ` · Shared ${formatDate(doc.shared_at)}` : ''}
             </Typography>
           </Box>
 
           {/* Actions */}
           <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
-            <Tooltip title={doc.is_pinned ? 'Unpin' : 'Pin as active'}>
-              <IconButton
-                onClick={handleTogglePin}
-                aria-label={doc.is_pinned ? 'Unpin document' : 'Pin document'}
-                sx={{ color: doc.is_pinned ? accent : 'text.secondary' }}
-              >
-                <PushPinIcon sx={{ transform: doc.is_pinned ? 'rotate(45deg)' : 'none' }} />
-              </IconButton>
-            </Tooltip>
+            {isOwner && (
+              <Tooltip title="Share">
+                <IconButton
+                  onClick={() => setShareOpen(true)}
+                  aria-label="Share document"
+                  sx={{ color: 'text.secondary' }}
+                >
+                  <ShareIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+            {isOwner && (
+              <Tooltip title={doc.is_pinned ? 'Unpin' : 'Pin as active'}>
+                <IconButton
+                  onClick={handleTogglePin}
+                  aria-label={doc.is_pinned ? 'Unpin document' : 'Pin document'}
+                  sx={{ color: doc.is_pinned ? accent : 'text.secondary' }}
+                >
+                  <PushPinIcon sx={{ transform: doc.is_pinned ? 'rotate(45deg)' : 'none' }} />
+                </IconButton>
+              </Tooltip>
+            )}
             <Button
               variant="outlined" size="small" startIcon={<EditIcon />}
               onClick={() => navigate(`/me/documents/${id}/edit`)}
+              disabled={viewerRole === 'viewer'}
               aria-label="Edit document"
             >
               Edit
@@ -248,23 +393,155 @@ const DocumentDetailPage: React.FC = () => {
             >
               Download
             </Button>
-            <Button
-              variant="outlined" size="small"
-              startIcon={doc.status === 'archived' ? <UnarchiveIcon /> : <ArchiveIcon />}
-              onClick={handleArchiveToggle}
-              aria-label={doc.status === 'archived' ? 'Restore document' : 'Archive document'}
-            >
-              {doc.status === 'archived' ? 'Restore' : 'Archive'}
-            </Button>
-            <Button
-              variant="outlined" size="small" color="error" startIcon={<DeleteIcon />}
-              onClick={() => setDeleteOpen(true)}
-              aria-label="Delete document"
-            >
-              Delete
-            </Button>
+            {Boolean((doc.head_version as Record<string, unknown> | undefined)?.source_file) && (
+              <Button
+                variant="outlined" size="small" startIcon={<PdfIcon />}
+                onClick={handleDownloadOriginal}
+                aria-label="Download original PDF"
+              >
+                Original PDF
+              </Button>
+            )}
+            {isOwner && (
+              <Button
+                variant="outlined" size="small"
+                startIcon={doc.status === 'archived' ? <UnarchiveIcon /> : <ArchiveIcon />}
+                onClick={handleArchiveToggle}
+                aria-label={doc.status === 'archived' ? 'Restore document' : 'Archive document'}
+              >
+                {doc.status === 'archived' ? 'Restore' : 'Archive'}
+              </Button>
+            )}
+            {isOwner && (
+              <Button
+                variant="outlined" size="small" color="error" startIcon={<DeleteIcon />}
+                onClick={() => setDeleteOpen(true)}
+                aria-label="Delete document"
+              >
+                Delete
+              </Button>
+            )}
           </Stack>
         </Box>
+      </Paper>
+
+      {!isOwner && (
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 2.5,
+            mb: 3,
+            background: alpha(theme.palette.info.main, 0.04),
+            borderColor: alpha(theme.palette.info.main, 0.16),
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>
+            Shared context
+          </Typography>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2.5} sx={{ flexWrap: 'wrap' }}>
+            <Box sx={{ minWidth: 180 }}>
+              <Typography variant="caption" color="text.secondary">Owner</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>{ownerLabel}</Typography>
+              {ownerSecondary && <Typography variant="caption" color="text.secondary">{ownerSecondary}</Typography>}
+            </Box>
+            <Box sx={{ minWidth: 180 }}>
+              <Typography variant="caption" color="text.secondary">Shared by</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>{sharedByLabel}</Typography>
+              {sharedBySecondary && <Typography variant="caption" color="text.secondary">{sharedBySecondary}</Typography>}
+            </Box>
+            <Box sx={{ minWidth: 180 }}>
+              <Typography variant="caption" color="text.secondary">Access granted</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {doc.shared_at ? formatDate(doc.shared_at) : 'Unknown'}
+              </Typography>
+            </Box>
+            <Box sx={{ minWidth: 180 }}>
+              <Typography variant="caption" color="text.secondary">Access updated</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {doc.share_updated_at ? formatDate(doc.share_updated_at) : 'Never'}
+              </Typography>
+            </Box>
+          </Stack>
+        </Paper>
+      )}
+
+      {sourceFileName && (
+        <Paper variant="outlined" sx={{ p: 2.5, mb: 3 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.75 }}>
+            Imported source
+          </Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            Imported from PDF: {sourceFileName}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            The original upload remains available from this document for local-first review and export.
+          </Typography>
+        </Paper>
+      )}
+
+      <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+        Activity History
+      </Typography>
+      <Paper sx={{ mb: 3, overflow: 'hidden' }}>
+        {activityLoading ? (
+          <Box sx={{ p: 2 }}>
+            <Skeleton variant="text" width="60%" height={24} />
+            <Skeleton variant="text" width="80%" height={24} />
+            <Skeleton variant="text" width="70%" height={24} />
+          </Box>
+        ) : activityError ? (
+          <Alert severity="warning" sx={{ m: 2 }}>{activityError}</Alert>
+        ) : activity.length === 0 ? (
+          <Box sx={{ p: 3 }}>
+            <Typography variant="body2" color="text.secondary">
+              No document activity recorded yet.
+            </Typography>
+          </Box>
+        ) : (
+          <Stack divider={<Divider />}>
+            {activity.map(item => {
+              const actorLabel = formatPersonLabel(item.actor_full_name, item.actor_email, 'Baldin');
+              const badges = getActivityBadgeLabels(item);
+              const tone = activityColor(item.activity_type);
+
+              return (
+                <Box key={item.id} sx={{ px: 2.5, py: 1.75, display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                  <Box
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '12px',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: tone,
+                      background: alpha(tone, 0.1),
+                    }}
+                  >
+                    {activityIcon(item.activity_type)}
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {item.message}
+                    </Typography>
+                    <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', mt: 0.75 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        {actorLabel}
+                      </Typography>
+                      {badges.map(badge => (
+                        <Chip key={`${item.id}-${badge}`} size="small" label={badge} variant="outlined" sx={{ height: 20, fontSize: '0.68rem' }} />
+                      ))}
+                    </Stack>
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                    {formatDate(item.created_at)}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Stack>
+        )}
       </Paper>
 
       {/* ── Version timeline ────────────────────────────────────── */}
@@ -362,12 +639,22 @@ const DocumentDetailPage: React.FC = () => {
                     border: `1px solid ${theme.palette.divider}`,
                     maxHeight: 400, overflow: 'auto',
                   }}>
-                    <Typography
-                      variant="body2" component="pre"
-                      sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem', m: 0 }}
-                    >
-                      {v.content || '(empty)'}
-                    </Typography>
+                    {v.content_format === 'tiptap_json' ? (
+                      <RichTextEditor
+                        content={v.content || ''}
+                        contentFormat="tiptap_json"
+                        readOnly
+                        onChange={() => {}}
+                        minHeight="100px"
+                      />
+                    ) : (
+                      <Typography
+                        variant="body2" component="pre"
+                        sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem', m: 0 }}
+                      >
+                        {v.content || '(empty)'}
+                      </Typography>
+                    )}
                   </Box>
                 </Collapse>
               </Box>
@@ -375,6 +662,14 @@ const DocumentDetailPage: React.FC = () => {
           })}
         </Stack>
       )}
+
+      {/* ── Share dialog ──────────────────────────────────────── */}
+      <ShareDocumentDialog
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        documentId={doc.id}
+        onSharesChanged={refresh}
+      />
 
       {/* ── Delete dialog ───────────────────────────────────────── */}
       <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)}>

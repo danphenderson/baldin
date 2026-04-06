@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState, useCallback, useMemo } from 're
 import {
   Box, Card, CardContent, Typography, Chip, Stack, Button, useTheme, alpha,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  Tooltip, Skeleton, Alert, InputAdornment, Menu, MenuItem, Fab,
+  Tooltip, Skeleton, Alert, InputAdornment, Menu, MenuItem, Fab, Tabs, Tab,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
@@ -11,14 +11,16 @@ import {
   NoteAdd as NoteAddIcon, SortByAlpha as SortIcon, PushPin as PushPinIcon,
   Add as AddIcon, Article as ResumeIcon, Mail as LetterIcon,
   Replay as FollowUpIcon, MenuBook as RefSheetIcon, TextSnippet as FreeformIcon,
+  CloudUpload as CloudUploadIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import {
-  getDocuments, deleteDocument, downloadDocument, pinDocument,
+  getDocuments, deleteDocument, downloadDocument, pinDocument, getSharedWithMe,
   type DocumentRead, type DocumentKind, type DocumentStatus,
 } from '../../service/documents';
+import UploadDocumentDialog from '../../component/upload-document-dialog';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -69,6 +71,40 @@ function accentForKind(kind: DocumentKind, palette: Record<string, { main: strin
   return (palette as Record<string, { main: string }>)[key]?.main ?? palette.primary.main;
 }
 
+function formatPersonLabel(fullName?: string | null, email?: string | null, fallback = 'Unknown user'): string {
+  return fullName?.trim() || email?.trim() || fallback;
+}
+
+function formatPersonSecondary(fullName?: string | null, email?: string | null): string | null {
+  if (email?.trim() && email !== fullName) return email;
+  return null;
+}
+
+function extractPlainTextFromTiptapJson(content: string): string {
+  try {
+    const doc = JSON.parse(content);
+    const walk = (node: Record<string, unknown>): string => {
+      if (node.type === 'text' && typeof node.text === 'string') return node.text;
+      if (!Array.isArray(node.content)) return '';
+      return (node.content as Record<string, unknown>[])
+        .map(child => walk(child))
+        .join(node.type === 'doc' || node.type === 'bulletList' || node.type === 'orderedList' ? '\n' : '');
+    };
+    return Array.isArray(doc?.content)
+      ? (doc.content as Record<string, unknown>[]).map(node => walk(node)).join('\n')
+      : content;
+  } catch {
+    return content;
+  }
+}
+
+function getDocumentPreview(doc: DocumentRead): string {
+  const raw = doc.head_version?.content ?? '';
+  return doc.head_version?.content_format === 'tiptap_json'
+    ? extractPlainTextFromTiptapJson(raw)
+    : raw;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -90,13 +126,21 @@ const DocumentListPage: React.FC = () => {
   const [sortAnchor, setSortAnchor] = useState<null | HTMLElement>(null);
   const [deleteTarget, setDeleteTarget] = useState<DocumentRead | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [tab, setTab] = useState<'my' | 'shared'>('my');
+  const [sharedDocs, setSharedDocs] = useState<DocumentRead[]>([]);
+  const [sharedLoading, setSharedLoading] = useState(false);
 
   /* toolbar header ------------------------------------------------- */
+  const activeDocs = tab === 'my' ? docs : sharedDocs;
   const summary = useMemo(() => {
+    if (tab === 'shared') {
+      return `${sharedDocs.length} shared document${sharedDocs.length !== 1 ? 's' : ''}`;
+    }
     const total = docs.length;
     const pinned = docs.filter(d => d.is_pinned).length;
     return `${total} document${total !== 1 ? 's' : ''}${pinned ? ` · ${pinned} pinned` : ''}`;
-  }, [docs]);
+  }, [docs, sharedDocs, tab]);
 
   usePageToolbarHeader('Documents Studio', summary);
 
@@ -115,12 +159,29 @@ const DocumentListPage: React.FC = () => {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  /* fetch shared with me ------------------------------------------- */
+  const refreshShared = useCallback(async () => {
+    if (!token) return;
+    setSharedLoading(true);
+    try {
+      const data = await getSharedWithMe(token);
+      setSharedDocs(data ?? []);
+    } catch {
+      /* silently fail — tab will show empty */
+    }
+    setSharedLoading(false);
+  }, [token]);
+
+  useEffect(() => {
+    if (tab === 'shared') refreshShared();
+  }, [tab, refreshShared]);
+
   /* available kind chips (only kinds with ≥1 doc) ------------------ */
   const availableKinds = useMemo(() => {
     const counts = new Map<DocumentKind, number>();
-    for (const d of docs) counts.set(d.kind, (counts.get(d.kind) ?? 0) + 1);
+    for (const d of activeDocs) counts.set(d.kind, (counts.get(d.kind) ?? 0) + 1);
     return (Object.keys(KIND_META) as DocumentKind[]).filter(k => (counts.get(k) ?? 0) > 0);
-  }, [docs]);
+  }, [activeDocs]);
 
   /* derived filtered / sorted list --------------------------------- */
   const filtered = useMemo(() => {
@@ -133,7 +194,7 @@ const DocumentListPage: React.FC = () => {
       const q = search.toLowerCase();
       list = list.filter(d =>
         d.title.toLowerCase().includes(q) ||
-        (d.head_version?.content ?? '').toLowerCase().includes(q),
+        getDocumentPreview(d).toLowerCase().includes(q),
       );
     }
 
@@ -148,6 +209,33 @@ const DocumentListPage: React.FC = () => {
 
     return list;
   }, [docs, kindFilter, statusFilter, search, sort]);
+
+  /* derived filtered / sorted shared list -------------------------- */
+  const filteredShared = useMemo(() => {
+    let list = [...sharedDocs];
+
+    if (kindFilter !== 'all') list = list.filter(d => d.kind === kindFilter);
+    if (statusFilter !== 'all') list = list.filter(d => d.status === statusFilter);
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(d =>
+        d.title.toLowerCase().includes(q) ||
+        getDocumentPreview(d).toLowerCase().includes(q),
+      );
+    }
+
+    list.sort((a, b) => {
+      switch (sort) {
+        case 'newest':    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        case 'oldest':    return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+        case 'title_asc': return a.title.localeCompare(b.title);
+        case 'title_desc': return b.title.localeCompare(a.title);
+      }
+    });
+
+    return list;
+  }, [sharedDocs, kindFilter, statusFilter, search, sort]);
 
   /* handlers ------------------------------------------------------- */
   const handleDelete = async () => {
@@ -202,6 +290,17 @@ const DocumentListPage: React.FC = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')} role="alert">{error}</Alert>
       )}
+
+      {/* ── Tabs ────────────────────────────────────────────────── */}
+      <Tabs
+        value={tab}
+        onChange={(_, v: 'my' | 'shared') => setTab(v)}
+        sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
+        aria-label="Document tabs"
+      >
+        <Tab label="My Documents" value="my" />
+        <Tab label="Shared with Me" value="shared" />
+      </Tabs>
 
       {/* ── Toolbar ─────────────────────────────────────────────── */}
       <Stack direction="row" spacing={1.5} sx={{ mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -263,6 +362,15 @@ const DocumentListPage: React.FC = () => {
 
         <Box sx={{ flex: 1 }} />
 
+        {/* Upload PDF */}
+        <Button
+          size="small" variant="outlined" startIcon={<CloudUploadIcon />}
+          onClick={() => setUploadOpen(true)}
+          aria-label="Upload PDF"
+        >
+          Upload PDF
+        </Button>
+
         {/* Sort */}
         <Tooltip title="Sort">
           <Chip
@@ -287,7 +395,7 @@ const DocumentListPage: React.FC = () => {
       </Stack>
 
       {/* ── Grid ────────────────────────────────────────────────── */}
-      {loading ? (
+      {(tab === 'my' ? loading : sharedLoading) ? (
         <Grid container spacing={2.5} aria-busy="true" aria-label="Loading documents">
           {[1, 2, 3, 4, 5, 6].map(i => (
             <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={i}>
@@ -295,7 +403,7 @@ const DocumentListPage: React.FC = () => {
             </Grid>
           ))}
         </Grid>
-      ) : filtered.length === 0 ? (
+      ) : (tab === 'my' ? filtered : filteredShared).length === 0 ? (
         <Box sx={{
           textAlign: 'center', py: 10,
           border: `1.5px dashed ${alpha(theme.palette.divider, 0.4)}`,
@@ -308,13 +416,15 @@ const DocumentListPage: React.FC = () => {
           }}>
             <NoteAddIcon sx={{ fontSize: 36, color: 'primary.main' }} />
           </Box>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>{emptyLabel}</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>{tab === 'shared' ? 'No shared documents' : emptyLabel}</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, maxWidth: 360, mx: 'auto' }}>
-            {search
-              ? 'Try a different search term or create a new document.'
-              : 'Create your first document to start building your professional profile with Baldin.'}
+            {tab === 'shared'
+              ? 'Documents shared with you will appear here.'
+              : search
+                ? 'Try a different search term or create a new document.'
+                : 'Create your first document to start building your professional profile with Baldin.'}
           </Typography>
-          {!search && kindFilter === 'all' && statusFilter === 'all' && (
+          {tab === 'my' && !search && kindFilter === 'all' && statusFilter === 'all' && (
             <Button
               variant="contained" size="small" startIcon={<AddIcon />}
               onClick={() => navigate('/me/documents/new')}
@@ -327,11 +437,17 @@ const DocumentListPage: React.FC = () => {
         </Box>
       ) : (
         <Grid container spacing={2.5}>
-          {filtered.map(doc => {
+          {(tab === 'my' ? filtered : filteredShared).map(doc => {
             const accent = accentForKind(doc.kind, pal);
             const meta = KIND_META[doc.kind] ?? KIND_META.freeform;
             const statusMeta = STATUS_META[doc.status] ?? STATUS_META.draft;
-            const preview = (doc.head_version?.content ?? '').slice(0, 200);
+            const preview = getDocumentPreview(doc).slice(0, 200);
+            const isShared = tab === 'shared';
+            const viewerRole = (doc as DocumentRead).viewer_role;
+            const ownerLabel = formatPersonLabel(doc.owner_full_name, doc.owner_email, 'Document owner');
+            const ownerSecondary = formatPersonSecondary(doc.owner_full_name, doc.owner_email);
+            const sharedByLabel = formatPersonLabel(doc.shared_by_full_name, doc.shared_by_email, 'Unknown sharer');
+            const hasSourceFile = Boolean(doc.head_version?.source_file);
 
             return (
               <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={doc.id}>
@@ -385,6 +501,22 @@ const DocumentListPage: React.FC = () => {
                             size="small" label={statusMeta.label} color={statusMeta.color}
                             sx={{ height: 20, fontSize: '0.68rem' }}
                           />
+                          {hasSourceFile && (
+                            <Chip
+                              size="small"
+                              label="PDF Import"
+                              variant="outlined"
+                              color="info"
+                              sx={{ height: 20, fontSize: '0.68rem', fontWeight: 600 }}
+                            />
+                          )}
+                          {isShared && viewerRole && (
+                            <Chip
+                              size="small" label={`Shared · ${viewerRole.charAt(0).toUpperCase() + viewerRole.slice(1)}`}
+                              color="info" variant="outlined"
+                              sx={{ height: 20, fontSize: '0.68rem', fontWeight: 600 }}
+                            />
+                          )}
                         </Stack>
                       </Box>
                     </Box>
@@ -398,8 +530,41 @@ const DocumentListPage: React.FC = () => {
                           fontSize: '0.8rem', lineHeight: 1.5,
                         }}
                       >
-                        {preview}{(doc.head_version?.content ?? '').length > 200 ? '…' : ''}
+                        {preview}{getDocumentPreview(doc).length > 200 ? '…' : ''}
                       </Typography>
+                    )}
+
+                    {isShared && (
+                      <Box
+                        sx={{
+                          mb: 1.5,
+                          p: 1.25,
+                          borderRadius: 2,
+                          background: alpha(theme.palette.info.main, 0.05),
+                          border: `1px solid ${alpha(theme.palette.info.main, 0.14)}`,
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          Owner
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                          {ownerLabel}
+                        </Typography>
+                        {ownerSecondary && (
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>
+                            {ownerSecondary}
+                          </Typography>
+                        )}
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }} noWrap>
+                          Shared by {sharedByLabel}
+                          {doc.shared_at ? ` · ${relativeTime(doc.shared_at)}` : ''}
+                        </Typography>
+                        {doc.share_updated_at && doc.share_updated_at !== doc.shared_at && (
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>
+                            Access updated {relativeTime(doc.share_updated_at)}
+                          </Typography>
+                        )}
+                      </Box>
                     )}
 
                     {/* footer */}
@@ -417,13 +582,16 @@ const DocumentListPage: React.FC = () => {
                             <ViewIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Edit">
-                          <IconButton
-                            size="small" aria-label="Edit document"
-                            onClick={e => { e.stopPropagation(); navigate(`/me/documents/${doc.id}/edit`); }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
+                        <Tooltip title={viewerRole === 'viewer' ? 'View-only access' : 'Edit'}>
+                          <span>
+                            <IconButton
+                              size="small" aria-label="Edit document"
+                              disabled={viewerRole === 'viewer'}
+                              onClick={e => { e.stopPropagation(); navigate(`/me/documents/${doc.id}/edit`); }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </span>
                         </Tooltip>
                         <Tooltip title="Download">
                           <IconButton
@@ -434,13 +602,16 @@ const DocumentListPage: React.FC = () => {
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Delete">
+                          <span>
                           <IconButton
                             size="small" aria-label="Delete document"
+                            disabled={isShared}
                             onClick={e => { e.stopPropagation(); setDeleteTarget(doc); }}
                             sx={{ '&:hover': { color: 'error.main' } }}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
+                          </span>
                         </Tooltip>
                       </Stack>
                     </Box>
@@ -461,6 +632,13 @@ const DocumentListPage: React.FC = () => {
       >
         <AddIcon />
       </Fab>
+
+      {/* ── Upload dialog ──────────────────────────────────────── */}
+      <UploadDocumentDialog
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        onSuccess={(doc) => { setUploadOpen(false); navigate(`/me/documents/${doc.id}`); }}
+      />
 
       {/* ── Delete dialog ───────────────────────────────────────── */}
       <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>

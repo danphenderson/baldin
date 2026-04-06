@@ -86,7 +86,8 @@ const AppLayout: React.FC = () => {
   const drawerWidth = collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH;
   const textTransition = 'opacity 0.2s ease, max-width 0.2s ease';
   const accountRailWidth = isCompactToolbar ? 184 : 270;
-  const secondaryNavItems = getSecondaryNavItems(location.pathname);
+  const secondaryNavItems = getSecondaryNavItems(location.pathname)
+    ?.filter((item) => !item.superuserOnly || user?.is_superuser) ?? null;
 
   const closeAccountDial = () => setIsAccountDialOpen(false);
 

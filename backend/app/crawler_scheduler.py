@@ -103,7 +103,15 @@ async def _tick() -> None:
             pipeline.schedule_definition = updated_sched
             await db.commit()
 
-            # Launch in background — use the pipeline creator as the acting user
-            asyncio.create_task(
-                execute_crawler_run_background(run.id, pipeline.created_by_user_id)
-            )
+            if pipeline.requires_approval:
+                # Hold for review — don't execute
+                run.status = "pending_review"
+                await db.commit()
+                await log.info(
+                    f"Scheduler: pipeline {pipeline.id} run {run.id} held for review"
+                )
+            else:
+                # Launch in background — use the pipeline creator as the acting user
+                asyncio.create_task(
+                    execute_crawler_run_background(run.id, pipeline.created_by_user_id)
+                )

@@ -559,11 +559,29 @@ async def get_document(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Document:
-    document = await db.get(models.Document, id)
+    document = await db.get(
+        models.Document,
+        id,
+        options=[selectinload(models.Document.user)],
+    )
     if not document:
         raise await _404(document, id)
-    if document.user_id != user.id:  # type: ignore
-        raise await _403(user.id, document, id)
+    if document.user_id == user.id:  # type: ignore
+        document._effective_role = "owner"  # type: ignore[attr-defined]
+    else:
+        share_result = await db.execute(
+            select(models.DocumentShare)
+            .options(selectinload(models.DocumentShare.shared_by_user))
+            .where(
+                models.DocumentShare.document_id == document.id,
+                models.DocumentShare.shared_with_user_id == user.id,
+            )
+        )
+        share = share_result.scalar_one_or_none()
+        if share is None:
+            raise await _403(user.id, document, id)
+        document._effective_role = share.role  # type: ignore[attr-defined]
+        document._share_context = share  # type: ignore[attr-defined]
     await log.info(f"get_document: {document}")
     return document
 
@@ -896,6 +914,18 @@ async def run_extractor(
         ),
         db=db,
     )
+
+    # Stamp extractor version hash for traceability
+    from app.utils import compute_version_hash
+
+    event_obj = await db.get(models.OrchestrationEvent, event.id)
+    if event_obj:
+        event_obj.version_hash = compute_version_hash(
+            getattr(extractor, "instruction", None),
+            getattr(extractor, "json_schema", None),
+        )
+        await db.flush()
+
     # Run the extraction event, TODO, cleanup
     try:
         llm = payload.llm or conf.openai.COMPLETION_MODEL
@@ -922,8 +952,24 @@ async def run_extractor(
         )
         raise HTTPException(status_code=500, detail=str(e)) from e
 
+    # Check if extractor requires approval
+    _requires_approval = getattr(extractor, "requires_approval", False)
+    _final_status = (
+        schemas.OrchestrationEventStatusType.PENDING_REVIEW
+        if _requires_approval
+        else schemas.OrchestrationEventStatusType.SUCCESS
+    )
     await update_orchestration_event(
-        event.id, payload=schemas.OrchestrationEventUpdate(message=f"Success! Extracted res: {res}", status=schemas.OrchestrationEventStatusType.SUCCESS), db=db  # type: ignore
+        event.id,
+        payload=schemas.OrchestrationEventUpdate(
+            message=(
+                f"Extraction complete, held for review: {res}"
+                if _requires_approval
+                else f"Success! Extracted res: {res}"
+            ),
+            status=_final_status,
+        ),
+        db=db,  # type: ignore
     )
     return schemas.ExtractorResponse(**res)
 
@@ -1257,19 +1303,36 @@ async def execute_crawler_run(
                     await log.exception(f"Error persisting lead from {result.url}")
                     stats["errors"] += 1
 
-        # Success
-        run.status = "success"
-        run.finished_at = datetime.utcnow()
-        run.stats = stats
-        await db.commit()
+        # Check if pipeline requires approval for created leads
+        _approval_required = getattr(pipeline, "requires_approval", False)
 
-        if event is not None:
-            event.status = "success"
-            event.message = (
-                f"Crawler run completed: {stats['leads_created']} created, "
-                f"{stats['leads_deduped']} deduped, {stats['errors']} errors"
-            )
+        if _approval_required and stats["leads_created"] > 0:
+            run.status = "pending_review"
+            run.finished_at = datetime.utcnow()
+            run.stats = stats
             await db.commit()
+
+            if event is not None:
+                event.status = "pending_review"
+                event.message = (
+                    f"Crawler run completed, held for review: {stats['leads_created']} created, "
+                    f"{stats['leads_deduped']} deduped, {stats['errors']} errors"
+                )
+                await db.commit()
+        else:
+            # Success — no approval needed
+            run.status = "success"
+            run.finished_at = datetime.utcnow()
+            run.stats = stats
+            await db.commit()
+
+            if event is not None:
+                event.status = "success"
+                event.message = (
+                    f"Crawler run completed: {stats['leads_created']} created, "
+                    f"{stats['leads_deduped']} deduped, {stats['errors']} errors"
+                )
+                await db.commit()
 
     except Exception as exc:
         await log.exception(f"Crawler run {run.id} failed: {exc}")

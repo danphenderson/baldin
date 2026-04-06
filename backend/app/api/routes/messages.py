@@ -1,10 +1,10 @@
 # app/api/routes/messages.py
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import UUID4
-from sqlalchemy import and_, delete, func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app import models, schemas, utils
@@ -386,7 +386,7 @@ async def get_conversation(
     messages = msg_result.scalars().all()
 
     # Auto-mark as read
-    viewer_part.last_read_at = datetime.now(timezone.utc)
+    viewer_part.last_read_at = datetime.utcnow()
     await db.commit()
 
     return schemas.ConversationDetailRead(
@@ -481,10 +481,16 @@ async def edit_message(
         )
 
     msg.content = payload.content
-    msg.edited_at = datetime.now(timezone.utc)
+    msg.edited_at = datetime.utcnow()
     await db.commit()
-    await db.refresh(msg)
 
+    # Re-query with eager-loaded author to avoid MissingGreenlet
+    result = await db.execute(
+        select(models.Message)
+        .where(models.Message.id == message_id)
+        .options(selectinload(models.Message.author))
+    )
+    msg = result.scalars().first()
     return _serialize_message(msg)
 
 
@@ -526,7 +532,7 @@ async def mark_conversation_read(
     await _get_conversation_or_404(db, conversation_id)
     part = await _get_participant_or_403(db, conversation_id, user.id)
 
-    part.last_read_at = datetime.now(timezone.utc)
+    part.last_read_at = datetime.utcnow()
     await db.commit()
 
 

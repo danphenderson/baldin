@@ -29,6 +29,7 @@ import {
   getOrchestrationPipelines, createOrchestrationPipeline, deleteOrchestrationPipeline,
   getOrchestrationPipeline, getOrchestrationEvents, createOrchestrationEvent,
   updateOrchestrationPipeline, updateOrchestrationEvent,
+  retryOrchestrationEvent,
   formatURI,
 } from '../service/data-orchestration';
 
@@ -66,6 +67,7 @@ const STATUS_CONFIG: Record<OrchestrationEventStatus, { icon: React.ReactElement
   failure: { icon: <ErrorIcon fontSize="small" />, color: '#f43f5e', label: 'Failed' },
   pending: { icon: <PendingIcon fontSize="small" />, color: '#f59e0b', label: 'Pending' },
   running: { icon: <RunningIcon fontSize="small" />, color: '#06b6d4', label: 'Running' },
+  pending_review: { icon: <PendingIcon fontSize="small" />, color: '#8b5cf6', label: 'Pending Review' },
 };
 
 const JSON_TREE_THEME = {
@@ -342,8 +344,9 @@ const EventRow: React.FC<{
   evt: OrchestrationEventRead;
   pipelineName: string;
   onStatusChange: (status: OrchestrationEventStatus) => void;
+  onRetry?: () => void;
   index: number;
-}> = ({ evt, pipelineName, onStatusChange, index }) => {
+}> = ({ evt, pipelineName, onStatusChange, onRetry, index }) => {
   const theme = useTheme();
   const statusKey = evt.status ?? 'pending';
   const cfg = STATUS_CONFIG[statusKey];
@@ -401,6 +404,15 @@ const EventRow: React.FC<{
             </Typography>
           </Stack>
         </Box>
+
+        {/* Retry button for failed events */}
+        {statusKey === 'failure' && onRetry && (
+          <Tooltip title="Retry">
+            <IconButton size="small" onClick={onRetry} sx={{ color: theme.palette.warning.main }}>
+              <RefreshIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
+        )}
 
         {/* Quick status transitions */}
         <Tooltip title="Change status">
@@ -604,6 +616,15 @@ const PipelinesPage: React.FC = () => {
       await updateOrchestrationEvent(token, eventId, { status: newStatus });
       refreshEvents();
       refreshPipelines(); // summary fields may change
+    } catch (e: unknown) { setError(getErrorMessage(e)); }
+  };
+
+  const handleRetryEvent = async (eventId: string) => {
+    if (!token) return;
+    try {
+      await retryOrchestrationEvent(token, eventId);
+      refreshEvents();
+      refreshPipelines();
     } catch (e: unknown) { setError(getErrorMessage(e)); }
   };
 
@@ -854,6 +875,7 @@ const PipelinesPage: React.FC = () => {
                       index={i}
                       pipelineName={pipelineNameMap[evt.pipeline_id ?? ''] ?? ''}
                       onStatusChange={(s) => handleUpdateEventStatus(evt.id, s)}
+                      onRetry={() => handleRetryEvent(evt.id)}
                     />
                   ))}
                 </Stack>

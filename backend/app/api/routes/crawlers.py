@@ -1,13 +1,14 @@
 # app/api/routes/crawlers.py
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import UUID4
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_async_session, get_current_superuser, models, schemas
+from app.core.rate_limit import limiter
 
 router = APIRouter(dependencies=[Depends(get_current_superuser)])
 
@@ -57,8 +58,10 @@ async def update_crawler_pipeline(
 
 
 @router.post("/pipelines/{pipeline_id}/runs", response_model=schemas.CrawlerRunRead)
+@limiter.limit("3/minute")
 async def trigger_crawler_run(
     pipeline_id: UUID4,
+    request: Request,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),
     user=Depends(get_current_superuser),
@@ -97,6 +100,23 @@ async def list_crawler_runs(
     query = query.order_by(models.CrawlerRun.created_at.desc())
     result = await db.execute(query)
     return result.scalars().all()
+
+
+@router.delete("/runs/prune", dependencies=[Depends(get_current_superuser)])
+async def prune_crawler_runs(
+    older_than_days: int = Query(30, ge=1, description="Delete runs older than N days"),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Delete completed/failed/cancelled crawler runs older than the specified age."""
+    cutoff = datetime.utcnow() - timedelta(days=older_than_days)
+    result = await db.execute(
+        delete(models.CrawlerRun).where(
+            models.CrawlerRun.status.in_(["success", "failed", "cancelled"]),
+            models.CrawlerRun.created_at < cutoff,
+        )
+    )
+    await db.commit()
+    return {"deleted": result.rowcount}
 
 
 @router.get("/runs/{run_id}", response_model=schemas.CrawlerRunDetailRead)
@@ -184,3 +204,48 @@ async def resume_crawler_run(
     await db.refresh(run)
     background_tasks.add_task(execute_crawler_run_background, run.id, user.id)
     return run
+
+
+@router.post("/runs/{run_id}/retry", response_model=schemas.CrawlerRunRead)
+async def retry_crawler_run(
+    run_id: UUID4,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_async_session),
+    user=Depends(get_current_superuser),
+):
+    from app.api.deps import create_crawler_run as _create_run
+    from app.api.deps import execute_crawler_run_background
+    from app.api.deps import get_crawler_run as _get
+
+    run = await _get(run_id, db)
+    if run.status not in ("failed", "cancelled"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot retry run with status '{run.status}'. Must be 'failed' or 'cancelled'.",
+        )
+
+    # Prevent double-retry: check if an active retry already exists
+    existing_retry = await db.execute(
+        select(models.CrawlerRun).where(
+            models.CrawlerRun.retry_of_id == run_id,
+            models.CrawlerRun.status.in_(["pending", "running", "pending_review"]),
+        )
+    )
+    if existing_retry.scalars().first():
+        raise HTTPException(
+            status_code=409,
+            detail="An active retry of this run already exists.",
+        )
+
+    pipeline = await db.get(models.CrawlerPipeline, run.crawler_pipeline_id)
+    if not pipeline:
+        raise HTTPException(status_code=404, detail="Parent pipeline not found")
+
+    new_run = await _create_run(pipeline, "manual", db)
+    # Set retry_of_id
+    new_run.retry_of_id = run.id
+    await db.commit()
+    await db.refresh(new_run)
+
+    background_tasks.add_task(execute_crawler_run_background, new_run.id, user.id)
+    return new_run

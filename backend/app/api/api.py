@@ -4,8 +4,11 @@ from fastapi import APIRouter
 
 from app.api.deps import fastapi_users, schemas, security
 from app.api.routes import (
+    action_items,
+    activity_feed,
     applications,
     certificate,
+    collaboration,
     companies,
     connections,
     contacts,
@@ -21,6 +24,7 @@ from app.api.routes import (
     leads,
     messages,
     resumes,
+    review,
     skills,
     users,
 )
@@ -139,4 +143,24 @@ api_router.include_router(
     messages.router,
     prefix="/conversations",
     tags=["messaging"],
+)
+api_router.include_router(
+    collaboration.router,
+    prefix="/documents",
+    tags=["collaboration"],
+)
+api_router.include_router(
+    action_items.router,
+    prefix="/action-items",
+    tags=["action-items"],
+)
+api_router.include_router(
+    activity_feed.router,
+    prefix="/activity-feed",
+    tags=["activity-feed"],
+)
+api_router.include_router(
+    review.router,
+    prefix="/review",
+    tags=["review"],
 )

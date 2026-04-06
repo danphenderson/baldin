@@ -47,8 +47,11 @@ import {
   TravelExplore as ViewIcon,
   PersonAdd as PersonAddIcon,
   WorkspacesOutlined as LeadIcon,
+  PlaylistAdd as PlaylistAddIcon,
 } from '@mui/icons-material';
 import ConfirmDialog from './common/confirm-dialog';
+import CreateActionItemDialog from './create-action-item-dialog';
+import type { ActionItemRead, ActionItemCreate } from '../service/action-items';
 import type { CompanyRead } from '../service/companies';
 import {
   createLeadComment,
@@ -455,6 +458,7 @@ const LeadModal: React.FC<LeadModalProps> = ({
   const [replySubmittingId, setReplySubmittingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
 
   const permissions = lead?.viewer_permissions;
   const otherInterestCount = lead ? getOtherInterestCount(lead) : 0;
@@ -1259,6 +1263,15 @@ const LeadModal: React.FC<LeadModalProps> = ({
                   <Button variant="contained" onClick={() => onApply(lead)} disabled={applying}>
                     {applying ? 'Applying...' : 'Quick Apply'}
                   </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<PlaylistAddIcon />}
+                    onClick={() => setActionDialogOpen(true)}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Create Action
+                  </Button>
                   {!lead.viewer_is_registered && permissions?.can_register && (
                     <Button variant="outlined" startIcon={<JoinIcon />} onClick={handleJoinLead} disabled={registrationSaving}>
                       {registrationSaving ? 'Joining...' : 'Join Lead'}
@@ -1325,6 +1338,22 @@ const LeadModal: React.FC<LeadModalProps> = ({
         onConfirm={handleDeleteLead}
         onCancel={() => setConfirmDelete(false)}
       />
+
+      {lead && (
+        <CreateActionItemDialog
+          open={actionDialogOpen}
+          onClose={() => setActionDialogOpen(false)}
+          onCreated={(item: ActionItemRead) => {
+            setActionDialogOpen(false);
+            onNotify('Action item created', 'success');
+          }}
+          defaults={{
+            title: `Review: ${lead.title ?? 'Lead'}`,
+            kind: 'review_lead' as ActionItemCreate['kind'],
+            lead_id: lead.id,
+          }}
+        />
+      )}
     </>
   );
 };

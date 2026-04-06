@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import UUID4
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import selectinload
 
 from app import utils
 from app.api.deps import (
@@ -96,7 +97,15 @@ async def send_connection_request(
     )
     db.add(connection)
     await db.commit()
-    await db.refresh(connection, attribute_names=["requester", "addressee"])
+    result = await db.execute(
+        select(models.Connection)
+        .where(models.Connection.id == connection.id)
+        .options(
+            selectinload(models.Connection.requester),
+            selectinload(models.Connection.addressee),
+        )
+    )
+    connection = result.scalars().first()
     return _serialize_connection(connection)
 
 
@@ -116,6 +125,10 @@ async def list_connections(
     query = (
         select(models.Connection)
         .where(base_filter)
+        .options(
+            selectinload(models.Connection.requester),
+            selectinload(models.Connection.addressee),
+        )
         .order_by(models.Connection.created_at.desc())
     )
     count_query = select(func.count()).select_from(models.Connection).where(base_filter)
@@ -148,7 +161,14 @@ async def accept_connection(
     user: schemas.UserRead = Depends(get_current_user),
 ):
     """Accept a pending connection request. Only the addressee can accept."""
-    connection = await db.get(models.Connection, id)
+    connection = await db.get(
+        models.Connection,
+        id,
+        options=[
+            selectinload(models.Connection.requester),
+            selectinload(models.Connection.addressee),
+        ],
+    )
     if connection is None:
         raise HTTPException(status_code=404, detail="Connection not found")
     if connection.addressee_id != user.id:
@@ -163,7 +183,15 @@ async def accept_connection(
 
     connection.status = "accepted"
     await db.commit()
-    await db.refresh(connection, attribute_names=["requester", "addressee"])
+    result = await db.execute(
+        select(models.Connection)
+        .where(models.Connection.id == id)
+        .options(
+            selectinload(models.Connection.requester),
+            selectinload(models.Connection.addressee),
+        )
+    )
+    connection = result.scalars().first()
     return _serialize_connection(connection)
 
 
@@ -174,7 +202,14 @@ async def decline_connection(
     user: schemas.UserRead = Depends(get_current_user),
 ):
     """Decline a pending connection request. Only the addressee can decline."""
-    connection = await db.get(models.Connection, id)
+    connection = await db.get(
+        models.Connection,
+        id,
+        options=[
+            selectinload(models.Connection.requester),
+            selectinload(models.Connection.addressee),
+        ],
+    )
     if connection is None:
         raise HTTPException(status_code=404, detail="Connection not found")
     if connection.addressee_id != user.id:
@@ -189,7 +224,15 @@ async def decline_connection(
 
     connection.status = "declined"
     await db.commit()
-    await db.refresh(connection, attribute_names=["requester", "addressee"])
+    result = await db.execute(
+        select(models.Connection)
+        .where(models.Connection.id == id)
+        .options(
+            selectinload(models.Connection.requester),
+            selectinload(models.Connection.addressee),
+        )
+    )
+    connection = result.scalars().first()
     return _serialize_connection(connection)
 
 
@@ -200,7 +243,14 @@ async def remove_connection(
     user: schemas.UserRead = Depends(get_current_user),
 ):
     """Remove an accepted connection or cancel a pending request. Either party can do this."""
-    connection = await db.get(models.Connection, id)
+    connection = await db.get(
+        models.Connection,
+        id,
+        options=[
+            selectinload(models.Connection.requester),
+            selectinload(models.Connection.addressee),
+        ],
+    )
     if connection is None:
         raise HTTPException(status_code=404, detail="Connection not found")
     if user.id not in (connection.requester_id, connection.addressee_id):
@@ -224,7 +274,14 @@ async def block_connection(
     user: schemas.UserRead = Depends(get_current_user),
 ):
     """Block a user via an existing connection record. Sets status to blocked."""
-    connection = await db.get(models.Connection, id)
+    connection = await db.get(
+        models.Connection,
+        id,
+        options=[
+            selectinload(models.Connection.requester),
+            selectinload(models.Connection.addressee),
+        ],
+    )
     if connection is None:
         raise HTTPException(status_code=404, detail="Connection not found")
     if user.id not in (connection.requester_id, connection.addressee_id):
@@ -234,5 +291,13 @@ async def block_connection(
 
     connection.status = "blocked"
     await db.commit()
-    await db.refresh(connection, attribute_names=["requester", "addressee"])
+    result = await db.execute(
+        select(models.Connection)
+        .where(models.Connection.id == id)
+        .options(
+            selectinload(models.Connection.requester),
+            selectinload(models.Connection.addressee),
+        )
+    )
+    connection = result.scalars().first()
     return _serialize_connection(connection)

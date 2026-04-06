@@ -53,6 +53,14 @@ def build_user_display_name(user: Any) -> str:
     return display_name or getattr(user, "email", "") or str(getattr(user, "id", ""))
 
 
+def compute_version_hash(instruction: str | None, json_schema: dict | None) -> str:
+    """Compute a SHA-256 hash of an extractor's instruction and schema for traceability."""
+    import hashlib
+
+    content = (instruction or "") + json.dumps(json_schema or {}, sort_keys=True)
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
 def _is_tracking_query_param(name: str) -> bool:
     lowered = name.lower()
     return lowered.startswith("utm_") or lowered in TRACKING_QUERY_PARAMS

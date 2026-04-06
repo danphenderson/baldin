@@ -13,6 +13,7 @@ import {
   AutoAwesome as AIIcon,
   OpenInNew as OpenIcon,
   Warning as WarningIcon,
+  PlaylistAdd as PlaylistAddIcon,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
@@ -28,6 +29,8 @@ import { getDocuments, downloadDocument } from '../../service/documents';
 import { getCoverLetters, downloadCoverLetter, type CoverLetterRead } from '../../service/cover-letters';
 import { getResumes, downloadResume, type ResumeRead } from '../../service/resumes';
 import { COLUMNS, relativeDate } from './use-applications';
+import CreateActionItemDialog from '../../component/create-action-item-dialog';
+import type { ActionItemRead, ActionItemCreate } from '../../service/action-items';
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -63,6 +66,9 @@ const ApplicationDetailPage: React.FC = () => {
 
   /* delete confirmation */
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  /* action item dialog */
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
 
   /* inline-edit state for new metadata fields */
   const [localNotes, setLocalNotes] = useState('');
@@ -499,6 +505,15 @@ const ApplicationDetailPage: React.FC = () => {
                 }),
               }}
             />
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<PlaylistAddIcon />}
+              onClick={() => setActionDialogOpen(true)}
+              sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+            >
+              Create Action
+            </Button>
           </Stack>
         </Box>
 
@@ -753,6 +768,22 @@ const ApplicationDetailPage: React.FC = () => {
           <Button variant="contained" color="error" onClick={handleDeleteConfirm}>Delete</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Create Action Item dialog */}
+      <CreateActionItemDialog
+        open={actionDialogOpen}
+        onClose={() => setActionDialogOpen(false)}
+        onCreated={(item: ActionItemRead) => {
+          setActionDialogOpen(false);
+          showSuccess('Action item created');
+        }}
+        defaults={{
+          title: localNextStep,
+          kind: 'follow_up' as ActionItemCreate['kind'],
+          due_at: localNextStepDue || undefined,
+          application_id: app.id,
+        }}
+      />
     </Box>
   );
 };

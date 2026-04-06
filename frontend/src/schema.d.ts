@@ -173,11 +173,25 @@ export interface paths {
     /** Create Orch Event */
     post: operations["create_orch_event_data_orchestration_events_post"];
   };
+  "/data_orchestration/events/prune": {
+    /**
+     * Prune Orchestration Events
+     * @description Delete completed/failed orchestration events older than the specified age.
+     */
+    delete: operations["prune_orchestration_events_data_orchestration_events_prune_delete"];
+  };
   "/data_orchestration/events/{id}": {
     /** Read Orch Event */
     get: operations["read_orch_event_data_orchestration_events__id__get"];
     /** Update Orch Event */
     put: operations["update_orch_event_data_orchestration_events__id__put"];
+  };
+  "/data_orchestration/events/{event_id}/retry": {
+    /**
+     * Retry Orch Event
+     * @description Retry a failed orchestration event by creating a new event linked to the original.
+     */
+    post: operations["retry_orch_event_data_orchestration_events__event_id__retry_post"];
   };
   "/contacts/": {
     /** Get Current User Contacts */
@@ -336,6 +350,13 @@ export interface paths {
     /** Detach Document From Application */
     delete: operations["detach_document_from_application_applications__id__documents__document_id__delete"];
   };
+  "/documents/upload": {
+    /**
+     * Upload Document
+     * @description Upload a PDF file, extract its text, and create a new Document + v1.
+     */
+    post: operations["upload_document_documents_upload_post"];
+  };
   "/documents/pinned": {
     /**
      * Get Pinned Documents
@@ -351,6 +372,20 @@ export interface paths {
      * @description Create a document with its initial version (v1).
      */
     post: operations["create_document_documents__post"];
+  };
+  "/documents/shared-with-me": {
+    /**
+     * List Shared With Me
+     * @description List documents that other users have shared with the current user.
+     */
+    get: operations["list_shared_with_me_documents_shared_with_me_get"];
+  };
+  "/documents/{document_id}/share-candidates": {
+    /**
+     * List Share Candidates
+     * @description Look up authenticated share candidates for a specific document.
+     */
+    get: operations["list_share_candidates_documents__document_id__share_candidates_get"];
   };
   "/documents/generate": {
     /**
@@ -372,6 +407,13 @@ export interface paths {
     /** Update Document */
     patch: operations["update_document_documents__document_id__patch"];
   };
+  "/documents/{document_id}/activity": {
+    /**
+     * List Document Activity
+     * @description Read audit-style activity history for a document.
+     */
+    get: operations["list_document_activity_documents__document_id__activity_get"];
+  };
   "/documents/{document_id}/versions": {
     /** List Versions */
     get: operations["list_versions_documents__document_id__versions_get"];
@@ -392,9 +434,40 @@ export interface paths {
      */
     post: operations["pin_document_documents__document_id__pin_post"];
   };
+  "/documents/{document_id}/original": {
+    /**
+     * Download Original
+     * @description Download the original uploaded PDF for the head version.
+     */
+    get: operations["download_original_documents__document_id__original_get"];
+  };
   "/documents/{document_id}/download": {
     /** Download Document */
     get: operations["download_document_documents__document_id__download_get"];
+  };
+  "/documents/{document_id}/shares": {
+    /**
+     * List Shares
+     * @description List all shares for a document (owner only).
+     */
+    get: operations["list_shares_documents__document_id__shares_get"];
+    /**
+     * Create Share
+     * @description Grant another user access to this document (owner only).
+     */
+    post: operations["create_share_documents__document_id__shares_post"];
+  };
+  "/documents/{document_id}/shares/{share_id}": {
+    /**
+     * Delete Share
+     * @description Revoke a share (owner only).
+     */
+    delete: operations["delete_share_documents__document_id__shares__share_id__delete"];
+    /**
+     * Update Share
+     * @description Update a share's role (owner only).
+     */
+    patch: operations["update_share_documents__document_id__shares__share_id__patch"];
   };
   "/education/": {
     /** Read Current User Educations */
@@ -474,6 +547,10 @@ export interface paths {
     /** Create Extractor Example */
     post: operations["create_extractor_example_extractor__id__examples_post"];
   };
+  "/extractor/{id}/versions": {
+    /** List Extractor Versions */
+    get: operations["list_extractor_versions_extractor__id__versions_get"];
+  };
   "/extractor/{id}/examples/{example_id}": {
     /** Delete Extractor Example */
     delete: operations["delete_extractor_example_extractor__id__examples__example_id__delete"];
@@ -484,6 +561,13 @@ export interface paths {
      * @description Run an extractor on a given payload
      */
     post: operations["extractor_runner_extractor__id__run_post"];
+  };
+  "/extractor/{id}/run/{event_id}/retry": {
+    /**
+     * Retry Extractor Run
+     * @description Retry a failed extractor run by re-executing against the same source.
+     */
+    post: operations["retry_extractor_run_extractor__id__run__event_id__retry_post"];
   };
   "/crawlers/pipelines": {
     /** List Crawler Pipelines */
@@ -505,6 +589,13 @@ export interface paths {
     /** List Crawler Runs */
     get: operations["list_crawler_runs_crawlers_runs_get"];
   };
+  "/crawlers/runs/prune": {
+    /**
+     * Prune Crawler Runs
+     * @description Delete completed/failed/cancelled crawler runs older than the specified age.
+     */
+    delete: operations["prune_crawler_runs_crawlers_runs_prune_delete"];
+  };
   "/crawlers/runs/{run_id}": {
     /** Get Crawler Run */
     get: operations["get_crawler_run_crawlers_runs__run_id__get"];
@@ -520,6 +611,10 @@ export interface paths {
   "/crawlers/runs/{run_id}/resume": {
     /** Resume Crawler Run */
     post: operations["resume_crawler_run_crawlers_runs__run_id__resume_post"];
+  };
+  "/crawlers/runs/{run_id}/retry": {
+    /** Retry Crawler Run */
+    post: operations["retry_crawler_run_crawlers_runs__run_id__retry_post"];
   };
   "/directory/": {
     /**
@@ -643,6 +738,62 @@ export interface paths {
      */
     delete: operations["remove_participant_conversations__conversation_id__participants__target_user_id__delete"];
   };
+  "/documents/{document_id}/collaborate/bootstrap": {
+    /** Request Collaboration Bootstrap */
+    post: operations["request_collaboration_bootstrap_documents__document_id__collaborate_bootstrap_post"];
+  };
+  "/action-items/": {
+    /** List Action Items */
+    get: operations["list_action_items_action_items__get"];
+    /** Create Action Item */
+    post: operations["create_action_item_action_items__post"];
+  };
+  "/action-items/reorder": {
+    /**
+     * Reorder Action Items
+     * @description Set sort_order for action items based on position in item_ids array.
+     */
+    post: operations["reorder_action_items_action_items_reorder_post"];
+  };
+  "/action-items/{id}": {
+    /** Get Action Item */
+    get: operations["get_action_item_action_items__id__get"];
+    /** Delete Action Item */
+    delete: operations["delete_action_item_action_items__id__delete"];
+    /** Update Action Item */
+    patch: operations["update_action_item_action_items__id__patch"];
+  };
+  "/action-items/from-application/{application_id}": {
+    /** Create Action Item From Application */
+    post: operations["create_action_item_from_application_action_items_from_application__application_id__post"];
+  };
+  "/activity-feed/": {
+    /** Get Activity Feed */
+    get: operations["get_activity_feed_activity_feed__get"];
+  };
+  "/activity-feed/summary": {
+    /** Get Command Center Summary */
+    get: operations["get_command_center_summary_activity_feed_summary_get"];
+  };
+  "/review/items": {
+    /**
+     * List Review Items
+     * @description List all items pending human review.
+     */
+    get: operations["list_review_items_review_items_get"];
+  };
+  "/review/items/{item_type}/{item_id}/approve": {
+    /** Approve Item */
+    post: operations["approve_item_review_items__item_type___item_id__approve_post"];
+  };
+  "/review/items/{item_type}/{item_id}/reject": {
+    /** Reject Item */
+    post: operations["reject_item_review_items__item_type___item_id__reject_post"];
+  };
+  "/review/items/batch": {
+    /** Batch Review */
+    post: operations["batch_review_review_items_batch_post"];
+  };
   "/": {
     /** Root */
     get: operations["root__get"];
@@ -653,6 +804,215 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    /** ActionItemCreate */
+    ActionItemCreate: {
+      /** Title */
+      title: string;
+      /** Description */
+      description?: string | null;
+      kind: components["schemas"]["ActionItemKind"];
+      /** @default pending */
+      status?: components["schemas"]["ActionItemStatus"];
+      /** @default medium */
+      priority?: components["schemas"]["ActionItemPriority"];
+      /** Due At */
+      due_at?: string | null;
+      /**
+       * Sort Order
+       * @default 0
+       */
+      sort_order?: number;
+      /** Application Id */
+      application_id?: string | null;
+      /** Lead Id */
+      lead_id?: string | null;
+      /** Document Id */
+      document_id?: string | null;
+      /** Conversation Id */
+      conversation_id?: string | null;
+    };
+    /** ActionItemDetailRead */
+    ActionItemDetailRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+      /** Title */
+      title: string;
+      /** Description */
+      description?: string | null;
+      kind: components["schemas"]["ActionItemKind"];
+      status: components["schemas"]["ActionItemStatus"];
+      priority: components["schemas"]["ActionItemPriority"];
+      /** Due At */
+      due_at?: string | null;
+      /** Completed At */
+      completed_at?: string | null;
+      /**
+       * Sort Order
+       * @default 0
+       */
+      sort_order?: number;
+      /** Application Id */
+      application_id?: string | null;
+      /** Lead Id */
+      lead_id?: string | null;
+      /** Document Id */
+      document_id?: string | null;
+      /** Conversation Id */
+      conversation_id?: string | null;
+      application?: components["schemas"]["ApplicationRead"] | null;
+      lead?: components["schemas"]["LeadRead"] | null;
+      document?: components["schemas"]["DocumentRead"] | null;
+      conversation?: components["schemas"]["ConversationRead"] | null;
+    };
+    /**
+     * ActionItemKind
+     * @enum {string}
+     */
+    ActionItemKind: "follow_up" | "prepare_document" | "send_message" | "review_lead" | "schedule_interview" | "custom";
+    /**
+     * ActionItemPriority
+     * @enum {string}
+     */
+    ActionItemPriority: "low" | "medium" | "high" | "urgent";
+    /** ActionItemRead */
+    ActionItemRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+      /** Title */
+      title: string;
+      /** Description */
+      description?: string | null;
+      kind: components["schemas"]["ActionItemKind"];
+      status: components["schemas"]["ActionItemStatus"];
+      priority: components["schemas"]["ActionItemPriority"];
+      /** Due At */
+      due_at?: string | null;
+      /** Completed At */
+      completed_at?: string | null;
+      /**
+       * Sort Order
+       * @default 0
+       */
+      sort_order?: number;
+      /** Application Id */
+      application_id?: string | null;
+      /** Lead Id */
+      lead_id?: string | null;
+      /** Document Id */
+      document_id?: string | null;
+      /** Conversation Id */
+      conversation_id?: string | null;
+    };
+    /** ActionItemReorder */
+    ActionItemReorder: {
+      /** Item Ids */
+      item_ids: string[];
+    };
+    /**
+     * ActionItemStatus
+     * @enum {string}
+     */
+    ActionItemStatus: "pending" | "in_progress" | "completed" | "dismissed";
+    /** ActionItemUpdate */
+    ActionItemUpdate: {
+      /** Title */
+      title?: string | null;
+      /** Description */
+      description?: string | null;
+      kind?: components["schemas"]["ActionItemKind"] | null;
+      status?: components["schemas"]["ActionItemStatus"] | null;
+      priority?: components["schemas"]["ActionItemPriority"] | null;
+      /** Due At */
+      due_at?: string | null;
+      /** Sort Order */
+      sort_order?: number | null;
+      /** Application Id */
+      application_id?: string | null;
+      /** Lead Id */
+      lead_id?: string | null;
+      /** Document Id */
+      document_id?: string | null;
+      /** Conversation Id */
+      conversation_id?: string | null;
+    };
+    /** ActivityFeedItem */
+    ActivityFeedItem: {
+      /** Type */
+      type: string;
+      /** Entity Type */
+      entity_type: string;
+      /**
+       * Entity Id
+       * Format: uuid4
+       */
+      entity_id: string;
+      /** Title */
+      title: string;
+      /** Detail */
+      detail?: string | null;
+      /**
+       * Timestamp
+       * Format: date-time
+       */
+      timestamp: string;
+      /** Metadata */
+      metadata?: {
+        [key: string]: unknown;
+      } | null;
+    };
+    /** ActivityFeedRead */
+    ActivityFeedRead: {
+      /** Items */
+      items: components["schemas"]["ActivityFeedItem"][];
+      /** Total */
+      total: number;
+      /** Page */
+      page: number;
+      /** Page Size */
+      page_size: number;
+    };
     /** ApplicationCoverLetterAttach */
     ApplicationCoverLetterAttach: {
       /**
@@ -868,6 +1228,21 @@ export interface components {
       /** Password */
       password: string;
     };
+    /** Body_upload_document_documents_upload_post */
+    Body_upload_document_documents_upload_post: {
+      /**
+       * File
+       * Format: binary
+       */
+      file: string;
+      /** Title */
+      title: string;
+      /**
+       * Kind
+       * @default freeform
+       */
+      kind?: string;
+    };
     /** Body_verify_request_token_auth_request_verify_token_post */
     Body_verify_request_token_auth_request_verify_token_post: {
       /**
@@ -967,6 +1342,37 @@ export interface components {
        * @description Issued date of the certificate
        */
       issued_date?: string | null;
+    };
+    /** CommandCenterSummary */
+    CommandCenterSummary: {
+      /** Lead Count */
+      lead_count: number;
+      /** Unapplied Lead Count */
+      unapplied_lead_count: number;
+      /** Application Count */
+      application_count: number;
+      /** Active Application Count */
+      active_application_count: number;
+      /** Status Breakdown */
+      status_breakdown: {
+        [key: string]: number;
+      };
+      /** Pending Action Items */
+      pending_action_items: number;
+      /** Overdue Action Items */
+      overdue_action_items: number;
+      /** Action Items Due Today */
+      action_items_due_today: number;
+      /** Pending Connections */
+      pending_connections: number;
+      /** Unread Messages */
+      unread_messages: number;
+      /** Profile Completion */
+      profile_completion: number;
+      /** Documents Count */
+      documents_count: number;
+      /** Draft Documents Count */
+      draft_documents_count: number;
     };
     /** CompanyCreate */
     CompanyCreate: {
@@ -1324,6 +1730,11 @@ export interface components {
       notes?: string | null;
     };
     /**
+     * ContentFormat
+     * @enum {string}
+     */
+    ContentFormat: "plain_text" | "tiptap_json";
+    /**
      * ContentType
      * @enum {string}
      */
@@ -1605,6 +2016,12 @@ export interface components {
       extraction_policy?: {
         [key: string]: unknown;
       } | null;
+      /**
+       * Requires Approval
+       * @description Whether runs require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
     };
     /** CrawlerPipelineRead */
     CrawlerPipelineRead: {
@@ -1672,6 +2089,12 @@ export interface components {
         [key: string]: unknown;
       } | null;
       /**
+       * Requires Approval
+       * @description Whether runs require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
+      /**
        * Created By User Id
        * Format: uuid4
        * @description Superuser who created the pipeline
@@ -1736,6 +2159,11 @@ export interface components {
       extraction_policy?: {
         [key: string]: unknown;
       } | null;
+      /**
+       * Requires Approval
+       * @description Whether runs require human approval
+       */
+      requires_approval?: boolean | null;
     };
     /**
      * CrawlerRunDetailRead
@@ -1797,6 +2225,11 @@ export interface components {
        * @description Error summary if failed
        */
       error_summary?: string | null;
+      /**
+       * Retry Of Id
+       * @description ID of the original run this is a retry of
+       */
+      retry_of_id?: string | null;
       /**
        * Events
        * @description Linked orchestration events
@@ -1861,12 +2294,17 @@ export interface components {
        * @description Error summary if failed
        */
       error_summary?: string | null;
+      /**
+       * Retry Of Id
+       * @description ID of the original run this is a retry of
+       */
+      retry_of_id?: string | null;
     };
     /**
      * CrawlerRunStatus
      * @enum {string}
      */
-    CrawlerRunStatus: "pending" | "running" | "success" | "failed" | "cancelled" | "paused";
+    CrawlerRunStatus: "pending" | "running" | "success" | "failed" | "cancelled" | "paused" | "pending_review";
     /**
      * CrawlerSourceType
      * @enum {string}
@@ -1877,6 +2315,89 @@ export interface components {
      * @enum {string}
      */
     CrawlerTriggerType: "manual" | "scheduled";
+    /** DocumentActivityRead */
+    DocumentActivityRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Document identifier
+       */
+      document_id: string;
+      /** @description Activity event type */
+      activity_type: components["schemas"]["DocumentActivityType"];
+      /**
+       * Message
+       * @description Human-readable activity summary
+       */
+      message: string;
+      /**
+       * Details
+       * @description Structured activity metadata for UI rendering
+       */
+      details?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Actor User Id
+       * @description User who triggered the activity, when available
+       */
+      actor_user_id?: string | null;
+      /**
+       * Actor Full Name
+       * @description Best-available display label for the actor
+       */
+      actor_full_name?: string | null;
+      /**
+       * Actor Email
+       * @description Actor email address
+       */
+      actor_email?: string | null;
+    };
+    /**
+     * DocumentActivityType
+     * @enum {string}
+     */
+    DocumentActivityType: "document_created" | "document_uploaded" | "version_saved" | "share_created" | "share_updated" | "share_revoked" | "document_archived" | "document_unarchived" | "document_pinned" | "document_unpinned";
+    /** DocumentCollaborationBootstrapRead */
+    DocumentCollaborationBootstrapRead: {
+      /** @description How the client should proceed with collaborative bootstrap */
+      status: components["schemas"]["DocumentCollaborationBootstrapStatus"];
+      /**
+       * Retry After Ms
+       * @description How long the client should wait before retrying bootstrap when another claim is still active
+       */
+      retry_after_ms?: number | null;
+      /**
+       * Content
+       * @description Authoritative rich-text content to seed when the bootstrap status is seed
+       */
+      content?: string | null;
+      /** @description Content format for the collaborative bootstrap payload when the bootstrap status is seed */
+      content_format?: components["schemas"]["ContentFormat"] | null;
+    };
+    /**
+     * DocumentCollaborationBootstrapStatus
+     * @enum {string}
+     */
+    DocumentCollaborationBootstrapStatus: "connect" | "pending" | "seed";
     /** DocumentCreate */
     DocumentCreate: {
       /** @description Document kind discriminator */
@@ -1898,6 +2419,11 @@ export interface components {
       content?: string | null;
       /** @description Content origin type for the initial version */
       content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * @description Content format: plain_text or tiptap_json
+       * @default plain_text
+       */
+      content_format?: components["schemas"]["ContentFormat"];
     };
     /** DocumentDetailRead */
     DocumentDetailRead: {
@@ -1942,6 +2468,48 @@ export interface components {
        * @default 0
        */
       version_count?: number;
+      /** @description Effective share role for the viewer (null means owner) */
+      viewer_role?: components["schemas"]["DocumentShareRole"] | null;
+      /**
+       * Owner User Id
+       * @description Owner identifier when the document is shared with the viewer
+       */
+      owner_user_id?: string | null;
+      /**
+       * Owner Full Name
+       * @description Owner full name when the document is shared with the viewer
+       */
+      owner_full_name?: string | null;
+      /**
+       * Owner Email
+       * @description Owner email when the document is shared with the viewer
+       */
+      owner_email?: string | null;
+      /**
+       * Shared By User Id
+       * @description User who granted access to the viewer
+       */
+      shared_by_user_id?: string | null;
+      /**
+       * Shared By Full Name
+       * @description Full name of the user who granted access to the viewer
+       */
+      shared_by_full_name?: string | null;
+      /**
+       * Shared By Email
+       * @description Email of the user who granted access to the viewer
+       */
+      shared_by_email?: string | null;
+      /**
+       * Shared At
+       * @description Timestamp when the viewer was granted access
+       */
+      shared_at?: string | null;
+      /**
+       * Share Updated At
+       * @description Timestamp when the share was last updated
+       */
+      share_updated_at?: string | null;
       /**
        * Versions
        * @description Full version history, oldest first
@@ -2026,6 +2594,170 @@ export interface components {
        * @default 0
        */
       version_count?: number;
+      /** @description Effective share role for the viewer (null means owner) */
+      viewer_role?: components["schemas"]["DocumentShareRole"] | null;
+      /**
+       * Owner User Id
+       * @description Owner identifier when the document is shared with the viewer
+       */
+      owner_user_id?: string | null;
+      /**
+       * Owner Full Name
+       * @description Owner full name when the document is shared with the viewer
+       */
+      owner_full_name?: string | null;
+      /**
+       * Owner Email
+       * @description Owner email when the document is shared with the viewer
+       */
+      owner_email?: string | null;
+      /**
+       * Shared By User Id
+       * @description User who granted access to the viewer
+       */
+      shared_by_user_id?: string | null;
+      /**
+       * Shared By Full Name
+       * @description Full name of the user who granted access to the viewer
+       */
+      shared_by_full_name?: string | null;
+      /**
+       * Shared By Email
+       * @description Email of the user who granted access to the viewer
+       */
+      shared_by_email?: string | null;
+      /**
+       * Shared At
+       * @description Timestamp when the viewer was granted access
+       */
+      shared_at?: string | null;
+      /**
+       * Share Updated At
+       * @description Timestamp when the share was last updated
+       */
+      share_updated_at?: string | null;
+    };
+    /** DocumentShareCandidateRead */
+    DocumentShareCandidateRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description Share candidate identifier
+       */
+      id: string;
+      /**
+       * Full Name
+       * @description Best-available human label for the user
+       */
+      full_name: string;
+      /**
+       * Email
+       * Format: email
+       * @description Candidate email address
+       */
+      email: string;
+      /**
+       * Headline
+       * @description Candidate headline
+       */
+      headline?: string | null;
+      /**
+       * Avatar Uri
+       * @description Candidate avatar URI
+       */
+      avatar_uri?: string | null;
+    };
+    /** DocumentShareCreate */
+    DocumentShareCreate: {
+      /**
+       * Shared With User Id
+       * Format: uuid4
+       * @description User to share the document with
+       */
+      shared_with_user_id: string;
+      /**
+       * @description Access level to grant
+       * @default viewer
+       */
+      role?: components["schemas"]["DocumentShareRole"];
+    };
+    /** DocumentShareRead */
+    DocumentShareRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Document identifier
+       */
+      document_id: string;
+      /**
+       * Shared With User Id
+       * Format: uuid4
+       * @description User the document is shared with
+       */
+      shared_with_user_id: string;
+      /**
+       * Shared By User Id
+       * Format: uuid4
+       * @description User who created the share
+       */
+      shared_by_user_id: string;
+      /** @description Access role: viewer or editor */
+      role: components["schemas"]["DocumentShareRole"];
+      /**
+       * Shared With Full Name
+       * @description Best-available name for the shared user
+       */
+      shared_with_full_name: string;
+      /**
+       * Shared With Email
+       * Format: email
+       * @description Email for the shared user
+       */
+      shared_with_email: string;
+      /**
+       * Shared With Headline
+       * @description Headline for the shared user
+       */
+      shared_with_headline?: string | null;
+      /**
+       * Shared By Full Name
+       * @description Best-available name for the sharing user
+       */
+      shared_by_full_name: string;
+      /**
+       * Shared By Email
+       * Format: email
+       * @description Email for the sharing user
+       */
+      shared_by_email: string;
+    };
+    /**
+     * DocumentShareRole
+     * @enum {string}
+     */
+    DocumentShareRole: "viewer" | "editor";
+    /** DocumentShareUpdate */
+    DocumentShareUpdate: {
+      /** @description New access level */
+      role: components["schemas"]["DocumentShareRole"];
     };
     /**
      * DocumentStatus
@@ -2056,6 +2788,11 @@ export interface components {
       content?: string | null;
       /** @description Content origin type */
       content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * @description Content format: plain_text or tiptap_json
+       * @default plain_text
+       */
+      content_format?: components["schemas"]["ContentFormat"];
       /**
        * Change Summary
        * @description User or system note for this version
@@ -2105,6 +2842,16 @@ export interface components {
       content?: string | null;
       /** @description Content origin type */
       content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * Content Format
+       * @description Content format: plain_text or tiptap_json
+       */
+      content_format?: string | null;
+      /**
+       * Source File
+       * @description Relative path to uploaded source file
+       */
+      source_file?: string | null;
       /**
        * Change Summary
        * @description User or system note for this version
@@ -2412,6 +3159,12 @@ export interface components {
        * @default []
        */
       extractor_examples?: components["schemas"]["ExtractorExampleRead"][];
+      /**
+       * Requires Approval
+       * @description Whether extraction results require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
     };
     /**
      * ExtractorDefinition
@@ -2498,6 +3251,12 @@ export interface components {
        * @default []
        */
       extractor_examples?: components["schemas"]["ExtractorExampleRead"][];
+      /**
+       * Requires Approval
+       * @description Whether extraction results require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
       /**
        * Id
        * Format: uuid4
@@ -2600,6 +3359,61 @@ export interface components {
        * @default []
        */
       extractor_examples?: components["schemas"]["ExtractorExampleRead"][];
+      /**
+       * Requires Approval
+       * @description Whether extraction results require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
+    };
+    /** ExtractorVersionRead */
+    ExtractorVersionRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Extractor Id
+       * Format: uuid4
+       * @description Parent extractor ID
+       */
+      extractor_id: string;
+      /**
+       * Version Number
+       * @description Version sequence number
+       */
+      version_number: number;
+      /**
+       * Instruction
+       * @description Instruction at this version
+       */
+      instruction?: string | null;
+      /**
+       * Json Schema
+       * @description JSON schema at this version
+       */
+      json_schema?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Version Hash
+       * @description SHA-256 hash of instruction + schema
+       */
+      version_hash: string;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -3362,6 +4176,16 @@ export interface components {
        * @description Pipeline ID
        */
       pipeline_id?: string | null;
+      /**
+       * Version Hash
+       * @description Extractor version hash used for this run
+       */
+      version_hash?: string | null;
+      /**
+       * Retry Of Id
+       * @description ID of the original event this is a retry of
+       */
+      retry_of_id?: string | null;
     };
     /** OrchestrationEventRead */
     "OrchestrationEventRead-Output": {
@@ -3411,12 +4235,22 @@ export interface components {
        * @description Pipeline ID
        */
       pipeline_id?: string | null;
+      /**
+       * Version Hash
+       * @description Extractor version hash used for this run
+       */
+      version_hash?: string | null;
+      /**
+       * Retry Of Id
+       * @description ID of the original event this is a retry of
+       */
+      retry_of_id?: string | null;
     };
     /**
      * OrchestrationEventStatusType
      * @enum {string}
      */
-    OrchestrationEventStatusType: "pending" | "running" | "success" | "failure";
+    OrchestrationEventStatusType: "pending" | "running" | "success" | "failure" | "pending_review";
     /**
      * OrchestrationEventSummary
      * @description Lightweight summary of an OrchestrationEvent for embedding in CrawlerRunDetailRead.
@@ -3747,6 +4581,80 @@ export interface components {
       /** @description Resume content type */
       content_type?: components["schemas"]["ContentType"] | null;
     };
+    /**
+     * ReviewAction
+     * @enum {string}
+     */
+    ReviewAction: "approve" | "reject";
+    /** ReviewBatchItem */
+    ReviewBatchItem: {
+      /** @description Type of review item */
+      item_type: components["schemas"]["ReviewItemType"];
+      /**
+       * Item Id
+       * Format: uuid4
+       * @description Item ID
+       */
+      item_id: string;
+      /** @description approve or reject */
+      action: components["schemas"]["ReviewAction"];
+    };
+    /** ReviewBatchRequest */
+    ReviewBatchRequest: {
+      /**
+       * Items
+       * @description Batch of review actions
+       */
+      items: components["schemas"]["ReviewBatchItem"][];
+    };
+    /** ReviewBatchResponse */
+    ReviewBatchResponse: {
+      /**
+       * Processed
+       * @description Number of items processed
+       */
+      processed: number;
+      /**
+       * Errors
+       * @description Errors encountered
+       * @default []
+       */
+      errors?: string[];
+    };
+    /** ReviewItemRead */
+    ReviewItemRead: {
+      /** @description Type of review item */
+      item_type: components["schemas"]["ReviewItemType"];
+      /**
+       * Item Id
+       * Format: uuid4
+       * @description ID of the item
+       */
+      item_id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description When the item was created
+       */
+      created_at: string;
+      /**
+       * Summary
+       * @description Brief summary of the item
+       */
+      summary?: string | null;
+      /**
+       * Detail
+       * @description Additional context
+       */
+      detail?: {
+        [key: string]: unknown;
+      } | null;
+    };
+    /**
+     * ReviewItemType
+     * @enum {string}
+     */
+    ReviewItemType: "crawler_run" | "extraction_event" | "lead";
     /** SkillCreate */
     SkillCreate: {
       /**
@@ -5508,6 +6416,32 @@ export interface operations {
       };
     };
   };
+  /**
+   * Prune Orchestration Events
+   * @description Delete completed/failed orchestration events older than the specified age.
+   */
+  prune_orchestration_events_data_orchestration_events_prune_delete: {
+    parameters: {
+      query?: {
+        /** @description Delete events older than N days */
+        older_than_days?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Read Orch Event */
   read_orch_event_data_orchestration_events__id__get: {
     parameters: {
@@ -5540,6 +6474,31 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["OrchestrationEventUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retry Orch Event
+   * @description Retry a failed orchestration event by creating a new event linked to the original.
+   */
+  retry_orch_event_data_orchestration_events__event_id__retry_post: {
+    parameters: {
+      path: {
+        event_id: string;
       };
     };
     responses: {
@@ -6566,6 +7525,31 @@ export interface operations {
     };
   };
   /**
+   * Upload Document
+   * @description Upload a PDF file, extract its text, and create a new Document + v1.
+   */
+  upload_document_documents_upload_post: {
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_upload_document_documents_upload_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
    * Get Pinned Documents
    * @description Return the user's pinned (active/canonical) documents — at most one per kind.
    */
@@ -6623,6 +7607,51 @@ export interface operations {
       201: {
         content: {
           "application/json": components["schemas"]["DocumentDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Shared With Me
+   * @description List documents that other users have shared with the current user.
+   */
+  list_shared_with_me_documents_shared_with_me_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"][];
+        };
+      };
+    };
+  };
+  /**
+   * List Share Candidates
+   * @description Look up authenticated share candidates for a specific document.
+   */
+  list_share_candidates_documents__document_id__share_candidates_get: {
+    parameters: {
+      query?: {
+        /** @description Search by name, email, or headline */
+        q?: string;
+        /** @description Maximum candidates to return */
+        limit?: number;
+      };
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentShareCandidateRead"][];
         };
       };
       /** @description Validation Error */
@@ -6722,6 +7751,35 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["DocumentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Document Activity
+   * @description Read audit-style activity history for a document.
+   */
+  list_document_activity_documents__document_id__activity_get: {
+    parameters: {
+      query?: {
+        /** @description Maximum activity rows to return */
+        limit?: number;
+      };
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentActivityRead"][];
         };
       };
       /** @description Validation Error */
@@ -6837,6 +7895,31 @@ export interface operations {
       };
     };
   };
+  /**
+   * Download Original
+   * @description Download the original uploaded PDF for the head version.
+   */
+  download_original_documents__document_id__original_get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Download Document */
   download_document_documents__document_id__download_get: {
     parameters: {
@@ -6849,6 +7932,116 @@ export interface operations {
       200: {
         content: {
           "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Shares
+   * @description List all shares for a document (owner only).
+   */
+  list_shares_documents__document_id__shares_get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentShareRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Create Share
+   * @description Grant another user access to this document (owner only).
+   */
+  create_share_documents__document_id__shares_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentShareCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentShareRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Delete Share
+   * @description Revoke a share (owner only).
+   */
+  delete_share_documents__document_id__shares__share_id__delete: {
+    parameters: {
+      path: {
+        document_id: string;
+        share_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Update Share
+   * @description Update a share's role (owner only).
+   */
+  update_share_documents__document_id__shares__share_id__patch: {
+    parameters: {
+      path: {
+        document_id: string;
+        share_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentShareUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentShareRead"];
         };
       };
       /** @description Validation Error */
@@ -7327,6 +8520,32 @@ export interface operations {
       };
     };
   };
+  /** List Extractor Versions */
+  list_extractor_versions_extractor__id__versions_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorVersionRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Delete Extractor Example */
   delete_extractor_example_extractor__id__examples__example_id__delete: {
     parameters: {
@@ -7361,6 +8580,32 @@ export interface operations {
     requestBody?: {
       content: {
         "multipart/form-data": components["schemas"]["Body_extractor_runner_extractor__id__run_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retry Extractor Run
+   * @description Retry a failed extractor run by re-executing against the same source.
+   */
+  retry_extractor_run_extractor__id__run__event_id__retry_post: {
+    parameters: {
+      path: {
+        event_id: string;
+        id: string;
       };
     };
     responses: {
@@ -7511,6 +8756,32 @@ export interface operations {
       };
     };
   };
+  /**
+   * Prune Crawler Runs
+   * @description Delete completed/failed/cancelled crawler runs older than the specified age.
+   */
+  prune_crawler_runs_crawlers_runs_prune_delete: {
+    parameters: {
+      query?: {
+        /** @description Delete runs older than N days */
+        older_than_days?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Get Crawler Run */
   get_crawler_run_crawlers_runs__run_id__get: {
     parameters: {
@@ -7579,6 +8850,28 @@ export interface operations {
   };
   /** Resume Crawler Run */
   resume_crawler_run_crawlers_runs__run_id__resume_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Retry Crawler Run */
+  retry_crawler_run_crawlers_runs__run_id__retry_post: {
     parameters: {
       path: {
         run_id: string;
@@ -8063,6 +9356,328 @@ export interface operations {
       /** @description Successful Response */
       204: {
         content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Request Collaboration Bootstrap */
+  request_collaboration_bootstrap_documents__document_id__collaborate_bootstrap_post: {
+    parameters: {
+      query: {
+        token: string;
+      };
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentCollaborationBootstrapRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Action Items */
+  list_action_items_action_items__get: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["ActionItemStatus"] | null;
+        kind?: components["schemas"]["ActionItemKind"] | null;
+        priority?: components["schemas"]["ActionItemPriority"] | null;
+        due_before?: string | null;
+        due_after?: string | null;
+        page?: number;
+        page_size?: number;
+        request_count?: boolean;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActionItemDetailRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Action Item */
+  create_action_item_action_items__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActionItemCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ActionItemRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Reorder Action Items
+   * @description Set sort_order for action items based on position in item_ids array.
+   */
+  reorder_action_items_action_items_reorder_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActionItemReorder"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Action Item */
+  get_action_item_action_items__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActionItemDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Action Item */
+  delete_action_item_action_items__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Action Item */
+  update_action_item_action_items__id__patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActionItemUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActionItemRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Action Item From Application */
+  create_action_item_from_application_action_items_from_application__application_id__post: {
+    parameters: {
+      path: {
+        application_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ActionItemRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Activity Feed */
+  get_activity_feed_activity_feed__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+        since?: string | null;
+        entity_type?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActivityFeedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Command Center Summary */
+  get_command_center_summary_activity_feed_summary_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CommandCenterSummary"];
+        };
+      };
+    };
+  };
+  /**
+   * List Review Items
+   * @description List all items pending human review.
+   */
+  list_review_items_review_items_get: {
+    parameters: {
+      query?: {
+        /** @description Filter by item type */
+        item_type?: components["schemas"]["ReviewItemType"] | null;
+        page?: number;
+        page_size?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ReviewItemRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Approve Item */
+  approve_item_review_items__item_type___item_id__approve_post: {
+    parameters: {
+      path: {
+        item_type: components["schemas"]["ReviewItemType"];
+        item_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Reject Item */
+  reject_item_review_items__item_type___item_id__reject_post: {
+    parameters: {
+      path: {
+        item_type: components["schemas"]["ReviewItemType"];
+        item_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Batch Review */
+  batch_review_review_items_batch_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReviewBatchRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ReviewBatchResponse"];
+        };
       };
       /** @description Validation Error */
       422: {

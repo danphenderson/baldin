@@ -1,7 +1,7 @@
 # app/api/routes/extractor.py
 from typing import Sequence
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import UUID4, Field
 from sqlalchemy import select
@@ -23,6 +23,7 @@ from app.api.deps import (
     schemas,
 )
 from app.core import conf
+from app.core.rate_limit import limiter
 
 router: APIRouter = APIRouter()
 
@@ -137,7 +138,10 @@ UPDATE_CHAIN = (
 
 
 @router.post("/suggest", response_model=ExtractorDefinition)
-async def suggest_extractor(suggest_extractor: SuggestExtractor) -> ExtractorDefinition:
+@limiter.limit("5/minute")
+async def suggest_extractor(
+    request: Request, suggest_extractor: SuggestExtractor
+) -> ExtractorDefinition:
 
     # TODO: Have this take a bool query parameter signaling to create a new extractor
     """Suggest an extractor based on a description."""
@@ -185,8 +189,20 @@ async def create_extractor(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> schemas.ExtractorRead:
+    from app.utils import compute_version_hash
+
     extractor = models.Extractor(**extractor_in.dict(), user_id=user.id)
     db.add(extractor)
+    await db.flush()
+
+    version = models.ExtractorVersion(
+        extractor_id=extractor.id,
+        version_number=1,
+        instruction=extractor.instruction,
+        json_schema=extractor.json_schema,
+        version_hash=compute_version_hash(extractor.instruction, extractor.json_schema),
+    )
+    db.add(version)
     await db.commit()
     return extractor  # type: ignore
 
@@ -197,8 +213,36 @@ async def update_extractor(
     extractor: schemas.ExtractorRead = Depends(get_extractor),
     db: AsyncSession = Depends(get_async_session),
 ) -> schemas.ExtractorRead:
-    for field, value in payload.dict(exclude_unset=True).items():
+    from app.utils import compute_version_hash
+
+    changed_fields = payload.dict(exclude_unset=True)
+    needs_version = "instruction" in changed_fields or "json_schema" in changed_fields
+
+    for field, value in changed_fields.items():
         setattr(extractor, field, value)
+    await db.flush()
+
+    if needs_version:
+        from sqlalchemy import func as sa_func
+
+        max_ver_result = await db.execute(
+            select(
+                sa_func.coalesce(sa_func.max(models.ExtractorVersion.version_number), 0)
+            ).where(models.ExtractorVersion.extractor_id == extractor.id)
+        )
+        max_ver = max_ver_result.scalar() or 0
+
+        version = models.ExtractorVersion(
+            extractor_id=extractor.id,
+            version_number=max_ver + 1,
+            instruction=extractor.instruction,
+            json_schema=extractor.json_schema,
+            version_hash=compute_version_hash(
+                extractor.instruction, extractor.json_schema
+            ),
+        )
+        db.add(version)
+
     await db.commit()
     await db.refresh(extractor)
     return schemas.ExtractorRead.from_orm(extractor)
@@ -230,6 +274,23 @@ async def get_extractor_examples(
     return result.scalars().all()  # type: ignore
 
 
+@router.get("/{id}/versions", response_model=list[schemas.ExtractorVersionRead])
+async def list_extractor_versions(
+    extractor: schemas.ExtractorRead = Depends(get_extractor),
+    db: AsyncSession = Depends(get_async_session),
+    limit: int = Query(20, ge=1),
+    offset: int = Query(0, ge=0),
+) -> Sequence[schemas.ExtractorVersionRead]:
+    result = await db.execute(
+        select(models.ExtractorVersion)
+        .where(models.ExtractorVersion.extractor_id == extractor.id)
+        .order_by(models.ExtractorVersion.version_number.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return result.scalars().all()  # type: ignore
+
+
 @router.post("/{id}/examples", response_model=schemas.ExtractorExampleRead)
 async def create_extractor_example(
     example_in: schemas.ExtractorExampleCreate,
@@ -253,7 +314,9 @@ async def delete_extractor_example(
 
 
 @router.post("/{id}/run", response_model=schemas.ExtractorResponse)
+@limiter.limit("5/minute")
 async def extractor_runner(
+    request: Request,
     extractor: schemas.ExtractorRead = Depends(get_extractor),
     payload: schemas.ExtractorRun = Depends(get_extractor_run_payload),
     db: AsyncSession = Depends(get_async_session),
@@ -261,3 +324,42 @@ async def extractor_runner(
 ) -> schemas.ExtractorResponse:
     """Run an extractor on a given payload"""
     return await run_extractor(extractor, payload, user, db)
+
+
+@router.post("/{id}/run/{event_id}/retry", response_model=schemas.ExtractorResponse)
+async def retry_extractor_run(
+    event_id: UUID4,
+    extractor: schemas.ExtractorRead = Depends(get_extractor),
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> schemas.ExtractorResponse:
+    """Retry a failed extractor run by re-executing against the same source."""
+    event = await db.get(models.OrchestrationEvent, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail=f"Event {event_id} not found")
+    if event.status != "failure":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot retry event with status '{event.status}'. Must be 'failure'.",
+        )
+
+    # Prevent double-retry
+    existing = await db.execute(
+        select(models.OrchestrationEvent).where(
+            models.OrchestrationEvent.retry_of_id == event_id,
+            models.OrchestrationEvent.status.in_(
+                ["pending", "running", "pending_review"]
+            ),
+        )
+    )
+    if existing.scalars().first():
+        raise HTTPException(status_code=409, detail="An active retry already exists.")
+
+    # Reconstruct the payload from the original event
+    original_payload = event.payload or {}
+    retry_payload = schemas.ExtractorRun(
+        text=original_payload.get("text"),
+        mode=original_payload.get("mode", "entire_document"),
+        llm=original_payload.get("llm"),
+    )
+    return await run_extractor(extractor, retry_payload, user, db)

@@ -200,3 +200,8 @@ export const deleteOrchestrationPipeline = async (token: string, id: string): Pr
   const requestOptions = createRequestOptions(token, "DELETE");
   await fetchAPI<void>(`${BASE_URL}/pipelines/${id}`, requestOptions);
 };
+
+export const retryOrchestrationEvent = async (token: string, eventId: string): Promise<OrchestrationEventRead> => {
+  const requestOptions = createRequestOptions(token, "POST");
+  return fetchAPI<OrchestrationEventRead>(`${BASE_URL}/events/${eventId}/retry`, requestOptions);
+};

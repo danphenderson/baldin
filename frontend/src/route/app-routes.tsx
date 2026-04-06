@@ -10,7 +10,7 @@ import ApplicationsGroupLayout from '../layout/applications-group-layout';
 import WorkflowsGroupLayout from '../layout/workflows-group-layout';
 import NetworkGroupLayout from '../layout/network-group-layout';
 import SettingsGroupLayout from '../layout/settings-group-layout';
-import DashboardPage from '../page/dashboard';
+import CommandCenterPage from '../page/command-center';
 import LeadsPage from '../page/leads';
 import { ApplicationsQueuePage, ApplicationsBoardPage, ApplicationDetailPage } from '../page/applications';
 import { DocumentListPage, DocumentDetailPage, DocumentEditorPage, DocumentComparePage } from '../page/documents';
@@ -26,17 +26,26 @@ import ConversationDetailPage from '../page/messages/conversation-detail-page';
 import SubscriptionPage from '../page/settings/subscription-page';
 import GraduationPage from '../page/settings/graduation-page';
 import CrawlersPage from '../page/crawlers';
+import ReviewQueuePage from '../page/review-queue';
+import { UserContext } from '../context/user-context';
 import LoginPage from '../page/login';
 import RegisterPage from '../page/register';
 import UserTermsPage from '../page/user-terms';
 import ErrorPage from '../page/error';
+
+/** Redirects non-superusers away from admin-only routes. */
+const SuperuserRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
+  const { user } = React.useContext(UserContext);
+  if (!user?.is_superuser) return <Navigate to="/workflows" replace />;
+  return children;
+};
 
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<UserRoute />}>
-          <Route index element={<DashboardPage />} />
+          <Route index element={<CommandCenterPage />} />
 
           {/* ── Leads group ── */}
           <Route path="leads" element={<LeadsGroupLayout />}>
@@ -65,7 +74,8 @@ const AppRoutes: React.FC = () => {
           <Route path="workflows" element={<WorkflowsGroupLayout />}>
             <Route index element={<PipelinesPage />} />
             <Route path="extractors" element={<ExtractorPage />} />
-            <Route path="crawlers" element={<CrawlersPage />} />
+            <Route path="review" element={<SuperuserRoute><ReviewQueuePage /></SuperuserRoute>} />
+            <Route path="crawlers" element={<SuperuserRoute><CrawlersPage /></SuperuserRoute>} />
           </Route>
 
           {/* ── Network group ── */}

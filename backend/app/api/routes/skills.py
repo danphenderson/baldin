@@ -3,7 +3,7 @@ import json
 from asyncio import gather
 
 from aiofiles import open as aopen
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy import select
 
 from app.api.deps import AsyncSession, conf
@@ -23,6 +23,7 @@ from app.api.deps import (
     run_extractor,
     schemas,
 )
+from app.core.rate_limit import limiter
 
 router: APIRouter = APIRouter()
 
@@ -49,7 +50,9 @@ async def extract_user_skills_task(
 
 
 @router.post("/extract", response_model=dict[str, str])
+@limiter.limit("5/minute")
 async def extract_user_skills(
+    request: Request,
     background_tasks: BackgroundTasks,
     payload: schemas.ExtractorRun = Depends(get_extractor_run_payload),
     user: schemas.UserRead = Depends(get_current_user),

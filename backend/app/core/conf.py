@@ -115,6 +115,7 @@ class Settings(_BaseSettings):
         return Path(self.PUBLIC_ASSETS_DIR) / "seeds"
 
     CRAWLER_SCHEDULER_ENABLED: bool = True
+    RUN_REAPER_ENABLED: bool = True
 
     @property
     def SHOULD_BOOTSTRAP_ON_STARTUP(self) -> bool:
@@ -125,6 +126,12 @@ class Settings(_BaseSettings):
         if self.ENVIRONMENT == "PYTEST":
             return False
         return self.CRAWLER_SCHEDULER_ENABLED
+
+    @property
+    def SHOULD_RUN_REAPER(self) -> bool:
+        if self.ENVIRONMENT == "PYTEST":
+            return False
+        return self.RUN_REAPER_ENABLED
 
 
 class OpenAI(_BaseSettings, env_prefix="OPENAI_"):

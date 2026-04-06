@@ -1,16 +1,118 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Stack, Typography, Button, Snackbar, Alert, CircularProgress, Paper, Box } from '@mui/material';
+import { Stack, Typography, Button, Snackbar, Alert, CircularProgress, Paper, Box, Switch, FormControlLabel, Collapse, IconButton, Tooltip, Chip } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import HistoryIcon from '@mui/icons-material/History';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 
-import { ExtractorRead, ExtractorResponse, getExtractors } from '../service/extractor';
+import { ExtractorRead, ExtractorResponse, getExtractors, updateExtractor, ExtractorVersionRead, getExtractorVersions } from '../service/extractor';
 
 import ExtractRunModal from '../component/extractor-modal';
 import { ExtractorCreateModal, ExampleCreateModal } from '../component/extractor-modal';
 import RichJsonDisplay from '../component/common/json-modal';
 
 type FeedbackSeverity = 'success' | 'error';
+
+const formatRelativeTime = (iso: string): string => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
+// ---------------------------------------------------------------------------
+// Version History sub-component
+// ---------------------------------------------------------------------------
+
+const VersionHistoryPanel: React.FC<{ extractorId: string; token: string | null }> = ({ extractorId, token }) => {
+  const [open, setOpen] = useState(false);
+  const [versions, setVersions] = useState<ExtractorVersionRead[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [fetched, setFetched] = useState(false);
+
+  const toggle = async () => {
+    const next = !open;
+    setOpen(next);
+    if (next && !fetched && token) {
+      setLoading(true);
+      try {
+        const data = await getExtractorVersions(token, extractorId);
+        setVersions(data);
+        setFetched(true);
+      } catch {
+        // silently fail — empty list is fine
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Reset when extractor changes
+  useEffect(() => {
+    setOpen(false);
+    setVersions([]);
+    setFetched(false);
+  }, [extractorId]);
+
+  return (
+    <Paper variant="outlined" sx={{ p: 0, overflow: 'hidden' }}>
+      <Box
+        onClick={toggle}
+        sx={{
+          display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5, cursor: 'pointer',
+          '&:hover': { bgcolor: 'action.hover' },
+        }}
+      >
+        <HistoryIcon fontSize="small" color="action" />
+        <Typography variant="h6" sx={{ flexGrow: 1 }}>Version History</Typography>
+        <IconButton size="small" sx={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+          <ExpandMoreIcon />
+        </IconButton>
+      </Box>
+      <Collapse in={open}>
+        <Box sx={{ px: 2, pb: 2 }}>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}><CircularProgress size={24} /></Box>
+          ) : versions.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">No version history yet.</Typography>
+          ) : (
+            <Stack spacing={1}>
+              {versions.map((v) => (
+                <Box
+                  key={v.id}
+                  sx={{
+                    display: 'flex', alignItems: 'flex-start', gap: 1.5,
+                    p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'divider',
+                  }}
+                >
+                  <Chip label={`v${v.version_number}`} size="small" color="primary" variant="outlined" />
+                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                    <Typography variant="body2" noWrap>
+                      {v.instruction ? v.instruction.slice(0, 100) + (v.instruction.length > 100 ? '…' : '') : '(no instruction)'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {v.version_hash.slice(0, 8)} · {formatRelativeTime(v.created_at)}
+                    </Typography>
+                  </Box>
+                </Box>
+              ))}
+            </Stack>
+          )}
+        </Box>
+      </Collapse>
+    </Paper>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 
 const ExtractorPage: React.FC = () => {
   const { token } = useContext(UserContext);
@@ -168,6 +270,25 @@ const ExtractorPage: React.FC = () => {
               <Typography variant="body1">Name: {selectedExtractor.name}</Typography>
               <Typography variant="body1">Description: {selectedExtractor.description}</Typography>
               <Typography variant="body1">Instruction: {selectedExtractor.instruction}</Typography>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={selectedExtractor.requires_approval ?? false}
+                    onChange={async (e) => {
+                      if (!token) return;
+                      try {
+                        const updated = await updateExtractor(token, selectedExtractor.id, { requires_approval: e.target.checked });
+                        setSelectedExtractor(updated);
+                        setExtractors((prev) => prev.map((ex) => (ex.id === updated.id ? updated : ex)));
+                        showFeedback(`Human review ${e.target.checked ? 'enabled' : 'disabled'}`, 'success');
+                      } catch (err) {
+                        showFeedback(err instanceof Error ? err.message : 'Failed to update', 'error');
+                      }
+                    }}
+                  />
+                }
+                label="Require human review"
+              />
 
               {/* Display Examples */}
               <Stack spacing={2}>
@@ -192,6 +313,9 @@ const ExtractorPage: React.FC = () => {
                 <Typography variant="h6">Json Schema</Typography>
                 <RichJsonDisplay jsonString={JSON.stringify(selectedExtractor.json_schema)} />
               </Stack>
+
+              {/* Version History */}
+              <VersionHistoryPanel extractorId={selectedExtractor.id} token={token} />
             </Stack>
           )}
         </Stack>

@@ -1,0 +1,205 @@
+"""Regression tests for local-first bootstrap schema repair."""
+
+import pytest
+from fastapi_users.password import PasswordHelper
+from sqlalchemy import text
+
+from app import models
+from app.core.db import (
+    async_engine,
+    create_db_and_tables,
+    drop_and_create_db_and_tables,
+    session_context,
+)
+from app.tests import utils
+
+pytestmark = pytest.mark.asyncio(loop_scope="module")
+
+password_helper = PasswordHelper()
+
+
+async def _column_names(table_name: str) -> set[str]:
+    async with session_context() as session:
+        result = await session.execute(
+            text(
+                """
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = :table_name
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return {row[0] for row in result.all()}
+
+
+async def _table_exists(table_name: str) -> bool:
+    async with session_context() as session:
+        result = await session.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public' AND table_name = :table_name
+                )
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return bool(result.scalar_one())
+
+
+async def test_create_db_and_tables_repairs_existing_local_schema() -> None:
+    await async_engine.dispose()
+    await drop_and_create_db_and_tables()
+
+    async with session_context() as session:
+        user = await utils.create_db_user(
+            utils.random_email(),
+            password_helper.hash("geralt"),
+            session,
+        )
+        document = models.Document(
+            user_id=user.id, kind="freeform", title="Local draft"
+        )
+        session.add(document)
+        await session.flush()
+
+        version = models.DocumentVersion(
+            document_id=document.id,
+            version_number=1,
+            name="v1",
+            content="hello world",
+        )
+        session.add(version)
+        await session.flush()
+
+        extractor = models.Extractor(
+            name="Bootstrap extractor",
+            instruction="Extract contact data.",
+            json_schema={"type": "object"},
+            user_id=user.id,
+        )
+        session.add(extractor)
+        await session.flush()
+
+        crawler_pipeline = models.CrawlerPipeline(
+            name="Bootstrap crawler",
+            source="linkedin",
+            query_definition={"keywords": ["python"]},
+            created_by_user_id=user.id,
+        )
+        session.add(crawler_pipeline)
+        await session.flush()
+
+        document.head_version_id = version.id
+        await session.commit()
+
+        user_id = user.id
+        document_id = document.id
+        version_id = version.id
+        extractor_id = extractor.id
+        crawler_pipeline_id = crawler_pipeline.id
+
+    async with session_context() as session:
+        await session.execute(text("DROP TABLE IF EXISTS document_shares CASCADE"))
+        await session.execute(text("DROP TABLE IF EXISTS document_activities CASCADE"))
+        await session.execute(
+            text("ALTER TABLE users DROP COLUMN IF EXISTS headline CASCADE")
+        )
+        await session.execute(
+            text("ALTER TABLE users DROP COLUMN IF EXISTS bio CASCADE")
+        )
+        await session.execute(
+            text("ALTER TABLE users DROP COLUMN IF EXISTS is_discoverable CASCADE")
+        )
+        await session.execute(
+            text("ALTER TABLE users DROP COLUMN IF EXISTS subscription_tier CASCADE")
+        )
+        await session.execute(
+            text(
+                "ALTER TABLE users DROP COLUMN IF EXISTS subscription_expires_at CASCADE"
+            )
+        )
+        await session.execute(
+            text("ALTER TABLE users DROP COLUMN IF EXISTS placement_status CASCADE")
+        )
+        await session.execute(
+            text("ALTER TABLE users DROP COLUMN IF EXISTS placement_date CASCADE")
+        )
+        await session.execute(
+            text("ALTER TABLE documents DROP COLUMN IF EXISTS yjs_state CASCADE")
+        )
+        await session.execute(
+            text(
+                "ALTER TABLE document_versions DROP COLUMN IF EXISTS content_format CASCADE"
+            )
+        )
+        await session.execute(
+            text(
+                "ALTER TABLE document_versions DROP COLUMN IF EXISTS source_file CASCADE"
+            )
+        )
+        await session.execute(
+            text(
+                "ALTER TABLE extractors DROP COLUMN IF EXISTS requires_approval CASCADE"
+            )
+        )
+        await session.execute(
+            text(
+                "ALTER TABLE crawler_pipelines DROP COLUMN IF EXISTS requires_approval CASCADE"
+            )
+        )
+        await session.commit()
+
+    await create_db_and_tables()
+
+    assert await _table_exists("document_shares")
+    assert await _table_exists("document_activities")
+    assert {
+        "headline",
+        "bio",
+        "is_discoverable",
+        "subscription_tier",
+        "subscription_expires_at",
+        "placement_status",
+        "placement_date",
+    }.issubset(await _column_names("users"))
+    assert {"yjs_state"}.issubset(await _column_names("documents"))
+    assert {"content_format", "source_file"}.issubset(
+        await _column_names("document_versions")
+    )
+    assert {"requires_approval"}.issubset(await _column_names("extractors"))
+    assert {"requires_approval"}.issubset(await _column_names("crawler_pipelines"))
+
+    async with session_context() as session:
+        repaired_user = await session.get(models.User, user_id)
+        repaired_document = await session.get(models.Document, document_id)
+        repaired_version = await session.get(models.DocumentVersion, version_id)
+        repaired_extractor = await session.get(models.Extractor, extractor_id)
+        repaired_crawler_pipeline = await session.get(
+            models.CrawlerPipeline, crawler_pipeline_id
+        )
+
+        assert repaired_user is not None
+        assert repaired_user.headline is None
+        assert repaired_user.bio is None
+        assert repaired_user.is_discoverable is True
+        assert repaired_user.subscription_tier == "free"
+        assert repaired_user.subscription_expires_at is None
+        assert repaired_user.placement_status == "active"
+        assert repaired_user.placement_date is None
+
+        assert repaired_document is not None
+        assert repaired_document.yjs_state is None
+
+        assert repaired_version is not None
+        assert repaired_version.content_format == "plain_text"
+        assert repaired_version.source_file is None
+
+        assert repaired_extractor is not None
+        assert repaired_extractor.requires_approval is False
+
+        assert repaired_crawler_pipeline is not None
+        assert repaired_crawler_pipeline.requires_approval is False

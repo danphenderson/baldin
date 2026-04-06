@@ -31,6 +31,7 @@ import {
   type CrawlerSourceType,
   getCrawlerPipelines, createCrawlerPipeline, updateCrawlerPipeline,
   getCrawlerRuns, triggerCrawlerRun, cancelCrawlerRun, pauseCrawlerRun, resumeCrawlerRun,
+  retryCrawlerRun,
 } from '../service/crawlers';
 
 // ---------------------------------------------------------------------------
@@ -63,6 +64,7 @@ const STATUS_CONFIG: Record<CrawlerRunStatus, { icon: React.ReactElement; color:
   running: { icon: <RunningIcon fontSize="small" />, color: '#06b6d4', label: 'Running' },
   cancelled: { icon: <CancelIcon fontSize="small" />, color: '#94a3b8', label: 'Cancelled' },
   paused: { icon: <PauseIcon fontSize="small" />, color: '#eab308', label: 'Paused' },
+  pending_review: { icon: <PendingIcon fontSize="small" />, color: '#8b5cf6', label: 'Pending Review' },
 };
 
 const SOURCE_COLORS: Record<CrawlerSourceType, string> = {
@@ -77,6 +79,7 @@ type PipelineFormState = {
   query_definition: string;
   schedule_definition: string;
   enabled: boolean;
+  requires_approval: boolean;
   execution_policy: string;
   extraction_policy: string;
 };
@@ -88,6 +91,7 @@ const INITIAL_FORM: PipelineFormState = {
   query_definition: '{}',
   schedule_definition: '{}',
   enabled: true,
+  requires_approval: false,
   execution_policy: '{}',
   extraction_policy: '{}',
 };
@@ -186,8 +190,9 @@ const CrawlerPipelineCard: React.FC<{
   onCancelRun: (runId: string) => void;
   onPauseRun: (runId: string) => void;
   onResumeRun: (runId: string) => void;
+  onRetryRun: (runId: string) => void;
   index: number;
-}> = ({ pipe, onEdit, onTrigger, onToggleEnabled, expandedId, onToggleExpand, runs, runsLoading, onCancelRun, onPauseRun, onResumeRun, index }) => {
+}> = ({ pipe, onEdit, onTrigger, onToggleEnabled, expandedId, onToggleExpand, runs, runsLoading, onCancelRun, onPauseRun, onResumeRun, onRetryRun, index }) => {
   const theme = useTheme();
   const lastStatusKey = pipe.last_run_status ?? null;
   const lastCfg = lastStatusKey ? STATUS_CONFIG[lastStatusKey] : null;
@@ -390,6 +395,13 @@ const CrawlerPipelineCard: React.FC<{
                         </IconButton>
                       </Tooltip>
                     )}
+                    {(run.status === 'failed' || run.status === 'cancelled') && (
+                      <Tooltip title="Retry">
+                        <IconButton size="small" onClick={() => onRetryRun(run.id)}>
+                          <RefreshIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                   </Stack>
                 </Box>
               ))}
@@ -460,6 +472,15 @@ const PipelineFormDialog: React.FC<{
             />
           }
           label="Enabled"
+        />
+        <FormControlLabel
+          control={
+            <Switch
+              checked={form.requires_approval}
+              onChange={(e) => setForm((prev) => ({ ...prev, requires_approval: e.target.checked }))}
+            />
+          }
+          label="Require human review"
         />
         {jsonFields.map(({ key, label }) => (
           <TextField
@@ -573,6 +594,7 @@ const CrawlersPage: React.FC = () => {
         source: formState.source,
         query_definition: JSON.parse(formState.query_definition),
         enabled: formState.enabled,
+        requires_approval: formState.requires_approval,
         ...(formState.description ? { description: formState.description } : {}),
         ...(formState.schedule_definition !== '{}' ? { schedule_definition: JSON.parse(formState.schedule_definition) } : {}),
         ...(formState.execution_policy !== '{}' ? { execution_policy: JSON.parse(formState.execution_policy) } : {}),
@@ -598,6 +620,7 @@ const CrawlersPage: React.FC = () => {
       query_definition: JSON.stringify(pipe.query_definition, null, 2),
       schedule_definition: JSON.stringify(pipe.schedule_definition ?? {}, null, 2),
       enabled: pipe.enabled,
+      requires_approval: (pipe as any).requires_approval ?? false,
       execution_policy: JSON.stringify(pipe.execution_policy ?? {}, null, 2),
       extraction_policy: JSON.stringify(pipe.extraction_policy ?? {}, null, 2),
     });
@@ -611,6 +634,7 @@ const CrawlersPage: React.FC = () => {
       const payload: CrawlerPipelineUpdate = {
         name: formState.name,
         enabled: formState.enabled,
+        requires_approval: formState.requires_approval,
         query_definition: JSON.parse(formState.query_definition),
         ...(formState.description ? { description: formState.description } : {}),
         ...(formState.schedule_definition !== '{}' ? { schedule_definition: JSON.parse(formState.schedule_definition) } : {}),
@@ -674,6 +698,15 @@ const CrawlersPage: React.FC = () => {
     if (!token) return;
     try {
       await resumeCrawlerRun(token, runId);
+      if (expandedId) fetchRuns(expandedId);
+      fetchPipelines();
+    } catch (e: unknown) { setError(getErrorMessage(e)); }
+  };
+
+  const handleRetryRun = async (runId: string) => {
+    if (!token) return;
+    try {
+      await retryCrawlerRun(token, runId);
       if (expandedId) fetchRuns(expandedId);
       fetchPipelines();
     } catch (e: unknown) { setError(getErrorMessage(e)); }
@@ -746,6 +779,7 @@ const CrawlersPage: React.FC = () => {
                   onCancelRun={handleCancelRun}
                   onPauseRun={handlePauseRun}
                   onResumeRun={handleResumeRun}
+                  onRetryRun={handleRetryRun}
                   index={i}
                 />
               </Grid>

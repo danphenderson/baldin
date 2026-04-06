@@ -5,6 +5,12 @@ Baldin is a developer-preview workspace for exploring job-search automation loca
 > Baldin is local-first right now.
 > The public repository is meant for local evaluation, architecture exploration, and contribution. It is not positioned as a production-hardened SaaS or a finished deployment blueprint.
 
+## Documentation
+
+Full documentation is available at **[danphenderson.github.io/baldin](https://danphenderson.github.io/baldin/)**.
+
+The docs cover architecture, engineering workflows, the data model, CI pipeline, contract management, and environment configuration.
+
 ## What You Can Explore
 
 - Track companies, leads, applications, resumes, cover letters, contacts, education, experience, and skills.
@@ -63,7 +69,7 @@ Baldin is split into a few clear pieces:
 - `backend/`: FastAPI application, Starlette Admin, authentication, extractors, orchestration flows, and tests.
 - `frontend/`: React/Vite client that talks to the backend through `VITE_API_URL`.
 - `docker-compose.yml`: the local-first entry point for the API, frontend, Postgres, and the separate test Postgres service.
-- `docs/`: generated documentation output.
+- `docs/`: project documentation (Docusaurus site, deployed to GitHub Pages).
 
 For deeper backend details, including the data model and future migration workflows, see [backend/README.md](backend/README.md).
 

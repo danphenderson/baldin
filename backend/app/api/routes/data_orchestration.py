@@ -1,12 +1,16 @@
 # app/api/routes/data_orchestration.py
 
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import desc, func, select
+from pydantic import UUID4
+from sqlalchemy import delete, desc, func, select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import (  # noqa
     AsyncSession,
     get_async_session,
+    get_current_superuser,
     get_current_user,
     get_orchestration_event,
     get_orchestration_pipeline,
@@ -130,6 +134,25 @@ async def read_orch_events(
     )
 
 
+@router.delete("/events/prune", dependencies=[Depends(get_current_superuser)])
+async def prune_orchestration_events(
+    older_than_days: int = Query(
+        30, ge=1, description="Delete events older than N days"
+    ),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Delete completed/failed orchestration events older than the specified age."""
+    cutoff = datetime.utcnow() - timedelta(days=older_than_days)
+    result = await db.execute(
+        delete(models.OrchestrationEvent).where(
+            models.OrchestrationEvent.status.in_(["success", "failure"]),
+            models.OrchestrationEvent.created_at < cutoff,
+        )
+    )
+    await db.commit()
+    return {"deleted": result.rowcount}
+
+
 @router.get(
     "/events/{id}", status_code=202, response_model=schemas.OrchestrationEventRead
 )
@@ -168,3 +191,58 @@ async def update_orch_event(
     ),
 ):
     return event
+
+
+@router.post(
+    "/events/{event_id}/retry",
+    status_code=202,
+    response_model=schemas.OrchestrationEventRead,
+)
+async def retry_orch_event(
+    event_id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    """Retry a failed orchestration event by creating a new event linked to the original."""
+    event = await db.get(models.OrchestrationEvent, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail=f"Event {event_id} not found")
+    if event.status != "failure":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot retry event with status '{event.status}'. Must be 'failure'.",
+        )
+
+    # Check ownership via pipeline
+    if event.pipeline_id:
+        pipeline = await db.get(models.OrchestrationPipeline, event.pipeline_id)
+        if pipeline and str(pipeline.user_id) != str(user.id):
+            raise HTTPException(status_code=403, detail="Not your pipeline")
+
+    # Prevent double-retry
+    existing = await db.execute(
+        select(models.OrchestrationEvent).where(
+            models.OrchestrationEvent.retry_of_id == event_id,
+            models.OrchestrationEvent.status.in_(
+                ["pending", "running", "pending_review"]
+            ),
+        )
+    )
+    if existing.scalars().first():
+        raise HTTPException(status_code=409, detail="An active retry already exists.")
+
+    new_event = models.OrchestrationEvent(
+        status="pending",
+        message=f"Retry of event {event_id}",
+        payload=event.payload,
+        environment=event.environment,
+        source_uri=event.source_uri,
+        destination_uri=event.destination_uri,
+        pipeline_id=event.pipeline_id,
+        version_hash=event.version_hash,
+        retry_of_id=event.id,
+    )
+    db.add(new_event)
+    await db.commit()
+    await db.refresh(new_event)
+    return new_event

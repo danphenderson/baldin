@@ -3,6 +3,7 @@ import {
   Box, Typography, Chip, Stack, Button, useTheme, alpha, TextField,
   Alert, Paper, Divider, List, ListItemButton, ListItemText, MenuItem,
   Select, FormControl, InputLabel, type SelectChangeEvent,
+  ToggleButtonGroup, ToggleButton,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
@@ -13,6 +14,8 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
+import RichTextEditor, { type ContentFormat } from '../../component/rich-text-editor';
+import { normalizeDocumentContent } from '../../component/document-content';
 import {
   getDocument, createDocument, createVersion, getVersions,
   type DocumentDetailRead, type DocumentVersionRead, type DocumentKind,
@@ -60,6 +63,21 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function formatPersonLabel(fullName?: string | null, email?: string | null, fallback = 'Unknown user'): string {
+  return fullName?.trim() || email?.trim() || fallback;
+}
+
+function formatCurrentUserName(user: { first_name?: string | null; last_name?: string | null; email?: string | null }): string {
+  const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+  return fullName || user.email || 'User';
+}
+
+function getSourceFileName(sourceFile?: string | null): string | null {
+  if (!sourceFile) return null;
+  const parts = sourceFile.split('/').filter(Boolean);
+  return parts[parts.length - 1] ?? sourceFile;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -68,7 +86,7 @@ const DocumentEditorPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { token } = useContext(UserContext);
+  const { token, user } = useContext(UserContext);
 
   const isCreate = !id;
 
@@ -83,15 +101,34 @@ const DocumentEditorPage: React.FC = () => {
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<DocumentKind>('resume');
   const [content, setContent] = useState('');
+  const [plainText, setPlainText] = useState('');
   const [contentType, setContentType] = useState('custom');
+  const [contentFormat, setContentFormat] = useState<ContentFormat>('tiptap_json');
   const [changeSummary, setChangeSummary] = useState('');
+  const [externalContentKey, setExternalContentKey] = useState(0);
 
   const headVersionNumber = doc?.head_version?.version_number ?? 0;
+  const viewerRole = doc?.viewer_role;
+  const isReadOnly = viewerRole === 'viewer';
+  const isSharedEditor = viewerRole === 'editor';
+  const collaborative = !isCreate && contentFormat === 'tiptap_json' && viewerRole !== 'viewer';
+  const currentUserName = user ? formatCurrentUserName(user) : 'User';
+  const ownerLabel = formatPersonLabel(doc?.owner_full_name, doc?.owner_email, 'Document owner');
+  const sharedByLabel = formatPersonLabel(doc?.shared_by_full_name, doc?.shared_by_email, 'Unknown sharer');
+  const sourceFileName = getSourceFileName(doc?.head_version?.source_file);
 
   usePageToolbarHeader(
     isCreate ? 'New Document' : `Editing: ${doc?.title ?? '…'}`,
     isCreate ? 'Create a new document' : `Editing v${headVersionNumber + 1} based on v${headVersionNumber}`,
   );
+
+  const applyExternalContent = useCallback((nextContent: string | null | undefined, nextFormat: ContentFormat) => {
+    const normalized = normalizeDocumentContent(nextContent, nextFormat);
+    setContent(normalized.storedContent);
+    setPlainText(normalized.plainText);
+    setContentFormat(nextFormat);
+    setExternalContentKey(currentKey => currentKey + 1);
+  }, []);
 
   /* fetch for edit mode -------------------------------------------- */
   const loadDocument = useCallback(async () => {
@@ -105,14 +142,17 @@ const DocumentEditorPage: React.FC = () => {
       setDoc(docData);
       setTitle(docData.title);
       setKind(docData.kind);
-      setContent(docData.head_version?.content ?? '');
       setContentType(docData.head_version?.content_type ?? 'custom');
+      applyExternalContent(
+        docData.head_version?.content,
+        docData.head_version?.content_format === 'tiptap_json' ? 'tiptap_json' : 'plain_text',
+      );
       setVersions(versionsData.sort((a, b) => b.version_number - a.version_number));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load document');
     }
     setLoading(false);
-  }, [token, id]);
+  }, [token, id, applyExternalContent]);
 
   useEffect(() => {
     if (!isCreate) loadDocument();
@@ -126,20 +166,24 @@ const DocumentEditorPage: React.FC = () => {
     setSaving(true);
     setError('');
     try {
+      const persistedContent = contentFormat === 'plain_text' ? plainText : content;
+
       if (isCreate) {
-        const payload: DocumentCreate = {
+        const payload: DocumentCreate & { content_format?: string } = {
           kind,
           title: title.trim(),
-          content: content || undefined,
+          content: persistedContent || undefined,
           content_type: contentType as DocumentCreate['content_type'],
+          content_format: contentFormat,
         };
         const created = await createDocument(token, payload);
         navigate(`/me/documents/${created.id}`);
       } else {
-        const payload: DocumentVersionCreate = {
-          content: content || undefined,
+        const payload: DocumentVersionCreate & { content_format?: string } = {
+          content: persistedContent || undefined,
           content_type: contentType as DocumentVersionCreate['content_type'],
           change_summary: changeSummary.trim() || undefined,
+          content_format: contentFormat,
         };
         await createVersion(token, id!, payload);
         navigate(`/me/documents/${id}`);
@@ -151,14 +195,15 @@ const DocumentEditorPage: React.FC = () => {
   };
 
   const handleLoadVersion = (v: DocumentVersionRead) => {
-    setContent(v.content ?? '');
     setContentType(v.content_type ?? 'custom');
+    applyExternalContent(v.content, v.content_format === 'tiptap_json' ? 'tiptap_json' : 'plain_text');
     setChangeSummary(`Reverted to v${v.version_number}`);
   };
 
   /* stats ---------------------------------------------------------- */
-  const words = useMemo(() => wordCount(content), [content]);
-  const chars = content.length;
+  const editorContent = contentFormat === 'plain_text' ? plainText : content;
+  const words = useMemo(() => wordCount(plainText), [plainText]);
+  const chars = plainText.length;
 
   /* loading state -------------------------------------------------- */
   if (loading) {
@@ -173,6 +218,62 @@ const DocumentEditorPage: React.FC = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 200px)' }}>
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
+      {!isCreate && sourceFileName && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          This document was imported from the PDF {sourceFileName}. The original upload is available from the document detail page.
+        </Alert>
+      )}
+
+      {isReadOnly && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          You have view-only access to this document.
+        </Alert>
+      )}
+
+      {!isCreate && viewerRole && (
+        <Paper
+          variant="outlined"
+          sx={{
+            mb: 2,
+            p: 2,
+            background: alpha(theme.palette.info.main, 0.04),
+            borderColor: alpha(theme.palette.info.main, 0.18),
+          }}
+        >
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ alignItems: { md: 'center' }, flexWrap: 'wrap' }}>
+            <Chip
+              size="small"
+              color="info"
+              variant="outlined"
+              label={`Shared access · ${viewerRole === 'viewer' ? 'Viewer' : 'Editor'}`}
+              sx={{ fontWeight: 700 }}
+            />
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              Owner: {ownerLabel}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Shared by {sharedByLabel}
+            </Typography>
+            {doc?.shared_at && (
+              <Typography variant="caption" color="text.secondary">
+                Granted {formatDate(doc.shared_at)}
+              </Typography>
+            )}
+            {doc?.share_updated_at && doc.share_updated_at !== doc.shared_at && (
+              <Typography variant="caption" color="text.secondary">
+                Access updated {formatDate(doc.share_updated_at)}
+              </Typography>
+            )}
+          </Stack>
+        </Paper>
+      )}
+
+      {collaborative && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          Collaborative editing active — changes sync in real-time as {currentUserName}
+        </Alert>
+      )}
+
       <Grid container spacing={3} sx={{ flex: 1 }}>
         {/* ── Main editor area ──────────────────────────────────── */}
         <Grid size={{ xs: 12, md: versions.length > 0 ? 9 : 12 }}>
@@ -185,6 +286,7 @@ const DocumentEditorPage: React.FC = () => {
                   onChange={e => setTitle(e.target.value)}
                   placeholder="Document title"
                   variant="outlined" size="small"
+                  disabled={isReadOnly || isSharedEditor}
                   slotProps={{ input: { 'aria-label': 'Document title' } }}
                   sx={{ flex: 1, minWidth: 200 }}
                 />
@@ -231,6 +333,17 @@ const DocumentEditorPage: React.FC = () => {
                     ))}
                   </Select>
                 </FormControl>
+              {isCreate && (
+                  <ToggleButtonGroup
+                    size="small" exclusive
+                    value={contentFormat}
+                    onChange={(_, val: ContentFormat | null) => { if (val) setContentFormat(val); }}
+                    aria-label="Content format"
+                  >
+                    <ToggleButton value="tiptap_json" aria-label="Rich Text">Rich Text</ToggleButton>
+                    <ToggleButton value="plain_text" aria-label="Plain Text">Plain Text</ToggleButton>
+                  </ToggleButtonGroup>
+                )}
                 {!isCreate && (
                   <Chip
                     label={`Editing v${headVersionNumber + 1}`}
@@ -242,19 +355,27 @@ const DocumentEditorPage: React.FC = () => {
             </Stack>
           </Paper>
 
-          {/* Content textarea */}
-          <TextField
-            fullWidth multiline minRows={20} maxRows={60}
-            value={content}
-            onChange={e => setContent(e.target.value)}
-            placeholder={KIND_HINTS[kind]?.placeholder ?? 'Start writing your document content…'}
-            variant="outlined"
-            slotProps={{ input: { 'aria-label': 'Document content' } }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                fontFamily: 'monospace', fontSize: '0.875rem', lineHeight: 1.6,
-              },
+          {/* Content editor */}
+          <RichTextEditor
+            content={editorContent}
+            contentFormat={contentFormat}
+            externalContentKey={externalContentKey}
+            readOnly={isReadOnly}
+            onChange={(json, text) => {
+              if (contentFormat === 'tiptap_json') {
+                setContent(json);
+                setPlainText(text);
+              } else {
+                setContent(text);
+                setPlainText(text);
+              }
             }}
+            placeholder={KIND_HINTS[kind]?.placeholder ?? 'Start writing…'}
+            minHeight="400px"
+            collaborative={collaborative}
+            documentId={id}
+            token={token ?? undefined}
+            collaborationUserName={currentUserName}
           />
         </Grid>
 
@@ -335,7 +456,7 @@ const DocumentEditorPage: React.FC = () => {
         </Button>
         <Button
           variant="contained" onClick={handleSave}
-          disabled={saving || !title.trim()}
+          disabled={saving || !title.trim() || isReadOnly}
           startIcon={<SaveIcon />}
           aria-label={isCreate ? 'Create document' : 'Save new version'}
         >

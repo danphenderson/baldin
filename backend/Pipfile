@@ -46,6 +46,8 @@ python-magic = "*"
 reportlab = "*"
 gunicorn = "==21.0.1"
 itsdangerous = "*"
+slowapi = "*"
+ypy-websocket = "*"
 
 [dev-packages]
 ipython = "*"
@@ -63,8 +65,6 @@ test = "docker-compose exec web python -m pytest"
 testv = "docker-compose exec web python -m pytest -vv"
 psql = 'docker-compose exec db psql -U "$DEFAULT_DATABASE_USER" -d "$DEFAULT_DATABASE_DB"'
 build = "docker-compose exec web python setup.py sdist bdist_wheel"
-build-docs = "docker-compose exec web sphinx-build -b html docs ../docs"
-host-docs = "docker-compose exec web python -m http.server --directory ../docs"
 
 [requires]
 python_version = "3.11"

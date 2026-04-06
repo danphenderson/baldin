@@ -108,3 +108,8 @@ export const resumeCrawlerRun = async (token: string, runId: string): Promise<Cr
   const requestOptions = createRequestOptions(token, "POST");
   return fetchAPI(`${BASE_URL}/runs/${runId}/resume`, requestOptions);
 };
+
+export const retryCrawlerRun = async (token: string, runId: string): Promise<CrawlerRunRead> => {
+  const requestOptions = createRequestOptions(token, "POST");
+  return fetchAPI(`${BASE_URL}/runs/${runId}/retry`, requestOptions);
+};

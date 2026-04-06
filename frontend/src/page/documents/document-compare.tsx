@@ -74,6 +74,31 @@ function formatDate(dateStr: string): string {
   });
 }
 
+/** Recursively extract plain text from a Tiptap JSON node tree. */
+function extractPlainTextFromTiptapJson(content: string): string {
+  try {
+    const doc = JSON.parse(content);
+    if (!doc || typeof doc !== 'object') return content;
+    const walk = (node: Record<string, unknown>): string => {
+      if (node.type === 'text' && typeof node.text === 'string') return node.text;
+      if (!Array.isArray(node.content)) return '';
+      return (node.content as Record<string, unknown>[])
+        .map(child => walk(child))
+        .join(node.type === 'doc' || node.type === 'bulletList' || node.type === 'orderedList' ? '\n' : '');
+    };
+    const lines = ((doc.content ?? []) as Record<string, unknown>[])
+      .map((block: Record<string, unknown>) => walk(block));
+    return lines.join('\n');
+  } catch {
+    return content;
+  }
+}
+
+function getVersionText(v: DocumentVersionRead): string {
+  if (v.content_format === 'tiptap_json' && v.content) return extractPlainTextFromTiptapJson(v.content);
+  return v.content ?? '';
+}
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -128,9 +153,13 @@ const DocumentComparePage: React.FC = () => {
   useEffect(() => { load(); }, [load]);
 
   /* diff ----------------------------------------------------------- */
+  const hasRichContent = useMemo(() => {
+    return leftVersion?.content_format === 'tiptap_json' || rightVersion?.content_format === 'tiptap_json';
+  }, [leftVersion, rightVersion]);
+
   const diffLines = useMemo(() => {
     if (!leftVersion || !rightVersion) return [];
-    return computeDiff(leftVersion.content ?? '', rightVersion.content ?? '');
+    return computeDiff(getVersionText(leftVersion), getVersionText(rightVersion));
   }, [leftVersion, rightVersion]);
 
   const stats = useMemo(() => {
@@ -151,6 +180,7 @@ const DocumentComparePage: React.FC = () => {
       const payload: DocumentVersionCreate = {
         content: version.content,
         content_type: version.content_type,
+        content_format: version.content_format === 'tiptap_json' ? 'tiptap_json' : 'plain_text',
         change_summary: `Restored from v${version.version_number}`,
       };
       await createVersion(token, id, payload);
@@ -182,6 +212,8 @@ const DocumentComparePage: React.FC = () => {
     );
   }
 
+  const isReadOnly = doc?.viewer_role === 'viewer';
+
   const bgColor = (type: DiffLine['type']) => {
     switch (type) {
       case 'added':   return alpha(theme.palette.success.main, 0.12);
@@ -209,6 +241,12 @@ const DocumentComparePage: React.FC = () => {
   return (
     <Box>
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+
+      {isReadOnly && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          You have view-only access to this document. Restoring versions is disabled.
+        </Alert>
+      )}
 
       {/* ── Back button ─────────────────────────────────────────── */}
       <Button
@@ -246,7 +284,7 @@ const DocumentComparePage: React.FC = () => {
             <Button
               size="small" variant="outlined" startIcon={<RestoreIcon />}
               onClick={() => handleRestore(leftVersion)}
-              disabled={restoring}
+              disabled={restoring || isReadOnly}
               sx={{ mt: 1.5 }}
               aria-label={`Restore version ${leftVersion.version_number}`}
             >
@@ -278,7 +316,7 @@ const DocumentComparePage: React.FC = () => {
             <Button
               size="small" variant="outlined" startIcon={<RestoreIcon />}
               onClick={() => handleRestore(rightVersion)}
-              disabled={restoring}
+              disabled={restoring || isReadOnly}
               sx={{ mt: 1.5 }}
               aria-label={`Restore version ${rightVersion.version_number}`}
             >
@@ -287,6 +325,13 @@ const DocumentComparePage: React.FC = () => {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* ── Rich-text note ─────────────────────────────────────── */}
+      {hasRichContent && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Rich-text formatting is not shown in diff view. Comparing plain-text content only.
+        </Alert>
+      )}
 
       {/* ── Diff stats ──────────────────────────────────────────── */}
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>

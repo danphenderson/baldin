@@ -6,12 +6,15 @@ from uuid import UUID
 
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyUserDatabase
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, inspect, or_, select
+from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.schema import CreateColumn
 from sqlalchemy.sql import text
 
 from app import models
 from app.core import conf
+from app.logging import console_log
 
 USER_PROFILE_FIELDS = (
     "first_name",
@@ -42,15 +45,64 @@ async_engine = create_async_engine(sqlalchemy_database_uri, echo=False)
 async_session_maker = async_sessionmaker(bind=async_engine, expire_on_commit=False)
 
 
+def _quote_identifier(connection: Connection, identifier: str) -> str:
+    return connection.dialect.identifier_preparer.quote(identifier)
+
+
+def _sync_missing_columns(connection: Connection) -> None:
+    """Add model columns that are missing from an existing local database table."""
+    inspector = inspect(connection)
+    existing_tables = set(inspector.get_table_names(schema="public"))
+
+    for table in models.Base.metadata.tables.values():
+        if table.name not in existing_tables:
+            continue
+
+        existing_columns = {
+            column["name"]
+            for column in inspector.get_columns(table.name, schema="public")
+        }
+        quoted_table_name = _quote_identifier(connection, table.name)
+
+        for column in table.columns:
+            if column.name in existing_columns:
+                continue
+
+            column_ddl = str(
+                CreateColumn(column).compile(dialect=connection.dialect)
+            ).strip()
+            if not column_ddl:
+                continue
+
+            connection.execute(
+                text(f"ALTER TABLE {quoted_table_name} ADD COLUMN {column_ddl}")
+            )
+            existing_columns.add(column.name)
+            console_log.info(
+                f"Added missing column {table.name}.{column.name} during bootstrap schema sync."
+            )
+
+
+def _create_and_sync_schema(connection: Connection) -> None:
+    models.Base.metadata.create_all(connection)
+    _sync_missing_columns(connection)
+
+
 async def create_db_and_tables() -> None:
     """
-    Asynchronously create the database and all defined tables.
+    Asynchronously create the database tables and repair additive local schema drift.
 
     This function is typically used during the application startup to ensure
     that the database schema is set up correctly.
+
+    `metadata.create_all()` only creates missing tables; it does not alter
+    existing ones. In local developer-preview environments we keep a persisted
+    Postgres volume, so additive model changes would otherwise break startup
+    until the user manually reset the database. This sync step only adds missing
+    columns and does not attempt destructive migrations.
     """
     async with async_engine.begin() as conn:
-        await conn.run_sync(models.Base.metadata.create_all)
+        await conn.run_sync(_create_and_sync_schema)
 
 
 async def drop_and_create_db_and_tables():
@@ -67,7 +119,7 @@ async def drop_and_create_db_and_tables():
         await conn.execute(text("CREATE SCHEMA public"))
         await conn.execute(text("GRANT ALL ON SCHEMA public TO postgres"))
         await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
-        await conn.run_sync(models.Base.metadata.create_all)
+        await conn.run_sync(_create_and_sync_schema)
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:

@@ -10,10 +10,12 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
@@ -50,6 +52,8 @@ class OrchestrationEvent(Base):
     environment = Column(String)
     source_uri = Column(JSON)
     destination_uri = Column(JSON)
+    version_hash = Column(String, nullable=True)
+    retry_of_id = Column(UUID, ForeignKey("orchestration_events.id"), nullable=True)
     pipeline_id = Column(UUID, ForeignKey("orchestration_pipelines.id"))
     orchestration_pipeline = relationship(
         "OrchestrationPipeline", back_populates="orchestration_events"
@@ -93,6 +97,12 @@ class CrawlerPipeline(Base):
     enabled = Column(Boolean, default=True, nullable=False)
     execution_policy = Column(JSON)
     extraction_policy = Column(JSON)
+    requires_approval = Column(
+        Boolean,
+        default=False,
+        server_default=text("false"),
+        nullable=False,
+    )
     created_by_user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
     created_by = relationship("User", back_populates="crawler_pipelines")
     runs = relationship("CrawlerRun", back_populates="crawler_pipeline")
@@ -117,6 +127,7 @@ class CrawlerRun(Base):
     checkpoint = Column(JSON)
     stats = Column(JSON)
     error_summary = Column(Text)
+    retry_of_id = Column(UUID, ForeignKey("crawler_runs.id"), nullable=True)
     crawler_pipeline = relationship("CrawlerPipeline", back_populates="runs")
 
 
@@ -158,12 +169,37 @@ class Extractor(Base):
     description = Column(Text)
     json_schema = Column(JSONB)
     instruction = Column(Text)
+    requires_approval = Column(
+        Boolean,
+        default=False,
+        server_default=text("false"),
+        nullable=False,
+    )
     user_id = Column(UUID, ForeignKey("users.id"))
     user = relationship("User", back_populates="extractors")
     extractor_examples = relationship("ExtractorExample", back_populates="extractor")
+    versions = relationship(
+        "ExtractorVersion",
+        back_populates="extractor",
+        order_by="ExtractorVersion.version_number.desc()",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<Extractor(id={self.id}, description={self.description})>"
+
+
+class ExtractorVersion(Base):
+    """Immutable snapshot of an Extractor's instruction and schema at a point in time."""
+
+    __tablename__ = "extractor_versions"
+    extractor_id = Column(UUID, ForeignKey("extractors.id"), nullable=False, index=True)
+    version_number = Column(Integer, nullable=False)
+    instruction = Column(Text)
+    json_schema = Column(JSONB)
+    version_hash = Column(String, nullable=False, index=True)
+
+    extractor = relationship("Extractor", back_populates="versions")
 
 
 class LeadXCompany(Base):
@@ -226,6 +262,7 @@ class Lead(Base):
     seniority_level = Column(String)
     education_level = Column(String)
     hiring_manager = Column(String)
+    review_status = Column(String, nullable=True)
 
     application = relationship("Application", back_populates="lead")
     companies = relationship(
@@ -466,9 +503,20 @@ class Document(Base):
     user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
     kind = Column(String, nullable=False, index=True)
     title = Column(String, nullable=False)
-    status = Column(String, nullable=False, default="draft")
-    is_pinned = Column(Boolean, default=False, nullable=False)
+    status = Column(
+        String,
+        nullable=False,
+        default="draft",
+        server_default=text("'draft'"),
+    )
+    is_pinned = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        server_default=text("false"),
+    )
     head_version_id = Column(UUID, ForeignKey("document_versions.id"))
+    yjs_state = Column(LargeBinary, nullable=True)
 
     user = relationship("User", back_populates="documents")
     versions = relationship(
@@ -485,6 +533,18 @@ class Document(Base):
         post_update=True,
         uselist=False,
         lazy="selectin",
+    )
+    shares = relationship(
+        "DocumentShare",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    activities = relationship(
+        "DocumentActivity",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
     applications = relationship(
         "Application",
@@ -506,6 +566,13 @@ class DocumentVersion(Base):
     name = Column(String)
     content = Column(Text)
     content_type = Column(String)
+    content_format = Column(
+        String,
+        default="plain_text",
+        nullable=False,
+        server_default=text("'plain_text'"),
+    )
+    source_file = Column(String, nullable=True)
     change_summary = Column(String)
 
     document = relationship(
@@ -524,6 +591,93 @@ class DocumentXApplication(Base):
     application_id = Column(UUID, ForeignKey("applications.id"), primary_key=True)
     document_id = Column(UUID, ForeignKey("documents.id"), primary_key=True)
     version_id = Column(UUID, ForeignKey("document_versions.id"))
+
+
+class DocumentShare(Base):
+    """Grants another user view or edit access to a document."""
+
+    __tablename__ = "document_shares"
+    __table_args__ = (
+        UniqueConstraint(
+            "document_id", "shared_with_user_id", name="uq_document_share_user"
+        ),
+    )
+
+    document_id = Column(
+        UUID, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    shared_with_user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    shared_by_user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    role = Column(
+        String,
+        nullable=False,
+        default="viewer",
+        server_default=text("'viewer'"),
+    )  # viewer | editor
+
+    document = relationship("Document", back_populates="shares")
+    shared_with_user = relationship("User", foreign_keys=[shared_with_user_id])
+    shared_by_user = relationship("User", foreign_keys=[shared_by_user_id])
+
+
+class DocumentActivity(Base):
+    """Audit-style activity event recorded against a document."""
+
+    __tablename__ = "document_activities"
+
+    document_id = Column(
+        UUID, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    actor_user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    activity_type = Column(String, nullable=False, index=True)
+    message = Column(String, nullable=False)
+    details = Column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+
+    document = relationship("Document", back_populates="activities")
+    actor = relationship("User", foreign_keys=[actor_user_id])
+
+
+class ActionItem(Base):
+    """
+    Tracks user-facing tasks and follow-ups across applications, leads,
+    documents, and conversations.
+    """
+
+    __tablename__ = "action_items"
+
+    user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    kind = Column(String, nullable=False, index=True)
+    status = Column(String, nullable=False, default="pending")
+    priority = Column(String, nullable=False, default="medium")
+    due_at = Column(DateTime, nullable=True, index=True)
+    completed_at = Column(DateTime, nullable=True)
+    sort_order = Column(Integer, nullable=False, default=0, server_default="0")
+
+    # Polymorphic nullable FKs
+    application_id = Column(UUID, ForeignKey("applications.id"), nullable=True)
+    lead_id = Column(UUID, ForeignKey("leads.id"), nullable=True)
+    document_id = Column(UUID, ForeignKey("documents.id"), nullable=True)
+    conversation_id = Column(UUID, ForeignKey("conversations.id"), nullable=True)
+
+    # Relationships
+    user = relationship("User", back_populates="action_items")
+    application = relationship("Application", lazy="selectin")
+    lead = relationship("Lead", lazy="selectin")
+    document = relationship("Document", lazy="selectin")
+    conversation = relationship("Conversation", lazy="selectin")
 
 
 class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
@@ -548,10 +702,25 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     # Social / subscription / lifecycle fields
     headline = Column(Text)
     bio = Column(Text)
-    is_discoverable = Column(Boolean, default=True, nullable=False)
-    subscription_tier = Column(String, default="free", nullable=False)
+    is_discoverable = Column(
+        Boolean,
+        default=True,
+        nullable=False,
+        server_default=text("true"),
+    )
+    subscription_tier = Column(
+        String,
+        default="free",
+        nullable=False,
+        server_default=text("'free'"),
+    )
     subscription_expires_at = Column(DateTime)
-    placement_status = Column(String, default="active", nullable=False)
+    placement_status = Column(
+        String,
+        default="active",
+        nullable=False,
+        server_default=text("'active'"),
+    )
     placement_date = Column(DateTime)
 
     lead_registrations = relationship(
@@ -584,6 +753,11 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
         "OrchestrationPipeline", back_populates="user"
     )
     crawler_pipelines = relationship("CrawlerPipeline", back_populates="created_by")
+    action_items = relationship(
+        "ActionItem",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
     sent_connections = relationship(
         "Connection",
         foreign_keys="Connection.requester_id",

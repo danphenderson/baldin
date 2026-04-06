@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from io import BytesIO
 from pathlib import Path  # TODO: Use Literal for performance improvement
-from typing import Any, Literal, Sequence, TypeVar
+from typing import Any, Literal, Optional, Sequence, TypeVar
 
 from fastapi import UploadFile
 from fastapi_users import schemas
@@ -35,11 +35,23 @@ class ContentType(str, Enum):
     TEMPLATE = "template"
 
 
+class ContentFormat(str, Enum):
+    PLAIN_TEXT = "plain_text"
+    TIPTAP_JSON = "tiptap_json"
+
+
+class DocumentCollaborationBootstrapStatus(str, Enum):
+    CONNECT = "connect"
+    PENDING = "pending"
+    SEED = "seed"
+
+
 class OrchestrationEventStatusType(str, Enum):
     PENDING = "pending"
     RUNNING = "running"
     SUCCESS = "success"
     FAILED = "failure"
+    PENDING_REVIEW = "pending_review"
 
 
 class URIType(str, Enum):
@@ -167,6 +179,13 @@ class BaseOrchestrationEvent(BaseSchema):
 
 
 class OrchestrationEventRead(BaseOrchestrationEvent, BaseRead):
+    version_hash: str | None = Field(
+        None, description="Extractor version hash used for this run"
+    )
+    retry_of_id: UUID4 | None = Field(
+        None, description="ID of the original event this is a retry of"
+    )
+
     @validator("payload", pre=True)
     def load_json(cls, v):
         if isinstance(v, str):
@@ -738,12 +757,31 @@ class DocumentStatus(str, Enum):
     ARCHIVED = "archived"
 
 
+class DocumentActivityType(str, Enum):
+    DOCUMENT_CREATED = "document_created"
+    DOCUMENT_UPLOADED = "document_uploaded"
+    VERSION_SAVED = "version_saved"
+    SHARE_CREATED = "share_created"
+    SHARE_UPDATED = "share_updated"
+    SHARE_REVOKED = "share_revoked"
+    DOCUMENT_ARCHIVED = "document_archived"
+    DOCUMENT_UNARCHIVED = "document_unarchived"
+    DOCUMENT_PINNED = "document_pinned"
+    DOCUMENT_UNPINNED = "document_unpinned"
+
+
 class DocumentVersionRead(BaseRead):
     document_id: UUID4 = Field(description="Parent document identifier")
     version_number: int = Field(description="Monotonically incrementing version number")
     name: str | None = Field(None, description="Snapshot title")
     content: str | None = Field(None, description="Version content")
     content_type: ContentType | None = Field(None, description="Content origin type")
+    content_format: str | None = Field(
+        None, description="Content format: plain_text or tiptap_json"
+    )
+    source_file: str | None = Field(
+        None, description="Relative path to uploaded source file"
+    )
     change_summary: str | None = Field(
         None, description="User or system note for this version"
     )
@@ -753,6 +791,10 @@ class DocumentVersionCreate(BaseSchema):
     name: str | None = Field(None, description="Snapshot title")
     content: str | None = Field(None, description="Version content")
     content_type: ContentType | None = Field(None, description="Content origin type")
+    content_format: ContentFormat = Field(
+        ContentFormat.PLAIN_TEXT,
+        description="Content format: plain_text or tiptap_json",
+    )
     change_summary: str | None = Field(
         None, description="User or system note for this version"
     )
@@ -769,11 +811,66 @@ class DocumentRead(BaseRead):
         None, description="Current head version inline"
     )
     version_count: int = Field(0, description="Total number of versions")
+    viewer_role: Optional["DocumentShareRole"] = Field(
+        None,
+        description="Effective share role for the viewer (null means owner)",
+    )
+    owner_user_id: UUID4 | None = Field(
+        None,
+        description="Owner identifier when the document is shared with the viewer",
+    )
+    owner_full_name: str | None = Field(
+        None,
+        description="Owner full name when the document is shared with the viewer",
+    )
+    owner_email: EmailStr | None = Field(
+        None,
+        description="Owner email when the document is shared with the viewer",
+    )
+    shared_by_user_id: UUID4 | None = Field(
+        None,
+        description="User who granted access to the viewer",
+    )
+    shared_by_full_name: str | None = Field(
+        None,
+        description="Full name of the user who granted access to the viewer",
+    )
+    shared_by_email: EmailStr | None = Field(
+        None,
+        description="Email of the user who granted access to the viewer",
+    )
+    shared_at: datetime | None = Field(
+        None,
+        description="Timestamp when the viewer was granted access",
+    )
+    share_updated_at: datetime | None = Field(
+        None,
+        description="Timestamp when the share was last updated",
+    )
 
 
 class DocumentDetailRead(DocumentRead):
     versions: list[DocumentVersionRead] = Field(
         default_factory=list, description="Full version history, oldest first"
+    )
+
+
+class DocumentCollaborationBootstrapRead(BaseSchema):
+    status: DocumentCollaborationBootstrapStatus = Field(
+        description="How the client should proceed with collaborative bootstrap"
+    )
+    retry_after_ms: int | None = Field(
+        None,
+        ge=0,
+        description="How long the client should wait before retrying bootstrap when another claim is still active",
+    )
+    content: str | None = Field(
+        None,
+        description="Authoritative rich-text content to seed when the bootstrap status is seed",
+    )
+    content_format: ContentFormat | None = Field(
+        None,
+        description="Content format for the collaborative bootstrap payload when the bootstrap status is seed",
     )
 
 
@@ -786,6 +883,10 @@ class DocumentCreate(BaseSchema):
     content: str | None = Field(None, description="Initial version content")
     content_type: ContentType | None = Field(
         None, description="Content origin type for the initial version"
+    )
+    content_format: ContentFormat = Field(
+        ContentFormat.PLAIN_TEXT,
+        description="Content format: plain_text or tiptap_json",
     )
 
 
@@ -816,6 +917,76 @@ class DocumentGenerateRequest(BaseSchema):
     template_version_id: UUID4 | None = Field(
         None,
         description="Optional template version to use for generation",
+    )
+
+
+# ---------------------------------------------------------------------------
+#  Document sharing schemas
+# ---------------------------------------------------------------------------
+
+
+class DocumentShareRole(str, Enum):
+    VIEWER = "viewer"
+    EDITOR = "editor"
+
+
+class DocumentShareCandidateRead(BaseSchema):
+    id: UUID4 = Field(description="Share candidate identifier")
+    full_name: str = Field(description="Best-available human label for the user")
+    email: EmailStr = Field(description="Candidate email address")
+    headline: str | None = Field(None, description="Candidate headline")
+    avatar_uri: str | None = Field(None, description="Candidate avatar URI")
+
+
+class DocumentShareCreate(BaseSchema):
+    shared_with_user_id: UUID4 = Field(description="User to share the document with")
+    role: DocumentShareRole = Field(
+        DocumentShareRole.VIEWER, description="Access level to grant"
+    )
+
+
+class DocumentShareRead(BaseRead):
+    document_id: UUID4 = Field(description="Document identifier")
+    shared_with_user_id: UUID4 = Field(description="User the document is shared with")
+    shared_by_user_id: UUID4 = Field(description="User who created the share")
+    role: DocumentShareRole = Field(description="Access role: viewer or editor")
+    shared_with_full_name: str = Field(
+        description="Best-available name for the shared user"
+    )
+    shared_with_email: EmailStr = Field(description="Email for the shared user")
+    shared_with_headline: str | None = Field(
+        None,
+        description="Headline for the shared user",
+    )
+    shared_by_full_name: str = Field(
+        description="Best-available name for the sharing user"
+    )
+    shared_by_email: EmailStr = Field(description="Email for the sharing user")
+
+
+class DocumentShareUpdate(BaseSchema):
+    role: DocumentShareRole = Field(description="New access level")
+
+
+class DocumentActivityRead(BaseRead):
+    document_id: UUID4 = Field(description="Document identifier")
+    activity_type: DocumentActivityType = Field(description="Activity event type")
+    message: str = Field(description="Human-readable activity summary")
+    details: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Structured activity metadata for UI rendering",
+    )
+    actor_user_id: UUID4 | None = Field(
+        None,
+        description="User who triggered the activity, when available",
+    )
+    actor_full_name: str | None = Field(
+        None,
+        description="Best-available display label for the actor",
+    )
+    actor_email: EmailStr | None = Field(
+        None,
+        description="Actor email address",
     )
 
 
@@ -920,6 +1091,127 @@ class UserPublicProfileRead(BaseSchema):
     experiences: list[ExperienceRead] = Field(
         default_factory=list, description="Work experiences"
     )
+
+
+# ---------------------------------------------------------------------------
+#  ActionItem schemas
+# ---------------------------------------------------------------------------
+
+
+class ActionItemKind(str, Enum):
+    FOLLOW_UP = "follow_up"
+    PREPARE_DOCUMENT = "prepare_document"
+    SEND_MESSAGE = "send_message"
+    REVIEW_LEAD = "review_lead"
+    SCHEDULE_INTERVIEW = "schedule_interview"
+    CUSTOM = "custom"
+
+
+class ActionItemStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    DISMISSED = "dismissed"
+
+
+class ActionItemPriority(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    URGENT = "urgent"
+
+
+class ActionItemCreate(BaseSchema):
+    title: str
+    description: str | None = None
+    kind: ActionItemKind
+    status: ActionItemStatus = ActionItemStatus.PENDING
+    priority: ActionItemPriority = ActionItemPriority.MEDIUM
+    due_at: datetime | None = None
+    sort_order: int = 0
+    application_id: UUID4 | None = None
+    lead_id: UUID4 | None = None
+    document_id: UUID4 | None = None
+    conversation_id: UUID4 | None = None
+
+
+class ActionItemUpdate(BaseSchema):
+    title: str | None = None
+    description: str | None = None
+    kind: ActionItemKind | None = None
+    status: ActionItemStatus | None = None
+    priority: ActionItemPriority | None = None
+    due_at: datetime | None = None
+    sort_order: int | None = None
+    application_id: UUID4 | None = None
+    lead_id: UUID4 | None = None
+    document_id: UUID4 | None = None
+    conversation_id: UUID4 | None = None
+
+
+class ActionItemRead(BaseRead):
+    user_id: UUID4
+    title: str
+    description: str | None = None
+    kind: ActionItemKind
+    status: ActionItemStatus
+    priority: ActionItemPriority
+    due_at: datetime | None = None
+    completed_at: datetime | None = None
+    sort_order: int = 0
+    application_id: UUID4 | None = None
+    lead_id: UUID4 | None = None
+    document_id: UUID4 | None = None
+    conversation_id: UUID4 | None = None
+
+
+class ActionItemReorder(BaseSchema):
+    item_ids: list[UUID4]
+
+
+class ActionItemDetailRead(ActionItemRead):
+    application: "ApplicationRead | None" = None
+    lead: "LeadRead | None" = None
+    document: "DocumentRead | None" = None
+    conversation: "ConversationRead | None" = None
+
+
+# ---------------------------------------------------------------------------
+#  Activity feed & Command Center summary schemas
+# ---------------------------------------------------------------------------
+
+
+class ActivityFeedItem(BaseSchema):
+    type: str
+    entity_type: str
+    entity_id: UUID4
+    title: str
+    detail: str | None = None
+    timestamp: datetime
+    metadata: dict | None = None
+
+
+class ActivityFeedRead(BaseSchema):
+    items: list[ActivityFeedItem]
+    total: int
+    page: int
+    page_size: int
+
+
+class CommandCenterSummary(BaseSchema):
+    lead_count: int
+    unapplied_lead_count: int
+    application_count: int
+    active_application_count: int
+    status_breakdown: dict[str, int]
+    pending_action_items: int
+    overdue_action_items: int
+    action_items_due_today: int
+    pending_connections: int
+    unread_messages: int
+    profile_completion: int
+    documents_count: int
+    draft_documents_count: int
 
 
 # ---------------------------------------------------------------------------
@@ -1158,6 +1450,9 @@ class BaseExtractor(BaseSchema):
     extractor_examples: list[ExtractorExampleRead] = Field(
         [], description="Extractor examples"
     )
+    requires_approval: bool = Field(
+        False, description="Whether extraction results require human approval"
+    )
 
     @validator("json_schema")
     def validate_schema(cls, v: Any) -> dict[str, Any]:
@@ -1171,6 +1466,14 @@ class BaseExtractor(BaseSchema):
 
 class ExtractorRead(BaseRead, BaseExtractor):
     pass
+
+
+class ExtractorVersionRead(BaseRead):
+    extractor_id: UUID4 = Field(description="Parent extractor ID")
+    version_number: int = Field(description="Version sequence number")
+    instruction: str | None = Field(None, description="Instruction at this version")
+    json_schema: dict | None = Field(None, description="JSON schema at this version")
+    version_hash: str = Field(description="SHA-256 hash of instruction + schema")
 
 
 class ExtractorCreate(BaseExtractor):
@@ -1250,6 +1553,9 @@ class ApplicationCoverLetterAttach(BaseSchema):
     cover_letter_id: UUID4
 
 
+ActionItemDetailRead.model_rebuild()
+
+
 # Crawler schemas
 
 
@@ -1270,6 +1576,13 @@ class CrawlerRunStatus(str, Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
     PAUSED = "paused"
+    PENDING_REVIEW = "pending_review"
+
+
+class ReviewStatus(str, Enum):
+    PENDING_REVIEW = "pending_review"
+    APPROVED = "approved"
+    REJECTED = "rejected"
 
 
 class CrawlerPipelineCreate(BaseSchema):
@@ -1286,6 +1599,9 @@ class CrawlerPipelineCreate(BaseSchema):
     )
     extraction_policy: dict | None = Field(
         None, description="Whether to run LLM extraction on crawled leads"
+    )
+    requires_approval: bool = Field(
+        False, description="Whether runs require human approval"
     )
 
 
@@ -1305,6 +1621,9 @@ class CrawlerPipelineUpdate(BaseSchema):
     extraction_policy: dict | None = Field(
         None, description="Whether to run LLM extraction on crawled leads"
     )
+    requires_approval: bool | None = Field(
+        None, description="Whether runs require human approval"
+    )
 
 
 class CrawlerPipelineRead(BaseRead):
@@ -1321,6 +1640,9 @@ class CrawlerPipelineRead(BaseRead):
     )
     extraction_policy: dict | None = Field(
         None, description="Whether to run LLM extraction on crawled leads"
+    )
+    requires_approval: bool = Field(
+        False, description="Whether runs require human approval"
     )
     created_by_user_id: UUID4 = Field(description="Superuser who created the pipeline")
     last_run_status: CrawlerRunStatus | None = Field(
@@ -1376,6 +1698,9 @@ class CrawlerRunRead(BaseRead):
     finished_at: datetime | None = Field(None, description="When the run finished")
     stats: dict | None = Field(None, description="Run statistics")
     error_summary: str | None = Field(None, description="Error summary if failed")
+    retry_of_id: UUID4 | None = Field(
+        None, description="ID of the original run this is a retry of"
+    )
 
 
 class CrawlerRunCreate(BaseSchema):
@@ -1405,3 +1730,42 @@ class CrawlerRunDetailRead(CrawlerRunRead):
     events: list[OrchestrationEventSummary] = Field(
         [], description="Linked orchestration events"
     )
+
+
+# ---------------------------------------------------------------------------
+#  Human review queue schemas
+# ---------------------------------------------------------------------------
+
+
+class ReviewItemType(str, Enum):
+    CRAWLER_RUN = "crawler_run"
+    EXTRACTION_EVENT = "extraction_event"
+    LEAD = "lead"
+
+
+class ReviewItemRead(BaseSchema):
+    item_type: ReviewItemType = Field(description="Type of review item")
+    item_id: UUID4 = Field(description="ID of the item")
+    created_at: datetime = Field(description="When the item was created")
+    summary: str | None = Field(None, description="Brief summary of the item")
+    detail: dict | None = Field(None, description="Additional context")
+
+
+class ReviewAction(str, Enum):
+    APPROVE = "approve"
+    REJECT = "reject"
+
+
+class ReviewBatchItem(BaseSchema):
+    item_type: ReviewItemType = Field(description="Type of review item")
+    item_id: UUID4 = Field(description="Item ID")
+    action: ReviewAction = Field(description="approve or reject")
+
+
+class ReviewBatchRequest(BaseSchema):
+    items: list[ReviewBatchItem] = Field(description="Batch of review actions")
+
+
+class ReviewBatchResponse(BaseSchema):
+    processed: int = Field(description="Number of items processed")
+    errors: list[str] = Field([], description="Errors encountered")

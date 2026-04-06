@@ -17,6 +17,13 @@ export type DocumentPinRequest = components['schemas']['DocumentPinRequest'];
 export type DocumentGenerateRequest = components['schemas']['DocumentGenerateRequest'];
 export type DocumentKind = components['schemas']['DocumentKind'];
 export type DocumentStatus = components['schemas']['DocumentStatus'];
+export type DocumentContentFormat = components['schemas']['ContentFormat'];
+export type DocumentShareRole = components['schemas']['DocumentShareRole'];
+export type DocumentShareRead = components['schemas']['DocumentShareRead'];
+export type DocumentShareCandidateRead = components['schemas']['DocumentShareCandidateRead'];
+export type DocumentActivityRead = components['schemas']['DocumentActivityRead'];
+export type DocumentActivityType = components['schemas']['DocumentActivityType'];
+export type DocumentCollaborationBootstrapRead = components['schemas']['DocumentCollaborationBootstrapRead'];
 
 const BASE_URL = `${API_URL}/documents`;
 
@@ -26,14 +33,33 @@ const BASE_URL = `${API_URL}/documents`;
 
 const createRequestOptions = (token: string, method: string, body?: unknown): RequestInit => {
   if (!token) throw new Error('Authorization token is required');
+  const headers: HeadersInit = {
+    Authorization: `Bearer ${token}`,
+  };
+
+  if (body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   return {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: body ? JSON.stringify(body) : null,
+    headers,
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   };
+};
+
+const withQuery = (
+  path: string,
+  query?: Record<string, string | number | boolean | null | undefined>,
+): string => {
+  const params = new URLSearchParams();
+  Object.entries(query ?? {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      params.set(key, String(value));
+    }
+  });
+  const suffix = params.toString();
+  return `${path}${suffix ? `?${suffix}` : ''}`;
 };
 
 const fetchAPI = async (url: string, options: RequestInit) => {
@@ -60,13 +86,15 @@ export const getDocuments = async (
   token: string,
   filters?: { kind?: string; status?: string; is_pinned?: boolean; search?: string },
 ): Promise<DocumentRead[]> => {
-  const params = new URLSearchParams();
-  if (filters?.kind) params.set('kind', filters.kind);
-  if (filters?.status) params.set('status', filters.status);
-  if (filters?.is_pinned !== undefined) params.set('is_pinned', String(filters.is_pinned));
-  if (filters?.search) params.set('search', filters.search);
-  const qs = params.toString();
-  return fetchAPI(`${BASE_URL}/${qs ? `?${qs}` : ''}`, createRequestOptions(token, 'GET'));
+  return fetchAPI(
+    withQuery(`${BASE_URL}/`, {
+      kind: filters?.kind,
+      status: filters?.status,
+      is_pinned: filters?.is_pinned,
+      search: filters?.search,
+    }),
+    createRequestOptions(token, 'GET'),
+  );
 };
 
 export const getDocument = async (token: string, id: string): Promise<DocumentDetailRead> => {
@@ -150,3 +178,136 @@ export const downloadDocument = async (token: string, id: string): Promise<void>
   a.remove();
   window.URL.revokeObjectURL(url);
 };
+
+/* ------------------------------------------------------------------ */
+/*  Upload                                                             */
+/* ------------------------------------------------------------------ */
+
+export async function uploadDocument(
+  token: string,
+  file: File,
+  title: string,
+  kind: string,
+): Promise<DocumentDetailRead> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('title', title);
+  formData.append('kind', kind);
+
+  const response = await fetch(`${API_URL}/documents/upload`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Upload failed' }));
+    throw new Error(error.detail || 'Upload failed');
+  }
+  return response.json();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Original PDF download                                              */
+/* ------------------------------------------------------------------ */
+
+export async function downloadOriginal(token: string, documentId: string): Promise<void> {
+  const response = await fetch(`${API_URL}/documents/${documentId}/original`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error('Download failed');
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'original.pdf';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Shares                                                             */
+/* ------------------------------------------------------------------ */
+
+export async function getDocumentShares(token: string, documentId: string): Promise<DocumentShareRead[]> {
+  return fetchAPI(`${BASE_URL}/${documentId}/shares`, createRequestOptions(token, 'GET'));
+}
+
+export async function getDocumentShareCandidates(
+  token: string,
+  documentId: string,
+  params?: { q?: string; limit?: number },
+): Promise<DocumentShareCandidateRead[]> {
+  return fetchAPI(
+    withQuery(`${BASE_URL}/${documentId}/share-candidates`, {
+      q: params?.q,
+      limit: params?.limit,
+    }),
+    createRequestOptions(token, 'GET'),
+  );
+}
+
+export async function createDocumentShare(
+  token: string,
+  documentId: string,
+  sharedWithUserId: string,
+  role: DocumentShareRole = 'viewer',
+): Promise<DocumentShareRead> {
+  return fetchAPI(
+    `${BASE_URL}/${documentId}/shares`,
+    createRequestOptions(token, 'POST', { shared_with_user_id: sharedWithUserId, role }),
+  );
+}
+
+export async function updateDocumentShare(
+  token: string,
+  documentId: string,
+  shareId: string,
+  role: DocumentShareRole,
+): Promise<DocumentShareRead> {
+  return fetchAPI(
+    `${BASE_URL}/${documentId}/shares/${shareId}`,
+    createRequestOptions(token, 'PATCH', { role }),
+  );
+}
+
+export async function revokeDocumentShare(token: string, documentId: string, shareId: string): Promise<void> {
+  await fetchAPI(
+    `${BASE_URL}/${documentId}/shares/${shareId}`,
+    createRequestOptions(token, 'DELETE'),
+  );
+}
+
+export async function getSharedWithMe(token: string): Promise<DocumentRead[]> {
+  return fetchAPI(`${BASE_URL}/shared-with-me`, createRequestOptions(token, 'GET'));
+}
+
+/* ------------------------------------------------------------------ */
+/*  Collaboration bootstrap                                            */
+/* ------------------------------------------------------------------ */
+
+export async function requestDocumentCollaborationBootstrap(
+  token: string,
+  documentId: string,
+): Promise<DocumentCollaborationBootstrapRead> {
+  return fetchAPI(
+    withQuery(`${BASE_URL}/${documentId}/collaborate/bootstrap`, { token }),
+    createRequestOptions(token, 'POST'),
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Activity                                                           */
+/* ------------------------------------------------------------------ */
+
+export async function getDocumentActivity(
+  token: string,
+  documentId: string,
+  params?: { limit?: number },
+): Promise<DocumentActivityRead[]> {
+  return fetchAPI(
+    withQuery(`${BASE_URL}/${documentId}/activity`, { limit: params?.limit }),
+    createRequestOptions(token, 'GET'),
+  );
+}

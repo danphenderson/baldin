@@ -51,32 +51,7 @@ tests = [
     "pytest-cov"
 ]
 
-docs = [
-    "sphinx",
-    "sphinx-py3doc-enhanced-theme",
-    "sphinx-autodoc-typehints",
-    "sphinxcontrib-asyncio",
-    "sphinxcontrib-napoleon",
-    "sphinxcontrib-trio",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-]
+docs = []
 
 
 [tool.pytest.ini_options]

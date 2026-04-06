@@ -11,11 +11,17 @@ from time import time
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
 
 from app.admin import admin
 from app.api.api import api_router
 from app.core import conf
 from app.core.db import create_db_and_tables
+from app.core.document_collaboration import (
+    ensure_document_collaboration_server_started,
+    stop_document_collaboration_server,
+)
+from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 from app.core.security import create_default_superuser
 from app.logging import console_log, get_async_logger
 
@@ -31,6 +37,9 @@ app = FastAPI(
     openapi_url="/openapi.json",
     docs_url="/docs",
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # Set all CORS enabled origins
 if conf.settings.BACKEND_CORS_ORIGINS:
@@ -78,6 +87,7 @@ admin.mount_to(app)
 async def startup_event():
     console_log.info("Starting up...")
     tracemalloc.start()
+    await ensure_document_collaboration_server_started()
     if getattr(app.state, "bootstrap_completed", False):
         console_log.info("Startup bootstrap already completed for this process.")
         return
@@ -100,6 +110,15 @@ async def startup_event():
     else:
         console_log.info("Crawler scheduler disabled for this environment.")
 
+    # Start run reaper if enabled
+    if conf.settings.SHOULD_RUN_REAPER:
+        from app.run_reaper import run_reaper_loop
+
+        app.state.reaper_task = asyncio.create_task(run_reaper_loop())
+        console_log.info("Run reaper started.")
+    else:
+        console_log.info("Run reaper disabled for this environment.")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -113,6 +132,17 @@ async def shutdown_event():
             pass
         console_log.info("Crawler scheduler stopped.")
 
+    # Cancel reaper if running
+    reaper_task = getattr(app.state, "reaper_task", None)
+    if reaper_task is not None:
+        reaper_task.cancel()
+        try:
+            await reaper_task
+        except asyncio.CancelledError:
+            pass
+        console_log.info("Run reaper stopped.")
+
+    await stop_document_collaboration_server()
     tracemalloc.stop()
     console_log.info("Shutting down...")
 

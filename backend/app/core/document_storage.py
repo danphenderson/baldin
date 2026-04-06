@@ -29,8 +29,10 @@ def build_document_source_path(
 def resolve_document_source_path(relative_path: str) -> Path:
     absolute_path = (public_assets_root() / relative_path).resolve()
     uploads_root = document_uploads_root()
-    if not str(absolute_path).startswith(str(uploads_root)):
-        raise ValueError("Document source file path must stay under the uploads root")
+    try:
+        absolute_path.relative_to(uploads_root)
+    except ValueError as exc:
+        raise ValueError("Document source file path must stay under the uploads root") from exc
     return absolute_path
 
 

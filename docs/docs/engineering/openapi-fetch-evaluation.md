@@ -49,7 +49,7 @@ optional auth middleware.
 | --- | --- | --- |
 | 1 | **Path-level type safety** | `client.GET('/leads/{id}', { params: { path: { id } } })` is type-checked against `paths["/leads/{id}"]["get"]`.  Typos in the path string, missing path/query params, or wrong body shapes are compile-time errors. |
 | 2 | **Response types are inferred** | Return types are derived from the schema automatically — no manual `Promise<LeadDetailRead>` annotation required on internal calls. |
-| 3 | **Eliminated boilerplate** | `buildRequest`, `buildLeadListQuery`, and `fetchAPI` (60+ lines) were replaced by the library's built-in serialization and request construction.  The service shrank from 238 lines to 185 lines despite keeping all custom error logic. |
+| 3 | **Eliminated boilerplate** | `buildRequest`, `buildLeadListQuery`, and `fetchAPI` (60+ lines) were replaced by the library's built-in serialization and request construction.  The service is still materially smaller despite keeping all custom error logic. |
 | 4 | **Native Fetch under the hood** | `openapi-fetch` wraps the native `fetch` API with zero runtime dependencies.  No bundle-size surprise — the library is ~7 kB gzipped. |
 | 5 | **Middleware model** | Auth headers are injected through a first-class middleware hook rather than per-function boilerplate.  Logging, retry, or metrics middleware can be added in one place. |
 | 6 | **Schema-driven evolution** | When backend routes change, `scripts/update_frontend_schemas.sh` regenerates `schema.d.ts` and the compiler immediately flags any service call whose path or params no longer match.  Today, mismatches are only caught at runtime. |

@@ -60,10 +60,21 @@ describe('lead service', () => {
     expect(result.normalized_url).toBe('https://jobs.example.com/roles/123');
     // openapi-fetch passes a Request object to fetch rather than (url, options)
     const request = fetchMock.mock.calls[0][0] as Request;
-    expect(request.url).toContain('/leads/extract');
-    expect(request.url).toContain('extraction_url=');
+    expect(request.url).toBe(
+      'http://localhost:8000/api/v1/leads/extract?extraction_url=https%3A%2F%2Fjobs.example.com%2Froles%2F123%3Fref%3Dmail',
+    );
     expect(request.method).toBe('POST');
     expect(request.headers.get('Authorization')).toBe('Bearer token-123');
+  });
+
+  it('rejects missing tokens before dispatching a leads request', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(extractLead('', 'https://jobs.example.com/roles/123?ref=mail'))
+      .rejects
+      .toThrow('Authorization token is required');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('throws a LeadServiceError for non-422 collaboration failures', async () => {

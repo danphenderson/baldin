@@ -1,10 +1,17 @@
 # Path: app/api/routes/applications.py
 import json
+import zipfile
+from html import escape as html_escape
+from io import BytesIO
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import UUID4
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.api.deps import (
     AsyncSession,
@@ -19,7 +26,9 @@ from app.api.deps import (
     models,
     schemas,
 )
+from app.api.routes.documents import _tiptap_to_flowables
 from app.core.datetime_utils import format_utc_datetime, normalize_utc_datetime, now_utc
+from app.core.document_storage import resolve_document_source_path
 
 router: APIRouter = APIRouter()
 
@@ -415,6 +424,206 @@ async def get_application_by_id(
     # Fetch company details for the application
 
     return application
+
+
+# ---------------------------------------------------------------------------
+#  Materials export
+# ---------------------------------------------------------------------------
+
+_PDF_STYLE = ParagraphStyle(
+    name="ExportDefault",
+    fontName="Helvetica",
+    fontSize=12,
+    leading=14,
+    spaceAfter=0,
+    spaceBefore=0,
+)
+
+
+def _text_to_pdf(text: str) -> bytes:
+    """Render plain text content into a minimal PDF and return the bytes."""
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72,
+    )
+    doc.build([Paragraph(html_escape(text).replace("\n", "<br />"), _PDF_STYLE)])
+    buf.seek(0)
+    return buf.read()
+
+
+def _document_version_to_pdf(version: models.DocumentVersion) -> bytes:
+    """Render a document version to PDF, honoring its content format."""
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72,
+    )
+    raw_content = version.content or ""
+    if getattr(version, "content_format", None) == "tiptap_json":
+        flowables = _tiptap_to_flowables(raw_content, _PDF_STYLE)
+    else:
+        flowables = [
+            Paragraph(html_escape(raw_content).replace("\n", "<br />"), _PDF_STYLE)
+        ]
+    doc.build(flowables)
+    buf.seek(0)
+    return buf.read()
+
+
+def _safe_filename(name: str) -> str:
+    """Strip characters that are problematic inside ZIP entry names."""
+    return name.replace("/", "_").replace("\\", "_").replace("\0", "")
+
+
+@router.get("/{id}/export")
+async def export_application_materials(
+    app: models.Application = Depends(get_application),
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    """Export all materials linked to an application as a ZIP archive.
+
+    The archive contains up to three subdirectories — ``resumes/``,
+    ``cover_letters/``, and ``documents/`` — each holding PDF files for
+    the linked records.
+    """
+    if app.user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to export this application",
+        )
+
+    # -- Fetch linked resumes ----------------------------------------------
+    resumes = (
+        (
+            await db.execute(
+                select(models.Resume)
+                .join(models.ResumeXApplication)
+                .where(models.ResumeXApplication.application_id == app.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    # -- Fetch linked cover letters ----------------------------------------
+    cover_letters = (
+        (
+            await db.execute(
+                select(models.CoverLetter)
+                .join(models.CoverLetterXApplication)
+                .where(models.CoverLetterXApplication.application_id == app.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    # -- Fetch linked document attachments ---------------------------------
+    document_links = (
+        (
+            await db.execute(
+                select(models.DocumentXApplication).where(
+                    models.DocumentXApplication.application_id == app.id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    documents_by_id: dict = {}
+    if document_links:
+        document_ids = [link.document_id for link in document_links]
+        documents = (
+            (
+                await db.execute(
+                    select(models.Document)
+                    .options(
+                        selectinload(models.Document.versions),
+                        selectinload(models.Document.head_version),
+                    )
+                    .where(models.Document.id.in_(document_ids))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        documents_by_id = {document.id: document for document in documents}
+
+    if not resumes and not cover_letters and not document_links:
+        raise HTTPException(
+            status_code=404,
+            detail="No materials linked to this application",
+        )
+
+    # -- Build ZIP in memory -----------------------------------------------
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for resume in resumes:
+            if resume.content:
+                fname = _safe_filename(resume.name or "resume") + ".pdf"
+                zf.writestr(f"resumes/{fname}", _text_to_pdf(resume.content))
+
+        for cl in cover_letters:
+            if cl.content:
+                fname = _safe_filename(cl.name or "cover_letter") + ".pdf"
+                zf.writestr(f"cover_letters/{fname}", _text_to_pdf(cl.content))
+
+        for link in document_links:
+            doc = documents_by_id.get(link.document_id)
+            if not doc:
+                continue
+
+            version = doc.head_version
+            if link.version_id:
+                version = next(
+                    (
+                        candidate
+                        for candidate in doc.versions
+                        if candidate.id == link.version_id
+                    ),
+                    None,
+                )
+
+            if not version:
+                continue
+
+            fname = _safe_filename(doc.title or "document") + ".pdf"
+
+            # Prefer the original uploaded PDF when available on disk.
+            if version.source_file:
+                try:
+                    abs_path = resolve_document_source_path(version.source_file)
+                    if abs_path.is_file():
+                        zf.write(abs_path, f"documents/{fname}")
+                        continue
+                except ValueError:
+                    pass  # path outside uploads root — fall through
+
+            # Fall back to generating a PDF from the linked version content.
+            if version.content:
+                zf.writestr(
+                    f"documents/{fname}",
+                    _document_version_to_pdf(version),
+                )
+
+    zip_buffer.seek(0)
+
+    response = StreamingResponse(zip_buffer, media_type="application/zip")
+    response.headers["Content-Disposition"] = (
+        'attachment; filename="application_materials.zip"'
+    )
+    return response
 
 
 # ---------------------------------------------------------------------------

@@ -7,15 +7,22 @@ Covers:
 - No spurious version creation when only name changes
 """
 
+import asyncio
 from contextlib import asynccontextmanager
 from uuid import UUID
 
 import pytest
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import inspect, text
 
 from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
+from app.core.db import (
+    async_engine,
+    create_db_and_tables,
+    drop_and_create_db_and_tables,
+    session_context,
+)
 from app.main import app
 from app.tests import utils
 
@@ -99,6 +106,16 @@ def _extractor_payload(**overrides) -> dict:
     }
     payload.update(overrides)
     return payload
+
+
+async def _extractor_version_unique_constraints() -> list[dict]:
+    async with async_engine.connect() as conn:
+        return await conn.run_sync(
+            lambda sync_conn: inspect(sync_conn).get_unique_constraints(
+                "extractor_versions",
+                schema="public",
+            )
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -189,3 +206,153 @@ async def test_update_without_schema_change_no_new_version():
         versions = resp.json()
         assert len(versions) == 1
         assert versions[0]["version_number"] == 1
+
+
+async def test_idempotent_update_with_same_payload_no_new_version():
+    """Replaying the same payload should not create another version."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, _ = await _create_user("testpass123", is_superuser=False)
+        headers = await _auth_headers(client, email, "testpass123")
+
+        payload = _extractor_payload()
+        resp = await client.post("/extractor/", json=payload, headers=headers)
+        assert resp.status_code == 200, resp.text
+        extractor_id = resp.json()["id"]
+
+        resp = await client.put(
+            f"/extractor/{extractor_id}",
+            json=payload,
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+
+        resp = await client.get(f"/extractor/{extractor_id}/versions", headers=headers)
+        assert resp.status_code == 200, resp.text
+        versions = resp.json()
+        assert len(versions) == 1
+        assert versions[0]["version_number"] == 1
+
+
+async def test_update_with_reordered_schema_no_new_version():
+    """A semantically identical schema should not create another version."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, _ = await _create_user("testpass123", is_superuser=False)
+        headers = await _auth_headers(client, email, "testpass123")
+
+        payload = _extractor_payload()
+        resp = await client.post("/extractor/", json=payload, headers=headers)
+        assert resp.status_code == 200, resp.text
+        extractor_id = resp.json()["id"]
+
+        reordered_schema = {
+            "description": payload["json_schema"]["description"],
+            "properties": {
+                "companies": {
+                    "description": payload["json_schema"]["properties"]["companies"][
+                        "description"
+                    ],
+                    "items": payload["json_schema"]["properties"]["companies"]["items"],
+                    "title": payload["json_schema"]["properties"]["companies"]["title"],
+                    "type": payload["json_schema"]["properties"]["companies"]["type"],
+                }
+            },
+            "title": payload["json_schema"]["title"],
+            "type": payload["json_schema"]["type"],
+        }
+
+        resp = await client.put(
+            f"/extractor/{extractor_id}",
+            json={"json_schema": reordered_schema},
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+
+        resp = await client.get(f"/extractor/{extractor_id}/versions", headers=headers)
+        assert resp.status_code == 200, resp.text
+        versions = resp.json()
+        assert len(versions) == 1
+        assert versions[0]["version_number"] == 1
+
+
+async def test_extractor_version_unique_constraint_exists():
+    await _ensure_db_ready()
+
+    constraints = await _extractor_version_unique_constraints()
+
+    assert any(
+        constraint["name"] == "uq_extractor_versions_extractor_id_version_number"
+        and tuple(constraint.get("column_names") or [])
+        == ("extractor_id", "version_number")
+        for constraint in constraints
+    )
+
+
+async def test_create_db_and_tables_restores_extractor_version_constraint():
+    await _ensure_db_ready()
+
+    async with async_engine.begin() as conn:
+        await conn.execute(
+            text(
+                "ALTER TABLE extractor_versions "
+                "DROP CONSTRAINT IF EXISTS "
+                "uq_extractor_versions_extractor_id_version_number"
+            )
+        )
+
+    constraints = await _extractor_version_unique_constraints()
+    assert not any(
+        constraint["name"] == "uq_extractor_versions_extractor_id_version_number"
+        for constraint in constraints
+    )
+
+    await create_db_and_tables()
+
+    constraints = await _extractor_version_unique_constraints()
+    assert any(
+        constraint["name"] == "uq_extractor_versions_extractor_id_version_number"
+        and tuple(constraint.get("column_names") or [])
+        == ("extractor_id", "version_number")
+        for constraint in constraints
+    )
+
+
+async def test_concurrent_instruction_updates_keep_monotonic_versions():
+    await _ensure_db_ready()
+    async with _client() as client_create:
+        email, _ = await _create_user("testpass123", is_superuser=False)
+        headers = await _auth_headers(client_create, email, "testpass123")
+
+        payload = _extractor_payload()
+        resp = await client_create.post("/extractor/", json=payload, headers=headers)
+        assert resp.status_code == 200, resp.text
+        extractor_id = resp.json()["id"]
+
+    async with _client() as client_one, _client() as client_two:
+        responses = await asyncio.gather(
+            client_one.put(
+                f"/extractor/{extractor_id}",
+                json={"instruction": "Extract executive names from the text."},
+                headers=headers,
+            ),
+            client_two.put(
+                f"/extractor/{extractor_id}",
+                json={"instruction": "Extract customer names from the text."},
+                headers=headers,
+            ),
+        )
+
+    for response in responses:
+        assert response.status_code == 200, response.text
+
+    async with _client() as client_verify:
+        resp = await client_verify.get(
+            f"/extractor/{extractor_id}/versions",
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+        versions = resp.json()
+
+    assert [version["version_number"] for version in versions] == [3, 2, 1]
+    assert len({version["version_hash"] for version in versions}) == 3

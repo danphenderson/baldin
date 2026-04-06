@@ -36,8 +36,10 @@ def _resolve_hostname_addresses(
             type=socket.SOCK_STREAM,
             proto=socket.IPPROTO_TCP,
         )
-    except socket.gaierror:
-        return set()
+    except socket.gaierror as exc:
+        raise UnsafeFetchUrlError(
+            f"Fetch URL host '{hostname}' could not be resolved"
+        ) from exc
 
     addresses: set[ipaddress.IPv4Address | ipaddress.IPv6Address] = set()
     for _family, _type, _proto, _canonname, sockaddr in addrinfo:
@@ -46,6 +48,11 @@ def _resolve_hostname_addresses(
             addresses.add(ipaddress.ip_address(resolved_host))
         except ValueError:
             continue
+
+    if not addresses:
+        raise UnsafeFetchUrlError(
+            f"Fetch URL host '{hostname}' did not resolve to any IP addresses"
+        )
 
     return addresses
 

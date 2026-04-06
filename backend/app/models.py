@@ -193,6 +193,13 @@ class ExtractorVersion(Base):
     """Immutable snapshot of an Extractor's instruction and schema at a point in time."""
 
     __tablename__ = "extractor_versions"
+    __table_args__ = (
+        UniqueConstraint(
+            "extractor_id",
+            "version_number",
+            name="uq_extractor_versions_extractor_id_version_number",
+        ),
+    )
     extractor_id = Column(UUID, ForeignKey("extractors.id"), nullable=False, index=True)
     version_number = Column(Integer, nullable=False)
     instruction = Column(Text)

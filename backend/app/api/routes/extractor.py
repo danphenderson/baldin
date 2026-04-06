@@ -1,10 +1,11 @@
 # app/api/routes/extractor.py
+import json
 from typing import Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import UUID4, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload, selectinload
 from typing_extensions import TypedDict
 
@@ -138,6 +139,37 @@ UPDATE_CHAIN = (
 ).with_config({"run_name": "suggest_update"})
 
 
+async def _create_extractor_version_snapshot(
+    db: AsyncSession,
+    extractor: models.Extractor,
+) -> models.ExtractorVersion:
+    """Persist the next immutable extractor snapshot inside the current transaction."""
+    from app.utils import compute_version_hash
+
+    await db.execute(
+        select(models.Extractor.id)
+        .where(models.Extractor.id == extractor.id)
+        .with_for_update()
+    )
+    max_ver_result = await db.execute(
+        select(
+            func.coalesce(func.max(models.ExtractorVersion.version_number), 0)
+        ).where(models.ExtractorVersion.extractor_id == extractor.id)
+    )
+    next_version_number = max_ver_result.scalar_one() + 1
+
+    version = models.ExtractorVersion(
+        extractor_id=extractor.id,
+        version_number=next_version_number,
+        instruction=extractor.instruction,
+        json_schema=extractor.json_schema,
+        version_hash=compute_version_hash(extractor.instruction, extractor.json_schema),
+    )
+    db.add(version)
+    await db.flush()
+    return version
+
+
 @router.post("/suggest", response_model=ExtractorDefinition)
 @limiter.limit("5/minute")
 async def suggest_extractor(
@@ -193,20 +225,11 @@ async def create_extractor(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> schemas.ExtractorRead:
-    from app.utils import compute_version_hash
-
     extractor = models.Extractor(**extractor_in.model_dump(), user_id=user.id)
     db.add(extractor)
     await db.flush()
 
-    version = models.ExtractorVersion(
-        extractor_id=extractor.id,
-        version_number=1,
-        instruction=extractor.instruction,
-        json_schema=extractor.json_schema,
-        version_hash=compute_version_hash(extractor.instruction, extractor.json_schema),
-    )
-    db.add(version)
+    await _create_extractor_version_snapshot(db, extractor)
     await db.commit()
     return extractor  # type: ignore
 
@@ -214,38 +237,25 @@ async def create_extractor(
 @router.put("/{id}", response_model=schemas.ExtractorRead)
 async def update_extractor(
     payload: schemas.ExtractorUpdate,
-    extractor: schemas.ExtractorRead = Depends(get_extractor),
+    extractor: models.Extractor = Depends(get_extractor),
     db: AsyncSession = Depends(get_async_session),
 ) -> schemas.ExtractorRead:
-    from app.utils import compute_version_hash
-
     changed_fields = payload.model_dump(exclude_unset=True)
-    needs_version = "instruction" in changed_fields or "json_schema" in changed_fields
+    needs_version = (
+        "instruction" in changed_fields
+        and changed_fields["instruction"] != extractor.instruction
+    ) or (
+        "json_schema" in changed_fields
+        and json.dumps(changed_fields["json_schema"] or {}, sort_keys=True)
+        != json.dumps(extractor.json_schema or {}, sort_keys=True)
+    )
 
     for field, value in changed_fields.items():
         setattr(extractor, field, value)
     await db.flush()
 
     if needs_version:
-        from sqlalchemy import func as sa_func
-
-        max_ver_result = await db.execute(
-            select(
-                sa_func.coalesce(sa_func.max(models.ExtractorVersion.version_number), 0)
-            ).where(models.ExtractorVersion.extractor_id == extractor.id)
-        )
-        max_ver = max_ver_result.scalar() or 0
-
-        version = models.ExtractorVersion(
-            extractor_id=extractor.id,
-            version_number=max_ver + 1,
-            instruction=extractor.instruction,
-            json_schema=extractor.json_schema,
-            version_hash=compute_version_hash(
-                extractor.instruction, extractor.json_schema
-            ),
-        )
-        db.add(version)
+        await _create_extractor_version_snapshot(db, extractor)
 
     await db.commit()
     await db.refresh(extractor)

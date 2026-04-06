@@ -61,6 +61,35 @@ def test_validate_url_safe_for_fetch_allows_public_dns_resolution(
     )
 
 
+def test_validate_url_safe_for_fetch_rejects_dns_resolution_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_getaddrinfo(host, port, type, proto):
+        assert host == "example.com"
+        raise socket.gaierror(socket.EAI_AGAIN, "temporary failure")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+
+    with pytest.raises(UnsafeFetchUrlError, match="could not be resolved"):
+        validate_url_safe_for_fetch("https://example.com/resume")
+
+
+def test_validate_url_safe_for_fetch_rejects_empty_dns_resolution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_getaddrinfo(host, port, type, proto):
+        assert host == "example.com"
+        return []
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+
+    with pytest.raises(
+        UnsafeFetchUrlError,
+        match="did not resolve to any IP addresses",
+    ):
+        validate_url_safe_for_fetch("https://example.com/resume")
+
+
 @pytest.mark.asyncio
 async def test_extract_text_from_url_rejects_unsafe_url_before_browser_loader(
     monkeypatch: pytest.MonkeyPatch,

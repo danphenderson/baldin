@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyUserDatabase
-from sqlalchemy import delete, inspect, or_, select
+from sqlalchemy import UniqueConstraint, delete, inspect, or_, select
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -126,9 +126,57 @@ def _sync_missing_columns(connection: Connection) -> None:
             )
 
 
+def _sync_missing_named_unique_constraints(connection: Connection) -> None:
+    """Add explicitly named unique constraints that are missing from local tables."""
+    inspector = inspect(connection)
+    existing_tables = set(inspector.get_table_names(schema="public"))
+
+    for table in models.Base.metadata.tables.values():
+        if table.name not in existing_tables:
+            continue
+
+        existing_constraints = inspector.get_unique_constraints(
+            table.name, schema="public"
+        )
+        existing_names = {constraint["name"] for constraint in existing_constraints}
+        existing_columns = {
+            tuple(constraint.get("column_names") or [])
+            for constraint in existing_constraints
+        }
+        quoted_table_name = _quote_identifier(connection, table.name)
+
+        for constraint in table.constraints:
+            if not isinstance(constraint, UniqueConstraint) or not constraint.name:
+                continue
+
+            column_names = tuple(column.name for column in constraint.columns)
+            if constraint.name in existing_names or column_names in existing_columns:
+                continue
+
+            quoted_constraint_name = _quote_identifier(connection, constraint.name)
+            quoted_columns = ", ".join(
+                _quote_identifier(connection, column_name)
+                for column_name in column_names
+            )
+            connection.execute(
+                text(
+                    "ALTER TABLE "
+                    f"{quoted_table_name} ADD CONSTRAINT {quoted_constraint_name} "
+                    f"UNIQUE ({quoted_columns})"
+                )
+            )
+            existing_names.add(constraint.name)
+            existing_columns.add(column_names)
+            console_log.info(
+                "Added missing unique constraint "
+                f"{constraint.name} during bootstrap schema sync."
+            )
+
+
 def _create_and_sync_schema(connection: Connection) -> None:
     models.Base.metadata.create_all(connection)
     _sync_missing_columns(connection)
+    _sync_missing_named_unique_constraints(connection)
 
 
 async def _terminate_other_test_db_sessions(conn: AsyncSession | Any) -> None:

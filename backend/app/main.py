@@ -13,6 +13,7 @@ from time import time
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.admin import admin
 from app.api.api import api_router
@@ -120,6 +121,7 @@ app = FastAPI(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # Set all CORS enabled origins
 if conf.settings.BACKEND_CORS_ORIGINS:

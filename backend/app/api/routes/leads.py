@@ -3,31 +3,32 @@
 import json
 
 from aiofiles import open as aopen
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import UUID4
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app import utils
-from app.api.deps import AsyncSession, conf
-from app.api.deps import console_log as log
+from app.api.deps import AsyncSession
 from app.api.deps import (
     create_extractor,
     create_lead,
-    create_orchestration_event,
-    create_orchestration_pipeline,
     get_async_session,
     get_current_superuser,
     get_current_user,
     get_extractor_by_name,
     get_lead,
     get_mutable_lead,
-    get_orchestration_pipeline_by_name,
     get_pagination_params,
     logging,
     models,
     run_extractor,
     schemas,
+)
+from app.api.routes.seed_tasks import (
+    SeedOperation,
+    build_user_seed_creator,
+    schedule_seed_operation,
 )
 from app.core.db import session_context
 from app.core.url_safety import validate_url_safe_for_fetch
@@ -35,6 +36,14 @@ from app.core.url_safety import validate_url_safe_for_fetch
 logger = logging.get_logger(__name__)
 
 router: APIRouter = APIRouter()
+
+LEAD_SEED_OPERATION = SeedOperation(
+    pipeline_name="seed_leads",
+    resource_name="Leads",
+    seed_filename="leads.json",
+    destination_table="leads",
+    creator=build_user_seed_creator(schemas.LeadCreate, create_lead),
+)
 
 
 def _get_viewer_registration(
@@ -726,62 +735,10 @@ async def delete_lead(
     return None
 
 
-@router.post("/seed")
+@router.post("/seed", status_code=202, response_model=schemas.SeedOperationAccepted)
 async def seed_leads(
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    seed_path = conf.settings.SEEDS_PATH / "leads.json"
-    logger.info(f"Seeding Leads table with initial data from {seed_path}")
-    try:
-        pipeline = await get_orchestration_pipeline_by_name("seed_leads", db, user)
-    except HTTPException as exc:
-        if exc.status_code != 404:
-            raise exc
-        logger.warning("Seed Leads pipeline not found, creating a new one")
-        pipeline = await create_orchestration_pipeline(
-            schemas.OrchestrationPipelineCreate(
-                name="seed_leads",
-                description="Seed Leads table with initial data",
-                definition={"action": "Insert initial data into Leads table"},
-            ),
-            user,
-            db,
-        )
-
-    event = await create_orchestration_event(
-        schemas.OrchestrationEventCreate(
-            message="Seeding Leads table with initial data",
-            environment=conf.settings.ENVIRONMENT,
-            pipeline_id=pipeline.id,  # type: ignore[arg-type]
-            status=schemas.OrchestrationEventStatusType.PENDING,
-            payload={},
-            source_uri=schemas.URI(name=str(seed_path), type=schemas.URIType.FILE),
-            destination_uri=schemas.URI(
-                name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#leads",
-                type=schemas.URIType.DATABASE,
-            ),
-        ),
-        db=db,
-    )
-
-    try:
-        async with aopen(seed_path, "r") as file_handle:
-            seed_data = json.loads(await file_handle.read())
-            log.info(f"Seeding Leads table with {len(seed_data)} records")
-        for lead_data in seed_data:
-            await create_lead(
-                schemas.LeadCreate(**lead_data),
-                db=db,
-                user=user,
-            )
-    except Exception as exc:
-        log.exception(f"Error seeding Leads table: {exc}")
-        setattr(event, "status", schemas.OrchestrationEventStatusType.FAILED)
-        setattr(event, "message", str(exc))
-        await db.commit()
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    setattr(event, "status", schemas.OrchestrationEventStatusType.SUCCESS)
-    await db.commit()
-    return {"message": "Leads table seeded successfully"}
+    return await schedule_seed_operation(background_tasks, db, user, LEAD_SEED_OPERATION)

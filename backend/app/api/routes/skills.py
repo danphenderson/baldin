@@ -1,31 +1,39 @@
 # app/api/routes/skills.py
-import json
 from asyncio import gather
 
-from aiofiles import open as aopen
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy import select
 
-from app.api.deps import AsyncSession, conf
+from app.api.deps import AsyncSession
 from app.api.deps import console_log as log
 from app.api.deps import (
     create_extractor,
-    create_orchestration_event,
-    create_orchestration_pipeline,
     create_skill,
     get_async_session,
     get_current_user,
     get_extractor_by_name,
     get_extractor_run_payload,
-    get_orchestration_pipeline_by_name,
     get_skill,
     models,
     run_extractor,
     schemas,
 )
+from app.api.routes.seed_tasks import (
+    SeedOperation,
+    build_user_seed_creator,
+    schedule_seed_operation,
+)
 from app.core.rate_limit import limiter
 
 router: APIRouter = APIRouter()
+
+SKILL_SEED_OPERATION = SeedOperation(
+    pipeline_name="seed_skills",
+    resource_name="Skills",
+    seed_filename="skills.json",
+    destination_table="skills",
+    creator=build_user_seed_creator(schemas.SkillCreate, create_skill),
+)
 
 
 async def extract_user_skills_task(
@@ -140,67 +148,10 @@ async def delete_user_skill(
     return None
 
 
-@router.post("/seed", response_model=str)
+@router.post("/seed", status_code=202, response_model=schemas.SeedOperationAccepted)
 async def seed_skills(
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
-) -> str:
-    seed_path = conf.settings.SEEDS_PATH / "skills.json"
-    log.info(f"Seeding Skills table with initial data from {seed_path}")
-
-    # Fetch orchestration pipeline, create a new one if not found
-    try:
-        pipeline = await get_orchestration_pipeline_by_name("seed_skills", db, user)
-    except HTTPException as e:
-        if e.status_code == 404:
-            log.warning("Seed Skills pipeline not found, creating a new one")
-            pipeline = await create_orchestration_pipeline(
-                schemas.OrchestrationPipelineCreate(
-                    name="seed_skills",
-                    description="Seed Skills table with initial data",
-                    definition={"action": "Insert initial data into Skills table"},
-                ),
-                user,
-                db,
-            )
-        else:
-            raise e
-
-    # Create orchestration event
-    event = await create_orchestration_event(
-        schemas.OrchestrationEventCreate(
-            message="Seeding Skills table with initial data",
-            environment=conf.settings.ENVIRONMENT,
-            pipeline_id=pipeline.id,
-            status=schemas.OrchestrationEventStatusType.PENDING,
-            payload={},
-            source_uri=schemas.URI(name=str(seed_path), type=schemas.URIType.FILE),
-            destination_uri=schemas.URI(
-                name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#skills",
-                type=schemas.URIType.DATABASE,
-            ),
-        ),
-        db=db,
-    )
-
-    # Run the orchestration event
-    try:
-        async with aopen(seed_path, "r") as f:
-            skills_data = json.loads(await f.read())
-        for skill_data in skills_data:
-            await create_skill(
-                schemas.SkillCreate(**skill_data),
-                db=db,
-                user=user,
-            )
-    except Exception as e:
-        log.error(f"Error seeding Skills table: {e}")
-        setattr(event, "status", schemas.OrchestrationEventStatusType.FAILED)
-        setattr(event, "message", str(e))
-        await db.commit()
-        raise HTTPException(status_code=500, detail=str(e))
-
-    setattr(event, "status", schemas.OrchestrationEventStatusType.SUCCESS)
-    await db.commit()
-    log.info(f"Seeded Skills table with {len(skills_data)} records.")
-    return f"Seeded Skills table with {len(skills_data)} records."
+):
+    return await schedule_seed_operation(background_tasks, db, user, SKILL_SEED_OPERATION)

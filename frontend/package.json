@@ -26,7 +26,6 @@
     "fuse.js": "^7.1.0",
     "markdown-to-jsx": "^7.7.0",
     "motion": "^12.23.12",
-    "openapi-fetch": "^0.17.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-github-calendar": "^4.5.10",

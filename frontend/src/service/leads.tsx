@@ -1,5 +1,5 @@
 import { components } from '../schema';
-import { createApiClient } from './api-client';
+import { API_URL } from '../config/env';
 
 export type LeadRead = components['schemas']['LeadRead'];
 export type LeadDetailRead = components['schemas']['LeadDetailRead'];
@@ -19,6 +19,8 @@ export type LeadsPaginatedRead = components['schemas']['LeadsPaginatedRead'];
 
 type LeadErrorDetail = unknown;
 
+const BASE_URL = `${API_URL}/leads`;
+
 export class LeadServiceError extends Error {
   status: number;
 
@@ -35,6 +37,26 @@ export class LeadServiceError extends Error {
 export const isLeadServiceError = (error: unknown): error is LeadServiceError => (
   error instanceof LeadServiceError
 );
+
+const buildRequest = (token: string, method: string, body?: unknown): RequestInit => {
+  if (!token) {
+    throw new Error('Authorization token is required');
+  }
+
+  const headers = new Headers({
+    Authorization: `Bearer ${token}`,
+  });
+
+  if (body !== undefined) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  return {
+    method,
+    headers,
+    body: body === undefined ? null : JSON.stringify(body),
+  };
+};
 
 const stringifyDetail = (detail: unknown, fallback: string): string => {
   if (typeof detail === 'string' && detail.trim()) {
@@ -69,86 +91,111 @@ const stringifyDetail = (detail: unknown, fallback: string): string => {
   return fallback;
 };
 
-const toLeadServiceError = (status: number, detail: unknown): LeadServiceError => {
-  const fallback = status === 400
+const parseError = async (response: Response): Promise<LeadServiceError> => {
+  let detail: unknown = null;
+
+  try {
+    const text = await response.text();
+    if (text) {
+      try {
+        detail = JSON.parse(text);
+      } catch {
+        detail = text;
+      }
+    }
+  } catch {
+    detail = null;
+  }
+
+  const fallback = response.status === 400
     ? 'The server rejected that lead request.'
-    : status === 403
+    : response.status === 403
       ? 'You do not have permission to do that on this lead.'
-      : status === 404
+      : response.status === 404
         ? 'That lead or collaboration thread could not be found.'
         : 'Lead request failed.';
 
-  return new LeadServiceError(stringifyDetail(detail, fallback), status, detail);
+  return new LeadServiceError(stringifyDetail(detail, fallback), response.status, detail);
 };
 
-const unwrap = <T,>(
-  result: { data?: T; error?: unknown; response: Response },
-): T => {
-  if (result.error !== undefined) {
-    throw toLeadServiceError(result.response.status, result.error);
+const fetchAPI = async <T,>(url: string, options: RequestInit): Promise<T> => {
+  const response = await fetch(url, options);
+
+  if (!response.ok) {
+    throw await parseError(response);
   }
-  return result.data as T;
+
+  if (response.status === 204 || response.status === 205) {
+    return null as T;
+  }
+
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    return null as T;
+  }
+
+  return response.json() as Promise<T>;
+};
+
+const buildLeadListQuery = (pagination: Pagination): string => {
+  const params = new URLSearchParams();
+
+  if (pagination.page !== undefined) {
+    params.set('page', String(pagination.page));
+  }
+
+  if (pagination.page_size !== undefined) {
+    params.set('page_size', String(pagination.page_size));
+  }
+
+  if (pagination.request_count !== undefined) {
+    params.set('request_count', String(Boolean(pagination.request_count)));
+  }
+
+  return params.toString();
 };
 
 export const getLeads = async (token: string, pagination: Pagination): Promise<LeadsPaginatedRead> => {
-  const client = createApiClient(token);
-  return unwrap(await client.GET('/leads/', {
-    params: {
-      query: {
-        page: pagination.page,
-        page_size: pagination.page_size,
-        request_count: pagination.request_count,
-      },
-    },
-  }));
+  const requestOptions = buildRequest(token, 'GET');
+  const query = buildLeadListQuery(pagination);
+  const suffix = query ? `/?${query}` : '/';
+  return fetchAPI<LeadsPaginatedRead>(`${BASE_URL}${suffix}`, requestOptions);
 };
 
 export const getLead = async (token: string, id: string): Promise<LeadDetailRead> => {
-  const client = createApiClient(token);
-  return unwrap(await client.GET('/leads/{id}', {
-    params: { path: { id } },
-  }));
+  const requestOptions = buildRequest(token, 'GET');
+  return fetchAPI<LeadDetailRead>(`${BASE_URL}/${id}`, requestOptions);
 };
 
 export const createLead = async (token: string, lead: LeadCreate): Promise<LeadRead> => {
-  const client = createApiClient(token);
-  return unwrap(await client.POST('/leads/', {
-    body: lead,
-  }));
+  const requestOptions = buildRequest(token, 'POST', lead);
+  return fetchAPI<LeadRead>(`${BASE_URL}/`, requestOptions);
 };
 
 export const updateLead = async (token: string, id: string, lead: LeadSharedUpdate): Promise<LeadRead> => {
-  const client = createApiClient(token);
-  return unwrap(await client.PATCH('/leads/{id}', {
-    params: { path: { id } },
-    body: lead,
-  }));
+  const requestOptions = buildRequest(token, 'PATCH', lead);
+  return fetchAPI<LeadRead>(`${BASE_URL}/${id}`, requestOptions);
 };
 
 export const deleteLead = async (token: string, id: string): Promise<void> => {
-  const client = createApiClient(token);
-  unwrap(await client.DELETE('/leads/{id}', {
-    params: { path: { id } },
-  }));
+  const requestOptions = buildRequest(token, 'DELETE');
+  await fetchAPI<void>(`${BASE_URL}/${id}`, requestOptions);
 };
 
 export const seedLeads = async (token: string): Promise<void> => {
-  const client = createApiClient(token);
-  unwrap(await client.POST('/leads/seed'));
+  const requestOptions = buildRequest(token, 'POST');
+  await fetchAPI<void>(`${BASE_URL}/seed`, requestOptions);
 };
 
 export const extractLead = async (token: string, extractionUrl: string): Promise<LeadExtractResponse> => {
-  const client = createApiClient(token);
-  return unwrap(await client.POST('/leads/extract', {
-    params: { query: { extraction_url: extractionUrl } },
-  }));
+  const requestOptions = buildRequest(token, 'POST');
+  const query = new URLSearchParams({ extraction_url: extractionUrl });
+  return fetchAPI<LeadExtractResponse>(`${BASE_URL}/extract?${query.toString()}`, requestOptions);
 };
 
 export const createLeadRegistration = async (token: string, leadId: string): Promise<LeadRegistrationRead> => {
-  const client = createApiClient(token);
-  return unwrap(await client.POST('/leads/{id}/registration', {
-    params: { path: { id: leadId } },
-  }));
+  const requestOptions = buildRequest(token, 'POST');
+  return fetchAPI<LeadRegistrationRead>(`${BASE_URL}/${leadId}/registration`, requestOptions);
 };
 
 export const updateLeadRegistration = async (
@@ -156,25 +203,18 @@ export const updateLeadRegistration = async (
   leadId: string,
   registration: LeadRegistrationUpdate,
 ): Promise<LeadRegistrationRead> => {
-  const client = createApiClient(token);
-  return unwrap(await client.PATCH('/leads/{id}/registration', {
-    params: { path: { id: leadId } },
-    body: registration,
-  }));
+  const requestOptions = buildRequest(token, 'PATCH', registration);
+  return fetchAPI<LeadRegistrationRead>(`${BASE_URL}/${leadId}/registration`, requestOptions);
 };
 
 export const deleteLeadRegistration = async (token: string, leadId: string): Promise<void> => {
-  const client = createApiClient(token);
-  unwrap(await client.DELETE('/leads/{id}/registration', {
-    params: { path: { id: leadId } },
-  }));
+  const requestOptions = buildRequest(token, 'DELETE');
+  await fetchAPI<void>(`${BASE_URL}/${leadId}/registration`, requestOptions);
 };
 
 export const getLeadComments = async (token: string, leadId: string): Promise<LeadCommentRead[]> => {
-  const client = createApiClient(token);
-  return unwrap(await client.GET('/leads/{id}/comments', {
-    params: { path: { id: leadId } },
-  }));
+  const requestOptions = buildRequest(token, 'GET');
+  return fetchAPI<LeadCommentRead[]>(`${BASE_URL}/${leadId}/comments`, requestOptions);
 };
 
 export const createLeadComment = async (
@@ -182,11 +222,8 @@ export const createLeadComment = async (
   leadId: string,
   comment: LeadCommentCreate,
 ): Promise<LeadCommentRead> => {
-  const client = createApiClient(token);
-  return unwrap(await client.POST('/leads/{id}/comments', {
-    params: { path: { id: leadId } },
-    body: comment,
-  }));
+  const requestOptions = buildRequest(token, 'POST', comment);
+  return fetchAPI<LeadCommentRead>(`${BASE_URL}/${leadId}/comments`, requestOptions);
 };
 
 export const createLeadCommentReply = async (
@@ -195,9 +232,6 @@ export const createLeadCommentReply = async (
   commentId: string,
   comment: LeadCommentCreate,
 ): Promise<LeadCommentRead> => {
-  const client = createApiClient(token);
-  return unwrap(await client.POST('/leads/{id}/comments/{comment_id}/replies', {
-    params: { path: { id: leadId, comment_id: commentId } },
-    body: comment,
-  }));
+  const requestOptions = buildRequest(token, 'POST', comment);
+  return fetchAPI<LeadCommentRead>(`${BASE_URL}/${leadId}/comments/${commentId}/replies`, requestOptions);
 };

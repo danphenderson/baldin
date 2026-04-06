@@ -4836,7 +4836,7 @@ export interface components {
        */
       time_zone?: string | null;
       /** @description Avatar URI */
-      avatar_uri?: components["schemas"]["URI"] | null;
+      avatar_uri?: string | null;
       /**
        * Headline
        * @description Short professional tagline
@@ -5133,7 +5133,7 @@ export interface components {
        */
       time_zone?: string | null;
       /** @description Avatar URI */
-      avatar_uri?: components["schemas"]["URI"] | null;
+      avatar_uri?: string | null;
       /**
        * Headline
        * @description Short professional tagline
@@ -5249,7 +5249,7 @@ export interface components {
        */
       time_zone?: string | null;
       /** @description Avatar URI */
-      avatar_uri?: components["schemas"]["URI"] | null;
+      avatar_uri?: string | null;
       /**
        * Headline
        * @description Short professional tagline

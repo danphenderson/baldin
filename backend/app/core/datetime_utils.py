@@ -22,9 +22,11 @@ def parse_utc_datetime(value: str | datetime | None) -> datetime | None:
         return None
     if isinstance(value, datetime):
         return ensure_utc(value)
+    if not isinstance(value, str):
+        return None
     try:
         return ensure_utc(datetime.fromisoformat(value.replace("Z", "+00:00")))
-    except ValueError:
+    except (TypeError, ValueError):
         return None
 
 

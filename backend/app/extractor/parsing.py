@@ -29,7 +29,6 @@ HANDLERS = {
     "text/x-tex": TextParser(),
     "application/x-tex": TextParser(),
     "text/html": BS4HTMLParser(),
-    "application/xhtml+xml": BS4HTMLParser(),
     # Disable for now as they rely on unstructured and there's some install
     # issue with unstructured.
     # from langchain.document_loaders.parsers.msword import MsWordParser

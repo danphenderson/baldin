@@ -1171,3 +1171,187 @@ async def delete_share(
     await db.delete(share)
     await db.commit()
     return None
+
+
+# ---------------------------------------------------------------------------
+#  Document embedding & semantic search
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/search",
+    response_model=schemas.DocumentSearchResponse,
+    summary="Semantic search across user documents",
+)
+async def search_documents(
+    body: schemas.DocumentSearchRequest,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    Perform a semantic similarity search across the authenticated user's
+    embedded documents using pgvector cosine distance.
+    """
+    from app.core.vector_store import PGVectorStore
+
+    store = PGVectorStore(db)
+    results = await store.similarity_search(
+        body.query, user_id=user.id, k=body.k
+    )
+    return schemas.DocumentSearchResponse(
+        query=body.query,
+        results=[schemas.DocumentSearchResult(**r) for r in results],
+    )
+
+
+@router.post(
+    "/{document_id}/embed",
+    response_model=schemas.DocumentEmbedResponse,
+    summary="Generate embeddings for a document",
+)
+async def embed_document(
+    document_id: UUID4,
+    body: schemas.DocumentEmbedRequest | None = None,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    Chunk and embed a document's text content, storing the resulting vectors
+    in pgvector for later semantic search.  Replaces any existing embeddings
+    for the same document.
+    """
+    from app.core.langchain import chunk_text
+    from app.core.vector_store import PGVectorStore
+
+    doc = await get_document(document_id, db, user)
+    _require_role(doc, {"owner", "editor"})
+
+    version_id = (body.version_id if body else None) or (
+        doc.head_version_id if doc.head_version_id else None
+    )
+    if version_id is None:
+        raise HTTPException(
+            status_code=400, detail="Document has no version to embed"
+        )
+
+    version = await db.get(models.DocumentVersion, version_id)
+    if version is None or str(version.document_id) != str(doc.id):
+        raise HTTPException(status_code=404, detail="Document version not found")
+
+    text_content = version.content or ""
+    if not text_content.strip():
+        raise HTTPException(
+            status_code=400, detail="Document version has no text content"
+        )
+
+    store = PGVectorStore(db)
+    await store.delete_by_document(doc.id)
+
+    chunks = chunk_text(text_content)
+    if not chunks:
+        raise HTTPException(
+            status_code=400, detail="No embeddable text after chunking"
+        )
+
+    await store.add_texts(
+        chunks,
+        document_id=doc.id,
+        document_version_id=version.id,
+        user_id=user.id,
+    )
+    await db.commit()
+
+    return schemas.DocumentEmbedResponse(
+        document_id=doc.id,
+        document_version_id=version.id,
+        chunks_embedded=len(chunks),
+    )
+
+
+# ---------------------------------------------------------------------------
+#  RAG-powered endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/rag/enrich-lead",
+    response_model=schemas.LeadEnrichResponse,
+    summary="Enrich a lead using document context",
+)
+async def enrich_lead_endpoint(
+    body: schemas.LeadEnrichRequest,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    Retrieve relevant document chunks and use them to enrich a job lead
+    description with personalized analysis.
+    """
+    from app.core.langchain import enrich_lead
+    from app.core.vector_store import PGVectorStore
+
+    store = PGVectorStore(db)
+    results = await store.similarity_search(
+        body.lead_description, user_id=user.id, k=body.k
+    )
+    context_chunks = [r["chunk_text"] for r in results]
+    if not context_chunks:
+        raise HTTPException(
+            status_code=400,
+            detail="No embedded documents found. Embed documents first.",
+        )
+    enrichment = enrich_lead(body.lead_description, context_chunks)
+    return schemas.LeadEnrichResponse(enrichment=enrichment)
+
+
+@router.post(
+    "/rag/rank-leads",
+    response_model=schemas.LeadRankResponse,
+    summary="Rank leads by relevance to user profile",
+)
+async def rank_leads_endpoint(
+    body: schemas.LeadRankRequest,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Rank job leads based on the user's embedded document context."""
+    from app.core.langchain import rank_leads
+    from app.core.vector_store import PGVectorStore
+
+    combined_text = " ".join(
+        lead.get("title", "") + " " + lead.get("description", "")
+        for lead in body.leads
+    )
+    store = PGVectorStore(db)
+    results = await store.similarity_search(
+        combined_text, user_id=user.id, k=body.k
+    )
+    context_chunks = [r["chunk_text"] for r in results]
+    if not context_chunks:
+        raise HTTPException(
+            status_code=400,
+            detail="No embedded documents found. Embed documents first.",
+        )
+    ranking = rank_leads(body.leads, context_chunks)
+    return schemas.LeadRankResponse(ranking=ranking)
+
+
+@router.post(
+    "/rag/summarize-company",
+    response_model=schemas.CompanySummarizeResponse,
+    summary="Summarize a company website",
+)
+async def summarize_company_endpoint(
+    body: schemas.CompanySummarizeRequest,
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    """Load a company website, extract text, and return an AI summary."""
+    from app.core.langchain import extract_text_from_url, summarize_company_website
+
+    page_text = await extract_text_from_url(body.url)
+    if not page_text.strip():
+        raise HTTPException(
+            status_code=400, detail="Could not extract text from the URL"
+        )
+    summary = summarize_company_website(body.url, page_text)
+    return schemas.CompanySummarizeResponse(url=body.url, summary=summary)

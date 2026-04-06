@@ -9,6 +9,7 @@ from langchain_community.document_transformers import BeautifulSoupTransformer
 from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import async_playwright
 
@@ -200,3 +201,171 @@ def generate_resume(profile, job, template) -> str:
     )
     chain = generation_template | llm | str_output_parser
     return chain.invoke({"profile": profile, "job": job, "template": template})
+
+
+# ---------------------------------------------------------------------------
+#  Text chunking helpers
+# ---------------------------------------------------------------------------
+
+_text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=800,
+    chunk_overlap=200,
+    length_function=len,
+    separators=["\n\n", "\n", ". ", " ", ""],
+)
+
+
+def chunk_text(text: str) -> list[str]:
+    """Split *text* into overlapping chunks suitable for embedding."""
+    if not text or not text.strip():
+        return []
+    return _text_splitter.split_text(text)
+
+
+# ---------------------------------------------------------------------------
+#  RAG chains
+# ---------------------------------------------------------------------------
+
+
+def enrich_lead(lead_description: str, context_chunks: list[str]) -> str:
+    """Enrich a lead description using relevant document context."""
+    context = "\n---\n".join(context_chunks)
+    template = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are a career research assistant. Use the provided context "
+                "from the user's documents to enrich and analyze the following "
+                "job lead. Highlight key qualifications the user already has, "
+                "gaps to address, and actionable next steps.",
+            ),
+            (
+                "user",
+                "Context from my documents:\n{context}\n\n"
+                "Job lead details:\n{lead_description}",
+            ),
+        ]
+    )
+    chain = template | llm | str_output_parser
+    return chain.invoke(
+        {"context": context, "lead_description": lead_description},
+    )
+
+
+def generate_cover_letter_rag(
+    profile: str,
+    job: str,
+    template: str,
+    context_chunks: list[str],
+) -> str:
+    """Generate a cover letter using RAG context from user documents."""
+    context = "\n---\n".join(context_chunks)
+    generation_template = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are a helpful AI assistant that generates cover letters. "
+                "Use the additional context from the user's documents to tailor "
+                "the letter to their specific background and achievements.",
+            ),
+            (
+                "user",
+                "My background: {profile}\n\n"
+                "Additional context from my documents:\n{context}",
+            ),
+            (
+                "system",
+                "Generate a cover letter from this template: {template}",
+            ),
+            ("user", "Here are the job details:\n{job}"),
+        ]
+    )
+    chain = generation_template | llm | str_output_parser
+    return chain.invoke(
+        {"profile": profile, "job": job, "template": template, "context": context},
+    )
+
+
+def generate_resume_rag(
+    profile: str,
+    job: str,
+    template: str,
+    context_chunks: list[str],
+) -> str:
+    """Generate a resume using RAG context from user documents."""
+    context = "\n---\n".join(context_chunks)
+    generation_template = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are a helpful AI assistant that generates resumes. "
+                "Use the additional context from the user's documents to tailor "
+                "the resume to their specific background, skills, and achievements.",
+            ),
+            (
+                "user",
+                "My background: {profile}\n\n"
+                "Additional context from my documents:\n{context}",
+            ),
+            (
+                "system",
+                "Generate a resume from this template: {template}",
+            ),
+            ("user", "Here are the job details:\n{job}"),
+        ]
+    )
+    chain = generation_template | llm | str_output_parser
+    return chain.invoke(
+        {"profile": profile, "job": job, "template": template, "context": context},
+    )
+
+
+def rank_leads(
+    leads: list[dict],
+    context_chunks: list[str],
+) -> str:
+    """Rank a list of leads by relevance to the user's profile and documents."""
+    context = "\n---\n".join(context_chunks)
+    leads_text = "\n\n".join(
+        f"Lead {i + 1}: {lead.get('title', 'Untitled')} — {lead.get('description', '')}"
+        for i, lead in enumerate(leads)
+    )
+    template = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are a career advisor. Rank the following job leads from "
+                "most to least relevant based on the user's background documents. "
+                "For each lead, provide a relevance score (1-10) and a brief "
+                "explanation. Return the results as a structured list.",
+            ),
+            (
+                "user",
+                "Context from my documents:\n{context}\n\n"
+                "Job leads to rank:\n{leads_text}",
+            ),
+        ]
+    )
+    chain = template | llm | str_output_parser
+    return chain.invoke({"context": context, "leads_text": leads_text})
+
+
+def summarize_company_website(url: str, page_text: str) -> str:
+    """Summarize a company website page for lead research."""
+    template = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are a company research assistant. Summarize the following "
+                "company website content. Focus on: company mission, products/"
+                "services, culture, recent news, and potential job opportunities. "
+                "Be concise but thorough.",
+            ),
+            (
+                "user",
+                "Website URL: {url}\n\nPage content:\n{page_text}",
+            ),
+        ]
+    )
+    chain = template | llm | str_output_parser
+    return chain.invoke({"url": url, "page_text": page_text})

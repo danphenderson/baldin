@@ -174,6 +174,7 @@ def _sync_missing_named_unique_constraints(connection: Connection) -> None:
 
 
 def _create_and_sync_schema(connection: Connection) -> None:
+    connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     models.Base.metadata.create_all(connection)
     _sync_missing_columns(connection)
     _sync_missing_named_unique_constraints(connection)

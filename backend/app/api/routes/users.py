@@ -1,17 +1,23 @@
 # app/api/routes/users.py
 
 import json
+import mimetypes
 from asyncio import gather
 from typing import Any
+from uuid import UUID as _UUID
 
 from aiofiles import open as aopen
 from fastapi import Depends, File, Form, HTTPException, UploadFile
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse
 from pydantic import ValidationError
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import AsyncSession, conf
+from app.api.deps import (
+    AsyncSession,
+    conf,
+)
 from app.api.deps import console_log as log
 from app.api.deps import (
     create_certificate,
@@ -32,6 +38,15 @@ from app.api.deps import (
     run_extractor,
     schemas,
 )
+from app.core.document_storage import (
+    ALLOWED_AVATAR_CONTENT_TYPES,
+    MAX_AVATAR_UPLOAD_BYTES,
+    build_avatar_path,
+    find_avatar_file,
+    remove_avatar_files,
+    save_avatar_file,
+)
+from app.core.datetime_utils import now_utc_naive
 from app.core.url_parsers import extract_text_from_url_smart
 from app.core.url_safety import UnsafeFetchUrlError
 from app.extractor.parsing import parse_binary_input
@@ -143,6 +158,70 @@ async def read_profile(
     return schemas.UserProfileRead.from_orm(user_with_details)
 
 
+@router.post("/me/avatar", response_model=schemas.UserRead)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_async_session),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Upload or replace the current user's profile picture."""
+    content_type = file.content_type or ""
+    if content_type not in ALLOWED_AVATAR_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Unsupported image type '{content_type}'. "
+                f"Allowed: {', '.join(sorted(ALLOWED_AVATAR_CONTENT_TYPES))}"
+            ),
+        )
+
+    file_bytes = await file.read()
+    if len(file_bytes) > MAX_AVATAR_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Avatar file exceeds the {MAX_AVATAR_UPLOAD_BYTES // (1024 * 1024)} MB limit.",
+        )
+
+    # Remove any previous avatar files (handles extension changes)
+    remove_avatar_files(current_user.id)
+
+    relative_path = build_avatar_path(current_user.id, content_type)
+    save_avatar_file(relative_path, file_bytes)
+
+    current_user.avatar_uri = relative_path  # type: ignore
+    db.add(current_user)
+    await db.commit()
+    await db.refresh(current_user)
+    return current_user
+
+
+_SUFFIX_TO_MEDIA_TYPE = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
+
+
+@router.get("/{user_id}/avatar")
+async def serve_avatar(user_id: _UUID):
+    """Serve a user's avatar image. Returns 404 if no avatar is set."""
+    avatar_path = find_avatar_file(user_id)
+    if avatar_path is None or not avatar_path.exists():
+        raise HTTPException(status_code=404, detail="Avatar not found")
+
+    media_type = _SUFFIX_TO_MEDIA_TYPE.get(
+        avatar_path.suffix.lower(),
+        mimetypes.guess_type(str(avatar_path))[0] or "application/octet-stream",
+    )
+    return FileResponse(
+        path=avatar_path,
+        media_type=media_type,
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
 @router.patch("/me/placement", response_model=schemas.UserRead)
 async def update_placement(
     payload: schemas.PlacementUpdate,
@@ -153,8 +232,6 @@ async def update_placement(
 
     Valid transitions: active → graduated, graduated → alumni.
     """
-    from datetime import datetime as _dt
-
     current = schemas.PlacementStatus(current_user.placement_status)
     target = payload.placement_status
 
@@ -172,7 +249,7 @@ async def update_placement(
 
     current_user.placement_status = target.value  # type: ignore
     if target in (schemas.PlacementStatus.GRADUATED, schemas.PlacementStatus.ALUMNI):
-        current_user.placement_date = _dt.utcnow()  # type: ignore
+        current_user.placement_date = now_utc_naive()  # type: ignore
 
     db.add(current_user)
     await db.commit()

@@ -191,7 +191,7 @@ async def test_create_db_and_tables_repairs_existing_local_schema() -> None:
         assert repaired_user is not None
         assert repaired_user.headline is None
         assert repaired_user.bio is None
-        assert repaired_user.is_discoverable is True
+        assert repaired_user.is_discoverable is False
         assert repaired_user.subscription_tier == "free"
         assert repaired_user.subscription_expires_at is None
         assert repaired_user.placement_status == "active"

@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Box, Card, CardContent, Typography, Chip, Stack, Button, TextField,
-  useTheme, alpha, Avatar,
+  useTheme, alpha, Avatar, IconButton, Tooltip, CircularProgress,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
   Edit as EditIcon, Close as CloseIcon, Save as SaveIcon,
+  CameraAlt as CameraIcon,
 } from '@mui/icons-material';
 import type { UserRead, UserUpdate } from '../../../service/users';
+import { avatarUrl } from '../../../service/users';
 
 export interface SectionCounts {
   skills: number;
@@ -31,6 +33,8 @@ interface ProfileHeroProps {
   pf: (key: keyof UserUpdate, value: string) => void;
   sectionCounts?: SectionCounts;
   completionPercent?: number;
+  onAvatarSelected?: (file: File) => void;
+  avatarUploading?: boolean;
 }
 
 export const ProfileHero: React.FC<ProfileHeroProps> = ({
@@ -47,8 +51,28 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
   pf,
   sectionCounts,
   completionPercent,
+  onAvatarSelected,
+  avatarUploading,
 }) => {
   const theme = useTheme();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onAvatarSelected) {
+      onAvatarSelected(file);
+    }
+    // Reset so the same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const resolvedAvatarSrc = profile
+    ? avatarUrl(profile.id, profile.avatar_uri)
+    : undefined;
 
   return (
     <Card
@@ -121,15 +145,51 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
         ) : (
           /* ─── View mode ─── */
           <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
-            <Avatar
-              sx={{
-                width: 72, height: 72, fontSize: '1.75rem', fontWeight: 800,
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                flexShrink: 0,
-              }}
-            >
-              {userInitials}
-            </Avatar>
+            {/* Avatar with upload overlay */}
+            <Box sx={{ position: 'relative', flexShrink: 0 }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                hidden
+                onChange={handleFileChange}
+              />
+              <Avatar
+                src={resolvedAvatarSrc}
+                sx={{
+                  width: 72, height: 72, fontSize: '1.75rem', fontWeight: 800,
+                  background: resolvedAvatarSrc
+                    ? undefined
+                    : `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  flexShrink: 0,
+                }}
+              >
+                {userInitials}
+              </Avatar>
+              <Tooltip title="Change profile picture">
+                <IconButton
+                  onClick={handleAvatarClick}
+                  disabled={avatarUploading}
+                  size="small"
+                  sx={{
+                    position: 'absolute',
+                    bottom: -4,
+                    right: -4,
+                    width: 28,
+                    height: 28,
+                    backgroundColor: theme.palette.background.paper,
+                    border: `2px solid ${theme.palette.divider}`,
+                    '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.08) },
+                  }}
+                >
+                  {avatarUploading ? (
+                    <CircularProgress size={14} />
+                  ) : (
+                    <CameraIcon sx={{ fontSize: 14 }} />
+                  )}
+                </IconButton>
+              </Tooltip>
+            </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
                 <Box>

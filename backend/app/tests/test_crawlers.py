@@ -118,9 +118,9 @@ async def test_unauthenticated_user_gets_401_on_crawler_routes():
         ]
         for method, path in endpoints:
             resp = await client.request(method, path)
-            assert (
-                resp.status_code == 401
-            ), f"{method} {path} returned {resp.status_code}, expected 401"
+            assert resp.status_code == 401, (
+                f"{method} {path} returned {resp.status_code}, expected 401"
+            )
 
 
 async def test_non_superuser_gets_403_on_crawler_routes():
@@ -144,9 +144,9 @@ async def test_non_superuser_gets_403_on_crawler_routes():
         ]
         for method, path in endpoints:
             resp = await client.request(method, path, headers=headers)
-            assert (
-                resp.status_code == 403
-            ), f"{method} {path} returned {resp.status_code}, expected 403"
+            assert resp.status_code == 403, (
+                f"{method} {path} returned {resp.status_code}, expected 403"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -601,6 +601,14 @@ async def test_linkedin_crawler_can_be_instantiated():
     assert crawler.page_end == 2
 
 
+async def test_linkedin_crawler_accepts_max_retries():
+    """LinkedInCrawler accepts max_retries parameter."""
+    from etl.linkedin import LinkedInCrawler
+
+    crawler = LinkedInCrawler(keywords=["python"], location="Remote", max_retries=5)
+    assert crawler.max_retries == 5
+
+
 async def test_glassdoor_crawler_can_be_instantiated():
     """GlassdoorCrawler can be instantiated without network."""
     from etl.glassdoor import GlassdoorCrawler
@@ -608,6 +616,14 @@ async def test_glassdoor_crawler_can_be_instantiated():
     crawler = GlassdoorCrawler(keywords="python", location="Remote")
     assert crawler.keywords == "python"
     assert crawler.location == "Remote"
+
+
+async def test_glassdoor_crawler_accepts_max_retries():
+    """GlassdoorCrawler accepts max_retries parameter."""
+    from etl.glassdoor import GlassdoorCrawler
+
+    crawler = GlassdoorCrawler(keywords="python", max_retries=5)
+    assert crawler.max_retries == 5
 
 
 async def test_crawler_result_fields_map_to_lead_create():
@@ -634,6 +650,160 @@ async def test_crawler_result_fields_map_to_lead_create():
     assert lead.employment_type == result.employment_type
     assert lead.seniority_level == result.seniority_level
     assert lead.education_level == result.education_level
+
+
+# ---------------------------------------------------------------------------
+# 7b. CrawlerResult validation tests
+# ---------------------------------------------------------------------------
+
+
+async def test_crawler_result_valid_with_url_and_content():
+    """CrawlerResult validates successfully with URL and content."""
+    result = CrawlerResult(
+        url="https://example.com/job/123",
+        title="Software Engineer",
+        description="Full description of the role...",
+    )
+    validation = result.validate()
+    assert validation.is_valid is True
+    assert len(validation.errors) == 0
+
+
+async def test_crawler_result_invalid_without_url():
+    """CrawlerResult fails validation without URL."""
+    result = CrawlerResult(
+        url="",
+        title="Software Engineer",
+        description="Full description",
+    )
+    validation = result.validate()
+    assert validation.is_valid is False
+    assert "url is required but empty" in validation.errors
+
+
+async def test_crawler_result_invalid_with_malformed_url():
+    """CrawlerResult fails validation with non-HTTP URL."""
+    result = CrawlerResult(
+        url="not-a-valid-url",
+        title="Software Engineer",
+    )
+    validation = result.validate()
+    assert validation.is_valid is False
+    assert any("not a valid HTTP" in e for e in validation.errors)
+
+
+async def test_crawler_result_warns_without_content():
+    """CrawlerResult warns when both title and description are empty."""
+    result = CrawlerResult(
+        url="https://example.com/job/123",
+    )
+    validation = result.validate()
+    assert validation.is_valid is True  # still valid, just warning
+    assert "Both title and description are empty" in validation.warnings
+
+
+async def test_crawler_result_warns_on_short_description():
+    """CrawlerResult warns on suspiciously short description."""
+    result = CrawlerResult(
+        url="https://example.com/job/123",
+        title="Engineer",
+        description="Short",
+    )
+    validation = result.validate()
+    assert validation.is_valid is True
+    assert any("suspiciously short" in w for w in validation.warnings)
+
+
+async def test_crawler_result_is_valid_convenience():
+    """CrawlerResult.is_valid() convenience method works correctly."""
+    valid = CrawlerResult(url="https://example.com/job/123", title="Job")
+    invalid = CrawlerResult(url="", title="Job")
+
+    assert valid.is_valid() is True
+    assert invalid.is_valid() is False
+
+
+# ---------------------------------------------------------------------------
+# 7c. Retry logic tests (unit tests, no network)
+# ---------------------------------------------------------------------------
+
+
+async def test_async_retry_succeeds_on_first_try():
+    """async_retry returns result on immediate success."""
+    from etl.base import async_retry
+
+    call_count = 0
+
+    async def succeeds_immediately():
+        nonlocal call_count
+        call_count += 1
+        return "success"
+
+    result = await async_retry(succeeds_immediately, max_retries=3)
+    assert result == "success"
+    assert call_count == 1
+
+
+async def test_async_retry_succeeds_after_failures():
+    """async_retry retries and succeeds after transient failures."""
+    from etl.base import async_retry
+
+    call_count = 0
+
+    async def fails_then_succeeds():
+        nonlocal call_count
+        call_count += 1
+        if call_count < 3:
+            raise TimeoutError("Simulated timeout")
+        return "success"
+
+    result = await async_retry(
+        fails_then_succeeds,
+        max_retries=3,
+        base_delay=0.01,  # short delay for tests
+    )
+    assert result == "success"
+    assert call_count == 3
+
+
+async def test_async_retry_raises_after_exhaustion():
+    """async_retry raises exception after retries exhausted."""
+    from etl.base import async_retry
+
+    call_count = 0
+
+    async def always_fails():
+        nonlocal call_count
+        call_count += 1
+        raise TimeoutError("Persistent timeout")
+
+    with pytest.raises(TimeoutError):
+        await async_retry(
+            always_fails,
+            max_retries=2,
+            base_delay=0.01,
+        )
+    assert call_count == 3  # initial + 2 retries
+
+
+async def test_async_retry_does_not_retry_non_retryable():
+    """async_retry does not retry non-retryable exceptions."""
+    from etl.base import async_retry
+
+    call_count = 0
+
+    async def raises_value_error():
+        nonlocal call_count
+        call_count += 1
+        raise ValueError("Not retryable")
+
+    with pytest.raises(ValueError):
+        await async_retry(
+            raises_value_error,
+            max_retries=3,
+            base_delay=0.01,
+        )
+    assert call_count == 1  # no retries for ValueError
 
 
 # ---------------------------------------------------------------------------

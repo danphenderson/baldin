@@ -1,7 +1,5 @@
 # app/api/routes/messages.py
 
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import UUID4
 from sqlalchemy import and_, func, or_, select
@@ -9,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas, utils
 from app.api.deps import AsyncSession, get_async_session, get_current_user, require_tier
+from app.core.datetime_utils import now_utc_naive
 
 router: APIRouter = APIRouter()
 
@@ -386,7 +385,7 @@ async def get_conversation(
     messages = msg_result.scalars().all()
 
     # Auto-mark as read
-    viewer_part.last_read_at = datetime.utcnow()
+    viewer_part.last_read_at = now_utc_naive()
     await db.commit()
 
     return schemas.ConversationDetailRead(
@@ -481,7 +480,7 @@ async def edit_message(
         )
 
     msg.content = payload.content
-    msg.edited_at = datetime.utcnow()
+    msg.edited_at = now_utc_naive()
     await db.commit()
 
     # Re-query with eager-loaded author to avoid MissingGreenlet
@@ -532,7 +531,7 @@ async def mark_conversation_read(
     await _get_conversation_or_404(db, conversation_id)
     part = await _get_participant_or_403(db, conversation_id, user.id)
 
-    part.last_read_at = datetime.utcnow()
+    part.last_read_at = now_utc_naive()
     await db.commit()
 
 

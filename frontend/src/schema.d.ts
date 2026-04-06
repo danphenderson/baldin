@@ -6,12 +6,20 @@
 
 export interface paths {
   "/auth/jwt/login": {
-    /** Auth:Jwt.Login */
-    post: operations["auth_jwt_login_auth_jwt_login_post"];
+    /**
+     * Login
+     * @description Authenticate with email + password.
+     *
+     * * If MFA is **disabled** → returns ``{ access_token, token_type }``.
+     * * If MFA is **enabled** → returns ``{ mfa_required, mfa_token }``
+     *   and the client must call ``POST /auth/mfa/login-verify`` to
+     *   complete authentication.
+     */
+    post: operations["login_auth_jwt_login_post"];
   };
   "/auth/jwt/logout": {
-    /** Auth:Jwt.Logout */
-    post: operations["auth_jwt_logout_auth_jwt_logout_post"];
+    /** Logout */
+    post: operations["logout_auth_jwt_logout_post"];
   };
   "/auth/register": {
     /** Register:Register */
@@ -32,6 +40,56 @@ export interface paths {
   "/auth/verify": {
     /** Verify:Verify */
     post: operations["verify_verify_auth_verify_post"];
+  };
+  "/auth/mfa/status": {
+    /**
+     * Mfa Status
+     * @description Return whether MFA is currently enabled for the authenticated user.
+     */
+    get: operations["mfa_status_auth_mfa_status_get"];
+  };
+  "/auth/mfa/setup": {
+    /**
+     * Mfa Setup
+     * @description Generate a fresh TOTP secret.
+     *
+     * The secret is persisted on the user record but MFA is **not** active
+     * until the user confirms setup via ``POST /verify``.
+     */
+    post: operations["mfa_setup_auth_mfa_setup_post"];
+  };
+  "/auth/mfa/verify": {
+    /**
+     * Mfa Verify Setup
+     * @description Confirm MFA setup by presenting a valid TOTP code.
+     *
+     * This activates MFA on the account.
+     */
+    post: operations["mfa_verify_setup_auth_mfa_verify_post"];
+  };
+  "/auth/mfa/disable": {
+    /**
+     * Mfa Disable
+     * @description Disable MFA by presenting a valid TOTP code.
+     */
+    post: operations["mfa_disable_auth_mfa_disable_post"];
+  };
+  "/auth/mfa/admin-reset/{user_id}": {
+    /**
+     * Mfa Admin Reset
+     * @description Reset MFA for a user when they have lost access to their authenticator.
+     */
+    post: operations["mfa_admin_reset_auth_mfa_admin_reset__user_id__post"];
+  };
+  "/auth/mfa/login-verify": {
+    /**
+     * Mfa Login Verify
+     * @description Complete the MFA login challenge.
+     *
+     * Accepts the short-lived ``mfa_token`` returned by ``POST /auth/jwt/login``
+     * together with a valid TOTP code and returns a full-access JWT.
+     */
+    post: operations["mfa_login_verify_auth_mfa_login_verify_post"];
   };
   "/db-management/list-tables": {
     /** List Tables */
@@ -66,6 +124,20 @@ export interface paths {
   "/users/me/profile": {
     /** Read Profile */
     get: operations["read_profile_users_me_profile_get"];
+  };
+  "/users/me/avatar": {
+    /**
+     * Upload Avatar
+     * @description Upload or replace the current user's profile picture.
+     */
+    post: operations["upload_avatar_users_me_avatar_post"];
+  };
+  "/users/{user_id}/avatar": {
+    /**
+     * Serve Avatar
+     * @description Serve a user's avatar image. Returns 404 if no avatar is set.
+     */
+    get: operations["serve_avatar_users__user_id__avatar_get"];
   };
   "/users/me/placement": {
     /**
@@ -339,6 +411,17 @@ export interface paths {
   "/applications/{id}/cover_letters/generate": {
     /** Generate Cover Letter For Application */
     post: operations["generate_cover_letter_for_application_applications__id__cover_letters_generate_post"];
+  };
+  "/applications/{id}/export": {
+    /**
+     * Export Application Materials
+     * @description Export all materials linked to an application as a ZIP archive.
+     *
+     * The archive contains up to three subdirectories — ``resumes/``,
+     * ``cover_letters/``, and ``documents/`` — each holding PDF files for
+     * the linked records.
+     */
+    get: operations["export_application_materials_applications__id__export_get"];
   };
   "/applications/{id}/documents": {
     /** Get Application Documents */
@@ -660,7 +743,8 @@ export interface paths {
      * List Directory
      * @description Paginated, searchable user directory.
      *
-     * Only users with ``is_discoverable=True`` and ``is_active=True`` are returned.
+     * Only discoverable, active users are returned. ``superusers_only=true`` narrows
+     * results to Baldin superusers.
      */
     get: operations["list_directory_directory__get"];
   };
@@ -680,6 +764,9 @@ export interface paths {
     /**
      * Send Connection Request
      * @description Send a connection request to another user.
+     *
+     * Requests to superusers are available to all authenticated users. Requests to
+     * non-superusers still require a Starter subscription or above.
      */
     post: operations["send_connection_request_connections__post"];
   };
@@ -1172,36 +1259,22 @@ export interface components {
       /** Next Step Due */
       next_step_due?: string | null;
     };
-    /** BearerResponse */
+    /**
+     * BearerResponse
+     * @description Returned when password auth completes without an MFA challenge.
+     */
     BearerResponse: {
-      /** Access Token */
+      /**
+       * Access Token
+       * @description JWT access token
+       */
       access_token: string;
-      /** Token Type */
-      token_type: string;
-    };
-    /** Body_auth_jwt_login_auth_jwt_login_post */
-    Body_auth_jwt_login_auth_jwt_login_post: {
-      /** Grant Type */
-      grant_type?: string | null;
-      /** Username */
-      username: string;
       /**
-       * Password
-       * Format: password
+       * Token Type
+       * @description Bearer token type
+       * @default bearer
        */
-      password: string;
-      /**
-       * Scope
-       * @default
-       */
-      scope?: string;
-      /** Client Id */
-      client_id?: string | null;
-      /**
-       * Client Secret
-       * Format: password
-       */
-      client_secret?: string | null;
+      token_type?: string;
     };
     /** Body_extract_user_profile_users_me_profile_extract_post */
     Body_extract_user_profile_users_me_profile_extract_post: {
@@ -1252,6 +1325,30 @@ export interface components {
       /** Llm */
       llm?: string | null;
     };
+    /** Body_login_auth_jwt_login_post */
+    Body_login_auth_jwt_login_post: {
+      /** Grant Type */
+      grant_type?: string | null;
+      /** Username */
+      username: string;
+      /**
+       * Password
+       * Format: password
+       */
+      password: string;
+      /**
+       * Scope
+       * @default
+       */
+      scope?: string;
+      /** Client Id */
+      client_id?: string | null;
+      /**
+       * Client Secret
+       * Format: password
+       */
+      client_secret?: string | null;
+    };
     /** Body_reset_forgot_password_auth_forgot_password_post */
     Body_reset_forgot_password_auth_forgot_password_post: {
       /**
@@ -1266,6 +1363,11 @@ export interface components {
       token: string;
       /** Password */
       password: string;
+    };
+    /** Body_upload_avatar_users_me_avatar_post */
+    Body_upload_avatar_users_me_avatar_post: {
+      /** File */
+      file: string;
     };
     /** Body_upload_document_documents_upload_post */
     Body_upload_document_documents_upload_post: {
@@ -1617,6 +1719,11 @@ export interface components {
        * @description Public display name
        */
       display_name: string;
+      /**
+       * Is Superuser
+       * @description Whether the user is a Baldin superuser
+       */
+      is_superuser: boolean;
       /**
        * Headline
        * @description Professional tagline
@@ -4184,6 +4291,95 @@ export interface components {
        */
       total_count: number | null;
     };
+    /**
+     * MFAAdminResetResponse
+     * @description Returned when a superuser resets MFA for another account.
+     */
+    MFAAdminResetResponse: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User whose MFA state was reset
+       */
+      user_id: string;
+      /**
+       * Mfa Enabled
+       * @description Always false after a successful admin reset
+       * @default false
+       */
+      mfa_enabled?: boolean;
+    };
+    /**
+     * MFALoginRequired
+     * @description Returned at login when MFA verification is still needed.
+     */
+    MFALoginRequired: {
+      /**
+       * Mfa Required
+       * @description Always True
+       * @default true
+       */
+      mfa_required?: boolean;
+      /**
+       * Mfa Token
+       * @description Short-lived token to present with the TOTP code
+       */
+      mfa_token: string;
+    };
+    /**
+     * MFALoginVerifyRequest
+     * @description Payload for the second step of MFA login.
+     */
+    MFALoginVerifyRequest: {
+      /**
+       * Mfa Token
+       * @description MFA challenge token from login response
+       */
+      mfa_token: string;
+      /**
+       * Code
+       * @description 6-digit TOTP code
+       */
+      code: string;
+    };
+    /**
+     * MFASetupResponse
+     * @description Returned when the user requests MFA setup (before verification).
+     */
+    MFASetupResponse: {
+      /**
+       * Secret
+       * @description Base-32 encoded TOTP secret
+       */
+      secret: string;
+      /**
+       * Provisioning Uri
+       * @description otpauth:// URI for import into an authenticator app
+       */
+      provisioning_uri: string;
+    };
+    /**
+     * MFAStatusResponse
+     * @description Current MFA enrolment status.
+     */
+    MFAStatusResponse: {
+      /**
+       * Mfa Enabled
+       * @description Whether MFA is currently active
+       */
+      mfa_enabled: boolean;
+    };
+    /**
+     * MFAVerifyRequest
+     * @description Payload for verifying a TOTP code (setup confirmation or login).
+     */
+    MFAVerifyRequest: {
+      /**
+       * Code
+       * @description 6-digit TOTP code
+       */
+      code: string;
+    };
     /** MessageAuthorRead */
     MessageAuthorRead: {
       /**
@@ -5027,8 +5223,11 @@ export interface components {
        * @description Time zone
        */
       time_zone?: string | null;
-      /** @description Avatar URI */
-      avatar_uri?: components["schemas"]["URI"] | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
       /**
        * Headline
        * @description Short professional tagline
@@ -5042,7 +5241,7 @@ export interface components {
       /**
        * Is Discoverable
        * @description Whether the user appears in the directory
-       * @default true
+       * @default false
        */
       is_discoverable?: boolean;
       /**
@@ -5155,6 +5354,11 @@ export interface components {
        */
       display_name: string;
       /**
+       * Is Superuser
+       * @description Whether the user is a Baldin superuser
+       */
+      is_superuser: boolean;
+      /**
        * Headline
        * @description Professional tagline
        */
@@ -5229,6 +5433,11 @@ export interface components {
        * @description Public display name
        */
       display_name: string;
+      /**
+       * Is Superuser
+       * @description Whether the user is a Baldin superuser
+       */
+      is_superuser: boolean;
       /**
        * Headline
        * @description Professional tagline
@@ -5324,8 +5533,11 @@ export interface components {
        * @description Time zone
        */
       time_zone?: string | null;
-      /** @description Avatar URI */
-      avatar_uri?: components["schemas"]["URI"] | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
       /**
        * Headline
        * @description Short professional tagline
@@ -5339,7 +5551,7 @@ export interface components {
       /**
        * Is Discoverable
        * @description Whether the user appears in the directory
-       * @default true
+       * @default false
        */
       is_discoverable?: boolean;
       /**
@@ -5440,8 +5652,11 @@ export interface components {
        * @description Time zone
        */
       time_zone?: string | null;
-      /** @description Avatar URI */
-      avatar_uri?: components["schemas"]["URI"] | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
       /**
        * Headline
        * @description Short professional tagline
@@ -5455,7 +5670,7 @@ export interface components {
       /**
        * Is Discoverable
        * @description Whether the user appears in the directory
-       * @default true
+       * @default false
        */
       is_discoverable?: boolean;
       /**
@@ -5516,24 +5731,26 @@ export type external = Record<string, never>;
 
 export interface operations {
 
-  /** Auth:Jwt.Login */
-  auth_jwt_login_auth_jwt_login_post: {
+  /**
+   * Login
+   * @description Authenticate with email + password.
+   *
+   * * If MFA is **disabled** → returns ``{ access_token, token_type }``.
+   * * If MFA is **enabled** → returns ``{ mfa_required, mfa_token }``
+   *   and the client must call ``POST /auth/mfa/login-verify`` to
+   *   complete authentication.
+   */
+  login_auth_jwt_login_post: {
     requestBody: {
       content: {
-        "application/x-www-form-urlencoded": components["schemas"]["Body_auth_jwt_login_auth_jwt_login_post"];
+        "application/x-www-form-urlencoded": components["schemas"]["Body_login_auth_jwt_login_post"];
       };
     };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["BearerResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        content: {
-          "application/json": components["schemas"]["ErrorModel"];
+          "application/json": components["schemas"]["BearerResponse"] | components["schemas"]["MFALoginRequired"];
         };
       };
       /** @description Validation Error */
@@ -5544,18 +5761,14 @@ export interface operations {
       };
     };
   };
-  /** Auth:Jwt.Logout */
-  auth_jwt_logout_auth_jwt_logout_post: {
+  /** Logout */
+  logout_auth_jwt_logout_post: {
     responses: {
       /** @description Successful Response */
       200: {
         content: {
           "application/json": unknown;
         };
-      };
-      /** @description Missing token or inactive user. */
-      401: {
-        content: never;
       };
     };
   };
@@ -5677,6 +5890,142 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ErrorModel"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Mfa Status
+   * @description Return whether MFA is currently enabled for the authenticated user.
+   */
+  mfa_status_auth_mfa_status_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MFAStatusResponse"];
+        };
+      };
+    };
+  };
+  /**
+   * Mfa Setup
+   * @description Generate a fresh TOTP secret.
+   *
+   * The secret is persisted on the user record but MFA is **not** active
+   * until the user confirms setup via ``POST /verify``.
+   */
+  mfa_setup_auth_mfa_setup_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MFASetupResponse"];
+        };
+      };
+    };
+  };
+  /**
+   * Mfa Verify Setup
+   * @description Confirm MFA setup by presenting a valid TOTP code.
+   *
+   * This activates MFA on the account.
+   */
+  mfa_verify_setup_auth_mfa_verify_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MFAVerifyRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MFAStatusResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Mfa Disable
+   * @description Disable MFA by presenting a valid TOTP code.
+   */
+  mfa_disable_auth_mfa_disable_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MFAVerifyRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MFAStatusResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Mfa Admin Reset
+   * @description Reset MFA for a user when they have lost access to their authenticator.
+   */
+  mfa_admin_reset_auth_mfa_admin_reset__user_id__post: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MFAAdminResetResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Mfa Login Verify
+   * @description Complete the MFA login challenge.
+   *
+   * Accepts the short-lived ``mfa_token`` returned by ``POST /auth/jwt/login``
+   * together with a valid TOTP code and returns a full-access JWT.
+   */
+  mfa_login_verify_auth_mfa_login_verify_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MFALoginVerifyRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["BearerResponse"];
         };
       };
       /** @description Validation Error */
@@ -5931,6 +6280,56 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["UserProfileRead"];
+        };
+      };
+    };
+  };
+  /**
+   * Upload Avatar
+   * @description Upload or replace the current user's profile picture.
+   */
+  upload_avatar_users_me_avatar_post: {
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_upload_avatar_users_me_avatar_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Serve Avatar
+   * @description Serve a user's avatar image. Returns 404 if no avatar is set.
+   */
+  serve_avatar_users__user_id__avatar_get: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -7646,6 +8045,35 @@ export interface operations {
       };
     };
   };
+  /**
+   * Export Application Materials
+   * @description Export all materials linked to an application as a ZIP archive.
+   *
+   * The archive contains up to three subdirectories — ``resumes/``,
+   * ``cover_letters/``, and ``documents/`` — each holding PDF files for
+   * the linked records.
+   */
+  export_application_materials_applications__id__export_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Get Application Documents */
   get_application_documents_applications__id__documents_get: {
     parameters: {
@@ -9222,7 +9650,8 @@ export interface operations {
    * List Directory
    * @description Paginated, searchable user directory.
    *
-   * Only users with ``is_discoverable=True`` and ``is_active=True`` are returned.
+   * Only discoverable, active users are returned. ``superusers_only=true`` narrows
+   * results to Baldin superusers.
    */
   list_directory_directory__get: {
     parameters: {
@@ -9233,6 +9662,8 @@ export interface operations {
         placement_status?: components["schemas"]["PlacementStatus"] | null;
         /** @description Filter by city/state/country */
         location?: string | null;
+        /** @description Only return superusers */
+        superusers_only?: boolean;
         /** @description Page number starting from 1 */
         page?: number;
         /** @description Number of records per page */
@@ -9316,6 +9747,9 @@ export interface operations {
   /**
    * Send Connection Request
    * @description Send a connection request to another user.
+   *
+   * Requests to superusers are available to all authenticated users. Requests to
+   * non-superusers still require a Starter subscription or above.
    */
   send_connection_request_connections__post: {
     requestBody: {

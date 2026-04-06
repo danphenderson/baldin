@@ -23,6 +23,7 @@ import {
 import { UserContext } from '../context/user-context';
 import { getConnections, type ConnectionRead } from '../service/connections';
 import { createConversation } from '../service/messages';
+import { avatarUrl } from '../service/users';
 
 interface NewConversationDialogProps {
   open: boolean;
@@ -185,7 +186,7 @@ const NewConversationDialog: React.FC<NewConversationDialogProps> = ({
                       />
                     ) : null}
                     <ListItemAvatar>
-                      <Avatar src={u.avatar_uri || undefined} sx={{ width: 36, height: 36 }}>
+                      <Avatar src={avatarUrl(u.user_id, u.avatar_uri)} sx={{ width: 36, height: 36 }}>
                         {u.display_name.charAt(0)}
                       </Avatar>
                     </ListItemAvatar>

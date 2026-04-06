@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, Chip, Stack, useTheme, Skeleton, Alert,
   Snackbar,
@@ -13,6 +13,7 @@ import { motion } from 'motion/react';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import type { SkillRead } from '../../service/skills';
+import { uploadAvatar } from '../../service/users';
 
 import { useProfileData } from './hooks/useProfileData';
 import { useProfileCompletion } from './hooks/useProfileCompletion';
@@ -27,6 +28,7 @@ import { EditDialog } from './components/EditDialog';
 import { DeleteDialog } from './components/DeleteDialog';
 import { DocumentsSummary } from './components/DocumentsSummary';
 import ProfileImportModal from '../../component/profile-import-modal';
+import MFASetupCard from '../../component/mfa-setup-card';
 
 const MotionBox = motion.create(Box);
 
@@ -84,6 +86,24 @@ const ProfilePage: React.FC = () => {
 
   usePageToolbarHeader('Profile', "Your professional identity powering Baldin's AI autopilot");
 
+  // ── Avatar upload ──────────────────────────────────────────────────────
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const handleAvatarSelected = useCallback(async (file: File) => {
+    if (!token) return;
+    setAvatarUploading(true);
+    try {
+      const updated = await uploadAvatar(token, file);
+      setUser(updated);
+      data.refresh();
+      data.setToast('Profile picture updated');
+    } catch (err: unknown) {
+      data.setError(err instanceof Error ? err.message : 'Avatar upload failed');
+    } finally {
+      setAvatarUploading(false);
+    }
+  }, [token, setUser, data]);
+
   const skillsByCategory = useMemo(() => {
     const map = new Map<string, SkillRead[]>();
     for (const skill of data.skills) {
@@ -135,6 +155,8 @@ const ProfilePage: React.FC = () => {
         pf={data.pf}
         sectionCounts={sectionCounts}
         completionPercent={completionPercent}
+        onAvatarSelected={handleAvatarSelected}
+        avatarUploading={avatarUploading}
       />
 
       {/* ── Profile Builder Panel ──────────────────────────────────── */}
@@ -364,6 +386,9 @@ const ProfilePage: React.FC = () => {
 
         {/* ── Documents Summary ────────────────────────────────────────── */}
         <DocumentsSummary token={token} />
+
+        {/* ── Security (MFA) ──────────────────────────────────────────── */}
+        <MFASetupCard />
       </Stack>
 
       {/* ── Edit / Create Dialog ─────────────────────────────────────── */}

@@ -11,6 +11,7 @@ import {
   getDocumentShares, getDocumentShareCandidates, createDocumentShare, updateDocumentShare, revokeDocumentShare,
   type DocumentShareRead, type DocumentShareCandidateRead, type DocumentShareRole,
 } from '../service/documents';
+import { avatarUrl } from '../service/users';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -231,7 +232,7 @@ const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
                     }}
                   >
                     <ListItemAvatar>
-                      <Avatar src={u.avatar_uri || undefined} sx={{ width: 36, height: 36 }}>
+                      <Avatar src={avatarUrl(u.id, u.avatar_uri)} sx={{ width: 36, height: 36 }}>
                         {formatPersonLabel(u.full_name, u.email, '?').charAt(0).toUpperCase()}
                       </Avatar>
                     </ListItemAvatar>

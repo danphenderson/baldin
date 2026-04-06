@@ -112,8 +112,11 @@ export const uploadAvatar = async (token: string, file: File): Promise<UserRead>
  * Returns undefined when no avatar is set (avatarUri is falsy),
  * so callers can pass the result directly to MUI Avatar's src prop.
  */
-export const avatarUrl = (userId: string, avatarUri?: string | null): string | undefined => {
-  if (!avatarUri) return undefined;
+export const avatarUrl = (
+  userId?: string | null,
+  avatarUri?: string | null,
+): string | undefined => {
+  if (!userId || !avatarUri) return undefined;
   return `${API_URL}/users/${userId}/avatar`;
 };
 

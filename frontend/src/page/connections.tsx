@@ -33,6 +33,7 @@ import {
   deleteConnection,
   type ConnectionRead,
 } from '../service/connections';
+import { avatarUrl } from '../service/users';
 import { createConversation } from '../service/messages';
 import EmptyState from '../component/common/empty-state';
 import TierGate from '../component/tier-gate';
@@ -249,7 +250,7 @@ const ConnectionsPage: React.FC = () => {
                   <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
                     <Stack spacing={1.5}>
                       <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Avatar src={otherUser.avatar_uri || undefined} sx={{ width: 48, height: 48 }}>
+                        <Avatar src={avatarUrl(otherUser.user_id, otherUser.avatar_uri)} sx={{ width: 48, height: 48 }}>
                           {otherUser.display_name.charAt(0)}
                         </Avatar>
                         <Box sx={{ minWidth: 0, flex: 1 }}>

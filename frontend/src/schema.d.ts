@@ -67,6 +67,20 @@ export interface paths {
     /** Read Profile */
     get: operations["read_profile_users_me_profile_get"];
   };
+  "/users/me/avatar": {
+    /**
+     * Upload Avatar
+     * @description Upload or replace the current user's profile picture.
+     */
+    post: operations["upload_avatar_users_me_avatar_post"];
+  };
+  "/users/{user_id}/avatar": {
+    /**
+     * Serve Avatar
+     * @description Serve a user's avatar image. Returns 404 if no avatar is set.
+     */
+    get: operations["serve_avatar_users__user_id__avatar_get"];
+  };
   "/users/me/placement": {
     /**
      * Update Placement
@@ -1228,12 +1242,14 @@ export interface components {
       /** Password */
       password: string;
     };
+    /** Body_upload_avatar_users_me_avatar_post */
+    Body_upload_avatar_users_me_avatar_post: {
+      /** File */
+      file: string;
+    };
     /** Body_upload_document_documents_upload_post */
     Body_upload_document_documents_upload_post: {
-      /**
-       * File
-       * Format: binary
-       */
+      /** File */
       file: string;
       /** Title */
       title: string;
@@ -4835,7 +4851,10 @@ export interface components {
        * @description Time zone
        */
       time_zone?: string | null;
-      /** @description Avatar URI */
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
       avatar_uri?: string | null;
       /**
        * Headline
@@ -5132,7 +5151,10 @@ export interface components {
        * @description Time zone
        */
       time_zone?: string | null;
-      /** @description Avatar URI */
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
       avatar_uri?: string | null;
       /**
        * Headline
@@ -5248,7 +5270,10 @@ export interface components {
        * @description Time zone
        */
       time_zone?: string | null;
-      /** @description Avatar URI */
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
       avatar_uri?: string | null;
       /**
        * Headline
@@ -5739,6 +5764,56 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["UserProfileRead"];
+        };
+      };
+    };
+  };
+  /**
+   * Upload Avatar
+   * @description Upload or replace the current user's profile picture.
+   */
+  upload_avatar_users_me_avatar_post: {
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_upload_avatar_users_me_avatar_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Serve Avatar
+   * @description Serve a user's avatar image. Returns 404 if no avatar is set.
+   */
+  serve_avatar_users__user_id__avatar_get: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

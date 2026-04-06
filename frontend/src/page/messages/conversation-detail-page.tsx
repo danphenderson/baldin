@@ -33,6 +33,7 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
+import { avatarUrl } from '../../service/users';
 import {
   getConversation,
   sendMessage,
@@ -245,7 +246,7 @@ const ConversationDetailPage: React.FC = () => {
                 {participants.map((p) => (
                   <Chip
                     key={p.user_id}
-                    avatar={<Avatar src={p.avatar_uri || undefined}>{p.display_name.charAt(0)}</Avatar>}
+                    avatar={<Avatar src={avatarUrl(p.user_id, p.avatar_uri)}>{p.display_name.charAt(0)}</Avatar>}
                     label={`${p.display_name}${p.role === 'admin' ? ' (admin)' : ''}`}
                     size="small"
                     variant="outlined"
@@ -284,7 +285,7 @@ const ConversationDetailPage: React.FC = () => {
                     sx={{ maxWidth: '75%' }}
                   >
                     <Avatar
-                      src={msg.author.avatar_uri || undefined}
+                      src={avatarUrl(msg.author.user_id, msg.author.avatar_uri)}
                       sx={{ width: 32, height: 32, fontSize: 14, mt: 0.5 }}
                     >
                       {msg.author.display_name.charAt(0)}

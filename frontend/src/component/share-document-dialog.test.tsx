@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserContext } from '../context/user-context';
 import ShareDocumentDialog from './share-document-dialog';
 import * as documentService from '../service/documents';
+import * as userService from '../service/users';
 
 vi.mock('../service/documents', async () => {
   const actual = await vi.importActual<typeof import('../service/documents')>('../service/documents');
@@ -19,6 +20,7 @@ vi.mock('../service/documents', async () => {
 
 const mockedGetDocumentShares = vi.mocked(documentService.getDocumentShares);
 const mockedGetDocumentShareCandidates = vi.mocked(documentService.getDocumentShareCandidates);
+const mockedAvatarUrl = vi.spyOn(userService, 'avatarUrl');
 
 describe('ShareDocumentDialog', () => {
   beforeEach(() => {
@@ -44,7 +46,7 @@ describe('ShareDocumentDialog', () => {
         full_name: 'Alice Zhang',
         email: 'alice@example.com',
         headline: null,
-        avatar_uri: null,
+        avatar_uri: 'uploads/avatars/candidate-1/avatar.png',
       },
     ]);
   });
@@ -82,5 +84,6 @@ describe('ShareDocumentDialog', () => {
     });
     expect(await screen.findByText('Alice Zhang')).toBeInTheDocument();
     expect(screen.getByText('alice@example.com')).toBeInTheDocument();
+    expect(mockedAvatarUrl).toHaveBeenCalledWith('candidate-1', 'uploads/avatars/candidate-1/avatar.png');
   });
 });

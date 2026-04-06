@@ -27,6 +27,7 @@ import {
 } from '../service/directory';
 import { createConnection, getConnections } from '../service/connections';
 import { createConversation } from '../service/messages';
+import { avatarUrl } from '../service/users';
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -142,7 +143,7 @@ const UserProfilePage: React.FC = () => {
         <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} alignItems={{ sm: 'center' }}>
             <Avatar
-              src={profile.avatar_uri || undefined}
+              src={avatarUrl(profile.user_id, profile.avatar_uri)}
               sx={{ width: 80, height: 80, fontSize: 32 }}
             >
               {profile.display_name.charAt(0)}

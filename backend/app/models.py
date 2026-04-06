@@ -2,6 +2,7 @@
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -19,8 +20,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
-
-from pgvector.sqlalchemy import Vector
 
 
 class Base(DeclarativeBase):

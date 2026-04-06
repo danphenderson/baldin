@@ -9,7 +9,7 @@ Uses pgvector with SQLAlchemy for PostgreSQL-backed vector similarity search.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Sequence
+from typing import Any
 from uuid import UUID
 
 from langchain_openai import OpenAIEmbeddings

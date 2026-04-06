@@ -181,16 +181,12 @@ def _create_and_sync_schema(connection: Connection) -> None:
 
 
 async def _terminate_other_test_db_sessions(conn: AsyncSession | Any) -> None:
-    await conn.execute(
-        text(
-            """
+    await conn.execute(text("""
             SELECT pg_terminate_backend(pid)
             FROM pg_stat_activity
             WHERE datname = current_database()
               AND pid <> pg_backend_pid()
-            """
-        )
-    )
+            """))
 
 
 async def create_db_and_tables() -> None:

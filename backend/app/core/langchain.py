@@ -3,6 +3,7 @@
 """
 Client for interacting with the Langchain API.
 """
+
 import httpx
 from bs4 import BeautifulSoup
 from langchain_community.document_transformers import BeautifulSoupTransformer

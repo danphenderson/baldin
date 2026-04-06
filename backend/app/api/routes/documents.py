@@ -1195,9 +1195,7 @@ async def search_documents(
     from app.core.vector_store import PGVectorStore
 
     store = PGVectorStore(db)
-    results = await store.similarity_search(
-        body.query, user_id=user.id, k=body.k
-    )
+    results = await store.similarity_search(body.query, user_id=user.id, k=body.k)
     return schemas.DocumentSearchResponse(
         query=body.query,
         results=[schemas.DocumentSearchResult(**r) for r in results],
@@ -1230,9 +1228,7 @@ async def embed_document(
         doc.head_version_id if doc.head_version_id else None
     )
     if version_id is None:
-        raise HTTPException(
-            status_code=400, detail="Document has no version to embed"
-        )
+        raise HTTPException(status_code=400, detail="Document has no version to embed")
 
     version = await db.get(models.DocumentVersion, version_id)
     if version is None or str(version.document_id) != str(doc.id):
@@ -1249,9 +1245,7 @@ async def embed_document(
 
     chunks = chunk_text(text_content)
     if not chunks:
-        raise HTTPException(
-            status_code=400, detail="No embeddable text after chunking"
-        )
+        raise HTTPException(status_code=400, detail="No embeddable text after chunking")
 
     await store.add_texts(
         chunks,
@@ -1319,13 +1313,10 @@ async def rank_leads_endpoint(
     from app.core.vector_store import PGVectorStore
 
     combined_text = " ".join(
-        lead.get("title", "") + " " + lead.get("description", "")
-        for lead in body.leads
+        lead.get("title", "") + " " + lead.get("description", "") for lead in body.leads
     )
     store = PGVectorStore(db)
-    results = await store.similarity_search(
-        combined_text, user_id=user.id, k=body.k
-    )
+    results = await store.similarity_search(combined_text, user_id=user.id, k=body.k)
     context_chunks = [r["chunk_text"] for r in results]
     if not context_chunks:
         raise HTTPException(

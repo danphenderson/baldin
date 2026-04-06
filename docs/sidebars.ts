@@ -30,6 +30,7 @@ const sidebars: SidebarsConfig = {
         'engineering/local-development',
         'engineering/ci-pipeline',
         'engineering/contract-management',
+        'engineering/copilot-prompt-cookbook',
         'engineering/testing',
         'engineering/deployment-status',
       ],

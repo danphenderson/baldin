@@ -18,4 +18,5 @@ Welcome to the Baldin documentation. Baldin is a developer-preview, local-first 
 - **[API Surface](architecture/api-surface)** — REST endpoint map organized by domain
 - **[Local Development](engineering/local-development)** — Docker Compose workflow and developer URLs
 - **[CI Pipeline](engineering/ci-pipeline)** — CI jobs, required checks, and branch protection
+- **[Copilot Prompt Cookbook](engineering/copilot-prompt-cookbook)** — Copy-paste prompt templates for Baldin's workspace agents
 - **[Environment Variables](reference/environment-variables)** — Full list of backend and frontend configuration

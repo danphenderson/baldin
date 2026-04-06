@@ -10,6 +10,18 @@ const sidebars: SidebarsConfig = {
         'getting-started/overview',
         'getting-started/quickstart',
         'getting-started/contributing',
+        'getting-started/deployment-guide',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Explore Features',
+      items: [
+        'features/command-center',
+        'features/job-search-pipeline',
+        'features/document-workspace',
+        'features/extraction-and-automation',
+        'features/networking',
       ],
     },
     {
@@ -43,6 +55,7 @@ const sidebars: SidebarsConfig = {
       label: 'Look Up Details',
       items: [
         'reference/api-reference',
+        'reference/resources',
         'reference/environment-variables',
         'reference/glossary',
       ],

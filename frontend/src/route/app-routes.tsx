@@ -24,6 +24,7 @@ import ConnectionsPage from '../page/connections';
 import ConversationsPage from '../page/messages/conversations-page';
 import ConversationDetailPage from '../page/messages/conversation-detail-page';
 import SubscriptionPage from '../page/settings/subscription-page';
+import DiscoverabilityPage from '../page/settings/discoverability-page';
 import GraduationPage from '../page/settings/graduation-page';
 import CrawlersPage from '../page/crawlers';
 import ReviewQueuePage from '../page/review-queue';
@@ -90,6 +91,7 @@ const AppRoutes: React.FC = () => {
           {/* ── Settings group ── */}
           <Route path="settings" element={<SettingsGroupLayout />}>
             <Route path="subscription" element={<SubscriptionPage />} />
+            <Route path="discoverability" element={<DiscoverabilityPage />} />
             <Route path="graduation" element={<GraduationPage />} />
           </Route>
 

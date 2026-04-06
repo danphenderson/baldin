@@ -398,6 +398,17 @@ export interface paths {
     /** Generate Cover Letter For Application */
     post: operations["generate_cover_letter_for_application_applications__id__cover_letters_generate_post"];
   };
+  "/applications/{id}/export": {
+    /**
+     * Export Application Materials
+     * @description Export all materials linked to an application as a ZIP archive.
+     *
+     * The archive contains up to three subdirectories — ``resumes/``,
+     * ``cover_letters/``, and ``documents/`` — each holding PDF files for
+     * the linked records.
+     */
+    get: operations["export_application_materials_applications__id__export_get"];
+  };
   "/applications/{id}/documents": {
     /** Get Application Documents */
     get: operations["get_application_documents_applications__id__documents_get"];
@@ -679,7 +690,8 @@ export interface paths {
      * List Directory
      * @description Paginated, searchable user directory.
      *
-     * Only users with ``is_discoverable=True`` and ``is_active=True`` are returned.
+     * Only discoverable, active users are returned. ``superusers_only=true`` narrows
+     * results to Baldin superusers.
      */
     get: operations["list_directory_directory__get"];
   };
@@ -699,6 +711,9 @@ export interface paths {
     /**
      * Send Connection Request
      * @description Send a connection request to another user.
+     *
+     * Requests to superusers are available to all authenticated users. Requests to
+     * non-superusers still require a Starter subscription or above.
      */
     post: operations["send_connection_request_connections__post"];
   };
@@ -1625,6 +1640,11 @@ export interface components {
        * @description Public display name
        */
       display_name: string;
+      /**
+       * Is Superuser
+       * @description Whether the user is a Baldin superuser
+       */
+      is_superuser: boolean;
       /**
        * Headline
        * @description Professional tagline
@@ -5004,7 +5024,7 @@ export interface components {
       /**
        * Is Discoverable
        * @description Whether the user appears in the directory
-       * @default true
+       * @default false
        */
       is_discoverable?: boolean;
       /**
@@ -5117,6 +5137,11 @@ export interface components {
        */
       display_name: string;
       /**
+       * Is Superuser
+       * @description Whether the user is a Baldin superuser
+       */
+      is_superuser: boolean;
+      /**
        * Headline
        * @description Professional tagline
        */
@@ -5191,6 +5216,11 @@ export interface components {
        * @description Public display name
        */
       display_name: string;
+      /**
+       * Is Superuser
+       * @description Whether the user is a Baldin superuser
+       */
+      is_superuser: boolean;
       /**
        * Headline
        * @description Professional tagline
@@ -5301,7 +5331,7 @@ export interface components {
       /**
        * Is Discoverable
        * @description Whether the user appears in the directory
-       * @default true
+       * @default false
        */
       is_discoverable?: boolean;
       /**
@@ -5417,7 +5447,7 @@ export interface components {
       /**
        * Is Discoverable
        * @description Whether the user appears in the directory
-       * @default true
+       * @default false
        */
       is_discoverable?: boolean;
       /**
@@ -7742,6 +7772,35 @@ export interface operations {
       };
     };
   };
+  /**
+   * Export Application Materials
+   * @description Export all materials linked to an application as a ZIP archive.
+   *
+   * The archive contains up to three subdirectories — ``resumes/``,
+   * ``cover_letters/``, and ``documents/`` — each holding PDF files for
+   * the linked records.
+   */
+  export_application_materials_applications__id__export_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Get Application Documents */
   get_application_documents_applications__id__documents_get: {
     parameters: {
@@ -9184,7 +9243,8 @@ export interface operations {
    * List Directory
    * @description Paginated, searchable user directory.
    *
-   * Only users with ``is_discoverable=True`` and ``is_active=True`` are returned.
+   * Only discoverable, active users are returned. ``superusers_only=true`` narrows
+   * results to Baldin superusers.
    */
   list_directory_directory__get: {
     parameters: {
@@ -9195,6 +9255,8 @@ export interface operations {
         placement_status?: components["schemas"]["PlacementStatus"] | null;
         /** @description Filter by city/state/country */
         location?: string | null;
+        /** @description Only return superusers */
+        superusers_only?: boolean;
         /** @description Page number starting from 1 */
         page?: number;
         /** @description Number of records per page */
@@ -9278,6 +9340,9 @@ export interface operations {
   /**
    * Send Connection Request
    * @description Send a connection request to another user.
+   *
+   * Requests to superusers are available to all authenticated users. Requests to
+   * non-superusers still require a Starter subscription or above.
    */
   send_connection_request_connections__post: {
     requestBody: {

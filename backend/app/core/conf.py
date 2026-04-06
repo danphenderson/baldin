@@ -118,6 +118,18 @@ class Settings(_BaseSettings):
     def SEEDS_PATH(self) -> Path:
         return Path(self.PUBLIC_ASSETS_DIR) / "seeds"
 
+    @property
+    def LOGS_PATH(self) -> Path:
+        return Path(self.PUBLIC_ASSETS_DIR) / "var" / "logs"
+
+    @property
+    def SHOULD_LOG_API_TO_CONSOLE(self) -> bool:
+        return self.ENVIRONMENT == "DEV"
+
+    @property
+    def SHOULD_LOG_API_TO_FILE(self) -> bool:
+        return self.ENVIRONMENT == "DEV"
+
     CRAWLER_SCHEDULER_ENABLED: bool = True
     RUN_REAPER_ENABLED: bool = True
 

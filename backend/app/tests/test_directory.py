@@ -101,6 +101,7 @@ async def test_directory_returns_paginated_results() -> None:
     assert "total" in body
     assert body["total"] >= 2
     assert isinstance(body["items"], list)
+    assert all("is_superuser" in item for item in body["items"])
 
 
 async def test_directory_filters_by_placement_status() -> None:
@@ -177,8 +178,77 @@ async def test_directory_public_profile() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["display_name"] == "Profile User"
+    assert body["is_superuser"] is False
     assert body["headline"] == "Software Engineer"
     assert body["bio"] == "I write code"
+
+
+async def test_superusers_are_discoverable_by_default() -> None:
+    """New superusers stay visible by default while normal users start hidden."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        unique = utils.random_lower_string(10)
+        email_hidden, uid_hidden = await _create_user("dir-default-hidden-pass")
+        email_super, uid_super = await _create_user(
+            "dir-default-super-pass",
+            is_superuser=True,
+        )
+        await _set_user_fields(uid_hidden, first_name=f"Guide{unique}")
+        await _set_user_fields(uid_super, first_name=f"Guide{unique}")
+        email_viewer, _ = await _create_user("dir-default-view-pass")
+        headers = await _auth_headers(client, email_viewer, "dir-default-view-pass")
+
+        response = await client.get(
+            "/directory/",
+            params={"q": f"Guide{unique}", "request_count": True},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["user_id"] == str(uid_super)
+    assert body["items"][0]["is_superuser"] is True
+
+
+async def test_directory_can_filter_superusers_only() -> None:
+    """GET /directory/?superusers_only=true returns only superusers and tags profiles."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        unique = utils.random_lower_string(10)
+        email_super, uid_super = await _create_user(
+            "dir-filter-super-pass",
+            is_superuser=True,
+        )
+        email_peer, uid_peer = await _create_user("dir-filter-peer-pass")
+        await _set_user_fields(uid_super, first_name=f"Scout{unique}")
+        await _set_user_fields(
+            uid_peer,
+            first_name=f"Scout{unique}",
+            is_discoverable=True,
+        )
+        email_viewer, _ = await _create_user("dir-filter-view-pass")
+        headers = await _auth_headers(client, email_viewer, "dir-filter-view-pass")
+
+        list_response = await client.get(
+            "/directory/",
+            params={
+                "q": f"Scout{unique}",
+                "superusers_only": True,
+                "request_count": True,
+            },
+            headers=headers,
+        )
+        profile_response = await client.get(f"/directory/{uid_super}", headers=headers)
+
+    assert list_response.status_code == 200
+    body = list_response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["user_id"] == str(uid_super)
+    assert body["items"][0]["is_superuser"] is True
+
+    assert profile_response.status_code == 200
+    assert profile_response.json()["is_superuser"] is True
 
 
 async def test_non_discoverable_users_excluded() -> None:

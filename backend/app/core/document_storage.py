@@ -118,7 +118,12 @@ def build_avatar_path(
     user_id: UUID | str,
     content_type: str,
 ) -> str:
-    suffix = _AVATAR_CONTENT_TYPE_SUFFIX.get(content_type, ".jpg")
+    suffix = _AVATAR_CONTENT_TYPE_SUFFIX.get(content_type)
+    if suffix is None:
+        raise ValueError(
+            f"Unsupported avatar content type: {content_type}. "
+            f"Allowed: {', '.join(sorted(ALLOWED_AVATAR_CONTENT_TYPES))}"
+        )
     return f"{UPLOADS_SUBDIR}/{AVATARS_SUBDIR}/{user_id}/avatar{suffix}"
 
 

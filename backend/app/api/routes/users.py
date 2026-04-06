@@ -194,6 +194,15 @@ async def upload_avatar(
     return current_user
 
 
+_SUFFIX_TO_MEDIA_TYPE = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
+
+
 @router.get("/{user_id}/avatar")
 async def serve_avatar(user_id: _UUID):
     """Serve a user's avatar image. Returns 404 if no avatar is set."""
@@ -201,7 +210,10 @@ async def serve_avatar(user_id: _UUID):
     if avatar_path is None or not avatar_path.exists():
         raise HTTPException(status_code=404, detail="Avatar not found")
 
-    media_type = mimetypes.guess_type(str(avatar_path))[0] or "image/jpeg"
+    media_type = _SUFFIX_TO_MEDIA_TYPE.get(
+        avatar_path.suffix.lower(),
+        mimetypes.guess_type(str(avatar_path))[0] or "application/octet-stream",
+    )
     return FileResponse(
         path=avatar_path,
         media_type=media_type,

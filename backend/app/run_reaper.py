@@ -10,11 +10,12 @@ for human action, not stuck.
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from sqlalchemy import update
 
 from app import models
+from app.core.datetime_utils import now_utc_naive
 from app.core.db import session_context
 from app.logging import get_async_logger
 
@@ -40,7 +41,7 @@ async def run_reaper_loop() -> None:
 
 
 async def _reap() -> None:
-    cutoff = datetime.utcnow() - timedelta(minutes=STALE_TIMEOUT_MINUTES)
+    cutoff = now_utc_naive() - timedelta(minutes=STALE_TIMEOUT_MINUTES)
 
     async with session_context() as db:
         # Reap stale CrawlerRuns
@@ -53,7 +54,7 @@ async def _reap() -> None:
             .values(
                 status="failed",
                 error_summary="Reaped: exceeded 30-minute timeout",
-                finished_at=datetime.utcnow(),
+                finished_at=now_utc_naive(),
             )
         )
         reaped_runs = result.rowcount

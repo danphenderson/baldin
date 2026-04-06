@@ -19,7 +19,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /usr/src/app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc libmagic1 netcat-traditional postgresql-client \
+    && apt-get install -y --no-install-recommends libmagic1 netcat-traditional postgresql-client \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --upgrade pip
 
@@ -28,7 +28,10 @@ FROM base AS dependencies
 
 COPY Pipfile Pipfile.lock ./
 
-RUN pip install pipenv \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install pipenv \
     && pipenv install --system --deploy --ignore-pipfile
 
 # ── Dev target ────────────────────────────────────────────────────────

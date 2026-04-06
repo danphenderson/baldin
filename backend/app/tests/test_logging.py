@@ -33,9 +33,9 @@ async def test_response_contains_x_request_id_header():
         base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
     ) as client:
         resp = await client.get("/")
-        assert REQUEST_ID_HEADER.lower() in {
-            k.lower() for k in resp.headers.keys()
-        }, f"Missing {REQUEST_ID_HEADER} header in response"
+        assert REQUEST_ID_HEADER.lower() in {k.lower() for k in resp.headers.keys()}, (
+            f"Missing {REQUEST_ID_HEADER} header in response"
+        )
 
 
 @pytest.mark.asyncio(loop_scope="module")
@@ -178,3 +178,31 @@ def test_get_async_logger_skips_file_creation_when_file_logging_disabled(
 
     assert logger.filepath is None
     assert not (tmp_path / "var" / "logs" / "stage_logger.json").exists()
+
+
+@pytest.mark.asyncio
+async def test_async_logger_reads_ndjson_records(monkeypatch, tmp_path):
+    base_config = conf.settings.model_dump()
+    dev_settings = conf.get_settings(
+        **(
+            base_config
+            | {
+                "ENVIRONMENT": "DEV",
+                "PUBLIC_ASSETS_DIR": str(tmp_path),
+            }
+        )
+    )
+
+    monkeypatch.setattr(conf, "settings", dev_settings)
+    monkeypatch.setattr(app_logging.conf, "settings", dev_settings)
+
+    logger = app_logging.get_async_logger("ndjson_logger")
+    await logger.info("first message")
+    await logger.info("second message")
+
+    records = await logger.read()
+
+    assert [record["message"] for record in records] == [
+        "first message",
+        "second message",
+    ]

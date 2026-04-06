@@ -1,13 +1,15 @@
 """WebSocket endpoint for real-time collaborative document editing."""
 
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Query, WebSocket
-from fastapi_users.jwt import decode_jwt
+import jwt
+from fastapi import APIRouter, Depends, Query, WebSocket
 from sqlalchemy import select
 
 from app.api.deps import schemas
+from app.core import conf
 from app.core.db import async_session_maker
 from app.core.document_collaboration import (
     DocumentCollaborationBootstrapClaimStatus,
@@ -16,10 +18,12 @@ from app.core.document_collaboration import (
     document_collaboration_server,
     ensure_document_collaboration_server_started,
 )
-from app.core.security import get_jwt_strategy
+from app.core.security import get_current_user
 from app.models import Document, DocumentShare, User
 
 router: APIRouter = APIRouter()
+COLLABORATION_TOKEN_AUDIENCE = "document-collaboration"
+COLLABORATION_TOKEN_EXPIRE_MINUTES = 5
 
 
 def _connect_bootstrap_response() -> schemas.DocumentCollaborationBootstrapRead:
@@ -33,26 +37,32 @@ def _connect_bootstrap_response() -> schemas.DocumentCollaborationBootstrapRead:
 # ---------------------------------------------------------------------------
 
 
-async def _authenticate_ws(token: str) -> Optional[User]:
-    """Decode a JWT bearer token and return the User or None."""
-    strategy = get_jwt_strategy()
+def _create_collaboration_token(user_id: uuid.UUID, document_id: uuid.UUID) -> str:
+    payload = {
+        "sub": str(user_id),
+        "doc": str(document_id),
+        "aud": COLLABORATION_TOKEN_AUDIENCE,
+        "exp": datetime.now(timezone.utc)
+        + timedelta(minutes=COLLABORATION_TOKEN_EXPIRE_MINUTES),
+    }
+    return jwt.encode(payload, conf.settings.SECRET_KEY, algorithm="HS256")
+
+
+async def _authenticate_collaboration_session(
+    token: str,
+    document_id: uuid.UUID,
+) -> Optional[User]:
     try:
-        data = decode_jwt(
+        data = jwt.decode(
             token,
-            strategy.decode_key,
-            strategy.token_audience,
-            algorithms=[strategy.algorithm],
+            conf.settings.SECRET_KEY,
+            algorithms=["HS256"],
+            audience=COLLABORATION_TOKEN_AUDIENCE,
         )
-        user_id_str = data.get("sub")
+        if data.get("doc") != str(document_id):
+            return None
+        user_id = uuid.UUID(data["sub"])
     except Exception:
-        return None
-
-    if not user_id_str:
-        return None
-
-    try:
-        user_id = uuid.UUID(user_id_str)
-    except (ValueError, AttributeError):
         return None
 
     async with async_session_maker() as session:
@@ -101,20 +111,18 @@ async def _check_editor_access(
 )
 async def request_collaboration_bootstrap(
     document_id: str,
-    token: str = Query(...),
+    current_user: User = Depends(get_current_user),
 ) -> schemas.DocumentCollaborationBootstrapRead:
-    user = await _authenticate_ws(token)
-    if user is None:
-        return _connect_bootstrap_response()
-
     try:
         doc_uuid = uuid.UUID(document_id)
     except ValueError:
         return _connect_bootstrap_response()
 
-    document = await _check_editor_access(user, doc_uuid)
+    document = await _check_editor_access(current_user, doc_uuid)
     if document is None:
         return _connect_bootstrap_response()
+
+    collaboration_token = _create_collaboration_token(current_user.id, doc_uuid)
 
     bootstrap = await claim_document_collaboration_bootstrap(document_id)
     if bootstrap.status is DocumentCollaborationBootstrapClaimStatus.SEED:
@@ -122,32 +130,37 @@ async def request_collaboration_bootstrap(
             status=schemas.DocumentCollaborationBootstrapStatus.SEED,
             content=bootstrap.content,
             content_format=schemas.ContentFormat.TIPTAP_JSON,
+            collaboration_token=collaboration_token,
         )
 
     if bootstrap.status is DocumentCollaborationBootstrapClaimStatus.PENDING:
         return schemas.DocumentCollaborationBootstrapRead(
             status=schemas.DocumentCollaborationBootstrapStatus.PENDING,
             retry_after_ms=bootstrap.retry_after_ms,
+            collaboration_token=collaboration_token,
         )
 
-    return _connect_bootstrap_response()
+    return schemas.DocumentCollaborationBootstrapRead(
+        status=schemas.DocumentCollaborationBootstrapStatus.CONNECT,
+        collaboration_token=collaboration_token,
+    )
 
 
 @router.websocket("/{document_id}/collaborate")
 async def collaborate(
     websocket: WebSocket,
     document_id: str,
-    token: str = Query(...),
+    collaboration_token: str = Query(...),
 ) -> None:
-    user = await _authenticate_ws(token)
-    if user is None:
-        await websocket.close(code=4003, reason="Unauthorized")
-        return
-
     try:
         doc_uuid = uuid.UUID(document_id)
     except ValueError:
         await websocket.close(code=4004, reason="Invalid document ID")
+        return
+
+    user = await _authenticate_collaboration_session(collaboration_token, doc_uuid)
+    if user is None:
+        await websocket.close(code=4003, reason="Unauthorized")
         return
 
     document = await _check_editor_access(user, doc_uuid)

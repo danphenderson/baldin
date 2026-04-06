@@ -891,6 +891,10 @@ class DocumentCollaborationBootstrapRead(BaseSchema):
     status: DocumentCollaborationBootstrapStatus = Field(
         description="How the client should proceed with collaborative bootstrap"
     )
+    collaboration_token: str | None = Field(
+        None,
+        description="Short-lived collaboration session token used for the follow-up WebSocket connection",
+    )
     retry_after_ms: int | None = Field(
         None,
         ge=0,

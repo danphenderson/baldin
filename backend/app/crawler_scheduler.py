@@ -10,7 +10,7 @@ execute_crawler_run_background path used by manual triggers.
 import asyncio
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app import models
 from app.core.db import session_context
@@ -19,6 +19,22 @@ from app.logging import get_async_logger
 log = get_async_logger(__name__)
 
 POLL_INTERVAL_SECONDS = 60
+_SCHEDULER_ADVISORY_LOCK_ID = 64127831
+
+
+async def _acquire_scheduler_leader_lock(db) -> bool:
+    result = await db.execute(
+        text("SELECT pg_try_advisory_lock(:lock_id)"),
+        {"lock_id": _SCHEDULER_ADVISORY_LOCK_ID},
+    )
+    return bool(result.scalar())
+
+
+async def _release_scheduler_leader_lock(db) -> None:
+    await db.execute(
+        text("SELECT pg_advisory_unlock(:lock_id)"),
+        {"lock_id": _SCHEDULER_ADVISORY_LOCK_ID},
+    )
 
 
 async def crawler_scheduler_loop() -> None:
@@ -48,68 +64,79 @@ async def _tick() -> None:
     now = datetime.now(timezone.utc)
 
     async with session_context() as db:
-        result = await db.execute(
-            select(models.CrawlerPipeline).where(
-                models.CrawlerPipeline.enabled.is_(True)
+        if not await _acquire_scheduler_leader_lock(db):
+            await log.debug(
+                "Crawler scheduler tick skipped; another process holds the leader lock"
             )
-        )
-        pipelines = result.scalars().all()
+            return
 
-        for pipeline in pipelines:
-            sched = pipeline.schedule_definition
-            if not sched:
-                continue
-
-            next_run_at_raw = sched.get("next_run_at")
-            interval_minutes = sched.get("interval_minutes")
-            if not next_run_at_raw or not interval_minutes:
-                continue
-
-            # Parse next_run_at — accept ISO 8601
-            if isinstance(next_run_at_raw, str):
-                next_run_at = datetime.fromisoformat(
-                    next_run_at_raw.replace("Z", "+00:00")
+        try:
+            result = await db.execute(
+                select(models.CrawlerPipeline).where(
+                    models.CrawlerPipeline.enabled.is_(True)
                 )
-            elif isinstance(next_run_at_raw, datetime):
-                next_run_at = next_run_at_raw
-            else:
-                continue
-
-            # Make offset-aware if naive
-            if next_run_at.tzinfo is None:
-                next_run_at = next_run_at.replace(tzinfo=timezone.utc)
-
-            if next_run_at > now:
-                continue
-
-            # Pipeline is due — create a scheduled run
-            await log.info(
-                f"Scheduler: pipeline {pipeline.id} ({pipeline.name}) is due"
             )
+            pipelines = result.scalars().all()
 
-            run = await create_crawler_run(pipeline, "scheduled", db)
+            for pipeline in pipelines:
+                sched = pipeline.schedule_definition
+                if not sched:
+                    continue
 
-            # Advance next_run_at
-            new_next = next_run_at + timedelta(minutes=interval_minutes)
-            # If the new time is still in the past (e.g. app was offline),
-            # skip forward to the next future slot
-            while new_next <= now:
-                new_next += timedelta(minutes=interval_minutes)
+                next_run_at_raw = sched.get("next_run_at")
+                interval_minutes = sched.get("interval_minutes")
+                if not next_run_at_raw or not interval_minutes:
+                    continue
 
-            updated_sched = dict(sched)
-            updated_sched["next_run_at"] = new_next.isoformat()
-            pipeline.schedule_definition = updated_sched
-            await db.commit()
+                # Parse next_run_at — accept ISO 8601
+                if isinstance(next_run_at_raw, str):
+                    next_run_at = datetime.fromisoformat(
+                        next_run_at_raw.replace("Z", "+00:00")
+                    )
+                elif isinstance(next_run_at_raw, datetime):
+                    next_run_at = next_run_at_raw
+                else:
+                    continue
 
-            if pipeline.requires_approval:
-                # Hold for review — don't execute
-                run.status = "pending_review"
-                await db.commit()
+                # Make offset-aware if naive
+                if next_run_at.tzinfo is None:
+                    next_run_at = next_run_at.replace(tzinfo=timezone.utc)
+
+                if next_run_at > now:
+                    continue
+
+                # Pipeline is due — create a scheduled run
                 await log.info(
-                    f"Scheduler: pipeline {pipeline.id} run {run.id} held for review"
+                    f"Scheduler: pipeline {pipeline.id} ({pipeline.name}) is due"
                 )
-            else:
-                # Launch in background — use the pipeline creator as the acting user
-                asyncio.create_task(
-                    execute_crawler_run_background(run.id, pipeline.created_by_user_id)
-                )
+
+                run = await create_crawler_run(pipeline, "scheduled", db)
+
+                # Advance next_run_at
+                new_next = next_run_at + timedelta(minutes=interval_minutes)
+                # If the new time is still in the past (e.g. app was offline),
+                # skip forward to the next future slot
+                while new_next <= now:
+                    new_next += timedelta(minutes=interval_minutes)
+
+                updated_sched = dict(sched)
+                updated_sched["next_run_at"] = new_next.isoformat()
+                pipeline.schedule_definition = updated_sched
+                await db.commit()
+
+                if pipeline.requires_approval:
+                    # Hold for review — don't execute
+                    run.status = "pending_review"
+                    await db.commit()
+                    await log.info(
+                        f"Scheduler: pipeline {pipeline.id} run {run.id} held for review"
+                    )
+                else:
+                    # Launch in background — use the pipeline creator as the acting user
+                    asyncio.create_task(
+                        execute_crawler_run_background(
+                            run.id, pipeline.created_by_user_id
+                        )
+                    )
+        finally:
+            await _release_scheduler_leader_lock(db)

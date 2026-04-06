@@ -201,38 +201,39 @@ async def test_collaboration_bootstrap_claims_rich_text_seed_then_waits_until_re
 
         first_response = await client.post(
             f"/documents/{document_id}/collaborate/bootstrap",
-            params={"token": headers["Authorization"].removeprefix("Bearer ")},
+            headers=headers,
         )
         second_response = await client.post(
             f"/documents/{document_id}/collaborate/bootstrap",
-            params={"token": headers["Authorization"].removeprefix("Bearer ")},
+            headers=headers,
         )
         _document_bootstrap_claims[str(document_id)] = 0.0
         third_response = await client.post(
             f"/documents/{document_id}/collaborate/bootstrap",
-            params={"token": headers["Authorization"].removeprefix("Bearer ")},
+            headers=headers,
         )
 
     assert first_response.status_code == 200
-    assert first_response.json() == {
-        "status": "seed",
-        "retry_after_ms": None,
-        "content": rich_content,
-        "content_format": "tiptap_json",
-    }
+    first_payload = first_response.json()
+    assert first_payload["status"] == "seed"
+    assert first_payload["retry_after_ms"] is None
+    assert first_payload["content"] == rich_content
+    assert first_payload["content_format"] == "tiptap_json"
+    assert first_payload["collaboration_token"]
     assert second_response.status_code == 200
     second_payload = second_response.json()
     assert second_payload["status"] == "pending"
+    assert second_payload["collaboration_token"]
     assert second_payload["content"] is None
     assert second_payload["content_format"] is None
     assert 100 <= second_payload["retry_after_ms"] <= 1000
     assert third_response.status_code == 200
-    assert third_response.json() == {
-        "status": "seed",
-        "retry_after_ms": None,
-        "content": rich_content,
-        "content_format": "tiptap_json",
-    }
+    third_payload = third_response.json()
+    assert third_payload["status"] == "seed"
+    assert third_payload["retry_after_ms"] is None
+    assert third_payload["content"] == rich_content
+    assert third_payload["content_format"] == "tiptap_json"
+    assert third_payload["collaboration_token"]
 
 
 async def test_collaboration_bootstrap_skips_invalid_or_plain_text_content() -> None:

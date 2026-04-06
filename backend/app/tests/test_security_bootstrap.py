@@ -56,3 +56,27 @@ async def test_create_default_superuser_raises_actionable_error(
     create_user.assert_not_awaited()
     assert "one digit" in str(exc_info.value)
     assert "backend/.env" in str(exc_info.value)
+
+
+async def test_create_default_superuser_is_not_discoverable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_user = AsyncMock()
+
+    monkeypatch.setattr(
+        security.conf.settings,
+        "FIRST_SUPERUSER_PASSWORD",
+        "ValidPass1",
+    )
+    monkeypatch.setattr(
+        security,
+        "get_user_by_email",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(security, "create_user", create_user)
+
+    await security.create_default_superuser()
+
+    payload = create_user.await_args.args[0]
+    assert payload.is_superuser is True
+    assert payload.is_discoverable is False

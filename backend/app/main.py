@@ -40,8 +40,9 @@ def _normalize_cors_origin(origin: object) -> str:
 
 async def _startup(app: FastAPI) -> None:
     console_log.info("Starting up...")
-    tracemalloc.start()
-    await ensure_document_collaboration_server_started()
+    if conf.settings.ENVIRONMENT != "PYTEST":
+        tracemalloc.start()
+        await ensure_document_collaboration_server_started()
     if getattr(app.state, "bootstrap_completed", False):
         console_log.info("Startup bootstrap already completed for this process.")
         return
@@ -101,8 +102,10 @@ async def _shutdown(app: FastAPI) -> None:
         "Run reaper stopped.",
     )
 
-    await stop_document_collaboration_server()
-    tracemalloc.stop()
+    if conf.settings.ENVIRONMENT != "PYTEST":
+        await stop_document_collaboration_server()
+    if tracemalloc.is_tracing():
+        tracemalloc.stop()
     console_log.info("Shutting down...")
 
 

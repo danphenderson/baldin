@@ -17,7 +17,7 @@ From `backend/`:
 
 ```bash
 pipenv sync --dev
-pipenv run pytest --cov=app --cov=etl --cov-report=term-missing --cov-fail-under=40
+pipenv run pytest --cov=app --cov=etl --cov-report=term-missing --cov-fail-under=60
 ```
 
 From the repo root:

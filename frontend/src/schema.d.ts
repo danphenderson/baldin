@@ -2605,6 +2605,11 @@ export interface components {
       /** @description How the client should proceed with collaborative bootstrap */
       status: components["schemas"]["DocumentCollaborationBootstrapStatus"];
       /**
+       * Collaboration Token
+       * @description Short-lived collaboration session token used for the follow-up WebSocket connection
+       */
+      collaboration_token?: string | null;
+      /**
        * Retry After Ms
        * @description How long the client should wait before retrying bootstrap when another claim is still active
        */
@@ -10270,9 +10275,6 @@ export interface operations {
   /** Request Collaboration Bootstrap */
   request_collaboration_bootstrap_documents__document_id__collaborate_bootstrap_post: {
     parameters: {
-      query: {
-        token: string;
-      };
       path: {
         document_id: string;
       };

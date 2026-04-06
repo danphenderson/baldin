@@ -292,7 +292,7 @@ export async function requestDocumentCollaborationBootstrap(
   documentId: string,
 ): Promise<DocumentCollaborationBootstrapRead> {
   return fetchAPI(
-    withQuery(`${BASE_URL}/${documentId}/collaborate/bootstrap`, { token }),
+    `${BASE_URL}/${documentId}/collaborate/bootstrap`,
     createRequestOptions(token, 'POST'),
   );
 }

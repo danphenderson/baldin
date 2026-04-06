@@ -1,5 +1,7 @@
 """Tests for vector store, document embedding, and semantic search schemas."""
 
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -175,3 +177,33 @@ class TestChunkText:
         chunks = chunk_text("A short sentence.")
         assert len(chunks) == 1
         assert chunks[0] == "A short sentence."
+
+
+@pytest.mark.asyncio
+async def test_pgvector_store_add_texts_flushes_once():
+    from app.core.vector_store import PGVectorStore
+
+    session = MagicMock()
+    session.flush = AsyncMock()
+    added_rows = []
+
+    def add(row):
+        row.id = uuid4()
+        added_rows.append(row)
+
+    session.add.side_effect = add
+
+    store = PGVectorStore(session)
+    store._embeddings = SimpleNamespace(
+        aembed_documents=AsyncMock(return_value=[[0.1, 0.2], [0.3, 0.4]])
+    )
+
+    ids = await store.add_texts(
+        ["alpha", "beta"],
+        document_id=uuid4(),
+        document_version_id=uuid4(),
+        user_id=uuid4(),
+    )
+
+    session.flush.assert_awaited_once()
+    assert ids == [row.id for row in added_rows]

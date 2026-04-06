@@ -82,6 +82,7 @@ describe('useCollaborativeEditor', () => {
     websocketProviderMock.mockReturnValue(providerDouble);
     vi.mocked(requestDocumentCollaborationBootstrap).mockResolvedValue({
       status: 'seed',
+      collaboration_token: 'collab-token-123',
       retry_after_ms: null,
       content: JSON.stringify({
         type: 'doc',
@@ -105,7 +106,7 @@ describe('useCollaborativeEditor', () => {
 
     expect(providerDouble.connect).toHaveBeenCalledTimes(1);
     expect(websocketProviderMock.mock.calls[0]?.[3]).toMatchObject({
-      params: { token: 'token-123' },
+      params: { collaboration_token: 'collab-token-123' },
       connect: false,
     });
   });
@@ -117,6 +118,7 @@ describe('useCollaborativeEditor', () => {
     let resolveSecondBootstrap:
       | ((value: {
         status: 'seed';
+        collaboration_token: string;
         retry_after_ms: null;
         content: string;
         content_format: 'tiptap_json';
@@ -124,6 +126,7 @@ describe('useCollaborativeEditor', () => {
       | null = null;
     const secondBootstrap = new Promise<{
       status: 'seed';
+      collaboration_token: string;
       retry_after_ms: null;
       content: string;
       content_format: 'tiptap_json';
@@ -134,6 +137,7 @@ describe('useCollaborativeEditor', () => {
     vi.mocked(requestDocumentCollaborationBootstrap)
       .mockResolvedValueOnce({
         status: 'pending',
+        collaboration_token: 'collab-token-123',
         retry_after_ms: 250,
         content: null,
         content_format: null,
@@ -157,6 +161,7 @@ describe('useCollaborativeEditor', () => {
     await act(async () => {
       resolveSecondBootstrap?.({
         status: 'seed',
+        collaboration_token: 'collab-token-123',
         retry_after_ms: null,
         content: JSON.stringify({
           type: 'doc',
@@ -180,6 +185,7 @@ describe('useCollaborativeEditor', () => {
     websocketProviderMock.mockReturnValue(providerDouble);
     vi.mocked(requestDocumentCollaborationBootstrap).mockResolvedValue({
       status: 'connect',
+      collaboration_token: 'collab-token-123',
       retry_after_ms: null,
       content: null,
       content_format: null,

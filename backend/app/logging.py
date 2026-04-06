@@ -84,7 +84,7 @@ class AsyncJSONFileLogger:
             if self.filepath is None:
                 raise RuntimeError("Cannot read logs: file logging is disabled.")
             with open(self.filepath, "r") as f:
-                return json.load(f)
+                return [json.loads(line) for line in f if line.strip()]
 
 
 _lock = asyncio.Lock()

@@ -44,7 +44,9 @@ async def mfa_status(
 
 
 @router.post("/setup", response_model=schemas.MFASetupResponse)
+@limiter.limit("5/minute")
 async def mfa_setup(
+    request: Request,
     current_user: models.User = Depends(get_current_user),
 ):
     """Generate a fresh TOTP secret.
@@ -114,7 +116,9 @@ async def mfa_verify_setup(
 
 
 @router.post("/disable", response_model=schemas.MFAStatusResponse)
+@limiter.limit("5/minute")
 async def mfa_disable(
+    request: Request,
     body: schemas.MFAVerifyRequest,
     current_user: models.User = Depends(get_current_user),
 ):

@@ -73,6 +73,7 @@ describe('documents service', () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({
         status: 'seed',
+        collaboration_token: 'collab-token-123',
         retry_after_ms: null,
         content: '{"type":"doc"}',
         content_format: 'tiptap_json',
@@ -88,7 +89,8 @@ describe('documents service', () => {
 
     expect(result.status).toBe('seed');
     const [requestUrl, requestOptions] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(requestUrl).toContain('/documents/doc-1/collaborate/bootstrap?token=token-123');
+    expect(requestUrl).toContain('/documents/doc-1/collaborate/bootstrap');
+    expect(requestUrl).not.toContain('token=');
     expect(requestOptions.method).toBe('POST');
     expect(requestOptions.headers).toMatchObject({ Authorization: 'Bearer token-123' });
   });

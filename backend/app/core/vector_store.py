@@ -75,7 +75,7 @@ class PGVectorStore(BaseVectorStore):
         user_id: UUID,
     ) -> list[UUID]:
         vectors = await self._embeddings.aembed_documents(texts)
-        ids: list[UUID] = []
+        rows: list[DocumentEmbedding] = []
         for idx, (chunk, vector) in enumerate(zip(texts, vectors)):
             row = DocumentEmbedding(
                 document_id=document_id,
@@ -86,9 +86,9 @@ class PGVectorStore(BaseVectorStore):
                 embedding=vector,
             )
             self.session.add(row)
-            await self.session.flush()
-            ids.append(row.id)
-        return ids
+            rows.append(row)
+        await self.session.flush()
+        return [row.id for row in rows]
 
     async def similarity_search(
         self,

@@ -131,6 +131,7 @@ export function useCollaborativeEditor(
 
     const buildConnectBootstrapResponse = (): DocumentCollaborationBootstrapRead => ({
       status: 'connect',
+      collaboration_token: null,
       retry_after_ms: null,
       content: null,
       content_format: null,
@@ -182,6 +183,10 @@ export function useCollaborativeEditor(
         return;
       }
 
+      if (!bootstrap.collaboration_token) {
+        return;
+      }
+
       const { serverUrl, roomName } = buildCollaborationSocketConfig(API_URL, documentId);
 
       providerInstance = new WebsocketProvider(
@@ -189,7 +194,7 @@ export function useCollaborativeEditor(
         roomName,
         ydocInstance,
         {
-          params: { token },
+          params: { collaboration_token: bootstrap.collaboration_token },
           connect: false,
         },
       );

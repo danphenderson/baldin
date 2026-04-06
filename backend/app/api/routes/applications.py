@@ -11,7 +11,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.api.deps import (
     AsyncSession,
@@ -26,6 +26,7 @@ from app.api.deps import (
     models,
     schemas,
 )
+from app.api.routes.documents import _tiptap_to_flowables
 from app.core.datetime_utils import format_utc_datetime, normalize_utc_datetime, now_utc
 from app.core.document_storage import resolve_document_source_path
 
@@ -455,6 +456,29 @@ def _text_to_pdf(text: str) -> bytes:
     return buf.read()
 
 
+def _document_version_to_pdf(version: models.DocumentVersion) -> bytes:
+    """Render a document version to PDF, honoring its content format."""
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72,
+    )
+    raw_content = version.content or ""
+    if getattr(version, "content_format", None) == "tiptap_json":
+        flowables = _tiptap_to_flowables(raw_content, _PDF_STYLE)
+    else:
+        flowables = [
+            Paragraph(html_escape(raw_content).replace("\n", "<br />"), _PDF_STYLE)
+        ]
+    doc.build(flowables)
+    buf.seek(0)
+    return buf.read()
+
+
 def _safe_filename(name: str) -> str:
     """Strip characters that are problematic inside ZIP entry names."""
     return name.replace("/", "_").replace("\\", "_").replace("\0", "")
@@ -504,20 +528,39 @@ async def export_application_materials(
         .all()
     )
 
-    # -- Fetch linked documents --------------------------------------------
-    documents = (
+    # -- Fetch linked document attachments ---------------------------------
+    document_links = (
         (
             await db.execute(
-                select(models.Document)
-                .join(models.DocumentXApplication)
-                .where(models.DocumentXApplication.application_id == app.id)
+                select(models.DocumentXApplication).where(
+                    models.DocumentXApplication.application_id == app.id
+                )
             )
         )
         .scalars()
         .all()
     )
 
-    if not resumes and not cover_letters and not documents:
+    documents_by_id: dict = {}
+    if document_links:
+        document_ids = [link.document_id for link in document_links]
+        documents = (
+            (
+                await db.execute(
+                    select(models.Document)
+                    .options(
+                        selectinload(models.Document.versions),
+                        selectinload(models.Document.head_version),
+                    )
+                    .where(models.Document.id.in_(document_ids))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        documents_by_id = {document.id: document for document in documents}
+
+    if not resumes and not cover_letters and not document_links:
         raise HTTPException(
             status_code=404,
             detail="No materials linked to this application",
@@ -536,26 +579,43 @@ async def export_application_materials(
                 fname = _safe_filename(cl.name or "cover_letter") + ".pdf"
                 zf.writestr(f"cover_letters/{fname}", _text_to_pdf(cl.content))
 
-        for doc in documents:
-            head = doc.head_version
-            if not head:
+        for link in document_links:
+            doc = documents_by_id.get(link.document_id)
+            if not doc:
+                continue
+
+            version = doc.head_version
+            if link.version_id:
+                version = next(
+                    (
+                        candidate
+                        for candidate in doc.versions
+                        if candidate.id == link.version_id
+                    ),
+                    None,
+                )
+
+            if not version:
                 continue
 
             fname = _safe_filename(doc.title or "document") + ".pdf"
 
             # Prefer the original uploaded PDF when available on disk.
-            if head.source_file:
+            if version.source_file:
                 try:
-                    abs_path = resolve_document_source_path(head.source_file)
+                    abs_path = resolve_document_source_path(version.source_file)
                     if abs_path.is_file():
                         zf.write(abs_path, f"documents/{fname}")
                         continue
                 except ValueError:
                     pass  # path outside uploads root — fall through
 
-            # Fall back to generating a PDF from text content.
-            if head.content:
-                zf.writestr(f"documents/{fname}", _text_to_pdf(head.content))
+            # Fall back to generating a PDF from the linked version content.
+            if version.content:
+                zf.writestr(
+                    f"documents/{fname}",
+                    _document_version_to_pdf(version),
+                )
 
     zip_buffer.seek(0)
 

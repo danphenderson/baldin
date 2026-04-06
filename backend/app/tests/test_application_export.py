@@ -9,9 +9,14 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from reportlab.platypus import Paragraph
 
 from app.api.routes import applications as app_routes
-from app.api.routes.applications import _safe_filename, _text_to_pdf
+from app.api.routes.applications import (
+    _document_version_to_pdf,
+    _safe_filename,
+    _text_to_pdf,
+)
 
 # ---------------------------------------------------------------------------
 #  Unit: helper functions
@@ -21,6 +26,26 @@ from app.api.routes.applications import _safe_filename, _text_to_pdf
 def test_text_to_pdf_returns_valid_pdf():
     data = _text_to_pdf("Hello, world!")
     assert data[:5] == b"%PDF-"
+
+
+def test_document_version_to_pdf_uses_tiptap_renderer(monkeypatch: pytest.MonkeyPatch):
+    calls = []
+
+    def fake_tiptap_to_flowables(raw_content, base_style):
+        calls.append((raw_content, base_style.name))
+        return [Paragraph("Rendered", base_style)]
+
+    monkeypatch.setattr(app_routes, "_tiptap_to_flowables", fake_tiptap_to_flowables)
+
+    version = SimpleNamespace(
+        content='{"type":"doc","content":[]}',
+        content_format="tiptap_json",
+    )
+
+    data = _document_version_to_pdf(version)
+
+    assert data[:5] == b"%PDF-"
+    assert calls == [('{"type":"doc","content":[]}', "ExportDefault")]
 
 
 def test_safe_filename_strips_slashes():
@@ -133,9 +158,11 @@ async def test_export_zip_with_document_source_file(tmp_path):
     head_version = SimpleNamespace(
         source_file="uploads/test.pdf", content="fallback text"
     )
-    doc = SimpleNamespace(title="Uploaded Doc", head_version=head_version)
+    doc = SimpleNamespace(title="Uploaded Doc", head_version=head_version, versions=[])
+    link = SimpleNamespace(document_id=uuid4(), version_id=None)
+    doc.id = link.document_id
 
-    db = _FakeSession([[], [], [doc]])
+    db = _FakeSession([[], [], [link], [doc]])
 
     with patch.object(
         app_routes,
@@ -164,9 +191,11 @@ async def test_export_zip_document_falls_back_to_content():
     user = SimpleNamespace(id=uid)
 
     head_version = SimpleNamespace(source_file=None, content="Some text content")
-    doc = SimpleNamespace(title="Text Doc", head_version=head_version)
+    doc = SimpleNamespace(title="Text Doc", head_version=head_version, versions=[])
+    link = SimpleNamespace(document_id=uuid4(), version_id=None)
+    doc.id = link.document_id
 
-    db = _FakeSession([[], [], [doc]])
+    db = _FakeSession([[], [], [link], [doc]])
 
     response = await app_routes.export_application_materials(app=app, db=db, user=user)
 
@@ -190,9 +219,11 @@ async def test_export_zip_uses_fallback_names_when_none():
     resume = SimpleNamespace(name=None, content="resume text")
     cover_letter = SimpleNamespace(name=None, content="cover letter text")
     head_version = SimpleNamespace(source_file=None, content="doc text")
-    doc = SimpleNamespace(title=None, head_version=head_version)
+    doc = SimpleNamespace(title=None, head_version=head_version, versions=[])
+    link = SimpleNamespace(document_id=uuid4(), version_id=None)
+    doc.id = link.document_id
 
-    db = _FakeSession([[resume], [cover_letter], [doc]])
+    db = _FakeSession([[resume], [cover_letter], [link], [doc]])
 
     response = await app_routes.export_application_materials(app=app, db=db, user=user)
 
@@ -219,9 +250,11 @@ async def test_export_zip_document_source_file_value_error_falls_back():
     head_version = SimpleNamespace(
         source_file="../../etc/passwd", content="safe content"
     )
-    doc = SimpleNamespace(title="Bad Path Doc", head_version=head_version)
+    doc = SimpleNamespace(title="Bad Path Doc", head_version=head_version, versions=[])
+    link = SimpleNamespace(document_id=uuid4(), version_id=None)
+    doc.id = link.document_id
 
-    db = _FakeSession([[], [], [doc]])
+    db = _FakeSession([[], [], [link], [doc]])
 
     with patch.object(
         app_routes,
@@ -255,9 +288,15 @@ async def test_export_zip_document_source_file_missing_falls_back(tmp_path):
     head_version = SimpleNamespace(
         source_file="uploads/missing.pdf", content="fallback content"
     )
-    doc = SimpleNamespace(title="Missing File Doc", head_version=head_version)
+    doc = SimpleNamespace(
+        title="Missing File Doc",
+        head_version=head_version,
+        versions=[],
+    )
+    link = SimpleNamespace(document_id=uuid4(), version_id=None)
+    doc.id = link.document_id
 
-    db = _FakeSession([[], [], [doc]])
+    db = _FakeSession([[], [], [link], [doc]])
 
     with patch.object(
         app_routes,
@@ -277,3 +316,49 @@ async def test_export_zip_document_source_file_missing_falls_back(tmp_path):
     zf = zipfile.ZipFile(BytesIO(body))
     assert "documents/Missing File Doc.pdf" in zf.namelist()
     assert zf.read("documents/Missing File Doc.pdf")[:5] == b"%PDF-"
+
+
+@pytest.mark.asyncio
+async def test_export_zip_uses_pinned_document_version():
+    uid = uuid4()
+    app = _fake_app(user_id=uid)
+    user = SimpleNamespace(id=uid)
+
+    pinned_version = SimpleNamespace(
+        id=uuid4(),
+        source_file=None,
+        content="Pinned version content",
+        content_format="plain_text",
+    )
+    head_version = SimpleNamespace(
+        id=uuid4(),
+        source_file=None,
+        content="Head version content",
+        content_format="plain_text",
+    )
+    doc = SimpleNamespace(
+        id=uuid4(),
+        title="Pinned Doc",
+        head_version=head_version,
+        versions=[pinned_version, head_version],
+    )
+    link = SimpleNamespace(document_id=doc.id, version_id=pinned_version.id)
+
+    db = _FakeSession([[], [], [link], [doc]])
+
+    with patch.object(
+        app_routes,
+        "_document_version_to_pdf",
+        wraps=app_routes._document_version_to_pdf,
+    ) as render_version:
+        response = await app_routes.export_application_materials(
+            app=app, db=db, user=user
+        )
+        body = b""
+        async for chunk in response.body_iterator:
+            if isinstance(chunk, str):
+                chunk = chunk.encode()
+            body += chunk
+
+    assert body.startswith(b"PK")
+    assert render_version.call_args[0][0] is pinned_version

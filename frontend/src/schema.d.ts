@@ -340,6 +340,17 @@ export interface paths {
     /** Generate Cover Letter For Application */
     post: operations["generate_cover_letter_for_application_applications__id__cover_letters_generate_post"];
   };
+  "/applications/{id}/export": {
+    /**
+     * Export Application Materials
+     * @description Export all materials linked to an application as a ZIP archive.
+     *
+     * The archive contains up to three subdirectories — ``resumes/``,
+     * ``cover_letters/``, and ``documents/`` — each holding PDF files for
+     * the linked records.
+     */
+    get: operations["export_application_materials_applications__id__export_get"];
+  };
   "/applications/{id}/documents": {
     /** Get Application Documents */
     get: operations["get_application_documents_applications__id__documents_get"];
@@ -1234,10 +1245,7 @@ export interface components {
     };
     /** Body_upload_document_documents_upload_post */
     Body_upload_document_documents_upload_post: {
-      /**
-       * File
-       * Format: binary
-       */
+      /** File */
       file: string;
       /** Title */
       title: string;
@@ -7463,6 +7471,35 @@ export interface operations {
       201: {
         content: {
           "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Export Application Materials
+   * @description Export all materials linked to an application as a ZIP archive.
+   *
+   * The archive contains up to three subdirectories — ``resumes/``,
+   * ``cover_letters/``, and ``documents/`` — each holding PDF files for
+   * the linked records.
+   */
+  export_application_materials_applications__id__export_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
         };
       };
       /** @description Validation Error */

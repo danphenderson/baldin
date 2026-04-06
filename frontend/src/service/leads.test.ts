@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { API_URL } from '../config/env';
 import {
   createLeadComment,
   extractLead,
@@ -61,7 +62,7 @@ describe('lead service', () => {
     // openapi-fetch passes a Request object to fetch rather than (url, options)
     const request = fetchMock.mock.calls[0][0] as Request;
     expect(request.url).toBe(
-      'http://localhost:8000/api/v1/leads/extract?extraction_url=https%3A%2F%2Fjobs.example.com%2Froles%2F123%3Fref%3Dmail',
+      `${API_URL}/leads/extract?extraction_url=https%3A%2F%2Fjobs.example.com%2Froles%2F123%3Fref%3Dmail`,
     );
     expect(request.method).toBe('POST');
     expect(request.headers.get('Authorization')).toBe('Bearer token-123');

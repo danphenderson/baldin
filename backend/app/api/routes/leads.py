@@ -36,7 +36,7 @@ async def _create_seed_lead(
     db: AsyncSession,
     user: models.User,
 ):
-    """Drop legacy lead-seed fields that are not part of the current create schema."""
+    """Create a lead from seed data after dropping legacy fields unsupported by LeadCreate."""
     seed_payload = {
         key: value
         for key, value in record.items()

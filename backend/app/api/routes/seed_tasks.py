@@ -64,6 +64,7 @@ async def _run_seed_operation(
     event_id: UUID4,
     user_id: UUID4,
 ) -> None:
+    """Execute a seed operation in the background and update orchestration status."""
     async with session_context() as db:
         event = await db.get(models.OrchestrationEvent, event_id)
         if event is None:
@@ -106,6 +107,7 @@ async def schedule_seed_operation(
     user: schemas.UserRead,
     operation: SeedOperation,
 ) -> schemas.SeedOperationAccepted:
+    """Create a pending orchestration event, enqueue the seed work, and return polling metadata."""
     log.info(
         f"Seeding {operation.resource_name} table with initial data from {operation.seed_path}"
     )

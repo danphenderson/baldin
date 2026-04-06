@@ -2,7 +2,9 @@
 
 import pytest
 from bs4 import BeautifulSoup
+from pydantic import ValidationError
 
+from app.schemas import ExtractorRequest
 from app.utils import (
     _is_tracking_query_param,
     _rm_titles,
@@ -258,13 +260,14 @@ def test_validate_json_schema_valid():
 
 
 def test_validate_json_schema_invalid():
-    # check_schema raises SchemaError (a subclass of ValidationError in jsonschema)
-    # The production code catches ValidationError; SchemaError inherits from it.
-    from jsonschema import exceptions as jse
-
     schema = {"type": "not-a-type"}
-    with pytest.raises(jse.SchemaError):
+    with pytest.raises(ValueError, match="Invalid schema"):
         validate_json_schema(schema)
+
+
+def test_extractor_request_invalid_schema_surfaces_validation_error():
+    with pytest.raises(ValidationError, match="Invalid schema"):
+        ExtractorRequest(schema={"type": "not-a-type"})
 
 
 # ---------------------------------------------------------------------------

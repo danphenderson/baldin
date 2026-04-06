@@ -11,10 +11,8 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 
 from app import models
-from app.core import conf
 from app.core.db import session_context
 from app.logging import get_async_logger
 
@@ -51,9 +49,9 @@ async def _tick() -> None:
 
     async with session_context() as db:
         result = await db.execute(
-            select(models.CrawlerPipeline)
-            .where(models.CrawlerPipeline.enabled.is_(True))
-            .options(selectinload(models.CrawlerPipeline.runs))
+            select(models.CrawlerPipeline).where(
+                models.CrawlerPipeline.enabled.is_(True)
+            )
         )
         pipelines = result.scalars().all()
 

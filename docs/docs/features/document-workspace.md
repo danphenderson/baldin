@@ -25,7 +25,7 @@ Every document maintains an immutable version history through the `DocumentVersi
 - The content and `content_format` (plain text, Markdown, Tiptap JSON)
 - A reference back to the parent document
 
-The document's `head_version_id` always points to the latest version. Version comparisons are available in the frontend at `/me/documents/compare`.
+The document's `head_version_id` always points to the latest version. Version comparisons are available per document in the frontend at `/me/documents/:id/compare`.
 
 ## Real-Time Collaboration
 
@@ -55,8 +55,9 @@ Documents can be attached to applications through the `DocumentXApplication` bri
 | Path | Page | Purpose |
 |------|------|---------|
 | `/me/documents` | Studio / Document Library | Browse and manage documents |
-| `/me/documents/:id` | Document Editor | Rich-text editing with collaboration |
-| `/me/documents/compare` | Version Compare | Side-by-side version diff |
+| `/me/documents/:id` | Document Detail | Inspect the latest version, metadata, and sharing |
+| `/me/documents/:id/edit` | Document Editor | Rich-text editing with collaboration |
+| `/me/documents/:id/compare` | Version Compare | Side-by-side version diff for a specific document |
 
 ## Related Docs
 

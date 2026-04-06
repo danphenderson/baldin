@@ -21,7 +21,7 @@ Extractors are user-defined LLM-backed definitions that transform unstructured i
 
 The extraction flow:
 
-1. The user triggers an extraction via `POST /extractor/extract`
+1. The user triggers an extraction via `POST /extractor/{id}/run` for a saved extractor definition
 2. The backend calls `run_extractor`, which fetches content from a URL (`extract_text_from_url`) and passes it through `extraction_runnable`
 3. The LLM produces structured output matching the extractor's schema
 4. Results are returned to the caller

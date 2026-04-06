@@ -13,7 +13,7 @@ Baldin's network layer connects users through discoverable profiles, peer connec
 
 ## Directory
 
-The directory at `/network` surfaces discoverable user profiles. Visibility is governed by subscription tier:
+The directory at `/network/directory` surfaces discoverable user profiles. Visibility is governed by subscription tier:
 
 | Tier | Directory Access |
 |------|-----------------|
@@ -23,7 +23,7 @@ The directory at `/network` surfaces discoverable user profiles. Visibility is g
 
 Users can browse profiles and initiate connection requests from the directory.
 
-**Frontend:** `/network` — Directory (`frontend/src/page/directory.tsx`)
+**Frontend:** `/network/directory` — Directory (`frontend/src/page/directory.tsx`)
 
 **API:** `/directory` — Search and profile discovery endpoints
 
@@ -58,7 +58,7 @@ Messages support single-level threading for focused discussions within a convers
 
 **Frontend:**
 - `/network/messages` — Conversation list (`frontend/src/page/messages/`)
-- `/network/messages/:id` — Conversation detail with message thread
+- `/network/messages/:conversationId` — Conversation detail with message thread
 
 **API:** `/conversations` — Conversation CRUD, participant management, and message endpoints
 

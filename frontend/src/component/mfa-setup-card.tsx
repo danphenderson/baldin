@@ -5,8 +5,13 @@ import {
   InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import { Security as SecurityIcon, Lock } from '@mui/icons-material';
+import { QRCodeSVG } from 'qrcode.react';
 import { UserContext } from '../context/user-context';
 import { mfaStatus, mfaSetup, mfaVerify, mfaDisable, MFASetup } from '../service/auth';
+
+/** Sanitise user input to digits only, capped at 6 characters. */
+const sanitizeTotpInput = (raw: string): string =>
+  raw.replace(/\D/g, '').slice(0, 6);
 
 const MFASetupCard: React.FC = () => {
   const theme = useTheme();
@@ -149,14 +154,11 @@ const MFASetupCard: React.FC = () => {
                 then enter the 6-digit code below to confirm.
               </Typography>
 
-              {/* QR code via Google Charts API */}
+              {/* Client-side QR code generation – secret never leaves the browser */}
               <Box sx={{ textAlign: 'center', mb: 2 }}>
-                <Box
-                  component="img"
-                  src={`https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(setupData.provisioning_uri)}`}
-                  alt="MFA QR Code"
-                  sx={{ borderRadius: 2, border: `1px solid ${alpha('#000', 0.08)}` }}
-                />
+                <Box sx={{ display: 'inline-block', p: 1.5, borderRadius: 2, border: `1px solid ${alpha('#000', 0.08)}`, bgcolor: '#fff' }}>
+                  <QRCodeSVG value={setupData.provisioning_uri} size={200} />
+                </Box>
               </Box>
 
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mb: 2, wordBreak: 'break-all' }}>
@@ -166,7 +168,7 @@ const MFASetupCard: React.FC = () => {
               <Stack direction="row" spacing={1}>
                 <TextField
                   size="small" fullWidth label="6-digit code" value={verifyCode}
-                  onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => setVerifyCode(sanitizeTotpInput(e.target.value))}
                   inputProps={{ maxLength: 6, inputMode: 'numeric', pattern: '[0-9]*' }}
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><Lock sx={{ fontSize: 18, color: 'text.secondary' }} /></InputAdornment>,
@@ -195,7 +197,7 @@ const MFASetupCard: React.FC = () => {
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           <TextField
             fullWidth label="6-digit code" value={disableCode}
-            onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            onChange={(e) => setDisableCode(sanitizeTotpInput(e.target.value))}
             inputProps={{ maxLength: 6, inputMode: 'numeric', pattern: '[0-9]*' }}
             autoFocus
           />

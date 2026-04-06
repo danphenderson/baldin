@@ -236,7 +236,7 @@ async def test_mfa_verify_invalid_code_rejected() -> None:
 async def test_mfa_setup_blocked_when_already_enabled() -> None:
     """Calling setup when MFA is already enabled should return 400."""
     await _ensure_db_ready()
-    email, uid = await _create_user("Mfa1Block")
+    email, _ = await _create_user("Mfa1Block")
     async with _client() as client:
         headers = await _auth_headers(client, email, "Mfa1Block")
 

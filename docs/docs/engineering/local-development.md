@@ -11,6 +11,8 @@ description: Work locally with Docker Compose or outside-container loops and the
 
 Baldin uses Docker Compose as the local-first entry point. All four services start with a single command.
 
+If you use Baldin's workspace skills, `/baldin-local-stack-doctor` helps triage local Compose failures, `test_db` connectivity problems, schema-drift resets, and PostgreSQL collation-repair decisions.
+
 ## Services
 
 | Service | Container | Port | Volume |

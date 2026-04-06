@@ -11,6 +11,8 @@ description: Run the smallest effective backend, frontend, contract, and docs ch
 
 Use the smallest validation surface that proves your change. Backend, frontend, contract, and docs work each have their own primary checks.
 
+If you use Baldin's workspace skills, `/baldin-backend-test-gap-planner` helps choose the smallest useful backend pytest coverage, and `/baldin-contract-regen-resolver` handles backend-to-contract regeneration fallout.
+
 ## Choose The Right Check
 
 | Surface | Primary local check |

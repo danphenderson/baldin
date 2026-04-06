@@ -48,7 +48,9 @@ The Executive Summary review supports a local-first operating model for Baldin: 
 
 Use workspace skills for repeated Baldin workflows that are narrower than a full implementation handoff.
 
+- `/baldin-backend-test-gap-planner` for backend route, auth, ETL, and orchestration changes where you need the right pytest strategy, fixture reuse, and smallest useful coverage scope.
 - `/baldin-contract-regen-resolver` for stale or missing `openapi.json` and `frontend/src/schema.d.ts`, `./scripts/update_frontend_schemas.sh` exits, `SCHEMA_UPDATE_FORCE`, and backend-to-frontend contract fallout.
+- `/baldin-local-stack-doctor` for Docker Compose startup failures, local Postgres volume drift, host-versus-container test DB confusion, and choosing between reset or collation repair.
 - `/baldin-docs-drift-auditor` when docs, plans, or `.github/**` guidance may no longer match the current repo.
 
 ## Reusable Prompt Files
@@ -61,6 +63,9 @@ If you already know the task shape, use these workspace prompts from chat with `
 | `API Contract Change Orchestrator` | You changed routes, schemas, response shapes, or generated frontend types and need contract ownership, regeneration, and downstream validation. |
 | `Change-Aware Validation Sequence` | You want the exact ordered Baldin checks for a specific backend, frontend, docs, CI, or contract change. |
 | `Plan Slice Kickoff` | You want a plan section turned into a bounded work slice with the correct owner, scope, stop conditions, and validation. |
+| `Documentation Impact Review` | You changed code, workflow docs, plans, prompts, or repo rules and want a targeted docs-impact audit before stale guidance spreads. |
+| `Cross-Stack Workstream Router` | You have a backend plus frontend plus docs or CI style task and want the smallest low-conflict owner split with explicit handoff packets. |
+| `Multi-Agent Handoff Synthesizer` | You already have outputs from one or more Baldin agents and need a single evidence-backed handoff packet for the next owner, reviewer, or operator. |
 
 ## Prompt Shape
 

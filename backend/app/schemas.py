@@ -1014,7 +1014,7 @@ class BaseUser(BaseSchema):
     zip_code: str | None = Field(None, description="Zip code")
     country: str | None = Field(None, description="Country")
     time_zone: str | None = Field(None, description="Time zone")
-    avatar_uri: URI | None = Field(None, description="Avatar URI")
+    avatar_uri: str | None = Field(None, description="Avatar URI")
     headline: str | None = Field(None, description="Short professional tagline")
     bio: str | None = Field(None, description="Longer about-me blurb")
     is_discoverable: bool = Field(

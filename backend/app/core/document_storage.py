@@ -5,8 +5,22 @@ from uuid import UUID
 from app.core import conf
 
 UPLOADS_SUBDIR = "uploads"
+AVATARS_SUBDIR = "avatars"
 EXTRACTOR_RUNS_SUBDIR = "extractor-runs"
 MAX_DOCUMENT_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_AVATAR_UPLOAD_BYTES = 2 * 1024 * 1024
+ALLOWED_AVATAR_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+}
+_AVATAR_CONTENT_TYPE_SUFFIX = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+}
 
 
 def public_assets_root() -> Path:
@@ -95,3 +109,43 @@ def remove_document_source_files(relative_paths: Iterable[str | None]) -> None:
 
 def remove_extractor_run_source_files(relative_paths: Iterable[str | None]) -> None:
     remove_document_source_files(relative_paths)
+
+
+# ── Avatar helpers ───────────────────────────────────────────────────────
+
+
+def build_avatar_path(
+    user_id: UUID | str,
+    content_type: str,
+) -> str:
+    suffix = _AVATAR_CONTENT_TYPE_SUFFIX.get(content_type, ".jpg")
+    return f"{UPLOADS_SUBDIR}/{AVATARS_SUBDIR}/{user_id}/avatar{suffix}"
+
+
+def resolve_avatar_path(relative_path: str) -> Path:
+    return resolve_document_source_path(relative_path)
+
+
+def save_avatar_file(relative_path: str, file_bytes: bytes) -> Path:
+    return save_document_source_file(relative_path, file_bytes)
+
+
+def find_avatar_file(user_id: UUID | str) -> Path | None:
+    """Return the avatar file path for a user, or None if no avatar exists."""
+    avatar_dir = document_uploads_root() / AVATARS_SUBDIR / str(user_id)
+    if not avatar_dir.is_dir():
+        return None
+    for child in avatar_dir.iterdir():
+        if child.is_file() and child.stem == "avatar":
+            return child
+    return None
+
+
+def remove_avatar_files(user_id: UUID | str) -> None:
+    """Remove all existing avatar files for a user."""
+    avatar_dir = document_uploads_root() / AVATARS_SUBDIR / str(user_id)
+    if not avatar_dir.is_dir():
+        return
+    for child in avatar_dir.iterdir():
+        if child.is_file() and child.stem == "avatar":
+            child.unlink()

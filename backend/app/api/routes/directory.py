@@ -31,6 +31,7 @@ def _serialize_directory_entry(
     return schemas.UserDirectoryRead(
         user_id=user.id,
         display_name=display_name,
+        is_superuser=bool(user.is_superuser),
         headline=user.headline,
         avatar_uri=str(avatar) if avatar else None,
         city=user.city,
@@ -52,10 +53,15 @@ async def list_directory(
         None, description="Filter by placement status"
     ),
     location: str | None = Query(None, description="Filter by city/state/country"),
+    superusers_only: bool = Query(
+        False,
+        description="Only return superusers",
+    ),
 ):
     """Paginated, searchable user directory.
 
-    Only users with ``is_discoverable=True`` and ``is_active=True`` are returned.
+    Only discoverable, active users are returned. ``superusers_only=true`` narrows
+    results to Baldin superusers.
     """
     base = (
         select(models.User)
@@ -63,6 +69,9 @@ async def list_directory(
         .where(models.User.is_discoverable.is_(True))
         .where(models.User.is_active.is_(True))
     )
+
+    if superusers_only:
+        base = base.where(models.User.is_superuser.is_(True))
 
     if placement_status:
         base = base.where(models.User.placement_status == placement_status.value)
@@ -139,6 +148,7 @@ async def read_public_profile(
     return schemas.UserPublicProfileRead(
         user_id=user.id,
         display_name=display_name,
+        is_superuser=bool(user.is_superuser),
         headline=user.headline,
         bio=user.bio,
         avatar_uri=str(avatar) if avatar else None,

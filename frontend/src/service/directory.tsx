@@ -125,13 +125,21 @@ const fetchAPI = async <T,>(url: string, options: RequestInit): Promise<T> => {
 
 export const getDirectoryUsers = async (
   token: string,
-  params?: { q?: string; placement_status?: string; location?: string; page?: number; page_size?: number },
+  params?: {
+    q?: string;
+    placement_status?: string;
+    location?: string;
+    superusers_only?: boolean;
+    page?: number;
+    page_size?: number;
+  },
 ): Promise<UserDirectoryPaginatedRead> => {
   const requestOptions = buildRequest(token, 'GET');
   const query = new URLSearchParams();
   if (params?.q) query.set('q', params.q);
   if (params?.placement_status) query.set('placement_status', params.placement_status);
   if (params?.location) query.set('location', params.location);
+  if (params?.superusers_only) query.set('superusers_only', 'true');
   if (params?.page !== undefined) query.set('page', String(params.page));
   if (params?.page_size !== undefined) query.set('page_size', String(params.page_size));
   const suffix = query.toString() ? `/?${query.toString()}` : '/';

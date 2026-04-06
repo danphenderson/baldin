@@ -94,8 +94,8 @@ The document surface currently spans both the legacy resume and cover-letter API
 
 | Tag | Prefix | Purpose |
 | --- | --- | --- |
-| `directory` | `/directory` | Discoverable user directory and profile previews |
-| `connections` | `/connections` | Connection request lifecycle |
+| `directory` | `/directory` | Discoverable user directory and profile previews, including superuser discovery filters |
+| `connections` | `/connections` | Connection request lifecycle with superuser-aware entitlement rules |
 | `messaging` | `/conversations` | Direct and group conversations, messages, unread counts |
 | `action-items` | `/action-items` | Cross-entity user task management |
 | `activity-feed` | `/activity-feed` | Aggregated activity stream and command-center summary |
@@ -119,7 +119,9 @@ Most routes require a JWT bearer token obtained through `POST /auth/jwt/login`. 
 ### Tier gates and role gates
 
 - `users.subscription_tier` is enforced through `require_tier()` in `backend/app/api/deps.py`.
-- Connection requests require at least the `starter` tier.
+- New regular users default to `is_discoverable=false`; superusers default to `is_discoverable=true`, and both can toggle visibility through the `/users` update surface.
+- Directory and profile payloads expose `is_superuser`, and `GET /directory/` accepts `superusers_only=true` for the focused discovery view.
+- Connection requests to non-superusers require at least the `starter` tier. Requests to superusers are available to any authenticated user.
 - Direct messaging requires an accepted connection; group conversations require `pro`.
 - Review and crawler endpoints are reserved for superusers.
 - Collaboration routes additionally require document ownership or an editor-level share.

@@ -1,20 +1,13 @@
 ---
 description: "Use when modifying Baldin backend, frontend, scripts, CI, docs, contracts, or deployment files. Covers repo-wide conventions for local-first design, generated artifacts, validation, and release-path decisions."
 name: "Baldin Project Conventions"
-applyTo:
-  - "backend/**"
-  - "frontend/**"
-  - "scripts/**"
-  - ".github/**"
-  - "docs/**"
-  - "plans/**"
-  - "README.md"
-  - "openapi.json"
-  - "docker-compose*.yml"
+applyTo: backend/**, frontend/**, scripts/**, .github/**, docs/**, plans/**, README.md, openapi.json, docker-compose*.yml
 ---
 # Baldin Project Conventions
 
-- Baldin is local-first and still in developer-preview. Prefer the smallest complete solution that fits the current repo instead of introducing speculative platform abstractions.
+- Baldin is local-first and still in developer-preview. Treat it as a still-evolving prototype that is getting close to a deployable POC, not as a mature production SaaS baseline.
+- Prefer the smallest complete solution that fits the current repo and the next controlled-launch step instead of introducing speculative platform abstractions.
+- Optimize for developer-preview robustness, local reproducibility, and credible launch-path progress. Do not assume multi-tenant requirements, cloud-scale or high-availability architecture, enterprise compliance programs, or inactive deployment paths unless the task explicitly calls for them.
 - Keep work aligned with the existing boundaries: backend application code in `backend/app`, ETL code in `backend/etl`, frontend product code in `frontend/src`, local integration in `docker-compose.yml`, and documentation in `docs/`.
 - Do not hand-edit generated contract artifacts such as `frontend/src/schema.d.ts` or `openapi.json`. When backend API routes or schemas change, regenerate them through `scripts/update_frontend_schemas.sh`. If regeneration is intentionally deferred, name the follow-on owner responsible for completing it and for downstream frontend review.
 - The top-level `docs/` directory is a Docusaurus project. Edit Markdown sources under `docs/docs/` and validate with `cd docs && npm run build`. Build output in `docs/build/` is gitignored. Do not commit Docusaurus build artifacts.

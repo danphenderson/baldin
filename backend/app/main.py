@@ -33,6 +33,10 @@ logging.basicConfig()
 logger = get_async_logger(__name__)
 
 
+def _normalize_cors_origin(origin: object) -> str:
+    return str(origin).rstrip("/")
+
+
 async def _startup(app: FastAPI) -> None:
     console_log.info("Starting up...")
     tracemalloc.start()
@@ -127,7 +131,10 @@ app.add_middleware(SlowAPIMiddleware)
 if conf.settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[str(origin) for origin in conf.settings.BACKEND_CORS_ORIGINS],
+        allow_origins=[
+            _normalize_cors_origin(origin)
+            for origin in conf.settings.BACKEND_CORS_ORIGINS
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

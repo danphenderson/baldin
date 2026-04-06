@@ -140,6 +140,7 @@ async def create_default_superuser():
     default_superuser_payload = schemas.UserCreate(
         email=conf.settings.FIRST_SUPERUSER_EMAIL,
         password=conf.settings.FIRST_SUPERUSER_PASSWORD,
+        is_discoverable=True,
         is_superuser=True,  # type: ignore
     )
     await create_user(default_superuser_payload)

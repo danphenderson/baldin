@@ -25,6 +25,7 @@ import { UserContext } from '../context/user-context';
 import { logout as logoutApi } from '../service/auth';
 import { getUnreadCount } from '../service/messages';
 import { useThemeMode } from '../theme/theme-provider';
+import { avatarUrl } from '../service/users';
 import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-header-context';
 import SecondaryNavBar from '../component/common/secondary-nav-bar';
 import { getSecondaryNavItems, drawerSections } from '../route/navigation';
@@ -88,6 +89,7 @@ const AppLayout: React.FC = () => {
   const accountRailWidth = isCompactToolbar ? 184 : 270;
   const secondaryNavItems = getSecondaryNavItems(location.pathname)
     ?.filter((item) => !item.superuserOnly || user?.is_superuser) ?? null;
+  const isSuperuser = Boolean(user?.is_superuser);
 
   const closeAccountDial = () => setIsAccountDialOpen(false);
 
@@ -141,6 +143,10 @@ const AppLayout: React.FC = () => {
   const userInitials = user
     ? `${(user as any).first_name?.[0] || ''}${(user as any).last_name?.[0] || ''}`.toUpperCase() || user.email[0].toUpperCase()
     : '?';
+
+  const userAvatarSrc = user
+    ? avatarUrl(user.id, (user as any).avatar_uri)
+    : undefined;
 
   const accountActions = [
     {
@@ -564,17 +570,37 @@ const AppLayout: React.FC = () => {
                   >
                     <Badge
                       overlap="circular"
-                      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                      variant="dot"
-                      sx={{ '& .MuiBadge-badge': { backgroundColor: theme.palette.success.main } }}
+                      anchorOrigin={isSuperuser
+                        ? { vertical: 'top', horizontal: 'right' }
+                        : { vertical: 'bottom', horizontal: 'right' }}
+                      badgeContent={isSuperuser ? <AutoAwesomeIcon sx={{ fontSize: 12 }} /> : undefined}
+                      variant={isSuperuser ? 'standard' : 'dot'}
+                      sx={{
+                        '& .MuiBadge-badge': isSuperuser
+                          ? {
+                            minWidth: 18,
+                            height: 18,
+                            borderRadius: '50%',
+                            backgroundColor: theme.palette.warning.main,
+                            color: theme.palette.getContrastText(theme.palette.warning.main),
+                            boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
+                            padding: 0,
+                          }
+                          : {
+                            backgroundColor: theme.palette.success.main,
+                          },
+                      }}
                     >
                       <Avatar
+                        src={userAvatarSrc}
                         sx={{
                           width: 36,
                           height: 36,
                           fontSize: '0.875rem',
                           fontWeight: 700,
-                          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                          background: userAvatarSrc
+                            ? undefined
+                            : `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
                         }}
                       >
                         {userInitials}

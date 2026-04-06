@@ -2,6 +2,7 @@
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -14,6 +15,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
     func,
     text,
 )
@@ -558,6 +560,12 @@ class Document(Base):
         secondary="documents_x_applications",
         back_populates="documents",
     )
+    embeddings = relationship(
+        "DocumentEmbedding",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class DocumentVersion(Base):
@@ -655,6 +663,41 @@ class DocumentActivity(Base):
     actor = relationship("User", foreign_keys=[actor_user_id])
 
 
+class DocumentEmbedding(Base):
+    """Stores vector embeddings for document chunks, enabling semantic search."""
+
+    __tablename__ = "document_embeddings"
+    __table_args__ = (
+        Index(
+            "ix_document_embeddings_vector",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
+
+    document_id = Column(
+        UUID, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    document_version_id = Column(
+        UUID,
+        ForeignKey("document_versions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    chunk_index = Column(Integer, nullable=False, default=0)
+    chunk_text = Column(Text, nullable=False)
+    embedding = Column(Vector(1536), nullable=False)
+
+    document = relationship("Document", back_populates="embeddings")
+    document_version = relationship("DocumentVersion")
+    user = relationship("User")
+
+
 class ActionItem(Base):
     """
     Tracks user-facing tasks and follow-ups across applications, leads,
@@ -711,9 +754,9 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     bio = Column(Text)
     is_discoverable = Column(
         Boolean,
-        default=True,
+        default=False,
         nullable=False,
-        server_default=text("true"),
+        server_default=text("false"),
     )
     subscription_tier = Column(
         String,
@@ -729,6 +772,15 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
         server_default=text("'active'"),
     )
     placement_date = Column(DateTime)
+
+    # MFA / Two-Factor Authentication
+    mfa_secret = Column(String, nullable=True)
+    mfa_enabled = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        server_default=text("false"),
+    )
 
     lead_registrations = relationship(
         "LeadRegistration",
@@ -777,6 +829,12 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
         back_populates="addressee",
         cascade="all, delete-orphan",
     )
+
+
+@event.listens_for(User, "before_insert")
+def _apply_user_visibility_defaults(_mapper, _connection, target: User) -> None:
+    if target.is_superuser and target.is_discoverable is None:
+        target.is_discoverable = True
 
 
 class Connection(Base):

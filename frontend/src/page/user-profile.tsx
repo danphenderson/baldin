@@ -14,8 +14,10 @@ import {
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
+  AutoAwesome as AutoAwesomeIcon,
   PersonAdd as PersonAddIcon,
   LocationOn as LocationIcon,
+  Lock as LockIcon,
   Mail as MessageIcon,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -27,10 +29,11 @@ import {
 } from '../service/directory';
 import { createConnection, getConnections } from '../service/connections';
 import { createConversation } from '../service/messages';
+import { avatarUrl } from '../service/users';
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
-  const { token, user } = useContext(UserContext);
+  const { token, user, canAccessTier } = useContext(UserContext);
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<UserPublicProfileRead | null>(null);
@@ -81,6 +84,8 @@ const UserProfilePage: React.FC = () => {
   usePageToolbarHeader(profile?.display_name ?? 'User Profile', profile?.headline ?? undefined);
 
   const isSelf = user?.id === userId;
+  const canSendMessage = canAccessTier('starter');
+  const canRequestConnection = Boolean(profile?.is_superuser) || canAccessTier('starter');
 
   const handleConnect = async () => {
     if (!token || !userId) return;
@@ -142,15 +147,25 @@ const UserProfilePage: React.FC = () => {
         <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} alignItems={{ sm: 'center' }}>
             <Avatar
-              src={profile.avatar_uri || undefined}
+              src={avatarUrl(profile.user_id, profile.avatar_uri)}
               sx={{ width: 80, height: 80, fontSize: 32 }}
             >
               {profile.display_name.charAt(0)}
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="h5" fontWeight={700}>{profile.display_name}</Typography>
+              {profile.is_superuser && (
+                <Chip
+                  icon={<AutoAwesomeIcon fontSize="small" />}
+                  label="Superuser"
+                  color="warning"
+                  size="small"
+                  variant="outlined"
+                  sx={{ mt: 1.25 }}
+                />
+              )}
               {profile.headline && (
-                <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>{profile.headline}</Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mt: profile.is_superuser ? 1 : 0.5 }}>{profile.headline}</Typography>
               )}
               {location && (
                 <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 1 }}>
@@ -167,25 +182,52 @@ const UserProfilePage: React.FC = () => {
               />
             </Box>
             {!isSelf && (
-              <Stack direction="row" spacing={1}>
-                {isConnected && (
-                  <Button
-                    variant="outlined"
-                    startIcon={messaging ? <CircularProgress size={16} color="inherit" /> : <MessageIcon />}
-                    disabled={messaging}
-                    onClick={handleMessage}
-                  >
-                    Message
-                  </Button>
-                )}
-                <Button
-                  variant="contained"
-                  startIcon={connecting ? <CircularProgress size={16} color="inherit" /> : <PersonAddIcon />}
-                  disabled={connecting || connected}
-                  onClick={handleConnect}
-                >
-                  {connected ? 'Request Sent' : 'Connect'}
-                </Button>
+              <Stack spacing={1} alignItems={{ sm: 'flex-end' }}>
+                <Stack direction="row" spacing={1}>
+                  {isConnected && (
+                    canSendMessage ? (
+                      <Button
+                        variant="outlined"
+                        startIcon={messaging ? <CircularProgress size={16} color="inherit" /> : <MessageIcon />}
+                        disabled={messaging}
+                        onClick={handleMessage}
+                      >
+                        Message
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outlined"
+                        startIcon={<LockIcon />}
+                        onClick={() => navigate('/settings/subscription')}
+                      >
+                        Unlock Messages
+                      </Button>
+                    )
+                  )}
+                  {canRequestConnection ? (
+                    <Button
+                      variant="contained"
+                      startIcon={connecting ? <CircularProgress size={16} color="inherit" /> : <PersonAddIcon />}
+                      disabled={connecting || connected}
+                      onClick={handleConnect}
+                    >
+                      {connected ? 'Request Sent' : 'Connect'}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outlined"
+                      startIcon={<LockIcon />}
+                      onClick={() => navigate('/settings/subscription')}
+                    >
+                      Starter Required
+                    </Button>
+                  )}
+                </Stack>
+                <Typography variant="caption" color="text.secondary">
+                  {profile.is_superuser
+                    ? 'Superusers accept connection requests from any authenticated Baldin account.'
+                    : 'Starter or Pro is required to connect with other members.'}
+                </Typography>
               </Stack>
             )}
           </Stack>

@@ -1,6 +1,6 @@
 # app/api/routes/crawlers.py
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import UUID4
@@ -8,6 +8,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_async_session, get_current_superuser, models, schemas
+from app.core.datetime_utils import now_utc_naive
 from app.core.rate_limit import limiter
 
 router = APIRouter(dependencies=[Depends(get_current_superuser)])
@@ -112,7 +113,7 @@ async def prune_crawler_runs(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Delete completed/failed/cancelled crawler runs older than the specified age."""
-    cutoff = datetime.utcnow() - timedelta(days=older_than_days)
+    cutoff = now_utc_naive() - timedelta(days=older_than_days)
     result = await db.execute(
         delete(models.CrawlerRun).where(
             models.CrawlerRun.status.in_(["success", "failed", "cancelled"]),
@@ -162,7 +163,7 @@ async def cancel_crawler_run(
         )
     run.status = "cancelled"
     if not run.finished_at:
-        run.finished_at = datetime.utcnow()
+        run.finished_at = now_utc_naive()
     await db.commit()
     await db.refresh(run)
     return run

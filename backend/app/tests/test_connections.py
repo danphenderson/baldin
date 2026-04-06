@@ -102,7 +102,9 @@ async def test_create_connection_request() -> None:
     assert body["status"] == "pending"
     assert body["message"] == "Let's connect!"
     assert body["requester"]["user_id"] == str(uid_a)
+    assert body["requester"]["is_superuser"] is False
     assert body["addressee"]["user_id"] == str(uid_b)
+    assert body["addressee"]["is_superuser"] is False
 
 
 async def test_free_tier_cannot_create_connection() -> None:
@@ -120,6 +122,30 @@ async def test_free_tier_cannot_create_connection() -> None:
         )
 
     assert response.status_code == 403
+
+
+async def test_free_tier_can_create_connection_to_superuser() -> None:
+    """Free-tier users can request a connection when the target is a superuser."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        email_f, uid_f = await _create_user("conn-free-super-pass", tier="free")
+        email_s, uid_s = await _create_user(
+            "conn-super-target-pass",
+            is_superuser=True,
+        )
+        headers = await _auth_headers(client, email_f, "conn-free-super-pass")
+
+        response = await client.post(
+            "/connections/",
+            json={"addressee_id": str(uid_s)},
+            headers=headers,
+        )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["requester"]["user_id"] == str(uid_f)
+    assert body["addressee"]["user_id"] == str(uid_s)
+    assert body["addressee"]["is_superuser"] is True
 
 
 async def test_cannot_connect_to_self() -> None:
@@ -184,6 +210,40 @@ async def test_list_connections_with_status_filter() -> None:
     assert body["total"] >= 1
     for item in body["items"]:
         assert item["status"] == "pending"
+
+
+async def test_connection_list_exposes_superuser_metadata() -> None:
+    """GET /connections/ includes superuser flags in participant summaries."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        email_a, uid_a = await _create_user("conn-meta-a-pass", tier="starter")
+        email_s, uid_s = await _create_user(
+            "conn-meta-super-pass",
+            is_superuser=True,
+        )
+        headers_a = await _auth_headers(client, email_a, "conn-meta-a-pass")
+
+        create_resp = await client.post(
+            "/connections/",
+            json={"addressee_id": str(uid_s)},
+            headers=headers_a,
+        )
+        assert create_resp.status_code == 201
+
+        response = await client.get(
+            "/connections/",
+            params={"status": "pending", "page": 1, "page_size": 500},
+            headers=headers_a,
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    matching = next(
+        item for item in body["items"] if item["addressee"]["user_id"] == str(uid_s)
+    )
+    assert matching["requester"]["user_id"] == str(uid_a)
+    assert matching["requester"]["is_superuser"] is False
+    assert matching["addressee"]["is_superuser"] is True
 
 
 async def test_accept_connection() -> None:

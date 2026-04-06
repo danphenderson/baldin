@@ -81,6 +81,45 @@ export const updatePlacement = async (token: string, data: PlacementUpdate): Pro
   return await fetchApi(`${BASE_URL}/placement`, requestOptions);
 };
 
+/**
+ * Upload or replace the current user's avatar image.
+ * Accepts JPEG, PNG, WebP, or GIF up to 2 MB.
+ */
+export const uploadAvatar = async (token: string, file: File): Promise<UserRead> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${BASE_URL}/avatar`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!response.ok) {
+    let message = 'Avatar upload failed';
+    try {
+      const err = await response.json();
+      if (err?.detail) {
+        message = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+      }
+    } catch { /* keep default message */ }
+    throw new Error(message);
+  }
+  return response.json();
+};
+
+/**
+ * Build the full URL for a user's avatar image.
+ * Returns undefined when no avatar is set (avatarUri is falsy),
+ * so callers can pass the result directly to MUI Avatar's src prop.
+ */
+export const avatarUrl = (
+  userId?: string | null,
+  avatarUri?: string | null,
+): string | undefined => {
+  if (!userId || !avatarUri) return undefined;
+  return `${API_URL}/users/${userId}/avatar`;
+};
+
 export const extractProfile = async (
   token: string,
   data: ProfileExtractRequest,

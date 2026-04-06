@@ -14,12 +14,24 @@ UserManager class is core fastapi users class with customizable attrs and method
 https://fastapi-users.github.io/fastapi-users/configuration/user-manager/
 """
 
+import base64
 import contextlib
+import hashlib
+import re
 import uuid
+from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from typing import Optional
 
+import jwt
+from cryptography.fernet import Fernet, InvalidToken
 from fastapi import Depends, Request
-from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
+from fastapi_users import (
+    BaseUserManager,
+    FastAPIUsers,
+    InvalidPasswordException,
+    UUIDIDMixin,
+)
 from fastapi_users.authentication import (
     AuthenticationBackend,
     BearerTransport,
@@ -32,6 +44,30 @@ from app import models, schemas
 from app.core import conf
 from app.core.db import get_async_session, get_user_db
 from app.logging import console_log
+
+MIN_PASSWORD_LENGTH = 8
+_PASSWORD_RULES = [
+    (re.compile(r"[A-Z]"), "one uppercase letter"),
+    (re.compile(r"[a-z]"), "one lowercase letter"),
+    (re.compile(r"\d"), "one digit"),
+]
+
+MFA_TOKEN_EXPIRE_MINUTES = 5
+MFA_TOKEN_AUDIENCE = "baldin:mfa"
+
+
+@lru_cache(maxsize=1)
+def _get_mfa_fernet() -> Fernet:
+    """Derive the MFA-at-rest encryption key from a dedicated override or SECRET_KEY.
+
+    Rotating the effective source key invalidates decryption of previously stored MFA
+    secrets until an administrator resets MFA for affected accounts.
+    """
+    encryption_seed = (
+        conf.settings.MFA_ENCRYPTION_KEY or f"{conf.settings.SECRET_KEY}:mfa"
+    )
+    key_material = hashlib.sha256(encryption_seed.encode("utf-8")).digest()
+    return Fernet(base64.urlsafe_b64encode(key_material))
 
 
 def get_jwt_strategy() -> JWTStrategy:
@@ -54,6 +90,20 @@ AUTH_BACKEND = AuthenticationBackend(
 class UserManager(UUIDIDMixin, BaseUserManager[models.User, uuid.UUID]):  # type: ignore # noqa
     reset_password_token_secret = conf.settings.SECRET_KEY
     verification_token_secret = conf.settings.SECRET_KEY
+
+    async def validate_password(
+        self, password: str, user: models.User | schemas.UserCreate
+    ) -> None:
+        reasons: list[str] = []
+        if len(password) < MIN_PASSWORD_LENGTH:
+            reasons.append(f"at least {MIN_PASSWORD_LENGTH} characters")
+        for pattern, label in _PASSWORD_RULES:
+            if not pattern.search(password):
+                reasons.append(label)
+        if reasons:
+            raise InvalidPasswordException(
+                reason=f"Password must contain {', '.join(reasons)}."
+            )
 
     async def on_after_register(
         self, user: models.User, request: Optional[Request] = None
@@ -140,6 +190,52 @@ async def create_default_superuser():
     default_superuser_payload = schemas.UserCreate(
         email=conf.settings.FIRST_SUPERUSER_EMAIL,
         password=conf.settings.FIRST_SUPERUSER_PASSWORD,
+        is_discoverable=True,
         is_superuser=True,  # type: ignore
     )
     await create_user(default_superuser_payload)
+
+
+# ---------------------------------------------------------------------------
+# MFA challenge-token helpers
+# ---------------------------------------------------------------------------
+
+
+def create_mfa_token(user_id: uuid.UUID) -> str:
+    """Return a short-lived JWT that proves the user passed password auth
+    but still needs to present a valid TOTP code."""
+    payload = {
+        "sub": str(user_id),
+        "aud": MFA_TOKEN_AUDIENCE,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=MFA_TOKEN_EXPIRE_MINUTES),
+    }
+    return jwt.encode(payload, conf.settings.SECRET_KEY, algorithm="HS256")
+
+
+def encrypt_mfa_secret(secret: str) -> str:
+    return _get_mfa_fernet().encrypt(secret.encode("utf-8")).decode("utf-8")
+
+
+def decrypt_mfa_secret(secret: str | None) -> tuple[str | None, bool]:
+    if not secret:
+        return None, False
+
+    try:
+        decrypted = _get_mfa_fernet().decrypt(secret.encode("utf-8")).decode("utf-8")
+        return decrypted, True
+    except InvalidToken:
+        return secret, False
+
+
+def verify_mfa_token(token: str) -> uuid.UUID:
+    """Decode an MFA challenge token and return the user id.
+
+    Raises ``jwt.PyJWTError`` (or a subclass) on any failure.
+    """
+    data = jwt.decode(
+        token,
+        conf.settings.SECRET_KEY,
+        algorithms=["HS256"],
+        audience=MFA_TOKEN_AUDIENCE,
+    )
+    return uuid.UUID(data["sub"])

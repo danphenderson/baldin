@@ -2,6 +2,7 @@
 from uuid import uuid4
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -559,6 +560,12 @@ class Document(Base):
         secondary="documents_x_applications",
         back_populates="documents",
     )
+    embeddings = relationship(
+        "DocumentEmbedding",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class DocumentVersion(Base):
@@ -654,6 +661,41 @@ class DocumentActivity(Base):
 
     document = relationship("Document", back_populates="activities")
     actor = relationship("User", foreign_keys=[actor_user_id])
+
+
+class DocumentEmbedding(Base):
+    """Stores vector embeddings for document chunks, enabling semantic search."""
+
+    __tablename__ = "document_embeddings"
+    __table_args__ = (
+        Index(
+            "ix_document_embeddings_vector",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
+
+    document_id = Column(
+        UUID, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    document_version_id = Column(
+        UUID,
+        ForeignKey("document_versions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    chunk_index = Column(Integer, nullable=False, default=0)
+    chunk_text = Column(Text, nullable=False)
+    embedding = Column(Vector(1536), nullable=False)
+
+    document = relationship("Document", back_populates="embeddings")
+    document_version = relationship("DocumentVersion")
+    user = relationship("User")
 
 
 class ActionItem(Base):

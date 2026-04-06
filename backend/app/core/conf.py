@@ -160,6 +160,8 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
     API_KEY: str
     COMPLETION_MODEL: str = "gpt-5.4-nano-2026-03-17"
     DEFAULT_MODEL: str = "gpt-5.4-mini-2026-03-17"
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_DIMENSIONS: int = 1536
 
     @property
     def SUPPORTED_MODELS(self):

@@ -552,6 +552,45 @@ export interface paths {
      */
     patch: operations["update_share_documents__document_id__shares__share_id__patch"];
   };
+  "/documents/search": {
+    /**
+     * Semantic search across user documents
+     * @description Perform a semantic similarity search across the authenticated user's
+     * embedded documents using pgvector cosine distance.
+     */
+    post: operations["search_documents_documents_search_post"];
+  };
+  "/documents/{document_id}/embed": {
+    /**
+     * Generate embeddings for a document
+     * @description Chunk and embed a document's text content, storing the resulting vectors
+     * in pgvector for later semantic search.  Replaces any existing embeddings
+     * for the same document.
+     */
+    post: operations["embed_document_documents__document_id__embed_post"];
+  };
+  "/documents/rag/enrich-lead": {
+    /**
+     * Enrich a lead using document context
+     * @description Retrieve relevant document chunks and use them to enrich a job lead
+     * description with personalized analysis.
+     */
+    post: operations["enrich_lead_endpoint_documents_rag_enrich_lead_post"];
+  };
+  "/documents/rag/rank-leads": {
+    /**
+     * Rank leads by relevance to user profile
+     * @description Rank job leads based on the user's embedded document context.
+     */
+    post: operations["rank_leads_endpoint_documents_rag_rank_leads_post"];
+  };
+  "/documents/rag/summarize-company": {
+    /**
+     * Summarize a company website
+     * @description Load a company website, extract text, and return an AI summary.
+     */
+    post: operations["summarize_company_endpoint_documents_rag_summarize_company_post"];
+  };
   "/education/": {
     /** Read Current User Educations */
     get: operations["read_current_user_educations_education__get"];
@@ -1546,6 +1585,27 @@ export interface components {
        * @description Description of the company
        */
       description?: string | null;
+    };
+    /** CompanySummarizeRequest */
+    CompanySummarizeRequest: {
+      /**
+       * Url
+       * @description Company website URL
+       */
+      url: string;
+    };
+    /** CompanySummarizeResponse */
+    CompanySummarizeResponse: {
+      /**
+       * Url
+       * @description Website URL that was summarized
+       */
+      url: string;
+      /**
+       * Summary
+       * @description AI-generated company summary
+       */
+      summary: string;
     };
     /** CompanyUpdate */
     CompanyUpdate: {
@@ -2620,6 +2680,32 @@ export interface components {
        */
       versions?: components["schemas"]["DocumentVersionRead"][];
     };
+    /** DocumentEmbedRequest */
+    DocumentEmbedRequest: {
+      /**
+       * Version Id
+       * @description Specific version to embed. Defaults to the head version.
+       */
+      version_id?: string | null;
+    };
+    /** DocumentEmbedResponse */
+    DocumentEmbedResponse: {
+      /**
+       * Document Id
+       * Format: uuid4
+       */
+      document_id: string;
+      /**
+       * Document Version Id
+       * Format: uuid4
+       */
+      document_version_id: string;
+      /**
+       * Chunks Embedded
+       * @description Number of text chunks embedded
+       */
+      chunks_embedded: number;
+    };
     /** DocumentGenerateRequest */
     DocumentGenerateRequest: {
       /** @description Document kind to generate */
@@ -2740,6 +2826,69 @@ export interface components {
        * @description Timestamp when the share was last updated
        */
       share_updated_at?: string | null;
+    };
+    /** DocumentSearchRequest */
+    DocumentSearchRequest: {
+      /**
+       * Query
+       * @description Natural-language search query
+       */
+      query: string;
+      /**
+       * K
+       * @description Number of results to return
+       * @default 5
+       */
+      k?: number;
+    };
+    /** DocumentSearchResponse */
+    DocumentSearchResponse: {
+      /**
+       * Query
+       * @description Original search query
+       */
+      query: string;
+      /**
+       * Results
+       * @description Ranked search results
+       */
+      results?: components["schemas"]["DocumentSearchResult"][];
+    };
+    /** DocumentSearchResult */
+    DocumentSearchResult: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description Embedding row identifier
+       */
+      id: string;
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Source document identifier
+       */
+      document_id: string;
+      /**
+       * Document Version Id
+       * Format: uuid4
+       * @description Version that was embedded
+       */
+      document_version_id: string;
+      /**
+       * Chunk Index
+       * @description Chunk position within the document
+       */
+      chunk_index: number;
+      /**
+       * Chunk Text
+       * @description Matching text chunk
+       */
+      chunk_text: string;
+      /**
+       * Score
+       * @description Cosine similarity score (0-1, higher is better)
+       */
+      score: number;
     };
     /** DocumentShareCandidateRead */
     DocumentShareCandidateRead: {
@@ -3751,6 +3900,28 @@ export interface components {
        */
       participant_summaries?: components["schemas"]["LeadParticipantSummaryRead"][];
     };
+    /** LeadEnrichRequest */
+    LeadEnrichRequest: {
+      /**
+       * Lead Description
+       * @description Lead description
+       */
+      lead_description: string;
+      /**
+       * K
+       * @description Context chunks to retrieve
+       * @default 5
+       */
+      k?: number;
+    };
+    /** LeadEnrichResponse */
+    LeadEnrichResponse: {
+      /**
+       * Enrichment
+       * @description AI-generated enrichment analysis
+       */
+      enrichment: string;
+    };
     /**
      * LeadExtractDisposition
      * @enum {string}
@@ -3828,6 +3999,30 @@ export interface components {
        * @description Connection record id, if an accepted connection exists
        */
       connection_id?: string | null;
+    };
+    /** LeadRankRequest */
+    LeadRankRequest: {
+      /**
+       * Leads
+       * @description List of leads with title and description
+       */
+      leads: {
+          [key: string]: unknown;
+        }[];
+      /**
+       * K
+       * @description Context chunks per lead
+       * @default 5
+       */
+      k?: number;
+    };
+    /** LeadRankResponse */
+    LeadRankResponse: {
+      /**
+       * Ranking
+       * @description AI-generated lead ranking
+       */
+      ranking: string;
     };
     /** LeadRead */
     LeadRead: {
@@ -8467,6 +8662,140 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["DocumentShareRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Semantic search across user documents
+   * @description Perform a semantic similarity search across the authenticated user's
+   * embedded documents using pgvector cosine distance.
+   */
+  search_documents_documents_search_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentSearchRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentSearchResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Generate embeddings for a document
+   * @description Chunk and embed a document's text content, storing the resulting vectors
+   * in pgvector for later semantic search.  Replaces any existing embeddings
+   * for the same document.
+   */
+  embed_document_documents__document_id__embed_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DocumentEmbedRequest"] | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentEmbedResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Enrich a lead using document context
+   * @description Retrieve relevant document chunks and use them to enrich a job lead
+   * description with personalized analysis.
+   */
+  enrich_lead_endpoint_documents_rag_enrich_lead_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadEnrichRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadEnrichResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Rank leads by relevance to user profile
+   * @description Rank job leads based on the user's embedded document context.
+   */
+  rank_leads_endpoint_documents_rag_rank_leads_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadRankRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRankResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Summarize a company website
+   * @description Load a company website, extract text, and return an AI summary.
+   */
+  summarize_company_endpoint_documents_rag_summarize_company_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanySummarizeRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanySummarizeResponse"];
         };
       };
       /** @description Validation Error */

@@ -1003,6 +1003,83 @@ class DocumentActivityRead(BaseRead):
     )
 
 
+# ---------------------------------------------------------------------------
+#  Document embedding & semantic search schemas
+# ---------------------------------------------------------------------------
+
+
+class DocumentEmbeddingRead(BaseRead):
+    document_id: UUID4 = Field(description="Owning document identifier")
+    document_version_id: UUID4 = Field(description="Version that was embedded")
+    chunk_index: int = Field(description="Chunk position within the document")
+    chunk_text: str = Field(description="The text content of this chunk")
+
+
+class DocumentSearchRequest(BaseSchema):
+    query: str = Field(
+        ..., min_length=1, max_length=1000, description="Natural-language search query"
+    )
+    k: int = Field(5, ge=1, le=50, description="Number of results to return")
+
+
+class DocumentSearchResult(BaseSchema):
+    id: UUID4 = Field(description="Embedding row identifier")
+    document_id: UUID4 = Field(description="Source document identifier")
+    document_version_id: UUID4 = Field(description="Version that was embedded")
+    chunk_index: int = Field(description="Chunk position within the document")
+    chunk_text: str = Field(description="Matching text chunk")
+    score: float = Field(description="Cosine similarity score (0-1, higher is better)")
+
+
+class DocumentSearchResponse(BaseSchema):
+    query: str = Field(description="Original search query")
+    results: list[DocumentSearchResult] = Field(
+        default_factory=list, description="Ranked search results"
+    )
+
+
+class DocumentEmbedRequest(BaseSchema):
+    version_id: UUID4 | None = Field(
+        None,
+        description="Specific version to embed. Defaults to the head version.",
+    )
+
+
+class DocumentEmbedResponse(BaseSchema):
+    document_id: UUID4
+    document_version_id: UUID4
+    chunks_embedded: int = Field(description="Number of text chunks embedded")
+
+
+class LeadEnrichRequest(BaseSchema):
+    lead_description: str = Field(..., min_length=1, description="Lead description")
+    k: int = Field(5, ge=1, le=20, description="Context chunks to retrieve")
+
+
+class LeadEnrichResponse(BaseSchema):
+    enrichment: str = Field(description="AI-generated enrichment analysis")
+
+
+class LeadRankRequest(BaseSchema):
+    leads: list[dict[str, Any]] = Field(
+        ..., min_length=1, description="List of leads with title and description"
+    )
+    k: int = Field(5, ge=1, le=20, description="Context chunks per lead")
+
+
+class LeadRankResponse(BaseSchema):
+    ranking: str = Field(description="AI-generated lead ranking")
+
+
+class CompanySummarizeRequest(BaseSchema):
+    url: str = Field(..., min_length=1, description="Company website URL")
+
+
+class CompanySummarizeResponse(BaseSchema):
+    url: str = Field(description="Website URL that was summarized")
+    summary: str = Field(description="AI-generated company summary")
+
+
 class BaseUser(BaseSchema):
     first_name: str | None = Field(None, description="First name")
     last_name: str | None = Field(None, description="Last name")

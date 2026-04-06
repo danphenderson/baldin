@@ -2,11 +2,12 @@
 
 from fastapi import APIRouter
 
-from app.api.deps import fastapi_users, schemas, security
+from app.api.deps import fastapi_users, schemas
 from app.api.routes import (
     action_items,
     activity_feed,
     applications,
+    auth,
     certificate,
     collaboration,
     companies,
@@ -23,6 +24,7 @@ from app.api.routes import (
     extractor,
     leads,
     messages,
+    mfa,
     resumes,
     review,
     skills,
@@ -32,7 +34,7 @@ from app.api.routes import (
 api_router: APIRouter = APIRouter()
 
 api_router.include_router(
-    fastapi_users.get_auth_router(security.AUTH_BACKEND),
+    auth.router,
     prefix="/auth/jwt",
     tags=["auth"],
 )
@@ -49,6 +51,11 @@ api_router.include_router(
 api_router.include_router(
     fastapi_users.get_verify_router(schemas.UserRead),
     prefix="/auth",
+    tags=["auth"],
+)
+api_router.include_router(
+    mfa.router,
+    prefix="/auth/mfa",
     tags=["auth"],
 )
 api_router.include_router(

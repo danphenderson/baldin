@@ -31,6 +31,10 @@ The frontend consumes the same contract through generated types in `frontend/src
 
 The Starlette Admin UI is available at [http://localhost:8004/admin](http://localhost:8004/admin). It uses its own browser session scoped to `/admin` and expects the bootstrap superuser's email and password (`FIRST_SUPERUSER_EMAIL` / `FIRST_SUPERUSER_PASSWORD` from `backend/.env`).
 
+## MFA Recovery
+
+MFA is intentionally self-service for setup, verification, disable, and login challenge completion. Recovery is admin-driven: if a user loses access to their authenticator app, a superuser can clear MFA from the account with `POST /auth/mfa/admin-reset/{user_id}` and then ask the user to enroll again from the profile page.
+
 ## Start Here Next
 
 - For the route-group map: [Browse API Routes](../architecture/api-surface.md)

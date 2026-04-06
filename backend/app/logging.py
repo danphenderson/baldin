@@ -4,10 +4,12 @@ import asyncio
 import json
 import logging
 import sys
+from datetime import datetime, timezone
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 from app.core import conf
+from app.core.correlation_id import correlation_id
 
 if conf.settings.ENVIRONMENT == "DEV":
     logging.basicConfig(
@@ -17,18 +19,39 @@ if conf.settings.ENVIRONMENT == "DEV":
     )
 
 
+class StructuredJSONFormatter(logging.Formatter):
+    """Produce a single JSON object per log record.
+
+    Every record includes the correlation ID for the active request (empty
+    string when logged outside a request context).
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_entry: dict = {
+            "timestamp": datetime.fromtimestamp(
+                record.created, tz=timezone.utc
+            ).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "correlation_id": correlation_id.get(""),
+            "process_id": record.process,
+            "thread_id": record.thread,
+        }
+        if record.exc_info and record.exc_info[1] is not None:
+            log_entry["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_entry)
+
+
 class AsyncJSONFileLogger:
     def __init__(self, name, filepath, backupcount=5, interval="D", encoding="utf-8"):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(conf.settings.LOGGING_LEVEL)
         self.filepath = filepath
-        formatter = logging.Formatter(
-            '{"levelname": "%(levelname)s", "message": "%(message)s", "asctime": "%(asctime)s", "process_id": "%(process)s", "thread_id": "%(thread)s"}'
-        )  # noqa: E501
         handler = TimedRotatingFileHandler(
             filepath, backupCount=backupcount, when=interval, encoding=encoding
         )
-        handler.setFormatter(formatter)
+        handler.setFormatter(StructuredJSONFormatter())
         self.logger.addHandler(handler)
 
     async def log(self, level, msg, *args, **kwargs):
@@ -64,7 +87,6 @@ _lock = asyncio.Lock()
 
 def _get_logger_filepath(name: str) -> Path:
     filepath = Path(conf.settings.PUBLIC_ASSETS_DIR) / "logs" / f"{name}.json"
-    print(str(filepath))
     if not filepath.exists():
         filepath.parent.mkdir(parents=True, exist_ok=True)
     return filepath
@@ -82,16 +104,13 @@ def get_async_logger(
 def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(conf.settings.LOGGING_LEVEL)
-    formatter = logging.Formatter(
-        '{"levelname": "%(levelname)s", "message": "%(message)s", "asctime": "%(asctime)s", "process_id": "%(process)s", "thread_id": "%(thread)s"}'
-    )
     handler = TimedRotatingFileHandler(
         _get_logger_filepath(name),
         backupCount=5,
         when="D",
         encoding="utf-8",
     )
-    handler.setFormatter(formatter)
+    handler.setFormatter(StructuredJSONFormatter())
     logger.addHandler(handler)
     return logger
 

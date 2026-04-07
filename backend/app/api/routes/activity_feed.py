@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import String, and_, cast, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app import models, schemas
@@ -16,6 +16,10 @@ from app.core.datetime_utils import (
 )
 
 router: APIRouter = APIRouter()
+
+
+def _application_status_text_expression():
+    return func.lower(cast(models.Application.__table__.c.status, String))
 
 
 @router.get("/", response_model=schemas.ActivityFeedRead)
@@ -41,13 +45,16 @@ async def get_activity_feed(
     # 1. Application status changes (from status_history JSONB)
     if entity_type is None or entity_type == "application":
         result = await db.execute(
-            select(models.Application)
-            .options(selectinload(models.Application.lead))
+            select(
+                models.Application.id,
+                models.Application.status_history,
+                models.Lead.title,
+            )
+            .outerjoin(models.Lead, models.Lead.id == models.Application.lead_id)
             .where(models.Application.user_id == user.id)
         )
-        applications = result.scalars().all()
-        for app in applications:
-            history = app.status_history or []
+        for application_id, status_history, lead_title in result.all():
+            history = status_history or []
             for entry in history:
                 changed_at_raw = entry.get("changed_at")
                 if not changed_at_raw:
@@ -57,15 +64,12 @@ async def get_activity_feed(
                     continue
                 if changed_at < since:
                     continue
-                lead_title = (
-                    app.lead.title if app.lead and app.lead.title else "Application"
-                )
                 items.append(
                     schemas.ActivityFeedItem(
                         type="status_change",
                         entity_type="application",
-                        entity_id=app.id,
-                        title=lead_title,
+                        entity_id=application_id,
+                        title=lead_title or "Application",
                         detail=f"{entry.get('from', 'none')} → {entry.get('to', 'unknown')}",
                         timestamp=changed_at,
                     )
@@ -203,6 +207,7 @@ async def get_command_center_summary(
     now = now_utc_naive()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
+    application_status_text = _application_status_text_expression()
 
     # Lead counts
     lead_count_q = (
@@ -239,16 +244,22 @@ async def get_command_center_summary(
         .select_from(models.Application)
         .where(
             models.Application.user_id == user.id,
-            ~models.Application.status.in_(["rejected", "withdrawn"]),
+            ~application_status_text.in_(
+                [
+                    schemas.ApplicationStatus.REJECTED.value,
+                    schemas.ApplicationStatus.WITHDRAWN.value,
+                ]
+            ),
         )
     )
     active_application_count = (await db.execute(active_app_q)).scalar() or 0
 
     # Status breakdown
+    breakdown_status = func.coalesce(application_status_text, "unknown")
     breakdown_q = (
-        select(models.Application.status, func.count())
+        select(breakdown_status, func.count())
         .where(models.Application.user_id == user.id)
-        .group_by(models.Application.status)
+        .group_by(breakdown_status)
     )
     breakdown_result = await db.execute(breakdown_q)
     status_breakdown = {(row[0] or "unknown"): row[1] for row in breakdown_result.all()}

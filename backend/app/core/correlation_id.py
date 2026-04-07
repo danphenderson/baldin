@@ -32,6 +32,7 @@ class CorrelationIdMiddleware:
             return
 
         request_id = uuid.uuid4().hex
+        scope["request_id"] = request_id
         token = correlation_id.set(request_id)
 
         async def send_with_id(message: Message) -> None:

@@ -1,13 +1,16 @@
 """Tests for the /activity-feed endpoints (feed, summary)."""
 
+import json
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 
+from app import models
 from app.core import conf
 from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
 from app.main import app
@@ -313,3 +316,91 @@ async def test_summary_empty_user() -> None:
     assert body["profile_completion"] == 0
     assert body["documents_count"] == 0
     assert body["draft_documents_count"] == 0
+
+
+async def test_activity_feed_and_summary_tolerate_legacy_varchar_application_statuses() -> (
+    None
+):
+    """Legacy local DB rows with lowercase varchar statuses should not break the dashboard."""
+    global _db_ready
+
+    await async_engine.dispose()
+    await drop_and_create_db_and_tables()
+    app.state.bootstrap_completed = True
+    _db_ready = True
+
+    password = "feed-legacy-status-pass"
+    async with _client() as client:
+        email, user_id = await _create_user(password)
+        headers = await _auth_headers(client, email, password)
+
+        async with session_context() as session:
+            lead = models.Lead(
+                url="https://example.com/jobs/legacy-status-role",
+                canonical_url=f"https://example.com/jobs/{utils.random_lower_string(12)}",
+                title="Legacy status role",
+            )
+            session.add(lead)
+            await session.flush()
+
+            await session.execute(
+                text(
+                    "ALTER TABLE applications ALTER COLUMN status TYPE VARCHAR USING lower(status::text)"
+                )
+            )
+            await session.execute(
+                text(
+                    """
+                    INSERT INTO applications (
+                        id,
+                        created_at,
+                        updated_at,
+                        status,
+                        status_history,
+                        lead_id,
+                        user_id
+                    ) VALUES (
+                        :application_id,
+                        NOW(),
+                        NOW(),
+                        :status,
+                        CAST(:status_history AS jsonb),
+                        :lead_id,
+                        :user_id
+                    )
+                    """
+                ),
+                {
+                    "application_id": uuid4(),
+                    "status": "applied",
+                    "status_history": json.dumps(
+                        [
+                            {
+                                "from": None,
+                                "to": "applied",
+                                "changed_at": datetime.utcnow().isoformat(),
+                            }
+                        ]
+                    ),
+                    "lead_id": lead.id,
+                    "user_id": user_id,
+                },
+            )
+            await session.commit()
+
+        feed_response = await client.get("/activity-feed/", headers=headers)
+        summary_response = await client.get("/activity-feed/summary", headers=headers)
+
+    assert feed_response.status_code == 200
+    feed_body = feed_response.json()
+    status_change_events = [
+        item for item in feed_body["items"] if item["type"] == "status_change"
+    ]
+    assert any(event["title"] == "Legacy status role" for event in status_change_events)
+    assert any(event["detail"].endswith("→ applied") for event in status_change_events)
+
+    assert summary_response.status_code == 200
+    summary_body = summary_response.json()
+    assert summary_body["application_count"] == 1
+    assert summary_body["active_application_count"] == 1
+    assert summary_body["status_breakdown"] == {"applied": 1}

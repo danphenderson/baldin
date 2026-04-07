@@ -11,6 +11,8 @@ description: Links to all Baldin documentation assets — API docs, admin, repo 
 
 This page collects links to every Baldin documentation asset in one place. Use it as a quick-reference hub when you need to jump to a specific tool, interface, or source file.
 
+Repository file paths below refer to private-repo locations and require approved repository access.
+
 ## Local Interfaces (requires running stack)
 
 These links work when the local Docker Compose stack is running (`docker-compose up --build`):
@@ -27,17 +29,16 @@ These links work when the local Docker Compose stack is running (`docker-compose
 
 | Resource | Location | Description |
 |----------|----------|-------------|
-| **README** | [`README.md`](https://github.com/danphenderson/baldin/blob/main/README.md) | Repository overview, quickstart, and status |
-| **Contributing Guide** | [`docs/docs/getting-started/contributing.md`](https://github.com/danphenderson/baldin/blob/main/docs/docs/getting-started/contributing.md) | Contributor workflow, validation expectations, and scope rules |
-| **Execution Plan** | [`plans/REPO_EXECUTION_PLAN.md`](https://github.com/danphenderson/baldin/blob/main/plans/REPO_EXECUTION_PLAN.md) | Seven-phase release roadmap |
-| **License** | [`LICENSE`](https://github.com/danphenderson/baldin/blob/main/LICENSE) | MIT License |
+| **README** | `README.md` | Repository overview, quickstart, and status |
+| **Contributing Guide** | `docs/docs/getting-started/contributing.md` | Contributor workflow, validation expectations, and scope rules |
+| **Execution Plan** | `plans/REPO_EXECUTION_PLAN.md` | Seven-phase release roadmap maintained in the private repo |
 
 ## Generated Artifacts
 
 | Artifact | Location | Regeneration |
 |----------|----------|--------------|
-| **OpenAPI Spec** | [`openapi.json`](https://github.com/danphenderson/baldin/blob/main/openapi.json) | `scripts/update_frontend_schemas.sh` |
-| **TypeScript Types** | [`frontend/src/schema.d.ts`](https://github.com/danphenderson/baldin/blob/main/frontend/src/schema.d.ts) | `scripts/update_frontend_schemas.sh` |
+| **OpenAPI Spec** | `openapi.json` | `scripts/update_frontend_schemas.sh` |
+| **TypeScript Types** | `frontend/src/schema.d.ts` | `scripts/update_frontend_schemas.sh` |
 
 See [Regenerate API Contracts](../engineering/contract-management.md) for when and how to regenerate these files.
 
@@ -45,27 +46,27 @@ See [Regenerate API Contracts](../engineering/contract-management.md) for when a
 
 | Resource | Location | Status |
 |----------|----------|--------|
-| **Docker Compose** | [`docker-compose.yml`](https://github.com/danphenderson/baldin/blob/main/docker-compose.yml) | Supported local development surface |
-| **Backend Dockerfile** | [`backend/Dockerfile`](https://github.com/danphenderson/baldin/blob/main/backend/Dockerfile) | Candidate image build |
-| **Dev Dockerfile** | [`backend/Dockerfile.dev`](https://github.com/danphenderson/baldin/blob/main/backend/Dockerfile.dev) | Local development with hot reload |
-| **Frontend Dockerfile** | [`frontend/Dockerfile`](https://github.com/danphenderson/baldin/blob/main/frontend/Dockerfile) | Dev server container |
-| **CDK Stacks** | [`cdk/`](https://github.com/danphenderson/baldin/blob/main/cdk/) | Reference only — not production-approved |
-| **Environment Template** | [`backend/.env.example`](https://github.com/danphenderson/baldin/blob/main/backend/.env.example) | Starting point for `backend/.env` |
+| **Docker Compose** | `docker-compose.yml` | Supported local development surface |
+| **Backend Dockerfile** | `backend/Dockerfile` | Candidate image build |
+| **Backend Dockerfile (dev target)** | `backend/Dockerfile` | Local development image via the `dev` build target |
+| **Frontend Dockerfile** | `frontend/Dockerfile` | Dev server container |
+| **CDK Stacks** | `cdk/` | Reference only — not production-approved |
+| **Environment Template** | `backend/.env.example` | Starting point for `backend/.env` |
 
 ## Developer Scripts
 
 | Script | Purpose | Status |
 |--------|---------|--------|
-| [`scripts/update_frontend_schemas.sh`](https://github.com/danphenderson/baldin/blob/main/scripts/update_frontend_schemas.sh) | Regenerate OpenAPI spec and TypeScript types | Active |
-| [`scripts/reset_local_db.sh`](https://github.com/danphenderson/baldin/blob/main/scripts/reset_local_db.sh) | Reset local development databases | Active |
-| [`scripts/sync_frontend_to_s3.sh`](https://github.com/danphenderson/baldin/blob/main/scripts/sync_frontend_to_s3.sh) | Legacy S3 deployment | Intentionally disabled |
+| `scripts/update_frontend_schemas.sh` | Regenerate OpenAPI spec and TypeScript types | Active |
+| `scripts/reset_local_db.sh` | Reset local development databases | Active |
+| `scripts/sync_frontend_to_s3.sh` | Legacy S3 deployment | Intentionally disabled |
 
 ## Documentation Site
 
 | Resource | Description |
 |----------|-------------|
 | **This site** | Docusaurus documentation at `docs/` — architecture, engineering, features, and reference |
-| **Source files** | [`docs/docs/`](https://github.com/danphenderson/baldin/blob/main/docs/docs/) — Markdown sources for all pages |
+| **Source files** | `docs/docs/` — Markdown sources for all pages |
 
 ## Related Docs
 

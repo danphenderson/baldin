@@ -11,7 +11,7 @@ description: See current release posture, remaining launch phases, and deploymen
 
 Baldin is still in developer preview. The supported workflow today is the local Docker Compose stack. Repository-side CI and candidate-build workflows exist, but merge-blocking enforcement and later deployment automation are still being rebuilt, with branch protection remaining a GitHub settings step outside the repo.
 
-The canonical execution plan lives in [`plans/REPO_EXECUTION_PLAN.md`](https://github.com/danphenderson/baldin/blob/main/plans/REPO_EXECUTION_PLAN.md). This page is the documentation summary for readers who need the current posture without reading the full plan first.
+The canonical execution plan lives in the private repo at `plans/REPO_EXECUTION_PLAN.md`. This page is the documentation summary for readers who need the current posture without reading the full plan first.
 
 ## Current Deployment Posture
 
@@ -82,7 +82,7 @@ Validate the system with staging smoke tests, rollback verification, and a contr
 - Safe use today: review, `cdk ls`, and `cdk synth`
 - Unsafe assumption: that the restored stacks are already the approved release path
 
-See [cdk/README.md](https://github.com/danphenderson/baldin/blob/main/cdk/README.md) for the current cautionary guidance.
+See the private-repo guidance in `cdk/README.md` for the current cautionary guidance.
 
 ## Current Release Risks Called Out In Code And Docs
 

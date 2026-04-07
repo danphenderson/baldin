@@ -8,4 +8,4 @@ description: Archived link target preserved for older links. Use Track Release R
 
 This page is retained only to preserve older links.
 
-Use [Track Release Readiness](../engineering/release-roadmap.md) for the current documentation summary, and use [`plans/REPO_EXECUTION_PLAN.md`](https://github.com/danphenderson/baldin/blob/main/plans/REPO_EXECUTION_PLAN.md) for the canonical phase-by-phase plan.
+Use [Track Release Readiness](../engineering/release-roadmap.md) for the current documentation summary, and use the private-repo plan at `plans/REPO_EXECUTION_PLAN.md` for the canonical phase-by-phase roadmap.

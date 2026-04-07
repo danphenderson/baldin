@@ -9,7 +9,7 @@ description: Current deployment posture, planned production topology, and what i
 
 # Planned Deployment
 
-Baldin is in developer preview. The only supported deployment path today is the local Docker Compose stack. Production deployment is being planned through a phased roadmap tracked in [`plans/REPO_EXECUTION_PLAN.md`](https://github.com/danphenderson/baldin/blob/main/plans/REPO_EXECUTION_PLAN.md).
+Baldin is in developer preview. The only supported deployment path today is the local Docker Compose stack. Production deployment is being planned through a phased roadmap tracked in the private repo at `plans/REPO_EXECUTION_PLAN.md`.
 
 This page explains what works today, what is planned, and what constraints shape the deployment path.
 

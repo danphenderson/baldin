@@ -89,7 +89,6 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/docs',
-          editUrl: 'https://github.com/danphenderson/baldin/tree/main/docs/',
         },
         blog: false,
         theme: {
@@ -102,10 +101,10 @@ const config: Config = {
   themeConfig: {
     image: 'img/og-image.svg',
     metadata: [
-      {name: 'description', content: 'Baldin is a local-first, open-source job-search automation workspace. Track applications, extract leads, collaborate on documents, and take control of your job search.'},
-      {name: 'keywords', content: 'job search automation, employment autopilot, job tracking, AI job search, local-first, open source, career tools, application tracker'},
+      {name: 'description', content: 'Baldin is a local-first, developer-preview job-search automation workspace. Track applications, extract leads, collaborate on documents, and manage your search through a private engineering workflow.'},
+      {name: 'keywords', content: 'job search automation, employment autopilot, job tracking, AI job search, local-first, developer preview, private repo, career tools, application tracker'},
       {property: 'og:title', content: 'Baldin — AI-Powered Employment Autopilot'},
-      {property: 'og:description', content: 'Take control of your job search. Open-source, local-first automation for applications, leads, documents, and networking.'},
+      {property: 'og:description', content: 'Take control of your job search with a local-first developer preview for applications, leads, documents, and networking.'},
     ],
     announcementBar: {
       id: 'developer_preview',
@@ -128,8 +127,8 @@ const config: Config = {
           label: 'Docs',
         },
         {
-          href: 'https://github.com/danphenderson/baldin',
-          label: 'GitHub',
+          to: '/docs/engineering/release-roadmap',
+          label: 'Release Readiness',
           position: 'right',
         },
       ],
@@ -156,11 +155,11 @@ const config: Config = {
           ],
         },
         {
-          title: 'Community',
+          title: 'Current Posture',
           items: [
-            {label: 'GitHub', href: 'https://github.com/danphenderson/baldin'},
-            {label: 'Issues', href: 'https://github.com/danphenderson/baldin/issues'},
-            {label: 'Pull Requests', href: 'https://github.com/danphenderson/baldin/pulls'},
+            {label: 'Developer Preview', to: '/docs/getting-started/overview'},
+            {label: 'Release Readiness', to: '/docs/engineering/release-roadmap'},
+            {label: 'Contribute Safely', to: '/docs/getting-started/contributing'},
           ],
         },
       ],

@@ -62,6 +62,7 @@ If you already know the task shape, use these workspace prompts from chat with `
 | `Hard-Gate PR Review` | You want a concrete pre-merge review of the active PR or current branch focused on merge risk. |
 | `API Contract Change Orchestrator` | You changed routes, schemas, response shapes, or generated frontend types and need contract ownership, regeneration, and downstream validation. |
 | `Change-Aware Validation Sequence` | You want the exact ordered Baldin checks for a specific backend, frontend, docs, CI, or contract change. |
+| `Issue Cleanup Orchestrator` | You want the Baldin Project Manager to clean up open issues in order: dedupe or rescope, rewrite for dispatch, then assign labels, project fields, milestones, and relationships. |
 | `Plan Slice Kickoff` | You want a plan section turned into a bounded work slice with the correct owner, scope, stop conditions, and validation. |
 | `Documentation Impact Review` | You changed code, workflow docs, plans, prompts, or repo rules and want a targeted docs-impact audit before stale guidance spreads. |
 | `Cross-Stack Workstream Router` | You have a backend plus frontend plus docs or CI style task and want the smallest low-conflict owner split with explicit handoff packets. |

@@ -12,13 +12,19 @@ from time import time
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from starlette.types import Receive, Scope, Send
 
 from app.admin import admin
 from app.api.api import api_router
 from app.core import conf
-from app.core.correlation_id import CorrelationIdMiddleware, correlation_id
+from app.core.correlation_id import (
+    REQUEST_ID_HEADER,
+    CorrelationIdMiddleware,
+    correlation_id,
+)
 from app.core.db import create_db_and_tables
 from app.core.document_collaboration import (
     ensure_document_collaboration_server_started,
@@ -36,6 +42,32 @@ logger = get_async_logger(__name__)
 
 def _normalize_cors_origin(origin: object) -> str:
     return str(origin).rstrip("/")
+
+
+class _OuterCORSMiddlewareApp:
+    def __init__(self, app: FastAPI, *, allow_origins: list[str]) -> None:
+        self._app = app
+        self._wrapped_app = CORSMiddleware(
+            app,
+            allow_origins=allow_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+        self.state = app.state
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        await self._wrapped_app(scope, receive, send)
+
+    def __getattr__(self, name: str):
+        return getattr(self._app, name)
+
+
+def _internal_server_error_detail(exc: Exception) -> str:
+    if conf.settings.ENVIRONMENT in {"DEV", "PYTEST"}:
+        detail = str(exc).strip()
+        return detail or exc.__class__.__name__
+    return "Internal server error"
 
 
 async def _startup(app: FastAPI) -> None:
@@ -131,18 +163,25 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-# Set all CORS enabled origins
-if conf.settings.BACKEND_CORS_ORIGINS:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[
-            _normalize_cors_origin(origin)
-            for origin in conf.settings.BACKEND_CORS_ORIGINS
-        ],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+
+# Keep unhandled route errors inside FastAPI's response pipeline so browser
+# clients still receive CORS and request-id headers on 500 responses.
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    request_id = request.scope.get("request_id", "") or correlation_id.get("")
+    console_log.exception(
+        "Unhandled exception during %s %s [%s]",
+        request.method,
+        request.url.path,
+        request_id,
     )
+    content: dict[str, str] = {"detail": _internal_server_error_detail(exc)}
+    headers: dict[str, str] | None = None
+    if request_id:
+        content["request_id"] = request_id
+        headers = {REQUEST_ID_HEADER: request_id}
+    return JSONResponse(status_code=500, content=content, headers=headers)
+
 
 # Correlation ID middleware (outermost — runs first on every request)
 app.add_middleware(CorrelationIdMiddleware)
@@ -195,3 +234,13 @@ admin.mount_to(app)
 async def root():
     console_log.info("Root!")
     return {"message": "Hello World!"}
+
+
+if conf.settings.BACKEND_CORS_ORIGINS:
+    app = _OuterCORSMiddlewareApp(
+        app,
+        allow_origins=[
+            _normalize_cors_origin(origin)
+            for origin in conf.settings.BACKEND_CORS_ORIGINS
+        ],
+    )

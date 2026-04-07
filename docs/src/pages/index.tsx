@@ -13,9 +13,9 @@ function Hero() {
         <h1 className={styles.heroTitle}>{siteConfig.title}</h1>
         <p className={styles.heroTagline}>{siteConfig.tagline}</p>
         <p className={styles.heroSub}>
-          Take control of your job search with an open-source, local-first
-          workspace that tracks applications, extracts leads, and keeps your
-          data under your control.
+          Take control of your job search with a local-first workspace in
+          developer preview that tracks applications, extracts leads, and keeps
+          your workflow under your control.
         </p>
         <div className={styles.heroCta}>
           <Link className={clsx('button button--lg', styles.ctaPrimary)} to="/docs/getting-started/quickstart">
@@ -23,9 +23,9 @@ function Hero() {
           </Link>
           <Link
             className={clsx('button button--lg button--outline', styles.ctaSecondary)}
-            href="https://github.com/danphenderson/baldin"
+            to="/docs/architecture/system-overview"
           >
-            View on GitHub
+            See The Architecture
           </Link>
         </div>
       </div>
@@ -68,7 +68,7 @@ const features = [
     title: 'Local-First & Private',
     icon: '🔒',
     description:
-      'Your data stays on your machine. MIT-licensed, fully open source, no tracking, no lock-in. You own everything.',
+      'Runs locally with a private engineering repo, controlled release planning, and data that stays on your machine by default.',
   },
 ];
 
@@ -96,7 +96,7 @@ function Features() {
 }
 
 const steps = [
-  {step: '1', title: 'Clone the repo', code: 'git clone https://github.com/danphenderson/baldin.git'},
+  {step: '1', title: 'Use an approved checkout', code: 'git clone <approved-baldin-remote>'},
   {step: '2', title: 'Start the stack', code: 'docker-compose up --build'},
   {step: '3', title: 'Open Baldin', code: 'open http://localhost:5173'},
 ];
@@ -107,8 +107,8 @@ function HowItWorks() {
       <div className={styles.howInner}>
         <h2 className={styles.sectionTitle}>Up and running in minutes</h2>
         <p className={styles.sectionSub}>
-          Baldin runs locally with Docker Compose. No cloud account, no API keys,
-          no sign-up required.
+          Baldin runs locally with Docker Compose. Use an approved repository
+          checkout and bring up the full preview stack on your machine.
         </p>
         <div className={styles.stepsGrid}>
           {steps.map((s) => (
@@ -124,28 +124,28 @@ function HowItWorks() {
   );
 }
 
-function OpenSource() {
+function CurrentPosture() {
   return (
-    <section className={styles.openSource}>
-      <div className={styles.openSourceInner}>
-        <h2 className={styles.sectionTitle}>Open source. Local first. Yours.</h2>
+    <section className={styles.posture}>
+      <div className={styles.postureInner}>
+        <h2 className={styles.sectionTitle}>Private preview. Local first. Yours.</h2>
         <p className={styles.sectionSub}>
-          Baldin is MIT-licensed and built in the open. Your job search data
-          never leaves your machine unless you decide otherwise. No telemetry,
-          no tracking, no vendor lock-in.
+          Baldin is currently developed in a private engineering repository.
+          Source access is limited to approved collaborators while the product,
+          deployment path, and release controls are still being hardened.
         </p>
         <div className={styles.trustBadges}>
           <div className={styles.trustItem}>
-            <strong>MIT License</strong>
-            <span>Free to use, modify, and distribute</span>
+            <strong>Private Repo</strong>
+            <span>Source access is limited to approved collaborators</span>
           </div>
           <div className={styles.trustItem}>
             <strong>Local-First</strong>
             <span>Data stays on your machine by default</span>
           </div>
           <div className={styles.trustItem}>
-            <strong>No Tracking</strong>
-            <span>Zero telemetry, zero analytics, zero surveillance</span>
+            <strong>Developer Preview</strong>
+            <span>Release posture and deployment flow are still being hardened</span>
           </div>
         </div>
       </div>
@@ -159,8 +159,8 @@ function BottomCta() {
       <div className={styles.bottomCtaInner}>
         <h2 className={styles.bottomCtaTitle}>Ready to take control?</h2>
         <p className={styles.bottomCtaSub}>
-          Baldin is in developer preview. Clone the repo, spin up the stack, and
-          start organizing your job search today.
+          Baldin is in developer preview. Use an approved checkout, spin up the
+          stack, and start organizing your job search locally.
         </p>
         <div className={styles.heroCta}>
           <Link className={clsx('button button--lg', styles.ctaPrimary)} to="/docs/getting-started/quickstart">
@@ -168,9 +168,9 @@ function BottomCta() {
           </Link>
           <Link
             className={clsx('button button--lg button--outline', styles.ctaSecondary)}
-            href="https://github.com/danphenderson/baldin"
+            to="/docs/engineering/release-roadmap"
           >
-            Star on GitHub
+            Track Release Readiness
           </Link>
         </div>
       </div>
@@ -186,7 +186,7 @@ export default function Home(): React.JSX.Element {
       <main>
         <Features />
         <HowItWorks />
-        <OpenSource />
+        <CurrentPosture />
         <BottomCta />
       </main>
     </Layout>

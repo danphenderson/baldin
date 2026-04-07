@@ -199,13 +199,13 @@
   word-break: break-all;
 }
 
-/* ── Open Source ───────────────────────────────────────── */
-.openSource {
+/* ── Current Posture ────────────────────────────────────── */
+.posture {
   padding: 5rem 2rem;
   background: #0f172a;
 }
 
-.openSourceInner {
+.postureInner {
   max-width: 900px;
   margin: 0 auto;
 }

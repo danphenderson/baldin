@@ -1,14 +1,12 @@
 # Baldin
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/danphenderson/baldin/actions/workflows/ci.yml/badge.svg)](https://github.com/danphenderson/baldin/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-live-06b6d4)](https://danphenderson.github.io/baldin/)
 
-**AI-Powered Employment Autopilot** — a local-first, open-source job-search automation workspace.
+**AI-Powered Employment Autopilot** — a local-first, developer-preview job-search automation workspace.
 
 > Take control of your job search. Track applications, extract leads, collaborate on documents, and manage your network — all running locally under your control.
 
-**[Landing Page](https://danphenderson.github.io/baldin/)** · **[Documentation](https://danphenderson.github.io/baldin/docs)** · **[Issues](https://github.com/danphenderson/baldin/issues)**
+**[Landing Page](https://danphenderson.github.io/baldin/)** · **[Documentation](https://danphenderson.github.io/baldin/docs)** · **[Release Posture](plans/REPO_EXECUTION_PLAN.md)**
 
 ---
 
@@ -80,8 +78,4 @@ The supported development path today is the local Docker Compose stack. The mate
 
 Launch sequencing, release-boundary work, and remaining runtime hardening are tracked in [plans/REPO_EXECUTION_PLAN.md](plans/REPO_EXECUTION_PLAN.md).
 
-If you hit something confusing or broken, open an issue in the [issue tracker](https://github.com/danphenderson/baldin/issues).
-
-## License
-
-This project is licensed under the terms of the [MIT license](LICENSE).
+If you hit something confusing or broken, raise it through the current Baldin issue workflow.

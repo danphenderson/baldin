@@ -50,8 +50,4 @@ Baldin is **local-first** right now. This private repository is Baldin's main en
 
 ## Project Status
 
-Baldin is still early. Expect rough edges, evolving APIs, breaking data-model changes, and unfinished automation workflows. If you hit something confusing or broken, open an issue in the [issue tracker](https://github.com/danphenderson/baldin/issues).
-
-## License
-
-This project is licensed under the terms of the [MIT license](https://github.com/danphenderson/baldin/blob/main/LICENSE).
+Baldin is still early. Expect rough edges, evolving APIs, breaking data-model changes, and unfinished automation workflows. If you hit something confusing or broken, route it through the current Baldin team workflow.

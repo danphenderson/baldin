@@ -70,6 +70,15 @@ Copy `backend/.env.example` to `backend/.env` for local development.
 | `GLASSDOOR_USERNAME` | Glassdoor crawler authentication |
 | `GLASSDOOR_PASSWORD` | Glassdoor crawler authentication |
 
+### Background Jobs / Redis (Optional)
+
+| Variable | Purpose |
+|----------|---------|
+| `REDIS_URL` | Enables worker-mode background execution when set, for example `redis://localhost:6379/0` |
+| `CRAWLER_QUEUE_NAME` | Redis list name used for crawler and seed background jobs |
+| `CRAWLER_EXECUTION_MODE` | `inline` runs jobs in the API process; `worker` enqueues them to Redis |
+| `CRAWLER_SCHEDULER_INTERVAL` | Poll interval, in seconds, for the recurring crawler scheduler |
+
 ### Startup Behavior
 
 | Setting | Source | Meaning |

@@ -60,6 +60,17 @@ If you hit local schema drift after pulling breaking model changes, reset the de
 
 For deeper setup, service topology, and environment details, use [docs/docs/getting-started/quickstart.md](docs/docs/getting-started/quickstart.md), [docs/docs/engineering/local-development.md](docs/docs/engineering/local-development.md), and [docs/docs/reference/environment-variables.md](docs/docs/reference/environment-variables.md).
 
+## Local Services
+
+| Service | Description |
+| --- | --- |
+| `db` | PostgreSQL 15 primary application database |
+| `test_db` | PostgreSQL 15 database used by pytest |
+| `redis` | Redis 7 queue backing background jobs |
+| `web` | FastAPI backend, API, and admin surface |
+| `crawler-worker` | Background worker consuming Redis jobs |
+| `frontend` | React/Vite frontend |
+
 ## Contributing
 
 Use the normal branch-and-pull-request flow against `main`, and install hooks before your first commit:
@@ -73,6 +84,8 @@ If you change backend API routes or schemas, regenerate contracts with `./script
 ## Status And Caveats
 
 Baldin is still early. Expect rough edges, evolving APIs, breaking data-model changes, and unfinished automation workflows.
+
+When you run the full Docker Compose stack, `docker-compose.yml` injects the local Redis queue settings for the API and worker containers. You only need to override them manually when running services outside Compose.
 
 The supported development path today is the local Docker Compose stack. The material under [cdk/](cdk/) is reference-only while Baldin narrows and rebuilds its deployment path inside this repository.
 

@@ -774,7 +774,7 @@ export interface paths {
   "/crawlers/runs/prune": {
     /**
      * Prune Crawler Runs
-     * @description Delete completed/failed/cancelled crawler runs older than the specified age.
+     * @description Delete completed or terminal crawler runs older than the specified age.
      */
     delete: operations["prune_crawler_runs_crawlers_runs_prune_delete"];
   };
@@ -9659,7 +9659,7 @@ export interface operations {
   };
   /**
    * Prune Crawler Runs
-   * @description Delete completed/failed/cancelled crawler runs older than the specified age.
+   * @description Delete completed or terminal crawler runs older than the specified age.
    */
   prune_crawler_runs_crawlers_runs_prune_delete: {
     parameters: {

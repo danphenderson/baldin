@@ -28,11 +28,9 @@ pydantic = {extras = ["email"] }
 types-beautifulsoup4 = "*"
 pypdf2 = "*"
 playwright = "*"
-llama-index = "*"
 langchain = "*"
 transformers = "*"
 accelerate = "*"
-llama-index-llms-openai = "*"
 jsonpath-ng = "*"
 langchain-openai = "*"
 langgraph = "*"
@@ -51,6 +49,7 @@ itsdangerous = "*"
 slowapi = "*"
 ypy-websocket = "*"
 pyotp = "*"
+redis = {extras = ["hiredis"], version = "*"}
 
 [dev-packages]
 ipython = "*"

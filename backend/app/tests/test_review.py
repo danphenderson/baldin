@@ -68,6 +68,7 @@ async def _create_user(
 async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
+    app.state.limiter.reset()
     response = await client.post(
         "/auth/jwt/login",
         data={"username": email, "password": password},

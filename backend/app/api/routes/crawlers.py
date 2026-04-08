@@ -22,10 +22,10 @@ async def create_crawler_pipeline(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_superuser),
 ):
+    del request
     from app.api.deps import create_crawler_pipeline as _create
 
-    pipeline = await _create(payload, user, db)
-    return pipeline
+    return await _create(payload, user, db)
 
 
 @router.get("/pipelines", response_model=list[schemas.CrawlerPipelineRead])
@@ -67,15 +67,16 @@ async def trigger_crawler_run(
     request: Request,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),
-    user=Depends(get_current_superuser),
+    user: schemas.UserRead = Depends(get_current_superuser),
 ):
+    del request
     from app.api.deps import create_crawler_run as _create_run
     from app.api.deps import get_crawler_pipeline as _get
     from app.api.deps import schedule_crawler_run_execution
 
     pipeline = await _get(pipeline_id, db)
     run = await _create_run(pipeline, "manual", db)
-    schedule_crawler_run_execution(
+    await schedule_crawler_run_execution(
         run.id,
         user.id,
         background_tasks=background_tasks,
@@ -114,7 +115,7 @@ async def prune_crawler_runs(
     older_than_days: int = Query(30, ge=1, description="Delete runs older than N days"),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """Delete completed/failed/cancelled crawler runs older than the specified age."""
+    """Delete completed or terminal crawler runs older than the specified age."""
     cutoff = now_utc_naive() - timedelta(days=older_than_days)
     result = await db.execute(
         delete(models.CrawlerRun).where(
@@ -145,7 +146,7 @@ async def get_crawler_run(
                 created_at=event.created_at,
             )
         )
-    # Build the detail response by converting the ORM run and attaching events
+
     run_data = schemas.CrawlerRunRead.model_validate(run, from_attributes=True)
     return schemas.CrawlerRunDetailRead(**run_data.model_dump(), events=events)
 
@@ -195,7 +196,7 @@ async def resume_crawler_run(
     run_id: UUID4,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),
-    user=Depends(get_current_superuser),
+    user: schemas.UserRead = Depends(get_current_superuser),
 ):
     from app.api.deps import get_crawler_run as _get
     from app.api.deps import schedule_crawler_run_execution
@@ -209,7 +210,7 @@ async def resume_crawler_run(
     run.status = "running"
     await db.commit()
     await db.refresh(run)
-    schedule_crawler_run_execution(
+    await schedule_crawler_run_execution(
         run.id,
         user.id,
         background_tasks=background_tasks,
@@ -222,7 +223,7 @@ async def retry_crawler_run(
     run_id: UUID4,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),
-    user=Depends(get_current_superuser),
+    user: schemas.UserRead = Depends(get_current_superuser),
 ):
     from app.api.deps import create_crawler_run as _create_run
     from app.api.deps import get_crawler_run as _get
@@ -235,7 +236,6 @@ async def retry_crawler_run(
             detail=f"Cannot retry run with status '{run.status}'. Must be 'failed' or 'cancelled'.",
         )
 
-    # Prevent double-retry: check if an active retry already exists
     existing_retry = await db.execute(
         select(models.CrawlerRun).where(
             models.CrawlerRun.retry_of_id == run_id,
@@ -253,12 +253,11 @@ async def retry_crawler_run(
         raise HTTPException(status_code=404, detail="Parent pipeline not found")
 
     new_run = await _create_run(pipeline, "manual", db)
-    # Set retry_of_id
     new_run.retry_of_id = run.id
     await db.commit()
     await db.refresh(new_run)
 
-    schedule_crawler_run_execution(
+    await schedule_crawler_run_execution(
         new_run.id,
         user.id,
         background_tasks=background_tasks,

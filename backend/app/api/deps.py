@@ -123,7 +123,6 @@ def require_tier(minimum: schemas.SubscriptionTier):
                 status_code=403,
                 detail=f"This feature requires a {minimum.value} subscription or above",
             )
-        # Free tier never expires; paid tiers check expiry
         if user_tier != schemas.SubscriptionTier.FREE and user.subscription_expires_at:
             if user.subscription_expires_at < datetime.utcnow():
                 raise HTTPException(
@@ -136,8 +135,7 @@ def require_tier(minimum: schemas.SubscriptionTier):
 
 
 def require_active_placement():
-    """Return a FastAPI dependency that raises 403 if the user has graduated/alumni status
-    and is trying to use active-seeker features."""
+    """Return a FastAPI dependency that raises 403 if the user is not active."""
 
     async def _guard(user: models.User = Depends(get_current_user)):
         status = schemas.PlacementStatus(user.placement_status)
@@ -517,11 +515,6 @@ async def create_resume(
     await db.refresh(resume)
     await log.info(f"create_resume: {resume}")
     return resume
-
-
-# ---------------------------------------------------------------------------
-#  Document helpers (unified, versioned)
-# ---------------------------------------------------------------------------
 
 
 async def get_document(
@@ -977,7 +970,6 @@ async def create_crawler_run(
     db.add(run)
     await db.flush()
 
-    # Create an OrchestrationEvent for audit trail
     event = models.OrchestrationEvent(
         status="pending",
         message=f"Crawler run triggered ({trigger_type}) for pipeline {pipeline.name}",
@@ -1007,23 +999,8 @@ async def get_crawler_run(
     return run
 
 
-# ---------------------------------------------------------------------------
-# Crawler run execution pipeline
-# ---------------------------------------------------------------------------
-
-_ADAPTER_MAP = {
-    "linkedin": "etl.linkedin.LinkedInCrawler",
-    "glassdoor": "etl.glassdoor.GlassdoorCrawler",
-}
-
-
 def crawler_result_to_lead_create(result) -> schemas.LeadCreate:
-    """Convert a CrawlerResult dataclass into a LeadCreate schema.
-
-    company_name is appended to description because LeadCreate uses
-    company_ids (UUID list) rather than a name string.  Company association
-    can be improved in a later phase.
-    """
+    """Convert a CrawlerResult dataclass into a LeadCreate schema."""
     description = result.description or ""
     if result.company_name:
         if description:
@@ -1059,7 +1036,7 @@ def _instantiate_adapter(
             page_end=query_definition.get("page_end", 5),
             headless=(execution_policy or {}).get("headless", True),
         )
-    elif source == "glassdoor":
+    if source == "glassdoor":
         from etl.glassdoor import GlassdoorCrawler
 
         return GlassdoorCrawler(
@@ -1067,14 +1044,12 @@ def _instantiate_adapter(
             location=query_definition.get("location", ""),
             headless=(execution_policy or {}).get("headless", True),
         )
-    else:
-        raise ValueError(f"Unsupported crawler source: {source}")
+    raise ValueError(f"Unsupported crawler source: {source}")
 
 
 async def _find_orchestration_event_for_run(
     run_id: uuid.UUID, db: AsyncSession
 ) -> models.OrchestrationEvent | None:
-    """Find the OrchestrationEvent created alongside a CrawlerRun."""
     result = await db.execute(
         select(models.OrchestrationEvent).where(
             models.OrchestrationEvent.payload["crawler_run_id"].as_string()
@@ -1090,7 +1065,6 @@ async def execute_crawler_run(
     user: models.User,
 ) -> models.CrawlerRun:
     """Execute a crawler run: instantiate adapter, crawl, persist leads, update stats."""
-
     stats = {
         "leads_found": 0,
         "leads_created": 0,
@@ -1098,7 +1072,6 @@ async def execute_crawler_run(
         "errors": 0,
     }
 
-    # Load pipeline
     pipeline = await db.get(models.CrawlerPipeline, run.crawler_pipeline_id)
     if pipeline is None:
         run.status = "failed"
@@ -1107,19 +1080,16 @@ async def execute_crawler_run(
         await db.commit()
         return run
 
-    # Transition to running
     run.status = "running"
     run.started_at = datetime.utcnow()
     await db.commit()
 
-    # Update OrchestrationEvent to RUNNING
     event = await _find_orchestration_event_for_run(run.id, db)
     if event is not None:
         event.status = "running"
         event.message = f"Crawler run started for pipeline {pipeline.name}"
         await db.commit()
 
-    # Build a UserRead-compatible object for create_lead
     user_read = schemas.UserRead.model_validate(user, from_attributes=True)
 
     try:
@@ -1131,7 +1101,6 @@ async def execute_crawler_run(
 
         async with adapter:
             async for result in adapter.search_jobs():
-                # Check for external cancel/pause before processing each lead
                 await db.refresh(run, ["status"])
                 if run.status == "cancelled":
                     run.stats = stats
@@ -1163,7 +1132,6 @@ async def execute_crawler_run(
                 try:
                     lead_payload = crawler_result_to_lead_create(result)
                     lead_result = await create_lead(lead_payload, db, user_read)
-
                     if (
                         lead_result.disposition
                         == schemas.LeadExtractDisposition.CREATED
@@ -1175,10 +1143,7 @@ async def execute_crawler_run(
                     await log.exception(f"Error persisting lead from {result.url}")
                     stats["errors"] += 1
 
-        # Check if pipeline requires approval for created leads
-        _approval_required = getattr(pipeline, "requires_approval", False)
-
-        if _approval_required and stats["leads_created"] > 0:
+        if pipeline.requires_approval and stats["leads_created"] > 0:
             run.status = "pending_review"
             run.finished_at = datetime.utcnow()
             run.stats = stats
@@ -1192,7 +1157,6 @@ async def execute_crawler_run(
                 )
                 await db.commit()
         else:
-            # Success — no approval needed
             run.status = "success"
             run.finished_at = datetime.utcnow()
             run.stats = stats
@@ -1205,7 +1169,6 @@ async def execute_crawler_run(
                     f"{stats['leads_deduped']} deduped, {stats['errors']} errors"
                 )
                 await db.commit()
-
     except Exception as exc:
         await log.exception(f"Crawler run {run.id} failed: {exc}")
         run.status = "failed"
@@ -1240,24 +1203,63 @@ async def execute_crawler_run_background(run_id: uuid.UUID, user_id: uuid.UUID) 
         await execute_crawler_run(run, db, user)
 
 
-def schedule_crawler_run_execution(
+async def mark_crawler_run_enqueue_failure(
+    run_id: uuid.UUID, error_summary: str
+) -> None:
+    """Mark a crawler run terminal if inline recovery cannot be scheduled."""
+    async with session_context() as db:
+        run = await db.get(models.CrawlerRun, run_id)
+        if run is None:
+            await log.error(
+                "mark_crawler_run_enqueue_failure: run %s not found",
+                run_id,
+            )
+            return
+
+        run.status = "failed"
+        run.finished_at = datetime.utcnow()
+        run.error_summary = error_summary[:2000]
+
+        event = await _find_orchestration_event_for_run(run_id, db)
+        if event is not None:
+            event.status = "failure"
+            event.message = (
+                f"Crawler run failed before execution: {error_summary[:500]}"
+            )
+
+        await db.commit()
+
+
+async def schedule_crawler_run_execution(
     run_id: uuid.UUID,
     user_id: uuid.UUID,
     *,
     background_tasks: BackgroundTasks | None = None,
 ) -> None:
-    """Schedule crawler execution unless the app is running under PYTEST.
-
-    ASGITransport-backed integration tests wait for response background tasks,
-    so launching the real crawler there would pull Playwright and external
-    network work into request assertions. In PYTEST we keep the run in its
-    queued state and let tests mutate statuses explicitly when needed.
-    """
+    """Enqueue crawler execution when possible, else fall back to inline execution."""
     if conf.settings.ENVIRONMENT == "PYTEST":
         return
+
+    from app.crawler_queue import _queue_enabled, enqueue_crawler_job
+
+    if _queue_enabled():
+        enqueued = await enqueue_crawler_job(str(run_id), str(user_id))
+        if enqueued:
+            return
+        await log.warning(
+            f"Falling back to inline crawler execution for run {run_id} after queue enqueue failure"
+        )
 
     if background_tasks is not None:
         background_tasks.add_task(execute_crawler_run_background, run_id, user_id)
         return
 
-    asyncio.create_task(execute_crawler_run_background(run_id, user_id))
+    try:
+        asyncio.create_task(execute_crawler_run_background(run_id, user_id))
+    except RuntimeError as exc:
+        error_summary = (
+            "Unable to schedule inline crawler execution after queue enqueue failure: "
+            f"{exc}"
+        )
+        await log.exception(error_summary)
+        await mark_crawler_run_enqueue_failure(run_id, error_summary)

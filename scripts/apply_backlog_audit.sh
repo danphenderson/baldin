@@ -80,16 +80,15 @@ Backend database management API now exists at \`backend/app/api/routes/db_manage
 
 The original stretch goals (superuser auth, base model separation) are also addressed. Recommend closing."
 
-close_comment 84 "**Closure recommendation: Implemented by PR #130**
+close_comment 84 "**Closure recommendation: No longer aligned with current direction**
 
-\`backend/dev.py\` exists as a Typer CLI with the following commands:
-- \`code\` — Generate code snippets using OpenAI with codebase context
-- \`qa\` — Q&A chatbot with OpenAI
-- \`find\` — Search HTML/Chromium content
-- \`bs_find\` — BeautifulSoup HTML search
-- \`docs_codegen\` / \`docs_qa\` — Placeholder commands
+The original request targeted a repo-local AI assistant CLI at \`backend/dev.py\`.
+That entry point has been intentionally removed from the current codebase and is
+no longer part of Baldin's local-first developer-preview workflow.
 
-The AI assistant CLI is functional. Recommend closing."
+The active repo direction keeps AI-assisted development in the Copilot and issue
+dispatch workflow rather than a checked-in backend CLI surface. Recommend
+closing as not planned."
 
 close_comment 92 "**Closure recommendation: Implemented by PR #130**
 

@@ -87,9 +87,168 @@ async_engine = create_async_engine(
 # Create an asynchronous session maker
 async_session_maker = async_sessionmaker(bind=async_engine, expire_on_commit=False)
 
+_ENUM_COLUMN_SPECS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
+    (
+        "applications",
+        "status",
+        "applicationstatus",
+        tuple(status.value for status in models.ApplicationStatus),
+    ),
+    (
+        "crawler_runs",
+        "status",
+        "crawlerrunstatus",
+        tuple(status.value for status in models.CrawlerRunStatus),
+    ),
+    (
+        "leads",
+        "review_status",
+        "leadreviewstatus",
+        tuple(status.value for status in models.LeadReviewStatus),
+    ),
+)
+
 
 def _quote_identifier(connection: Connection, identifier: str) -> str:
     return connection.dialect.identifier_preparer.quote(identifier)
+
+
+def _quote_literal(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
+def _get_enum_labels(connection: Connection, enum_name: str) -> list[str]:
+    result = connection.execute(
+        text(
+            """
+            SELECT enumlabel
+            FROM pg_type AS t
+            JOIN pg_enum AS e ON t.oid = e.enumtypid
+            WHERE t.typname = :enum_name
+            ORDER BY e.enumsortorder
+            """
+        ),
+        {"enum_name": enum_name},
+    )
+    return [row[0] for row in result]
+
+
+def _get_column_type_info(
+    connection: Connection, table_name: str, column_name: str
+) -> tuple[str, str] | None:
+    result = connection.execute(
+        text(
+            """
+            SELECT data_type, udt_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = :table_name
+              AND column_name = :column_name
+            """
+        ),
+        {"table_name": table_name, "column_name": column_name},
+    ).first()
+    if result is None:
+        return None
+    return result[0], result[1]
+
+
+def _sync_enum_labels(
+    connection: Connection, enum_name: str, desired_labels: tuple[str, ...]
+) -> None:
+    existing_labels = _get_enum_labels(connection, enum_name)
+    if not existing_labels or existing_labels == list(desired_labels):
+        return
+
+    if len(existing_labels) != len(desired_labels):
+        console_log.warning(
+            "Skipped enum label repair for %s because the existing label count does not match the model.",
+            enum_name,
+        )
+        return
+
+    for existing_label, desired_label in zip(existing_labels, desired_labels):
+        if existing_label == desired_label:
+            continue
+        if existing_label.lower() != desired_label.lower():
+            console_log.warning(
+                "Skipped enum label repair for %s because label %s does not match expected value %s.",
+                enum_name,
+                existing_label,
+                desired_label,
+            )
+            return
+
+    quoted_enum_name = _quote_identifier(connection, enum_name)
+    for existing_label, desired_label in zip(existing_labels, desired_labels):
+        if existing_label == desired_label:
+            continue
+
+        connection.execute(
+            text(
+                "ALTER TYPE "
+                f"{quoted_enum_name} RENAME VALUE {_quote_literal(existing_label)} "
+                f"TO {_quote_literal(desired_label)}"
+            )
+        )
+        console_log.info(
+            "Renamed enum label %s.%s -> %s during bootstrap schema sync.",
+            enum_name,
+            existing_label,
+            desired_label,
+        )
+
+
+def _sync_string_backed_enum_column(
+    connection: Connection,
+    table_name: str,
+    column_name: str,
+    enum_name: str,
+) -> None:
+    column_type = _get_column_type_info(connection, table_name, column_name)
+    if column_type is None:
+        return
+
+    data_type, udt_name = column_type
+    if data_type == "USER-DEFINED" and udt_name == enum_name:
+        return
+
+    if data_type not in {"character varying", "text"}:
+        console_log.warning(
+            "Skipped enum column repair for %s.%s because the existing type is %s (%s).",
+            table_name,
+            column_name,
+            data_type,
+            udt_name,
+        )
+        return
+
+    quoted_table_name = _quote_identifier(connection, table_name)
+    quoted_column_name = _quote_identifier(connection, column_name)
+    quoted_enum_name = _quote_identifier(connection, enum_name)
+
+    connection.execute(
+        text(
+            "ALTER TABLE "
+            f"{quoted_table_name} ALTER COLUMN {quoted_column_name} TYPE {quoted_enum_name} "
+            "USING CASE "
+            f"WHEN {quoted_column_name} IS NULL THEN NULL "
+            f"ELSE lower({quoted_column_name}::text)::{quoted_enum_name} END"
+        )
+    )
+    console_log.info(
+        "Converted %s.%s from %s to enum %s during bootstrap schema sync.",
+        table_name,
+        column_name,
+        data_type,
+        enum_name,
+    )
+
+
+def _sync_named_enum_columns(connection: Connection) -> None:
+    for table_name, column_name, enum_name, desired_labels in _ENUM_COLUMN_SPECS:
+        _sync_enum_labels(connection, enum_name, desired_labels)
+        _sync_string_backed_enum_column(connection, table_name, column_name, enum_name)
 
 
 def _sync_missing_columns(connection: Connection) -> None:
@@ -178,6 +337,7 @@ def _create_and_sync_schema(connection: Connection) -> None:
     models.Base.metadata.create_all(connection)
     _sync_missing_columns(connection)
     _sync_missing_named_unique_constraints(connection)
+    _sync_named_enum_columns(connection)
 
 
 async def _terminate_other_test_db_sessions(conn: AsyncSession | Any) -> None:
@@ -385,19 +545,19 @@ class DataBaseManager:
         }
 
         if pipeline_ids:
-            deleted_records[models.OrchestrationEvent.__tablename__] = (
-                await self._delete_rows(
-                    models.OrchestrationEvent,
-                    models.OrchestrationEvent.pipeline_id.in_(pipeline_ids),
-                )
+            deleted_records[
+                models.OrchestrationEvent.__tablename__
+            ] = await self._delete_rows(
+                models.OrchestrationEvent,
+                models.OrchestrationEvent.pipeline_id.in_(pipeline_ids),
             )
 
         if extractor_ids:
-            deleted_records[models.ExtractorExample.__tablename__] = (
-                await self._delete_rows(
-                    models.ExtractorExample,
-                    models.ExtractorExample.extractor_id.in_(extractor_ids),
-                )
+            deleted_records[
+                models.ExtractorExample.__tablename__
+            ] = await self._delete_rows(
+                models.ExtractorExample,
+                models.ExtractorExample.extractor_id.in_(extractor_ids),
             )
 
         resume_link_conditions: list[Any] = []
@@ -409,10 +569,10 @@ class DataBaseManager:
             resume_link_conditions.append(
                 models.ResumeXApplication.resume_id.in_(resume_ids)
             )
-        deleted_records[models.ResumeXApplication.__tablename__] = (
-            await self._delete_rows_matching_any(
-                models.ResumeXApplication, resume_link_conditions
-            )
+        deleted_records[
+            models.ResumeXApplication.__tablename__
+        ] = await self._delete_rows_matching_any(
+            models.ResumeXApplication, resume_link_conditions
         )
 
         cover_letter_link_conditions: list[Any] = []
@@ -424,16 +584,16 @@ class DataBaseManager:
             cover_letter_link_conditions.append(
                 models.CoverLetterXApplication.cover_letter_id.in_(cover_letter_ids)
             )
-        deleted_records[models.CoverLetterXApplication.__tablename__] = (
-            await self._delete_rows_matching_any(
-                models.CoverLetterXApplication, cover_letter_link_conditions
-            )
+        deleted_records[
+            models.CoverLetterXApplication.__tablename__
+        ] = await self._delete_rows_matching_any(
+            models.CoverLetterXApplication, cover_letter_link_conditions
         )
 
-        deleted_records[models.LeadRegistration.__tablename__] = (
-            await self._delete_rows(
-                models.LeadRegistration, models.LeadRegistration.user_id == user_id
-            )
+        deleted_records[
+            models.LeadRegistration.__tablename__
+        ] = await self._delete_rows(
+            models.LeadRegistration, models.LeadRegistration.user_id == user_id
         )
         deleted_records[models.LeadComment.__tablename__] = await self._delete_rows(
             models.LeadComment, models.LeadComment.author_user_id == user_id
@@ -466,11 +626,11 @@ class DataBaseManager:
         deleted_records[models.Extractor.__tablename__] = await self._delete_rows(
             models.Extractor, models.Extractor.user_id == user_id
         )
-        deleted_records[models.OrchestrationPipeline.__tablename__] = (
-            await self._delete_rows(
-                models.OrchestrationPipeline,
-                models.OrchestrationPipeline.user_id == user_id,
-            )
+        deleted_records[
+            models.OrchestrationPipeline.__tablename__
+        ] = await self._delete_rows(
+            models.OrchestrationPipeline,
+            models.OrchestrationPipeline.user_id == user_id,
         )
 
         return deleted_records

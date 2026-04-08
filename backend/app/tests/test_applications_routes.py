@@ -74,6 +74,7 @@ async def _create_user(
 async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
+    app.state.limiter.reset()
     response = await client.post(
         "/auth/jwt/login",
         data={"username": email, "password": password},
@@ -114,6 +115,37 @@ async def _create_document_via_db(user_id: UUID) -> UUID:
             user_id=user_id,
         )
         session.add(doc)
+        await session.commit()
+        return doc.id
+
+
+async def _create_versioned_document_via_db(
+    user_id: UUID,
+    *,
+    title: str = "Test Doc",
+    content: str = "Document body",
+) -> UUID:
+    async with session_context() as session:
+        doc = models.Document(
+            title=title,
+            kind="resume",
+            status="draft",
+            user_id=user_id,
+        )
+        session.add(doc)
+        await session.flush()
+
+        version = models.DocumentVersion(
+            document_id=doc.id,
+            version_number=1,
+            name="v1",
+            content=content,
+            content_format="plain_text",
+        )
+        session.add(version)
+        await session.flush()
+
+        doc.head_version_id = version.id
         await session.commit()
         return doc.id
 
@@ -487,6 +519,158 @@ async def test_attach_duplicate_document_returns_400() -> None:
 
     assert second.status_code == 400
     assert "already attached" in second.json()["detail"].lower()
+
+
+async def test_application_documents_include_shared_attachments() -> None:
+    """GET /applications/{id}/documents includes shared documents attached by the caller."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        viewer_id, viewer_headers = await _get_auth(client)
+        _, owner_id = await _create_user("SharedDocOwnerPass1!")
+        lead_id = await _create_lead()
+
+        create_resp = await client.post(
+            "/applications/",
+            json={"lead_id": str(lead_id), "status": "applied"},
+            headers=viewer_headers,
+        )
+        app_id = create_resp.json()["id"]
+
+        shared_doc_id = await _create_versioned_document_via_db(
+            owner_id,
+            title="Shared Application Doc",
+            content="Shared attachment body",
+        )
+
+        async with session_context() as session:
+            session.add(
+                models.DocumentShare(
+                    document_id=shared_doc_id,
+                    shared_with_user_id=viewer_id,
+                    shared_by_user_id=owner_id,
+                    role="viewer",
+                )
+            )
+            await session.commit()
+
+        attach_resp = await client.post(
+            f"/applications/{app_id}/documents",
+            json={"document_id": str(shared_doc_id)},
+            headers=viewer_headers,
+        )
+        assert attach_resp.status_code == 201
+
+        list_resp = await client.get(
+            f"/applications/{app_id}/documents", headers=viewer_headers
+        )
+
+    assert list_resp.status_code == 200
+    document_ids = {document["id"] for document in list_resp.json()}
+    assert str(shared_doc_id) in document_ids
+
+
+async def test_application_documents_exclude_inaccessible_other_user_attachments() -> (
+    None
+):
+    """GET /applications/{id}/documents excludes attached documents the caller cannot access."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        owner_id, headers = await _get_auth(client)
+        _, other_user_id = await _create_user("OtherOwnerPass1!")
+        lead_id = await _create_lead()
+
+        create_resp = await client.post(
+            "/applications/",
+            json={"lead_id": str(lead_id), "status": "applied"},
+            headers=headers,
+        )
+        app_id = create_resp.json()["id"]
+
+        owner_doc_id = await _create_document_via_db(owner_id)
+        other_doc_id = await _create_document_via_db(other_user_id)
+
+        attach_resp = await client.post(
+            f"/applications/{app_id}/documents",
+            json={"document_id": str(owner_doc_id)},
+            headers=headers,
+        )
+        assert attach_resp.status_code == 201
+
+        async with session_context() as session:
+            session.add(
+                models.DocumentXApplication(
+                    application_id=UUID(app_id),
+                    document_id=other_doc_id,
+                )
+            )
+            await session.commit()
+
+        list_resp = await client.get(
+            f"/applications/{app_id}/documents", headers=headers
+        )
+
+    assert list_resp.status_code == 200
+    document_ids = {document["id"] for document in list_resp.json()}
+    assert str(owner_doc_id) in document_ids
+    assert str(other_doc_id) not in document_ids
+
+
+async def test_application_export_includes_shared_attached_documents() -> None:
+    """GET /applications/{id}/export includes attached shared documents the caller can access."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        viewer_id, viewer_headers = await _get_auth(client)
+        _, owner_id = await _create_user("SharedExportOwnerPass1!")
+        lead_id = await _create_lead()
+
+        create_resp = await client.post(
+            "/applications/",
+            json={"lead_id": str(lead_id), "status": "applied"},
+            headers=viewer_headers,
+        )
+        app_id = create_resp.json()["id"]
+
+        shared_doc_id = await _create_versioned_document_via_db(
+            owner_id,
+            title="Shared Export Doc",
+            content="Shared export body",
+        )
+
+        async with session_context() as session:
+            session.add(
+                models.DocumentShare(
+                    document_id=shared_doc_id,
+                    shared_with_user_id=viewer_id,
+                    shared_by_user_id=owner_id,
+                    role="viewer",
+                )
+            )
+            await session.commit()
+
+        attach_resp = await client.post(
+            f"/applications/{app_id}/documents",
+            json={"document_id": str(shared_doc_id)},
+            headers=viewer_headers,
+        )
+        assert attach_resp.status_code == 201
+
+        export_resp = await client.get(
+            f"/applications/{app_id}/export",
+            headers=viewer_headers,
+        )
+
+    assert export_resp.status_code == 200
+    assert export_resp.headers["content-type"] == "application/zip"
+
+    body = b""
+    async for chunk in export_resp.aiter_bytes():
+        body += chunk
+
+    import zipfile
+    from io import BytesIO
+
+    with zipfile.ZipFile(BytesIO(body)) as archive:
+        assert "documents/Shared Export Doc.pdf" in archive.namelist()
 
 
 async def test_detach_document_not_attached_returns_404() -> None:

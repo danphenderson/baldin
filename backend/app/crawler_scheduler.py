@@ -1,10 +1,9 @@
 # Path: app/crawler_scheduler.py
-"""
-Background scheduler loop for recurring CrawlerPipeline execution.
+"""Background scheduler loop for recurring CrawlerPipeline execution.
 
 Runs as an asyncio task during the app lifespan, checking for due pipelines
-every POLL_INTERVAL_SECONDS and dispatching scheduled runs through the same
-execute_crawler_run_background path used by manual triggers.
+at the configured interval and dispatching scheduled runs through the same
+queue-aware scheduling helper used by manual triggers.
 """
 
 import asyncio
@@ -13,13 +12,12 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, text
 
 from app import models
+from app.core import conf
 from app.core.db import session_context
 from app.logging import get_async_logger
 
 log = get_async_logger(__name__)
 
-POLL_INTERVAL_SECONDS = 60
-# Stable, app-specific advisory lock key for the in-process crawler scheduler.
 _SCHEDULER_ADVISORY_LOCK_ID = 64127831
 
 
@@ -40,27 +38,31 @@ async def _release_scheduler_leader_lock(db) -> None:
 
 async def crawler_scheduler_loop() -> None:
     """Long-running loop that polls for due CrawlerPipelines and launches runs."""
-    await log.info("Crawler scheduler started")
+    await log.info(
+        "Crawler scheduler started (interval=%ss, mode=%s)",
+        conf.settings.CRAWLER_SCHEDULER_INTERVAL,
+        conf.settings.CRAWLER_EXECUTION_MODE,
+    )
 
     while True:
         try:
             await _tick()
         except asyncio.CancelledError:
-            await log.info("Crawler scheduler cancelled — shutting down")
+            await log.info("Crawler scheduler cancelled; shutting down")
             return
         except Exception:
             await log.exception("Crawler scheduler tick failed")
 
         try:
-            await asyncio.sleep(POLL_INTERVAL_SECONDS)
+            await asyncio.sleep(conf.settings.CRAWLER_SCHEDULER_INTERVAL)
         except asyncio.CancelledError:
-            await log.info("Crawler scheduler cancelled during sleep — shutting down")
+            await log.info("Crawler scheduler cancelled during sleep; shutting down")
             return
 
 
 async def _tick() -> None:
-    """Single scheduler tick: find due pipelines and launch runs."""
-    from app.api.deps import create_crawler_run, execute_crawler_run_background
+    """Single scheduler tick: find due pipelines and schedule runs."""
+    from app.api.deps import create_crawler_run, schedule_crawler_run_execution
 
     now = datetime.now(timezone.utc)
 
@@ -89,7 +91,6 @@ async def _tick() -> None:
                 if not next_run_at_raw or not interval_minutes:
                     continue
 
-                # Parse next_run_at — accept ISO 8601
                 if isinstance(next_run_at_raw, str):
                     next_run_at = datetime.fromisoformat(
                         next_run_at_raw.replace("Z", "+00:00")
@@ -99,24 +100,21 @@ async def _tick() -> None:
                 else:
                     continue
 
-                # Make offset-aware if naive
                 if next_run_at.tzinfo is None:
                     next_run_at = next_run_at.replace(tzinfo=timezone.utc)
 
                 if next_run_at > now:
                     continue
 
-                # Pipeline is due — create a scheduled run
                 await log.info(
-                    f"Scheduler: pipeline {pipeline.id} ({pipeline.name}) is due"
+                    "Scheduler: pipeline %s (%s) is due",
+                    pipeline.id,
+                    pipeline.name,
                 )
 
                 run = await create_crawler_run(pipeline, "scheduled", db)
 
-                # Advance next_run_at
                 new_next = next_run_at + timedelta(minutes=interval_minutes)
-                # If the new time is still in the past (e.g. app was offline),
-                # skip forward to the next future slot
                 while new_next <= now:
                     new_next += timedelta(minutes=interval_minutes)
 
@@ -126,18 +124,18 @@ async def _tick() -> None:
                 await db.commit()
 
                 if pipeline.requires_approval:
-                    # Hold for review — don't execute
                     run.status = "pending_review"
                     await db.commit()
                     await log.info(
-                        f"Scheduler: pipeline {pipeline.id} run {run.id} held for review"
+                        "Scheduler: pipeline %s run %s held for review",
+                        pipeline.id,
+                        run.id,
                     )
-                else:
-                    # Launch in background — use the pipeline creator as the acting user
-                    asyncio.create_task(
-                        execute_crawler_run_background(
-                            run.id, pipeline.created_by_user_id
-                        )
-                    )
+                    continue
+
+                await schedule_crawler_run_execution(
+                    run.id,
+                    pipeline.created_by_user_id,
+                )
         finally:
             await _release_scheduler_leader_lock(db)

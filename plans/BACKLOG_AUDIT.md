@@ -12,8 +12,8 @@
 
 | Category | Count |
 |----------|-------|
-| Recommended for closure (implemented/superseded) | 14 |
-| Recommended for closure (no longer aligned) | 7 |
+| Recommended for closure (implemented/superseded) | 13 |
+| Recommended for closure (no longer aligned) | 8 |
 | Updated for implementation (still active) | 13 |
 | Needs human follow-up | 4 |
 | **Total** | **38** |
@@ -28,7 +28,6 @@
 |-------|-------|-------------|-----------|
 | #102 | Fix: Admin UI Authentication & Authorization | Implemented | AdminAuthProvider with superuser login, session management, and custom login template now exist in `backend/app/admin.py` |
 | #87 | Feat: backend database management API | Implemented | `backend/app/api/routes/db_management.py` provides table listing, user data purge, and user deletion with superuser-only auth |
-| #84 | Feat: backend/dev.py ai assistant | Implemented | `backend/dev.py` exists as a Typer CLI with code generation, Q&A, and search commands |
 | #92 | PDF download of cover letters and resumes | Implemented | Both `/resumes/{id}/download` and `/cover-letters/{id}/download` endpoints generate PDFs via ReportLab |
 | #81 | Feat: frontend for extractor/ API | Implemented | `frontend/src/page/extractor.tsx` provides full extractor UI with runs, versions, and examples management |
 | #80 | Feat: frontend for data_orchestration/ API | Implemented | `frontend/src/page/pipelines.tsx` provides pipeline/orchestration UI; extractor page also exists |
@@ -48,6 +47,7 @@
 | #122 | Feat: fastapi-mail integration | Not aligned | Baldin's local-first developer-preview direction has no email sending requirement; notifications are out of scope for the current hardening phases |
 | #109 | Feat: 'gh issue' alias in ~/.zshrc | Not aligned | Personal developer environment configuration is not a repository concern |
 | #90 | Fix: Beta Release registration token | Not aligned | The current direction is local-first developer-preview with Docker Compose, not gated beta access; FastAPI-Users handles auth |
+| #84 | Feat: backend/dev.py ai assistant | Not aligned | The repo-local AI assistant CLI at `backend/dev.py` was intentionally removed and is no longer part of Baldin's current local-first developer-preview workflow |
 | #74 | Chore: create Button common component | Not aligned | The frontend redesign uses MUI components directly; wrapper components add unnecessary abstraction for the current architecture |
 | #70 | Feat: package backend etl and app individually | Not aligned | The backend is a single deployable unit via Docker; splitting packages adds complexity without benefit for local-first development |
 | #66 | Feat: add Search & AutoComplete common components | Not aligned | MUI DataGrid has built-in column filtering; lead-search-bar.tsx handles lead-specific search; generic wrappers add unnecessary abstraction |

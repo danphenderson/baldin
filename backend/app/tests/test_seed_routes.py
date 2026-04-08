@@ -1,14 +1,21 @@
 import json
 from contextlib import asynccontextmanager
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
+from fastapi import BackgroundTasks
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
 from pytest import MonkeyPatch
 
+import app.crawler_queue as crawler_queue
 from app import models, schemas
-from app.api.routes.seed_tasks import SeedOperation, _run_seed_operation
+from app.api.routes.seed_tasks import (
+    SeedOperation,
+    _run_seed_operation,
+    schedule_seed_operation,
+)
 from app.core import conf
 from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
 from app.main import app
@@ -57,6 +64,7 @@ async def _auth_headers(
     email: str,
     password: str,
 ) -> dict[str, str]:
+    app.state.limiter.reset()
     response = await client.post(
         "/auth/jwt/login",
         data={"username": email, "password": password},
@@ -192,3 +200,99 @@ async def test_background_seed_failure_marks_event_failed(
         assert refreshed_event is not None
         assert refreshed_event.status == schemas.OrchestrationEventStatusType.FAILED
         assert refreshed_event.message == "seed batch failure"
+
+
+async def test_schedule_seed_operation_enqueues_job_in_worker_mode(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    background_tasks = BackgroundTasks()
+    enqueue_mock = AsyncMock(return_value=True)
+
+    monkeypatch.setattr(conf.settings, "ENVIRONMENT", "DEV")
+    monkeypatch.setattr(crawler_queue, "_queue_enabled", lambda: True)
+    monkeypatch.setattr(crawler_queue, "enqueue_seed_job", enqueue_mock)
+
+    async def _creator(record, db, user):
+        del record, db, user
+        return None
+
+    async with _test_client_with_fresh_db():
+        async with session_context() as session:
+            user = await utils.create_db_user(
+                utils.random_email(),
+                password_helper.hash("SeedQueuePass1"),
+                session,
+            )
+            await session.commit()
+            user_id = user.id
+            pipeline_name = f"seed-queue-{utils.random_lower_string(8)}"
+
+            accepted = await schedule_seed_operation(
+                background_tasks,
+                session,
+                schemas.UserRead.model_validate(user, from_attributes=True),
+                SeedOperation(
+                    pipeline_name=pipeline_name,
+                    resource_name="Seed Queue Test",
+                    seed_filename="contacts.json",
+                    destination_table="contacts",
+                    creator=_creator,
+                ),
+            )
+
+    assert accepted.status == schemas.OrchestrationEventStatusType.PENDING
+    enqueue_mock.assert_awaited_once_with(
+        pipeline_name,
+        str(accepted.event_id),
+        str(user_id),
+    )
+    assert background_tasks.tasks == []
+
+
+async def test_schedule_seed_operation_falls_back_when_enqueue_fails(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    background_tasks = BackgroundTasks()
+    enqueue_mock = AsyncMock(return_value=False)
+
+    monkeypatch.setattr(conf.settings, "ENVIRONMENT", "DEV")
+    monkeypatch.setattr(crawler_queue, "_queue_enabled", lambda: True)
+    monkeypatch.setattr(crawler_queue, "enqueue_seed_job", enqueue_mock)
+
+    async def _creator(record, db, user):
+        del record, db, user
+        return None
+
+    async with _test_client_with_fresh_db():
+        async with session_context() as session:
+            user = await utils.create_db_user(
+                utils.random_email(),
+                password_helper.hash("SeedQueueFallback1"),
+                session,
+            )
+            await session.commit()
+            user_id = user.id
+            pipeline_name = f"seed-queue-fallback-{utils.random_lower_string(8)}"
+
+            accepted = await schedule_seed_operation(
+                background_tasks,
+                session,
+                schemas.UserRead.model_validate(user, from_attributes=True),
+                SeedOperation(
+                    pipeline_name=pipeline_name,
+                    resource_name="Seed Queue Test",
+                    seed_filename="contacts.json",
+                    destination_table="contacts",
+                    creator=_creator,
+                ),
+            )
+
+    assert accepted.status == schemas.OrchestrationEventStatusType.PENDING
+    enqueue_mock.assert_awaited_once_with(
+        pipeline_name,
+        str(accepted.event_id),
+        str(user_id),
+    )
+    assert len(background_tasks.tasks) == 1
+    task = background_tasks.tasks[0]
+    assert task.func is _run_seed_operation

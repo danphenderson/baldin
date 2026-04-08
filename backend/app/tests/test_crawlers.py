@@ -7,6 +7,7 @@ ETL adapter normalization, and scheduler guard.
 """
 
 from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -70,6 +71,7 @@ async def _create_user(
 async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
+    app.state.limiter.reset()
     response = await client.post(
         "/auth/jwt/login",
         data={"username": email, "password": password},
@@ -266,6 +268,35 @@ async def test_superuser_triggers_manual_run():
         assert body["trigger_type"] == "manual"
         assert body["status"] == "pending"
         assert body["crawler_pipeline_id"] == pipeline_id
+
+
+async def test_superuser_triggers_manual_run_awaits_checked_queue_handoff(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """POST /crawlers/pipelines/{id}/runs awaits the queue handoff helper."""
+    await _ensure_db_ready()
+    schedule_mock = AsyncMock(return_value=None)
+    monkeypatch.setattr(api_deps, "schedule_crawler_run_execution", schedule_mock)
+
+    async with _client() as client:
+        email, user_id = await _create_user("super-await-run", is_superuser=True)
+        headers = await _auth_headers(client, email, "super-await-run")
+
+        create_resp = await client.post(
+            "/crawlers/pipelines", json=_pipeline_payload(), headers=headers
+        )
+        pipeline_id = create_resp.json()["id"]
+
+        resp = await client.post(
+            f"/crawlers/pipelines/{pipeline_id}/runs", headers=headers
+        )
+        assert resp.status_code == 200
+        run_id = UUID(resp.json()["id"])
+
+    schedule_mock.assert_awaited_once()
+    assert schedule_mock.await_args.args[0] == run_id
+    assert schedule_mock.await_args.args[1] == user_id
+    assert schedule_mock.await_args.kwargs["background_tasks"] is not None
 
 
 # ---------------------------------------------------------------------------

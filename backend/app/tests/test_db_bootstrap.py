@@ -39,6 +39,26 @@ async def _column_names(table_name: str) -> set[str]:
         return {row[0] for row in result.all()}
 
 
+async def _column_type(table_name: str, column_name: str) -> tuple[str, str] | None:
+    async with session_context() as session:
+        result = await session.execute(
+            text(
+                """
+                SELECT data_type, udt_name
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = :table_name
+                  AND column_name = :column_name
+                """
+            ),
+            {"table_name": table_name, "column_name": column_name},
+        )
+        row = result.first()
+        if row is None:
+            return None
+        return row[0], row[1]
+
+
 async def _table_exists(table_name: str) -> bool:
     async with session_context() as session:
         result = await session.execute(
@@ -209,6 +229,137 @@ async def test_create_db_and_tables_repairs_existing_local_schema() -> None:
 
         assert repaired_crawler_pipeline is not None
         assert repaired_crawler_pipeline.requires_approval is False
+
+
+async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None:
+    await async_engine.dispose()
+    await drop_and_create_db_and_tables()
+
+    async with session_context() as session:
+        user = await utils.create_db_user(
+            utils.random_email(),
+            password_helper.hash("geralt"),
+            session,
+        )
+        lead = await utils.create_lead(session)
+        lead.review_status = models.LeadReviewStatus.PENDING_REVIEW
+
+        crawler_pipeline = models.CrawlerPipeline(
+            name="Enum repair crawler",
+            source="linkedin",
+            query_definition={"keywords": ["python"]},
+            created_by_user_id=user.id,
+        )
+        session.add(crawler_pipeline)
+        await session.flush()
+
+        crawler_run = models.CrawlerRun(
+            crawler_pipeline_id=crawler_pipeline.id,
+            trigger_type="manual",
+            status=models.CrawlerRunStatus.RUNNING,
+        )
+        application = models.Application(
+            lead_id=lead.id,
+            user_id=user.id,
+            status=models.ApplicationStatus.APPLIED,
+        )
+        session.add_all([crawler_run, application])
+        await session.commit()
+
+        lead_id = lead.id
+        crawler_run_id = crawler_run.id
+        application_id = application.id
+
+    async with session_context() as session:
+        await session.execute(
+            text(
+                "ALTER TABLE applications ALTER COLUMN status TYPE varchar USING status::text"
+            )
+        )
+        await session.execute(
+            text(
+                "ALTER TABLE crawler_runs ALTER COLUMN status TYPE varchar USING status::text"
+            )
+        )
+        await session.execute(
+            text(
+                "ALTER TABLE leads ALTER COLUMN review_status TYPE varchar USING review_status::text"
+            )
+        )
+
+        await session.execute(
+            text(
+                "UPDATE applications SET status = 'applied' WHERE id = :application_id"
+            ),
+            {"application_id": application_id},
+        )
+        await session.execute(
+            text(
+                "UPDATE crawler_runs SET status = 'RUNNING' WHERE id = :crawler_run_id"
+            ),
+            {"crawler_run_id": crawler_run_id},
+        )
+        await session.execute(
+            text(
+                "UPDATE leads SET review_status = 'pending_review' WHERE id = :lead_id"
+            ),
+            {"lead_id": lead_id},
+        )
+
+        await session.execute(
+            text("ALTER TYPE applicationstatus RENAME VALUE 'applied' TO 'APPLIED'")
+        )
+        await session.execute(
+            text("ALTER TYPE crawlerrunstatus RENAME VALUE 'running' TO 'RUNNING'")
+        )
+        await session.execute(
+            text(
+                "ALTER TYPE leadreviewstatus RENAME VALUE 'pending_review' TO 'PENDING_REVIEW'"
+            )
+        )
+        await session.commit()
+
+    assert await _column_type("applications", "status") == (
+        "character varying",
+        "varchar",
+    )
+    assert await _column_type("crawler_runs", "status") == (
+        "character varying",
+        "varchar",
+    )
+    assert await _column_type("leads", "review_status") == (
+        "character varying",
+        "varchar",
+    )
+
+    await create_db_and_tables()
+
+    assert await _column_type("applications", "status") == (
+        "USER-DEFINED",
+        "applicationstatus",
+    )
+    assert await _column_type("crawler_runs", "status") == (
+        "USER-DEFINED",
+        "crawlerrunstatus",
+    )
+    assert await _column_type("leads", "review_status") == (
+        "USER-DEFINED",
+        "leadreviewstatus",
+    )
+
+    async with session_context() as session:
+        repaired_application = await session.get(models.Application, application_id)
+        repaired_crawler_run = await session.get(models.CrawlerRun, crawler_run_id)
+        repaired_lead = await session.get(models.Lead, lead_id)
+
+        assert repaired_application is not None
+        assert repaired_application.status == models.ApplicationStatus.APPLIED
+
+        assert repaired_crawler_run is not None
+        assert repaired_crawler_run.status == models.CrawlerRunStatus.RUNNING
+
+        assert repaired_lead is not None
+        assert repaired_lead.review_status == models.LeadReviewStatus.PENDING_REVIEW
 
 
 @pytest.mark.parametrize(

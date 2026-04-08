@@ -9,7 +9,7 @@ description: Work locally with Docker Compose or outside-container loops and the
 
 # Work Locally
 
-Baldin uses Docker Compose as the local-first entry point. All four services start with a single command.
+Baldin uses Docker Compose as the local-first entry point. All six services start with a single command.
 
 If you use Baldin's workspace skills, `/baldin-local-stack-doctor` helps triage local Compose failures, `test_db` connectivity problems, schema-drift resets, and PostgreSQL collation-repair decisions.
 
@@ -19,7 +19,9 @@ If you use Baldin's workspace skills, `/baldin-local-stack-doctor` helps triage 
 |---------|-----------|------|--------|
 | `db` | PostgreSQL 15 | 5432 | `./backend/public/db` |
 | `test_db` | PostgreSQL 15 | 5431 | `./backend/public/test_db` |
+| `redis` | Redis 7 | 6379 | none |
 | `web` | FastAPI (Uvicorn, hot-reload) | 8004→8000 | `./backend` mounted |
+| `crawler-worker` | Python background worker | none | `./backend` mounted |
 | `frontend` | Vite dev server | 5173 | `./frontend` mounted |
 
 ## Starting the Stack
@@ -29,6 +31,8 @@ docker-compose up --build
 ```
 
 The backend mounts `./backend` as a volume and runs Uvicorn with `--reload`, so Python changes take effect immediately. The frontend mounts `./frontend` and uses Vite's HMR.
+
+Redis backs the local background-job queue, and `crawler-worker` consumes crawler and seed jobs from that queue while the API stays responsive.
 
 Use [Boot The Stack](../getting-started/quickstart.md) for first boot. This page is the day-two reference once the stack already makes sense to you.
 
@@ -67,6 +71,14 @@ uvicorn app.main:app --reload --port 8004
 ```
 
 Requires a running PostgreSQL instance matching the `backend/.env` connection settings.
+
+If you want worker-mode background execution outside Docker, run Redis separately and start the worker in another shell:
+
+```bash
+cd backend
+pipenv install --dev
+pipenv run python -m app.crawler_worker
+```
 
 ### Frontend
 

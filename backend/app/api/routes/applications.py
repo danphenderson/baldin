@@ -10,7 +10,7 @@ from pydantic import UUID4
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Paragraph, SimpleDocTemplate
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.api.deps import (
@@ -512,6 +512,16 @@ def _safe_filename(name: str) -> str:
     return name.replace("/", "_").replace("\\", "_").replace("\0", "")
 
 
+def _document_access_filter(user_id: UUID4):
+    shared_document_ids = select(models.DocumentShare.document_id).where(
+        models.DocumentShare.shared_with_user_id == user_id
+    )
+    return or_(
+        models.Document.user_id == user_id,
+        models.Document.id.in_(shared_document_ids),
+    )
+
+
 @router.get("/{id}/export")
 async def export_application_materials(
     app: models.Application = Depends(get_application),
@@ -580,7 +590,10 @@ async def export_application_materials(
                         selectinload(models.Document.versions),
                         selectinload(models.Document.head_version),
                     )
-                    .where(models.Document.id.in_(document_ids))
+                    .where(
+                        models.Document.id.in_(document_ids),
+                        _document_access_filter(user.id),
+                    )
                 )
             )
             .scalars()
@@ -588,7 +601,11 @@ async def export_application_materials(
         )
         documents_by_id = {document.id: document for document in documents}
 
-    if not resumes and not cover_letters and not document_links:
+    accessible_document_links = [
+        link for link in document_links if link.document_id in documents_by_id
+    ]
+
+    if not resumes and not cover_letters and not accessible_document_links:
         raise HTTPException(
             status_code=404,
             detail="No materials linked to this application",
@@ -607,7 +624,7 @@ async def export_application_materials(
                 fname = _safe_filename(cl.name or "cover_letter") + ".pdf"
                 zf.writestr(f"cover_letters/{fname}", _text_to_pdf(cl.content))
 
-        for link in document_links:
+        for link in accessible_document_links:
             doc = documents_by_id.get(link.document_id)
             if not doc:
                 continue
@@ -672,8 +689,15 @@ async def get_application_documents(
         )
     result = await db.execute(
         select(models.Document)
+        .options(
+            selectinload(models.Document.versions),
+            selectinload(models.Document.head_version),
+        )
         .join(models.DocumentXApplication)
-        .where(models.DocumentXApplication.application_id == app.id)
+        .where(
+            models.DocumentXApplication.application_id == app.id,
+            _document_access_filter(user.id),
+        )
     )
     docs = result.scalars().all()
     return [

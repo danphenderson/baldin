@@ -48,11 +48,16 @@ async def _reap() -> None:
         result = await db.execute(
             update(models.CrawlerRun)
             .where(
-                models.CrawlerRun.status.in_(["running", "pending"]),
+                models.CrawlerRun.status.in_(
+                    [
+                        models.CrawlerRunStatus.RUNNING,
+                        models.CrawlerRunStatus.PENDING,
+                    ]
+                ),
                 models.CrawlerRun.created_at < cutoff,
             )
             .values(
-                status="failed",
+                status=models.CrawlerRunStatus.FAILED,
                 error_summary="Reaped: exceeded 30-minute timeout",
                 finished_at=now_utc_naive(),
             )

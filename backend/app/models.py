@@ -55,6 +55,10 @@ class CrawlerRunStatus(str, enum.Enum):
     PENDING_REVIEW = "pending_review"
 
 
+def _enum_values(enum_class: type[enum.Enum]) -> list[str]:
+    return [member.value for member in enum_class]
+
+
 class Base(DeclarativeBase):
     """
     Base model for all database entities.
@@ -156,7 +160,12 @@ class CrawlerRun(Base):
     )
     trigger_type = Column(String, nullable=False)
     status = Column(
-        SAEnum(CrawlerRunStatus, name="crawlerrunstatus", native_enum=True),
+        SAEnum(
+            CrawlerRunStatus,
+            name="crawlerrunstatus",
+            native_enum=True,
+            values_callable=_enum_values,
+        ),
         nullable=False,
         default=CrawlerRunStatus.PENDING,
     )
@@ -308,7 +317,12 @@ class Lead(Base):
     education_level = Column(String)
     hiring_manager = Column(String)
     review_status = Column(
-        SAEnum(LeadReviewStatus, name="leadreviewstatus", native_enum=True),
+        SAEnum(
+            LeadReviewStatus,
+            name="leadreviewstatus",
+            native_enum=True,
+            values_callable=_enum_values,
+        ),
         nullable=True,
     )
 
@@ -435,7 +449,12 @@ class Application(Base):
 
     __tablename__ = "applications"
     status = Column(
-        SAEnum(ApplicationStatus, name="applicationstatus", native_enum=True),
+        SAEnum(
+            ApplicationStatus,
+            name="applicationstatus",
+            native_enum=True,
+            values_callable=_enum_values,
+        ),
         nullable=True,
     )
     notes = Column(Text)

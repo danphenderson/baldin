@@ -1766,10 +1766,6 @@ class CrawlerTriggerType(str, Enum):
     SCHEDULED = "scheduled"
 
 
-# Re-export CrawlerRunStatus from models for schema use
-CrawlerRunStatus = CrawlerRunStatus
-
-
 # Re-export LeadReviewStatus from models as ReviewStatus for schema use
 ReviewStatus = LeadReviewStatus
 

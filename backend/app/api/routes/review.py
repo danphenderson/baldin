@@ -170,7 +170,7 @@ async def _approve_item(
         pipeline = await db.get(models.CrawlerPipeline, run.crawler_pipeline_id)
         user_id = pipeline.created_by_user_id if pipeline else None
         if user_id:
-            schedule_crawler_run_execution(
+            await schedule_crawler_run_execution(
                 run.id,
                 user_id,
                 background_tasks=background_tasks,

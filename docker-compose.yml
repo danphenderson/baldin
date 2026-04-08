@@ -33,6 +33,17 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   web:
     build:
       context: ./backend
@@ -42,6 +53,10 @@ services:
     command: uvicorn --app-dir /usr/src/app app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000
     env_file:
       - ./backend/.env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      CRAWLER_QUEUE_NAME: crawler_jobs
+      CRAWLER_EXECUTION_MODE: worker
     volumes:
       - ./backend:/usr/src/app
     ports:
@@ -50,6 +65,27 @@ services:
       db:
         condition: service_healthy
       test_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  crawler-worker:
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile
+    command: python -m app.crawler_worker
+    env_file:
+      - ./backend/.env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      CRAWLER_QUEUE_NAME: crawler_jobs
+      CRAWLER_EXECUTION_MODE: worker
+    volumes:
+      - ./backend:/usr/src/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   frontend:

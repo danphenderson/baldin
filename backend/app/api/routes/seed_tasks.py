@@ -60,6 +60,40 @@ def build_user_seed_creator(
     return _create
 
 
+def _seed_operations_by_name() -> dict[str, SeedOperation]:
+    from app.api.routes import (
+        certificate,
+        contacts,
+        cover_letters,
+        education,
+        experiences,
+        leads,
+        resumes,
+        skills,
+        users,
+    )
+
+    operations = (
+        certificate.CERTIFICATE_SEED_OPERATION,
+        contacts.CONTACT_SEED_OPERATION,
+        cover_letters.COVER_LETTER_SEED_OPERATION,
+        education.EDUCATION_SEED_OPERATION,
+        experiences.EXPERIENCE_SEED_OPERATION,
+        leads.LEAD_SEED_OPERATION,
+        resumes.RESUME_SEED_OPERATION,
+        skills.SKILL_SEED_OPERATION,
+        users.USER_SEED_OPERATION,
+    )
+    return {operation.pipeline_name: operation for operation in operations}
+
+
+def resolve_seed_operation(operation_name: str) -> SeedOperation:
+    operation = _seed_operations_by_name().get(operation_name)
+    if operation is None:
+        raise RuntimeError(f"Unknown seed operation: {operation_name}")
+    return operation
+
+
 async def _run_seed_operation(
     operation: SeedOperation,
     event_id: UUID4,
@@ -164,6 +198,28 @@ async def schedule_seed_operation(
         ),
         db=db,
     )
+
+    from app.crawler_queue import _queue_enabled, enqueue_seed_job
+
+    if _queue_enabled():
+        enqueued = await enqueue_seed_job(
+            operation.pipeline_name,
+            str(event.id),
+            str(user.id),
+        )
+        if enqueued:
+            return schemas.SeedOperationAccepted(
+                event_id=event.id,
+                pipeline_id=pipeline.id,
+                status=schemas.OrchestrationEventStatusType.PENDING,
+                poll_url=build_seed_poll_url(event.id),
+            )
+
+        log.warning(
+            "Falling back to inline seed execution for %s after queue enqueue failure",
+            operation.pipeline_name,
+        )
+
     background_tasks.add_task(_run_seed_operation, operation, event.id, user.id)
 
     return schemas.SeedOperationAccepted(

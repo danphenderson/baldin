@@ -454,9 +454,9 @@ classify_issue() {
       project_status="Close Candidate"
       ;;
     84)
-      disposition="close-implemented"
+      disposition="close-not-aligned"
       surface="backend"
-      rationale="The backend Typer CLI already exists at backend/dev.py."
+      rationale="The repo-local AI assistant CLI at backend/dev.py was intentionally removed and is not part of the current local-first developer-preview workflow."
       project_status="Close Candidate"
       ;;
     87)
@@ -797,7 +797,7 @@ EOF
       ;;
     84)
       cat <<'EOF'
-The backend Typer CLI already exists at backend/dev.py, so this issue is implemented.
+    The repo-local AI assistant CLI at backend/dev.py was intentionally removed and is not part of the current local-first developer-preview workflow, so this issue is no longer aligned with the active roadmap.
 EOF
       ;;
     87)

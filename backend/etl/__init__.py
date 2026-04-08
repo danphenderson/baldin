@@ -1,14 +1,14 @@
 from .base import (
-    CrawlerBase,
-    CrawlerResult,
-    CrawlerResultValidation,
-    async_retry,
     DEFAULT_BASE_DELAY,
     DEFAULT_JITTER,
     DEFAULT_MAX_DELAY,
     DEFAULT_MAX_RETRIES,
     MIN_DESCRIPTION_LENGTH,
     RETRYABLE_EXCEPTIONS,
+    CrawlerBase,
+    CrawlerResult,
+    CrawlerResultValidation,
+    async_retry,
 )
 from .glassdoor import GlassdoorCrawler
 from .linkedin import LinkedInCrawler

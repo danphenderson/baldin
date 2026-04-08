@@ -1,16 +1,16 @@
 """Tests for app.core.document_storage – path building and resolution."""
 
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from app.core.document_storage import (
     build_document_source_path,
     build_extractor_run_source_path,
+    remove_document_source_files,
     resolve_document_source_path,
     save_document_source_file,
-    remove_document_source_files,
 )
-
 
 # ---------------------------------------------------------------------------
 # build_document_source_path

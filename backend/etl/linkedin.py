@@ -29,7 +29,7 @@ from bs4 import BeautifulSoup
 
 from app.core import conf
 from app.logging import get_logger
-from etl.base import CrawlerBase, CrawlerResult, DEFAULT_MAX_RETRIES
+from etl.base import DEFAULT_MAX_RETRIES, CrawlerBase, CrawlerResult
 
 logger = get_logger(__name__)
 

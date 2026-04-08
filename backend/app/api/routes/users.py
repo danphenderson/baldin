@@ -13,13 +13,8 @@ from pydantic import ValidationError
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import AsyncSession
 from app.api.deps import (
     AsyncSession,
-    conf,
-)
-from app.api.deps import console_log as log
-from app.api.deps import (
     create_certificate,
     create_education,
     create_experience,
@@ -35,7 +30,9 @@ from app.api.deps import (
     run_extractor,
     schemas,
 )
+from app.api.deps import console_log as log
 from app.api.routes.seed_tasks import SeedOperation, schedule_seed_operation
+from app.core.datetime_utils import now_utc_naive
 from app.core.document_storage import (
     ALLOWED_AVATAR_CONTENT_TYPES,
     MAX_AVATAR_UPLOAD_BYTES,
@@ -44,7 +41,6 @@ from app.core.document_storage import (
     remove_avatar_files,
     save_avatar_file,
 )
-from app.core.datetime_utils import now_utc_naive
 from app.core.url_parsers import extract_text_from_url_smart
 from app.core.url_safety import UnsafeFetchUrlError
 from app.extractor.parsing import parse_binary_input

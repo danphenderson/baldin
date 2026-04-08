@@ -4,9 +4,8 @@ from asyncio import gather
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy import select
 
-from app.api.deps import AsyncSession
-from app.api.deps import console_log as log
 from app.api.deps import (
+    AsyncSession,
     create_extractor,
     create_skill,
     get_async_session,
@@ -18,6 +17,7 @@ from app.api.deps import (
     run_extractor,
     schemas,
 )
+from app.api.deps import console_log as log
 from app.api.routes.seed_tasks import (
     SeedOperation,
     build_user_seed_creator,

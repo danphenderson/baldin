@@ -1,5 +1,7 @@
 """Tests for app.core.url_parsers – URL normalisation and profile parsing."""
 
+from bs4 import BeautifulSoup
+
 from app.core.url_parsers import (
     _collect_all_section_texts,
     _collect_section_texts,
@@ -10,8 +12,6 @@ from app.core.url_parsers import (
     _parse_linkedin_profile_html,
     _section_text,
 )
-from bs4 import BeautifulSoup
-
 
 # ---------------------------------------------------------------------------
 # _normalize_url

@@ -1,7 +1,6 @@
 """Tests for app.core.conf – Settings properties and OpenAI helpers."""
 
-from app.core.conf import settings, openai
-
+from app.core.conf import openai, settings
 
 # ---------------------------------------------------------------------------
 # Settings properties

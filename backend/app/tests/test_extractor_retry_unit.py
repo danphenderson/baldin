@@ -1,21 +1,21 @@
 """Tests for app.core.extractor_retry – payload helpers and rehydration."""
 
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
+
+from app import schemas
 from app.core.extractor_retry import (
-    get_extractor_source_kind,
+    FILE_CONTENT_TYPE_KEY,
+    FILE_SOURCE_PATH_KEY,
+    SOURCE_KIND_KEY,
+    _build_upload_file,
     build_extractor_event_payload,
     build_extractor_source_uri,
     get_extractor_event_file_source_paths,
+    get_extractor_source_kind,
     rehydrate_extractor_run,
-    _build_upload_file,
-    SOURCE_KIND_KEY,
-    FILE_CONTENT_TYPE_KEY,
-    FILE_SOURCE_PATH_KEY,
 )
-from app import schemas
-
 
 # ---------------------------------------------------------------------------
 # helpers

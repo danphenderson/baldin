@@ -5,8 +5,8 @@ from typing import Literal, Union
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
-from pydantic import AnyHttpUrl, AnyUrl, EmailStr, validator
-from pydantic_settings import BaseSettings
+from pydantic import AnyHttpUrl, AnyUrl, EmailStr, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from toml import load as toml_load
 
 PROJECT_DIR = Path(__file__).parent.parent.parent
@@ -18,11 +18,12 @@ PYPROJECT_CONTENT = toml_load(f"{PROJECT_DIR}/pyproject.toml")["project"]
 
 
 class _BaseSettings(BaseSettings):
-    class Config:
-        case_sensitive = False
-        env_file = PROJECT_DIR / ".env"
-        env_file_encoding = "utf-8"
-        extra = "allow"
+    model_config = SettingsConfigDict(
+        case_sensitive=False,
+        env_file=PROJECT_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="allow",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -31,10 +32,11 @@ class _BaseSettings(BaseSettings):
 class Settings(_BaseSettings):
     # CORE SETTINGS
     SECRET_KEY: str
+    MFA_ENCRYPTION_KEY: str | None = None
     ENVIRONMENT: Literal["DEV", "PYTEST", "STAGE", "PROD"]
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     BACKEND_CORS_ORIGINS: Union[str, list[AnyHttpUrl]]
-    LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
+    LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     PUBLIC_ASSETS_DIR: str = "public"
 
     # PROJECT NAME, VERSION AND DESCRIPTION
@@ -85,37 +87,39 @@ class Settings(_BaseSettings):
     CRAWLER_SCHEDULER_INTERVAL: int = 60
 
     # VALIDATORS
-    @validator("BACKEND_CORS_ORIGINS")
-    def _assemble_cors_origins(cls, cors_origins: Union[str, list[AnyHttpUrl]]):
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def _assemble_cors_origins(
+        cls, cors_origins: Union[str, list[AnyHttpUrl]]
+    ) -> Union[str, list[AnyHttpUrl]]:
         if isinstance(cors_origins, str):
             return [item.strip() for item in cors_origins.split(",")]
         return cors_origins
 
-    @validator("DEFAULT_SQLALCHEMY_DATABASE_URI")
-    def _assemble_default_db_connection(cls, v, values):
-        return str(
+    @model_validator(mode="after")
+    def _assemble_db_connections(self) -> "Settings":
+        self.DEFAULT_SQLALCHEMY_DATABASE_URI = str(
             AnyUrl.build(
                 scheme="postgresql+asyncpg",
-                username=values["DEFAULT_DATABASE_USER"],
-                password=values["DEFAULT_DATABASE_PASSWORD"],
-                host=values["DEFAULT_DATABASE_HOSTNAME"],
-                port=values["DEFAULT_DATABASE_PORT"],
-                path=values["DEFAULT_DATABASE_DB"],
+                username=self.DEFAULT_DATABASE_USER,
+                password=self.DEFAULT_DATABASE_PASSWORD,
+                host=self.DEFAULT_DATABASE_HOSTNAME,
+                port=self.DEFAULT_DATABASE_PORT,
+                path=self.DEFAULT_DATABASE_DB,
             )
         )
 
-    @validator("TEST_SQLALCHEMY_DATABASE_URI")
-    def _assemble_test_db_connection(cls, v, values):
-        return str(
+        self.TEST_SQLALCHEMY_DATABASE_URI = str(
             AnyUrl.build(
                 scheme="postgresql+asyncpg",
-                username=values["TEST_DATABASE_USER"],
-                password=values["TEST_DATABASE_PASSWORD"],
-                host=values["TEST_DATABASE_HOSTNAME"],
-                port=int(values["TEST_DATABASE_PORT"]),
-                path=values["TEST_DATABASE_DB"],
+                username=self.TEST_DATABASE_USER,
+                password=self.TEST_DATABASE_PASSWORD,
+                host=self.TEST_DATABASE_HOSTNAME,
+                port=int(self.TEST_DATABASE_PORT),
+                path=self.TEST_DATABASE_DB,
             )
         )
+        return self
 
     @property
     def DATALAKE_PATH(self) -> Path:
@@ -124,6 +128,37 @@ class Settings(_BaseSettings):
     @property
     def SEEDS_PATH(self) -> Path:
         return Path(self.PUBLIC_ASSETS_DIR) / "seeds"
+
+    @property
+    def LOGS_PATH(self) -> Path:
+        return Path(self.PUBLIC_ASSETS_DIR) / "var" / "logs"
+
+    @property
+    def SHOULD_LOG_API_TO_CONSOLE(self) -> bool:
+        return self.ENVIRONMENT == "DEV"
+
+    @property
+    def SHOULD_LOG_API_TO_FILE(self) -> bool:
+        return self.ENVIRONMENT == "DEV"
+
+    CRAWLER_SCHEDULER_ENABLED: bool = True
+    RUN_REAPER_ENABLED: bool = True
+
+    @property
+    def SHOULD_BOOTSTRAP_ON_STARTUP(self) -> bool:
+        return self.ENVIRONMENT in {"DEV", "PYTEST"}
+
+    @property
+    def SHOULD_RUN_CRAWLER_SCHEDULER(self) -> bool:
+        if self.ENVIRONMENT == "PYTEST":
+            return False
+        return self.CRAWLER_SCHEDULER_ENABLED
+
+    @property
+    def SHOULD_RUN_REAPER(self) -> bool:
+        if self.ENVIRONMENT == "PYTEST":
+            return False
+        return self.RUN_REAPER_ENABLED
 
 
 class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
@@ -134,22 +169,28 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
     """
 
     API_KEY: str
-    COMPLETION_MODEL: str = "gpt-4-0125-preview"
-    DEFAULT_MODEL: str = "gpt-3.5-turbo"
+    COMPLETION_MODEL: str = "gpt-5.4-nano-2026-03-17"
+    DEFAULT_MODEL: str = "gpt-5.4-mini-2026-03-17"
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_DIMENSIONS: int = 1536
 
     @property
     def SUPPORTED_MODELS(self):
         """Get models according to environment secrets."""
         models = {}
         if self.API_KEY:
-            models["gpt-3.5-turbo"] = {
-                "chat_model": ChatOpenAI(model="gpt-3.5-turbo", temperature=0),
-                "description": "GPT-3.5 Turbo",
+            models["gpt-5.4-mini-2026-03-17"] = {
+                "chat_model": ChatOpenAI(
+                    model="gpt-5.4-mini-2026-03-17", temperature=0
+                ),
+                "description": "GPT-5.4 Mini",
             }
             if getenv("DISABLE_GPT4", "").lower() != "true":
-                models["gpt-4-0125-preview"] = {
-                    "chat_model": ChatOpenAI(model="gpt-4-0125-preview", temperature=0),
-                    "description": "GPT-4 0125 Preview",
+                models["gpt-5.4-nano-2026-03-17"] = {
+                    "chat_model": ChatOpenAI(
+                        model="gpt-5.4-nano-2026-03-17", temperature=0
+                    ),
+                    "description": "GPT-5.4 Nano",
                 }
 
         return models
@@ -174,6 +215,31 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
             "gpt-4-0125-preview": int(128_000 * 0.8),
         }
         return CHUNK_SIZES.get(name, int(4_096 * 0.8))
+
+    def get_tokenizer_encoding(self, name: str | None = None) -> str:
+        """Get an explicit tiktoken encoding for the configured model.
+
+        Newly released model names can lag behind tiktoken's automatic model
+        mapping, so callers that only need token counting should prefer an
+        explicit encoding over model-name lookup.
+        """
+        model_name = name or self.DEFAULT_MODEL
+        encodings_by_prefix = {
+            "gpt-5": "o200k_base",
+            "gpt-4.1": "o200k_base",
+            "gpt-4o": "o200k_base",
+            "o1": "o200k_base",
+            "o3": "o200k_base",
+            "o4": "o200k_base",
+            "gpt-4": "cl100k_base",
+            "gpt-3.5": "cl100k_base",
+            "text-embedding-3": "cl100k_base",
+            "text-embedding-ada": "cl100k_base",
+        }
+        for prefix, encoding_name in encodings_by_prefix.items():
+            if model_name.startswith(prefix):
+                return encoding_name
+        return "cl100k_base"
 
 
 class Linkedin(_BaseSettings, env_prefix="LINKEDIN_"):

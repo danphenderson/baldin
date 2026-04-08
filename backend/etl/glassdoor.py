@@ -1,78 +1,233 @@
-from app.core import conf
+"""
+Glassdoor crawler adapter.
+
+Preserves selector knowledge from the legacy Glassdoor class and normalizes
+output to CrawlerResult instances for downstream LeadCreate construction.
+
+Credential Configuration
+------------------------
+Glassdoor crawling may require environment variables for authenticated access:
+
+    GLASSDOOR_USERNAME : str
+        Glassdoor account email for login. Leave empty for guest browsing.
+    GLASSDOOR_PASSWORD : str
+        Glassdoor account password for login. Leave empty for guest browsing.
+
+These variables are loaded via Pydantic settings from the backend/.env file.
+See app/core/conf.py for the Glassdoor settings class.
+
+Note: The current implementation primarily uses guest browsing with modal
+bypass. Full authentication support can be added if needed for protected
+content access.
+"""
+
+from __future__ import annotations
+
+from typing import AsyncIterator
+
 from app.logging import get_logger
-from etl.base import Scrapper
+from etl.base import DEFAULT_MAX_RETRIES, CrawlerBase, CrawlerResult
 
 logger = get_logger(__name__)
 
+# ---------------------------------------------------------------------------
+# Selector constants — document what each one targets so future maintainers
+# can update them when Glassdoor changes its markup.
+# ---------------------------------------------------------------------------
 
-class Glassdoor:
-    def __init__(self, scrapper: Scrapper):
-        self.scrapper = scrapper
+# Glassdoor job search landing page.
+GLASSDOOR_SEARCH_URL = "https://www.glassdoor.com/Job/index.htm"
 
-    async def bypass_login(self):
+# XPath: job-title text input on the search page.
+GLASSDOOR_JOB_TITLE_INPUT_XPATH = '//*[@id="searchBar-jobTitle"]'
+
+# XPath: location text input on the search page.
+GLASSDOOR_LOCATION_INPUT_XPATH = '//*[@id="searchBar-location"]'
+
+# CSS selector: individual job listing item in search results.
+GLASSDOOR_JOB_LISTING_SELECTOR = 'li[data-test="jobListing"]'
+
+# XPath: "Show More" button that expands the full job description.
+GLASSDOOR_SHOW_MORE_XPATH = (
+    '//*[@id="app-navigation"]'
+    "/div[3]/div[2]/div[2]/div[1]/section/div/div[2]/button/span"
+)
+
+# XPath: container holding the job detail pane (content area).
+GLASSDOOR_CONTENT_XPATH = '//*[@id="app-navigation"]/div[3]/div[2]/div[2]/div[1]'
+
+# CSS selector: login modal overlay.
+GLASSDOOR_LOGIN_MODAL_SELECTOR = "#LoginModal"
+
+# CSS selector: close button on the login modal.
+GLASSDOOR_MODAL_CLOSE_SELECTOR = "button.CloseButton"
+
+
+class GlassdoorCrawler(CrawlerBase):
+    """Playwright-based Glassdoor job crawler.
+
+    Parameters
+    ----------
+    keywords : str
+        Search term for the job-title field.
+    location : str
+        Geographic search filter.
+    headless : bool
+        Browser headless mode (default True).
+    max_retries : int
+        Maximum retry attempts for navigation failures (default: 3).
+
+    Credential Requirements
+    -----------------------
+    Set these environment variables for authenticated access (optional):
+        - GLASSDOOR_USERNAME: Account email
+        - GLASSDOOR_PASSWORD: Account password
+
+    The current implementation primarily uses guest browsing with automatic
+    login modal bypass. Credentials are only needed for accessing protected
+    content that requires authentication.
+    """
+
+    def __init__(
+        self,
+        keywords: str = "",
+        location: str = "",
+        headless: bool = True,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+    ) -> None:
+        super().__init__(headless=headless)
+        self.keywords = keywords
+        self.location = location
+        self.max_retries = max_retries
+
+    # -- authentication / modals ---------------------------------------------
+
+    async def login(self) -> None:
+        """Submit Glassdoor credentials if a login wall appears.
+
+        Note: Currently bypasses the login modal for guest browsing.
+        For authenticated access, set GLASSDOOR_USERNAME and
+        GLASSDOOR_PASSWORD environment variables and extend this method.
+        """
+        # Glassdoor uses email/password but in many flows the modal intercepts.
+        # For now, bypass the modal; extend here if full auth is required.
+        await self.bypass_login_modal()
+
+    async def bypass_login_modal(self) -> None:
+        """Close the Glassdoor login modal if it is visible."""
         try:
-            logger.info("Bypassing login modal")
-            login_modal = await self.scrapper.locator("id='LoginModal'").all()
-            if login_modal:
-                logger.info("Login modal found. Hitting Close Button")
-                await self.scrapper.locator("button.CloseButton").click()
-        except:
-            pass
+            page = self._require_page()
+            modal = page.locator(GLASSDOOR_LOGIN_MODAL_SELECTOR)
+            if await modal.count() > 0:
+                logger.info("Login modal detected — closing")
+                close_btn = page.locator(GLASSDOOR_MODAL_CLOSE_SELECTOR)
+                await close_btn.click(timeout=3_000)
+        except Exception:
+            logger.debug("No login modal to dismiss (or already closed)")
 
-    async def search(self, keywords: str, location: str):
-        # Navigate to glassdoor Job Search page
-        await self.scrapper.goto("https://www.glassdoor.com/Job/index.htm")
+    # -- search orchestration ------------------------------------------------
 
-        # Find the job search textbox and type the keywords
-        job_textbox = self.scrapper.locator('//*[@id="searchBar-jobTitle"]')
-        await job_textbox.type(keywords)
+    async def search_jobs(
+        self,
+        keywords: str | None = None,
+        location: str | None = None,
+        validate_results: bool = True,
+    ) -> AsyncIterator[CrawlerResult]:
+        """Search Glassdoor and yield CrawlerResult for each listing found.
 
-        # Find the location textbox and type the location
-        location_textbox = self.scrapper.locator('//*[@id="searchBar-location"]')
-        await location_textbox.type(location)
+        Parameters
+        ----------
+        keywords : str, optional
+            Search keywords, overrides constructor value if provided.
+        location : str, optional
+            Location filter, overrides constructor value if provided.
+        validate_results : bool
+            If True, log warnings for invalid results but still yield them.
 
-        # Enter in the search using the keyboard
-        await self.scrapper.keyboard_press("Enter")
+        Yields
+        ------
+        CrawlerResult
+            Normalized job posting data for each listing found.
+        """
+        kw = keywords if keywords is not None else self.keywords
+        loc = location if location is not None else self.location
 
-        # Wait for the page to load
-        await self.scrapper.wait_for_load_state("networkidle")
+        await self.navigate_with_retry(
+            GLASSDOOR_SEARCH_URL, max_retries=self.max_retries
+        )
 
-        # Scrape the search results
-        res = await self._scrape_search()
+        # Fill search form.
+        page = self._require_page()
+        job_input = page.locator(f"xpath={GLASSDOOR_JOB_TITLE_INPUT_XPATH}")
+        await job_input.fill(kw)
 
-        return res
+        loc_input = page.locator(f"xpath={GLASSDOOR_LOCATION_INPUT_XPATH}")
+        await loc_input.fill(loc)
 
-    async def _scrape_search(self):
-        # Find the job postings
-        job_buttons = await self.scrapper.locator('li[data-test="jobListing"]').all()
+        await page.keyboard.press("Enter")
+        await self.wait_for_load_state("networkidle")
 
-        logger.info(f"Found {len(job_buttons)} job postings")
+        # Dismiss login modal if it appeared after navigation.
+        await self.bypass_login_modal()
 
-        result = []
+        # Collect job listing elements.
+        listings = await page.locator(GLASSDOOR_JOB_LISTING_SELECTOR).all()
+        logger.info("Found %d job listings", len(listings))
 
-        # Scrape each job post
-        for job_button in job_buttons[0:2]:
+        for listing in listings:
             try:
-                # Click on the job listing to load the job post
-                await job_button.click()
-                await self.scrapper.wait_for_load_state()
+                result = await self.scrape_job(listing)
+                if validate_results:
+                    validation = result.validate()
+                    if not validation.is_valid:
+                        logger.warning(
+                            "Invalid Glassdoor result: %s", validation.errors
+                        )
+                    elif validation.warnings:
+                        logger.debug(
+                            "Glassdoor result warnings: %s", validation.warnings
+                        )
+                yield result
+            except Exception:
+                logger.exception("Error scraping Glassdoor listing")
+                await self.bypass_login_modal()
 
-                # Expand the job description by clicking "Show More"
-                await self.scrapper.locator(
-                    '//*[@id="app-navigation"]/div[3]/div[2]/div[2]/div[1]/section/div/div[2]/button/span'
-                ).click()
-                await self.scrapper.wait_for_load_state()
+    # -- single-listing scraper ----------------------------------------------
 
-                # Scrape the job post
-                description = await self.scrapper.locator(
-                    '//*[@id="app-navigation"]/div[3]/div[2]/div[2]/div[1]'
-                ).inner_text()
-                result.append(description)
+    async def scrape_job(self, element) -> CrawlerResult:
+        """Click a listing element, expand, and extract structured fields.
 
-                logger.info(f"Scraped job post: {description}")
-            except Exception as e:
-                logger.exception(f"Error scraping job post {e}")
-                await self.bypass_login()
-                continue
+        Parameters
+        ----------
+        element
+            Playwright locator for the job listing element to scrape.
 
-        return result
+        Returns
+        -------
+        CrawlerResult
+            Extracted job data. Use result.validate() to check completeness.
+        """
+        await element.click()
+        await self.wait_for_load_state()
+
+        # Expand full description.
+        try:
+            page = self._require_page()
+            show_more = page.locator(f"xpath={GLASSDOOR_SHOW_MORE_XPATH}")
+            await show_more.click(timeout=3_000)
+            await self.wait_for_load_state()
+        except Exception:
+            logger.debug("Show More button not found or not clickable")
+
+        # Extract content from the detail pane.
+        description: str | None = None
+        try:
+            page = self._require_page()
+            content = page.locator(f"xpath={GLASSDOOR_CONTENT_XPATH}")
+            description = await content.inner_text(timeout=5_000)
+        except Exception:
+            logger.exception("Failed to extract Glassdoor job description")
+
+        return CrawlerResult(
+            description=description,
+        )

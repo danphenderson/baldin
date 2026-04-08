@@ -15,6 +15,7 @@ from app.api.deps import (
     run_extractor,
     schemas,
 )
+from app.core.url_safety import validate_url_safe_for_fetch
 
 router: APIRouter = APIRouter()
 
@@ -91,8 +92,6 @@ async def get_company_leads(
         .where(models.LeadXCompany.company_id == company.id)
     )
     leads = result.scalars().all()
-    if not leads:
-        raise HTTPException(status_code=404, detail="No leads found for the company")
     return leads
 
 
@@ -102,6 +101,11 @@ async def extract_company(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
+    try:
+        validate_url_safe_for_fetch(extraction_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     logger.warning(f"User {user.id} triggered company extraction for {extraction_url}")
     # Get extractor, create one if it doesn't exist
     try:
@@ -122,7 +126,7 @@ async def extract_company(
         else:
             raise e
 
-    # Buld the payload and run the extractor
+    # Build the payload and run the extractor
     payload = schemas.ExtractorRun(
         mode="entire_document",
         file=None,
@@ -131,12 +135,15 @@ async def extract_company(
         llm=None,
     )
 
-    # FIXME: Clean up the debugging code
     try:
-        # A bit of a hack below to convert the extractor to a read schema
         res = await run_extractor(
-            schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+            schemas.ExtractorRead.model_validate(extractor, from_attributes=True),
+            payload,
+            user,
+            db,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error running extractor: {extractor}")
         logger.error(e)
@@ -145,7 +152,7 @@ async def extract_company(
     logger.info(f"Successful Extraction, result: {res}")
 
     try:
-        company = models.Company(**res.data[0])  # TOOD: Handle multiple results
+        company = models.Company(**res.data[0])  # TODO: Handle multiple results
         db.add(company)
         await db.commit()
         await db.refresh(company)

@@ -11,7 +11,7 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 [project]
 name = "baldin"
 version = "0.1.0-alpha"
-description = "API serving baldin"
+description = "Local-first API and automation backend for Baldin's developer-preview job-search workspace"
 requires-python = ">=3.9"
 authors = [
     {name = "Daniel Henderson", email = "me@danhenderson.dev"},
@@ -51,32 +51,7 @@ tests = [
     "pytest-cov"
 ]
 
-docs = [
-    "sphinx",
-    "sphinx-py3doc-enhanced-theme",
-    "sphinx-autodoc-typehints",
-    "sphinxcontrib-asyncio",
-    "sphinxcontrib-napoleon",
-    "sphinxcontrib-trio",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-    "sphinx-autodoc-typehints",
-    "sphinx-autodoc-annotation",
-]
+docs = []
 
 
 [tool.pytest.ini_options]
@@ -91,10 +66,15 @@ testpaths = [
     "app/tests",
     "etl/tests",
 ]
-asyncio-mode = "auto"
+asyncio_mode = "auto"
 
-[tool.isort]
-profile = "black"
+[tool.ruff]
+target-version = "py39"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E203", "E501"]
 
 [tool.mypy]
 python_version = "3.11"

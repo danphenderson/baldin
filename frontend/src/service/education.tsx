@@ -1,64 +1,61 @@
 // Path: frontend/src/service/education.tsx
 
-import { components } from "../schema";
+import { components } from '../schema';
+import { createApiClient } from './api-client';
 
 export type EducationRead = components['schemas']['EducationRead'];
 export type EducationCreate = components['schemas']['EducationCreate'];
 export type EducationUpdate = components['schemas']['EducationUpdate'];
 
-// TODO - pull this from the environment schema.d.ts
-const BASE_URL = `${process.env.REACT_APP_API_URL}/education/`;
-
-const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
-  if (!token) {
-    throw new Error("Authorization token is required");
+const unwrap = <T,>(
+  result: { data?: T; error?: unknown; response: Response },
+): T => {
+  if (result.error !== undefined) {
+    const detail = result.error as { detail?: unknown };
+    let message = 'API request failed';
+    if (detail?.detail) {
+      message = typeof detail.detail === 'string' ? detail.detail : JSON.stringify(detail.detail);
+    }
+    throw new Error(message);
   }
-
-  return {
-    method: method,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: body ? JSON.stringify(body) : null,
-  };
-};
-
-const fetchAPI = async (url: string, options: RequestInit) => {
-  const response = await fetch(url, options);
-  if (!response.ok) {
-    // Custom error handling can be implemented here
-    throw new Error('API request failed');
-  }
-  return response.json();
+  return result.data as T;
 };
 
 export const getEducations = async (token: string): Promise<EducationRead[]> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/education/'));
 };
 
 export const getEducation = async (token: string, id: string): Promise<EducationRead> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}${id}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/education/{education_id}', {
+    params: { query: { id } },
+  }));
 };
 
 export const createEducation = async (token: string, education: EducationCreate): Promise<EducationRead> => {
-  const requestOptions = createRequestOptions(token, "POST", education);
-  return fetchAPI(BASE_URL, requestOptions);
-}
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/education/', {
+    body: education,
+  }));
+};
 
 export const updateEducation = async (token: string, id: string, education: EducationUpdate): Promise<EducationRead> => {
-  const requestOptions = createRequestOptions(token, "PATCH", education);
-  return fetchAPI(`${BASE_URL}${id}`, requestOptions);
-}
+  const client = createApiClient(token);
+  return unwrap(await client.PUT('/education/{education_id}', {
+    params: { query: { id } },
+    body: education,
+  }));
+};
 
 export const deleteEducation = async (token: string, id: string): Promise<void> => {
-  const requestOptions = createRequestOptions(token, "DELETE");
-  return fetchAPI(`${BASE_URL}${id}`, requestOptions);
-}
+  const client = createApiClient(token);
+  unwrap(await client.DELETE('/education/{education_id}', {
+    params: { query: { id } },
+  }));
+};
 
 export const seedEducations = async (token: string): Promise<void> => {
-  const requestOptions = createRequestOptions(token, "POST");
-  return fetchAPI(`${BASE_URL}seed`, requestOptions);
-}
+  const client = createApiClient(token);
+  unwrap(await client.POST('/education/seed'));
+};

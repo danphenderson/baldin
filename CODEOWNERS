@@ -1,0 +1,21 @@
+# Baldin CODEOWNERS
+# Changes to these paths require review from the listed owner(s).
+
+# Copilot customization surface
+.github/copilot-instructions.md    @danphenderson
+.github/instructions/**            @danphenderson
+.github/agents/**                  @danphenderson
+.github/prompts/**                 @danphenderson
+.github/skills/**                  @danphenderson
+
+# Copilot workflow docs
+docs/docs/engineering/copilot-*    @danphenderson
+
+# Generated artifacts (review required to catch hand-edits)
+openapi.json                       @danphenderson
+frontend/src/schema.d.ts           @danphenderson
+docs/build/**                      @danphenderson
+
+# CI and repo automation
+.github/workflows/**               @danphenderson
+scripts/**                         @danphenderson

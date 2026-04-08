@@ -1,110 +1,347 @@
+"""
+LinkedIn crawler adapter.
+
+Preserves selector knowledge from the legacy Linkedin class and normalizes
+output to CrawlerResult instances for downstream LeadCreate construction.
+
+Credential Configuration
+------------------------
+LinkedIn crawling requires environment variables for authenticated access:
+
+    LINKEDIN_USERNAME : str
+        LinkedIn account email/phone for login. Leave empty to use guest API only.
+    LINKEDIN_PASSWORD : str
+        LinkedIn account password for login. Leave empty to use guest API only.
+
+These variables are loaded via Pydantic settings from the backend/.env file.
+See app/core/conf.py for the Linkedin settings class.
+
+Note: The guest API (search_jobs) works without credentials for public job
+listings. Login is only required for accessing protected content.
+"""
+
+from __future__ import annotations
+
+from asyncio import sleep
+from typing import AsyncIterator
+
 from bs4 import BeautifulSoup
 
 from app.core import conf
-from app.logging import console_log, get_logger
-from etl.base import Job, Scrapper
+from app.logging import get_logger
+from etl.base import DEFAULT_MAX_RETRIES, CrawlerBase, CrawlerResult
 
 logger = get_logger(__name__)
 
+# ---------------------------------------------------------------------------
+# Selector constants — document what each one targets so future maintainers
+# can update them when LinkedIn changes its markup.
+# ---------------------------------------------------------------------------
 
-class Linkedin:
-    @classmethod
-    def redirect_job_search(cls) -> str:
-        if not conf.linkedin.search_endpoint.startswith(
-            "https://www.linkedin.com/jobs/search/"
-        ):
-            raise ValueError("url must be a valid linkedin search url")
-        return conf.linkedin.search_endpoint.replace(
-            "https://www.linkedin.com/jobs/search/",
-            "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search",
-        )
+# Guest job-search API (avoids login for initial listing pages).
+LINKEDIN_GUEST_SEARCH_API = (
+    "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
+)
 
-    @classmethod
-    def redirect_job_page(cls, page) -> str:
-        return f"{cls.redirect_job_search()}?page={page}"
+# LinkedIn login page.
+LINKEDIN_LOGIN_URL = "https://www.linkedin.com/login"
 
-    def __init__(self, scrapper: Scrapper):
-        self.scrapper = scrapper
+# CSS selector for job-card links in guest search results.
+LINKEDIN_JOB_CARD_SELECTOR = "a.base-card__full-link"
 
-    async def scrape_job_post(self, job_post: str) -> None:
-        await self.scrapper.goto(job_post)
+# XPath: "See more" button that expands the full job description.
+# This targets the first button in the description section's nested structure.
+# If LinkedIn changes their DOM layout, this path will need to be updated.
+LINKEDIN_EXPAND_BUTTON_XPATH = (
+    '//*[@id="main-content"]/section[1]/div/div/section[1]/div/div/section/button[1]'
+)
 
-        # Expand job description and wait for dynamic content to load.
-        element = await self.scrapper.element(
-            '//*[@id="main-content"]/section[1]/div/div/section[1]/div/div/section/button[1]',
-            by="xpath",
-        )
+# XPath: container holding the full job description after expansion.
+LINKEDIN_DESCRIPTION_SECTION_XPATH = (
+    '//*[@id="main-content"]/section[1]/div/div/section[1]'
+)
 
-        element.click()  # type: ignore
+# CSS class for the rich-text description block inside the section.
+LINKEDIN_DESCRIPTION_CLASS = "show-more-less-html__markup"
 
-        await self.scrapper.wait(3)  # Lowering this value causes rate limiting
+# CSS class for the structured criteria items (seniority, type, function, industries).
+LINKEDIN_CRITERIA_CLASS = (
+    "description__job-criteria-text description__job-criteria-text--criteria"
+)
 
-        # Extract hidden job description content from the page
-        desc = await self.scrapper.element('//*[@id="main-content"]/section[1]/div/div/section[1]', "xpath")  # type: ignore
+# Tracking suffix appended to card hrefs that should be stripped.
+LINKEDIN_TRACKING_SUFFIX = "&trk=public_jobs_jserp-result_search-card"
 
-        soup = BeautifulSoup(desc.get_attribute("innerHTML"), "html.parser")
+# Number of results per guest-API page.
+LINKEDIN_PAGE_SIZE = 25
 
-        data = await self.scrapper.run_async(
-            lambda: [
-                s.text
-                for s in [
-                    soup.find(class_="show-more-less-html__markup"),
-                    *soup.find_all(
-                        class_="description__job-criteria-text description__job-criteria-text--criteria"
-                    ),
-                ]
-            ]
-        )
+# Maximum offset LinkedIn's guest API will serve.
+LINKEDIN_MAX_OFFSET = 800
 
-        # Parse data into job the model dict-payload
-        job_dict = dict(zip(["description", "seniority_level", "employment_type", "job_function", "industries"], data))  # type: ignore
-        job_dict["url"] = job_post
 
-        # Create model instance and dump to json (Validate data)
-        async with Job(**job_dict) as job:
-            await job.dump(
-                file_path=str(conf.settings.DATALAKE_PATH / f"{job.url}.json")
+class LinkedInCrawler(CrawlerBase):
+    """Playwright-based LinkedIn job crawler.
+
+    Parameters
+    ----------
+    keywords : list[str]
+        Search keywords (joined with spaces).
+    location : str
+        Geographic search filter.
+    page_start / page_end : int
+        Inclusive range of search pages to crawl.
+    headless : bool
+        Browser headless mode (default True for CI / pipeline use).
+    max_retries : int
+        Maximum retry attempts for navigation failures (default: 3).
+
+    Credential Requirements
+    -----------------------
+    Set these environment variables for authenticated access:
+        - LINKEDIN_USERNAME: Account email/phone
+        - LINKEDIN_PASSWORD: Account password
+
+    Guest API access (search_jobs without login) does not require credentials.
+    """
+
+    def __init__(
+        self,
+        keywords: list[str] | None = None,
+        location: str = "",
+        page_start: int = 1,
+        page_end: int = 5,
+        headless: bool = True,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+    ) -> None:
+        super().__init__(headless=headless)
+        self.keywords = keywords or []
+        self.location = location
+        self.page_start = page_start
+        self.page_end = page_end
+        self.max_retries = max_retries
+
+    # -- authentication ------------------------------------------------------
+
+    async def login(self) -> None:
+        """Navigate to LinkedIn login and submit credentials from conf.
+
+        Uses credentials from environment variables:
+            - LINKEDIN_USERNAME: Email or phone number
+            - LINKEDIN_PASSWORD: Account password
+
+        Raises
+        ------
+        RuntimeError
+            If browser page is not initialized.
+        TimeoutError
+            If login page or elements fail to load within timeout.
+
+        Note
+        ----
+        Credentials are only required for authenticated access. Guest API
+        access via search_jobs() does not require login.
+        """
+        if not conf.linkedin.USERNAME or not conf.linkedin.PASSWORD:
+            logger.debug(
+                "LinkedIn credentials not configured — using guest access only. "
+                "Set LINKEDIN_USERNAME and LINKEDIN_PASSWORD for authenticated access."
             )
+        await self.navigate_with_retry(LINKEDIN_LOGIN_URL, max_retries=self.max_retries)
+        await self.fill_with_retry(
+            'input[name="session_key"]',
+            conf.linkedin.USERNAME,
+            max_retries=self.max_retries,
+        )
+        await self.fill_with_retry(
+            'input[name="session_password"]',
+            conf.linkedin.PASSWORD,
+            max_retries=self.max_retries,
+        )
+        await self.click_with_retry(
+            'button[type="submit"]', max_retries=self.max_retries
+        )
+        await self.wait_for_load_state("networkidle")
+        logger.info("LinkedIn login submitted")
 
-    async def scrape_job_page(self, page_number: int) -> None:
-        def get_job_cards(soup) -> list[BeautifulSoup]:
-            job_cards = soup.find_all("a", class_="base-card__full-link")
-            if not job_cards:
-                raise ValueError("soup contents do not contain any job cards")
-            return job_cards
+    # -- search orchestration ------------------------------------------------
 
-        def get_job_urls(soup) -> list:
-            job_urls = [card.get("href") for card in get_job_cards(soup)]
-            if not job_urls:
-                raise ValueError("job cards do not contain any job urls")
-            return [
-                str(job).replace("&trk=public_jobs_jserp-result_search-card", "")
-                for job in job_urls
-            ]
+    def _build_search_url(
+        self,
+        start: int = 0,
+        keywords: list[str] | None = None,
+        location: str | None = None,
+    ) -> str:
+        """Build the guest search API URL with query parameters."""
+        params: list[str] = []
+        resolved_keywords = self.keywords if keywords is None else keywords
+        resolved_location = self.location if location is None else location
+        if resolved_keywords:
+            params.append(f"keywords={'+'.join(resolved_keywords)}")
+        if resolved_location:
+            params.append(f"location={resolved_location}")
+        params.append(f"start={start}")
+        return f"{LINKEDIN_GUEST_SEARCH_API}?{'&'.join(params)}"
 
-        while True:  # Iterate through the pages
-            start = 0
-            await self.scrapper.goto(
-                f"{self.redirect_job_page(page_number)}&start={start}", wait=3
-            )
-            soup = await self.scrapper.page_soup()
-            # Iterate through the jobs on the page
-            for job_url in get_job_urls(soup):
-                try:
-                    await self.scrape_job_post(job_url)
-                except Exception as e:
-                    print(f"Error scraping job post: {e}")
+    async def search_jobs(
+        self,
+        keywords: list[str] | None = None,
+        location: str | None = None,
+        start_page: int | None = None,
+        end_page: int | None = None,
+        validate_results: bool = True,
+    ) -> AsyncIterator[CrawlerResult]:
+        """Iterate through LinkedIn guest search pages and yield results.
 
-            start += 25
-            if start >= 800:
+        Falls back to constructor parameters when arguments are omitted.
+        Uses retry logic for navigation failures.
+
+        Parameters
+        ----------
+        keywords : list[str], optional
+            Search keywords, overrides constructor value if provided.
+        location : str, optional
+            Location filter, overrides constructor value if provided.
+        start_page : int, optional
+            Starting page number (1-indexed).
+        end_page : int, optional
+            Ending page number (inclusive).
+        validate_results : bool
+            If True, log warnings for invalid results but still yield them.
+
+        Yields
+        ------
+        CrawlerResult
+            Normalized job posting data for each listing found.
+        """
+        resolved_keywords = keywords if keywords is not None else self.keywords
+        loc = location if location is not None else self.location
+        sp = start_page if start_page is not None else self.page_start
+        ep = end_page if end_page is not None else self.page_end
+
+        for page_num in range(sp, ep + 1):
+            offset = (page_num - 1) * LINKEDIN_PAGE_SIZE
+            if offset >= LINKEDIN_MAX_OFFSET:
+                logger.info("Reached max offset (%d), stopping", LINKEDIN_MAX_OFFSET)
                 break
 
-    async def scrape_job_search(self, start: int = 1, end: int = 5) -> None:
+            url = self._build_search_url(
+                start=offset,
+                keywords=resolved_keywords,
+                location=loc,
+            )
+            logger.info("Fetching search page %d (offset %d)", page_num, offset)
 
-        # Retrieve the pagination endpoint from the search url
-        await self.scrapper.goto(self.redirect_job_search())
+            try:
+                await self.navigate_with_retry(
+                    url,
+                    wait_until="domcontentloaded",
+                    max_retries=self.max_retries,
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to load search page %d after retries", page_num
+                )
+                continue
 
-        # Iterate through the search pages
-        for page_number in range(start, end):
-            console_log.info(f"Scraping page {page_number} of {end}")
-            await self.scrape_job_page(page_number)
+            job_urls = await self._extract_job_urls()
+            logger.info("Found %d job cards on page %d", len(job_urls), page_num)
+
+            for job_url in job_urls:
+                try:
+                    result = await self.scrape_job(job_url)
+                    if validate_results:
+                        validation = result.validate()
+                        if not validation.is_valid:
+                            logger.warning(
+                                "Invalid result from %s: %s",
+                                job_url,
+                                validation.errors,
+                            )
+                        elif validation.warnings:
+                            logger.debug(
+                                "Result warnings for %s: %s",
+                                job_url,
+                                validation.warnings,
+                            )
+                    yield result
+                except Exception:
+                    logger.exception("Error scraping job %s", job_url)
+
+    # -- page-level helpers --------------------------------------------------
+
+    async def _extract_job_urls(self) -> list[str]:
+        """Pull all job-card hrefs from the current page."""
+        page = self._require_page()
+        cards = await page.query_selector_all(LINKEDIN_JOB_CARD_SELECTOR)
+        urls: list[str] = []
+        for card in cards:
+            href = await card.get_attribute("href")
+            if href:
+                cleaned = href.replace(LINKEDIN_TRACKING_SUFFIX, "").strip()
+                urls.append(cleaned)
+        return urls
+
+    # -- single-job scraper --------------------------------------------------
+
+    async def scrape_job(self, url: str) -> CrawlerResult:
+        """Navigate to a job posting, expand, and extract structured fields.
+
+        Parameters
+        ----------
+        url : str
+            Full URL to the LinkedIn job posting.
+
+        Returns
+        -------
+        CrawlerResult
+            Extracted job data. Use result.validate() to check completeness.
+        """
+        await self.navigate_with_retry(
+            url, wait_until="domcontentloaded", max_retries=self.max_retries
+        )
+
+        # Attempt to expand the full description.
+        try:
+            page = self._require_page()
+            expand_btn = page.locator(f"xpath={LINKEDIN_EXPAND_BUTTON_XPATH}")
+            await expand_btn.click(timeout=5_000)
+        except Exception:
+            logger.debug("Expand button not found or not clickable for %s", url)
+
+        # Small delay to let dynamic content settle.
+        await sleep(1)
+
+        # Extract description HTML via the section container.
+        description: str | None = None
+        criteria: list[str] = []
+        try:
+            page = self._require_page()
+            section = page.locator(f"xpath={LINKEDIN_DESCRIPTION_SECTION_XPATH}")
+            section_html = await section.inner_html(timeout=5_000)
+            soup = BeautifulSoup(section_html, "html.parser")
+
+            desc_el = soup.find(class_=LINKEDIN_DESCRIPTION_CLASS)
+            if desc_el:
+                description = desc_el.get_text(separator="\n", strip=True)
+
+            criteria = [
+                el.get_text(strip=True)
+                for el in soup.find_all(class_=LINKEDIN_CRITERIA_CLASS)
+            ]
+        except Exception:
+            logger.exception("Failed to extract description for %s", url)
+
+        # Map criteria in the order LinkedIn renders them.
+        seniority = criteria[0] if len(criteria) > 0 else None
+        employment_type = criteria[1] if len(criteria) > 1 else None
+        job_function = criteria[2] if len(criteria) > 2 else None
+
+        return CrawlerResult(
+            url=url,
+            description=description,
+            seniority_level=seniority,
+            employment_type=employment_type,
+            job_function=job_function,
+            # LinkedIn lists "Industries" which we map to job_function alt;
+            # keep industries in description context instead.
+        )

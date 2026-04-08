@@ -1,270 +1,391 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { DataGrid, GridColDef, GridPaginationModel  } from '@mui/x-data-grid';
-import { Stack, Typography, Button, Box, Snackbar, Alert, TextField, CircularProgress } from '@mui/material';
-import LeadModal from '../component/lead-modal';
-import { createApplication, ApplicationCreate } from '../service/applications';
+import React, { useContext, useEffect, useState, useCallback, useMemo, useDeferredValue } from 'react';
+import {
+  Box, Typography, Skeleton,
+  Pagination as MuiPagination,
+  Stack,
+  Chip,
+} from '@mui/material';
+import Grid from '@mui/material/Grid';
+import {
+  Bolt as BoltIcon, Search as SearchIcon, Add as AddIcon,
+} from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
+import { usePageToolbarHeader } from '../layout/toolbar-header-context';
+import {
+  getLeads,
+  createLead,
+  updateLead,
+  deleteLead,
+  extractLead,
+} from '../service/leads';
+import type {
+  LeadRead,
+  LeadCreate,
+  LeadExtractResponse,
+  LeadSharedUpdate,
+} from '../service/leads';
+import { createApplication } from '../service/applications';
+import { getCompanies, type CompanyRead } from '../service/companies';
+import LeadFormDialog from '../component/lead-form-dialog';
+import LeadCard from '../component/lead-card';
+import LeadModal, { type LeadModalTab } from '../component/lead-modal';
+import LeadExtractionBar from '../component/lead-extraction-bar';
+import LeadSearchBar from '../component/lead-search-bar';
+import ConfirmDialog from '../component/common/confirm-dialog';
+import EmptyState from '../component/common/empty-state';
+import { useNotification } from '../context/notification-context';
 
+function isValidUrl(str: string): boolean {
+  try {
+    const u = new URL(str);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
-import { LeadRead, LeadsPaginatedRead, LeadCreate, LeadUpdate, getLeads, createLead, updateLead, extractLead  } from '../service/leads';
-import MessageAlert from '../component/common/alert';
+const PAGE_SIZE = 12;
 
+const filterLeadIntoList = (items: LeadRead[], nextLead: LeadRead, moveToFront = false): LeadRead[] => {
+  const nextItems = items.filter((item) => item.id !== nextLead.id);
+  if (moveToFront) {
+    return [nextLead, ...nextItems];
+  }
+
+  const existingIndex = items.findIndex((item) => item.id === nextLead.id);
+  if (existingIndex === -1) {
+    return [nextLead, ...nextItems];
+  }
+
+  nextItems.splice(existingIndex, 0, nextLead);
+  return nextItems;
+};
+
+const extractMessage = (response: LeadExtractResponse): string => {
+  switch (response.disposition) {
+    case 'created':
+      return 'Lead extracted and added to your board.';
+    case 'matched_existing_joined':
+      return 'Matched an existing shared lead and joined you to it.';
+    default:
+      return 'Matched a shared lead you are already tracking.';
+  }
+};
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
 
 const LeadsPage: React.FC = () => {
   const { token } = useContext(UserContext);
+
+  // Data
   const [leads, setLeads] = useState<LeadRead[]>([]);
-  const [extractUrl, setExtractUrl] = useState('');  // State for handling the extraction URL
-  const [loading, setLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState<string>('');
-  const [loadingSeverity, setLoadingSeverity] = useState<'info' | 'success' | 'warning' | 'error'>('info');
-  const [totalLeads, setTotalLeads] = useState(0);
-  const [selectedLead, setSelectedLead] = useState<LeadRead | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [paginationModel, setPaginationModel] = React.useState({
-    page_size: 10,
-    page: 1,
-  });
+  const [companies, setCompanies] = useState<CompanyRead[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const load = (loading: boolean, message: string, severity: 'info' | 'success' | 'warning' | 'error') => {
-    setLoading(loading);
-    setLoadingMessage(message);
-    setLoadingSeverity(severity);
-  };
+  // Search / filter / pagination (client-side)
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const deferredSearch = useDeferredValue(search);
 
-  const fetchLeads = async () => {
-    load(true, 'Fetching leads', 'info');
+  // AI Extraction
+  const [extractUrl, setExtractUrl] = useState('');
+  const [extracting, setExtracting] = useState(false);
+
+  // Lead detail modal
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedLeadTab, setSelectedLeadTab] = useState<LeadModalTab>('overview');
+  const [extractContext, setExtractContext] = useState<LeadExtractResponse | null>(null);
+
+  // Form dialog (create / edit)
+  const [formOpen, setFormOpen] = useState(false);
+  const [formLead, setFormLead] = useState<LeadRead | null>(null);
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<LeadRead | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Quick-apply
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+
+  // Feedback
+  const { notify } = useNotification();
+
+  /* ---- Data fetching ---- */
+
+  const refresh = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
     try {
-      if (!token) {
-        throw new Error('Authentication token is missing');
-      }
-      const data = await getLeads(token, paginationModel);
-      if (!data) {
-        console.error('Failed to fetch leads');
-        setError('Failed to load leads');
-        return;
-      }
-      setLeads(data.leads);
-      if (data.total_count) {
-        setTotalLeads(data.total_count);
-      }
-    } catch (error) {
-      console.error('Failed to fetch leads:', error);
-      setError(typeof error === 'string' ? error : 'Failed to load leads');
-    }
-    load(false, '', 'info')
-  };
-
-  useEffect(() => {
-    fetchLeads();
-  }, [paginationModel.page, paginationModel.page_size]);
-
-  const handlePaginationModelChange = (model: GridPaginationModel) => {
-    setPaginationModel({
-      page_size: model.pageSize,
-      page: model.page + 1, // GridPaginationModel's page index starts at 0, so add 1 for your API
-    });
-  };
-
-  const handleExtractLead = async () => {
-    if (!token) {
-      setError('Authorization token is missing, unable to extract lead');
-      return;
-    }
-    load(true, 'Extracting lead', 'info')
-    try {
-      const extractedLead = await extractLead(token, extractUrl);
-      setLeads([...leads, extractedLead]);  // Optionally add to local state
-      setExtractUrl('');  // Clear input after extraction
-    } catch (error) {
-      setError('Failed to extract lead from URL');
-      console.error(error);
+      const [res, co] = await Promise.all([
+        getLeads(token, { page: 1, page_size: 500, request_count: false }),
+        getCompanies(token),
+      ]);
+      setLeads(res.leads ?? []);
+      setCompanies(co ?? []);
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Failed to load leads', 'error');
     }
     setLoading(false);
-    load(false, '', 'info');
-  };
+  }, [token, notify]);
 
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const handleEditLead = (id: string) => {
-    const lead = leads.find(l => l.id === id);
-    if (lead) {
-      setSelectedLead(lead);
-      setModalOpen(true);
-    } else {
-      // Handle the case where the lead is not found
-      console.error('Lead not found');
-      setError('Lead not found');
-    }
-  };
+  /* ---- Filtering + pagination ---- */
 
-  const handleAddLead = () => {
-    setSelectedLead(null);
-    setModalOpen(true);
-  };
+  const filtered = useMemo(() => {
+    return leads.filter((lead) => {
+      const q = deferredSearch.toLowerCase().trim();
+      const interestCount = lead.interest_count ?? 0;
+      const matchesSearch = !q || [lead.title, lead.description, lead.location, lead.companies?.[0]?.name]
+        .some((f) => f?.toLowerCase().includes(q));
+      const matchesFilter =
+        filter === 'all' ||
+        (filter === 'registered' && Boolean(lead.viewer_is_registered)) ||
+        (filter === 'active' && (interestCount > 1 || (lead.comment_count ?? 0) > 0)) ||
+        (filter === 'remote' && lead.location?.toLowerCase().includes('remote')) ||
+        (filter === 'fulltime' && lead.employment_type?.toLowerCase().includes('full'));
+      return matchesSearch && matchesFilter;
+    });
+  }, [deferredSearch, filter, leads]);
 
-  const handleSaveLead = async (leadData: LeadCreate | LeadUpdate) => {
-    if (!token) {
-      setError('Authorization token is missing, unable to save lead');
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const joinedCount = useMemo(() => leads.filter((lead) => lead.viewer_is_registered).length, [leads]);
+  const activeCount = useMemo(() => leads.filter((lead) => (lead.interest_count ?? 0) > 1 || (lead.comment_count ?? 0) > 0).length, [leads]);
+  const discussionCount = useMemo(() => leads.filter((lead) => (lead.comment_count ?? 0) > 0).length, [leads]);
+
+  useEffect(() => { setPage(1); }, [deferredSearch, filter]);
+
+  usePageToolbarHeader('Job Leads', `${joinedCount} joined · ${activeCount} active · ${discussionCount} with discussion`);
+
+  /* ---- Actions ---- */
+
+  const openLead = useCallback((lead: LeadRead, nextTab: LeadModalTab = 'overview', nextExtractContext: LeadExtractResponse | null = null) => {
+    setSelectedLeadId(lead.id);
+    setSelectedLeadTab(nextTab);
+    setExtractContext(nextExtractContext);
+  }, []);
+
+  const closeLead = useCallback(() => {
+    setSelectedLeadId(null);
+    setSelectedLeadTab('overview');
+    setExtractContext(null);
+  }, []);
+
+  const handleExtract = async () => {
+    if (!token || !extractUrl.trim()) return;
+    if (!isValidUrl(extractUrl.trim())) {
+      notify('Please enter a valid URL starting with http:// or https://', 'error');
       return;
     }
-    setModalOpen(false);
-    load(true, 'Saving lead', 'info')
+    setExtracting(true);
     try {
-      const savedLead = selectedLead?.id
-        ? await updateLead(token, selectedLead.id, leadData as LeadUpdate)
-        : await createLead(token, leadData as LeadCreate);
-      if (savedLead) {
-        await fetchLeads();  // Refresh the leads list
-      } else {
-        throw new Error('Failed to save lead');
+      const response = await extractLead(token, extractUrl.trim());
+      setLeads((current) => filterLeadIntoList(current, response.lead, true));
+      setExtractUrl('');
+      setPage(1);
+      notify(extractMessage(response));
+      openLead(response.lead, 'overview', response);
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Extraction failed', 'error');
+    }
+    setExtracting(false);
+  };
+
+  const handleDelete = async () => {
+    if (!token || !deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteLead(token, deleteTarget.id);
+      setLeads((current) => current.filter((lead) => lead.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      notify('Lead deleted');
+      if (selectedLeadId === deleteTarget.id) {
+        closeLead();
       }
-    } catch (error) {
-      setError('Error saving lead');
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Delete failed', 'error');
     }
-    load(false, '', 'info');
+    setDeleting(false);
   };
 
-  const handleCloseSnackbar = () => {
-    setError(null);
-  };
-
-  const handleApply = async (id: string) => {
-    // For now I am just going to "register" an application using the current lead
-    // In the future, clicking the Apply button should open a modal to create a new application
-    // That modal should contain pregenerated application documents (resume, cover letter, etc)
-    // And the user should be able to upload their own documents
-    if (!token) {
-      setError('Authorization token is missing, unable to create application for lead with id: ' + id);
-      return;
-    }
-    load(true, 'Creating application', 'info');
+  const handleSaveForm = async (data: LeadCreate | LeadSharedUpdate) => {
+    if (!token) return;
     try {
-      const applicationData: ApplicationCreate = {
-        lead_id: id, // Assuming 'id' is the lead_id for the application
-        status: 'Not Submitted',
-      };
-      await createApplication(token, applicationData);
-    } catch (error) {
-      setError('Failed to create application for lead with id: ' + id);
-    } finally {
-      load(false, '', 'info');
+      if (formLead?.id) {
+        const updated = await updateLead(token, formLead.id, data as LeadSharedUpdate);
+        setLeads((current) => filterLeadIntoList(current, updated));
+        notify('Lead updated');
+      } else {
+        const created = await createLead(token, data as LeadCreate);
+        setLeads((current) => filterLeadIntoList(current, created, true));
+        notify('Lead created');
+        openLead(created);
+      }
+      setFormOpen(false);
+      setFormLead(null);
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Failed to save lead', 'error');
     }
   };
 
+  const handleApply = async (lead: LeadRead) => {
+    if (!token) return;
+    setApplyingId(lead.id);
+    try {
+      await createApplication(token, { lead_id: lead.id, status: 'applied' });
+      notify(`Application created for "${lead.title || 'Untitled'}"`);
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Failed to create application', 'error');
+    }
+    setApplyingId(null);
+  };
 
-  const columns: GridColDef[] = [
-    { field: 'title', headerName: 'Title', width: 150 },
-    { field: 'company', headerName: 'Company', width: 150 },
-    { field: 'description', headerName: 'Description', width: 200 },
-    { field: 'employment_type', headerName: 'Employment Type', width: 150 },
-    { field: 'seniority_level', headerName: 'Seniority Level', width: 150 },
-    { field: 'location', headerName: 'Location', width: 150 },
-    { field: 'salary', headerName: 'Salary', width: 130 },
-    { field: 'job_function', headerName: 'Job Function', width: 150 },
-    { field: 'industries', headerName: 'Industries', width: 150 },
-    //{ field: 'notes', headerName: 'Notes', width: 200 },
-    //{ field: 'url', headerName: 'URL', width: 200 },
-  ];
+  const openCreate = () => { setFormLead(null); setFormOpen(true); };
+
+  const handleLeadChange = useCallback((lead: LeadRead) => {
+    setLeads((current) => filterLeadIntoList(current, lead));
+  }, []);
+
+  const handleLeadDeleted = useCallback((leadId: string) => {
+    setLeads((current) => current.filter((lead) => lead.id !== leadId));
+    if (selectedLeadId === leadId) {
+      closeLead();
+    }
+  }, [closeLead, selectedLeadId]);
+
+  /* ================================================================ */
+  /*  JSX                                                              */
+  /* ================================================================ */
 
   return (
-    <Stack spacing={8}>
-      {/* Page Title */}
-      <Typography variant="h4">Lead Management</Typography>
-      {/* Handle Alert State */}
-      {loading ? <MessageAlert severity={loadingSeverity} message={loadingMessage}/> : null}
-      <Stack>
-        <TextField
-          label="Extract Lead URL"
-          variant="outlined"
-          value={extractUrl}
-          onChange={(e) => setExtractUrl(e.target.value)}
-          fullWidth
-          sx={{ mb: 2 }}
-        />
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleExtractLead}
-          disabled={!extractUrl}
-        >
-          Extract Lead
-        </Button>
+    <Box>
+      {/* ── AI Extraction Bar ── */}
+      <LeadExtractionBar
+        url={extractUrl}
+        extracting={extracting}
+        onUrlChange={setExtractUrl}
+        onExtract={handleExtract}
+      />
+
+      {/* ── Search, Filter, Pagination ── */}
+      <LeadSearchBar
+        search={search}
+        filter={filter}
+        page={safePage}
+        pageCount={pageCount}
+        onSearchChange={setSearch}
+        onFilterChange={setFilter}
+        onPageChange={setPage}
+      />
+
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ mb: 3 }}>
+        <Chip label={`${joinedCount} joined by you`} color="success" variant={joinedCount ? 'filled' : 'outlined'} />
+        <Chip label={`${activeCount} active shared leads`} color="secondary" variant={activeCount ? 'filled' : 'outlined'} />
+        <Chip label={`${discussionCount} with discussion`} color="primary" variant={discussionCount ? 'filled' : 'outlined'} />
       </Stack>
-      <Box sx={{ p: 2 }}>
-        <DataGrid
-          rows={leads}
-          columns={columns}
-          loading={loading}
-          disableRowSelectionOnClick
-          onRowClick={(params) => setSelectedLead(params.row)}
-          onRowDoubleClick={(params) => handleEditLead(params.id.toString())}
-          pagination
-          pageSizeOptions={[10, 15, 20]}
-          rowCount={totalLeads}
-          paginationMode="server"
-          initialState={{
-            pagination: {
-              paginationModel: {
-                pageSize: paginationModel.page_size,
-                page: paginationModel.page  // default value will be used if not passed */
-              },
-            },
-          }}
-          onPaginationModelChange={handlePaginationModelChange}
-        />
-        <Stack direction="row" spacing={2}>
-          <Button variant="contained" onClick={handleAddLead} sx={{ mb: 2 }}>
-            Add
-          </Button>
 
-          {/* TODO: Implement Extract Lead, which takes a URL as an input */}
+      {/* ── Lead Cards ── */}
+      {loading ? (
+        <Grid container spacing={2}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Grid size={{ xs: 12, md: 6 }} key={i}>
+              <Skeleton variant="rounded" height={160} sx={{ borderRadius: 3 }} />
+            </Grid>
+          ))}
+        </Grid>
+      ) : paged.length === 0 ? (
+        leads.length === 0 ? (
+          <EmptyState
+            icon={<BoltIcon />}
+            title="No leads imported yet"
+            description="Import a job lead from LinkedIn, Glassdoor, or paste a URL to get started."
+            action={{ label: 'Import a Lead', onClick: openCreate, icon: <AddIcon /> }}
+          />
+        ) : (
+          <EmptyState
+            icon={<SearchIcon />}
+            title="No results match your filters"
+            description="Try adjusting your search or clearing filters."
+          />
+        )
+      ) : (
+        <Grid container spacing={2}>
+          {paged.map((lead) => (
+            <Grid size={{ xs: 12, md: 6 }} key={lead.id}>
+              <LeadCard
+                lead={lead}
+                applying={applyingId === lead.id}
+                onOpen={(l) => openLead(l)}
+                onEdit={(l) => openLead(l, 'edit')}
+                onDelete={setDeleteTarget}
+                onApply={handleApply}
+              />
+            </Grid>
+          ))}
+        </Grid>
+      )}
 
-        </Stack>
-        <LeadModal
-          open={modalOpen}
-          onClose={() => setModalOpen(false)}
-          onSave={handleSaveLead}
-          initialData={selectedLead ? {
-            title: selectedLead.title,
-            description: selectedLead.description,
-            location: selectedLead.location,
-            salary: selectedLead.salary,
-            job_function: selectedLead.job_function,
-            employment_type: selectedLead.employment_type,
-            seniority_level: selectedLead.seniority_level,
-            notes: selectedLead.notes,
-            url: selectedLead.url || '', // Provide a default value of an empty string for url
-            // Add additional fields as required by the LeadCreate schema
-          } : undefined}
-        />
-        {error && (
-          <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-            <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
-              {error}
-            </Alert>
-          </Snackbar>
-        )}
+      {/* ── Bottom pagination (for long pages) ── */}
+      {!loading && pageCount > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <MuiPagination
+            count={pageCount}
+            page={safePage}
+            onChange={(_, v) => setPage(v)}
+            shape="rounded"
+            sx={{ '& .MuiPaginationItem-root': { fontWeight: 600 } }}
+          />
+        </Box>
+      )}
 
-          {selectedLead && (
-              <Box sx={{ mt: 4, overflowY: 'auto', maxHeight: 800, border: '1px solid #ccc', p: 2, bgcolor: 'background.paper' }}>
-              <Button onClick={() => handleEditLead(selectedLead.id)}>Edit</Button><Button onClick={() => handleApply(selectedLead.id)}>Apply</Button>
-              <Stack>
-                {/* Actions to perform on the selected lead */}
-                {/* Display the selected lead's details */}
-                <Typography><strong>{selectedLead.title}, {selectedLead.employment_type} </strong></Typography>
-                <Typography><strong>Location:</strong> {selectedLead.location}</Typography>
-                <Typography><strong>Salary:</strong> {selectedLead.salary}</Typography>
-                <Typography><strong>Job Function:</strong> {selectedLead.job_function}</Typography>
-                <Typography><strong>Seniority Level:</strong> {selectedLead.seniority_level}</Typography>
-                <Typography><strong>Notes:</strong> {selectedLead.notes}</Typography>
-                <Typography><strong>Description:</strong>{selectedLead.description}</Typography>
-                <Typography><strong>ID:</strong> {selectedLead.id}</Typography>
-                <Typography><strong>URL:</strong> {selectedLead.url}</Typography>
-              </Stack>
-              </Box>
-          )}
-      </Box>
-    </Stack>
+      {/* ── Form Dialog (create / edit) ── */}
+      <LeadFormDialog
+        open={formOpen}
+        onClose={() => { setFormOpen(false); setFormLead(null); }}
+        onSave={handleSaveForm}
+        lead={formLead}
+        companies={companies}
+      />
+
+      <LeadModal
+        open={Boolean(selectedLeadId)}
+        token={token}
+        leadId={selectedLeadId}
+        companies={companies}
+        applying={Boolean(selectedLeadId && applyingId === selectedLeadId)}
+        extractContext={extractContext}
+        initialTab={selectedLeadTab}
+        onClose={closeLead}
+        onApply={handleApply}
+        onLeadChange={handleLeadChange}
+        onLeadDeleted={handleLeadDeleted}
+        onNotify={notify}
+      />
+
+      {/* ── Delete Confirmation ── */}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete Lead"
+        message={
+          <>
+            Are you sure you want to delete{' '}
+            <Typography component="span" fontWeight={600} color="text.primary">
+              {deleteTarget?.title || 'this lead'}
+            </Typography>
+            ? This action cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </Box>
   );
 };
 

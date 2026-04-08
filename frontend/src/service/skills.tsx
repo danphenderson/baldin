@@ -1,95 +1,98 @@
 // Path: frontend/src/service/skills.tsx
 
-import { components } from "../schema";
+import { components } from '../schema';
+import { createApiClient } from './api-client';
+import { API_URL } from '../config/env';
 
 export type SkillRead = components['schemas']['SkillRead'];
 export type SkillCreate = components['schemas']['SkillCreate'];
 export type SkillUpdate = components['schemas']['SkillUpdate'];
-
-type ExtractorRun = components['schemas']['ExtractorRun'];
-
-// TODO - pull this from the environment schema.d.ts
-const BASE_URL = `${process.env.REACT_APP_API_URL}/skills/`;
-
-
-const createRequestOptions = (token: string, method: string, body?: any, isFormData?: boolean): RequestInit => {
-  if (!token) {
-    console.log("Authorization token is required")
-    throw new Error("Authorization token is required");
-  }
-  let headers = new Headers({
-    "Authorization": `Bearer ${token}`,
-    "Content-Type": "application/json"
-  });
-
-  if (isFormData) {
-    // For file uploads, let the browser set 'Content-Type' to 'multipart/form-data' with the correct boundary.
-    // Also, the body should be a FormData object & not a JSON string.
-    const formData = new FormData();
-    headers.delete("Content-Type");
-    if (body) {
-      for (const [key, value] of Object.entries(body)) {
-        formData.append(key, value as string);
-      }
-    }
-    return {
-      method: method,
-      headers: headers,
-      body: formData,
-    };
-  } else {
-    return {
-      method: method,
-      headers: headers,
-      body: body ? JSON.stringify(body) : null,
-    };
-  }
+type SkillExtractBody = components['schemas']['Body_extract_user_skills_skills_extract_post'];
+export type SkillExtractRequest = Omit<SkillExtractBody, 'file'> & {
+  file?: File | null;
 };
+export type SkillExtractResponse = Record<string, string>;
 
-
-const fetchAPI = async (url: string, options: RequestInit) => {
-  const response = await fetch(url, options);
-  if (!response.ok) {
-    // Custom error handling can be implemented here
-    throw new Error('API request failed');
+const unwrap = <T,>(
+  result: { data?: T; error?: unknown; response: Response },
+): T => {
+  if (result.error !== undefined) {
+    const detail = result.error as { detail?: unknown };
+    let message = 'API request failed';
+    if (detail?.detail) {
+      message = typeof detail.detail === 'string' ? detail.detail : JSON.stringify(detail.detail);
+    }
+    throw new Error(message);
   }
-  return response.json();
+  return result.data as T;
 };
 
 export const getSkills = async (token: string): Promise<SkillRead[]> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/skills/'));
 };
 
-
 export const getSkill = async (token: string, id: string): Promise<SkillRead> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}${id}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/skills/{skill_id}', {
+    params: { query: { id } },
+  }));
 };
 
 export const createSkill = async (token: string, skill: SkillCreate): Promise<SkillRead> => {
-  const requestOptions = createRequestOptions(token, "POST", skill);
-  return fetchAPI(BASE_URL, requestOptions);
-}
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/skills/', {
+    body: skill,
+  }));
+};
 
 export const updateSkill = async (token: string, id: string, skill: SkillUpdate): Promise<SkillRead> => {
-  const requestOptions = createRequestOptions(token, "PATCH", skill);
-  return fetchAPI(`${BASE_URL}${id}`, requestOptions);
-}
+  const client = createApiClient(token);
+  return unwrap(await client.PUT('/skills/{skill_id}', {
+    params: { query: { id } },
+    body: skill,
+  }));
+};
 
 export const deleteSkill = async (token: string, id: string): Promise<void> => {
-  const requestOptions = createRequestOptions(token, "DELETE");
-  return fetchAPI(`${BASE_URL}${id}`, requestOptions);
-}
+  const client = createApiClient(token);
+  unwrap(await client.DELETE('/skills/{skill_id}', {
+    params: { query: { id } },
+  }));
+};
 
-export const extractSkill = async (token: string, data: ExtractorRun): Promise<ExtractorRun> => {
-  const isFileUpload = data.file ? true : false;
-  console.log("isFileUpload", isFileUpload);
-  const requestOptions = createRequestOptions(token, "POST", data, isFileUpload);
-  return fetchAPI(`${BASE_URL}extract`, requestOptions);
-}
+// TODO: Migrate to shared client once openapi-fetch multipart/form-data support is verified
+export const extractSkill = async (token: string, data: SkillExtractRequest): Promise<SkillExtractResponse> => {
+  const isFileUpload = !!data.file;
+  const headers: HeadersInit = { Authorization: `Bearer ${token}` };
+
+  let body: BodyInit;
+  if (isFileUpload) {
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== null && value !== undefined) {
+        formData.append(key, value instanceof File ? value : String(value));
+      }
+    }
+    body = formData;
+  } else {
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify(data);
+  }
+
+  const response = await fetch(`${API_URL}/skills/extract`, { method: 'POST', headers, body });
+  if (!response.ok) {
+    let message = 'API request failed';
+    try {
+      const err = await response.json();
+      if (err?.detail) message = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+    } catch { /* keep default */ }
+    throw new Error(message);
+  }
+  return response.json() as Promise<SkillExtractResponse>;
+};
 
 export const seedSkills = async (token: string): Promise<void> => {
-  const requestOptions = createRequestOptions(token, "POST");
-  return fetchAPI(`${BASE_URL}seed`, requestOptions);
-}
+  const client = createApiClient(token);
+  unwrap(await client.POST('/skills/seed'));
+};

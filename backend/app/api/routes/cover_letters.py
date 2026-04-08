@@ -1,11 +1,8 @@
 # app/api/routes/cover_letters.py
 import json
-from asyncio import gather
-from datetime import datetime
 from io import BytesIO
 
-from aiofiles import open as aopen
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import UUID4
 from reportlab.lib.pagesizes import letter
@@ -14,29 +11,44 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from app.api.deps import AsyncSession, conf
-from app.api.deps import console_log as log
 from app.api.deps import (
+    AsyncSession,
     create_cover_letter,
-    create_extractor,
-    create_orchestration_event,
-    create_orchestration_pipeline,
     generate_cover_letter,
     get_async_session,
     get_cover_letter,
     get_current_user,
     get_lead,
-    get_orchestration_pipeline_by_name,
     model_to_dict,
     models,
     schemas,
 )
+from app.api.routes.seed_tasks import (
+    SeedOperation,
+    build_user_seed_creator,
+    schedule_seed_operation,
+)
 from app.logging import console_log as log
 
-router: APIRouter = APIRouter()
+
+async def _inject_deprecation_headers(response: Response) -> None:
+    """Inject RFC 8594 Deprecation + Sunset headers on every response."""
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "2026-06-01"
 
 
-@router.get("/{cover_letter_id}/download", response_class=FileResponse)
+router: APIRouter = APIRouter(dependencies=[Depends(_inject_deprecation_headers)])
+
+COVER_LETTER_SEED_OPERATION = SeedOperation(
+    pipeline_name="seed_cover_letters",
+    resource_name="Cover Letters",
+    seed_filename="cover-letters.json",
+    destination_table="cover_letters",
+    creator=build_user_seed_creator(schemas.CoverLetterCreate, create_cover_letter),
+)
+
+
+@router.get("/{cover_letter_id}/download", response_class=FileResponse, deprecated=True)
 async def download_cover_letter(
     cover_letter_id: UUID4,
     db: AsyncSession = Depends(get_async_session),
@@ -87,18 +99,19 @@ async def download_cover_letter(
 
     # Create a StreamingResponse that streams the PDF file
     response = StreamingResponse(pdf_buffer, media_type="application/pdf")
-    response.headers[
-        "Content-Disposition"
-    ] = f'attachment; filename="{cover_letter.name}.pdf"'
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{cover_letter.name}.pdf"'
+    )
 
     return response
 
 
-@router.post("/generate", response_model=schemas.CoverLetterRead)
+@router.post("/generate", response_model=schemas.CoverLetterRead, deprecated=True)
 async def generate_user_cover_letter(
     lead_id: UUID4,
-    template_id: str
-    | None = Query(None, description="Template ID for the cover letter"),
+    template_id: str | None = Query(
+        None, description="Template ID for the cover letter"
+    ),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -157,10 +170,11 @@ async def generate_user_cover_letter(
     return new_cover_letter
 
 
-@router.get("/", response_model=list[schemas.CoverLetterRead])
+@router.get("/", response_model=list[schemas.CoverLetterRead], deprecated=True)
 async def get_current_user_cover_letters(
-    content_type: schemas.ContentType
-    | None = Query(None, description="Filter by content type"),
+    content_type: schemas.ContentType | None = Query(
+        None, description="Filter by content type"
+    ),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -169,23 +183,21 @@ async def get_current_user_cover_letters(
         query = query.filter(models.CoverLetter.content_type == content_type)
     cover_letters = await db.execute(query)
     cover_letters = cover_letters.scalars().all()  # type: ignore
-
-    if not cover_letters:
-        raise HTTPException(
-            status_code=404, detail="No cover letters found for the current user"
-        )
-
     return cover_letters
 
 
-@router.get("/{cover_letter_id}", response_model=schemas.CoverLetterRead)
+@router.get(
+    "/{cover_letter_id}", response_model=schemas.CoverLetterRead, deprecated=True
+)
 async def get_cover_letter_by_id(
     cover_letter: schemas.CoverLetterRead = Depends(get_cover_letter),
 ):
     return cover_letter
 
 
-@router.post("/", status_code=201, response_model=schemas.CoverLetterRead)
+@router.post(
+    "/", status_code=201, response_model=schemas.CoverLetterRead, deprecated=True
+)
 async def create_user_cover_letter(
     payload: schemas.CoverLetterCreate,
     user: schemas.UserRead = Depends(get_current_user),
@@ -198,7 +210,9 @@ async def create_user_cover_letter(
     return cover_letter
 
 
-@router.patch("/{cover_letter_id}", response_model=schemas.CoverLetterRead)
+@router.patch(
+    "/{cover_letter_id}", response_model=schemas.CoverLetterRead, deprecated=True
+)
 async def update_user_cover_letter(
     payload: schemas.CoverLetterUpdate,
     cover_letter: schemas.CoverLetterRead = Depends(get_cover_letter),
@@ -211,7 +225,7 @@ async def update_user_cover_letter(
     return cover_letter
 
 
-@router.delete("/{cover_letter_id}", status_code=204)
+@router.delete("/{cover_letter_id}", status_code=204, deprecated=True)
 async def delete_user_cover_letter(
     cover_letter: schemas.CoverLetterRead = Depends(get_cover_letter),
     db: AsyncSession = Depends(get_async_session),
@@ -221,71 +235,17 @@ async def delete_user_cover_letter(
     return
 
 
-@router.post("/seed", response_model=str)
+@router.post(
+    "/seed",
+    status_code=202,
+    response_model=schemas.SeedOperationAccepted,
+    deprecated=True,
+)
 async def seed_cover_letters(
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
-) -> str:
-    seed_path = conf.settings.SEEDS_PATH / "cover-letters.json"
-    log.info(f"Seeding Cover Letters table with initial data from {seed_path}")
-
-    # Fetch orchestration pipeline, create a new one if not found
-    try:
-        pipeline = await get_orchestration_pipeline_by_name(
-            "seed_cover_letters", db, user
-        )
-    except HTTPException as e:
-        if e.status_code == 404:
-            log.warning("Seed Cover Letters pipeline not found, creating a new one")
-            pipeline = await create_orchestration_pipeline(
-                schemas.OrchestrationPipelineCreate(
-                    name="seed_cover_letters",
-                    description="Seed Cover Letters table with initial data",
-                    definition={
-                        "action": "Insert initial data into Cover Letters table"
-                    },
-                ),
-                user,
-                db,
-            )
-        else:
-            raise e
-
-    # Create orchestration event
-    event = await create_orchestration_event(
-        schemas.OrchestrationEventCreate(
-            message="Seeding Cover Letters table with initial data",
-            environment=conf.settings.ENVIRONMENT,
-            pipeline_id=pipeline.id,
-            status=schemas.OrchestrationEventStatusType.PENDING,
-            payload={},
-            source_uri=schemas.URI(name=str(seed_path), type=schemas.URIType.FILE),
-            destination_uri=schemas.URI(
-                name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#cover_letters",
-                type=schemas.URIType.DATABASE,
-            ),
-        ),
-        db=db,
+):
+    return await schedule_seed_operation(
+        background_tasks, db, user, COVER_LETTER_SEED_OPERATION
     )
-
-    # Run the orchestration event
-    try:
-        async with aopen(seed_path, "r") as f:
-            cover_letters_data = json.loads(await f.read())
-        for cover_letter in cover_letters_data:
-            await create_cover_letter(
-                schemas.CoverLetterCreate(**cover_letter),
-                db=db,
-                user=user,
-            )
-    except Exception as e:
-        log.error(f"Error seeding Cover Letters table: {e}")
-        setattr(event, "status", schemas.OrchestrationEventStatusType.FAILED)
-        setattr(event, "message", str(e))
-        await db.commit()
-        raise HTTPException(status_code=500, detail=str(e))
-
-    setattr(event, "status", schemas.OrchestrationEventStatusType.SUCCESS)
-    await db.commit()
-    log.info(f"Seeded Cover Letters table with {len(cover_letters_data)} records.")
-    return f"Seeded Cover Letters table with {len(cover_letters_data)} records."

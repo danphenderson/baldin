@@ -6,12 +6,20 @@
 
 export interface paths {
   "/auth/jwt/login": {
-    /** Auth:Jwt.Login */
-    post: operations["auth_jwt_login_auth_jwt_login_post"];
+    /**
+     * Login
+     * @description Authenticate with email + password.
+     *
+     * * If MFA is **disabled** → returns ``{ access_token, token_type }``.
+     * * If MFA is **enabled** → returns ``{ mfa_required, mfa_token }``
+     *   and the client must call ``POST /auth/mfa/login-verify`` to
+     *   complete authentication.
+     */
+    post: operations["login_auth_jwt_login_post"];
   };
   "/auth/jwt/logout": {
-    /** Auth:Jwt.Logout */
-    post: operations["auth_jwt_logout_auth_jwt_logout_post"];
+    /** Logout */
+    post: operations["logout_auth_jwt_logout_post"];
   };
   "/auth/register": {
     /** Register:Register */
@@ -33,6 +41,56 @@ export interface paths {
     /** Verify:Verify */
     post: operations["verify_verify_auth_verify_post"];
   };
+  "/auth/mfa/status": {
+    /**
+     * Mfa Status
+     * @description Return whether MFA is currently enabled for the authenticated user.
+     */
+    get: operations["mfa_status_auth_mfa_status_get"];
+  };
+  "/auth/mfa/setup": {
+    /**
+     * Mfa Setup
+     * @description Generate a fresh TOTP secret.
+     *
+     * The secret is persisted on the user record but MFA is **not** active
+     * until the user confirms setup via ``POST /verify``.
+     */
+    post: operations["mfa_setup_auth_mfa_setup_post"];
+  };
+  "/auth/mfa/verify": {
+    /**
+     * Mfa Verify Setup
+     * @description Confirm MFA setup by presenting a valid TOTP code.
+     *
+     * This activates MFA on the account.
+     */
+    post: operations["mfa_verify_setup_auth_mfa_verify_post"];
+  };
+  "/auth/mfa/disable": {
+    /**
+     * Mfa Disable
+     * @description Disable MFA by presenting a valid TOTP code.
+     */
+    post: operations["mfa_disable_auth_mfa_disable_post"];
+  };
+  "/auth/mfa/admin-reset/{user_id}": {
+    /**
+     * Mfa Admin Reset
+     * @description Reset MFA for a user when they have lost access to their authenticator.
+     */
+    post: operations["mfa_admin_reset_auth_mfa_admin_reset__user_id__post"];
+  };
+  "/auth/mfa/login-verify": {
+    /**
+     * Mfa Login Verify
+     * @description Complete the MFA login challenge.
+     *
+     * Accepts the short-lived ``mfa_token`` returned by ``POST /auth/jwt/login``
+     * together with a valid TOTP code and returns a full-access JWT.
+     */
+    post: operations["mfa_login_verify_auth_mfa_login_verify_post"];
+  };
   "/db-management/list-tables": {
     /** List Tables */
     get: operations["list_tables_db_management_list_tables_get"];
@@ -40,6 +98,14 @@ export interface paths {
   "/db-management/table-details/{table_name}": {
     /** Get Table Details */
     get: operations["get_table_details_db_management_table_details__table_name__get"];
+  };
+  "/db-management/users/{user_id}/purge": {
+    /** Purge User Data */
+    patch: operations["purge_user_data_db_management_users__user_id__purge_patch"];
+  };
+  "/db-management/users/{user_id}": {
+    /** Delete User */
+    delete: operations["delete_user_db_management_users__user_id__delete"];
   };
   "/users/me": {
     /** Users:Current User */
@@ -59,6 +125,36 @@ export interface paths {
     /** Read Profile */
     get: operations["read_profile_users_me_profile_get"];
   };
+  "/users/me/avatar": {
+    /**
+     * Upload Avatar
+     * @description Upload or replace the current user's profile picture.
+     */
+    post: operations["upload_avatar_users_me_avatar_post"];
+  };
+  "/users/{user_id}/avatar": {
+    /**
+     * Serve Avatar
+     * @description Serve a user's avatar image. Returns 404 if no avatar is set.
+     */
+    get: operations["serve_avatar_users__user_id__avatar_get"];
+  };
+  "/users/me/placement": {
+    /**
+     * Update Placement
+     * @description Update the current user's placement status.
+     *
+     * Valid transitions: active → graduated, graduated → alumni.
+     */
+    patch: operations["update_placement_users_me_placement_patch"];
+  };
+  "/users/me/profile/extract": {
+    /**
+     * Extract User Profile
+     * @description Extract all profile sections from one or many sources and persist results.
+     */
+    post: operations["extract_user_profile_users_me_profile_extract_post"];
+  };
   "/users/seed": {
     /** Seed Users */
     post: operations["seed_users_users_seed_post"];
@@ -69,6 +165,10 @@ export interface paths {
     /** Create Job Lead */
     post: operations["create_job_lead_leads__post"];
   };
+  "/leads/extract": {
+    /** Extract Lead */
+    post: operations["extract_lead_leads_extract_post"];
+  };
   "/leads/{id}": {
     /** Read Lead */
     get: operations["read_lead_leads__id__get"];
@@ -77,16 +177,27 @@ export interface paths {
     /** Update Lead */
     patch: operations["update_lead_leads__id__patch"];
   };
-  "/leads/purge": {
-    /**
-     * Purge Leads
-     * @description Drops all leads records in the table.
-     */
-    delete: operations["purge_leads_leads_purge_delete"];
+  "/leads/{id}/registration": {
+    /** Create Lead Registration */
+    post: operations["create_lead_registration_leads__id__registration_post"];
+    /** Delete Lead Registration */
+    delete: operations["delete_lead_registration_leads__id__registration_delete"];
+    /** Update Lead Registration */
+    patch: operations["update_lead_registration_leads__id__registration_patch"];
   };
-  "/leads/extract": {
-    /** Extract Lead */
-    post: operations["extract_lead_leads_extract_post"];
+  "/leads/{id}/comments": {
+    /** Read Lead Comments */
+    get: operations["read_lead_comments_leads__id__comments_get"];
+    /** Create Lead Comment */
+    post: operations["create_lead_comment_leads__id__comments_post"];
+  };
+  "/leads/{id}/comments/{comment_id}/replies": {
+    /** Create Lead Comment Reply */
+    post: operations["create_lead_comment_reply_leads__id__comments__comment_id__replies_post"];
+  };
+  "/leads/purge": {
+    /** Purge Leads */
+    delete: operations["purge_leads_leads_purge_delete"];
   };
   "/leads/seed": {
     /** Seed Leads */
@@ -134,11 +245,25 @@ export interface paths {
     /** Create Orch Event */
     post: operations["create_orch_event_data_orchestration_events_post"];
   };
+  "/data_orchestration/events/prune": {
+    /**
+     * Prune Orchestration Events
+     * @description Delete completed/failed orchestration events older than the specified age.
+     */
+    delete: operations["prune_orchestration_events_data_orchestration_events_prune_delete"];
+  };
   "/data_orchestration/events/{id}": {
     /** Read Orch Event */
     get: operations["read_orch_event_data_orchestration_events__id__get"];
     /** Update Orch Event */
     put: operations["update_orch_event_data_orchestration_events__id__put"];
+  };
+  "/data_orchestration/events/{event_id}/retry": {
+    /**
+     * Retry Orch Event
+     * @description Retry a failed orchestration event by creating a new event linked to the original.
+     */
+    post: operations["retry_orch_event_data_orchestration_events__event_id__retry_post"];
   };
   "/contacts/": {
     /** Get Current User Contacts */
@@ -207,51 +332,96 @@ export interface paths {
     post: operations["seed_skills_skills_seed_post"];
   };
   "/cover_letters/{cover_letter_id}/download": {
-    /** Download Cover Letter */
+    /**
+     * Download Cover Letter
+     * @deprecated
+     */
     get: operations["download_cover_letter_cover_letters__cover_letter_id__download_get"];
   };
   "/cover_letters/generate": {
-    /** Generate User Cover Letter */
+    /**
+     * Generate User Cover Letter
+     * @deprecated
+     */
     post: operations["generate_user_cover_letter_cover_letters_generate_post"];
   };
   "/cover_letters/": {
-    /** Get Current User Cover Letters */
+    /**
+     * Get Current User Cover Letters
+     * @deprecated
+     */
     get: operations["get_current_user_cover_letters_cover_letters__get"];
-    /** Create User Cover Letter */
+    /**
+     * Create User Cover Letter
+     * @deprecated
+     */
     post: operations["create_user_cover_letter_cover_letters__post"];
   };
   "/cover_letters/{cover_letter_id}": {
-    /** Get Cover Letter By Id */
+    /**
+     * Get Cover Letter By Id
+     * @deprecated
+     */
     get: operations["get_cover_letter_by_id_cover_letters__cover_letter_id__get"];
-    /** Delete User Cover Letter */
+    /**
+     * Delete User Cover Letter
+     * @deprecated
+     */
     delete: operations["delete_user_cover_letter_cover_letters__cover_letter_id__delete"];
-    /** Update User Cover Letter */
+    /**
+     * Update User Cover Letter
+     * @deprecated
+     */
     patch: operations["update_user_cover_letter_cover_letters__cover_letter_id__patch"];
   };
   "/cover_letters/seed": {
-    /** Seed Cover Letters */
+    /**
+     * Seed Cover Letters
+     * @deprecated
+     */
     post: operations["seed_cover_letters_cover_letters_seed_post"];
   };
   "/resumes/{resume_id}/download": {
-    /** Download Resume */
+    /**
+     * Download Resume
+     * @deprecated
+     */
     get: operations["download_resume_resumes__resume_id__download_get"];
   };
   "/resumes/": {
-    /** Get Current User Resumes */
+    /**
+     * Get Current User Resumes
+     * @deprecated
+     */
     get: operations["get_current_user_resumes_resumes__get"];
-    /** Create User Resume */
+    /**
+     * Create User Resume
+     * @deprecated
+     */
     post: operations["create_user_resume_resumes__post"];
   };
   "/resumes/{resume_id}": {
-    /** Get User Resume */
+    /**
+     * Get User Resume
+     * @deprecated
+     */
     get: operations["get_user_resume_resumes__resume_id__get"];
-    /** Delete User Resume */
+    /**
+     * Delete User Resume
+     * @deprecated
+     */
     delete: operations["delete_user_resume_resumes__resume_id__delete"];
-    /** Update User Resume */
+    /**
+     * Update User Resume
+     * @deprecated
+     */
     patch: operations["update_user_resume_resumes__resume_id__patch"];
   };
   "/resumes/seed": {
-    /** Seed Resumes */
+    /**
+     * Seed Resumes
+     * @deprecated
+     */
     post: operations["seed_resumes_resumes_seed_post"];
   };
   "/applications/": {
@@ -272,20 +442,214 @@ export interface paths {
     patch: operations["update_application_applications__id__patch"];
   };
   "/applications/{id}/resumes": {
-    /** Get Application Resumes */
+    /**
+     * Get Application Resumes
+     * @deprecated
+     */
     get: operations["get_application_resumes_applications__id__resumes_get"];
-    /** Add Resume To Application */
+    /**
+     * Add Resume To Application
+     * @deprecated
+     */
     post: operations["add_resume_to_application_applications__id__resumes_post"];
   };
   "/applications/{id}/cover_letters": {
-    /** Get Application Cover Letters */
+    /**
+     * Get Application Cover Letters
+     * @deprecated
+     */
     get: operations["get_application_cover_letters_applications__id__cover_letters_get"];
-    /** Add Cover Letter To Application */
+    /**
+     * Add Cover Letter To Application
+     * @deprecated
+     */
     post: operations["add_cover_letter_to_application_applications__id__cover_letters_post"];
   };
   "/applications/{id}/cover_letters/generate": {
-    /** Generate Cover Letter For Application */
+    /**
+     * Generate Cover Letter For Application
+     * @deprecated
+     */
     post: operations["generate_cover_letter_for_application_applications__id__cover_letters_generate_post"];
+  };
+  "/applications/{id}/export": {
+    /**
+     * Export Application Materials
+     * @description Export all materials linked to an application as a ZIP archive.
+     *
+     * The archive contains up to three subdirectories — ``resumes/``,
+     * ``cover_letters/``, and ``documents/`` — each holding PDF files for
+     * the linked records.
+     */
+    get: operations["export_application_materials_applications__id__export_get"];
+  };
+  "/applications/{id}/documents": {
+    /** Get Application Documents */
+    get: operations["get_application_documents_applications__id__documents_get"];
+    /** Add Document To Application */
+    post: operations["add_document_to_application_applications__id__documents_post"];
+  };
+  "/applications/{id}/documents/{document_id}": {
+    /** Detach Document From Application */
+    delete: operations["detach_document_from_application_applications__id__documents__document_id__delete"];
+  };
+  "/documents/upload": {
+    /**
+     * Upload Document
+     * @description Upload a PDF file, extract its text, and create a new Document + v1.
+     */
+    post: operations["upload_document_documents_upload_post"];
+  };
+  "/documents/pinned": {
+    /**
+     * Get Pinned Documents
+     * @description Return the user's pinned (active/canonical) documents — at most one per kind.
+     */
+    get: operations["get_pinned_documents_documents_pinned_get"];
+  };
+  "/documents/": {
+    /** List Documents */
+    get: operations["list_documents_documents__get"];
+    /**
+     * Create Document
+     * @description Create a document with its initial version (v1).
+     */
+    post: operations["create_document_documents__post"];
+  };
+  "/documents/shared-with-me": {
+    /**
+     * List Shared With Me
+     * @description List documents that other users have shared with the current user.
+     */
+    get: operations["list_shared_with_me_documents_shared_with_me_get"];
+  };
+  "/documents/{document_id}/share-candidates": {
+    /**
+     * List Share Candidates
+     * @description Look up authenticated share candidates for a specific document.
+     */
+    get: operations["list_share_candidates_documents__document_id__share_candidates_get"];
+  };
+  "/documents/generate": {
+    /**
+     * Generate Document
+     * @description Generate document content via AI and persist as a Document + Version.
+     *
+     * Supported kinds: ``cover_letter``, ``resume``.  Others return 501.
+     *
+     * If ``document_id`` is provided the generated content is appended as a new
+     * version; otherwise a brand-new Document is created.
+     */
+    post: operations["generate_document_documents_generate_post"];
+  };
+  "/documents/{document_id}": {
+    /** Get Document Detail */
+    get: operations["get_document_detail_documents__document_id__get"];
+    /** Delete Document */
+    delete: operations["delete_document_documents__document_id__delete"];
+    /** Update Document */
+    patch: operations["update_document_documents__document_id__patch"];
+  };
+  "/documents/{document_id}/activity": {
+    /**
+     * List Document Activity
+     * @description Read audit-style activity history for a document.
+     */
+    get: operations["list_document_activity_documents__document_id__activity_get"];
+  };
+  "/documents/{document_id}/versions": {
+    /** List Versions */
+    get: operations["list_versions_documents__document_id__versions_get"];
+    /** Create Version */
+    post: operations["create_version_documents__document_id__versions_post"];
+  };
+  "/documents/{document_id}/versions/{version_id}": {
+    /** Get Version */
+    get: operations["get_version_documents__document_id__versions__version_id__get"];
+  };
+  "/documents/{document_id}/pin": {
+    /**
+     * Pin Document
+     * @description Pin (or unpin) a document as the active/canonical for its kind.
+     *
+     * When pinning, all other documents of the same kind for this user are
+     * unpinned first.
+     */
+    post: operations["pin_document_documents__document_id__pin_post"];
+  };
+  "/documents/{document_id}/original": {
+    /**
+     * Download Original
+     * @description Download the original uploaded PDF for the head version.
+     */
+    get: operations["download_original_documents__document_id__original_get"];
+  };
+  "/documents/{document_id}/download": {
+    /** Download Document */
+    get: operations["download_document_documents__document_id__download_get"];
+  };
+  "/documents/{document_id}/shares": {
+    /**
+     * List Shares
+     * @description List all shares for a document (owner only).
+     */
+    get: operations["list_shares_documents__document_id__shares_get"];
+    /**
+     * Create Share
+     * @description Grant another user access to this document (owner only).
+     */
+    post: operations["create_share_documents__document_id__shares_post"];
+  };
+  "/documents/{document_id}/shares/{share_id}": {
+    /**
+     * Delete Share
+     * @description Revoke a share (owner only).
+     */
+    delete: operations["delete_share_documents__document_id__shares__share_id__delete"];
+    /**
+     * Update Share
+     * @description Update a share's role (owner only).
+     */
+    patch: operations["update_share_documents__document_id__shares__share_id__patch"];
+  };
+  "/documents/search": {
+    /**
+     * Semantic search across user documents
+     * @description Perform a semantic similarity search across the authenticated user's
+     * embedded documents using pgvector cosine distance.
+     */
+    post: operations["search_documents_documents_search_post"];
+  };
+  "/documents/{document_id}/embed": {
+    /**
+     * Generate embeddings for a document
+     * @description Chunk and embed a document's text content, storing the resulting vectors
+     * in pgvector for later semantic search.  Replaces any existing embeddings
+     * for the same document.
+     */
+    post: operations["embed_document_documents__document_id__embed_post"];
+  };
+  "/documents/rag/enrich-lead": {
+    /**
+     * Enrich a lead using document context
+     * @description Retrieve relevant document chunks and use them to enrich a job lead
+     * description with personalized analysis.
+     */
+    post: operations["enrich_lead_endpoint_documents_rag_enrich_lead_post"];
+  };
+  "/documents/rag/rank-leads": {
+    /**
+     * Rank leads by relevance to user profile
+     * @description Rank job leads based on the user's embedded document context.
+     */
+    post: operations["rank_leads_endpoint_documents_rag_rank_leads_post"];
+  };
+  "/documents/rag/summarize-company": {
+    /**
+     * Summarize a company website
+     * @description Load a company website, extract text, and return an AI summary.
+     */
+    post: operations["summarize_company_endpoint_documents_rag_summarize_company_post"];
   };
   "/education/": {
     /** Read Current User Educations */
@@ -365,6 +729,10 @@ export interface paths {
     /** Create Extractor Example */
     post: operations["create_extractor_example_extractor__id__examples_post"];
   };
+  "/extractor/{id}/versions": {
+    /** List Extractor Versions */
+    get: operations["list_extractor_versions_extractor__id__versions_get"];
+  };
   "/extractor/{id}/examples/{example_id}": {
     /** Delete Extractor Example */
     delete: operations["delete_extractor_example_extractor__id__examples__example_id__delete"];
@@ -376,6 +744,242 @@ export interface paths {
      */
     post: operations["extractor_runner_extractor__id__run_post"];
   };
+  "/extractor/{id}/run/{event_id}/retry": {
+    /**
+     * Retry Extractor Run
+     * @description Retry a failed extractor run by re-executing against the same source.
+     */
+    post: operations["retry_extractor_run_extractor__id__run__event_id__retry_post"];
+  };
+  "/crawlers/pipelines": {
+    /** List Crawler Pipelines */
+    get: operations["list_crawler_pipelines_crawlers_pipelines_get"];
+    /** Create Crawler Pipeline */
+    post: operations["create_crawler_pipeline_crawlers_pipelines_post"];
+  };
+  "/crawlers/pipelines/{pipeline_id}": {
+    /** Get Crawler Pipeline */
+    get: operations["get_crawler_pipeline_crawlers_pipelines__pipeline_id__get"];
+    /** Update Crawler Pipeline */
+    patch: operations["update_crawler_pipeline_crawlers_pipelines__pipeline_id__patch"];
+  };
+  "/crawlers/pipelines/{pipeline_id}/runs": {
+    /** Trigger Crawler Run */
+    post: operations["trigger_crawler_run_crawlers_pipelines__pipeline_id__runs_post"];
+  };
+  "/crawlers/runs": {
+    /** List Crawler Runs */
+    get: operations["list_crawler_runs_crawlers_runs_get"];
+  };
+  "/crawlers/runs/prune": {
+    /**
+     * Prune Crawler Runs
+     * @description Delete completed or terminal crawler runs older than the specified age.
+     */
+    delete: operations["prune_crawler_runs_crawlers_runs_prune_delete"];
+  };
+  "/crawlers/runs/{run_id}": {
+    /** Get Crawler Run */
+    get: operations["get_crawler_run_crawlers_runs__run_id__get"];
+  };
+  "/crawlers/runs/{run_id}/cancel": {
+    /** Cancel Crawler Run */
+    post: operations["cancel_crawler_run_crawlers_runs__run_id__cancel_post"];
+  };
+  "/crawlers/runs/{run_id}/pause": {
+    /** Pause Crawler Run */
+    post: operations["pause_crawler_run_crawlers_runs__run_id__pause_post"];
+  };
+  "/crawlers/runs/{run_id}/resume": {
+    /** Resume Crawler Run */
+    post: operations["resume_crawler_run_crawlers_runs__run_id__resume_post"];
+  };
+  "/crawlers/runs/{run_id}/retry": {
+    /** Retry Crawler Run */
+    post: operations["retry_crawler_run_crawlers_runs__run_id__retry_post"];
+  };
+  "/directory/": {
+    /**
+     * List Directory
+     * @description Paginated, searchable user directory.
+     *
+     * Only discoverable, active users are returned. ``superusers_only=true`` narrows
+     * results to Baldin superusers.
+     */
+    get: operations["list_directory_directory__get"];
+  };
+  "/directory/{user_id}": {
+    /**
+     * Read Public Profile
+     * @description View another user's public profile.
+     */
+    get: operations["read_public_profile_directory__user_id__get"];
+  };
+  "/connections/": {
+    /**
+     * List Connections
+     * @description List connections for the current user (both sent and received).
+     */
+    get: operations["list_connections_connections__get"];
+    /**
+     * Send Connection Request
+     * @description Send a connection request to another user.
+     *
+     * Requests to superusers are available to all authenticated users. Requests to
+     * non-superusers still require a Starter subscription or above.
+     */
+    post: operations["send_connection_request_connections__post"];
+  };
+  "/connections/{id}/accept": {
+    /**
+     * Accept Connection
+     * @description Accept a pending connection request. Only the addressee can accept.
+     */
+    patch: operations["accept_connection_connections__id__accept_patch"];
+  };
+  "/connections/{id}/decline": {
+    /**
+     * Decline Connection
+     * @description Decline a pending connection request. Only the addressee can decline.
+     */
+    patch: operations["decline_connection_connections__id__decline_patch"];
+  };
+  "/connections/{id}": {
+    /**
+     * Remove Connection
+     * @description Remove an accepted connection or cancel a pending request. Either party can do this.
+     */
+    delete: operations["remove_connection_connections__id__delete"];
+  };
+  "/connections/{id}/block": {
+    /**
+     * Block Connection
+     * @description Block a user via an existing connection record. Sets status to blocked.
+     */
+    post: operations["block_connection_connections__id__block_post"];
+  };
+  "/conversations/unread": {
+    /**
+     * Get Total Unread
+     * @description Total unread message count across all conversations (for sidebar badge).
+     */
+    get: operations["get_total_unread_conversations_unread_get"];
+  };
+  "/conversations/": {
+    /**
+     * List Conversations
+     * @description List the current user's conversations, sorted by most recent message.
+     */
+    get: operations["list_conversations_conversations__get"];
+    /**
+     * Create Conversation
+     * @description Create a DM or group conversation.
+     */
+    post: operations["create_conversation_conversations__post"];
+  };
+  "/conversations/{conversation_id}": {
+    /**
+     * Get Conversation
+     * @description Get conversation detail with paginated messages. Auto-marks as read.
+     */
+    get: operations["get_conversation_conversations__conversation_id__get"];
+  };
+  "/conversations/{conversation_id}/messages": {
+    /**
+     * Send Message
+     * @description Send a message in a conversation.
+     */
+    post: operations["send_message_conversations__conversation_id__messages_post"];
+  };
+  "/conversations/{conversation_id}/messages/{message_id}": {
+    /**
+     * Delete Message
+     * @description Delete your own message (hard delete).
+     */
+    delete: operations["delete_message_conversations__conversation_id__messages__message_id__delete"];
+    /**
+     * Edit Message
+     * @description Edit your own message.
+     */
+    patch: operations["edit_message_conversations__conversation_id__messages__message_id__patch"];
+  };
+  "/conversations/{conversation_id}/read": {
+    /**
+     * Mark Conversation Read
+     * @description Mark a conversation as read (update last_read_at).
+     */
+    post: operations["mark_conversation_read_conversations__conversation_id__read_post"];
+  };
+  "/conversations/{conversation_id}/participants": {
+    /**
+     * Add Participant
+     * @description Add a participant to a group conversation. Only admins can add.
+     */
+    post: operations["add_participant_conversations__conversation_id__participants_post"];
+  };
+  "/conversations/{conversation_id}/participants/{target_user_id}": {
+    /**
+     * Remove Participant
+     * @description Remove a participant or leave a group. Admins can remove others; anyone can leave.
+     */
+    delete: operations["remove_participant_conversations__conversation_id__participants__target_user_id__delete"];
+  };
+  "/documents/{document_id}/collaborate/bootstrap": {
+    /** Request Collaboration Bootstrap */
+    post: operations["request_collaboration_bootstrap_documents__document_id__collaborate_bootstrap_post"];
+  };
+  "/action-items/": {
+    /** List Action Items */
+    get: operations["list_action_items_action_items__get"];
+    /** Create Action Item */
+    post: operations["create_action_item_action_items__post"];
+  };
+  "/action-items/reorder": {
+    /**
+     * Reorder Action Items
+     * @description Set sort_order for action items based on position in item_ids array.
+     */
+    post: operations["reorder_action_items_action_items_reorder_post"];
+  };
+  "/action-items/{id}": {
+    /** Get Action Item */
+    get: operations["get_action_item_action_items__id__get"];
+    /** Delete Action Item */
+    delete: operations["delete_action_item_action_items__id__delete"];
+    /** Update Action Item */
+    patch: operations["update_action_item_action_items__id__patch"];
+  };
+  "/action-items/from-application/{application_id}": {
+    /** Create Action Item From Application */
+    post: operations["create_action_item_from_application_action_items_from_application__application_id__post"];
+  };
+  "/activity-feed/": {
+    /** Get Activity Feed */
+    get: operations["get_activity_feed_activity_feed__get"];
+  };
+  "/activity-feed/summary": {
+    /** Get Command Center Summary */
+    get: operations["get_command_center_summary_activity_feed_summary_get"];
+  };
+  "/review/items": {
+    /**
+     * List Review Items
+     * @description List all items pending human review.
+     */
+    get: operations["list_review_items_review_items_get"];
+  };
+  "/review/items/{item_type}/{item_id}/approve": {
+    /** Approve Item */
+    post: operations["approve_item_review_items__item_type___item_id__approve_post"];
+  };
+  "/review/items/{item_type}/{item_id}/reject": {
+    /** Reject Item */
+    post: operations["reject_item_review_items__item_type___item_id__reject_post"];
+  };
+  "/review/items/batch": {
+    /** Batch Review */
+    post: operations["batch_review_review_items_batch_post"];
+  };
   "/": {
     /** Root */
     get: operations["root__get"];
@@ -386,6 +990,223 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    /** ActionItemCreate */
+    ActionItemCreate: {
+      /** Title */
+      title: string;
+      /** Description */
+      description?: string | null;
+      kind: components["schemas"]["ActionItemKind"];
+      /** @default pending */
+      status?: components["schemas"]["ActionItemStatus"];
+      /** @default medium */
+      priority?: components["schemas"]["ActionItemPriority"];
+      /** Due At */
+      due_at?: string | null;
+      /**
+       * Sort Order
+       * @default 0
+       */
+      sort_order?: number;
+      /** Application Id */
+      application_id?: string | null;
+      /** Lead Id */
+      lead_id?: string | null;
+      /** Document Id */
+      document_id?: string | null;
+      /** Conversation Id */
+      conversation_id?: string | null;
+    };
+    /** ActionItemDetailRead */
+    ActionItemDetailRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+      /** Title */
+      title: string;
+      /** Description */
+      description?: string | null;
+      kind: components["schemas"]["ActionItemKind"];
+      status: components["schemas"]["ActionItemStatus"];
+      priority: components["schemas"]["ActionItemPriority"];
+      /** Due At */
+      due_at?: string | null;
+      /** Completed At */
+      completed_at?: string | null;
+      /**
+       * Sort Order
+       * @default 0
+       */
+      sort_order?: number;
+      /** Application Id */
+      application_id?: string | null;
+      /** Lead Id */
+      lead_id?: string | null;
+      /** Document Id */
+      document_id?: string | null;
+      /** Conversation Id */
+      conversation_id?: string | null;
+      application?: components["schemas"]["ApplicationRead"] | null;
+      lead?: components["schemas"]["LeadRead"] | null;
+      document?: components["schemas"]["DocumentRead"] | null;
+      conversation?: components["schemas"]["ConversationRead"] | null;
+    };
+    /**
+     * ActionItemKind
+     * @enum {string}
+     */
+    ActionItemKind: "follow_up" | "prepare_document" | "send_message" | "review_lead" | "schedule_interview" | "custom";
+    /**
+     * ActionItemPriority
+     * @enum {string}
+     */
+    ActionItemPriority: "low" | "medium" | "high" | "urgent";
+    /** ActionItemRead */
+    ActionItemRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+      /** Title */
+      title: string;
+      /** Description */
+      description?: string | null;
+      kind: components["schemas"]["ActionItemKind"];
+      status: components["schemas"]["ActionItemStatus"];
+      priority: components["schemas"]["ActionItemPriority"];
+      /** Due At */
+      due_at?: string | null;
+      /** Completed At */
+      completed_at?: string | null;
+      /**
+       * Sort Order
+       * @default 0
+       */
+      sort_order?: number;
+      /** Application Id */
+      application_id?: string | null;
+      /** Lead Id */
+      lead_id?: string | null;
+      /** Document Id */
+      document_id?: string | null;
+      /** Conversation Id */
+      conversation_id?: string | null;
+    };
+    /** ActionItemReorder */
+    ActionItemReorder: {
+      /** Item Ids */
+      item_ids: string[];
+    };
+    /**
+     * ActionItemStatus
+     * @enum {string}
+     */
+    ActionItemStatus: "pending" | "in_progress" | "completed" | "dismissed";
+    /** ActionItemUpdate */
+    ActionItemUpdate: {
+      /** Title */
+      title?: string | null;
+      /** Description */
+      description?: string | null;
+      kind?: components["schemas"]["ActionItemKind"] | null;
+      status?: components["schemas"]["ActionItemStatus"] | null;
+      priority?: components["schemas"]["ActionItemPriority"] | null;
+      /** Due At */
+      due_at?: string | null;
+      /** Sort Order */
+      sort_order?: number | null;
+      /** Application Id */
+      application_id?: string | null;
+      /** Lead Id */
+      lead_id?: string | null;
+      /** Document Id */
+      document_id?: string | null;
+      /** Conversation Id */
+      conversation_id?: string | null;
+    };
+    /** ActivityFeedItem */
+    ActivityFeedItem: {
+      /** Type */
+      type: string;
+      /** Entity Type */
+      entity_type: string;
+      /**
+       * Entity Id
+       * Format: uuid4
+       */
+      entity_id: string;
+      /** Title */
+      title: string;
+      /** Detail */
+      detail?: string | null;
+      /**
+       * Timestamp
+       * Format: date-time
+       */
+      timestamp: string;
+      /** Metadata */
+      metadata?: {
+        [key: string]: unknown;
+      } | null;
+    };
+    /** ActivityFeedRead */
+    ActivityFeedRead: {
+      /** Items */
+      items: components["schemas"]["ActivityFeedItem"][];
+      /** Total */
+      total: number;
+      /** Page */
+      page: number;
+      /** Page Size */
+      page_size: number;
+    };
+    /** ApplicationCoverLetterAttach */
+    ApplicationCoverLetterAttach: {
+      /**
+       * Cover Letter Id
+       * Format: uuid4
+       */
+      cover_letter_id: string;
+    };
     /** ApplicationCreate */
     ApplicationCreate: {
       /**
@@ -393,8 +1214,29 @@ export interface components {
        * Format: uuid4
        */
       lead_id: string;
-      /** Status */
-      status: string;
+      status: components["schemas"]["ApplicationStatus"];
+      /** Notes */
+      notes?: string | null;
+      /** Next Step */
+      next_step?: string | null;
+      /** Next Step Due */
+      next_step_due?: string | null;
+      /** Document Ids */
+      document_ids?: string[] | null;
+    };
+    /** ApplicationDocumentAttach */
+    ApplicationDocumentAttach: {
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Document to attach
+       */
+      document_id: string;
+      /**
+       * Version Id
+       * @description Specific version to pin for this application (default: head)
+       */
+      version_id?: string | null;
     };
     /** ApplicationRead */
     ApplicationRead: {
@@ -428,31 +1270,131 @@ export interface components {
       user_id: string;
       lead: components["schemas"]["LeadRead"];
       user: components["schemas"]["UserRead"];
+      /** @description Application status */
+      status?: components["schemas"]["ApplicationStatus"] | null;
       /**
-       * Status
-       * @description Application status
+       * Notes
+       * @description Free-form user notes
        */
-      status?: string | null;
+      notes?: string | null;
+      /**
+       * Next Step
+       * @description Next action for this application
+       */
+      next_step?: string | null;
+      /**
+       * Next Step Due
+       * @description When the next step is due
+       */
+      next_step_due?: string | null;
+      /**
+       * Status History
+       * @description Append-only log of status transitions
+       * @default []
+       */
+      status_history?: {
+          [key: string]: unknown;
+        }[] | null;
     };
+    /** ApplicationResumeAttach */
+    ApplicationResumeAttach: {
+      /**
+       * Resume Id
+       * Format: uuid4
+       */
+      resume_id: string;
+    };
+    /**
+     * ApplicationStatus
+     * @enum {string}
+     */
+    ApplicationStatus: "applied" | "screening" | "interview" | "offer" | "rejected" | "withdrawn";
     /** ApplicationUpdate */
     ApplicationUpdate: {
-      /** Status */
-      status: string;
+      status?: components["schemas"]["ApplicationStatus"] | null;
+      /** Notes */
+      notes?: string | null;
+      /** Next Step */
+      next_step?: string | null;
+      /** Next Step Due */
+      next_step_due?: string | null;
     };
-    /** BearerResponse */
+    /**
+     * BearerResponse
+     * @description Returned when password auth completes without an MFA challenge.
+     */
     BearerResponse: {
-      /** Access Token */
+      /**
+       * Access Token
+       * @description JWT access token
+       */
       access_token: string;
-      /** Token Type */
-      token_type: string;
+      /**
+       * Token Type
+       * @description Bearer token type
+       * @default bearer
+       */
+      token_type?: string;
     };
-    /** Body_auth_jwt_login_auth_jwt_login_post */
-    Body_auth_jwt_login_auth_jwt_login_post: {
+    /** Body_extract_user_profile_users_me_profile_extract_post */
+    Body_extract_user_profile_users_me_profile_extract_post: {
+      /** File */
+      file?: string | null;
+      /**
+       * Mode
+       * @default entire_document
+       */
+      mode?: string;
+      /** Text */
+      text?: string | null;
+      /** Url */
+      url?: string | null;
+      /** Llm */
+      llm?: string | null;
+      /** Sources Json */
+      sources_json?: string | null;
+      /**
+       * Source Files
+       * @default []
+       */
+      source_files?: string[];
+    };
+    /** Body_extract_user_skills_skills_extract_post */
+    Body_extract_user_skills_skills_extract_post: {
+      /** File */
+      file?: string | null;
+      /** Mode */
+      mode?: string | null;
+      /** Text */
+      text?: string | null;
+      /** Url */
+      url?: string | null;
+      /** Llm */
+      llm?: string | null;
+    };
+    /** Body_extractor_runner_extractor__id__run_post */
+    Body_extractor_runner_extractor__id__run_post: {
+      /** File */
+      file?: string | null;
+      /** Mode */
+      mode?: string | null;
+      /** Text */
+      text?: string | null;
+      /** Url */
+      url?: string | null;
+      /** Llm */
+      llm?: string | null;
+    };
+    /** Body_login_auth_jwt_login_post */
+    Body_login_auth_jwt_login_post: {
       /** Grant Type */
       grant_type?: string | null;
       /** Username */
       username: string;
-      /** Password */
+      /**
+       * Password
+       * Format: password
+       */
       password: string;
       /**
        * Scope
@@ -461,18 +1403,11 @@ export interface components {
       scope?: string;
       /** Client Id */
       client_id?: string | null;
-      /** Client Secret */
+      /**
+       * Client Secret
+       * Format: password
+       */
       client_secret?: string | null;
-    };
-    /** Body_extract_user_skills_skills_extract_post */
-    Body_extract_user_skills_skills_extract_post: {
-      /** File */
-      file?: string | null;
-    };
-    /** Body_extractor_runner_extractor__id__run_post */
-    Body_extractor_runner_extractor__id__run_post: {
-      /** File */
-      file?: string | null;
     };
     /** Body_reset_forgot_password_auth_forgot_password_post */
     Body_reset_forgot_password_auth_forgot_password_post: {
@@ -488,6 +1423,23 @@ export interface components {
       token: string;
       /** Password */
       password: string;
+    };
+    /** Body_upload_avatar_users_me_avatar_post */
+    Body_upload_avatar_users_me_avatar_post: {
+      /** File */
+      file: string;
+    };
+    /** Body_upload_document_documents_upload_post */
+    Body_upload_document_documents_upload_post: {
+      /** File */
+      file: string;
+      /** Title */
+      title: string;
+      /**
+       * Kind
+       * @default freeform
+       */
+      kind?: string;
     };
     /** Body_verify_request_token_auth_request_verify_token_post */
     Body_verify_request_token_auth_request_verify_token_post: {
@@ -589,6 +1541,37 @@ export interface components {
        */
       issued_date?: string | null;
     };
+    /** CommandCenterSummary */
+    CommandCenterSummary: {
+      /** Lead Count */
+      lead_count: number;
+      /** Unapplied Lead Count */
+      unapplied_lead_count: number;
+      /** Application Count */
+      application_count: number;
+      /** Active Application Count */
+      active_application_count: number;
+      /** Status Breakdown */
+      status_breakdown: {
+        [key: string]: number;
+      };
+      /** Pending Action Items */
+      pending_action_items: number;
+      /** Overdue Action Items */
+      overdue_action_items: number;
+      /** Action Items Due Today */
+      action_items_due_today: number;
+      /** Pending Connections */
+      pending_connections: number;
+      /** Unread Messages */
+      unread_messages: number;
+      /** Profile Completion */
+      profile_completion: number;
+      /** Documents Count */
+      documents_count: number;
+      /** Draft Documents Count */
+      draft_documents_count: number;
+    };
     /** CompanyCreate */
     CompanyCreate: {
       /**
@@ -663,6 +1646,27 @@ export interface components {
        */
       description?: string | null;
     };
+    /** CompanySummarizeRequest */
+    CompanySummarizeRequest: {
+      /**
+       * Url
+       * @description Company website URL
+       */
+      url: string;
+    };
+    /** CompanySummarizeResponse */
+    CompanySummarizeResponse: {
+      /**
+       * Url
+       * @description Website URL that was summarized
+       */
+      url: string;
+      /**
+       * Summary
+       * @description AI-generated company summary
+       */
+      summary: string;
+    };
     /** CompanyUpdate */
     CompanyUpdate: {
       /**
@@ -707,7 +1711,130 @@ export interface components {
       /** Max Chunks */
       max_chunks: number;
       /** Models */
-      models: Record<string, never>[];
+      models: {
+          [key: string]: unknown;
+        }[];
+    };
+    /** ConnectionCreate */
+    ConnectionCreate: {
+      /**
+       * Addressee Id
+       * Format: uuid4
+       * @description User to send the connection request to
+       */
+      addressee_id: string;
+      /**
+       * Message
+       * @description Optional note accompanying the request
+       */
+      message?: string | null;
+    };
+    /** ConnectionRead */
+    ConnectionRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description The user who sent the request */
+      requester: components["schemas"]["ConnectionUserSummaryRead"];
+      /** @description The user who received the request */
+      addressee: components["schemas"]["ConnectionUserSummaryRead"];
+      /** @description Connection status */
+      status: components["schemas"]["ConnectionStatus"];
+      /**
+       * Message
+       * @description Optional note from the requester
+       */
+      message?: string | null;
+    };
+    /**
+     * ConnectionStatus
+     * @enum {string}
+     */
+    ConnectionStatus: "pending" | "accepted" | "declined" | "blocked";
+    /** ConnectionUserSummaryRead */
+    ConnectionUserSummaryRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Public display name
+       */
+      display_name: string;
+      /**
+       * Is Superuser
+       * @description Whether the user is a Baldin superuser
+       */
+      is_superuser: boolean;
+      /**
+       * Headline
+       * @description Professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
+      /**
+       * City
+       * @description City
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description State
+       */
+      state?: string | null;
+      /**
+       * Country
+       * @description Country
+       */
+      country?: string | null;
+    };
+    /** ConnectionsPaginatedRead */
+    ConnectionsPaginatedRead: {
+      /**
+       * Items
+       * @description Paginated connection records
+       */
+      items?: components["schemas"]["ConnectionRead"][];
+      /**
+       * Total
+       * @description Total matching connections
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
     };
     /** ContactCreate */
     ContactCreate: {
@@ -827,10 +1954,181 @@ export interface components {
       notes?: string | null;
     };
     /**
+     * ContentFormat
+     * @enum {string}
+     */
+    ContentFormat: "plain_text" | "tiptap_json";
+    /**
      * ContentType
      * @enum {string}
      */
     ContentType: "custom" | "generated" | "template";
+    /** ConversationCreate */
+    ConversationCreate: {
+      /**
+       * Participant User Ids
+       * @description User IDs of the other participants (creator is auto-added)
+       */
+      participant_user_ids: string[];
+      /**
+       * @description Conversation type
+       * @default direct
+       */
+      type?: components["schemas"]["ConversationType"];
+      /**
+       * Title
+       * @description Title (required for group)
+       */
+      title?: string | null;
+    };
+    /** ConversationDetailRead */
+    ConversationDetailRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Conversation type */
+      type: components["schemas"]["ConversationType"];
+      /**
+       * Title
+       * @description Conversation title
+       */
+      title?: string | null;
+      /**
+       * Participants
+       * @description Conversation participants
+       */
+      participants?: components["schemas"]["ConversationParticipantRead"][];
+      /**
+       * Messages
+       * @description Paginated messages
+       */
+      messages?: components["schemas"]["MessageRead"][];
+      /**
+       * Total Messages
+       * @description Total message count
+       * @default 0
+       */
+      total_messages?: number;
+    };
+    /** ConversationParticipantRead */
+    ConversationParticipantRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description Participant user identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Participant display name
+       */
+      display_name: string;
+      /**
+       * Avatar Uri
+       * @description Participant avatar URI
+       */
+      avatar_uri?: string | null;
+      /** @description Participant role */
+      role: components["schemas"]["ConversationParticipantRole"];
+      /**
+       * Joined At
+       * Format: date-time
+       * @description When the participant joined
+       */
+      joined_at: string;
+    };
+    /**
+     * ConversationParticipantRole
+     * @enum {string}
+     */
+    ConversationParticipantRole: "member" | "admin";
+    /** ConversationRead */
+    ConversationRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Conversation type */
+      type: components["schemas"]["ConversationType"];
+      /**
+       * Title
+       * @description Conversation title
+       */
+      title?: string | null;
+      /**
+       * Participants
+       * @description Conversation participants
+       */
+      participants?: components["schemas"]["ConversationParticipantRead"][];
+      /** @description Most recent message preview */
+      last_message?: components["schemas"]["MessageRead"] | null;
+      /**
+       * Unread Count
+       * @description Unread messages for current user
+       * @default 0
+       */
+      unread_count?: number;
+    };
+    /**
+     * ConversationType
+     * @enum {string}
+     */
+    ConversationType: "direct" | "group";
+    /** ConversationsPaginatedRead */
+    ConversationsPaginatedRead: {
+      /**
+       * Items
+       * @description Paginated conversations
+       */
+      items?: components["schemas"]["ConversationRead"][];
+      /**
+       * Total
+       * @description Total matching conversations
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
     /** CoverLetterCreate */
     CoverLetterCreate: {
       /**
@@ -893,6 +2191,990 @@ export interface components {
       content?: string | null;
       /** @description Cover letter content type */
       content_type?: components["schemas"]["ContentType"] | null;
+    };
+    /** CrawlerPipelineCreate */
+    CrawlerPipelineCreate: {
+      /**
+       * Name
+       * @description Pipeline name
+       */
+      name: string;
+      /**
+       * Description
+       * @description Pipeline description
+       */
+      description?: string | null;
+      /** @description Crawl source platform */
+      source: components["schemas"]["CrawlerSourceType"];
+      /**
+       * Query Definition
+       * @description Source-specific search parameters
+       */
+      query_definition: {
+        [key: string]: unknown;
+      };
+      /**
+       * Schedule Definition
+       * @description Schedule cadence definition
+       */
+      schedule_definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Enabled
+       * @description Whether the pipeline is active
+       * @default true
+       */
+      enabled?: boolean;
+      /**
+       * Execution Policy
+       * @description Concurrency, timeouts, headless mode
+       */
+      execution_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Extraction Policy
+       * @description Whether to run LLM extraction on crawled leads
+       */
+      extraction_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Requires Approval
+       * @description Whether runs require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
+    };
+    /** CrawlerPipelineRead */
+    CrawlerPipelineRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Name
+       * @description Pipeline name
+       */
+      name: string;
+      /**
+       * Description
+       * @description Pipeline description
+       */
+      description?: string | null;
+      /** @description Crawl source platform */
+      source: components["schemas"]["CrawlerSourceType"];
+      /**
+       * Query Definition
+       * @description Source-specific search parameters
+       */
+      query_definition: {
+        [key: string]: unknown;
+      };
+      /**
+       * Schedule Definition
+       * @description Schedule cadence definition
+       */
+      schedule_definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Enabled
+       * @description Whether the pipeline is active
+       */
+      enabled: boolean;
+      /**
+       * Execution Policy
+       * @description Concurrency, timeouts, headless mode
+       */
+      execution_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Extraction Policy
+       * @description Whether to run LLM extraction on crawled leads
+       */
+      extraction_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Requires Approval
+       * @description Whether runs require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
+      /**
+       * Created By User Id
+       * Format: uuid4
+       * @description Superuser who created the pipeline
+       */
+      created_by_user_id: string;
+      /** @description Status of the most recent run */
+      last_run_status?: components["schemas"]["CrawlerRunStatus"] | null;
+      /**
+       * Last Run At
+       * @description Timestamp of the most recent run
+       */
+      last_run_at?: string | null;
+      /**
+       * Run Count
+       * @description Total number of runs
+       * @default 0
+       */
+      run_count?: number;
+    };
+    /** CrawlerPipelineUpdate */
+    CrawlerPipelineUpdate: {
+      /**
+       * Name
+       * @description Pipeline name
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Pipeline description
+       */
+      description?: string | null;
+      /**
+       * Query Definition
+       * @description Source-specific search parameters
+       */
+      query_definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Schedule Definition
+       * @description Schedule cadence definition
+       */
+      schedule_definition?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Enabled
+       * @description Whether the pipeline is active
+       */
+      enabled?: boolean | null;
+      /**
+       * Execution Policy
+       * @description Concurrency, timeouts, headless mode
+       */
+      execution_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Extraction Policy
+       * @description Whether to run LLM extraction on crawled leads
+       */
+      extraction_policy?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Requires Approval
+       * @description Whether runs require human approval
+       */
+      requires_approval?: boolean | null;
+    };
+    /**
+     * CrawlerRunDetailRead
+     * @description Extended read schema for single-run detail endpoint with linked events.
+     */
+    CrawlerRunDetailRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Crawler Pipeline Id
+       * Format: uuid4
+       * @description Parent pipeline ID
+       */
+      crawler_pipeline_id: string;
+      /** @description How the run was triggered */
+      trigger_type: components["schemas"]["CrawlerTriggerType"];
+      /** @description Current run status */
+      status: components["schemas"]["CrawlerRunStatus"];
+      /**
+       * Scheduled For
+       * @description When the run was scheduled for
+       */
+      scheduled_for?: string | null;
+      /**
+       * Started At
+       * @description When the run started
+       */
+      started_at?: string | null;
+      /**
+       * Finished At
+       * @description When the run finished
+       */
+      finished_at?: string | null;
+      /**
+       * Stats
+       * @description Run statistics
+       */
+      stats?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Error Summary
+       * @description Error summary if failed
+       */
+      error_summary?: string | null;
+      /**
+       * Retry Of Id
+       * @description ID of the original run this is a retry of
+       */
+      retry_of_id?: string | null;
+      /**
+       * Events
+       * @description Linked orchestration events
+       * @default []
+       */
+      events?: components["schemas"]["OrchestrationEventSummary"][];
+    };
+    /** CrawlerRunRead */
+    CrawlerRunRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Crawler Pipeline Id
+       * Format: uuid4
+       * @description Parent pipeline ID
+       */
+      crawler_pipeline_id: string;
+      /** @description How the run was triggered */
+      trigger_type: components["schemas"]["CrawlerTriggerType"];
+      /** @description Current run status */
+      status: components["schemas"]["CrawlerRunStatus"];
+      /**
+       * Scheduled For
+       * @description When the run was scheduled for
+       */
+      scheduled_for?: string | null;
+      /**
+       * Started At
+       * @description When the run started
+       */
+      started_at?: string | null;
+      /**
+       * Finished At
+       * @description When the run finished
+       */
+      finished_at?: string | null;
+      /**
+       * Stats
+       * @description Run statistics
+       */
+      stats?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Error Summary
+       * @description Error summary if failed
+       */
+      error_summary?: string | null;
+      /**
+       * Retry Of Id
+       * @description ID of the original run this is a retry of
+       */
+      retry_of_id?: string | null;
+    };
+    /**
+     * CrawlerRunStatus
+     * @enum {string}
+     */
+    CrawlerRunStatus: "pending" | "running" | "success" | "failed" | "cancelled" | "paused" | "pending_review";
+    /**
+     * CrawlerSourceType
+     * @enum {string}
+     */
+    CrawlerSourceType: "linkedin" | "glassdoor";
+    /**
+     * CrawlerTriggerType
+     * @enum {string}
+     */
+    CrawlerTriggerType: "manual" | "scheduled";
+    /** DocumentActivityRead */
+    DocumentActivityRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Document identifier
+       */
+      document_id: string;
+      /** @description Activity event type */
+      activity_type: components["schemas"]["DocumentActivityType"];
+      /**
+       * Message
+       * @description Human-readable activity summary
+       */
+      message: string;
+      /**
+       * Details
+       * @description Structured activity metadata for UI rendering
+       */
+      details?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Actor User Id
+       * @description User who triggered the activity, when available
+       */
+      actor_user_id?: string | null;
+      /**
+       * Actor Full Name
+       * @description Best-available display label for the actor
+       */
+      actor_full_name?: string | null;
+      /**
+       * Actor Email
+       * @description Actor email address
+       */
+      actor_email?: string | null;
+    };
+    /**
+     * DocumentActivityType
+     * @enum {string}
+     */
+    DocumentActivityType: "document_created" | "document_uploaded" | "version_saved" | "share_created" | "share_updated" | "share_revoked" | "document_archived" | "document_unarchived" | "document_pinned" | "document_unpinned";
+    /** DocumentCollaborationBootstrapRead */
+    DocumentCollaborationBootstrapRead: {
+      /** @description How the client should proceed with collaborative bootstrap */
+      status: components["schemas"]["DocumentCollaborationBootstrapStatus"];
+      /**
+       * Collaboration Token
+       * @description Short-lived collaboration session token used for the follow-up WebSocket connection
+       */
+      collaboration_token?: string | null;
+      /**
+       * Retry After Ms
+       * @description How long the client should wait before retrying bootstrap when another claim is still active
+       */
+      retry_after_ms?: number | null;
+      /**
+       * Content
+       * @description Authoritative rich-text content to seed when the bootstrap status is seed
+       */
+      content?: string | null;
+      /** @description Content format for the collaborative bootstrap payload when the bootstrap status is seed */
+      content_format?: components["schemas"]["ContentFormat"] | null;
+    };
+    /**
+     * DocumentCollaborationBootstrapStatus
+     * @enum {string}
+     */
+    DocumentCollaborationBootstrapStatus: "connect" | "pending" | "seed";
+    /** DocumentCreate */
+    DocumentCreate: {
+      /** @description Document kind discriminator */
+      kind: components["schemas"]["DocumentKind"];
+      /**
+       * Title
+       * @description Document title
+       */
+      title: string;
+      /**
+       * @description Initial lifecycle status
+       * @default draft
+       */
+      status?: components["schemas"]["DocumentStatus"];
+      /**
+       * Content
+       * @description Initial version content
+       */
+      content?: string | null;
+      /** @description Content origin type for the initial version */
+      content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * @description Content format: plain_text or tiptap_json
+       * @default plain_text
+       */
+      content_format?: components["schemas"]["ContentFormat"];
+    };
+    /** DocumentDetailRead */
+    DocumentDetailRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Document kind discriminator */
+      kind: components["schemas"]["DocumentKind"];
+      /**
+       * Title
+       * @description Document title
+       */
+      title: string;
+      /** @description Document lifecycle status */
+      status: components["schemas"]["DocumentStatus"];
+      /**
+       * Is Pinned
+       * @description Whether this is the active document for its kind
+       * @default false
+       */
+      is_pinned?: boolean;
+      /** @description Current head version inline */
+      head_version?: components["schemas"]["DocumentVersionRead"] | null;
+      /**
+       * Version Count
+       * @description Total number of versions
+       * @default 0
+       */
+      version_count?: number;
+      /** @description Effective share role for the viewer (null means owner) */
+      viewer_role?: components["schemas"]["DocumentShareRole"] | null;
+      /**
+       * Owner User Id
+       * @description Owner identifier when the document is shared with the viewer
+       */
+      owner_user_id?: string | null;
+      /**
+       * Owner Full Name
+       * @description Owner full name when the document is shared with the viewer
+       */
+      owner_full_name?: string | null;
+      /**
+       * Owner Email
+       * @description Owner email when the document is shared with the viewer
+       */
+      owner_email?: string | null;
+      /**
+       * Shared By User Id
+       * @description User who granted access to the viewer
+       */
+      shared_by_user_id?: string | null;
+      /**
+       * Shared By Full Name
+       * @description Full name of the user who granted access to the viewer
+       */
+      shared_by_full_name?: string | null;
+      /**
+       * Shared By Email
+       * @description Email of the user who granted access to the viewer
+       */
+      shared_by_email?: string | null;
+      /**
+       * Shared At
+       * @description Timestamp when the viewer was granted access
+       */
+      shared_at?: string | null;
+      /**
+       * Share Updated At
+       * @description Timestamp when the share was last updated
+       */
+      share_updated_at?: string | null;
+      /**
+       * Versions
+       * @description Full version history, oldest first
+       */
+      versions?: components["schemas"]["DocumentVersionRead"][];
+    };
+    /** DocumentEmbedRequest */
+    DocumentEmbedRequest: {
+      /**
+       * Version Id
+       * @description Specific version to embed. Defaults to the head version.
+       */
+      version_id?: string | null;
+    };
+    /** DocumentEmbedResponse */
+    DocumentEmbedResponse: {
+      /**
+       * Document Id
+       * Format: uuid4
+       */
+      document_id: string;
+      /**
+       * Document Version Id
+       * Format: uuid4
+       */
+      document_version_id: string;
+      /**
+       * Chunks Embedded
+       * @description Number of text chunks embedded
+       */
+      chunks_embedded: number;
+    };
+    /** DocumentGenerateRequest */
+    DocumentGenerateRequest: {
+      /** @description Document kind to generate */
+      kind: components["schemas"]["DocumentKind"];
+      /**
+       * Lead Id
+       * Format: uuid4
+       * @description Lead to generate content from
+       */
+      lead_id: string;
+      /**
+       * Document Id
+       * @description Existing document to append a new version to (omit to create a new document)
+       */
+      document_id?: string | null;
+      /**
+       * Template Version Id
+       * @description Optional template version to use for generation
+       */
+      template_version_id?: string | null;
+    };
+    /**
+     * DocumentKind
+     * @enum {string}
+     */
+    DocumentKind: "resume" | "cover_letter" | "follow_up" | "reference_sheet" | "freeform";
+    /** DocumentPinRequest */
+    DocumentPinRequest: {
+      /**
+       * Pinned
+       * @description Whether to pin or unpin the document
+       * @default true
+       */
+      pinned?: boolean;
+    };
+    /** DocumentRead */
+    DocumentRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Document kind discriminator */
+      kind: components["schemas"]["DocumentKind"];
+      /**
+       * Title
+       * @description Document title
+       */
+      title: string;
+      /** @description Document lifecycle status */
+      status: components["schemas"]["DocumentStatus"];
+      /**
+       * Is Pinned
+       * @description Whether this is the active document for its kind
+       * @default false
+       */
+      is_pinned?: boolean;
+      /** @description Current head version inline */
+      head_version?: components["schemas"]["DocumentVersionRead"] | null;
+      /**
+       * Version Count
+       * @description Total number of versions
+       * @default 0
+       */
+      version_count?: number;
+      /** @description Effective share role for the viewer (null means owner) */
+      viewer_role?: components["schemas"]["DocumentShareRole"] | null;
+      /**
+       * Owner User Id
+       * @description Owner identifier when the document is shared with the viewer
+       */
+      owner_user_id?: string | null;
+      /**
+       * Owner Full Name
+       * @description Owner full name when the document is shared with the viewer
+       */
+      owner_full_name?: string | null;
+      /**
+       * Owner Email
+       * @description Owner email when the document is shared with the viewer
+       */
+      owner_email?: string | null;
+      /**
+       * Shared By User Id
+       * @description User who granted access to the viewer
+       */
+      shared_by_user_id?: string | null;
+      /**
+       * Shared By Full Name
+       * @description Full name of the user who granted access to the viewer
+       */
+      shared_by_full_name?: string | null;
+      /**
+       * Shared By Email
+       * @description Email of the user who granted access to the viewer
+       */
+      shared_by_email?: string | null;
+      /**
+       * Shared At
+       * @description Timestamp when the viewer was granted access
+       */
+      shared_at?: string | null;
+      /**
+       * Share Updated At
+       * @description Timestamp when the share was last updated
+       */
+      share_updated_at?: string | null;
+    };
+    /** DocumentSearchRequest */
+    DocumentSearchRequest: {
+      /**
+       * Query
+       * @description Natural-language search query
+       */
+      query: string;
+      /**
+       * K
+       * @description Number of results to return
+       * @default 5
+       */
+      k?: number;
+    };
+    /** DocumentSearchResponse */
+    DocumentSearchResponse: {
+      /**
+       * Query
+       * @description Original search query
+       */
+      query: string;
+      /**
+       * Results
+       * @description Ranked search results
+       */
+      results?: components["schemas"]["DocumentSearchResult"][];
+    };
+    /** DocumentSearchResult */
+    DocumentSearchResult: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description Embedding row identifier
+       */
+      id: string;
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Source document identifier
+       */
+      document_id: string;
+      /**
+       * Document Version Id
+       * Format: uuid4
+       * @description Version that was embedded
+       */
+      document_version_id: string;
+      /**
+       * Chunk Index
+       * @description Chunk position within the document
+       */
+      chunk_index: number;
+      /**
+       * Chunk Text
+       * @description Matching text chunk
+       */
+      chunk_text: string;
+      /**
+       * Score
+       * @description Cosine similarity score (0-1, higher is better)
+       */
+      score: number;
+    };
+    /** DocumentShareCandidateRead */
+    DocumentShareCandidateRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description Share candidate identifier
+       */
+      id: string;
+      /**
+       * Full Name
+       * @description Best-available human label for the user
+       */
+      full_name: string;
+      /**
+       * Email
+       * Format: email
+       * @description Candidate email address
+       */
+      email: string;
+      /**
+       * Headline
+       * @description Candidate headline
+       */
+      headline?: string | null;
+      /**
+       * Avatar Uri
+       * @description Candidate avatar URI
+       */
+      avatar_uri?: string | null;
+    };
+    /** DocumentShareCreate */
+    DocumentShareCreate: {
+      /**
+       * Shared With User Id
+       * Format: uuid4
+       * @description User to share the document with
+       */
+      shared_with_user_id: string;
+      /**
+       * @description Access level to grant
+       * @default viewer
+       */
+      role?: components["schemas"]["DocumentShareRole"];
+    };
+    /** DocumentShareRead */
+    DocumentShareRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Document identifier
+       */
+      document_id: string;
+      /**
+       * Shared With User Id
+       * Format: uuid4
+       * @description User the document is shared with
+       */
+      shared_with_user_id: string;
+      /**
+       * Shared By User Id
+       * Format: uuid4
+       * @description User who created the share
+       */
+      shared_by_user_id: string;
+      /** @description Access role: viewer or editor */
+      role: components["schemas"]["DocumentShareRole"];
+      /**
+       * Shared With Full Name
+       * @description Best-available name for the shared user
+       */
+      shared_with_full_name: string;
+      /**
+       * Shared With Email
+       * Format: email
+       * @description Email for the shared user
+       */
+      shared_with_email: string;
+      /**
+       * Shared With Headline
+       * @description Headline for the shared user
+       */
+      shared_with_headline?: string | null;
+      /**
+       * Shared By Full Name
+       * @description Best-available name for the sharing user
+       */
+      shared_by_full_name: string;
+      /**
+       * Shared By Email
+       * Format: email
+       * @description Email for the sharing user
+       */
+      shared_by_email: string;
+    };
+    /**
+     * DocumentShareRole
+     * @enum {string}
+     */
+    DocumentShareRole: "viewer" | "editor";
+    /** DocumentShareUpdate */
+    DocumentShareUpdate: {
+      /** @description New access level */
+      role: components["schemas"]["DocumentShareRole"];
+    };
+    /**
+     * DocumentStatus
+     * @enum {string}
+     */
+    DocumentStatus: "draft" | "active" | "archived";
+    /** DocumentUpdate */
+    DocumentUpdate: {
+      /**
+       * Title
+       * @description Updated title
+       */
+      title?: string | null;
+      /** @description Updated lifecycle status */
+      status?: components["schemas"]["DocumentStatus"] | null;
+    };
+    /** DocumentVersionCreate */
+    DocumentVersionCreate: {
+      /**
+       * Name
+       * @description Snapshot title
+       */
+      name?: string | null;
+      /**
+       * Content
+       * @description Version content
+       */
+      content?: string | null;
+      /** @description Content origin type */
+      content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * @description Content format: plain_text or tiptap_json
+       * @default plain_text
+       */
+      content_format?: components["schemas"]["ContentFormat"];
+      /**
+       * Change Summary
+       * @description User or system note for this version
+       */
+      change_summary?: string | null;
+    };
+    /** DocumentVersionRead */
+    DocumentVersionRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Parent document identifier
+       */
+      document_id: string;
+      /**
+       * Version Number
+       * @description Monotonically incrementing version number
+       */
+      version_number: number;
+      /**
+       * Name
+       * @description Snapshot title
+       */
+      name?: string | null;
+      /**
+       * Content
+       * @description Version content
+       */
+      content?: string | null;
+      /** @description Content origin type */
+      content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * Content Format
+       * @description Content format: plain_text or tiptap_json
+       */
+      content_format?: string | null;
+      /**
+       * Source File
+       * @description Relative path to uploaded source file
+       */
+      source_file?: string | null;
+      /**
+       * Change Summary
+       * @description User or system note for this version
+       */
+      change_summary?: string | null;
     };
     /** EducationCreate */
     EducationCreate: {
@@ -1181,7 +3463,9 @@ export interface components {
        * Json Schema
        * @description JSON schema
        */
-      json_schema?: Record<string, never> | string | null;
+      json_schema?: {
+        [key: string]: unknown;
+      } | string | null;
       /**
        * Instruction
        * @description Extractor instruction
@@ -1193,6 +3477,12 @@ export interface components {
        * @default []
        */
       extractor_examples?: components["schemas"]["ExtractorExampleRead"][];
+      /**
+       * Requires Approval
+       * @description Whether extraction results require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
     };
     /**
      * ExtractorDefinition
@@ -1265,7 +3555,9 @@ export interface components {
        * Json Schema
        * @description JSON schema
        */
-      json_schema?: Record<string, never> | string | null;
+      json_schema?: {
+        [key: string]: unknown;
+      } | string | null;
       /**
        * Instruction
        * @description Extractor instruction
@@ -1277,6 +3569,12 @@ export interface components {
        * @default []
        */
       extractor_examples?: components["schemas"]["ExtractorExampleRead"][];
+      /**
+       * Requires Approval
+       * @description Whether extraction results require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
       /**
        * Id
        * Format: uuid4
@@ -1327,7 +3625,7 @@ export interface components {
        * File
        * @description A file to extract information from. If provided, the file will be processed and the text extracted.
        */
-      file?: File | null;
+      file?: string | null;
       /**
        * Text
        * @description Text to extract information from. If provided, the text will be processed and the information extracted.
@@ -1343,6 +3641,11 @@ export interface components {
        * @description The language model to use for the extraction.
        */
       llm?: string | null;
+      /**
+       * Sources
+       * @description Multiple sources to extract from in a single batch. When provided, url/file/text are ignored.
+       */
+      sources?: components["schemas"]["ProfileExtractSource"][] | null;
     };
     /** ExtractorUpdate */
     ExtractorUpdate: {
@@ -1360,7 +3663,9 @@ export interface components {
        * Json Schema
        * @description JSON schema
        */
-      json_schema?: Record<string, never> | string | null;
+      json_schema?: {
+        [key: string]: unknown;
+      } | string | null;
       /**
        * Instruction
        * @description Extractor instruction
@@ -1372,11 +3677,130 @@ export interface components {
        * @default []
        */
       extractor_examples?: components["schemas"]["ExtractorExampleRead"][];
+      /**
+       * Requires Approval
+       * @description Whether extraction results require human approval
+       * @default false
+       */
+      requires_approval?: boolean;
+    };
+    /** ExtractorVersionRead */
+    ExtractorVersionRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Extractor Id
+       * Format: uuid4
+       * @description Parent extractor ID
+       */
+      extractor_id: string;
+      /**
+       * Version Number
+       * @description Version sequence number
+       */
+      version_number: number;
+      /**
+       * Instruction
+       * @description Instruction at this version
+       */
+      instruction?: string | null;
+      /**
+       * Json Schema
+       * @description JSON schema at this version
+       */
+      json_schema?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Version Hash
+       * @description SHA-256 hash of instruction + schema
+       */
+      version_hash: string;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
       detail?: components["schemas"]["ValidationError"][];
+    };
+    /** LeadCommentCreate */
+    LeadCommentCreate: {
+      /**
+       * Content
+       * @description Comment content
+       */
+      content: string;
+      /**
+       * Anonymous
+       * @description Whether the comment hides the author's public profile
+       * @default true
+       */
+      anonymous?: boolean;
+    };
+    /** LeadCommentRead */
+    LeadCommentRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Lead Id
+       * Format: uuid4
+       * @description Lead identifier
+       */
+      lead_id: string;
+      /**
+       * Parent Comment Id
+       * @description Parent comment identifier for replies
+       */
+      parent_comment_id?: string | null;
+      /**
+       * Content
+       * @description Comment content
+       */
+      content: string;
+      /**
+       * Anonymous
+       * @description Whether the comment hides the author's public profile
+       * @default true
+       */
+      anonymous?: boolean;
+      /** @description The author's public profile, when the comment is non-anonymous */
+      author_public_profile?: components["schemas"]["LeadParticipantPublicProfileRead"] | null;
+      /**
+       * Replies
+       * @description Replies to this top-level comment
+       */
+      replies?: components["schemas"]["LeadCommentRead"][];
     };
     /** LeadCreate */
     LeadCreate: {
@@ -1421,11 +3845,6 @@ export interface components {
        */
       education_level?: string | null;
       /**
-       * Notes
-       * @description Additional notes
-       */
-      notes?: string | null;
-      /**
        * Hiring Manager
        * @description Hiring manager
        */
@@ -1437,6 +3856,238 @@ export interface components {
        * @description Company IDs
        */
       company_ids?: string[] | null;
+    };
+    /** LeadDetailRead */
+    LeadDetailRead: {
+      /**
+       * Title
+       * @description Job title
+       */
+      title?: string | null;
+      /**
+       * Description
+       * @description Job description
+       */
+      description?: string | null;
+      /**
+       * Location
+       * @description Job location
+       */
+      location?: string | null;
+      /**
+       * Salary
+       * @description Salary range
+       */
+      salary?: string | null;
+      /**
+       * Job Function
+       * @description Job function
+       */
+      job_function?: string | null;
+      /**
+       * Employment Type
+       * @description Type of employment
+       */
+      employment_type?: string | null;
+      /**
+       * Seniority Level
+       * @description Seniority level
+       */
+      seniority_level?: string | null;
+      /**
+       * Education Level
+       * @description Required education level
+       */
+      education_level?: string | null;
+      /**
+       * Hiring Manager
+       * @description Hiring manager
+       */
+      hiring_manager?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Url
+       * @description Job posting URL
+       */
+      url: string;
+      /**
+       * Canonical Url
+       * @description Canonical lead URL used for deduplication
+       */
+      canonical_url: string;
+      /**
+       * Companies
+       * @description List of companies associated with the lead
+       */
+      companies?: components["schemas"]["CompanyRead"][];
+      /**
+       * Interest Count
+       * @description How many viewers are currently registered on the lead
+       * @default 0
+       */
+      interest_count?: number;
+      /**
+       * Comment Count
+       * @description How many comments and replies exist for the lead
+       * @default 0
+       */
+      comment_count?: number;
+      /**
+       * Viewer Is Registered
+       * @description Whether the current viewer is registered on the lead
+       * @default false
+       */
+      viewer_is_registered?: boolean;
+      /** @description Current-viewer permissions for this lead */
+      viewer_permissions?: components["schemas"]["LeadViewerPermissionsRead"];
+      /** @description The current viewer's lead registration, if present */
+      viewer_registration?: components["schemas"]["LeadRegistrationRead"] | null;
+      /**
+       * Participant Summaries
+       * @description Registered participants who opted to expose their profile
+       */
+      participant_summaries?: components["schemas"]["LeadParticipantSummaryRead"][];
+    };
+    /** LeadEnrichRequest */
+    LeadEnrichRequest: {
+      /**
+       * Lead Description
+       * @description Lead description
+       */
+      lead_description: string;
+      /**
+       * K
+       * @description Context chunks to retrieve
+       * @default 5
+       */
+      k?: number;
+    };
+    /** LeadEnrichResponse */
+    LeadEnrichResponse: {
+      /**
+       * Enrichment
+       * @description AI-generated enrichment analysis
+       */
+      enrichment: string;
+    };
+    /**
+     * LeadExtractDisposition
+     * @enum {string}
+     */
+    LeadExtractDisposition: "created" | "matched_existing_joined" | "matched_existing_already_registered";
+    /** LeadExtractResponse */
+    LeadExtractResponse: {
+      /** @description The resulting lead record */
+      lead: components["schemas"]["LeadRead"];
+      /** @description Whether extraction created a lead or matched an existing one */
+      disposition: components["schemas"]["LeadExtractDisposition"];
+      /**
+       * Submitted Url
+       * @description The URL submitted for extraction
+       */
+      submitted_url: string;
+      /**
+       * Normalized Url
+       * @description The canonicalized URL used for deduplication
+       */
+      normalized_url: string;
+    };
+    /** LeadParticipantPublicProfileRead */
+    LeadParticipantPublicProfileRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Public display name for the participant
+       */
+      display_name: string;
+      /**
+       * City
+       * @description Participant city
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description Participant state
+       */
+      state?: string | null;
+      /**
+       * Country
+       * @description Participant country
+       */
+      country?: string | null;
+      /**
+       * Avatar Uri
+       * @description Participant avatar URI
+       */
+      avatar_uri?: string | null;
+    };
+    /** LeadParticipantSummaryRead */
+    LeadParticipantSummaryRead: {
+      /**
+       * Registered At
+       * Format: date-time
+       * @description When the participant registered interest in the lead
+       */
+      registered_at: string;
+      /** @description The participant's exposed public profile */
+      public_profile: components["schemas"]["LeadParticipantPublicProfileRead"];
+      /**
+       * Is Connected
+       * @description Whether the viewer has an accepted connection with this participant
+       * @default false
+       */
+      is_connected?: boolean;
+      /**
+       * Connection Id
+       * @description Connection record id, if an accepted connection exists
+       */
+      connection_id?: string | null;
+    };
+    /** LeadRankRequest */
+    LeadRankRequest: {
+      /**
+       * Leads
+       * @description List of leads with title and description
+       */
+      leads: {
+          [key: string]: unknown;
+        }[];
+      /**
+       * K
+       * @description Context chunks per lead
+       * @default 5
+       */
+      k?: number;
+    };
+    /** LeadRankResponse */
+    LeadRankResponse: {
+      /**
+       * Ranking
+       * @description AI-generated lead ranking
+       */
+      ranking: string;
     };
     /** LeadRead */
     LeadRead: {
@@ -1481,11 +4132,6 @@ export interface components {
        */
       education_level?: string | null;
       /**
-       * Notes
-       * @description Additional notes
-       */
-      notes?: string | null;
-      /**
        * Hiring Manager
        * @description Hiring manager
        */
@@ -1512,16 +4158,91 @@ export interface components {
        * Url
        * @description Job posting URL
        */
-      url?: string | null;
+      url: string;
+      /**
+       * Canonical Url
+       * @description Canonical lead URL used for deduplication
+       */
+      canonical_url: string;
       /**
        * Companies
        * @description List of companies associated with the lead
-       * @default []
        */
       companies?: components["schemas"]["CompanyRead"][];
+      /**
+       * Interest Count
+       * @description How many viewers are currently registered on the lead
+       * @default 0
+       */
+      interest_count?: number;
+      /**
+       * Comment Count
+       * @description How many comments and replies exist for the lead
+       * @default 0
+       */
+      comment_count?: number;
+      /**
+       * Viewer Is Registered
+       * @description Whether the current viewer is registered on the lead
+       * @default false
+       */
+      viewer_is_registered?: boolean;
+      /** @description Current-viewer permissions for this lead */
+      viewer_permissions?: components["schemas"]["LeadViewerPermissionsRead"];
     };
-    /** LeadUpdate */
-    LeadUpdate: {
+    /** LeadRegistrationRead */
+    LeadRegistrationRead: {
+      /**
+       * Lead Id
+       * Format: uuid4
+       * @description Lead identifier
+       */
+      lead_id: string;
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Internal Notes
+       * @description Viewer-scoped notes for this registration
+       */
+      internal_notes?: string | null;
+      /**
+       * Expose Profile
+       * @description Whether the viewer exposes their profile to participants
+       * @default false
+       */
+      expose_profile?: boolean;
+      /**
+       * Created At
+       * Format: date-time
+       * @description When the registration was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description When the registration was last updated
+       */
+      updated_at: string;
+    };
+    /** LeadRegistrationUpdate */
+    LeadRegistrationUpdate: {
+      /**
+       * Internal Notes
+       * @description Viewer-scoped notes for this registration
+       */
+      internal_notes?: string | null;
+      /**
+       * Expose Profile
+       * @description Whether the viewer exposes their profile to participants
+       */
+      expose_profile?: boolean | null;
+    };
+    /** LeadSharedUpdate */
+    LeadSharedUpdate: {
       /**
        * Title
        * @description Job title
@@ -1563,11 +4284,6 @@ export interface components {
        */
       education_level?: string | null;
       /**
-       * Notes
-       * @description Additional notes
-       */
-      notes?: string | null;
-      /**
        * Hiring Manager
        * @description Hiring manager
        */
@@ -1575,9 +4291,59 @@ export interface components {
       /**
        * Company Ids
        * @description Company IDs
-       * @default []
        */
-      company_ids?: string[];
+      company_ids?: string[] | null;
+    };
+    /** LeadViewerPermissionsRead */
+    LeadViewerPermissionsRead: {
+      /**
+       * Can Register
+       * @description Whether the viewer can register
+       * @default false
+       */
+      can_register?: boolean;
+      /**
+       * Can Leave Registration
+       * @description Whether the viewer can remove their registration
+       * @default false
+       */
+      can_leave_registration?: boolean;
+      /**
+       * Can Update Registration
+       * @description Whether the viewer can edit their registration metadata
+       * @default false
+       */
+      can_update_registration?: boolean;
+      /**
+       * Can Update Shared Fields
+       * @description Whether the viewer can update shared lead fields
+       * @default false
+       */
+      can_update_shared_fields?: boolean;
+      /**
+       * Can Clear Or Overwrite Shared Fields
+       * @description Whether the viewer can clear or overwrite populated shared fields
+       * @default false
+       */
+      can_clear_or_overwrite_shared_fields?: boolean;
+      /**
+       * Can Delete Shared Lead
+       * @description Whether the viewer can delete the shared lead
+       * @default false
+       */
+      can_delete_shared_lead?: boolean;
+      /**
+       * Can View Comments
+       * @description Whether the viewer can read comments on the lead
+       * @default false
+       */
+      can_view_comments?: boolean;
+      /**
+       * Can Post Comments
+       * @description Whether the viewer can post comments on the lead
+       * @default false
+       */
+      can_post_comments?: boolean;
     };
     /** LeadsPaginatedRead */
     LeadsPaginatedRead: {
@@ -1590,6 +4356,173 @@ export interface components {
        */
       total_count: number | null;
     };
+    /**
+     * MFAAdminResetResponse
+     * @description Returned when a superuser resets MFA for another account.
+     */
+    MFAAdminResetResponse: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User whose MFA state was reset
+       */
+      user_id: string;
+      /**
+       * Mfa Enabled
+       * @description Always false after a successful admin reset
+       * @default false
+       */
+      mfa_enabled?: boolean;
+    };
+    /**
+     * MFALoginRequired
+     * @description Returned at login when MFA verification is still needed.
+     */
+    MFALoginRequired: {
+      /**
+       * Mfa Required
+       * @description Always True
+       * @default true
+       */
+      mfa_required?: boolean;
+      /**
+       * Mfa Token
+       * @description Short-lived token to present with the TOTP code
+       */
+      mfa_token: string;
+    };
+    /**
+     * MFALoginVerifyRequest
+     * @description Payload for the second step of MFA login.
+     */
+    MFALoginVerifyRequest: {
+      /**
+       * Mfa Token
+       * @description MFA challenge token from login response
+       */
+      mfa_token: string;
+      /**
+       * Code
+       * @description 6-digit TOTP code
+       */
+      code: string;
+    };
+    /**
+     * MFASetupResponse
+     * @description Returned when the user requests MFA setup (before verification).
+     */
+    MFASetupResponse: {
+      /**
+       * Secret
+       * @description Base-32 encoded TOTP secret
+       */
+      secret: string;
+      /**
+       * Provisioning Uri
+       * @description otpauth:// URI for import into an authenticator app
+       */
+      provisioning_uri: string;
+    };
+    /**
+     * MFAStatusResponse
+     * @description Current MFA enrolment status.
+     */
+    MFAStatusResponse: {
+      /**
+       * Mfa Enabled
+       * @description Whether MFA is currently active
+       */
+      mfa_enabled: boolean;
+    };
+    /**
+     * MFAVerifyRequest
+     * @description Payload for verifying a TOTP code (setup confirmation or login).
+     */
+    MFAVerifyRequest: {
+      /**
+       * Code
+       * @description 6-digit TOTP code
+       */
+      code: string;
+    };
+    /** MessageAuthorRead */
+    MessageAuthorRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description Author user identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Author display name
+       */
+      display_name: string;
+      /**
+       * Avatar Uri
+       * @description Author avatar URI
+       */
+      avatar_uri?: string | null;
+    };
+    /** MessageCreate */
+    MessageCreate: {
+      /**
+       * Content
+       * @description Message content
+       */
+      content: string;
+      /**
+       * Parent Message Id
+       * @description Parent message ID for threaded replies
+       */
+      parent_message_id?: string | null;
+    };
+    /** MessageEdit */
+    MessageEdit: {
+      /**
+       * Content
+       * @description Updated message content
+       */
+      content: string;
+    };
+    /** MessageRead */
+    MessageRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Message author */
+      author: components["schemas"]["MessageAuthorRead"];
+      /**
+       * Content
+       * @description Message content
+       */
+      content: string;
+      /**
+       * Edited At
+       * @description When the message was last edited
+       */
+      edited_at?: string | null;
+      /**
+       * Parent Message Id
+       * @description Parent message ID for threaded replies
+       */
+      parent_message_id?: string | null;
+    };
     /** OrchestrationEventCreate */
     OrchestrationEventCreate: {
       /**
@@ -1601,7 +4534,9 @@ export interface components {
        * Payload
        * @description Payload of the triggering event
        */
-      payload?: Record<string, never> | null;
+      payload?: {
+        [key: string]: unknown;
+      } | null;
       /**
        * Environment
        * @description Application environment setting
@@ -1618,6 +4553,33 @@ export interface components {
        * Format: uuid4
        */
       pipeline_id: string;
+    };
+    /** OrchestrationEventPaginatedRead */
+    OrchestrationEventPaginatedRead: {
+      /**
+       * Items
+       * @description Paginated list of orchestration events
+       * @default []
+       */
+      items?: components["schemas"]["OrchestrationEventRead-Output"][];
+      /**
+       * Total
+       * @description Total number of matching events
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
     };
     /** OrchestrationEventRead */
     "OrchestrationEventRead-Input": {
@@ -1648,7 +4610,9 @@ export interface components {
        * Payload
        * @description Payload of the triggering event
        */
-      payload?: Record<string, never> | null;
+      payload?: {
+        [key: string]: unknown;
+      } | null;
       /**
        * Environment
        * @description Application environment setting
@@ -1665,6 +4629,16 @@ export interface components {
        * @description Pipeline ID
        */
       pipeline_id?: string | null;
+      /**
+       * Version Hash
+       * @description Extractor version hash used for this run
+       */
+      version_hash?: string | null;
+      /**
+       * Retry Of Id
+       * @description ID of the original event this is a retry of
+       */
+      retry_of_id?: string | null;
     };
     /** OrchestrationEventRead */
     "OrchestrationEventRead-Output": {
@@ -1695,7 +4669,9 @@ export interface components {
        * Payload
        * @description Payload of the triggering event
        */
-      payload?: Record<string, never> | null;
+      payload?: {
+        [key: string]: unknown;
+      } | null;
       /**
        * Environment
        * @description Application environment setting
@@ -1712,13 +4688,51 @@ export interface components {
        * @description Pipeline ID
        */
       pipeline_id?: string | null;
+      /**
+       * Version Hash
+       * @description Extractor version hash used for this run
+       */
+      version_hash?: string | null;
+      /**
+       * Retry Of Id
+       * @description ID of the original event this is a retry of
+       */
+      retry_of_id?: string | null;
     };
     /**
      * OrchestrationEventStatusType
      * @enum {string}
      */
-    OrchestrationEventStatusType: "pending" | "running" | "success" | "failure";
-    /** OrchestrationEventUpdate */
+    OrchestrationEventStatusType: "pending" | "running" | "success" | "failure" | "pending_review";
+    /**
+     * OrchestrationEventSummary
+     * @description Lightweight summary of an OrchestrationEvent for embedding in CrawlerRunDetailRead.
+     */
+    OrchestrationEventSummary: {
+      /**
+       * Status
+       * @description Event status
+       */
+      status?: string | null;
+      /**
+       * Message
+       * @description Event message
+       */
+      message?: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       * @description When the event was created
+       */
+      created_at: string;
+    };
+    /**
+     * OrchestrationEventUpdate
+     * @description Update schema for orchestration events.
+     *
+     * pipeline_id is intentionally excluded — runs cannot be reassigned
+     * to a different workflow after creation.
+     */
     OrchestrationEventUpdate: {
       /**
        * Message
@@ -1729,7 +4743,9 @@ export interface components {
        * Payload
        * @description Payload of the triggering event
        */
-      payload?: Record<string, never> | null;
+      payload?: {
+        [key: string]: unknown;
+      } | null;
       /**
        * Environment
        * @description Application environment setting
@@ -1741,11 +4757,6 @@ export interface components {
       destination_uri?: components["schemas"]["URI"] | null;
       /** @description Status of the event */
       status?: components["schemas"]["OrchestrationEventStatusType"] | null;
-      /**
-       * Pipeline Id
-       * @description Pipeline ID
-       */
-      pipeline_id?: string | null;
     };
     /** OrchestrationPipelineCreate */
     OrchestrationPipelineCreate: {
@@ -1763,7 +4774,9 @@ export interface components {
        * Definition
        * @description Parameters for the pipeline
        */
-      definition?: Record<string, never> | null;
+      definition?: {
+        [key: string]: unknown;
+      } | null;
     };
     /** OrchestrationPipelineRead */
     OrchestrationPipelineRead: {
@@ -1799,13 +4812,37 @@ export interface components {
        * Definition
        * @description Parameters for the pipeline
        */
-      definition?: Record<string, never> | null;
+      definition?: {
+        [key: string]: unknown;
+      } | null;
       /**
        * Orchestration Events
        * @description Events in the pipeline
        * @default []
        */
       orchestration_events?: components["schemas"]["OrchestrationEventRead-Output"][];
+      /**
+       * Run Count
+       * @description Total number of runs
+       * @default 0
+       */
+      run_count?: number;
+      /**
+       * Failure Count
+       * @description Number of failed runs
+       * @default 0
+       */
+      failure_count?: number;
+      /**
+       * Last Run Status
+       * @description Status of the most recent run
+       */
+      last_run_status?: string | null;
+      /**
+       * Last Run At
+       * @description Timestamp of the most recent run
+       */
+      last_run_at?: string | null;
     };
     /** OrchestrationPipelineUpdate */
     OrchestrationPipelineUpdate: {
@@ -1823,7 +4860,9 @@ export interface components {
        * Definition
        * @description Parameters for the pipeline
        */
-      definition?: Record<string, never> | null;
+      definition?: {
+        [key: string]: unknown;
+      } | null;
       /**
        * Events
        * @description Events in the pipeline
@@ -1851,6 +4890,86 @@ export interface components {
        * @default false
        */
       request_count?: boolean;
+    };
+    /**
+     * PlacementStatus
+     * @enum {string}
+     */
+    PlacementStatus: "active" | "graduated" | "alumni";
+    /** PlacementUpdate */
+    PlacementUpdate: {
+      /** @description Target placement status (active, graduated, alumni) */
+      placement_status: components["schemas"]["PlacementStatus"];
+    };
+    /**
+     * ProfileExtractResponse
+     * @description Response from the unified profile extraction endpoint.
+     */
+    ProfileExtractResponse: {
+      /**
+       * User
+       * @description Extracted core user fields (first_name, last_name, etc.)
+       */
+      user?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Skills
+       * @description Extracted and persisted skills
+       * @default []
+       */
+      skills?: components["schemas"]["SkillRead"][];
+      /**
+       * Experiences
+       * @description Extracted and persisted experiences
+       * @default []
+       */
+      experiences?: components["schemas"]["ExperienceRead"][];
+      /**
+       * Education
+       * @description Extracted and persisted education records
+       * @default []
+       */
+      education?: components["schemas"]["EducationRead"][];
+      /**
+       * Certificates
+       * @description Extracted and persisted certificates
+       * @default []
+       */
+      certificates?: components["schemas"]["CertificateRead"][];
+      /**
+       * Content Too Long
+       * @description True if any source exceeded extraction limits
+       * @default false
+       */
+      content_too_long?: boolean;
+      /**
+       * Sources Count
+       * @description Number of sources that were processed
+       * @default 1
+       */
+      sources_count?: number;
+    };
+    /**
+     * ProfileExtractSource
+     * @description A single extraction source — exactly one of url, file, or text.
+     */
+    ProfileExtractSource: {
+      /**
+       * Url
+       * @description URL to extract from
+       */
+      url?: string | null;
+      /**
+       * File
+       * @description File to extract from
+       */
+      file?: string | null;
+      /**
+       * Text
+       * @description Raw text to extract from
+       */
+      text?: string | null;
     };
     /** ResumeCreate */
     ResumeCreate: {
@@ -1914,6 +5033,102 @@ export interface components {
       content?: string | null;
       /** @description Resume content type */
       content_type?: components["schemas"]["ContentType"] | null;
+    };
+    /**
+     * ReviewAction
+     * @enum {string}
+     */
+    ReviewAction: "approve" | "reject";
+    /** ReviewBatchItem */
+    ReviewBatchItem: {
+      /** @description Type of review item */
+      item_type: components["schemas"]["ReviewItemType"];
+      /**
+       * Item Id
+       * Format: uuid4
+       * @description Item ID
+       */
+      item_id: string;
+      /** @description approve or reject */
+      action: components["schemas"]["ReviewAction"];
+    };
+    /** ReviewBatchRequest */
+    ReviewBatchRequest: {
+      /**
+       * Items
+       * @description Batch of review actions
+       */
+      items: components["schemas"]["ReviewBatchItem"][];
+    };
+    /** ReviewBatchResponse */
+    ReviewBatchResponse: {
+      /**
+       * Processed
+       * @description Number of items processed
+       */
+      processed: number;
+      /**
+       * Errors
+       * @description Errors encountered
+       * @default []
+       */
+      errors?: string[];
+    };
+    /** ReviewItemRead */
+    ReviewItemRead: {
+      /** @description Type of review item */
+      item_type: components["schemas"]["ReviewItemType"];
+      /**
+       * Item Id
+       * Format: uuid4
+       * @description ID of the item
+       */
+      item_id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description When the item was created
+       */
+      created_at: string;
+      /**
+       * Summary
+       * @description Brief summary of the item
+       */
+      summary?: string | null;
+      /**
+       * Detail
+       * @description Additional context
+       */
+      detail?: {
+        [key: string]: unknown;
+      } | null;
+    };
+    /**
+     * ReviewItemType
+     * @enum {string}
+     */
+    ReviewItemType: "crawler_run" | "extraction_event" | "lead";
+    /** SeedOperationAccepted */
+    SeedOperationAccepted: {
+      /**
+       * Event Id
+       * Format: uuid4
+       * @description Accepted orchestration event ID
+       */
+      event_id: string;
+      /**
+       * Pipeline Id
+       * Format: uuid4
+       * @description Seed orchestration pipeline ID
+       */
+      pipeline_id: string;
+      /** @description Current orchestration event status */
+      status: components["schemas"]["OrchestrationEventStatusType"];
+      /**
+       * Poll Url
+       * @description Relative URL to poll for event status
+       */
+      poll_url: string;
     };
     /** SkillCreate */
     SkillCreate: {
@@ -2003,6 +5218,11 @@ export interface components {
       subskills?: string | null;
     };
     /**
+     * SubscriptionTier
+     * @enum {string}
+     */
+    SubscriptionTier: "free" | "starter" | "pro";
+    /**
      * SuggestExtractor
      * @description A request to create an extractor from a text sample.
      */
@@ -2030,6 +5250,14 @@ export interface components {
      * @enum {string}
      */
     URIType: "filepath" | "datalake" | "database" | "api" | "url";
+    /** UnreadCountRead */
+    UnreadCountRead: {
+      /**
+       * Total Unread
+       * @description Total unread messages across conversations
+       */
+      total_unread: number;
+    };
     /** UserCreate */
     UserCreate: {
       /**
@@ -2082,8 +5310,47 @@ export interface components {
        * @description Time zone
        */
       time_zone?: string | null;
-      /** @description Avatar URI */
-      avatar_uri?: components["schemas"]["URI"] | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
+      /**
+       * Headline
+       * @description Short professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Bio
+       * @description Longer about-me blurb
+       */
+      bio?: string | null;
+      /**
+       * Is Discoverable
+       * @description Whether the user appears in the directory
+       * @default false
+       */
+      is_discoverable?: boolean;
+      /**
+       * @description Subscription tier
+       * @default free
+       */
+      subscription_tier?: components["schemas"]["SubscriptionTier"];
+      /**
+       * Subscription Expires At
+       * @description When the current subscription expires
+       */
+      subscription_expires_at?: string | null;
+      /**
+       * @description Job-seeker lifecycle status
+       * @default active
+       */
+      placement_status?: components["schemas"]["PlacementStatus"];
+      /**
+       * Placement Date
+       * @description Date when the user transitioned to graduated/alumni
+       */
+      placement_date?: string | null;
       /**
        * Email
        * Format: email
@@ -2106,6 +5373,112 @@ export interface components {
        * @default false
        */
       is_verified?: boolean | null;
+    };
+    /** UserDataOperationResult */
+    UserDataOperationResult: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User affected by the data-management operation
+       */
+      user_id: string;
+      /**
+       * User Deleted
+       * @description Whether the user row was removed
+       */
+      user_deleted: boolean;
+      /**
+       * Cleared Profile Fields
+       * @description Number of profile fields cleared from the retained user
+       * @default 0
+       */
+      cleared_profile_fields?: number;
+      /**
+       * Deleted Records
+       * @description Deleted record counts grouped by table or association
+       */
+      deleted_records?: {
+        [key: string]: number;
+      };
+    };
+    /** UserDirectoryPaginatedRead */
+    UserDirectoryPaginatedRead: {
+      /**
+       * Items
+       * @description Paginated user directory entries
+       */
+      items?: components["schemas"]["UserDirectoryRead"][];
+      /**
+       * Total
+       * @description Total matching users
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** UserDirectoryRead */
+    UserDirectoryRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Public display name
+       */
+      display_name: string;
+      /**
+       * Is Superuser
+       * @description Whether the user is a Baldin superuser
+       */
+      is_superuser: boolean;
+      /**
+       * Headline
+       * @description Professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
+      /**
+       * City
+       * @description City
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description State
+       */
+      state?: string | null;
+      /**
+       * Country
+       * @description Country
+       */
+      country?: string | null;
+      /** @description Lifecycle status */
+      placement_status: components["schemas"]["PlacementStatus"];
+      /** @description Subscription tier */
+      subscription_tier: components["schemas"]["SubscriptionTier"];
+      /**
+       * Skills Summary
+       * @description Top skill names
+       */
+      skills_summary?: string[];
     };
     /** UserProfileRead */
     UserProfileRead: {
@@ -2133,6 +5506,67 @@ export interface components {
        * @default []
        */
       certificates?: components["schemas"]["CertificateRead"][];
+    };
+    /** UserPublicProfileRead */
+    UserPublicProfileRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Display Name
+       * @description Public display name
+       */
+      display_name: string;
+      /**
+       * Is Superuser
+       * @description Whether the user is a Baldin superuser
+       */
+      is_superuser: boolean;
+      /**
+       * Headline
+       * @description Professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Bio
+       * @description About-me blurb
+       */
+      bio?: string | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
+      /**
+       * City
+       * @description City
+       */
+      city?: string | null;
+      /**
+       * State
+       * @description State
+       */
+      state?: string | null;
+      /**
+       * Country
+       * @description Country
+       */
+      country?: string | null;
+      /** @description Lifecycle status */
+      placement_status: components["schemas"]["PlacementStatus"];
+      /**
+       * Skills
+       * @description User skills
+       */
+      skills?: components["schemas"]["SkillRead"][];
+      /**
+       * Experiences
+       * @description Work experiences
+       */
+      experiences?: components["schemas"]["ExperienceRead"][];
     };
     /** UserRead */
     UserRead: {
@@ -2186,8 +5620,47 @@ export interface components {
        * @description Time zone
        */
       time_zone?: string | null;
-      /** @description Avatar URI */
-      avatar_uri?: components["schemas"]["URI"] | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
+      /**
+       * Headline
+       * @description Short professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Bio
+       * @description Longer about-me blurb
+       */
+      bio?: string | null;
+      /**
+       * Is Discoverable
+       * @description Whether the user appears in the directory
+       * @default false
+       */
+      is_discoverable?: boolean;
+      /**
+       * @description Subscription tier
+       * @default free
+       */
+      subscription_tier?: components["schemas"]["SubscriptionTier"];
+      /**
+       * Subscription Expires At
+       * @description When the current subscription expires
+       */
+      subscription_expires_at?: string | null;
+      /**
+       * @description Job-seeker lifecycle status
+       * @default active
+       */
+      placement_status?: components["schemas"]["PlacementStatus"];
+      /**
+       * Placement Date
+       * @description Date when the user transitioned to graduated/alumni
+       */
+      placement_date?: string | null;
       /**
        * Id
        * Format: uuid4
@@ -2266,8 +5739,47 @@ export interface components {
        * @description Time zone
        */
       time_zone?: string | null;
-      /** @description Avatar URI */
-      avatar_uri?: components["schemas"]["URI"] | null;
+      /**
+       * Avatar Uri
+       * @description Avatar URI
+       */
+      avatar_uri?: string | null;
+      /**
+       * Headline
+       * @description Short professional tagline
+       */
+      headline?: string | null;
+      /**
+       * Bio
+       * @description Longer about-me blurb
+       */
+      bio?: string | null;
+      /**
+       * Is Discoverable
+       * @description Whether the user appears in the directory
+       * @default false
+       */
+      is_discoverable?: boolean;
+      /**
+       * @description Subscription tier
+       * @default free
+       */
+      subscription_tier?: components["schemas"]["SubscriptionTier"];
+      /**
+       * Subscription Expires At
+       * @description When the current subscription expires
+       */
+      subscription_expires_at?: string | null;
+      /**
+       * @description Job-seeker lifecycle status
+       * @default active
+       */
+      placement_status?: components["schemas"]["PlacementStatus"];
+      /**
+       * Placement Date
+       * @description Date when the user transitioned to graduated/alumni
+       */
+      placement_date?: string | null;
       /** Password */
       password?: string | null;
       /** Email */
@@ -2287,6 +5799,10 @@ export interface components {
       msg: string;
       /** Error Type */
       type: string;
+      /** Input */
+      input?: unknown;
+      /** Context */
+      ctx?: Record<string, never>;
     };
   };
   responses: never;
@@ -2302,24 +5818,26 @@ export type external = Record<string, never>;
 
 export interface operations {
 
-  /** Auth:Jwt.Login */
-  auth_jwt_login_auth_jwt_login_post: {
+  /**
+   * Login
+   * @description Authenticate with email + password.
+   *
+   * * If MFA is **disabled** → returns ``{ access_token, token_type }``.
+   * * If MFA is **enabled** → returns ``{ mfa_required, mfa_token }``
+   *   and the client must call ``POST /auth/mfa/login-verify`` to
+   *   complete authentication.
+   */
+  login_auth_jwt_login_post: {
     requestBody: {
       content: {
-        "application/x-www-form-urlencoded": components["schemas"]["Body_auth_jwt_login_auth_jwt_login_post"];
+        "application/x-www-form-urlencoded": components["schemas"]["Body_login_auth_jwt_login_post"];
       };
     };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["BearerResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        content: {
-          "application/json": components["schemas"]["ErrorModel"];
+          "application/json": components["schemas"]["BearerResponse"] | components["schemas"]["MFALoginRequired"];
         };
       };
       /** @description Validation Error */
@@ -2330,18 +5848,14 @@ export interface operations {
       };
     };
   };
-  /** Auth:Jwt.Logout */
-  auth_jwt_logout_auth_jwt_logout_post: {
+  /** Logout */
+  logout_auth_jwt_logout_post: {
     responses: {
       /** @description Successful Response */
       200: {
         content: {
           "application/json": unknown;
         };
-      };
-      /** @description Missing token or inactive user. */
-      401: {
-        content: never;
       };
     };
   };
@@ -2473,6 +5987,142 @@ export interface operations {
       };
     };
   };
+  /**
+   * Mfa Status
+   * @description Return whether MFA is currently enabled for the authenticated user.
+   */
+  mfa_status_auth_mfa_status_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MFAStatusResponse"];
+        };
+      };
+    };
+  };
+  /**
+   * Mfa Setup
+   * @description Generate a fresh TOTP secret.
+   *
+   * The secret is persisted on the user record but MFA is **not** active
+   * until the user confirms setup via ``POST /verify``.
+   */
+  mfa_setup_auth_mfa_setup_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MFASetupResponse"];
+        };
+      };
+    };
+  };
+  /**
+   * Mfa Verify Setup
+   * @description Confirm MFA setup by presenting a valid TOTP code.
+   *
+   * This activates MFA on the account.
+   */
+  mfa_verify_setup_auth_mfa_verify_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MFAVerifyRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MFAStatusResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Mfa Disable
+   * @description Disable MFA by presenting a valid TOTP code.
+   */
+  mfa_disable_auth_mfa_disable_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MFAVerifyRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MFAStatusResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Mfa Admin Reset
+   * @description Reset MFA for a user when they have lost access to their authenticator.
+   */
+  mfa_admin_reset_auth_mfa_admin_reset__user_id__post: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MFAAdminResetResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Mfa Login Verify
+   * @description Complete the MFA login challenge.
+   *
+   * Accepts the short-lived ``mfa_token`` returned by ``POST /auth/jwt/login``
+   * together with a valid TOTP code and returns a full-access JWT.
+   */
+  mfa_login_verify_auth_mfa_login_verify_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MFALoginVerifyRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["BearerResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** List Tables */
   list_tables_db_management_list_tables_get: {
     responses: {
@@ -2498,6 +6148,50 @@ export interface operations {
           "application/json": {
             [key: string]: string;
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Purge User Data */
+  purge_user_data_db_management_users__user_id__purge_patch: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserDataOperationResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User */
+  delete_user_db_management_users__user_id__delete: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserDataOperationResult"];
         };
       };
       /** @description Validation Error */
@@ -2677,13 +6371,115 @@ export interface operations {
       };
     };
   };
-  /** Seed Users */
-  seed_users_users_seed_post: {
+  /**
+   * Upload Avatar
+   * @description Upload or replace the current user's profile picture.
+   */
+  upload_avatar_users_me_avatar_post: {
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_upload_avatar_users_me_avatar_post"];
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["UserRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Serve Avatar
+   * @description Serve a user's avatar image. Returns 404 if no avatar is set.
+   */
+  serve_avatar_users__user_id__avatar_get: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Update Placement
+   * @description Update the current user's placement status.
+   *
+   * Valid transitions: active → graduated, graduated → alumni.
+   */
+  update_placement_users_me_placement_patch: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PlacementUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Extract User Profile
+   * @description Extract all profile sections from one or many sources and persist results.
+   */
+  extract_user_profile_users_me_profile_extract_post: {
+    requestBody?: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_extract_user_profile_users_me_profile_extract_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProfileExtractResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Users */
+  seed_users_users_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -2737,6 +6533,28 @@ export interface operations {
       };
     };
   };
+  /** Extract Lead */
+  extract_lead_leads_extract_post: {
+    parameters: {
+      query: {
+        extraction_url: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadExtractResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Read Lead */
   read_lead_leads__id__get: {
     parameters: {
@@ -2748,7 +6566,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["LeadRead"];
+          "application/json": components["schemas"]["LeadDetailRead"];
         };
       };
       /** @description Validation Error */
@@ -2788,7 +6606,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["LeadUpdate"];
+        "application/json": components["schemas"]["LeadSharedUpdate"];
       };
     };
     responses: {
@@ -2806,38 +6624,161 @@ export interface operations {
       };
     };
   };
-  /**
-   * Purge Leads
-   * @description Drops all leads records in the table.
-   */
+  /** Create Lead Registration */
+  create_lead_registration_leads__id__registration_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRegistrationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Lead Registration */
+  delete_lead_registration_leads__id__registration_delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Lead Registration */
+  update_lead_registration_leads__id__registration_patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadRegistrationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRegistrationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Read Lead Comments */
+  read_lead_comments_leads__id__comments_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadCommentRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Lead Comment */
+  create_lead_comment_leads__id__comments_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadCommentCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["LeadCommentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Lead Comment Reply */
+  create_lead_comment_reply_leads__id__comments__comment_id__replies_post: {
+    parameters: {
+      path: {
+        comment_id: string;
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadCommentCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["LeadCommentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Purge Leads */
   purge_leads_leads_purge_delete: {
     responses: {
       /** @description Successful Response */
       202: {
         content: {
-          "application/json": Record<string, never>;
-        };
-      };
-    };
-  };
-  /** Extract Lead */
-  extract_lead_leads_extract_post: {
-    parameters: {
-      query: {
-        extraction_url: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["LeadRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
       };
     };
@@ -2846,9 +6787,9 @@ export interface operations {
   seed_leads_leads_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": unknown;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -3091,10 +7032,8 @@ export interface operations {
     };
     responses: {
       /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": unknown;
-        };
+      204: {
+        content: never;
       };
       /** @description Validation Error */
       422: {
@@ -3106,11 +7045,29 @@ export interface operations {
   };
   /** Read Orch Events */
   read_orch_events_data_orchestration_events_get: {
+    parameters: {
+      query?: {
+        /** @description Filter by run status */
+        status?: components["schemas"]["OrchestrationEventStatusType"] | null;
+        /** @description Filter by workflow ID */
+        pipeline_id?: string | null;
+        /** @description Page number */
+        page?: number;
+        /** @description Items per page */
+        page_size?: number;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead-Output"][];
+          "application/json": components["schemas"]["OrchestrationEventPaginatedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -3127,6 +7084,32 @@ export interface operations {
       202: {
         content: {
           "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Prune Orchestration Events
+   * @description Delete completed/failed orchestration events older than the specified age.
+   */
+  prune_orchestration_events_data_orchestration_events_prune_delete: {
+    parameters: {
+      query?: {
+        /** @description Delete events older than N days */
+        older_than_days?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
         };
       };
       /** @description Validation Error */
@@ -3169,6 +7152,31 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["OrchestrationEventUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retry Orch Event
+   * @description Retry a failed orchestration event by creating a new event linked to the original.
+   */
+  retry_orch_event_data_orchestration_events__event_id__retry_post: {
+    parameters: {
+      path: {
+        event_id: string;
       };
     };
     responses: {
@@ -3314,9 +7322,9 @@ export interface operations {
   seed_contacts_contacts_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -3449,23 +7457,15 @@ export interface operations {
   seed_experiences_experiences_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
   };
   /** Extract User Skills */
   extract_user_skills_skills_extract_post: {
-    parameters: {
-      query?: {
-        mode?: "entire_document" | "retrieval";
-        text?: string | null;
-        url?: string | null;
-        llm?: string | null;
-      };
-    };
     requestBody?: {
       content: {
         "multipart/form-data": components["schemas"]["Body_extract_user_skills_skills_extract_post"];
@@ -3594,14 +7594,17 @@ export interface operations {
   seed_skills_skills_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
   };
-  /** Download Cover Letter */
+  /**
+   * Download Cover Letter
+   * @deprecated
+   */
   download_cover_letter_cover_letters__cover_letter_id__download_get: {
     parameters: {
       path: {
@@ -3611,7 +7614,7 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       200: {
-        "application/pdf": File;
+        content: never;
       };
       /** @description Validation Error */
       422: {
@@ -3621,7 +7624,10 @@ export interface operations {
       };
     };
   };
-  /** Generate User Cover Letter */
+  /**
+   * Generate User Cover Letter
+   * @deprecated
+   */
   generate_user_cover_letter_cover_letters_generate_post: {
     parameters: {
       query: {
@@ -3645,7 +7651,10 @@ export interface operations {
       };
     };
   };
-  /** Get Current User Cover Letters */
+  /**
+   * Get Current User Cover Letters
+   * @deprecated
+   */
   get_current_user_cover_letters_cover_letters__get: {
     parameters: {
       query?: {
@@ -3668,7 +7677,10 @@ export interface operations {
       };
     };
   };
-  /** Create User Cover Letter */
+  /**
+   * Create User Cover Letter
+   * @deprecated
+   */
   create_user_cover_letter_cover_letters__post: {
     requestBody: {
       content: {
@@ -3690,7 +7702,10 @@ export interface operations {
       };
     };
   };
-  /** Get Cover Letter By Id */
+  /**
+   * Get Cover Letter By Id
+   * @deprecated
+   */
   get_cover_letter_by_id_cover_letters__cover_letter_id__get: {
     parameters: {
       query: {
@@ -3712,7 +7727,10 @@ export interface operations {
       };
     };
   };
-  /** Delete User Cover Letter */
+  /**
+   * Delete User Cover Letter
+   * @deprecated
+   */
   delete_user_cover_letter_cover_letters__cover_letter_id__delete: {
     parameters: {
       query: {
@@ -3732,7 +7750,10 @@ export interface operations {
       };
     };
   };
-  /** Update User Cover Letter */
+  /**
+   * Update User Cover Letter
+   * @deprecated
+   */
   update_user_cover_letter_cover_letters__cover_letter_id__patch: {
     parameters: {
       query: {
@@ -3759,18 +7780,24 @@ export interface operations {
       };
     };
   };
-  /** Seed Cover Letters */
+  /**
+   * Seed Cover Letters
+   * @deprecated
+   */
   seed_cover_letters_cover_letters_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
   };
-  /** Download Resume */
+  /**
+   * Download Resume
+   * @deprecated
+   */
   download_resume_resumes__resume_id__download_get: {
     parameters: {
       path: {
@@ -3780,7 +7807,7 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       200: {
-        "application/pdf": File;
+        content: never;
       };
       /** @description Validation Error */
       422: {
@@ -3790,7 +7817,10 @@ export interface operations {
       };
     };
   };
-  /** Get Current User Resumes */
+  /**
+   * Get Current User Resumes
+   * @deprecated
+   */
   get_current_user_resumes_resumes__get: {
     responses: {
       /** @description Successful Response */
@@ -3801,7 +7831,10 @@ export interface operations {
       };
     };
   };
-  /** Create User Resume */
+  /**
+   * Create User Resume
+   * @deprecated
+   */
   create_user_resume_resumes__post: {
     requestBody: {
       content: {
@@ -3823,7 +7856,10 @@ export interface operations {
       };
     };
   };
-  /** Get User Resume */
+  /**
+   * Get User Resume
+   * @deprecated
+   */
   get_user_resume_resumes__resume_id__get: {
     parameters: {
       query: {
@@ -3845,7 +7881,10 @@ export interface operations {
       };
     };
   };
-  /** Delete User Resume */
+  /**
+   * Delete User Resume
+   * @deprecated
+   */
   delete_user_resume_resumes__resume_id__delete: {
     parameters: {
       query: {
@@ -3865,7 +7904,10 @@ export interface operations {
       };
     };
   };
-  /** Update User Resume */
+  /**
+   * Update User Resume
+   * @deprecated
+   */
   update_user_resume_resumes__resume_id__patch: {
     parameters: {
       query: {
@@ -3892,13 +7934,16 @@ export interface operations {
       };
     };
   };
-  /** Seed Resumes */
+  /**
+   * Seed Resumes
+   * @deprecated
+   */
   seed_resumes_resumes_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -4008,7 +8053,10 @@ export interface operations {
       };
     };
   };
-  /** Get Application Resumes */
+  /**
+   * Get Application Resumes
+   * @deprecated
+   */
   get_application_resumes_applications__id__resumes_get: {
     parameters: {
       path: {
@@ -4030,7 +8078,10 @@ export interface operations {
       };
     };
   };
-  /** Add Resume To Application */
+  /**
+   * Add Resume To Application
+   * @deprecated
+   */
   add_resume_to_application_applications__id__resumes_post: {
     parameters: {
       path: {
@@ -4039,7 +8090,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["ResumeCreate"];
+        "application/json": components["schemas"]["ApplicationResumeAttach"];
       };
     };
     responses: {
@@ -4057,7 +8108,10 @@ export interface operations {
       };
     };
   };
-  /** Get Application Cover Letters */
+  /**
+   * Get Application Cover Letters
+   * @deprecated
+   */
   get_application_cover_letters_applications__id__cover_letters_get: {
     parameters: {
       path: {
@@ -4079,7 +8133,10 @@ export interface operations {
       };
     };
   };
-  /** Add Cover Letter To Application */
+  /**
+   * Add Cover Letter To Application
+   * @deprecated
+   */
   add_cover_letter_to_application_applications__id__cover_letters_post: {
     parameters: {
       path: {
@@ -4088,7 +8145,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["CoverLetterCreate"];
+        "application/json": components["schemas"]["ApplicationCoverLetterAttach"];
       };
     };
     responses: {
@@ -4106,7 +8163,10 @@ export interface operations {
       };
     };
   };
-  /** Generate Cover Letter For Application */
+  /**
+   * Generate Cover Letter For Application
+   * @deprecated
+   */
   generate_cover_letter_for_application_applications__id__cover_letters_generate_post: {
     parameters: {
       query?: {
@@ -4122,6 +8182,767 @@ export interface operations {
       201: {
         content: {
           "application/json": components["schemas"]["CoverLetterRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Export Application Materials
+   * @description Export all materials linked to an application as a ZIP archive.
+   *
+   * The archive contains up to three subdirectories — ``resumes/``,
+   * ``cover_letters/``, and ``documents/`` — each holding PDF files for
+   * the linked records.
+   */
+  export_application_materials_applications__id__export_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Application Documents */
+  get_application_documents_applications__id__documents_get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Add Document To Application */
+  add_document_to_application_applications__id__documents_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplicationDocumentAttach"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Detach Document From Application */
+  detach_document_from_application_applications__id__documents__document_id__delete: {
+    parameters: {
+      path: {
+        document_id: string;
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Upload Document
+   * @description Upload a PDF file, extract its text, and create a new Document + v1.
+   */
+  upload_document_documents_upload_post: {
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_upload_document_documents_upload_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Pinned Documents
+   * @description Return the user's pinned (active/canonical) documents — at most one per kind.
+   */
+  get_pinned_documents_documents_pinned_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"][];
+        };
+      };
+    };
+  };
+  /** List Documents */
+  list_documents_documents__get: {
+    parameters: {
+      query?: {
+        /** @description Filter by kind */
+        kind?: components["schemas"]["DocumentKind"] | null;
+        /** @description Filter by status */
+        status?: components["schemas"]["DocumentStatus"] | null;
+        /** @description Filter by pinned state */
+        is_pinned?: boolean | null;
+        /** @description Search by title (case-insensitive) */
+        search?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Create Document
+   * @description Create a document with its initial version (v1).
+   */
+  create_document_documents__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Shared With Me
+   * @description List documents that other users have shared with the current user.
+   */
+  list_shared_with_me_documents_shared_with_me_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"][];
+        };
+      };
+    };
+  };
+  /**
+   * List Share Candidates
+   * @description Look up authenticated share candidates for a specific document.
+   */
+  list_share_candidates_documents__document_id__share_candidates_get: {
+    parameters: {
+      query?: {
+        /** @description Search by name, email, or headline */
+        q?: string;
+        /** @description Maximum candidates to return */
+        limit?: number;
+      };
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentShareCandidateRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Generate Document
+   * @description Generate document content via AI and persist as a Document + Version.
+   *
+   * Supported kinds: ``cover_letter``, ``resume``.  Others return 501.
+   *
+   * If ``document_id`` is provided the generated content is appended as a new
+   * version; otherwise a brand-new Document is created.
+   */
+  generate_document_documents_generate_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentGenerateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Document Detail */
+  get_document_detail_documents__document_id__get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Document */
+  delete_document_documents__document_id__delete: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Document */
+  update_document_documents__document_id__patch: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Document Activity
+   * @description Read audit-style activity history for a document.
+   */
+  list_document_activity_documents__document_id__activity_get: {
+    parameters: {
+      query?: {
+        /** @description Maximum activity rows to return */
+        limit?: number;
+      };
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentActivityRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Versions */
+  list_versions_documents__document_id__versions_get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentVersionRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Version */
+  create_version_documents__document_id__versions_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentVersionCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentVersionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Version */
+  get_version_documents__document_id__versions__version_id__get: {
+    parameters: {
+      path: {
+        document_id: string;
+        version_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentVersionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Pin Document
+   * @description Pin (or unpin) a document as the active/canonical for its kind.
+   *
+   * When pinning, all other documents of the same kind for this user are
+   * unpinned first.
+   */
+  pin_document_documents__document_id__pin_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DocumentPinRequest"] | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Download Original
+   * @description Download the original uploaded PDF for the head version.
+   */
+  download_original_documents__document_id__original_get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Download Document */
+  download_document_documents__document_id__download_get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Shares
+   * @description List all shares for a document (owner only).
+   */
+  list_shares_documents__document_id__shares_get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentShareRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Create Share
+   * @description Grant another user access to this document (owner only).
+   */
+  create_share_documents__document_id__shares_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentShareCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentShareRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Delete Share
+   * @description Revoke a share (owner only).
+   */
+  delete_share_documents__document_id__shares__share_id__delete: {
+    parameters: {
+      path: {
+        document_id: string;
+        share_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Update Share
+   * @description Update a share's role (owner only).
+   */
+  update_share_documents__document_id__shares__share_id__patch: {
+    parameters: {
+      path: {
+        document_id: string;
+        share_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentShareUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentShareRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Semantic search across user documents
+   * @description Perform a semantic similarity search across the authenticated user's
+   * embedded documents using pgvector cosine distance.
+   */
+  search_documents_documents_search_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentSearchRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentSearchResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Generate embeddings for a document
+   * @description Chunk and embed a document's text content, storing the resulting vectors
+   * in pgvector for later semantic search.  Replaces any existing embeddings
+   * for the same document.
+   */
+  embed_document_documents__document_id__embed_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DocumentEmbedRequest"] | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentEmbedResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Enrich a lead using document context
+   * @description Retrieve relevant document chunks and use them to enrich a job lead
+   * description with personalized analysis.
+   */
+  enrich_lead_endpoint_documents_rag_enrich_lead_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadEnrichRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadEnrichResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Rank leads by relevance to user profile
+   * @description Rank job leads based on the user's embedded document context.
+   */
+  rank_leads_endpoint_documents_rag_rank_leads_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadRankRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LeadRankResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Summarize a company website
+   * @description Load a company website, extract text, and return an AI summary.
+   */
+  summarize_company_endpoint_documents_rag_summarize_company_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanySummarizeRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CompanySummarizeResponse"];
         };
       };
       /** @description Validation Error */
@@ -4262,9 +9083,9 @@ export interface operations {
   seed_education_education_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -4399,9 +9220,9 @@ export interface operations {
   seed_certificates_certificate_seed_post: {
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": string;
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };
@@ -4600,12 +9421,38 @@ export interface operations {
       };
     };
   };
+  /** List Extractor Versions */
+  list_extractor_versions_extractor__id__versions_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorVersionRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Delete Extractor Example */
   delete_extractor_example_extractor__id__examples__example_id__delete: {
     parameters: {
       path: {
-        id: string;
         example_id: string;
+        id: string;
       };
     };
     responses: {
@@ -4627,12 +9474,6 @@ export interface operations {
    */
   extractor_runner_extractor__id__run_post: {
     parameters: {
-      query?: {
-        mode?: "entire_document" | "retrieval";
-        text?: string | null;
-        url?: string | null;
-        llm?: string | null;
-      };
       path: {
         id: string;
       };
@@ -4647,6 +9488,1099 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["ExtractorResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retry Extractor Run
+   * @description Retry a failed extractor run by re-executing against the same source.
+   */
+  retry_extractor_run_extractor__id__run__event_id__retry_post: {
+    parameters: {
+      path: {
+        event_id: string;
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExtractorResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Crawler Pipelines */
+  list_crawler_pipelines_crawlers_pipelines_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerPipelineRead"][];
+        };
+      };
+    };
+  };
+  /** Create Crawler Pipeline */
+  create_crawler_pipeline_crawlers_pipelines_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CrawlerPipelineCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Crawler Pipeline */
+  get_crawler_pipeline_crawlers_pipelines__pipeline_id__get: {
+    parameters: {
+      path: {
+        pipeline_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Crawler Pipeline */
+  update_crawler_pipeline_crawlers_pipelines__pipeline_id__patch: {
+    parameters: {
+      path: {
+        pipeline_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CrawlerPipelineUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerPipelineRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Trigger Crawler Run */
+  trigger_crawler_run_crawlers_pipelines__pipeline_id__runs_post: {
+    parameters: {
+      path: {
+        pipeline_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Crawler Runs */
+  list_crawler_runs_crawlers_runs_get: {
+    parameters: {
+      query?: {
+        /** @description Filter by pipeline source */
+        source?: string | null;
+        /** @description Filter by run status */
+        status?: string | null;
+        /** @description Filter by pipeline ID */
+        pipeline_id?: string | null;
+        /** @description Filter by trigger type */
+        trigger_type?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Prune Crawler Runs
+   * @description Delete completed or terminal crawler runs older than the specified age.
+   */
+  prune_crawler_runs_crawlers_runs_prune_delete: {
+    parameters: {
+      query?: {
+        /** @description Delete runs older than N days */
+        older_than_days?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Crawler Run */
+  get_crawler_run_crawlers_runs__run_id__get: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Cancel Crawler Run */
+  cancel_crawler_run_crawlers_runs__run_id__cancel_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Pause Crawler Run */
+  pause_crawler_run_crawlers_runs__run_id__pause_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Resume Crawler Run */
+  resume_crawler_run_crawlers_runs__run_id__resume_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Retry Crawler Run */
+  retry_crawler_run_crawlers_runs__run_id__retry_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Directory
+   * @description Paginated, searchable user directory.
+   *
+   * Only discoverable, active users are returned. ``superusers_only=true`` narrows
+   * results to Baldin superusers.
+   */
+  list_directory_directory__get: {
+    parameters: {
+      query?: {
+        /** @description Search by name or headline */
+        q?: string | null;
+        /** @description Filter by placement status */
+        placement_status?: components["schemas"]["PlacementStatus"] | null;
+        /** @description Filter by city/state/country */
+        location?: string | null;
+        /** @description Only return superusers */
+        superusers_only?: boolean;
+        /** @description Page number starting from 1 */
+        page?: number;
+        /** @description Number of records per page */
+        page_size?: number;
+        /** @description Return total count of records */
+        request_count?: boolean;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserDirectoryPaginatedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Read Public Profile
+   * @description View another user's public profile.
+   */
+  read_public_profile_directory__user_id__get: {
+    parameters: {
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserPublicProfileRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Connections
+   * @description List connections for the current user (both sent and received).
+   */
+  list_connections_connections__get: {
+    parameters: {
+      query?: {
+        /** @description Filter by connection status */
+        status?: string | null;
+        /** @description Page number starting from 1 */
+        page?: number;
+        /** @description Number of records per page */
+        page_size?: number;
+        /** @description Return total count of records */
+        request_count?: boolean;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConnectionsPaginatedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Send Connection Request
+   * @description Send a connection request to another user.
+   *
+   * Requests to superusers are available to all authenticated users. Requests to
+   * non-superusers still require a Starter subscription or above.
+   */
+  send_connection_request_connections__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ConnectionCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ConnectionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Accept Connection
+   * @description Accept a pending connection request. Only the addressee can accept.
+   */
+  accept_connection_connections__id__accept_patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConnectionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Decline Connection
+   * @description Decline a pending connection request. Only the addressee can decline.
+   */
+  decline_connection_connections__id__decline_patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConnectionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Remove Connection
+   * @description Remove an accepted connection or cancel a pending request. Either party can do this.
+   */
+  remove_connection_connections__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Block Connection
+   * @description Block a user via an existing connection record. Sets status to blocked.
+   */
+  block_connection_connections__id__block_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConnectionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Total Unread
+   * @description Total unread message count across all conversations (for sidebar badge).
+   */
+  get_total_unread_conversations_unread_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UnreadCountRead"];
+        };
+      };
+    };
+  };
+  /**
+   * List Conversations
+   * @description List the current user's conversations, sorted by most recent message.
+   */
+  list_conversations_conversations__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConversationsPaginatedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Create Conversation
+   * @description Create a DM or group conversation.
+   */
+  create_conversation_conversations__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ConversationCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ConversationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Conversation
+   * @description Get conversation detail with paginated messages. Auto-marks as read.
+   */
+  get_conversation_conversations__conversation_id__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+      path: {
+        conversation_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConversationDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Send Message
+   * @description Send a message in a conversation.
+   */
+  send_message_conversations__conversation_id__messages_post: {
+    parameters: {
+      path: {
+        conversation_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MessageCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["MessageRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Delete Message
+   * @description Delete your own message (hard delete).
+   */
+  delete_message_conversations__conversation_id__messages__message_id__delete: {
+    parameters: {
+      path: {
+        conversation_id: string;
+        message_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Edit Message
+   * @description Edit your own message.
+   */
+  edit_message_conversations__conversation_id__messages__message_id__patch: {
+    parameters: {
+      path: {
+        conversation_id: string;
+        message_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MessageEdit"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MessageRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Mark Conversation Read
+   * @description Mark a conversation as read (update last_read_at).
+   */
+  mark_conversation_read_conversations__conversation_id__read_post: {
+    parameters: {
+      path: {
+        conversation_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Add Participant
+   * @description Add a participant to a group conversation. Only admins can add.
+   */
+  add_participant_conversations__conversation_id__participants_post: {
+    parameters: {
+      query: {
+        /** @description User ID to add */
+        user_id: string;
+      };
+      path: {
+        conversation_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ConversationParticipantRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Remove Participant
+   * @description Remove a participant or leave a group. Admins can remove others; anyone can leave.
+   */
+  remove_participant_conversations__conversation_id__participants__target_user_id__delete: {
+    parameters: {
+      path: {
+        conversation_id: string;
+        target_user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Request Collaboration Bootstrap */
+  request_collaboration_bootstrap_documents__document_id__collaborate_bootstrap_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentCollaborationBootstrapRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Action Items */
+  list_action_items_action_items__get: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["ActionItemStatus"] | null;
+        kind?: components["schemas"]["ActionItemKind"] | null;
+        priority?: components["schemas"]["ActionItemPriority"] | null;
+        due_before?: string | null;
+        due_after?: string | null;
+        page?: number;
+        page_size?: number;
+        request_count?: boolean;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActionItemDetailRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Action Item */
+  create_action_item_action_items__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActionItemCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ActionItemRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Reorder Action Items
+   * @description Set sort_order for action items based on position in item_ids array.
+   */
+  reorder_action_items_action_items_reorder_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActionItemReorder"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Action Item */
+  get_action_item_action_items__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActionItemDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Action Item */
+  delete_action_item_action_items__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Action Item */
+  update_action_item_action_items__id__patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActionItemUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActionItemRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Action Item From Application */
+  create_action_item_from_application_action_items_from_application__application_id__post: {
+    parameters: {
+      path: {
+        application_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["ActionItemRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Activity Feed */
+  get_activity_feed_activity_feed__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+        since?: string | null;
+        entity_type?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActivityFeedRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Command Center Summary */
+  get_command_center_summary_activity_feed_summary_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CommandCenterSummary"];
+        };
+      };
+    };
+  };
+  /**
+   * List Review Items
+   * @description List all items pending human review.
+   */
+  list_review_items_review_items_get: {
+    parameters: {
+      query?: {
+        /** @description Filter by item type */
+        item_type?: components["schemas"]["ReviewItemType"] | null;
+        page?: number;
+        page_size?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ReviewItemRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Approve Item */
+  approve_item_review_items__item_type___item_id__approve_post: {
+    parameters: {
+      path: {
+        item_type: components["schemas"]["ReviewItemType"];
+        item_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Reject Item */
+  reject_item_review_items__item_type___item_id__reject_post: {
+    parameters: {
+      path: {
+        item_type: components["schemas"]["ReviewItemType"];
+        item_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Batch Review */
+  batch_review_review_items_batch_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReviewBatchRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ReviewBatchResponse"];
         };
       };
       /** @description Validation Error */

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
-import { SkillRead, SkillCreate, SkillUpdate, extractSkill  } from '../service/skills';  // Adjust the import path as necessary
-import { ExtractorRun } from '../service/extractor';  // Adjust the import path as necessary
+import { SkillRead, SkillCreate, SkillUpdate, SkillExtractRequest, SkillExtractResponse, extractSkill  } from '../service/skills';  // Adjust the import path as necessary
 import  FilePicker  from '../component/common/file-picker';
 import { useContext } from 'react';
 import { UserContext } from '../context/user-context';
@@ -86,19 +85,18 @@ const SkillsModal: React.FC<SkillsModalProps> = ({ open, onClose, onSave, initia
 interface SkillsExtractModalProps {
   open: boolean;
   onClose: () => void;
-  onSave: (data: ExtractorRun) => void;
-  initialData?: ExtractorRun;
+  onSave: (data: SkillExtractResponse) => void;
+  initialData?: SkillExtractRequest;
 }
 
 const SkillsExtractModal: React.FC<SkillsExtractModalProps> = ({ open, onClose, onSave, initialData }) => {
-  const defaultData: ExtractorRun = {
+  const defaultData: SkillExtractRequest = {
     mode: 'entire_document',
-    file: null,
     text: null,
     url: null,
     llm: '',
   };
-  const [data, setData] = useState<ExtractorRun>({ ...defaultData, ...initialData});
+  const [data, setData] = useState<SkillExtractRequest>({ ...defaultData, ...initialData});
   const { token } = useContext(UserContext);
 
   useEffect(() => {
@@ -107,7 +105,7 @@ const SkillsExtractModal: React.FC<SkillsExtractModalProps> = ({ open, onClose, 
 
   const handleSave = async () => {
     try {
-      const result = await extractSkill(token || '', data as ExtractorRun);
+      const result = await extractSkill(token || '', data);
       onSave(result);
     } catch (error) {
       console.error(error);
@@ -127,7 +125,7 @@ const SkillsExtractModal: React.FC<SkillsExtractModalProps> = ({ open, onClose, 
       <DialogTitle>Run Extractor</DialogTitle>
       <DialogContent>
         <FilePicker
-          value={data.file ? [new File([], data.file.name)] : []}
+          value={data.file ? [data.file] : []}
           label="File"
           multiple={false}
           disabled={false}
@@ -137,19 +135,19 @@ const SkillsExtractModal: React.FC<SkillsExtractModalProps> = ({ open, onClose, 
         />
         <TextField
           label="Text"
-          value={data.text}
+          value={data.text ?? ''}
           onChange={(e) => setData({ ...data, text: e.target.value })}
           fullWidth
         />
         <TextField
           label="URL"
-          value={data.url}
+          value={data.url ?? ''}
           onChange={(e) => setData({ ...data, url: e.target.value })}
           fullWidth
         />
         <TextField
           label="LLM"
-          value={data.llm}
+          value={data.llm ?? ''}
           onChange={(e) => setData({ ...data, llm: e.target.value })}
           fullWidth
         />

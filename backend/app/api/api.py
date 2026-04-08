@@ -2,21 +2,31 @@
 
 from fastapi import APIRouter
 
-from app.api.deps import fastapi_users, schemas, security
+from app.api.deps import fastapi_users, schemas
 from app.api.routes import (
+    action_items,
+    activity_feed,
     applications,
+    auth,
     certificate,
+    collaboration,
     companies,
+    connections,
     contacts,
     cover_letters,
     crawlers,
     data_orchestration,
     db_management,
+    directory,
+    documents,
     education,
     experiences,
     extractor,
     leads,
+    messages,
+    mfa,
     resumes,
+    review,
     skills,
     users,
 )
@@ -24,7 +34,7 @@ from app.api.routes import (
 api_router: APIRouter = APIRouter()
 
 api_router.include_router(
-    fastapi_users.get_auth_router(security.AUTH_BACKEND),
+    auth.router,
     prefix="/auth/jwt",
     tags=["auth"],
 )
@@ -41,6 +51,11 @@ api_router.include_router(
 api_router.include_router(
     fastapi_users.get_verify_router(schemas.UserRead),
     prefix="/auth",
+    tags=["auth"],
+)
+api_router.include_router(
+    mfa.router,
+    prefix="/auth/mfa",
     tags=["auth"],
 )
 api_router.include_router(
@@ -97,6 +112,11 @@ api_router.include_router(
     tags=["applications"],
 )
 api_router.include_router(
+    documents.router,
+    prefix="/documents",
+    tags=["documents"],
+)
+api_router.include_router(
     education.router,
     prefix="/education",
     tags=["education"],
@@ -115,4 +135,39 @@ api_router.include_router(
     crawlers.router,
     prefix="/crawlers",
     tags=["crawlers"],
+)
+api_router.include_router(
+    directory.router,
+    prefix="/directory",
+    tags=["directory"],
+)
+api_router.include_router(
+    connections.router,
+    prefix="/connections",
+    tags=["connections"],
+)
+api_router.include_router(
+    messages.router,
+    prefix="/conversations",
+    tags=["messaging"],
+)
+api_router.include_router(
+    collaboration.router,
+    prefix="/documents",
+    tags=["collaboration"],
+)
+api_router.include_router(
+    action_items.router,
+    prefix="/action-items",
+    tags=["action-items"],
+)
+api_router.include_router(
+    activity_feed.router,
+    prefix="/activity-feed",
+    tags=["activity-feed"],
+)
+api_router.include_router(
+    review.router,
+    prefix="/review",
+    tags=["review"],
 )

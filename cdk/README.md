@@ -1,71 +1,53 @@
 
-# About
+# Deployment Notes
 
-Ship Baldin to AWS using CloudFormation with Infrastructure defined as Code (IaC) using the AWS Cloud Development Kit (CDK).
+This directory contains partially restored AWS infrastructure code. It is no longer treated as a
+general architecture sample, but it is also not yet the approved production deployment contract for Baldin.
 
+This repository is regaining direct deployment ownership. The near-term goal is to reuse only the
+useful parts of this CDK app while rebuilding a smaller, safer release path inside this repository.
 
-### Prerequisites
-Create a virtual environment and activate it, e.g. with pipenv:
+## Current Role of This Directory
 
-```
-$ pipenv install
-$ pipenv shell
-```
+- Provide reference implementations for VPC, ECS or Fargate, RDS, ECR, and static asset hosting.
+- Help narrow the first-release topology instead of forcing the team to start deployment design from zero.
+- Support review and synthesis while the protected deploy workflow is being rebuilt.
 
-Create a `.env` file in the root of the project with the following variables set:
+## What Not To Assume
 
-```txt
-AWS_REGION=
-AWS_ACCOUNT=
-```
-The AWS_ACCOUNT ID value can be found in the AWS console under your account settings.
+- Do not assume every stack in this directory should be revived as-is.
+- Do not assume the current CDK defaults are production-ready.
+- Do not assume legacy IAM, static hosting, or image-promotion paths are still valid.
+- Do not use this directory as the operator runbook until the new deploy path is approved.
 
-### AWS CDK CLI
+Several current behaviors are explicitly under review before any deployment path is re-enabled:
 
-To synthesize the CloudFormation template:
-```
-$ cdk synth
-```
+- public S3 website hosting assumptions
+- destructive removal policies
+- broad IAM scopes and long-lived machine-user patterns
+- open or overly broad database ingress
+- disabled helper paths that were written for an older repository boundary
 
-To list the stacks in the app:
+## Current Artifact Contract
 
-```
-$ cdk ls
-```
+The deploy path is still expected to start from the same application artifacts the repo builds today:
 
-To deploy the stack:
+- Backend container image built from `backend/Dockerfile`
+- Frontend static bundle built into `frontend/dist`
 
-```
-$ cdk deploy
-```
+Protected workflows in this repository should eventually promote those artifacts through staging and
+production environments with approvals, environment-scoped secrets, smoke validation, and rollback support.
 
-To destroy the stack:
+## Safe Use Right Now
 
-```
-$ cdk destroy
-```
+Until the deployment contract is narrowed and approved, prefer review-oriented commands such as:
 
-To see the difference between the deployed stack and the current state:
-
-```
-$ cdk diff <STACK-ID>
+```bash
+pipenv install
+pipenv shell
+cdk ls
+cdk synth
 ```
 
-Note, the first time you deploy with the AWS CDK CLI, you must boostrap your account:
-
-```
-$ cdk bootstrap
-```
-
-### Shipping Baldin
-
-To ship Baldin to AWS, you must deploy the stacks in roughly the following order:
-
-1. `BaldinIAMStack`
-2. `BaldinVPCStack`
-3. `BaldinS3Stack`
-4. `BaldinECRStack`
-5. `BaldinDBStack`
-6. `BaldinAPIStack`
-
-Enjoy!
+Some stack values still read placeholder or legacy configuration while synthesizing. Treat this flow as
+reference and review only until the protected deployment workflows are rebuilt.

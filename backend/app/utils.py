@@ -3,9 +3,11 @@
 import json
 import re
 import textwrap
+from collections.abc import Iterable
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Type
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import aiofiles
 from bs4 import BeautifulSoup
@@ -14,6 +16,16 @@ from jsonschema.validators import Draft202012Validator
 from langchain_core.utils.json_schema import dereference_refs
 from pydantic import BaseModel
 from PyPDF2 import PdfReader
+
+TRACKING_QUERY_PARAMS = {
+    "fbclid",
+    "gclid",
+    "ref",
+    "ref_id",
+    "source",
+    "src",
+    "trk",
+}
 
 
 def clean_text(text: str) -> str:
@@ -25,6 +37,77 @@ def clean_text(text: str) -> str:
     consistent_newlines = re.sub(r"\n+", "\n", starts_on_first_line)
     single_space_punctuation = re.sub(r"\s([,.!?;:])", r"\1", consistent_newlines)
     return single_space_punctuation
+
+
+def build_user_display_name(user: Any) -> str:
+    """Build the public-facing display name for a user."""
+
+    display_name = " ".join(
+        part
+        for part in [
+            getattr(user, "first_name", None),
+            getattr(user, "last_name", None),
+        ]
+        if part
+    ).strip()
+    return display_name or getattr(user, "email", "") or str(getattr(user, "id", ""))
+
+
+def compute_version_hash(instruction: str | None, json_schema: dict | None) -> str:
+    """Compute a SHA-256 hash of an extractor's instruction and schema for traceability."""
+    import hashlib
+
+    content = (instruction or "") + json.dumps(json_schema or {}, sort_keys=True)
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def _is_tracking_query_param(name: str) -> bool:
+    lowered = name.lower()
+    return lowered.startswith("utm_") or lowered in TRACKING_QUERY_PARAMS
+
+
+def _sorted_query_items(items: Iterable[tuple[str, str]]) -> list[tuple[str, str]]:
+    return sorted(items, key=lambda item: (item[0].lower(), item[0], item[1]))
+
+
+def canonicalize_lead_url(url: str) -> str:
+    """Canonicalize a lead URL for deduplication."""
+
+    candidate = url.strip()
+    parsed = urlsplit(candidate)
+    scheme = parsed.scheme.lower()
+    if scheme not in {"http", "https"}:
+        raise ValueError("Lead URLs must use http or https")
+
+    if not parsed.netloc:
+        raise ValueError("Lead URLs must include a host")
+
+    hostname = (parsed.hostname or "").lower()
+    if not hostname:
+        raise ValueError("Lead URLs must include a host")
+    if hostname.startswith("www."):
+        hostname = hostname[4:]
+
+    port = parsed.port
+    default_port = (scheme == "http" and port == 80) or (
+        scheme == "https" and port == 443
+    )
+    netloc = hostname if port is None or default_port else f"{hostname}:{port}"
+
+    path = re.sub(r"/{2,}", "/", parsed.path or "/")
+    if not path.startswith("/"):
+        path = f"/{path}"
+    if path != "/":
+        path = path.rstrip("/")
+
+    query_items = [
+        (key, value)
+        for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+        if not _is_tracking_query_param(key)
+    ]
+    query = urlencode(_sorted_query_items(query_items), doseq=True)
+
+    return urlunsplit((scheme, netloc, path, query, ""))
 
 
 def wrap_text(text: str, width: int = 120) -> str:
@@ -222,5 +305,5 @@ def validate_json_schema(schema: dict[str, Any]) -> None:
     """Validate a JSON schema."""
     try:
         Draft202012Validator.check_schema(schema)
-    except exceptions.ValidationError as e:
+    except (exceptions.ValidationError, exceptions.SchemaError) as e:
         raise ValueError(f"Invalid schema: {e.message}")

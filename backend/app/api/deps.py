@@ -1,27 +1,41 @@
 # Path: app/api/deps.py
+import asyncio
 import json
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path  # noqa
-from sre_constants import SUCCESS
-from typing import Any, Sequence
+from typing import Any, Awaitable, Callable, Sequence
 
-from fastapi import BackgroundTasks, Depends, HTTPException, Query  # noqa
-from pydantic import UUID4
-from sqlalchemy import select
-from sqlalchemy.orm import joinedload, selectinload
+from fastapi import (  # noqa
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
+from fastapi.exceptions import RequestValidationError
+from pydantic import UUID4, ValidationError
+from sqlalchemy import delete, select
+from sqlalchemy.orm import selectinload
 
 from app import logging, models, schemas, utils  # noqa
-from app.core import conf  # noqa
-from app.core import security  # noqa
+from app.core import (
+    conf,  # noqa
+    security,  # noqa
+)
+from app.core import orchestration as orchestration_core  # noqa
 from app.core.db import (  # noqa
     AsyncSession,
     DataBaseManager,
     get_async_session,
     session_context,
 )
+from app.core.extractor import service as extractor_service
 from app.core.langchain import (  # noqa
-    extract_text_from_url,
     generate_cover_letter,
     generate_resume,
 )
@@ -31,16 +45,34 @@ from app.core.security import (  # noqa
     get_current_superuser,
     get_current_user,
 )
-from app.extractor.extraction_runnable import extract_entire_document  # noqa
 from app.extractor.parsing import (  # noqa
     MAX_FILE_SIZE_MB,
     SUPPORTED_MIMETYPES,
-    parse_binary_input,
 )
-from app.extractor.retrieval import extract_from_content  # noqa
 from app.logging import console_log, get_async_logger
 
+__all__ = ["console_log"]
+
 log = get_async_logger(__name__)
+
+LEAD_SHARED_MUTABLE_FIELDS = (
+    "title",
+    "description",
+    "location",
+    "salary",
+    "job_function",
+    "employment_type",
+    "seniority_level",
+    "education_level",
+    "hiring_manager",
+)
+
+
+@dataclass
+class LeadCreateResult:
+    lead: models.Lead
+    disposition: schemas.LeadExtractDisposition
+    normalized_url: str
 
 
 async def _403(user_id: UUID4, obj: Any, id: UUID4 | str) -> HTTPException:
@@ -69,34 +101,309 @@ async def get_pagination_params(
     )
 
 
+# ---------------------------------------------------------------------------
+# Subscription tier and placement gating
+# ---------------------------------------------------------------------------
+
+_TIER_ORDER = {
+    schemas.SubscriptionTier.FREE: 0,
+    schemas.SubscriptionTier.STARTER: 1,
+    schemas.SubscriptionTier.PRO: 2,
+}
+
+
+def require_tier(minimum: schemas.SubscriptionTier):
+    """Return a FastAPI dependency that raises 403 if the user's tier is below *minimum*
+    or their subscription has expired (for non-free tiers)."""
+
+    async def _guard(user: models.User = Depends(get_current_user)):
+        user_tier = schemas.SubscriptionTier(user.subscription_tier)
+        if _TIER_ORDER[user_tier] < _TIER_ORDER[minimum]:
+            raise HTTPException(
+                status_code=403,
+                detail=f"This feature requires a {minimum.value} subscription or above",
+            )
+        if user_tier != schemas.SubscriptionTier.FREE and user.subscription_expires_at:
+            if user.subscription_expires_at < datetime.utcnow():
+                raise HTTPException(
+                    status_code=403,
+                    detail="Your subscription has expired",
+                )
+        return user
+
+    return _guard
+
+
+def require_active_placement():
+    """Return a FastAPI dependency that raises 403 if the user is not active."""
+
+    async def _guard(user: models.User = Depends(get_current_user)):
+        status = schemas.PlacementStatus(user.placement_status)
+        if status != schemas.PlacementStatus.ACTIVE:
+            raise HTTPException(
+                status_code=403,
+                detail="This feature is only available to active job seekers",
+            )
+        return user
+
+    return _guard
+
+
+def _normalize_extractor_input_value(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    normalized = value.strip()
+    if not normalized or normalized.lower() in {"null", "undefined"}:
+        return None
+
+    return normalized
+
+
+def _build_extractor_run_payload(payload: dict[str, Any]) -> schemas.ExtractorRun:
+    try:
+        return schemas.ExtractorRun(**payload)
+    except ValidationError as exc:
+        raise RequestValidationError(exc.errors()) from exc
+
+
+async def get_extractor_run_payload(
+    request: Request,
+    file: UploadFile | None = File(default=None),
+    mode: str | None = Form(default=None),
+    text: str | None = Form(default=None),
+    url: str | None = Form(default=None),
+    llm: str | None = Form(default=None),
+) -> schemas.ExtractorRun:
+    content_type = request.headers.get("content-type", "")
+
+    if content_type.startswith("application/json"):
+        try:
+            body = await request.json()
+        except json.JSONDecodeError as exc:
+            raise RequestValidationError(
+                [
+                    {
+                        "loc": ("body",),
+                        "msg": "Invalid JSON payload.",
+                        "type": "value_error.jsondecode",
+                    }
+                ]
+            ) from exc
+
+        if not isinstance(body, dict):
+            raise RequestValidationError(
+                [
+                    {
+                        "loc": ("body",),
+                        "msg": "Extractor payload must be a JSON object.",
+                        "type": "type_error.dict",
+                    }
+                ]
+            )
+
+        return _build_extractor_run_payload(body)
+
+    query = request.query_params
+    return _build_extractor_run_payload(
+        {
+            "mode": _normalize_extractor_input_value(mode)
+            or _normalize_extractor_input_value(query.get("mode"))
+            or "entire_document",
+            "file": file,
+            "text": _normalize_extractor_input_value(text)
+            or _normalize_extractor_input_value(query.get("text")),
+            "url": _normalize_extractor_input_value(url)
+            or _normalize_extractor_input_value(query.get("url")),
+            "llm": _normalize_extractor_input_value(llm)
+            or _normalize_extractor_input_value(query.get("llm")),
+        }
+    )
+
+
 async def get_lead(
-    id: UUID4, db: AsyncSession = Depends(get_async_session)
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Lead:
-    lead = await db.execute(
+    del user
+    result = await db.execute(
         select(models.Lead)
-        .options(joinedload(models.Lead.companies))
+        .execution_options(populate_existing=True)
+        .options(
+            selectinload(models.Lead.companies),
+            selectinload(models.Lead.registrations).selectinload(
+                models.LeadRegistration.user
+            ),
+            selectinload(models.Lead.comments),
+        )
         .where(models.Lead.id == id)
     )
+    lead = result.scalars().unique().first()
     if not lead:
         raise HTTPException(status_code=404, detail=f"Lead not found: {id}")
-    return lead.scalars().first()
+    return lead
+
+
+def _get_lead_registration(
+    lead: models.Lead, user_id: UUID4 | uuid.UUID
+) -> models.LeadRegistration | None:
+    return next(
+        (
+            registration
+            for registration in getattr(lead, "registrations", [])
+            if registration.user_id == user_id
+        ),
+        None,
+    )
+
+
+def _is_empty_shared_value(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    return False
+
+
+async def _apply_company_ids(
+    lead: models.Lead,
+    company_ids: Sequence[UUID4] | None,
+    db: AsyncSession,
+    *,
+    replace: bool,
+) -> bool:
+    if company_ids is None:
+        return False
+
+    existing_company_ids_result = await db.execute(
+        select(models.LeadXCompany.company_id).where(
+            models.LeadXCompany.lead_id == lead.id
+        )
+    )
+    existing_company_ids = set(existing_company_ids_result.scalars().all())
+
+    valid_requested_ids: list[UUID4] = []
+    seen_company_ids: set[UUID4] = set()
+    for company_id in company_ids:
+        if company_id in seen_company_ids:
+            continue
+        seen_company_ids.add(company_id)
+        company = await db.get(models.Company, company_id)
+        if company is not None:
+            valid_requested_ids.append(company_id)
+
+    requested_company_ids = set(valid_requested_ids)
+
+    if replace:
+        company_ids_to_remove = existing_company_ids - requested_company_ids
+        company_ids_to_add = requested_company_ids - existing_company_ids
+
+        if company_ids_to_remove:
+            await db.execute(
+                delete(models.LeadXCompany).where(
+                    models.LeadXCompany.lead_id == lead.id,
+                    models.LeadXCompany.company_id.in_(company_ids_to_remove),
+                )
+            )
+
+        for company_id in valid_requested_ids:
+            if company_id not in company_ids_to_add:
+                continue
+            db.add(models.LeadXCompany(lead_id=lead.id, company_id=company_id))
+
+        return bool(company_ids_to_remove or company_ids_to_add)
+
+    company_ids_to_add = requested_company_ids - existing_company_ids
+    for company_id in valid_requested_ids:
+        if company_id not in company_ids_to_add:
+            continue
+        db.add(models.LeadXCompany(lead_id=lead.id, company_id=company_id))
+
+    return bool(company_ids_to_add)
+
+
+def _fill_empty_shared_fields(lead: models.Lead, payload: schemas.LeadCreate) -> bool:
+    changed = False
+    for field, value in payload.model_dump(
+        exclude={"company_ids", "url"}, exclude_none=True
+    ).items():
+        if not _is_empty_shared_value(getattr(lead, field)):
+            continue
+        setattr(lead, field, value)
+        changed = True
+    return changed
+
+
+async def get_mutable_lead(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Lead:
+    lead = await get_lead(id, db, user)
+    if getattr(user, "is_superuser", False):
+        return lead
+    if _get_lead_registration(lead, user.id) is not None:
+        return lead
+    raise await _403(user.id, lead, id)
 
 
 async def create_lead(
     payload: schemas.LeadCreate,
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
-) -> models.Lead:
-    lead = models.Lead(**payload.dict(exclude={"company_ids"}))
-    if payload.company_ids:
-        lead.companies = [
-            await db.get(models.Company, company_id)
-            for company_id in payload.company_ids
-        ]
-    db.add(lead)
-    await db.commit()
-    await db.refresh(lead)
-    return lead
+) -> LeadCreateResult:
+    normalized_url = utils.canonicalize_lead_url(payload.url)
+    result = await db.execute(
+        select(models.Lead)
+        .options(
+            selectinload(models.Lead.companies),
+            selectinload(models.Lead.registrations).selectinload(
+                models.LeadRegistration.user
+            ),
+            selectinload(models.Lead.comments),
+        )
+        .where(models.Lead.canonical_url == normalized_url)
+    )
+    lead = result.scalars().unique().first()
+    current_user = await db.get(models.User, user.id)
+    if current_user is None:
+        raise HTTPException(status_code=404, detail=f"User not found: {user.id}")
+
+    changed = False
+    disposition = schemas.LeadExtractDisposition.CREATED
+    if lead is None:
+        lead = models.Lead(
+            **payload.model_dump(exclude={"company_ids"}, exclude_none=True),
+            canonical_url=normalized_url,
+        )
+        lead.registrations.append(models.LeadRegistration(user=current_user))
+        db.add(lead)
+        changed = True
+    else:
+        registration = _get_lead_registration(lead, user.id)
+        if registration is None:
+            lead.registrations.append(models.LeadRegistration(user=current_user))
+            disposition = schemas.LeadExtractDisposition.MATCHED_EXISTING_JOINED
+            changed = True
+        else:
+            disposition = (
+                schemas.LeadExtractDisposition.MATCHED_EXISTING_ALREADY_REGISTERED
+            )
+        if _fill_empty_shared_fields(lead, payload):
+            changed = True
+
+    if await _apply_company_ids(lead, payload.company_ids, db, replace=False):
+        changed = True
+
+    if changed:
+        await db.commit()
+
+    return LeadCreateResult(
+        lead=await get_lead(lead.id, db, user),
+        disposition=disposition,
+        normalized_url=normalized_url,
+    )
 
 
 async def get_company_by_id(
@@ -110,11 +417,24 @@ async def get_company_by_id(
 
 
 async def get_orchestration_event(
-    id: UUID4, db: AsyncSession = Depends(get_async_session)
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
 ) -> models.OrchestrationEvent:
-    orch_event = await db.get(models.OrchestrationEvent, id)
+    query = (
+        select(models.OrchestrationEvent)
+        .where(models.OrchestrationEvent.id == id)
+        .options(selectinload(models.OrchestrationEvent.orchestration_pipeline))
+    )
+    result = await db.execute(query)
+    orch_event = result.scalars().first()
     if not orch_event:
         raise await _404(orch_event, id)
+    if (
+        not orch_event.orchestration_pipeline
+        or orch_event.orchestration_pipeline.user_id != user.id  # type: ignore[union-attr]
+    ):
+        raise await _403(user.id, orch_event, id)
     await log.info(f"get_orchestration_event: {orch_event}")
     return orch_event
 
@@ -122,31 +442,26 @@ async def get_orchestration_event(
 async def update_orchestration_event(
     id: UUID4,
     payload: schemas.OrchestrationEventUpdate,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSession,
+    user: schemas.UserRead | None = None,
 ) -> models.OrchestrationEvent:
-    event = await get_orchestration_event(id, db)
-    for var, value in payload.dict(exclude_unset=True).items():
-        setattr(event, var, value)
-    await db.commit()
-    await db.refresh(event)
-    await log.info(f"update_orchestration_event: {event}")
-    return event
+    return await orchestration_core.update_orchestration_event(id, payload, db, user)
+
+
+async def update_orchestration_event_for_current_user(
+    id: UUID4,
+    payload: schemas.OrchestrationEventUpdate,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.OrchestrationEvent:
+    return await update_orchestration_event(id, payload, db, user)
 
 
 async def create_orchestration_event(
     payload: schemas.OrchestrationEventCreate,
     db: AsyncSession = Depends(get_async_session),
 ) -> models.OrchestrationEvent:
-    # Seralize URIS to JSON stings (for database)
-    setattr(payload, "source_uri", payload.source_uri.json())
-    setattr(payload, "destination_uri", payload.destination_uri.json())
-    # Create new event record in database
-    event = models.OrchestrationEvent(**payload.__dict__)
-    db.add(event)
-    await db.commit()
-    await db.refresh(event)
-    await log.info(f"create_orchestration_event: {event}")
-    return event
+    return await orchestration_core.create_orchestration_event(payload, db)
 
 
 async def get_skill(
@@ -168,7 +483,7 @@ async def create_skill(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Skill:
-    skill = models.Skill(**payload.dict(), user_id=user.id)
+    skill = models.Skill(**payload.model_dump(), user_id=user.id)
     db.add(skill)
     await db.commit()
     await db.refresh(skill)
@@ -181,7 +496,7 @@ async def create_cover_letter(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.CoverLetter:
-    cover_letter = models.CoverLetter(**payload.dict(), user_id=user.id)
+    cover_letter = models.CoverLetter(**payload.model_dump(), user_id=user.id)
     db.add(cover_letter)
     await db.commit()
     await db.refresh(cover_letter)
@@ -194,12 +509,44 @@ async def create_resume(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Resume:
-    resume = models.Resume(**payload.dict(), user_id=user.id)
+    resume = models.Resume(**payload.model_dump(), user_id=user.id)
     db.add(resume)
     await db.commit()
     await db.refresh(resume)
     await log.info(f"create_resume: {resume}")
     return resume
+
+
+async def get_document(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Document:
+    document = await db.get(
+        models.Document,
+        id,
+        options=[selectinload(models.Document.user)],
+    )
+    if not document:
+        raise await _404(document, id)
+    if document.user_id == user.id:  # type: ignore
+        document._effective_role = "owner"  # type: ignore[attr-defined]
+    else:
+        share_result = await db.execute(
+            select(models.DocumentShare)
+            .options(selectinload(models.DocumentShare.shared_by_user))
+            .where(
+                models.DocumentShare.document_id == document.id,
+                models.DocumentShare.shared_with_user_id == user.id,
+            )
+        )
+        share = share_result.scalar_one_or_none()
+        if share is None:
+            raise await _403(user.id, document, id)
+        document._effective_role = share.role  # type: ignore[attr-defined]
+        document._share_context = share  # type: ignore[attr-defined]
+    await log.info(f"get_document: {document}")
+    return document
 
 
 async def get_experience(
@@ -221,7 +568,7 @@ async def create_experience(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Experience:
-    experience = models.Experience(**payload.dict(), user_id=user.id)
+    experience = models.Experience(**payload.model_dump(), user_id=user.id)
     db.add(experience)
     await db.commit()
     await db.refresh(experience)
@@ -262,7 +609,7 @@ async def create_contact(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Contact:
-    contact = models.Contact(**payload.dict(), user_id=user.id)
+    contact = models.Contact(**payload.model_dump(), user_id=user.id)
     db.add(contact)
     await db.commit()
     await db.refresh(contact)
@@ -317,7 +664,7 @@ async def create_education(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Education:
-    education = models.Education(**payload.dict(), user_id=user.id)
+    education = models.Education(**payload.model_dump(), user_id=user.id)
     db.add(education)
     await db.commit()
     await db.refresh(education)
@@ -344,7 +691,7 @@ async def create_certificate(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.Certificate:
-    certificate = models.Certificate(**payload.dict(), user_id=user.id)
+    certificate = models.Certificate(**payload.model_dump(), user_id=user.id)
     db.add(certificate)
     await db.commit()
     await db.refresh(certificate)
@@ -377,20 +724,7 @@ async def get_orchestration_pipeline_by_name(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ) -> models.OrchestrationPipeline:
-    query = (
-        select(models.OrchestrationPipeline)
-        .where(
-            models.OrchestrationPipeline.name == name,
-            models.OrchestrationPipeline.user_id == user.id,
-        )
-        .options(selectinload(models.OrchestrationPipeline.orchestration_events))
-    )
-    result = await db.execute(query)
-    pipeline = result.scalars().first()
-    if not pipeline:
-        raise await _404(pipeline, name)
-    await log.info(f"get_orchestration_pipeline: {pipeline}")
-    return pipeline
+    return await orchestration_core.get_orchestration_pipeline_by_name(name, db, user)
 
 
 async def create_orchestration_pipeline(
@@ -398,12 +732,7 @@ async def create_orchestration_pipeline(
     user: schemas.UserRead,
     db: AsyncSession = Depends(get_async_session),
 ) -> models.OrchestrationPipeline:
-    pipeline = models.OrchestrationPipeline(**payload.dict(), user_id=user.id)
-    db.add(pipeline)
-    await db.commit()
-    await db.refresh(pipeline)
-    await log.info(f"create_orchestration_pipeline: {pipeline}")
-    return pipeline
+    return await orchestration_core.create_orchestration_pipeline(payload, user, db)
 
 
 async def get_extractor(
@@ -448,7 +777,7 @@ async def create_extractor(
     user: schemas.UserRead,
     db: AsyncSession = Depends(get_async_session),
 ) -> models.Extractor:
-    extractor = models.Extractor(**payload.dict(), user_id=user.id)
+    extractor = models.Extractor(**payload.model_dump(), user_id=user.id)
     db.add(extractor)
     await db.commit()
     await db.refresh(extractor)
@@ -457,109 +786,74 @@ async def create_extractor(
 
 
 async def run_extractor(
-    extractor: schemas.ExtractorRead,
+    extractor: models.Extractor | schemas.ExtractorRead,
     payload: schemas.ExtractorRun,
     user: schemas.UserRead,
     db: AsyncSession = Depends(get_async_session),
+    retry_of_id: UUID4 | None = None,
 ) -> schemas.ExtractorResponse:
-
-    await log.info(f"Running extractor {extractor.name} with payload {payload}")
-
-    # Check if there is an orchestration pipeline registered for this extractor
-    try:
-        pipeline = await get_orchestration_pipeline_by_name(
-            getattr(extractor, "name", ""), db, user
-        )
-    except HTTPException as _:  # noqa
-        # Create a new pipeline for this extractor
-        pipeline = models.OrchestrationPipeline(
-            name=extractor.name,
-            description=f"Extraction orchestration pipeline for {extractor.name}",
-            definition=extractor.json_schema,
-            user_id=user.id,
-        )
-        db.add(pipeline)
-        await db.commit()
-        await db.refresh(pipeline)
-
-    # Load text to run extraction on
-    text = payload.text
-    if text:
-        pass
-    elif payload.url:
-        text = await extract_text_from_url(str(payload.url))
-    elif payload.file:
-        documents = parse_binary_input(payload.file.file)  # type: ignore
-        text = "\n".join([document.page_content for document in documents])
-
-    if not text:
-        raise HTTPException(
-            status_code=400,
-            detail="No text to run extraction on. Provide either text, url or file.",
-        )
-
-    # Create a new event for this extraction run
-    source_uri_name = str(payload.url) or str(payload.file)
-    source_uri_type = (
-        schemas.URIType.URL if "http" in source_uri_name else schemas.URIType.FILE
+    return await extractor_service.run_extractor(
+        extractor,
+        payload,
+        user,
+        db,
+        retry_of_id=retry_of_id,
     )
-    event = await create_orchestration_event(
-        schemas.OrchestrationEventCreate(
-            message=f"Running extractor {extractor.name} with payload {payload}",
-            payload={
-                "mode": payload.mode,
-                "llm": payload.llm,
-                "text": text[:200]
-                if text
-                else None,  # FIXME: Add slicing to prevent very long text
-                "file": payload.file.filename if payload.file else None,
-            },
-            # type: ignore
-            environment=conf.settings.ENVIRONMENT,
-            source_uri=schemas.URI(name=source_uri_name, type=source_uri_type),
-            destination_uri=schemas.URI(
-                name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#leads",
-                type=schemas.URIType.DATABASE,
-            ),
-            status=schemas.OrchestrationEventStatusType.RUNNING,
-            pipeline_id=pipeline.id,  # type: ignore
-        ),
-        db=db,
-    )
-    # Run the extraction event, TODO, cleanup
+
+
+async def extract_and_create_records(
+    *,
+    extractor_name: str,
+    extractor_description: str,
+    extractor_instruction: str,
+    json_schema: dict[str, Any],
+    payload: schemas.ExtractorRun,
+    record_factory: Callable[[dict[str, Any]], Awaitable[Any]],
+    db: AsyncSession,
+    user: schemas.UserRead,
+) -> list[Any]:
+    """Get-or-create an extractor, run it, and create records from the results."""
     try:
-        llm = payload.llm or conf.openai.COMPLETION_MODEL
-        if payload.mode == "entire_document":
-            res = await extract_entire_document(text, extractor, llm)
-        elif payload.mode == "retrieval":
-            res = await extract_from_content(text, extractor, llm)
-        else:
-            raise ValueError(
-                f"Invalid mode {payload.mode}. Expected one of 'entire_document', 'retrieval'."
+        extractor = await get_extractor_by_name(extractor_name, db)
+    except HTTPException as e:
+        if e.status_code == 404:
+            extractor = await create_extractor(
+                schemas.ExtractorCreate(
+                    name=extractor_name,
+                    description=extractor_description,
+                    instruction=extractor_instruction,
+                    json_schema=json_schema,
+                    extractor_examples=[],
+                ),
+                db=db,
+                user=user,
             )
-    except Exception as e:
-        await update_orchestration_event(
-            event.id, payload=schemas.OrchestrationEventUpdate(message=f"Failure to extract orchestration event: {e.with_traceback()}", status=schemas.OrchestrationEventStatusType.FAILED), db=db  # type: ignore
-        )
-        raise HTTPException(status_code=500, detail=str(e))
+        else:
+            raise e
 
-    await update_orchestration_event(
-        event.id, payload=schemas.OrchestrationEventUpdate(message=f"Success! Extracted res: {res}", status=schemas.OrchestrationEventStatusType.SUCCESS), db=db  # type: ignore
+    resp = await run_extractor(
+        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
     )
-    return schemas.ExtractorResponse(**res)
+
+    return [await record_factory(item) for item in resp.data]
 
 
 async def get_extractor_example(
     example_id: UUID4,
+    extractor: models.Extractor = Depends(get_extractor),
     db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
 ) -> models.ExtractorExample:
-    example = await db.get(models.ExtractorExample, example_id)
+    result = await db.execute(
+        select(models.ExtractorExample).where(
+            models.ExtractorExample.id == example_id,
+            models.ExtractorExample.extractor_id == extractor.id,
+        )
+    )
+    example = result.scalars().first()
     if not example:
         raise HTTPException(
             status_code=404, detail=f"Example with id {example_id} not found"
         )
-    # Further checks for user access to this example can be performed here
     await log.info(f"get_extractor_example: {example}")
     return example
 
@@ -607,118 +901,370 @@ def model_to_dict(model_instance):
 
 
 # ---------------------------------------------------------------------------
-# Crawler execution
+# Crawler dependency helpers
 # ---------------------------------------------------------------------------
 
-# Maximum number of characters retained from crawled page text.
-MAX_CRAWLER_RESULT_TEXT_LENGTH: int = 4000
 
-
-async def _get_or_create_crawler_pipeline(
-    run: models.CrawlerRun,
-    db: AsyncSession,
-) -> models.OrchestrationPipeline:
-    """Return (or lazily create) a pipeline associated with this crawler run's URL."""
-    pipeline_name = f"crawler:{run.url}"
-    result = await db.execute(
-        select(models.OrchestrationPipeline).where(
-            models.OrchestrationPipeline.name == pipeline_name,
-            models.OrchestrationPipeline.user_id == run.user_id,
-        )
+async def get_crawler_pipeline(
+    pipeline_id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.CrawlerPipeline:
+    query = (
+        select(models.CrawlerPipeline)
+        .filter(models.CrawlerPipeline.id == pipeline_id)
+        .options(selectinload(models.CrawlerPipeline.runs))
     )
+    result = await db.execute(query)
     pipeline = result.scalars().first()
-    if pipeline:
-        return pipeline
+    if not pipeline:
+        raise await _404(pipeline, pipeline_id)
+    await log.info(f"get_crawler_pipeline: {pipeline}")
+    return pipeline  # type: ignore
 
-    pipeline = models.OrchestrationPipeline(
-        name=pipeline_name,
-        description=f"Crawler pipeline for {run.url}",
-        user_id=run.user_id,
+
+async def list_crawler_pipelines(
+    db: AsyncSession = Depends(get_async_session),
+) -> list[models.CrawlerPipeline]:
+    query = (
+        select(models.CrawlerPipeline)
+        .options(selectinload(models.CrawlerPipeline.runs))
+        .order_by(models.CrawlerPipeline.created_at.desc())
+    )
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
+async def create_crawler_pipeline(
+    payload: schemas.CrawlerPipelineCreate,
+    user: schemas.UserRead,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.CrawlerPipeline:
+    pipeline = models.CrawlerPipeline(
+        **payload.model_dump(), created_by_user_id=user.id
     )
     db.add(pipeline)
     await db.commit()
     await db.refresh(pipeline)
-    run.pipeline_id = pipeline.id
+    await log.info(f"create_crawler_pipeline: {pipeline}")
+    return await get_crawler_pipeline(pipeline.id, db)
+
+
+async def update_crawler_pipeline(
+    pipeline: models.CrawlerPipeline,
+    payload: schemas.CrawlerPipelineUpdate,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.CrawlerPipeline:
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(pipeline, field, value)
     await db.commit()
+    await db.refresh(pipeline)
+    await log.info(f"update_crawler_pipeline: {pipeline}")
     return pipeline
 
 
-async def execute_crawler_run(
+async def create_crawler_run(
+    pipeline: models.CrawlerPipeline,
+    trigger_type: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> models.CrawlerRun:
+    run = models.CrawlerRun(
+        crawler_pipeline_id=pipeline.id,
+        trigger_type=trigger_type,
+        status="pending",
+    )
+    db.add(run)
+    await db.flush()
+
+    event = models.OrchestrationEvent(
+        status="pending",
+        message=f"Crawler run triggered ({trigger_type}) for pipeline {pipeline.name}",
+        payload={
+            "crawler_pipeline_id": str(pipeline.id),
+            "crawler_run_id": str(run.id),
+            "trigger_type": trigger_type,
+            "source": pipeline.source,
+        },
+        environment=conf.settings.ENVIRONMENT,
+    )
+    db.add(event)
+    await db.commit()
+    await db.refresh(run)
+    await log.info(f"create_crawler_run: {run}")
+    return run
+
+
+async def get_crawler_run(
     run_id: UUID4,
-    user_id: UUID4,
-    db: AsyncSession,
-) -> None:
-    """Execute a crawler run end-to-end.
-
-    This is the single source of truth for crawler execution logic.
-    It is called both by the API (inline mode) and by the crawler-worker
-    (worker mode).  The function is idempotent with respect to terminal
-    runs: if the run is already running, succeeded, or failed it logs a
-    warning and returns immediately.
-    """
+    db: AsyncSession = Depends(get_async_session),
+) -> models.CrawlerRun:
     run = await db.get(models.CrawlerRun, run_id)
-    if run is None:
-        await log.warning(
-            f"execute_crawler_run: CrawlerRun {run_id} not found, skipping"
-        )
-        return
+    if not run:
+        raise await _404(run, run_id)
+    await log.info(f"get_crawler_run: {run}")
+    return run
 
-    if run.status in (
-        schemas.CrawlerRunStatus.RUNNING,
-        schemas.CrawlerRunStatus.SUCCESS,
-        schemas.CrawlerRunStatus.FAILED,
-    ):
-        await log.warning(
-            f"execute_crawler_run: CrawlerRun {run_id} is already {run.status}, skipping"
-        )
-        return
 
-    run.status = schemas.CrawlerRunStatus.RUNNING
+def crawler_result_to_lead_create(result) -> schemas.LeadCreate:
+    """Convert a CrawlerResult dataclass into a LeadCreate schema."""
+    description = result.description or ""
+    if result.company_name:
+        if description:
+            description = f"[{result.company_name}]\n{description}"
+        else:
+            description = f"[{result.company_name}]"
+
+    return schemas.LeadCreate(
+        url=result.url,
+        title=result.title,
+        description=description or None,
+        location=result.location,
+        salary=result.salary,
+        job_function=result.job_function,
+        employment_type=result.employment_type,
+        seniority_level=result.seniority_level,
+        education_level=result.education_level,
+        company_ids=None,
+    )
+
+
+def _instantiate_adapter(
+    source: str, query_definition: dict, execution_policy: dict | None
+):
+    """Lazily import and instantiate the correct ETL adapter."""
+    if source == "linkedin":
+        from etl.linkedin import LinkedInCrawler
+
+        return LinkedInCrawler(
+            keywords=query_definition.get("keywords", []),
+            location=query_definition.get("location", ""),
+            page_start=query_definition.get("page_start", 1),
+            page_end=query_definition.get("page_end", 5),
+            headless=(execution_policy or {}).get("headless", True),
+        )
+    if source == "glassdoor":
+        from etl.glassdoor import GlassdoorCrawler
+
+        return GlassdoorCrawler(
+            keywords=query_definition.get("keywords", ""),
+            location=query_definition.get("location", ""),
+            headless=(execution_policy or {}).get("headless", True),
+        )
+    raise ValueError(f"Unsupported crawler source: {source}")
+
+
+async def _find_orchestration_event_for_run(
+    run_id: uuid.UUID, db: AsyncSession
+) -> models.OrchestrationEvent | None:
+    result = await db.execute(
+        select(models.OrchestrationEvent).where(
+            models.OrchestrationEvent.payload["crawler_run_id"].as_string()
+            == str(run_id)
+        )
+    )
+    return result.scalars().first()
+
+
+async def execute_crawler_run(
+    run: models.CrawlerRun,
+    db: AsyncSession,
+    user: models.User,
+) -> models.CrawlerRun:
+    """Execute a crawler run: instantiate adapter, crawl, persist leads, update stats."""
+    stats = {
+        "leads_found": 0,
+        "leads_created": 0,
+        "leads_deduped": 0,
+        "errors": 0,
+    }
+
+    pipeline = await db.get(models.CrawlerPipeline, run.crawler_pipeline_id)
+    if pipeline is None:
+        run.status = "failed"
+        run.error_summary = f"Pipeline {run.crawler_pipeline_id} not found"
+        run.finished_at = datetime.utcnow()
+        await db.commit()
+        return run
+
+    run.status = "running"
+    run.started_at = datetime.utcnow()
     await db.commit()
 
-    pipeline = await _get_or_create_crawler_pipeline(run, db)
-
-    event = None
-    try:
-        event = await create_orchestration_event(
-            schemas.OrchestrationEventCreate(
-                message=f"Starting crawler run for {run.url}",
-                payload={"url": run.url, "run_id": str(run_id)},
-                environment=conf.settings.ENVIRONMENT,
-                source_uri=schemas.URI(name=run.url, type=schemas.URIType.URL),
-                destination_uri=schemas.URI(
-                    name=f"{conf.settings.DEFAULT_SQLALCHEMY_DATABASE_URI}#crawler_runs",
-                    type=schemas.URIType.DATABASE,
-                ),
-                status=schemas.OrchestrationEventStatusType.RUNNING,
-                pipeline_id=pipeline.id,
-            ),
-            db=db,
-        )
-        text = await extract_text_from_url(run.url)
-        run.result = {"text": text[:MAX_CRAWLER_RESULT_TEXT_LENGTH]}
-        run.status = schemas.CrawlerRunStatus.SUCCESS
-        await update_orchestration_event(
-            event.id,
-            payload=schemas.OrchestrationEventUpdate(
-                message="Crawler run succeeded",
-                status=schemas.OrchestrationEventStatusType.SUCCESS,
-            ),
-            db=db,
-        )
-        await log.info(f"execute_crawler_run: CrawlerRun {run_id} succeeded")
-    except Exception as exc:
-        run.status = schemas.CrawlerRunStatus.FAILED
-        run.result = {"error": str(exc)}
-        if event is not None:
-            await update_orchestration_event(
-                event.id,
-                payload=schemas.OrchestrationEventUpdate(
-                    message=f"Crawler run failed: {exc}",
-                    status=schemas.OrchestrationEventStatusType.FAILED,
-                ),
-                db=db,
-            )
-        await log.error(f"execute_crawler_run: CrawlerRun {run_id} failed: {exc}")
-    finally:
+    event = await _find_orchestration_event_for_run(run.id, db)
+    if event is not None:
+        event.status = "running"
+        event.message = f"Crawler run started for pipeline {pipeline.name}"
         await db.commit()
+
+    user_read = schemas.UserRead.model_validate(user, from_attributes=True)
+
+    try:
+        adapter = _instantiate_adapter(
+            pipeline.source,
+            pipeline.query_definition or {},
+            pipeline.execution_policy,
+        )
+
+        async with adapter:
+            async for result in adapter.search_jobs():
+                await db.refresh(run, ["status"])
+                if run.status == "cancelled":
+                    run.stats = stats
+                    if not run.finished_at:
+                        run.finished_at = datetime.utcnow()
+                    await db.commit()
+                    if event is not None:
+                        event.status = "failure"
+                        event.message = "Crawler run cancelled externally"
+                        await db.commit()
+                    return run
+                if run.status == "paused":
+                    run.stats = stats
+                    await db.commit()
+                    if event is not None:
+                        event.message = (
+                            f"Crawler run paused after {stats['leads_found']} leads"
+                        )
+                        await db.commit()
+                    return run
+
+                stats["leads_found"] += 1
+
+                if not result.url:
+                    await log.warning("Skipping CrawlerResult with empty URL")
+                    stats["errors"] += 1
+                    continue
+
+                try:
+                    lead_payload = crawler_result_to_lead_create(result)
+                    lead_result = await create_lead(lead_payload, db, user_read)
+                    if (
+                        lead_result.disposition
+                        == schemas.LeadExtractDisposition.CREATED
+                    ):
+                        stats["leads_created"] += 1
+                    else:
+                        stats["leads_deduped"] += 1
+                except Exception:
+                    await log.exception(f"Error persisting lead from {result.url}")
+                    stats["errors"] += 1
+
+        if pipeline.requires_approval and stats["leads_created"] > 0:
+            run.status = "pending_review"
+            run.finished_at = datetime.utcnow()
+            run.stats = stats
+            await db.commit()
+
+            if event is not None:
+                event.status = "pending_review"
+                event.message = (
+                    f"Crawler run completed, held for review: {stats['leads_created']} created, "
+                    f"{stats['leads_deduped']} deduped, {stats['errors']} errors"
+                )
+                await db.commit()
+        else:
+            run.status = "success"
+            run.finished_at = datetime.utcnow()
+            run.stats = stats
+            await db.commit()
+
+            if event is not None:
+                event.status = "success"
+                event.message = (
+                    f"Crawler run completed: {stats['leads_created']} created, "
+                    f"{stats['leads_deduped']} deduped, {stats['errors']} errors"
+                )
+                await db.commit()
+    except Exception as exc:
+        await log.exception(f"Crawler run {run.id} failed: {exc}")
+        run.status = "failed"
+        run.finished_at = datetime.utcnow()
+        run.stats = stats
+        run.error_summary = str(exc)[:2000]
+        await db.commit()
+
+        if event is not None:
+            event.status = "failure"
+            event.message = f"Crawler run failed: {str(exc)[:500]}"
+            await db.commit()
+
+    return run
+
+
+async def execute_crawler_run_background(run_id: uuid.UUID, user_id: uuid.UUID) -> None:
+    """Background-task wrapper that opens its own db session."""
+    async with session_context() as db:
+        run = await db.get(models.CrawlerRun, run_id)
+        if run is None:
+            await log.error(f"execute_crawler_run_background: run {run_id} not found")
+            return
+        user = await db.get(models.User, user_id)
+        if user is None:
+            await log.error(f"execute_crawler_run_background: user {user_id} not found")
+            run.status = "failed"
+            run.error_summary = f"User {user_id} not found"
+            run.finished_at = datetime.utcnow()
+            await db.commit()
+            return
+        await execute_crawler_run(run, db, user)
+
+
+async def mark_crawler_run_enqueue_failure(
+    run_id: uuid.UUID, error_summary: str
+) -> None:
+    """Mark a crawler run terminal if inline recovery cannot be scheduled."""
+    async with session_context() as db:
+        run = await db.get(models.CrawlerRun, run_id)
+        if run is None:
+            await log.error(
+                "mark_crawler_run_enqueue_failure: run %s not found",
+                run_id,
+            )
+            return
+
+        run.status = "failed"
+        run.finished_at = datetime.utcnow()
+        run.error_summary = error_summary[:2000]
+
+        event = await _find_orchestration_event_for_run(run_id, db)
+        if event is not None:
+            event.status = "failure"
+            event.message = (
+                f"Crawler run failed before execution: {error_summary[:500]}"
+            )
+
+        await db.commit()
+
+
+async def schedule_crawler_run_execution(
+    run_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    background_tasks: BackgroundTasks | None = None,
+) -> None:
+    """Enqueue crawler execution when possible, else fall back to inline execution."""
+    if conf.settings.ENVIRONMENT == "PYTEST":
+        return
+
+    from app.crawler_queue import _queue_enabled, enqueue_crawler_job
+
+    if _queue_enabled():
+        enqueued = await enqueue_crawler_job(str(run_id), str(user_id))
+        if enqueued:
+            return
+        await log.warning(
+            f"Falling back to inline crawler execution for run {run_id} after queue enqueue failure"
+        )
+
+    if background_tasks is not None:
+        background_tasks.add_task(execute_crawler_run_background, run_id, user_id)
+        return
+
+    try:
+        asyncio.create_task(execute_crawler_run_background(run_id, user_id))
+    except RuntimeError as exc:
+        error_summary = (
+            "Unable to schedule inline crawler execution after queue enqueue failure: "
+            f"{exc}"
+        )
+        await log.exception(error_summary)
+        await mark_crawler_run_enqueue_failure(run_id, error_summary)

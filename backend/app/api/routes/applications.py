@@ -1,23 +1,66 @@
 # Path: app/api/routes/applications.py
 import json
+import zipfile
+from html import escape as html_escape
+from io import BytesIO
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi.responses import StreamingResponse
 from pydantic import UUID4
-from sqlalchemy import select
-from sqlalchemy.orm import joinedload
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.platypus import Paragraph, SimpleDocTemplate
+from sqlalchemy import or_, select
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.api.deps import (
     AsyncSession,
     generate_cover_letter,
     get_application,
     get_async_session,
+    get_cover_letter,
     get_current_user,
+    get_document,
+    get_resume,
     model_to_dict,
     models,
     schemas,
 )
+from app.api.routes.documents import _tiptap_to_flowables
+from app.core.datetime_utils import format_utc_datetime, normalize_utc_datetime, now_utc
+from app.core.document_storage import resolve_document_source_path
 
 router: APIRouter = APIRouter()
+
+
+async def _inject_legacy_deprecation_headers(response: Response) -> None:
+    """Inject RFC 8594 Deprecation + Sunset headers on legacy resume/cover-letter sub-routes."""
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "2026-06-01"
+
+
+def _normalize_status_history(history: list[dict] | None) -> list[dict]:
+    """Normalize status-history timestamps to UTC Z strings when they parse cleanly."""
+    normalized_history: list[dict] = []
+    for entry in history or []:
+        normalized_entry = dict(entry)
+        changed_at = normalized_entry.get("changed_at")
+        if changed_at is not None:
+            normalized_changed_at = normalize_utc_datetime(changed_at)
+            if normalized_changed_at is not None:
+                normalized_entry["changed_at"] = normalized_changed_at
+        normalized_history.append(normalized_entry)
+    return normalized_history
+
+
+def _build_status_history_entry(
+    previous_status: str | None, next_status: str | None
+) -> dict:
+    return {
+        "from": previous_status,
+        "to": next_status,
+        "changed_at": format_utc_datetime(now_utc()),
+    }
 
 
 @router.post("/", status_code=201, response_model=schemas.ApplicationRead)
@@ -42,12 +85,39 @@ async def create_application(
         )
 
     # Create a new application
-    application_data = {**payload.dict(exclude_unset=True), "user_id": user.id}
+    application_data = {
+        **payload.dict(exclude_unset=True, exclude={"document_ids"}),
+        "user_id": user.id,
+    }
+    application_data["status_history"] = [
+        _build_status_history_entry(None, payload.status)
+    ]
 
     application = models.Application(**application_data)
     db.add(application)
     await db.commit()
     await db.refresh(application)
+
+    # Bulk-attach documents when IDs are provided
+    if payload.document_ids:
+        result = await db.execute(
+            select(models.Document).where(
+                models.Document.id.in_(payload.document_ids),
+                models.Document.user_id == user.id,
+            )
+        )
+        valid_document_ids = {doc.id for doc in result.scalars().all()}
+
+        links = [
+            models.DocumentXApplication(
+                document_id=doc_id, application_id=application.id
+            )
+            for doc_id in payload.document_ids
+            if doc_id in valid_document_ids
+        ]
+        if links:
+            db.add_all(links)
+        await db.commit()
 
     # Eagerly load related objects (lead and user) for serialization
     result = await db.execute(
@@ -83,11 +153,6 @@ async def get_applications(
     )
     # Ensure that unique rows are considered to avoid duplicates due to joinedload
     applications = result.scalars().unique().all()
-
-    if not applications:
-        raise HTTPException(
-            status_code=404, detail="No applications found for the current user"
-        )
     return applications
 
 
@@ -115,8 +180,16 @@ async def update_application(
         )
 
     # Update the application's attributes
-    for var, value in payload.dict(exclude_unset=True).items():
-        setattr(application, var, value)
+    update_data = payload.dict(exclude_unset=True)
+    new_status = update_data.get("status")
+    if new_status is not None and new_status != application.status:
+        history = _normalize_status_history(application.status_history)
+        history.append(_build_status_history_entry(application.status, new_status))
+        application.status_history = history
+
+    for var, value in update_data.items():
+        if var != "status_history":
+            setattr(application, var, value)
 
     await db.commit()
     await db.refresh(application)
@@ -153,7 +226,12 @@ async def delete_application(
     return {"message": "Application deleted successfully"}
 
 
-@router.get("/{id}/resumes", response_model=list[schemas.ResumeRead])
+@router.get(
+    "/{id}/resumes",
+    response_model=list[schemas.ResumeRead],
+    deprecated=True,
+    dependencies=[Depends(_inject_legacy_deprecation_headers)],
+)
 async def get_application_resumes(
     app: schemas.ApplicationRead = Depends(get_application),
     db: AsyncSession = Depends(get_async_session),
@@ -174,16 +252,15 @@ async def get_application_resumes(
         .where(models.ResumeXApplication.application_id == app.id)
     )
     resumes = result.scalars().all()
-
-    if not resumes:
-        raise HTTPException(
-            status_code=404, detail="No resumes found for this application"
-        )
-
     return resumes
 
 
-@router.get("/{id}/cover_letters", response_model=list[schemas.CoverLetterRead])
+@router.get(
+    "/{id}/cover_letters",
+    response_model=list[schemas.CoverLetterRead],
+    deprecated=True,
+    dependencies=[Depends(_inject_legacy_deprecation_headers)],
+)
 async def get_application_cover_letters(
     app: schemas.ApplicationRead = Depends(get_application),
     db: AsyncSession = Depends(get_async_session),
@@ -204,61 +281,65 @@ async def get_application_cover_letters(
         .where(models.CoverLetterXApplication.application_id == app.id)
     )
     cover_letters = result.scalars().all()
-
-    if not cover_letters:
-        raise HTTPException(
-            status_code=404, detail="No cover letters found for this application"
-        )
-
     return cover_letters
 
 
-@router.post("/{id}/resumes", status_code=201, response_model=schemas.ResumeRead)
+@router.post(
+    "/{id}/resumes",
+    status_code=201,
+    response_model=schemas.ResumeRead,
+    deprecated=True,
+    dependencies=[Depends(_inject_legacy_deprecation_headers)],
+)
 async def add_resume_to_application(
-    id: UUID4,
-    payload: schemas.ResumeCreate,
+    payload: schemas.ApplicationResumeAttach,
+    application: models.Application = Depends(get_application),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    # Create a new resume instance
-    resume = models.Resume(**payload.dict(), user_id=user.id)
+    resume = await get_resume(payload.resume_id, db, user)
 
-    # Add resume to the database
-    db.add(resume)
-    await db.commit()
-    await db.refresh(resume)
-
-    # Create an association between the resume and the application
-    association = models.ResumeXApplication(application_id=id, resume_id=resume.id)
-    db.add(association)
-    await db.commit()
+    association = await db.get(
+        models.ResumeXApplication,
+        (application.id, resume.id),
+    )
+    if not association:
+        association = models.ResumeXApplication(
+            application_id=application.id,
+            resume_id=resume.id,
+        )
+        db.add(association)
+        await db.commit()
 
     return resume
 
 
 @router.post(
-    "/{id}/cover_letters", status_code=201, response_model=schemas.CoverLetterRead
+    "/{id}/cover_letters",
+    status_code=201,
+    response_model=schemas.CoverLetterRead,
+    deprecated=True,
+    dependencies=[Depends(_inject_legacy_deprecation_headers)],
 )
 async def add_cover_letter_to_application(
-    id: UUID4,
-    payload: schemas.CoverLetterCreate,
+    payload: schemas.ApplicationCoverLetterAttach,
+    application: models.Application = Depends(get_application),
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    # Create a new cover letter instance
-    cover_letter = models.CoverLetter(**payload.dict(), user_id=user.id)
+    cover_letter = await get_cover_letter(payload.cover_letter_id, db, user)
 
-    # Add cover letter to the database
-    db.add(cover_letter)
-    await db.commit()
-    await db.refresh(cover_letter)
-
-    # Create an association between the cover letter and the application
-    association = models.CoverLetterXApplication(
-        application_id=id, cover_letter_id=cover_letter.id
+    association = await db.get(
+        models.CoverLetterXApplication,
+        (application.id, cover_letter.id),
     )
-    db.add(association)
-    await db.commit()
+    if not association:
+        association = models.CoverLetterXApplication(
+            application_id=application.id,
+            cover_letter_id=cover_letter.id,
+        )
+        db.add(association)
+        await db.commit()
 
     return cover_letter
 
@@ -267,11 +348,14 @@ async def add_cover_letter_to_application(
     "/{id}/cover_letters/generate",
     status_code=201,
     response_model=schemas.CoverLetterRead,
+    deprecated=True,
+    dependencies=[Depends(_inject_legacy_deprecation_headers)],
 )
 async def generate_cover_letter_for_application(
     id: UUID4,
-    template_id: str
-    | None = Query(None, description="Template ID for cover letter generation"),
+    template_id: str | None = Query(
+        None, description="Template ID for cover letter generation"
+    ),
     db: AsyncSession = Depends(get_async_session),  # noqa
     user: schemas.UserRead = Depends(get_current_user),
 ):
@@ -368,3 +452,337 @@ async def get_application_by_id(
     # Fetch company details for the application
 
     return application
+
+
+# ---------------------------------------------------------------------------
+#  Materials export
+# ---------------------------------------------------------------------------
+
+_PDF_STYLE = ParagraphStyle(
+    name="ExportDefault",
+    fontName="Helvetica",
+    fontSize=12,
+    leading=14,
+    spaceAfter=0,
+    spaceBefore=0,
+)
+
+
+def _text_to_pdf(text: str) -> bytes:
+    """Render plain text content into a minimal PDF and return the bytes."""
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72,
+    )
+    doc.build([Paragraph(html_escape(text).replace("\n", "<br />"), _PDF_STYLE)])
+    buf.seek(0)
+    return buf.read()
+
+
+def _document_version_to_pdf(version: models.DocumentVersion) -> bytes:
+    """Render a document version to PDF, honoring its content format."""
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72,
+    )
+    raw_content = version.content or ""
+    if getattr(version, "content_format", None) == "tiptap_json":
+        flowables = _tiptap_to_flowables(raw_content, _PDF_STYLE)
+    else:
+        flowables = [
+            Paragraph(html_escape(raw_content).replace("\n", "<br />"), _PDF_STYLE)
+        ]
+    doc.build(flowables)
+    buf.seek(0)
+    return buf.read()
+
+
+def _safe_filename(name: str) -> str:
+    """Strip characters that are problematic inside ZIP entry names."""
+    return name.replace("/", "_").replace("\\", "_").replace("\0", "")
+
+
+def _document_access_filter(user_id: UUID4):
+    shared_document_ids = select(models.DocumentShare.document_id).where(
+        models.DocumentShare.shared_with_user_id == user_id
+    )
+    return or_(
+        models.Document.user_id == user_id,
+        models.Document.id.in_(shared_document_ids),
+    )
+
+
+@router.get("/{id}/export")
+async def export_application_materials(
+    app: models.Application = Depends(get_application),
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    """Export all materials linked to an application as a ZIP archive.
+
+    The archive contains up to three subdirectories — ``resumes/``,
+    ``cover_letters/``, and ``documents/`` — each holding PDF files for
+    the linked records.
+    """
+    if app.user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to export this application",
+        )
+
+    # -- Fetch linked resumes ----------------------------------------------
+    resumes = (
+        (
+            await db.execute(
+                select(models.Resume)
+                .join(models.ResumeXApplication)
+                .where(models.ResumeXApplication.application_id == app.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    # -- Fetch linked cover letters ----------------------------------------
+    cover_letters = (
+        (
+            await db.execute(
+                select(models.CoverLetter)
+                .join(models.CoverLetterXApplication)
+                .where(models.CoverLetterXApplication.application_id == app.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    # -- Fetch linked document attachments ---------------------------------
+    document_links = (
+        (
+            await db.execute(
+                select(models.DocumentXApplication).where(
+                    models.DocumentXApplication.application_id == app.id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    documents_by_id: dict = {}
+    if document_links:
+        document_ids = [link.document_id for link in document_links]
+        documents = (
+            (
+                await db.execute(
+                    select(models.Document)
+                    .options(
+                        selectinload(models.Document.versions),
+                        selectinload(models.Document.head_version),
+                    )
+                    .where(
+                        models.Document.id.in_(document_ids),
+                        _document_access_filter(user.id),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        documents_by_id = {document.id: document for document in documents}
+
+    accessible_document_links = [
+        link for link in document_links if link.document_id in documents_by_id
+    ]
+
+    if not resumes and not cover_letters and not accessible_document_links:
+        raise HTTPException(
+            status_code=404,
+            detail="No materials linked to this application",
+        )
+
+    # -- Build ZIP in memory -----------------------------------------------
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for resume in resumes:
+            if resume.content:
+                fname = _safe_filename(resume.name or "resume") + ".pdf"
+                zf.writestr(f"resumes/{fname}", _text_to_pdf(resume.content))
+
+        for cl in cover_letters:
+            if cl.content:
+                fname = _safe_filename(cl.name or "cover_letter") + ".pdf"
+                zf.writestr(f"cover_letters/{fname}", _text_to_pdf(cl.content))
+
+        for link in accessible_document_links:
+            doc = documents_by_id.get(link.document_id)
+            if not doc:
+                continue
+
+            version = doc.head_version
+            if link.version_id:
+                version = next(
+                    (
+                        candidate
+                        for candidate in doc.versions
+                        if candidate.id == link.version_id
+                    ),
+                    None,
+                )
+
+            if not version:
+                continue
+
+            fname = _safe_filename(doc.title or "document") + ".pdf"
+
+            # Prefer the original uploaded PDF when available on disk.
+            if version.source_file:
+                try:
+                    abs_path = resolve_document_source_path(version.source_file)
+                    if abs_path.is_file():
+                        zf.write(abs_path, f"documents/{fname}")
+                        continue
+                except ValueError:
+                    pass  # path outside uploads root — fall through
+
+            # Fall back to generating a PDF from the linked version content.
+            if version.content:
+                zf.writestr(
+                    f"documents/{fname}",
+                    _document_version_to_pdf(version),
+                )
+
+    zip_buffer.seek(0)
+
+    response = StreamingResponse(zip_buffer, media_type="application/zip")
+    response.headers["Content-Disposition"] = (
+        'attachment; filename="application_materials.zip"'
+    )
+    return response
+
+
+# ---------------------------------------------------------------------------
+#  Application ↔ Document attachment
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{id}/documents", response_model=list[schemas.DocumentRead])
+async def get_application_documents(
+    app: models.Application = Depends(get_application),
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    if app.user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to view this application",
+        )
+    result = await db.execute(
+        select(models.Document)
+        .options(
+            selectinload(models.Document.versions),
+            selectinload(models.Document.head_version),
+        )
+        .join(models.DocumentXApplication)
+        .where(
+            models.DocumentXApplication.application_id == app.id,
+            _document_access_filter(user.id),
+        )
+    )
+    docs = result.scalars().all()
+    return [
+        schemas.DocumentRead(
+            id=d.id,
+            created_at=d.created_at,
+            updated_at=d.updated_at,
+            kind=d.kind,
+            title=d.title,
+            status=d.status,
+            is_pinned=d.is_pinned,
+            head_version=(
+                schemas.DocumentVersionRead.model_validate(d.head_version)
+                if d.head_version
+                else None
+            ),
+            version_count=len(d.versions) if d.versions else 0,
+        )
+        for d in docs
+    ]
+
+
+@router.post("/{id}/documents", status_code=201, response_model=schemas.DocumentRead)
+async def add_document_to_application(
+    payload: schemas.ApplicationDocumentAttach,
+    application: models.Application = Depends(get_application),
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    doc = await get_document(payload.document_id, db, user)
+
+    existing = await db.execute(
+        select(models.DocumentXApplication).where(
+            models.DocumentXApplication.application_id == application.id,
+            models.DocumentXApplication.document_id == doc.id,
+        )
+    )
+    if existing.scalars().first():
+        raise HTTPException(
+            status_code=400, detail="Document already attached to this application"
+        )
+
+    assoc = models.DocumentXApplication(
+        application_id=application.id,
+        document_id=doc.id,
+        version_id=payload.version_id,
+    )
+    db.add(assoc)
+    await db.commit()
+
+    return schemas.DocumentRead(
+        id=doc.id,
+        created_at=doc.created_at,
+        updated_at=doc.updated_at,
+        kind=doc.kind,
+        title=doc.title,
+        status=doc.status,
+        is_pinned=doc.is_pinned,
+        head_version=(
+            schemas.DocumentVersionRead.model_validate(doc.head_version)
+            if doc.head_version
+            else None
+        ),
+        version_count=len(doc.versions) if doc.versions else 0,
+    )
+
+
+@router.delete("/{id}/documents/{document_id}", status_code=204)
+async def detach_document_from_application(
+    document_id: UUID4,
+    application: models.Application = Depends(get_application),
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    result = await db.execute(
+        select(models.DocumentXApplication).where(
+            models.DocumentXApplication.application_id == application.id,
+            models.DocumentXApplication.document_id == document_id,
+        )
+    )
+    assoc = result.scalars().first()
+    if not assoc:
+        raise HTTPException(
+            status_code=404, detail="Document not attached to this application"
+        )
+    await db.delete(assoc)
+    await db.commit()
+    return None

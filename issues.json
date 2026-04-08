@@ -1,0 +1,798 @@
+[
+  {
+    "assignees": [],
+    "body": "## Problem\n\n`GET /crawlers/runs` returns `result.scalars().all()` with **no\n`.limit()` or `.offset()` clause**.  Unlike every other list\nendpoint in the API, this route does not use\n`get_pagination_params`.  Over time, crawler runs accumulate\nunboundedly and the response payload will grow without limit.\n\nThe route is superuser-gated, which reduces the risk to admin users\nonly, but still allows a single admin request to materialise the\nentire `crawler_runs` table.\n\n## Code Evidence\n\n### `backend/app/api/routes/crawlers.py` — `list_crawler_runs` (line 86)\n\n```python\n@router.get(\"/runs\", response_model=list[schemas.CrawlerRunRead])\nasync def list_crawler_runs(\n    db: AsyncSession = Depends(get_async_session),\n    source: str | None = Query(None, description=\"Filter by pipeline source\"),\n    status: str | None = Query(None, description=\"Filter by run status\"),\n    pipeline_id: UUID4 | None = Query(None, description=\"Filter by pipeline ID\"),\n    trigger_type: str | None = Query(None, description=\"Filter by trigger type\"),\n):\n    query = select(models.CrawlerRun)\n    # ... filter clauses ...\n    query = query.order_by(models.CrawlerRun.created_at.desc())\n    result = await db.execute(query)\n    return result.scalars().all()  # <-- no .limit()\n```\n\n**Missing:**\n- No `Depends(get_pagination_params)` — unlike all other list routes\n- No `.limit()` or `.offset()` on the query\n- Response model is `list[...]` not a paginated wrapper\n\n### Contrast: other list endpoints\n\n```python\n# applications list — uses pagination\n@router.get(\"/\", response_model=schemas.PaginatedResponse[schemas.ApplicationRead])\nasync def list_applications(\n    pagination: schemas.Pagination = Depends(get_pagination_params),\n    ...\n):\n    query = query.offset(...).limit(pagination.page_size)\n```\n\n### Mitigation note\n\nThe crawlers router is gated by `dependencies=[Depends(get_current_superuser)]`\nat the router level, so only admin users can hit this endpoint.  The\nrisk is lower than a user-facing endpoint but the unbounded query\npattern is still an availability concern.\n\n## Severity\n\n| Dimension | Score |\n|-----------|-------|\n| Availability impact | **Medium** — unbounded DB query (admin-only) |\n| Consistency | **Medium** — only list endpoint without pagination |\n| Fix complexity | **Low** — add `Depends(get_pagination_params)` + offset/limit |\n\n## Suggested Fix\n\n```python\n@router.get(\"/runs\", response_model=schemas.PaginatedResponse[schemas.CrawlerRunRead])\nasync def list_crawler_runs(\n    pagination: schemas.Pagination = Depends(get_pagination_params),\n    db: AsyncSession = Depends(get_async_session),\n    source: str | None = Query(None),\n    status: str | None = Query(None),\n    pipeline_id: UUID4 | None = Query(None),\n    trigger_type: str | None = Query(None),\n):\n    query = select(models.CrawlerRun)\n    # ... existing filters ...\n    query = query.order_by(models.CrawlerRun.created_at.desc())\n    query = query.offset((pagination.page - 1) * pagination.page_size)\n    query = query.limit(pagination.page_size)\n    result = await db.execute(query)\n    return result.scalars().all()\n```\n\n## Acceptance Criteria\n\n- [ ] `GET /crawlers/runs` accepts `page` and `page_size` query params\n- [ ] Response is bounded by `page_size` (default 10, max per #149)\n- [ ] Existing frontend admin consumers pass `page_size` or use defaults\n- [ ] `prune_crawler_runs` endpoint is unchanged\n\n## References\n\n- `backend/app/api/routes/crawlers.py:86-109` — `list_crawler_runs`\n- `backend/app/api/deps.py:94-101` — `get_pagination_params`\n- `backend/app/api/routes/applications.py:138` — reference paginated list pattern",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAACeU6txw",
+        "name": "feat-sprint",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 153,
+    "title": "Crawler runs endpoint returns unbounded result set — no pagination"
+  },
+  {
+    "assignees": [],
+    "body": "## Problem\n\nThe avatar upload endpoint (`POST /users/me/avatar`) validates the\nfile's `Content-Type` **header** but does not inspect the file's\nactual bytes (magic bytes / file signature).  An attacker can upload\nany file (HTML, SVG with embedded JS, polyglot PDF/JS) by setting\n`Content-Type: image/jpeg` in the multipart header.\n\nThe stored file is then served back by `GET /users/{id}/avatar` with\na content type inferred from the file extension (which is derived from\nthe original content-type header).  This creates a stored-XSS /\ncontent-sniffing attack surface.\n\n## Code Evidence\n\n### `backend/app/api/routes/users.py` — `upload_avatar` (line 177)\n\n```python\n@router.post(\"/me/avatar\", response_model=schemas.UserRead)\nasync def upload_avatar(\n    file: UploadFile = File(...),\n    db: AsyncSession = Depends(get_async_session),\n    current_user: models.User = Depends(get_current_user),\n):\n    content_type = file.content_type or \"\"\n    if content_type not in ALLOWED_AVATAR_CONTENT_TYPES:\n        raise HTTPException(\n            status_code=400,\n            detail=(\n                f\"Unsupported image type '{content_type}'. \"\n                f\"Allowed: {', '.join(sorted(ALLOWED_AVATAR_CONTENT_TYPES))}\"\n            ),\n        )\n\n    file_bytes = await file.read()\n    if len(file_bytes) > MAX_AVATAR_UPLOAD_BYTES:\n        raise HTTPException(...)\n\n    # === No magic-byte check on file_bytes here ===\n\n    relative_path = build_avatar_path(current_user.id, content_type)\n    save_avatar_file(relative_path, file_bytes)\n```\n\n**Missing:** Check that `file_bytes[:N]` matches expected image\nsignatures before writing to disk.\n\n### Contrast: Document upload already validates magic bytes\n\n`backend/app/api/routes/documents.py` (line ~349) validates\n`%PDF-` magic bytes for PDF uploads, demonstrating the repo already\nhas this pattern.\n\n### Known image signatures\n\n| Format | Magic bytes |\n|--------|-------------|\n| JPEG | `\\xff\\xd8\\xff` |\n| PNG | `\\x89PNG\\r\\n\\x1a\\n` |\n| GIF | `GIF87a` or `GIF89a` |\n| WebP | `RIFF....WEBP` |\n\n## Severity\n\n| Dimension | Score |\n|-----------|-------|\n| Security impact | **High** — stored XSS / content-sniffing via spoofed upload |\n| Blast radius | Avatar serve endpoint (`GET /users/{id}/avatar`) |\n| Fix complexity | **Low** — add ~15 lines of signature checking after `file.read()` |\n\n## Suggested Fix\n\nAfter `file_bytes = await file.read()`, add:\n\n```python\n_IMAGE_SIGNATURES = {\n    \"image/jpeg\": [b\"\\xff\\xd8\\xff\"],\n    \"image/png\":  [b\"\\x89PNG\\r\\n\\x1a\\n\"],\n    \"image/gif\":  [b\"GIF87a\", b\"GIF89a\"],\n    \"image/webp\": [b\"RIFF\"],\n}\n\nsigs = _IMAGE_SIGNATURES.get(content_type, [])\nif not any(file_bytes.startswith(sig) for sig in sigs):\n    raise HTTPException(\n        status_code=400,\n        detail=\"File content does not match the declared image type.\",\n    )\n```\n\nAlso add `X-Content-Type-Options: nosniff` on the serve response.\n\n## Acceptance Criteria\n\n- [ ] Upload rejects a non-image file sent with `Content-Type: image/jpeg`\n- [ ] Upload accepts a valid JPEG/PNG/GIF/WebP with correct content-type\n- [ ] `GET /users/{id}/avatar` response includes `X-Content-Type-Options: nosniff`\n- [ ] At least one test validates rejection of a spoofed file\n- [ ] Existing avatar upload flow still works for real images\n\n## References\n\n- `backend/app/api/routes/users.py:177-209` — `upload_avatar`\n- `backend/app/api/routes/documents.py:~349` — PDF magic-byte check pattern\n- `backend/app/core/document_storage.py` — `save_avatar_file`, `build_avatar_path`",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAACeU6txw",
+        "name": "feat-sprint",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 151,
+    "title": "Avatar upload lacks magic-byte validation — spoofed content-type allows arbitrary file storage"
+  },
+  {
+    "assignees": [],
+    "body": "## Problem\n\nThe Command Center page has **9 separate `catch` blocks** that all\nfollow the same pattern: `console.error(e)` with no user-facing\nfeedback.  When an API call fails (network issue, 401 expiry, 500\nbackend error), the UI appears to succeed silently — stale data remains\non screen and the user has no indication that their action failed.\n\nThis is the primary landing page and contains the most interactive\nfeatures (dismiss, snooze, complete, refresh, load-more).\n\n## Code Evidence\n\n### `frontend/src/page/command-center.tsx`\n\nEvery async action handler catches errors identically:\n\n```typescript\n// Pattern repeated 9 times across:\n//   refresh(), lightRefresh(), handleComplete(),\n//   handleDismiss(), handleSnooze(), handleUnsnooze(),\n//   handleAction(), loadMoreFeed(), inline fetch calls\n} catch (e) {\n  console.error(e);\n}\n```\n\n**Missing in all 9 blocks:**\n- No `setError()` or error state\n- No toast / snackbar notification\n- No retry prompt\n- No loading-state cleanup on failure (some leave spinner active)\n\n### Verification\n\n```bash\ngrep -c 'console.error' frontend/src/page/command-center.tsx\n# → 9\n```\n\n### Contrast: other pages\n\n`applications-board-page.tsx` uses a snackbar pattern for mutation\nerrors.  The command center does not follow this established pattern.\n\n## Severity\n\n| Dimension | Score |\n|-----------|-------|\n| UX impact | **High** — user actions fail silently on primary page |\n| Data integrity risk | Medium — stale data displayed after failed mutations |\n| Fix complexity | **Low** — add shared error state + MUI Snackbar (pattern exists in repo) |\n\n## Suggested Fix\n\n1. Add `const [error, setError] = useState<string | null>(null)`\n2. In each catch block: `setError('Failed to <action>. Please try again.')`\n3. Render an MUI `<Snackbar>` with auto-dismiss that clears on close\n4. Ensure loading states are reset in `finally` blocks\n\nThe applications board page already uses this pattern and can serve as a\nreference.\n\n## Acceptance Criteria\n\n- [ ] All 9 catch blocks surface a user-visible error message\n- [ ] Failed mutations do not leave stale data displayed\n- [ ] Loading spinners are cleared on error (not just success)\n- [ ] Error feedback uses the existing MUI Snackbar pattern\n- [ ] No `console.error`-only catch blocks remain on the page\n\n## References\n\n- `frontend/src/page/command-center.tsx` — all 9 catch blocks\n- `frontend/src/page/applications/applications-board-page.tsx` — reference Snackbar pattern",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAACeU6txw",
+        "name": "feat-sprint",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 150,
+    "title": "Command Center silently swallows all API errors — no user-visible error feedback"
+  },
+  {
+    "assignees": [],
+    "body": "## Problem\n\n`get_pagination_params` enforces `ge=1` on both `page` and\n`page_size`, but sets **no upper bound** (`le=...`).  A caller can\nrequest `page_size=999999` and the `.limit()` clause will ask\nPostgreSQL to materialise the entire table before returning.\n\nThis dependency is reused by **every paginated list endpoint** in the\nAPI.  A single oversized request can spike memory and slow down the\nsingle-worker dev server for all concurrent users.\n\n## Code Evidence\n\n### `backend/app/api/deps.py` — `get_pagination_params` (line 94)\n\n```python\nasync def get_pagination_params(\n    page: int = Query(1, ge=1, description=\"Page number starting from 1\"),\n    page_size: int = Query(10, ge=1, description=\"Number of records per page\"),\n    request_count: bool = Query(False, description=\"Return total count of records\"),\n) -> schemas.Pagination:\n    return schemas.Pagination(\n        page=page, page_size=page_size, request_count=request_count\n    )\n```\n\n**Missing:** `le=100` (or similar) on `page_size`.\n\n### Downstream consumers\n\nEvery `List` route that calls `Depends(get_pagination_params)` is\naffected.  Grep shows at least 15 call-sites across:\n\n- applications, companies, leads, resumes, cover-letters,\n  skills, experiences, education, certificates, contacts,\n  action-items, connections, messages, documents, notifications\n\n### Verification\n\n```bash\ngrep -rn 'Depends(get_pagination_params)' backend/app/api/routes/ | wc -l\n# → 15+\n```\n\n## Severity\n\n| Dimension | Score |\n|-----------|-------|\n| Availability impact | **High** — single request can exhaust worker memory |\n| Blast radius | All paginated list endpoints (~15 routes) |\n| Fix complexity | **Trivial** — add `le=100` (or `le=200`) to the Query declaration |\n\n## Suggested Fix\n\n```python\npage_size: int = Query(10, ge=1, le=100, description=\"Number of records per page\"),\n```\n\nThe change is one line and automatically propagated to every consumer.\n\n## Acceptance Criteria\n\n- [ ] `page_size` validates `le=100` (or a documented maximum)\n- [ ] Requests with `page_size > max` return 422 with a clear message\n- [ ] No existing frontend page breaks (current default is 10; max pages request ≤50)\n- [ ] One test validates the upper-bound rejection\n\n## References\n\n- `backend/app/api/deps.py:94-101` — `get_pagination_params`\n- `backend/app/schemas.py` — `Pagination` schema",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAACeU6txw",
+        "name": "feat-sprint",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 149,
+    "title": "Global pagination dependency `get_pagination_params` has no upper bound on page_size"
+  },
+  {
+    "assignees": [],
+    "body": "## Problem\n\nThe `get_company_by_id` dependency resolves a company by primary key but\n**never compares the requesting user's ID** against the company's\n`user_id` foreign key.  Every route that depends on it (`PUT /{id}`,\n`DELETE /{id}`, `GET /{id}`, extraction) therefore allows any\nauthenticated user to read, update, or delete any other user's company\nrow.\n\nCompare with the ownership-checked pattern used elsewhere in the same\nfile for other entities.\n\n## Code Evidence\n\n### `backend/app/api/deps.py` — `get_company_by_id` (line 411)\n\n```python\nasync def get_company_by_id(\n    id: UUID4, db: AsyncSession = Depends(get_async_session)\n) -> models.Company:\n    company = await db.get(models.Company, id)\n    if not company:\n        raise await _404(company, id)\n    await log.info(f\"get_company_by_id: {company}\")\n    return company\n```\n\n**Missing:** No `user: schemas.UserRead = Depends(get_current_user)`\nparameter; no `if company.user_id != user.id: raise _403(...)` guard.\n\n### Contrast: `get_education` (line 660)\n\n```python\nasync def get_education(\n    id: UUID4,\n    db: AsyncSession = Depends(get_async_session),\n    user: schemas.UserRead = Depends(get_current_user),\n) -> models.Education:\n    education = await db.get(models.Education, id)\n    if not education:\n        raise await _404(education, id)\n    if education.user_id != user.id:\n        raise await _403(user.id, education, id)\n    return education\n```\n\n### Contrast: `get_application` (line 654)\n\nChecks `application.user_id != user.id` and raises 403.\n\n### Affected routes in `backend/app/api/routes/companies.py`\n\n| Route | Line | Consequence |\n|-------|------|-------------|\n| `PUT /{id}` | 56 | Any user can overwrite any company's fields |\n| `DELETE /{id}` | 71 | Any user can delete any company |\n| `GET /{id}` | 46 | Any user can read another user's company |\n| `POST /{id}/extract` | ~95 | Any user can trigger extraction on another user's company |\n\nAdditionally, `delete_company` has a **wrong type annotation**:\n```python\ncompany: schemas.CompanyRead = Depends(get_company_by_id)\n#        ^^^^^^^^^^^^^^^^^^  should be models.Company\n```\n\n## Severity\n\n| Dimension | Score |\n|-----------|-------|\n| Security impact | **Critical** — full IDOR on company CRUD |\n| Blast radius | All company routes (4 endpoints) |\n| Fix complexity | Low — add `user` dep + ownership check (same pattern as 10+ other deps) |\n\n## Suggested Fix\n\nAdd `user: schemas.UserRead = Depends(get_current_user)` to\n`get_company_by_id`, then add the standard ownership check:\n\n```python\nif company.user_id != user.id:\n    raise await _403(user.id, company, id)\n```\n\nFix the type annotation on `delete_company` to `models.Company`.\n\n## Acceptance Criteria\n\n- [ ] `GET /companies/{id}` returns 403 when the company belongs to another user\n- [ ] `PUT /companies/{id}` returns 403 when the company belongs to another user\n- [ ] `DELETE /companies/{id}` returns 403 when the company belongs to another user\n- [ ] `POST /companies/{id}/extract` returns 403 for non-owner\n- [ ] `delete_company` type annotation uses `models.Company`\n- [ ] At least one test validates the ownership guard\n\n## References\n\n- `backend/app/api/deps.py:411-418` — `get_company_by_id`\n- `backend/app/api/routes/companies.py:56-80` — affected routes\n- `backend/app/api/deps.py:654-666` — correct ownership pattern in `get_application`",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAACeU6txw",
+        "name": "feat-sprint",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 148,
+    "title": "Companies API has no ownership checks — any user can mutate or delete any company"
+  },
+  {
+    "assignees": [],
+    "body": "Be sure to check the existing issues (both open and closed!), and make sure you are running the latest version of Baldin.\n\n\nMake sure to mention your debugging experience if the documented solution failed.\n\n\n### Issue description\n\nDescribe the issue briefly here.\n\n### Expected result\n\nDescribe what you expected.\n\n### Actual result\n\nDescribe the actual result.\n\n\n### Steps to replicate\n\nProvide the steps to replicate (which usually at least includes the commands, O.S., and python version).\n\n-------------------------------------------------------------------------------\n",
+    "labels": [],
+    "milestone": null,
+    "number": 126,
+    "title": "Dockerfile.prod build failing"
+  },
+  {
+    "assignees": [],
+    "body": "",
+    "labels": [],
+    "milestone": null,
+    "number": 122,
+    "title": "Feat: fastapi-mail integration"
+  },
+  {
+    "assignees": [],
+    "body": "When extracting a lead by a url, and visiting `http://localhost:3000/data-orchestration` then select the corresponding pipeline event:\n- issue with status being pending despite it being succesful\n- update source_uri and dest_uri information.\n- ensure the payload is correct.\n\n-------------------------------------------------------------------------------\n",
+    "labels": [],
+    "milestone": null,
+    "number": 120,
+    "title": "Fix: lead url extractraction orchestration pipeline event"
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjc3NDE3NjM5",
+        "login": "danphenderson",
+        "name": "Daniel Henderson",
+        "databaseId": 0
+      },
+      {
+        "id": "BOT_kgDOC9w8XQ",
+        "login": "Copilot",
+        "name": "",
+        "databaseId": 0
+      }
+    ],
+    "body": "## Problem Statement\n\nIndividual resume and cover letter downloads exist, but there is no way to export all materials for a specific application as a bundle.\n\n## Why It Still Matters After PR #130\n\nPR #130 built the application detail page with linked resumes, cover letters, and documents. Users preparing for interviews need to quickly gather all materials for a specific application without downloading each one individually.\n\n## Affected Area\n\n- `backend/app/api/routes/applications.py` — export endpoint\n- `frontend/src/page/applications-detail-page.tsx` — export button\n\n## In-Scope\n\n- Add `GET /applications/{id}/export` that returns a ZIP archive containing:\n  - Linked resume PDF (if any)\n  - Linked cover letter PDF (if any)\n  - Linked document files (if any)\n- Add an 'Export Materials' button on the application detail page\n- Handle edge cases: missing materials are omitted without error, empty export returns 404\n\n## Non-Goals\n\n- Exporting application metadata as structured data (JSON/CSV)\n- Batch export of multiple applications\n- Email sending of exported materials\n- Custom filename templates\n\n## Acceptance Criteria\n\n- [ ] Endpoint returns a ZIP file with correct `Content-Disposition` header\n- [ ] ZIP contains descriptively named PDFs for each linked material\n- [ ] Missing materials are omitted without error (not an empty ZIP)\n- [ ] Frontend button triggers browser download\n- [ ] At least one backend test validates the export endpoint with and without materials\n\n## Dependencies\n\nNone",
+    "labels": [],
+    "milestone": null,
+    "number": 119,
+    "title": "Applications: Add application materials export endpoint"
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjc3NDE3NjM5",
+        "login": "danphenderson",
+        "name": "Daniel Henderson",
+        "databaseId": 0
+      },
+      {
+        "id": "BOT_kgDOC9w8XQ",
+        "login": "Copilot",
+        "name": "",
+        "databaseId": 0
+      }
+    ],
+    "body": "## Problem Statement\n\nThe frontend has 24 hand-written service files (`frontend/src/service/*.tsx`) that manually construct fetch calls. `schema.d.ts` is already generated from OpenAPI, but the fetch layer is not auto-generated, leading to maintenance burden and potential drift between the API contract and client calls.\n\n## Why It Still Matters After PR #130\n\nPR #130 added 24 service files totaling thousands of lines of hand-written fetch logic. Each backend API change requires manually updating the corresponding service file. Auto-generated fetch clients would reduce this maintenance burden.\n\n## Affected Area\n\n- `frontend/src/service/*.tsx` — 24 API client files\n- `scripts/update_frontend_schemas.sh` — schema generation pipeline\n- `frontend/package.json` — new dependency\n\n## In-Scope\n\n- Evaluate `openapi-fetch` (or `openapi-typescript-fetch`) as a typed fetch client generator\n- Prototype migration for one service file (e.g., `action-items.tsx`) and compare:\n  - Type safety\n  - Bundle size impact\n  - Error handling patterns\n  - Migration effort per service\n- Document the trade-off analysis\n- If viable, propose incremental migration plan\n\n## Non-Goals\n\n- Rewriting all 24 services in one pass\n- Changing the backend API to accommodate client generation\n- Adding GraphQL, tRPC, or other API paradigms\n- Removing `schema.d.ts` generation\n\n## Acceptance Criteria\n\n- [ ] One service file is successfully replaced with auto-generated client\n- [ ] Type safety is preserved or improved vs. hand-written version\n- [ ] No runtime regressions in the converted service\n- [ ] Trade-off document captures bundle size, DX, and migration effort\n- [ ] Decision is recorded for team review\n\n## Dependencies\n\nNone",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVtY9w",
+        "name": "frontend",
+        "description": "",
+        "color": "CBBA5C"
+      }
+    ],
+    "milestone": null,
+    "number": 117,
+    "title": "Frontend: Evaluate openapi-fetch as typed API client replacement"
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjc3NDE3NjM5",
+        "login": "danphenderson",
+        "name": "Daniel Henderson",
+        "databaseId": 0
+      },
+      {
+        "id": "BOT_kgDOC9w8XQ",
+        "login": "Copilot",
+        "name": "",
+        "databaseId": 0
+      }
+    ],
+    "body": "## Problem Statement\n\nSome extract operations use FastAPI `BackgroundTasks`, but seed endpoints (resumes, cover letters, skills, experiences, education, certificates, contacts) still run synchronously, blocking the HTTP response until LLM processing completes.\n\n## Why It Still Matters After PR #130\n\nPR #130 added more extraction and seeding surfaces. Synchronous LLM calls in request handlers cause timeouts for large documents and block the event loop for other users in the local dev environment.\n\n## Affected Area\n\n- `backend/app/api/routes/resumes.py` — `/seed` endpoint\n- `backend/app/api/routes/cover_letters.py` — `/seed` endpoint\n- `backend/app/api/routes/skills.py` — `/extract` endpoint (partially done)\n- `backend/app/api/routes/experiences.py`, `education.py`, `certificates.py`, `contacts.py` — `/extract` and `/seed` endpoints\n\n## In-Scope\n\n- Refactor all `/seed` and remaining `/extract` endpoints to use `BackgroundTasks`\n- Return 202 Accepted with a status reference (task ID or polling URL)\n- Add a `GET /tasks/{id}/status` endpoint or use existing orchestration events for progress tracking\n- Ensure PYTEST mode runs synchronously for test determinism\n\n## Non-Goals\n\n- Full task queue (Celery, Redis-backed) — keep FastAPI BackgroundTasks for now\n- WebSocket-based progress streaming\n- Retry logic for failed background tasks (separate concern)\n\n## Acceptance Criteria\n\n- [ ] All seed/extract endpoints return 202 immediately\n- [ ] Frontend can poll for completion status\n- [ ] Existing seed/extract tests pass (adjusted for async pattern if needed)\n- [ ] No user-visible regression in data population flows\n- [ ] PYTEST mode behavior is documented\n\n## Dependencies\n\nNone",
+    "labels": [],
+    "milestone": null,
+    "number": 115,
+    "title": "Backend: Move remaining synchronous seed and extract operations to BackgroundTasks"
+  },
+  {
+    "assignees": [],
+    "body": "",
+    "labels": [],
+    "milestone": null,
+    "number": 109,
+    "title": "Feat: 'gh issue <subcommand>' alias in ~/.zshrc"
+  },
+  {
+    "assignees": [],
+    "body": "Ref: https://youtu.be/mBoX_JCKZTE?si=hesNmQfl89fxnPb0",
+    "labels": [],
+    "milestone": null,
+    "number": 105,
+    "title": "Feat: ETL scrappy integration"
+  },
+  {
+    "assignees": [],
+    "body": "The code is currently very scripted.",
+    "labels": [],
+    "milestone": null,
+    "number": 103,
+    "title": "Fix: Extractor API Clean-UP"
+  },
+  {
+    "assignees": [],
+    "body": "The Admin UI appears to only be working for unauthorized routes.\r\n\r\nImplementing Authentication and Authorization as a starting point to resolve missing data when listing certain model views in Admin UI, e.g. User. I suspect Authentication and Authorization will solve the problem from my troubleshooting of creating a model in the UI, which results in a null user for the new experience ( inspecting the request in the console, it shows a null token was passed in the POST request).\r\n\r\nRef:\r\n- [Documenation](https://jowilf.github.io/starlette-admin/es/tutorial/authentication/?h=auth)\r\n- [Example](https://github.com/jowilf/starlette-admin/tree/main/examples/auth)\r\n \r\nReqs:\r\n- Implement Authentication and Authorization in Admin UI\r\n- Move/Refactor admin logic in `app.main.py` to `app.api.routes.admin.py`\r\n- Update DropDown to include doc links for material ui, langchain, fastapi, pydantic, etc.\r\n- Add tags to group ui  Authorization and only display users' authorized routes.\r\n- Fix issues listing certain model views.",
+    "labels": [],
+    "milestone": null,
+    "number": 102,
+    "title": "Fix: Admin UI Authentication & Authorization"
+  },
+  {
+    "assignees": [],
+    "body": "Add /enrich endpoints similar to /extractor.",
+    "labels": [],
+    "milestone": null,
+    "number": 99,
+    "title": "Feat: /enrich API"
+  },
+  {
+    "assignees": [],
+    "body": "Create bootstrap shell script to set up the backend library's. (Playwright install, typer completions, etc.). Create pipenv alias.",
+    "labels": [],
+    "milestone": null,
+    "number": 97,
+    "title": "Feat: Bootstrap backend script"
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjc3NDE3NjM5",
+        "login": "danphenderson",
+        "name": "Daniel Henderson",
+        "databaseId": 0
+      },
+      {
+        "id": "BOT_kgDOC9w8XQ",
+        "login": "Copilot",
+        "name": "",
+        "databaseId": 0
+      }
+    ],
+    "body": "## Problem Statement\n\nThe Docusaurus site was created in PR #130 with architecture and engineering guide pages, but several sections are stubs or missing entirely.\n\n## Why It Still Matters After PR #130\n\nThe docs site is the primary reference for contributors and future implementation agents. Gaps in deployment guidance, API reference, and feature documentation slow down onboarding and increase the risk of inconsistent implementation decisions.\n\n## Affected Area\n\n- `docs/docs/` — Markdown documentation sources\n\n## In-Scope\n\n- Add deployment guide covering Docker Compose local setup and the Phase 3–7 release path\n- Add API reference page (auto-generated from `openapi.json` via Docusaurus plugin or embedded Swagger UI)\n- Flesh out contribution guide with branch strategy, pre-commit setup, and schema regeneration workflow\n- Add feature overview pages for Command Center, Document Studio, and Lead Collaboration\n- Verify all internal links resolve\n\n## Non-Goals\n\n- ReadTheDocs hosting (Docusaurus is the chosen platform)\n- Marketing copy or landing pages\n- Video tutorials\n- Hosting/deployment of the docs site itself\n\n## Acceptance Criteria\n\n- [ ] `cd docs && npm run build` succeeds with no broken links\n- [ ] Each major feature area (Command Center, Document Studio, Leads, Networking) has at least one overview page\n- [ ] API reference is accessible from the docs sidebar\n- [ ] Contribution guide includes complete local development setup steps\n\n## Dependencies\n\nNone",
+    "labels": [],
+    "milestone": null,
+    "number": 95,
+    "title": "Docs: Fill content gaps in Docusaurus documentation site"
+  },
+  {
+    "assignees": [],
+    "body": "### Feat\n\nAdd support for downloading cover letters and resumes in the 'applications' page.\n\n",
+    "labels": [],
+    "milestone": null,
+    "number": 92,
+    "title": "PDF download of cover letters and resumes."
+  },
+  {
+    "assignees": [],
+    "body": "## Issue\n\nWhen clicking the 'Load leads from data lake' button on the data-orchestration.tsx page,the user token is being passed as null and the request is failing in the service/leads.tsx fetchAPI call. Add logging to fetchAPI.\n\n\n-------------------------------------------------------------------------------\n",
+    "labels": [],
+    "milestone": null,
+    "number": 91,
+    "title": "Fix: data-orchestration action buttons bug"
+  },
+  {
+    "assignees": [],
+    "body": "Update signup endpoint.\r\n",
+    "labels": [],
+    "milestone": null,
+    "number": 90,
+    "title": "Fix: Beta Release Ensure User Has valid registration token"
+  },
+  {
+    "assignees": [],
+    "body": "Add management class to app.core.db.py.\n- implement table loading, which registers a data-orchestration/event (before registering, look up pipeline by name, if it doesn't exist, then post new pipeline)\n- management of db should be agnostic of the models.py and schemas.py (except for BaseModel and BaseSchema).\n\nStretch:\n- Add superuser auth on endpoints\n- Create app.base.py and move base model and schemas",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVlNHg",
+        "name": "backend",
+        "description": "",
+        "color": "B10A37"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVyHYA",
+        "name": "v1",
+        "description": "",
+        "color": "60E572"
+      }
+    ],
+    "milestone": null,
+    "number": 87,
+    "title": "Feat: backend database management API"
+  },
+  {
+    "assignees": [],
+    "body": "Create CLI accessible within project venv to expose various langchain agent operations.\n\nUse typer\n",
+    "labels": [],
+    "milestone": null,
+    "number": 84,
+    "title": "Feat: `backend/dev.py` ai assistant "
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjc3NDE3NjM5",
+        "login": "danphenderson",
+        "name": "Daniel Henderson",
+        "databaseId": 0
+      },
+      {
+        "id": "BOT_kgDOC9w8XQ",
+        "login": "Copilot",
+        "name": "",
+        "databaseId": 0
+      }
+    ],
+    "body": "## Problem Statement\n\nThe `User` model has an `avatar_uri` field, and the profile page was redesigned in PR #130, but there is no file upload endpoint or UI component for managing profile pictures.\n\n## Why It Still Matters After PR #130\n\nPR #130 added the user directory, public profiles, and connection features. Avatars are important for user identity in social features (connections, messages, directory listings). The `avatar_uri` field exists but has no supporting upload/serve infrastructure.\n\n## Affected Area\n\n- `backend/app/api/routes/users.py` — upload endpoint\n- `backend/app/core/document_storage.py` — file storage\n- `frontend/src/page/profile/ProfilePage.tsx` — upload UI\n- `frontend/src/route/navigation.ts` — avatar display in nav\n\n## In-Scope\n\n- Add a `POST /users/me/avatar` endpoint that accepts image upload (JPEG/PNG, max 2MB)\n- Store avatar files under `PUBLIC_ASSETS_DIR/uploads/avatars/`\n- Update `avatar_uri` on successful upload\n- Add a `GET /users/{id}/avatar` endpoint that serves the stored image\n- Display avatar in profile page, navigation drawer, and directory listings\n- Add a default placeholder avatar for users without uploads\n\n## Non-Goals\n\n- Image cropping or resizing in the browser\n- CDN integration or external storage\n- Social login avatar import (Google, LinkedIn)\n\n## Acceptance Criteria\n\n- [ ] Avatar upload works end-to-end from profile page\n- [ ] Uploaded images are served at the stored URI\n- [ ] Navigation drawer and directory show user avatar or placeholder\n- [ ] File size (> 2MB) and type (non-image) validation returns clear 422 errors\n- [ ] At least one backend test validates the upload/serve cycle\n\n## Dependencies\n\nNone",
+    "labels": [],
+    "milestone": null,
+    "number": 83,
+    "title": "Profile: Add avatar upload and display to user profile"
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjc3NDE3NjM5",
+        "login": "danphenderson",
+        "name": "Daniel Henderson",
+        "databaseId": 0
+      },
+      {
+        "id": "BOT_kgDOC9w8XQ",
+        "login": "Copilot",
+        "name": "",
+        "databaseId": 0
+      }
+    ],
+    "body": "## Problem Statement\n\nThe `etl/linkedin/` and `etl/glassdoor/` crawlers exist with Playwright-based scrapers, but they depend on hardcoded credential patterns, lack error recovery for navigation failures, and have no output validation before database insertion.\n\n## Why It Still Matters After PR #130\n\nPR #130 built the crawler infrastructure (CrawlerPipeline model, scheduler, Redis-backed queue, review queue). The ETL scripts that feed this infrastructure need to be reliable enough for the scheduled execution pattern to work without constant manual intervention.\n\n## Affected Area\n\n- `backend/etl/linkedin/` — LinkedIn Playwright scrapers\n- `backend/etl/glassdoor/` — Glassdoor Playwright scrapers\n- `backend/app/core/conf.py` — credential configuration\n- `backend/.env.example` — environment documentation\n\n## In-Scope\n\n- Add retry logic and structured error handling for Playwright navigation failures\n- Add output validation to ensure scraped data matches expected Lead schema before database insert\n- Document required environment variables and credential setup in `.env.example`\n- Add at least one test that validates the scraping pipeline against a mock HTML fixture\n\n## Non-Goals\n\n- New scraping targets beyond LinkedIn and Glassdoor\n- Anti-detection or proxy rotation\n- Real-time scraping (keep scheduled/batch pattern via CrawlerScheduler)\n- Headless browser pooling\n\n## Acceptance Criteria\n\n- [ ] Crawler runs produce structured log output on success and failure\n- [ ] Invalid scraped data is rejected before database insertion\n- [ ] `.env.example` documents all required ETL credentials\n- [ ] At least one test in `backend/app/tests/` validates the ETL pipeline with mock data\n- [ ] Transient failures (network timeout, page load error) are retried up to 3 times\n\n## Dependencies\n\n- Crawler infrastructure (routes, scheduler, queue) is already in place from PR #130",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVyHYA",
+        "name": "v1",
+        "description": "",
+        "color": "60E572"
+      }
+    ],
+    "milestone": null,
+    "number": 82,
+    "title": "ETL: Harden LinkedIn and Glassdoor crawler reliability"
+  },
+  {
+    "assignees": [],
+    "body": "# Please describe\nThe extractor UI contains:\n- Table of extractors w/ detailed view of extractor when selected\n- extractor detailed view contains information about extraction executions\n\n# Requirements\n1. patch API `extractor/run` so orchestration events are registered\n2. integrate `extractors` with orchestration pipelines\n3. poc level design for ui\n\n# Ref\nSee langchain extract ui example, wich implements nearly identical endpoints.\n(our inspiration)\n\n",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVlNHg",
+        "name": "backend",
+        "description": "",
+        "color": "B10A37"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVtY9w",
+        "name": "frontend",
+        "description": "",
+        "color": "CBBA5C"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVyHYA",
+        "name": "v1",
+        "description": "",
+        "color": "60E572"
+      }
+    ],
+    "milestone": null,
+    "number": 81,
+    "title": "Feat: frontend for `extractor/` API"
+  },
+  {
+    "assignees": [],
+    "body": "# Please Describe\r\nThe data orchestration page contains:\r\n- TableView of pipelines\r\n- TableView of pipeline events\r\n- pipeline schedular\r\n- pipeline notifications\r\n- pipeline creator\r\n\r\nSee langchain extractor demo webpage.\r\n# Requirements:\r\n- Implement common components:\r\n   * `component/common/table.tsx` TableView: Wrapper of DataGrid and GridColDef from MUI\r\n   * ...\r\n- Implement modals:\r\n   * `data-orchestration-modal.tsx`: EventView, EventTableView, CreatePipelineModal, PipelineTableView\r\n- POC ui for page ",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVlNHg",
+        "name": "backend",
+        "description": "",
+        "color": "B10A37"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVtY9w",
+        "name": "frontend",
+        "description": "",
+        "color": "CBBA5C"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVyHYA",
+        "name": "v1",
+        "description": "",
+        "color": "60E572"
+      }
+    ],
+    "milestone": null,
+    "number": 80,
+    "title": "Feat: frontend for `data_orchestration/` API"
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjc3NDE3NjM5",
+        "login": "danphenderson",
+        "name": "Daniel Henderson",
+        "databaseId": 0
+      },
+      {
+        "id": "BOT_kgDOC9w8XQ",
+        "login": "Copilot",
+        "name": "",
+        "databaseId": 0
+      }
+    ],
+    "body": "## Problem Statement\n\nFastAPI-Users allows registration with empty or trivially short passwords by default. Users can register without a password but cannot log in afterward, creating a broken account state.\n\n## Why It Still Matters After PR #130\n\nPR #130 uses FastAPI-Users for authentication with the default password policy. The subscription tier and connection features added in PR #130 make it more important that user accounts are in a valid state, since broken accounts cannot participate in collaboration features.\n\n## Affected Area\n\n- `backend/app/core/security.py` — UserManager configuration\n- `backend/app/schemas.py` — UserCreate schema\n\n## In-Scope\n\n- Add password validation to `UserManager` that enforces minimum length (≥ 8 characters)\n- Return a clear 422 error with a descriptive message for invalid passwords\n- Add tests that verify empty-password and short-password registration is rejected\n- Verify existing registration tests still pass\n\n## Non-Goals\n\n- Complex password strength rules (uppercase, special characters, symbols)\n- Password breach database checks (Have I Been Pwned)\n- Rate limiting on registration (separate concern)\n- Password change/reset flow improvements\n\n## Acceptance Criteria\n\n- [ ] `POST /auth/register` with empty password returns 422\n- [ ] `POST /auth/register` with password < 8 characters returns 422\n- [ ] Error message clearly states the minimum requirement\n- [ ] Existing registration tests continue to pass\n- [ ] At least 2 new tests cover the validation\n\n## Dependencies\n\nNone",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVlNHg",
+        "name": "backend",
+        "description": "",
+        "color": "B10A37"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVtY9w",
+        "name": "frontend",
+        "description": "",
+        "color": "CBBA5C"
+      }
+    ],
+    "milestone": null,
+    "number": 76,
+    "title": "Auth: Enforce minimum password requirements on registration"
+  },
+  {
+    "assignees": [],
+    "body": "### Please describe.\n\nA clear and concise description of what the feature is and your problem that it would address. Ex. I'm always frustrated when [...]\n\n### Describe the solution you'd like\n\nA clear and concise description of what you want to happen.\n\n### Describe alternatives you've considered\n\nA clear and concise description of any alternative solutions or features you've considered.\n\n### Additional context\n\nAdd any other context or screenshots about the feature request here. It may be a good idea to mention that platform and your Python and Node version you are on.\n",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABVMsO_A",
+        "name": "dependencies",
+        "description": "Pull requests that update a dependency file",
+        "color": "0366d6"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVvOEQ",
+        "name": "devops",
+        "description": "",
+        "color": "5319E7"
+      }
+    ],
+    "milestone": null,
+    "number": 75,
+    "title": "Feat: git hook automating `schema.d.ts` generation"
+  },
+  {
+    "assignees": [],
+    "body": "Wrap MUI Button to create a common component.\r\n\r\nCreate ActionButton, CreateButton, DeleteButton, UpdateButton components in `component/common/button.tsx`\r\n",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVtY9w",
+        "name": "frontend",
+        "description": "",
+        "color": "CBBA5C"
+      }
+    ],
+    "milestone": null,
+    "number": 74,
+    "title": "Chore: create Button common component"
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjc3NDE3NjM5",
+        "login": "danphenderson",
+        "name": "Daniel Henderson",
+        "databaseId": 0
+      },
+      {
+        "id": "BOT_kgDOC9w8XQ",
+        "login": "Copilot",
+        "name": "",
+        "databaseId": 0
+      }
+    ],
+    "body": "## Problem Statement\n\nThe pre-commit configuration uses three separate Python tools (isort, black, flake8) that can be consolidated into a single tool (ruff) for faster linting and simpler configuration.\n\n## Why It Still Matters After PR #130\n\nPR #130 established the CI lint gate with the current three-tool setup. Ruff is a drop-in replacement that runs 10-100x faster, reducing both local pre-commit and CI lint job execution time.\n\n## Affected Area\n\n- `.pre-commit-config.yaml` — hook configuration\n- New `backend/pyproject.toml` or `ruff.toml` — ruff settings\n- `.github/workflows/ci.yml` — lint job (if it references specific tools)\n\n## In-Scope\n\n- Replace isort, black, and flake8 hooks with `ruff check` and `ruff format`\n- Configure ruff rules to match current settings (E203, E501, W503 ignores; isort profile; black-compatible formatting)\n- Verify all existing backend files pass ruff with zero formatting changes\n- Keep the `openapi-schema-update` pre-commit hook unchanged\n\n## Non-Goals\n\n- Enabling additional ruff rules beyond current coverage\n- Adding type-checking rules (mypy/pyright)\n- Changing frontend linting\n\n## Acceptance Criteria\n\n- [ ] `.pre-commit-config.yaml` uses ruff instead of isort, black, and flake8\n- [ ] `pre-commit run --all-files` passes on the current backend codebase\n- [ ] CI lint job passes without changes to backend code\n- [ ] Pre-commit execution is measurably faster\n\n## Dependencies\n\nNone",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVlNHg",
+        "name": "backend",
+        "description": "",
+        "color": "B10A37"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVvOEQ",
+        "name": "devops",
+        "description": "",
+        "color": "5319E7"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVwWRw",
+        "name": "low priority",
+        "description": "",
+        "color": "21918D"
+      }
+    ],
+    "milestone": null,
+    "number": 73,
+    "title": "CI: Replace isort + black + flake8 with ruff in pre-commit"
+  },
+  {
+    "assignees": [],
+    "body": "",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVtY9w",
+        "name": "frontend",
+        "description": "",
+        "color": "CBBA5C"
+      }
+    ],
+    "milestone": null,
+    "number": 72,
+    "title": "Fix: UI bug when deleting application"
+  },
+  {
+    "assignees": [],
+    "body": "Update `applications/{id}/cover_letters/generate` to `applications/{id}/generate?` with resume, cover-letter, email, etc being model type?",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABPJCdbw",
+        "name": "question",
+        "description": "Further information is requested",
+        "color": "d876e3"
+      }
+    ],
+    "milestone": null,
+    "number": 71,
+    "title": "Question: refactoring API routes?"
+  },
+  {
+    "assignees": [],
+    "body": "This would require creating a `common` package..?",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVvOEQ",
+        "name": "devops",
+        "description": "",
+        "color": "5319E7"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVwWRw",
+        "name": "low priority",
+        "description": "",
+        "color": "21918D"
+      }
+    ],
+    "milestone": null,
+    "number": 70,
+    "title": "Feat: package backend etl and app individually"
+  },
+  {
+    "assignees": [],
+    "body": "# Bugs\r\n\r\n1. When Posting to Template Designer on `/profile` page the datagrid doesn't refresh. I suspect the solution is to add a div wrappping in `page/profile.tsx`.\r\n\r\n2. The selectedRow of a DataGrid disapers when hovering outside the component in numerous locations\r\n\r\n",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABPJCdWw",
+        "name": "bug",
+        "description": "Something isn't working",
+        "color": "d73a4a"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVlHAA",
+        "name": "blocked",
+        "description": "Blocked by another issue",
+        "color": "0CECCF"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVtY9w",
+        "name": "frontend",
+        "description": "",
+        "color": "CBBA5C"
+      }
+    ],
+    "milestone": null,
+    "number": 69,
+    "title": "Fix: DataGrid bugs - refreshing profile & highlighting `selectedRow`"
+  },
+  {
+    "assignees": [],
+    "body": "### Please describe.\r\n\r\nUpdate UI to enable search of DataGrids, with auto-complete options created from list state variables (either strings or objects). Integrate into DataGrid column definitions, to enable column-level search.\r\n\r\n### Additional context\r\n\r\nSee: Example in https://www.youtube.com/playlist?list=PLC3y8-rFHvwh-K9mDlrrcDywl7CeVL2rO series.\r\n",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVtY9w",
+        "name": "frontend",
+        "description": "",
+        "color": "CBBA5C"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlV026Q",
+        "name": "v1-strech",
+        "description": "",
+        "color": "d4c5f9"
+      }
+    ],
+    "milestone": null,
+    "number": 66,
+    "title": "Feat: add `Search` & `AutoComplete` common components"
+  },
+  {
+    "assignees": [],
+    "body": "Self host langsmith to trace langchain in docker-compose",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVvOEQ",
+        "name": "devops",
+        "description": "",
+        "color": "5319E7"
+      }
+    ],
+    "milestone": null,
+    "number": 59,
+    "title": "Feat: LangSmith Integration"
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjc3NDE3NjM5",
+        "login": "danphenderson",
+        "name": "Daniel Henderson",
+        "databaseId": 0
+      },
+      {
+        "id": "BOT_kgDOC9w8XQ",
+        "login": "Copilot",
+        "name": "",
+        "databaseId": 0
+      }
+    ],
+    "body": "## Problem Statement\n\nThe extractor API handles structured LLM extraction from text and URLs, but there is no semantic search over user documents. As the Document Studio grows, users need to query across their document corpus for resume tailoring and application preparation.\n\n## Why It Still Matters After PR #130\n\nPR #130 built the Document Studio with rich-text editing, PDF upload, sharing, and collaboration. The missing piece is the ability to search document content by meaning rather than exact text match.\n\n## Affected Area\n\n- `backend/app/core/langchain.py` — LLM integration\n- `backend/app/models.py` — embedding storage\n- `backend/app/api/routes/documents.py` — search endpoint\n- `docker-compose.yml` — pgvector extension if chosen\n\n## In-Scope\n\n- Evaluate pgvector (PostgreSQL extension) vs. in-memory FAISS for local-first vector storage\n- Add document embedding generation on document create/update\n- Add a `GET /documents/search?q=...` endpoint for semantic similarity queries\n- Integrate with existing LangChain OpenAI configuration in `conf.py`\n\n## Non-Goals\n\n- Full RAG agent with multi-turn conversation\n- Fine-tuning or model training\n- LangGraph or multi-agent orchestration\n- Replacing the existing extractor API\n\n## Acceptance Criteria\n\n- [ ] Documents can be embedded and queried by semantic similarity\n- [ ] Vector store works in local Docker Compose setup without external services\n- [ ] At least one test validates embedding creation and retrieval\n- [ ] No breaking changes to existing extractor or document APIs\n- [ ] Decision on vector backend is documented\n\n## Dependencies\n\n- Requires decision on vector store backend (pgvector recommended for single-database simplicity)\n- May benefit from #18 (Alembic) for schema migration of embedding columns",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVlNHg",
+        "name": "backend",
+        "description": "",
+        "color": "B10A37"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVyHYA",
+        "name": "v1",
+        "description": "",
+        "color": "60E572"
+      }
+    ],
+    "milestone": null,
+    "number": 55,
+    "title": "Backend: Add vector store support for document-aware semantic search"
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjc3NDE3NjM5",
+        "login": "danphenderson",
+        "name": "Daniel Henderson",
+        "databaseId": 0
+      },
+      {
+        "id": "BOT_kgDOC9w8XQ",
+        "login": "Copilot",
+        "name": "",
+        "databaseId": 0
+      }
+    ],
+    "body": "## Problem Statement\n\nThe backend has a configurable `LOGGING_LEVEL` and uses Python's standard logging, but there is no structured JSON output, no request correlation IDs, and no file-based log persistence for local debugging.\n\n## Why It Still Matters After PR #130\n\nPR #130 added many new API surfaces (collaboration WebSockets, crawler scheduler, action items, messaging). Debugging issues across these surfaces requires correlated, structured log output. The execution plan Phase 6 calls for 'logging and alerting' controls.\n\n## Affected Area\n\n- `backend/app/core/conf.py` — logging configuration\n- `backend/app/main.py` — middleware setup\n- New `backend/app/core/logging.py` — structured formatter\n\n## In-Scope\n\n- Add a structured JSON log formatter (using `python-json-logger` or stdlib `logging.config`)\n- Add request correlation ID middleware that propagates through log records\n- Configure file-based log output under `PUBLIC_ASSETS_DIR/logs/` in DEV mode\n- Preserve human-readable console output as the default for local development\n\n## Non-Goals\n\n- External log aggregation (ELK, CloudWatch, Datadog)\n- LangSmith or OpenAI-specific tracing (separate concern)\n- Performance profiling or APM integration\n- Frontend logging\n\n## Acceptance Criteria\n\n- [ ] API requests in DEV mode produce JSON log lines with timestamp, level, correlation ID, path, and status\n- [ ] Log files are written to `public/logs/` in DEV mode and gitignored\n- [ ] PYTEST mode uses console-only logging\n- [ ] Correlation ID header (`X-Request-ID`) is returned in responses\n- [ ] No new large dependencies\n\n## Dependencies\n\nNone",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVyHYA",
+        "name": "v1",
+        "description": "",
+        "color": "60E572"
+      }
+    ],
+    "milestone": null,
+    "number": 54,
+    "title": "Backend: Add structured JSON logging with request correlation IDs"
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjc3NDE3NjM5",
+        "login": "danphenderson",
+        "name": "Daniel Henderson",
+        "databaseId": 0
+      },
+      {
+        "id": "BOT_kgDOC9w8XQ",
+        "login": "Copilot",
+        "name": "",
+        "databaseId": 0
+      }
+    ],
+    "body": "## Problem Statement\n\nDatetime fields across the backend use inconsistent patterns: models use `func.now()` server defaults, but some route handlers use `datetime.utcnow().isoformat()` for JSONB fields (e.g., `status_history` in applications), and timezone awareness is not enforced.\n\n## Why It Still Matters After PR #130\n\nPR #130 added many new models with datetime fields (ActionItem.due_at, Connection timestamps, Message.edited_at, etc.). The inconsistency between server-generated and Python-generated timestamps can cause ordering bugs and client display issues.\n\n## Affected Area\n\n- `backend/app/models.py` — datetime column definitions\n- `backend/app/api/routes/applications.py` — `datetime.utcnow().isoformat()` usage\n- `backend/app/schemas.py` — datetime serialization\n\n## In-Scope\n\n- Audit all datetime fields in models for consistent use of `func.now()` server defaults\n- Replace `datetime.utcnow()` calls in route handlers with server-side defaults or `func.now()`\n- Ensure all JSONB-embedded timestamps (e.g., `status_history`) use ISO 8601 with UTC indicator\n- Add a `DateTimeUTC` type alias or convention doc to prevent future drift\n\n## Non-Goals\n\n- Changing column types from `DateTime` to `DateTime(timezone=True)` (requires Alembic migration, see #18)\n- Client-side timezone display logic\n- Retroactively fixing existing data\n\n## Acceptance Criteria\n\n- [ ] No Python-side `datetime.utcnow()` or `datetime.now()` calls remain in route handlers\n- [ ] All JSONB timestamp values include timezone indicator (`Z` or `+00:00`)\n- [ ] Existing tests pass without modification\n- [ ] Convention is documented in code or engineering docs\n\n## Dependencies\n\n- #18 (Alembic) if column type changes are needed — otherwise independent",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABPJCdWw",
+        "name": "bug",
+        "description": "Something isn't working",
+        "color": "d73a4a"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVlNHg",
+        "name": "backend",
+        "description": "",
+        "color": "B10A37"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVyHYA",
+        "name": "v1",
+        "description": "",
+        "color": "60E572"
+      }
+    ],
+    "milestone": null,
+    "number": 51,
+    "title": "Backend: Audit and normalize datetime handling across API and models"
+  },
+  {
+    "assignees": [],
+    "body": "# Data Lake Structure\r\n```sh\r\npublic/\r\n - seeds/\r\n   - leads.json\r\n   - companies.json\r\n   - users.json\r\n   ... \r\n - logs/\r\n - lake/\r\n    - leads/\r\n       - <lead-id>.json\r\n       - enriched/\r\n            - <lead-id>.json\r\n    - cover-letters/\r\n       - <cover-letter>.pdf\r\n       - templates/\r\n            - <cover-letter>.pdf\r\n    - resumes/\r\n        - <resume-pdf>.pdf\r\n        - templates/\r\n            - <resume-id>.pdf\r\n```\r\n\r\nRequirements\r\n- Make .env's shared between all backend namespaces\r\n- Implement backend changes for data lake structure\r\n    * `app.conf.settings.py`, `app.logging.py`, ...",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVlNHg",
+        "name": "backend",
+        "description": "",
+        "color": "B10A37"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVyHYA",
+        "name": "v1",
+        "description": "",
+        "color": "60E572"
+      }
+    ],
+    "milestone": null,
+    "number": 38,
+    "title": "Feat: data lake re-structure to definition"
+  },
+  {
+    "assignees": [],
+    "body": "## Problem Statement\n\nThe codebase uses `create_all()` with additive `_sync_missing_columns()` for local development database schema management. There are no versioned migrations, making it impossible to safely evolve the schema in staged environments.\n\n## Why It Still Matters After PR #130\n\nPR #130 added new models (ActionItem, CrawlerPipeline, Connection, Conversation, Message, DocumentShare, etc.) all managed by `create_all()`. The execution plan Phase 5 explicitly requires 'migration discipline.' A TODO comment in `db.py` notes Alembic is needed.\n\n## Affected Area\n\n- `backend/app/core/db.py` — current bootstrap logic\n- `backend/app/models.py` — all SQLAlchemy models\n- New `backend/alembic/` directory\n\n## In-Scope\n\n- Initialize Alembic with async SQLAlchemy (asyncpg) support\n- Generate an initial migration from the current model state\n- Update `docker-compose.yml` to run `alembic upgrade head` on startup\n- Update `scripts/reset_local_db.sh` to handle migration state\n- Preserve the `create_all()` fallback for PYTEST mode\n- Document migration workflow in `docs/docs/engineering/`\n\n## Non-Goals\n\n- Removing `_sync_missing_columns()` immediately (keep as local dev safety net until Alembic is proven)\n- Multi-database migration support\n- Data migrations (schema-only for initial integration)\n\n## Acceptance Criteria\n\n- [ ] `alembic upgrade head` applies cleanly to a fresh Postgres 15 database\n- [ ] `alembic revision --autogenerate` detects model changes\n- [ ] CI backend-tests job runs migrations before pytest\n- [ ] `docker compose up` still works without manual migration steps\n- [ ] Migration workflow is documented\n\n## Dependencies\n\nNone — this is a Phase 5 prerequisite and can start immediately",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVyHYA",
+        "name": "v1",
+        "description": "",
+        "color": "60E572"
+      }
+    ],
+    "milestone": null,
+    "number": 18,
+    "title": "Backend: Integrate Alembic for database migrations"
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjc3NDE3NjM5",
+        "login": "danphenderson",
+        "name": "Daniel Henderson",
+        "databaseId": 0
+      },
+      {
+        "id": "BOT_kgDOC9w8XQ",
+        "login": "Copilot",
+        "name": "",
+        "databaseId": 0
+      }
+    ],
+    "body": "## Problem Statement\n\nPR #130 introduced 30 backend test files and a 40% coverage gate in CI, but coverage can be raised and frontend integration testing (Playwright) has not been started.\n\n## Why It Still Matters After PR #130\n\nThe 40% threshold was a starting point. As the codebase stabilizes through Phases 3–7 of the execution plan, higher coverage prevents regressions in critical paths (collaboration, auth, document sharing). Frontend integration tests are needed to validate end-to-end user flows.\n\n## Affected Area\n\n- `backend/app/tests/` — backend unit and integration tests\n- `frontend/` — Playwright integration test scaffold\n- `.github/workflows/ci.yml` — coverage threshold configuration\n\n## In-Scope\n\n- Raise `--cov-fail-under` from 40 to 60 in CI\n- Add targeted tests for uncovered backend routes (crawler edge cases, document collaboration race conditions, message WebSocket handling)\n- Add a Playwright-based frontend integration test scaffold that validates at least one critical user flow (login → command center → create application)\n- Configure Playwright tests to run in CI\n\n## Non-Goals\n\n- 100% line coverage\n- Visual regression testing\n- Performance benchmarking\n\n## Acceptance Criteria\n\n- [ ] Backend coverage ≥ 60% on `app` and `etl` modules\n- [ ] At least one Playwright integration test runs in CI\n- [ ] No regressions in existing test suite\n- [ ] Coverage report is visible in CI output\n\n## Dependencies\n\nNone",
+    "labels": [
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVlNHg",
+        "name": "backend",
+        "description": "",
+        "color": "B10A37"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlVtY9w",
+        "name": "frontend",
+        "description": "",
+        "color": "CBBA5C"
+      },
+      {
+        "id": "LA_kwDOJOUlY88AAAABlV026Q",
+        "name": "v1-strech",
+        "description": "",
+        "color": "d4c5f9"
+      }
+    ],
+    "milestone": null,
+    "number": 10,
+    "title": "Backend: Increase test coverage to 60% and add frontend integration test scaffold"
+  }
+]

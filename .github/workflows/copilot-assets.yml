@@ -1,0 +1,44 @@
+name: Copilot Assets
+concurrency:
+  group: >-
+    ${{ github.workflow }}-
+    ${{ github.ref_type }}-
+    ${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+on:
+  push:
+    paths:
+      - ".github/copilot-instructions.md"
+      - ".github/agents/**"
+      - ".github/instructions/**"
+      - ".github/prompts/**"
+      - ".github/skills/**"
+      - ".github/README.md"
+      - "scripts/validate_copilot_assets.py"
+    branches:
+      - main
+  pull_request:
+    paths:
+      - ".github/copilot-instructions.md"
+      - ".github/agents/**"
+      - ".github/instructions/**"
+      - ".github/prompts/**"
+      - ".github/skills/**"
+      - ".github/README.md"
+      - "scripts/validate_copilot_assets.py"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Copilot assets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Run Copilot asset validator
+        run: python scripts/validate_copilot_assets.py

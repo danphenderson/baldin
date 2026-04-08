@@ -1,0 +1,224 @@
+import React from 'react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
+import { UserContext } from '../../context/user-context';
+import { ToolbarHeaderContext } from '../../layout/toolbar-header-context';
+
+/* ── Mock the useApplications hook ────────────────────────────────── */
+
+const mockUseApplications = vi.fn();
+
+vi.mock('./use-applications', async () => {
+  const actual = await vi.importActual<typeof import('./use-applications')>('./use-applications');
+  return {
+    ...actual,
+    useApplications: (...args: unknown[]) => mockUseApplications(...args),
+  };
+});
+
+vi.mock('../../component/common/confirm-dialog', () => ({
+  default: () => null,
+}));
+
+vi.mock('../../component/common/empty-state', () => ({
+  default: ({ title, description, action }: {
+    title: string;
+    description?: string;
+    action?: { label: string; onClick: () => void };
+  }) => (
+    <div data-testid="empty-state">
+      <span>{title}</span>
+      {description && <span>{description}</span>}
+      {action && <button onClick={action.onClick}>{action.label}</button>}
+    </div>
+  ),
+}));
+
+import ApplicationsQueuePage from './applications-queue-page';
+import { COLUMNS } from './use-applications';
+
+/* ── Test data ────────────────────────────────────────────────────── */
+
+function makeApplication(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 'app-1',
+    status: 'applied',
+    created_at: '2026-04-01T00:00:00',
+    updated_at: '2026-04-03T00:00:00',
+    next_step: null,
+    next_step_due: null,
+    lead: {
+      id: 'lead-1',
+      title: 'Senior Frontend Engineer',
+      location: 'Remote, US',
+      salary: '$150k',
+      companies: [{ id: 'c-1', name: 'Acme Corp' }],
+    },
+    ...overrides,
+  };
+}
+
+function makeHookReturn(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    applications: [],
+    loading: false,
+    error: '',
+    success: '',
+    setError: vi.fn(),
+    setSuccess: vi.fn(),
+    refresh: vi.fn(),
+    handleAdvance: vi.fn(),
+    handleDelete: vi.fn(),
+    confirmDelete: vi.fn(),
+    deleteTarget: null,
+    setDeleteTarget: vi.fn(),
+    handleStatusChange: vi.fn(),
+    buckets: new Map(),
+    appDocMeta: new Map(),
+    appDocMetaLoading: false,
+    ...overrides,
+  };
+}
+
+/* ── Helpers ──────────────────────────────────────────────────────── */
+
+const userContextValue = {
+  user: { id: 'u1', first_name: 'Jane', last_name: 'Doe', email: 'jane@test.com' } as never,
+  setUser: vi.fn(),
+  token: 'test-token',
+  setToken: vi.fn(),
+  loading: false,
+  canAccessTier: vi.fn(() => true),
+};
+
+function renderPage() {
+  return render(
+    <ToolbarHeaderContext.Provider value={vi.fn()}>
+      <UserContext.Provider value={userContextValue}>
+        <MemoryRouter>
+          <ApplicationsQueuePage />
+        </MemoryRouter>
+      </UserContext.Provider>
+    </ToolbarHeaderContext.Provider>,
+  );
+}
+
+/* ── Tests ────────────────────────────────────────────────────────── */
+
+describe('ApplicationsQueuePage', () => {
+  beforeEach(() => {
+    mockUseApplications.mockReset();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders loading skeletons while data is being fetched', () => {
+    mockUseApplications.mockReturnValue(makeHookReturn({ loading: true }));
+
+    renderPage();
+
+    const skeletons = document.querySelectorAll('.MuiSkeleton-root');
+    expect(skeletons.length).toBeGreaterThan(0);
+  });
+
+  it('renders application cards when data loads', () => {
+    mockUseApplications.mockReturnValue(
+      makeHookReturn({
+        applications: [
+          makeApplication(),
+          makeApplication({
+            id: 'app-2',
+            status: 'interview',
+            lead: {
+              id: 'lead-2',
+              title: 'Backend Engineer',
+              companies: [{ id: 'c-2', name: 'BigCo' }],
+            },
+          }),
+        ],
+      }),
+    );
+
+    renderPage();
+
+    expect(screen.getByText('Senior Frontend Engineer')).toBeInTheDocument();
+    expect(screen.getByText('Backend Engineer')).toBeInTheDocument();
+  });
+
+  it('renders stage filter chips for each pipeline column', () => {
+    mockUseApplications.mockReturnValue(
+      makeHookReturn({ applications: [makeApplication()] }),
+    );
+
+    renderPage();
+
+    expect(screen.getByText('All Stages')).toBeInTheDocument();
+    for (const col of COLUMNS) {
+      // Stage labels may appear in both summary strip and filter chips
+      const matches = screen.getAllByText(col.label);
+      expect(matches.length).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('renders sort controls', () => {
+    mockUseApplications.mockReturnValue(
+      makeHookReturn({ applications: [makeApplication()] }),
+    );
+
+    renderPage();
+
+    expect(screen.getByLabelText('Sort')).toBeInTheDocument();
+  });
+
+  it('renders summary chips with correct counts', () => {
+    mockUseApplications.mockReturnValue(
+      makeHookReturn({
+        applications: [
+          makeApplication({ id: 'a1', status: 'applied' }),
+          makeApplication({ id: 'a2', status: 'interview' }),
+          makeApplication({ id: 'a3', status: 'offer' }),
+          makeApplication({ id: 'a4', status: 'rejected' }),
+        ],
+      }),
+    );
+
+    renderPage();
+
+    expect(screen.getByText('4 total')).toBeInTheDocument();
+    expect(screen.getByText('3 active')).toBeInTheDocument();
+    expect(screen.getByText('1 interviewing')).toBeInTheDocument();
+    expect(screen.getByText('1 offers')).toBeInTheDocument();
+    expect(screen.getByText('1 rejected')).toBeInTheDocument();
+  });
+
+  it('renders empty state when there are no applications', () => {
+    mockUseApplications.mockReturnValue(makeHookReturn({ applications: [] }));
+
+    renderPage();
+
+    expect(screen.getByText('No applications tracked')).toBeInTheDocument();
+  });
+
+  it('renders "no matches" empty state when filters exclude all apps', async () => {
+    const user = userEvent.setup();
+    mockUseApplications.mockReturnValue(
+      makeHookReturn({
+        applications: [makeApplication()],
+      }),
+    );
+
+    renderPage();
+
+    // Search for something that doesn't match
+    const searchInput = screen.getByLabelText('Search applications');
+    await user.type(searchInput, 'zzz-nonexistent');
+
+    await waitFor(() => {
+      expect(screen.getByText('No results match your filters')).toBeInTheDocument();
+    });
+  });
+});

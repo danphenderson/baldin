@@ -1,110 +1,94 @@
-# Overview
+# Baldin
 
-Streamline your journey to employment with Baldin.
-------
+[![Docs](https://img.shields.io/badge/docs-live-06b6d4)](https://danphenderson.github.io/baldin/)
 
+**AI-Powered Employment Autopilot** — a local-first, developer-preview job-search automation workspace.
 
-Baldin is a platform that helps you find job opportunities, build and manage your applications, and prepare for interviews.
+> Take control of your job search. Track applications, extract leads, collaborate on Agentic Workflows, and discover your network — all running locally under your control.
 
+**[Landing Page](https://danphenderson.github.io/baldin/)** · **[Documentation](https://danphenderson.github.io/baldin/docs)** · **[Release Posture](plans/REPO_EXECUTION_PLAN.md)**
 
-Documentation is available at [https://danphenderson.github.io/baldin/](https://danphenderson.github.io/baldin/)
+---
 
+Baldin is a private, local-first engineering monorepo for a developer-preview job-search automation workspace. It contains the FastAPI backend, the React/Vite frontend, the local Docker integration surface, the Docusaurus docs, and the release-path planning material that currently defines how the system is being hardened.
 
-**Source Code**:  <a href="https://github.com/danphenderson/baldin" target="_blank">https://https://github.com/danphenderson/baldin</a>
+> Baldin is local-first right now.
+> This repository is the main engineering workspace for the product. It supports local development, contributor workflows, architecture review, and release-path planning, but it is not a production deployment blueprint.
 
+## Start Here
 
-## 🚧 Features + Bugs 🚧
+- Local setup: [docs/docs/getting-started/quickstart.md](docs/docs/getting-started/quickstart.md)
+- Contributor workflow: [docs/docs/getting-started/contributing.md](docs/docs/getting-started/contributing.md)
+- Architecture: [docs/docs/architecture/system-overview.md](docs/docs/architecture/system-overview.md), [docs/docs/architecture/data-model.md](docs/docs/architecture/data-model.md), [docs/docs/architecture/api-surface.md](docs/docs/architecture/api-surface.md), [docs/docs/architecture/frontend-architecture.md](docs/docs/architecture/frontend-architecture.md)
+- Document editor and collaboration: [docs/docs/architecture/document-collaboration.md](docs/docs/architecture/document-collaboration.md)
+- Networking and messaging: [docs/docs/architecture/networking-and-messaging.md](docs/docs/architecture/networking-and-messaging.md)
+- Testing and CI: [docs/docs/engineering/testing.md](docs/docs/engineering/testing.md), [docs/docs/engineering/ci-pipeline.md](docs/docs/engineering/ci-pipeline.md)
+- Release posture: [docs/docs/engineering/release-roadmap.md](docs/docs/engineering/release-roadmap.md) and [plans/REPO_EXECUTION_PLAN.md](plans/REPO_EXECUTION_PLAN.md)
 
-Currently, the application is in its infancy. See open issues for a list of planned features and
-known bugs. If you find a bug, have a feature request, or simply a question, please file an issue.
+If you use the published docs site, the same material is available at **[danphenderson.github.io/baldin/docs](https://danphenderson.github.io/baldin/docs)**.
 
-[issue tracker](https://github.com/danphenderson/baldin/issues)
+## Local Quickstart
 
-### Development
-
-To run baldin locally, ensure you have the following requirements installed:
+### Requirements
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
-- [Node.js](https://nodejs.org/en/download/)
-- [TypeScript](https://www.typescriptlang.org/download)
-- [pipenv](https://pipenv.pypa.io/en/latest/)
-- [pyenv](https://github.com/pyenv/pyenv#installation) (or your preferred Python version manager) with Python 3.11.2
 
+### Setup
 
-Fork the [repository](https://github.com/danphenderson) (look for the "Fork" button).
+1. Clone the repository.
+2. Copy `backend/.env.example` to `backend/.env`.
+3. Review the backend environment variables you need for local development.
+4. Start the local stack from the repository root:
 
-Then clone your fork locally: `git clone git@github.com:YOURGITHUBNAME/baldin.git`
+```bash
+docker-compose up --build
+```
 
+If you hit local schema drift after pulling breaking model changes, reset the developer databases and restart the stack:
 
-### Local Network
+```bash
+./scripts/reset_local_db.sh
+```
 
-The development stack is composed of the following services:
+5. Open the local services:
+   - Frontend: [http://localhost:5173](http://localhost:5173)
+   - API: [http://localhost:8004](http://localhost:8004)
+   - Swagger UI: [http://localhost:8004/docs](http://localhost:8004/docs)
+   - ReDoc: [http://localhost:8004/redoc](http://localhost:8004/redoc)
+   - Admin: [http://localhost:8004/admin](http://localhost:8004/admin) using the bootstrapped superuser email and password from `FIRST_SUPERUSER_EMAIL` and `FIRST_SUPERUSER_PASSWORD`
 
-**Baldin**
-    [API](http://localhost:8000)
-    [Frontend](http://localhost:3000/)
-    [Admin](http://localhost:8004/admin)
+For deeper setup, service topology, and environment details, use [docs/docs/getting-started/quickstart.md](docs/docs/getting-started/quickstart.md), [docs/docs/engineering/local-development.md](docs/docs/engineering/local-development.md), and [docs/docs/reference/environment-variables.md](docs/docs/reference/environment-variables.md).
 
-**Documentation**
-    [Swagger](http://localhost:8004/docs)
-    [(Re)docs](http://localhost:8004/redocs)
+## Local Services
 
-| Service          | Description                                                     |
-|------------------|-----------------------------------------------------------------|
-| `db`             | PostgreSQL 15 – primary application database                    |
-| `test_db`        | PostgreSQL 15 – isolated database used by pytest                |
-| `redis`          | Redis 7 – job queue for the crawler worker                      |
-| `web`            | FastAPI backend (API + admin)                                   |
-| `crawler-worker` | Dedicated process that consumes crawler jobs from Redis         |
-| `frontend`       | React frontend                                                  |
+| Service | Description |
+| --- | --- |
+| `db` | PostgreSQL 15 primary application database |
+| `test_db` | PostgreSQL 15 database used by pytest |
+| `redis` | Redis 7 queue backing background jobs |
+| `web` | FastAPI backend, API, and admin surface |
+| `crawler-worker` | Background worker consuming Redis jobs |
+| `frontend` | React/Vite frontend |
 
+## Contributing
 
-### Building and Running
+Use the normal branch-and-pull-request flow against `main`, and install hooks before your first commit:
 
-After cloning your forked version of the repository, spin up the development stack with the following steps:
+```bash
+pre-commit install
+```
 
-1. Copy `backend/.env.example` to `backend/.env` and supply a valid `OPENAI_API_KEY`.
-   **OPTIONAL**: Supply LinkedIn and Glassdoor credentials to accelerate job searching.
-   The `REDIS_URL`, `CRAWLER_QUEUE_NAME`, and `CRAWLER_EXECUTION_MODE` variables are
-   injected automatically by `docker-compose.yml` so you do **not** need to set them
-   manually when running the full stack.
-2. In the root of the repository, run `docker-compose up --build`.
+If you change backend API routes or schemas, regenerate contracts with `./scripts/update_frontend_schemas.sh` instead of editing `openapi.json` or `frontend/src/schema.d.ts` by hand. The canonical contributor workflow lives in [docs/docs/getting-started/contributing.md](docs/docs/getting-started/contributing.md).
 
-This starts all six services.  Crawler runs triggered via `POST /crawlers/runs` are
-immediately returned to the caller (the run row is created in Postgres) and the actual
-Playwright-based crawl is picked up and executed by the `crawler-worker` container.
+## Status And Caveats
 
-### Contributing
+Baldin is still early. Expect rough edges, evolving APIs, breaking data-model changes, and unfinished automation workflows.
 
-Contributions are welcome! The frontend is built with React and the backend is built with FastAPI. The API is powered by a Postgres database.
+When you run the full Docker Compose stack, `docker-compose.yml` injects the local Redis queue settings for the API and worker containers. You only need to override them manually when running services outside Compose.
 
-Currently the frontend of the application needs to get up to speed with the backend. The backend is in a good place to start building out the frontend.
+The supported development path today is the local Docker Compose stack. The material under [cdk/](cdk/) is reference-only while Baldin narrows and rebuilds its deployment path inside this repository.
 
+Launch sequencing, release-boundary work, and remaining runtime hardening are tracked in [plans/REPO_EXECUTION_PLAN.md](plans/REPO_EXECUTION_PLAN.md).
 
-### 5-steps to Contributing
-
-After running Baldin locally, you're ready to start contributing!
-
-1. Create a branch for your changes: `git checkout -b <issue-number>-branch-name`
-
-2. Make your changes and commit them:
-   `git add . && git commit -m "Your message here"`
-
-3. Push your changes to your fork:
-    `git push origin <issue-number>-branch-name`
-
-4. Open a pull request in the upstream repository (look for the "Pull Request" button).
-
-5. Wait for your changes to be reviewed and merged!
-
-*Note*: before committing changes for the first time, run  `pre-commit install` in the root of the repository.
-
-### Futher Considerations
-
-- Commiting modifications to the API endpoints and schemas trigger  `scripts/fronted_update_schemas.sh` hook to update `openapi.json` and `frontend/src/schemas.d.ts`.
-
-- Generating new API Keys: `openssl rand -base64 32`
-
-## License
-This project is licensed under the terms of the [MIT license](/LICENSE).
+If you hit something confusing or broken, raise it through the current Baldin issue workflow.

@@ -18,10 +18,17 @@ class BaldinS3Stack(Stack):
             encryption=s3.BucketEncryption.S3_MANAGED,
             block_public_access=s3.BlockPublicAccess(block_public_acls=False, block_public_policy=False, ignore_public_acls=False, restrict_public_buckets=False),  # Correctly configured for public read access
             bucket_name=settings.PUBLIC_STATIC_ASSETS_BUCKET_NAME,
-            public_read_access=True
+            public_read_access=True,
+            website_index_document="index.html",
+            website_error_document="404.html",
         )
         # Export the bucket name as a stack output
         CfnOutput(self, "PublicStaticAssetsBucketName", value=public_assets_bucket.bucket_name)
+        CfnOutput(
+            self,
+            "PublicStaticAssetsBucketWebsiteUrl",
+            value=public_assets_bucket.bucket_website_url,
+        )
 
         # Create S3 private bucket for data lake using intelligent tiering and encryption
         data_lake_bucket = s3.Bucket(

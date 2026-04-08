@@ -1,38 +1,68 @@
-name: Build and Push Docker image to AWS ECR
+name: Build Candidate Artifacts
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - main  # Set this to the branches where you want to trigger the build
+      - main
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
-  build-and-push-to-ecr:
-    name: Build and Push Docker
+  build-backend-image:
+    name: Build Backend Candidate Image
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      - name: Build backend container image
+        run: docker build -f backend/Dockerfile -t baldin-api-candidate:${{ github.sha }} backend
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+      - name: Capture backend build metadata
+        run: |
+          mkdir -p build-artifacts/backend
+          docker image inspect baldin-api-candidate:${GITHUB_SHA} > build-artifacts/backend/image-inspect.json
+          printf '%s\n' "baldin-api-candidate:${GITHUB_SHA}" > build-artifacts/backend/image-name.txt
 
-    - name: Build, tag, and push image to Amazon ECR
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: baldin-api-repository
-        IMAGE_TAG: latest
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      - name: Upload backend build metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-image-metadata
+          path: build-artifacts/backend
+          if-no-files-found: error
 
-    - name: Output image name
-      run: echo "The image $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG has been pushed to Amazon ECR"
+  build-frontend-static:
+    name: Build Frontend Candidate Bundle
+    runs-on: ubuntu-latest
+    env:
+      VITE_API_URL: https://api.preview.invalid
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend static bundle
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload frontend static bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-static-bundle
+          path: frontend/dist
+          if-no-files-found: error

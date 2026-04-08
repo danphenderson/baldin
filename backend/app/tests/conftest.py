@@ -1,7 +1,7 @@
 # Path: app/tests/conftest.py
 import pytest
 from fastapi_users.password import PasswordHelper
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import conf
@@ -37,8 +37,9 @@ superuser_user_hash = password_helper.hash("yennefer")
 async def test_client():
     assert conf.settings.ENVIRONMENT == "PYTEST"
     assert conf.settings.TEST_SQLALCHEMY_DATABASE_URI == sqlalchemy_database_uri
+    transport = ASGITransport(app=app)
     async with AsyncClient(
-        app=app, base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1])
+        transport=transport, base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1])
     ) as client:
         yield client
 

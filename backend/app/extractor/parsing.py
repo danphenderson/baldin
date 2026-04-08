@@ -1,6 +1,8 @@
 """Convert binary input to blobs and parse them using the appropriate parser."""
+
 from __future__ import annotations
 
+import mimetypes
 from typing import BinaryIO, List
 
 from fastapi import HTTPException
@@ -24,6 +26,8 @@ from langchain_core.documents import Document
 HANDLERS = {
     "application/pdf": PDFMinerParser(),
     "text/plain": TextParser(),
+    "text/x-tex": TextParser(),
+    "application/x-tex": TextParser(),
     "text/html": BS4HTMLParser(),
     # Disable for now as they rely on unstructured and there's some install
     # issue with unstructured.
@@ -39,18 +43,98 @@ SUPPORTED_MIMETYPES = sorted(HANDLERS.keys())
 MAX_FILE_SIZE_MB = 10  # in MB
 
 
-def _guess_mimetype(file_bytes: bytes) -> str:
-    """Guess the mime-type of a file."""
+def _normalize_mimetype(mimetype: str | None) -> str | None:
+    """Normalize mime-types to the parser keys supported by this module."""
+    if not mimetype:
+        return None
+
+    normalized = mimetype.split(";", 1)[0].strip().lower()
+
+    if normalized == "application/xhtml+xml":
+        return "text/html"
+
+    if normalized in {"application/x-tex", "text/x-tex"}:
+        return "text/plain"
+
+    if normalized.startswith("text/") and normalized != "text/html":
+        return "text/plain"
+
+    return normalized
+
+
+def _guess_mimetype_with_magic(file_bytes: bytes) -> str | None:
+    """Ask python-magic for the mime-type when libmagic is available."""
     try:
         import magic
-    except ImportError as e:
-        raise ImportError(
-            "magic package not found, please install it with `pip install python-magic`"
-        ) from e
+    except ImportError:
+        return None
 
-    mime = magic.Magic(mime=True)
-    mime_type = mime.from_buffer(file_bytes)
-    return mime_type
+    try:
+        mime = magic.Magic(mime=True)
+        return _normalize_mimetype(mime.from_buffer(file_bytes))
+    except Exception:
+        return None
+
+
+def _looks_like_text(file_bytes: bytes) -> bool:
+    """Detect whether a byte stream is likely plain text."""
+    sample = file_bytes[:2048]
+
+    if not sample:
+        return True
+
+    if b"\x00" in sample:
+        return False
+
+    try:
+        sample.decode("utf-8")
+        return True
+    except UnicodeDecodeError:
+        printable_bytes = sum(
+            byte in {9, 10, 13} or 32 <= byte <= 126 for byte in sample
+        )
+        return printable_bytes / len(sample) >= 0.9
+
+
+def _guess_mimetype_from_content(file_bytes: bytes) -> str | None:
+    """Use lightweight content sniffing for common supported formats."""
+    sample = file_bytes[:2048].lstrip().lower()
+
+    if sample.startswith(b"%pdf-"):
+        return "application/pdf"
+
+    if sample.startswith((b"<!doctype html", b"<html", b"<head", b"<body")):
+        return "text/html"
+
+    if _looks_like_text(file_bytes):
+        return "text/plain"
+
+    return None
+
+
+def _guess_mimetype(
+    file_bytes: bytes,
+    file_name: str | None = None,
+    content_type: str | None = None,
+) -> str:
+    """Guess the mime-type of a file without requiring libmagic to exist."""
+    guessed_from_name, _ = mimetypes.guess_type(file_name or "")
+    candidates = [
+        _guess_mimetype_with_magic(file_bytes),
+        _guess_mimetype_from_content(file_bytes),
+        _normalize_mimetype(content_type),
+        _normalize_mimetype(guessed_from_name),
+    ]
+
+    for candidate in candidates:
+        if candidate in HANDLERS:
+            return candidate
+
+    supported_types = ", ".join(SUPPORTED_MIMETYPES)
+    raise HTTPException(
+        status_code=415,
+        detail=f"Unsupported file type. Supported file types: {supported_types}.",
+    )
 
 
 def _get_file_size_in_mb(data: BinaryIO) -> float:
@@ -70,7 +154,11 @@ MIMETYPE_BASED_PARSER = MimeTypeBasedParser(
 )
 
 
-def convert_binary_input_to_blob(data: BinaryIO) -> Blob:
+def convert_binary_input_to_blob(
+    data: BinaryIO,
+    file_name: str | None = None,
+    content_type: str | None = None,
+) -> Blob:
     """Convert ingestion input to blob."""
     file_size_in_mb = _get_file_size_in_mb(data)
 
@@ -81,17 +169,23 @@ def convert_binary_input_to_blob(data: BinaryIO) -> Blob:
         )
 
     file_data = data.read()
-    mimetype = _guess_mimetype(file_data)
-    file_name = data.name
+    resolved_name = file_name or getattr(data, "name", None) or "uploaded-file"
+    mimetype = _guess_mimetype(file_data, resolved_name, content_type)
 
     return Blob.from_data(
         data=file_data,
-        path=file_name,
+        path=resolved_name,
         mime_type=mimetype,
     )
 
 
-def parse_binary_input(data: BinaryIO) -> List[Document]:
+def parse_binary_input(
+    data: BinaryIO,
+    file_name: str | None = None,
+    content_type: str | None = None,
+) -> List[Document]:
     """Parse binary input."""
-    blob = convert_binary_input_to_blob(data)
+    blob = convert_binary_input_to_blob(
+        data, file_name=file_name, content_type=content_type
+    )
     return MIMETYPE_BASED_PARSER.parse(blob)

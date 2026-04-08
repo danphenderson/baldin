@@ -1,8 +1,8 @@
 
-Build Docker Prod
+Keep public AWS notes synth-only
 
-Run Docker Prod Locally
+Document the private control-plane handoff
 
-Push Docker Prod to ECR
+Preserve backend and frontend artifact boundaries
 
-Deploy BaldinAPIStack
+Avoid reintroducing public rollout commands

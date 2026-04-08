@@ -1,75 +1,33 @@
 # Backend
 
-The backend defines the Baldin API and the data ETL pipelines that power the API.
+This directory contains the FastAPI application in `backend/app`, the crawler and ETL code in `backend/etl`, and the backend test suite.
 
+The canonical backend documentation now lives in the Docusaurus docs:
 
-## Getting Started
+- [System Overview](../docs/docs/architecture/system-overview.md)
+- [Data Model](../docs/docs/architecture/data-model.md)
+- [API Surface](../docs/docs/architecture/api-surface.md)
+- [Document Collaboration](../docs/docs/architecture/document-collaboration.md)
+- [Local Development](../docs/docs/engineering/local-development.md)
+- [Testing](../docs/docs/engineering/testing.md)
 
-To get started, create a `baldin/backend/.env` file for local development using the
-`baldin/backend/.env.example` file with your unique `OPEN_API_KEY`.
+## Local Backend Commands
 
-
-### API
-
-The Baldin API is a restful JSON API that performs CRUD operations on the applications data model. The API is built with FastAPI and is powered by a PostgreSQL database.
-
-TODO: Add a brief description of the API and how to run it
-
-
-### Data Model
-
-TODO: Add breif description and image of the data model ERD
-
-When making changes to the data model, you can generate a new migration by running the following command:
+From `backend/`:
 
 ```bash
-alembic revision --autogenerate -m "Your migration message here"
+pipenv sync --dev
+pipenv run pytest --cov=app --cov=etl --cov-report=term-missing --cov-fail-under=60
 ```
 
-After generating the migration, you can apply the migration to the database by running the following command:
+From the repo root:
 
 ```bash
-alembic upgrade head
+docker-compose up --build
+./scripts/update_frontend_schemas.sh
 ```
 
+## Notes
 
-### Tests
-
-The backend test suite stills needs to be built out. To run the tests, use the following command:
-
-```bash
-pipenv run test # or testv for verbose output
-```
-
-### ETL
-
-The ETL is a collection of scripts that are used to extract data from various sources, transform the data into a common format, and load the data into the Application's datalake.
-
-
-### Development Notes
-
-TODO: Add development notes
-
-Things to consider:
-- [ ] Add a section on how to run the ETL scripts
-- [ ] Add a section on how to run the API
-- [ ] Add a section on how to run the tests
-- [ ]
-
-
-#### Ref:
-
-There are a bunch of stealth playwriters in the world, all appearing to be unmaintained.
-
-This is the latest attempt https://github.com/QIN2DIM/undetected-playwright
-which references the one I am using
-
-
-GlassDoor Scrapping:
-https://iproyal.com/blog/scrape-data-from-glassdoor/
-
-LinkedIn Scrapping:
-https://www.scrapingbee.com/blog/scrape-linkedin/
-
-Indeed Scapping:
-https://iproyal.com/blog/scrape-data-from-glassdoor/
+- API and schema changes should regenerate `openapi.json` and `frontend/src/schema.d.ts` through `./scripts/update_frontend_schemas.sh`.
+- The repo does not currently use Alembic as its active schema-management path; see [Release Roadmap](../docs/docs/engineering/release-roadmap.md) for the current posture.

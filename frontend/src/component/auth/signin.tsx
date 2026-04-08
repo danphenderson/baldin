@@ -1,5 +1,6 @@
 import React, { useState, useContext } from "react";
-import { Grid, Box, Typography, Container, TextField, Button } from '@mui/material';
+import { Box, Typography, Container, TextField, Button } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import { useNavigate } from "react-router-dom";
 
 import { login } from "../../service/auth";
@@ -16,9 +17,13 @@ const SignIn: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const accessToken = await login(email, password);
-      setToken(accessToken);
-      navigate('/'); // Navigate to home after successful login
+      const result = await login(email, password);
+      if (result.mfa_required && result.mfa_token) {
+        setErrorMessage("MFA required. Please use the main login page.");
+      } else if (result.access_token) {
+        setToken(result.access_token);
+        navigate('/');
+      }
     } catch (error) {
       if (error instanceof Error) {
         setErrorMessage(error.message || "Login request failed");
@@ -32,7 +37,7 @@ const SignIn: React.FC = () => {
         <Typography component="h1" variant="h5">Login</Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 required
                 fullWidth
@@ -44,7 +49,7 @@ const SignIn: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 required
                 fullWidth

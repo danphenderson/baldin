@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # Path: app/crawler_worker.py
-"""
-Crawler worker process.
+"""Background worker process.
 
-Consumes crawler jobs from the Redis queue and executes them via
-``execute_crawler_run`` from app/api/deps.py.
+Consumes crawler and seed jobs from the Redis queue.
 
 Run with:
     python -m app.crawler_worker
@@ -14,9 +12,10 @@ The worker exits cleanly on SIGINT / SIGTERM.
 
 import asyncio
 import signal
+import uuid
 
 from app.core import conf
-from app.crawler_queue import dequeue_crawler_job
+from app.crawler_queue import dequeue_job
 from app.logging import get_async_logger
 
 log = get_async_logger(__name__)
@@ -30,21 +29,51 @@ def _handle_signal(sig, frame) -> None:  # pragma: no cover
 
 
 async def _process_job(job: dict) -> None:
-    """Load run and user from Postgres then call the shared execution logic."""
-    from app.api.deps import execute_crawler_run
-    from app.core.db import session_context
-
-    run_id = job.get("run_id")
+    """Dispatch a background job to the shared execution path."""
+    kind = job.get("kind")
     user_id = job.get("user_id")
-
-    if not run_id or not user_id:
+    if not kind or not user_id:
         await log.warning(f"Worker: malformed job payload, skipping: {job}")
         return
 
-    await log.info(f"Worker: processing job run_id={run_id}")
+    if kind == "crawler":
+        from app.api.deps import execute_crawler_run_background
 
-    async with session_context() as db:
-        await execute_crawler_run(run_id, user_id, db)
+        run_id = job.get("run_id")
+        if not run_id:
+            await log.warning(f"Worker: malformed crawler job payload: {job}")
+            return
+        await log.info(f"Worker: processing crawler job run_id={run_id}")
+        await execute_crawler_run_background(
+            uuid.UUID(run_id),
+            uuid.UUID(user_id),
+        )
+        return
+
+    if kind == "seed":
+        from app.api.routes.seed_tasks import (
+            _run_seed_operation,
+            resolve_seed_operation,
+        )
+
+        operation_name = job.get("operation_name")
+        event_id = job.get("event_id")
+        if not operation_name or not event_id:
+            await log.warning(f"Worker: malformed seed job payload: {job}")
+            return
+        await log.info(
+            "Worker: processing seed job operation=%s event_id=%s",
+            operation_name,
+            event_id,
+        )
+        await _run_seed_operation(
+            resolve_seed_operation(operation_name),
+            uuid.UUID(event_id),
+            uuid.UUID(user_id),
+        )
+        return
+
+    await log.warning(f"Worker: unknown job kind '{kind}', skipping")
 
 
 async def worker_loop() -> None:
@@ -56,7 +85,7 @@ async def worker_loop() -> None:
 
     while not _shutdown:
         try:
-            job = await dequeue_crawler_job(timeout=5)
+            job = await dequeue_job(timeout=5)
             if job is None:
                 continue  # timeout, loop again to check _shutdown
             await _process_job(job)

@@ -1,18 +1,16 @@
 # app/api/routes/education.py
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy import select
 
 from app.api.deps import (
     AsyncSession,
     create_education,
-    create_extractor,
+    extract_and_create_records,
     get_async_session,
     get_current_user,
     get_education,
-    get_extractor_by_name,
     models,
-    run_extractor,
     schemas,
 )
 from app.api.routes.seed_tasks import (
@@ -93,32 +91,18 @@ async def extract_education(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    try:
-        extractor = await get_extractor_by_name("education", db)
-    except HTTPException as e:
-        if e.status_code == 404:
-            extractor = await create_extractor(
-                schemas.ExtractorCreate(
-                    name="education",
-                    description="Education data extractor",
-                    instruction="Extract education JSON data from a given context",
-                    json_schema=schemas.EducationCreate.model_json_schema(),
-                    extractor_examples=[],
-                ),
-                db=db,
-                user=user,
-            )
-        else:
-            raise e
-
-    resp = await run_extractor(
-        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+    return await extract_and_create_records(
+        extractor_name="education",
+        extractor_description="Education data extractor",
+        extractor_instruction="Extract education JSON data from a given context",
+        json_schema=schemas.EducationCreate.model_json_schema(),
+        payload=payload,
+        record_factory=lambda data: create_education(
+            schemas.EducationCreate(**data), db=db, user=user
+        ),
+        db=db,
+        user=user,
     )
-
-    return [
-        await create_education(schemas.EducationCreate(**contact), db=db, user=user)
-        for contact in resp.data
-    ]
 
 
 @router.post("/seed", status_code=202, response_model=schemas.SeedOperationAccepted)

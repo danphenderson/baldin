@@ -5,7 +5,7 @@ title: Prompt The Right Agent
 description: Choose the right agent, scope prompts cleanly, and require consistent handbacks.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-08 -->
 
 # Prompt The Right Agent
 
@@ -60,6 +60,7 @@ Prompts and agents should link back to these layers and to the docs below instea
 
 Use workspace skills for repeated Baldin workflows that are narrower than a full implementation handoff.
 
+- `/baldin-agent-prompt-tuner` for tightening `.github/prompts/*.prompt.md` files against the prompt cookbook, prompt examples, owner model, stop conditions, and prompt catalog rules.
 - `/baldin-backend-test-gap-planner` for backend route, auth, ETL, and orchestration changes where you need the right pytest strategy, fixture reuse, and smallest useful coverage scope.
 - `/baldin-contract-regen-resolver` for stale or missing `openapi.json` and `frontend/src/schema.d.ts`, `./scripts/update_frontend_schemas.sh` exits, `SCHEMA_UPDATE_FORCE`, and backend-to-frontend contract fallout.
 - `/baldin-local-stack-doctor` for Docker Compose startup failures, local Postgres volume drift, host-versus-container test DB confusion, and choosing between reset or collation repair.
@@ -71,6 +72,12 @@ If you already know the task shape, use these workspace prompts from chat with `
 
 | Prompt | Use when |
 |--------|----------|
+| `Issue Dispatch Kickoff` | You are starting from a GitHub issue, PR comment, or backlog ticket and want a dispatch-ready execution slice with the right owner and handoff packet. |
+| `Backend Runtime Slice` | You want a backend-only implementation entry point for FastAPI, auth, model, extractor, ETL, or backend test work that should stay inside `backend/`. |
+| `Frontend Product Slice` | You want a frontend-only implementation entry point for page, UX, IA, accessibility, route, state, or typed service-consumption work against the current contract. |
+| `Local Preview Integration Fix` | You want one cross-stack owner to reproduce and fix a local-first preview bug that may touch backend, frontend, contracts, scripts, or docker-compose. |
+| `Deep Think Spike` | You need a bounded technical spike to answer an unknown before choosing an implementation path. |
+| `Deep Think Epic Planner` | You want a plan section, feature theme, or group of issues turned into a phased epic with explicit stories and dependencies. |
 | `Hard-Gate PR Review` | You want a concrete pre-merge review of the active PR or current branch focused on merge risk. |
 | `API Contract Change Orchestrator` | You changed routes, schemas, response shapes, or generated frontend types and need contract ownership, regeneration, and downstream validation. |
 | `Change-Aware Validation Sequence` | You want the exact ordered Baldin checks for a specific backend, frontend, docs, CI, or contract change. |
@@ -79,6 +86,67 @@ If you already know the task shape, use these workspace prompts from chat with `
 | `Documentation Impact Review` | You changed code, workflow docs, plans, prompts, or repo rules and want a targeted docs-impact audit before stale guidance spreads. |
 | `Cross-Stack Workstream Router` | You have a backend plus frontend plus docs or CI style task and want the smallest low-conflict owner split with explicit handoff packets. |
 | `Multi-Agent Handoff Synthesizer` | You already have outputs from one or more Baldin agents and need a single evidence-backed handoff packet for the next owner, reviewer, or operator. |
+
+## Prompt Decision Table
+
+Use this table to choose the right prompt for a task. Prompts are classified as **core** (routine daily use), **advanced** (requires multi-step reasoning or large context), or **maintenance** (specialized repo upkeep).
+
+| Prompt | Classification | Purpose | When to use instead of a simpler alternative |
+|--------|---------------|---------|----------------------------------------------|
+| Issue Dispatch Kickoff | core | Start from a GitHub issue or backlog ticket | Default entry for issue-driven work |
+| Backend Runtime Slice | core | Backend-only implementation entry point | When the task is confirmed backend-only |
+| Frontend Product Slice | core | Frontend-only implementation entry point | When the task is confirmed frontend-only |
+| Local Preview Integration Fix | core | Cross-stack local preview bug | When a local bug spans backend + frontend |
+| Change-Aware Validation Sequence | core | Ordered validation checks for a change | After any implementation to verify correctness |
+| Documentation Impact Review | core | Targeted docs-impact audit | After code or workflow changes |
+| API Contract Change Orchestrator | core | Contract ownership and regeneration | When backend API shapes change |
+| Hard-Gate PR Review | core | Pre-merge review of the active PR | Before merging significant changes |
+| Cross-Stack Workstream Router | core | Owner split for multi-surface tasks | When a task touches backend + frontend + docs/CI |
+| Multi-Agent Handoff Synthesizer | core | Consolidate agent outputs into one handoff | After multiple agents return results |
+| Plan Slice Kickoff | core | Turn a plan section into a work slice | When starting from plans/ rather than issues |
+| Deep Think Spike | advanced | Bounded technical spike | When the answer requires deep research before choosing an implementation path |
+| Deep Think Epic Planner | advanced | Phased epic planning from a theme or plan | When a large feature needs story breakdown and dependency mapping |
+| Issue Cleanup Orchestrator | maintenance | Multi-pass backlog cleanup | When the issue backlog needs deduplication, rescoping, or enrichment |
+
+## Prompt Lifecycle Rules
+
+1. **New prompts require a decision-table entry.** Before adding a prompt to `.github/prompts/`, add a row to the decision table above and classify it as core, advanced, or maintenance.
+2. **Overlap triggers merge or retirement.** If two prompts have >80% overlap in purpose, one must be merged into the other or retired. The decision table's "When to use instead of a simpler alternative" column should make the distinction clear.
+3. **Maintenance prompts are reviewed quarterly.** Prompts classified as maintenance should be evaluated for conversion to a skill (under `.github/skills/`) or retirement when their workflow stabilizes.
+4. **Advanced prompts carry usage guidance.** Prompts classified as advanced should include a note in their description or body explaining when the simpler alternative is sufficient.
+
+## Exact Slash Examples
+
+Prompt files use the prompt `name` after `/`, and workspace skills use the skill `name` after `/`. In practice, type `/`, pick the entry from the menu, and then add the rest of the request in the same chat input.
+
+### Skills
+
+| Skill | Example |
+|-------|---------|
+| `baldin-agent-prompt-tuner` | `/baldin-agent-prompt-tuner tighten a weak prompt draft for a backend-only auth fix` |
+| `baldin-backend-test-gap-planner` | `/baldin-backend-test-gap-planner applications route CRUD and attachment changes` |
+| `baldin-contract-regen-resolver` | `/baldin-contract-regen-resolver ApplicationRead changed and schema.d.ts looks stale after backend edits` |
+| `baldin-local-stack-doctor` | `/baldin-local-stack-doctor docker-compose boots but test_db is unhealthy and backend tests cannot connect` |
+| `baldin-docs-drift-auditor` | `/baldin-docs-drift-auditor prompts, plans, and docs after the service-layer migration` |
+
+### Prompt Files
+
+| Prompt | Example |
+|--------|---------|
+| `Issue Dispatch Kickoff` | `/Issue Dispatch Kickoff issue #126 stale command center counts after action-item edits` |
+| `Backend Runtime Slice` | `/Backend Runtime Slice fix duplicate lead creation when the same source URL is processed twice` |
+| `Frontend Product Slice` | `/Frontend Product Slice improve the applications detail loading and empty states` |
+| `Local Preview Integration Fix` | `/Local Preview Integration Fix frontend board loads but the applications detail flow fails after docker-compose boot` |
+| `Deep Think Spike` | `/Deep Think Spike should Baldin batch application document metadata or keep lazy per-view loading` |
+| `Deep Think Epic Planner` | `/Deep Think Epic Planner turn AI_SLOP_REMEDIATION_PLAN.md into phased execution stories` |
+| `Hard-Gate PR Review` | `/Hard-Gate PR Review PR 130 with focus on applications routes and generated artifacts` |
+| `API Contract Change Orchestrator` | `/API Contract Change Orchestrator add company health score to backend responses and frontend consumers` |
+| `Change-Aware Validation Sequence` | `/Change-Aware Validation Sequence backend applications schema changed and the detail page now calls GET /applications/{id}` |
+| `Issue Cleanup Orchestrator` | `/Issue Cleanup Orchestrator issues #82 and #105 ETL direction conflict` |
+| `Plan Slice Kickoff` | `/Plan Slice Kickoff AI_SLOP_REMEDIATION_PLAN.md Phase 3 service-layer migration` |
+| `Documentation Impact Review` | `/Documentation Impact Review applications detail page now uses GET /applications/{id}` |
+| `Cross-Stack Workstream Router` | `/Cross-Stack Workstream Router add crawler pause status to backend, frontend, docs, and validation` |
+| `Multi-Agent Handoff Synthesizer` | `/Multi-Agent Handoff Synthesizer backend applications tests landed and frontend service migration is next` |
 
 ## Prompt Shape
 

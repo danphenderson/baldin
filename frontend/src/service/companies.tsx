@@ -1,79 +1,70 @@
 // Path: frontend/src/service/companies.tsx
 
 import { components } from '../schema';
-import { API_URL } from '../config/env';
+import { createApiClient } from './api-client';
 
 export type CompanyRead = components['schemas']['CompanyRead'];
 export type CompanyCreate = components['schemas']['CompanyCreate'];
 export type CompanyUpdate = components['schemas']['CompanyUpdate'];
 
-const BASE_URL = `${API_URL}/companies`;
-
-const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
-  if (!token) {
-    throw new Error("Authorization token is required");
-  }
-  return {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: body ? JSON.stringify(body) : null,
-  };
-};
-
-const fetchAPI = async (url: string, options: RequestInit) => {
-  const response = await fetch(url, options);
-  if (!response.ok) {
+const unwrap = <T,>(
+  result: { data?: T; error?: unknown; response: Response },
+): T => {
+  if (result.error !== undefined) {
+    const detail = result.error as { detail?: unknown };
     let message = 'API request failed';
-    try {
-      const data = await response.json();
-      if (data?.detail) {
-        message = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-      }
-    } catch {
-      // Keep the default message when the error response is not JSON.
+    if (detail?.detail) {
+      message = typeof detail.detail === 'string' ? detail.detail : JSON.stringify(detail.detail);
     }
     throw new Error(message);
   }
-  if (response.status === 204 || response.status === 205) {
-    return null;
-  }
-  return response.json();
+  return result.data as T;
 };
 
 export const getCompanies = async (token: string): Promise<CompanyRead[]> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}/`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/companies/'));
 };
 
 export const getCompany = async (token: string, id: string): Promise<CompanyRead> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/companies/{id}', {
+    params: { path: { id } },
+  }));
 };
 
 export const createCompany = async (token: string, company: CompanyCreate): Promise<CompanyRead> => {
-  const requestOptions = createRequestOptions(token, "POST", company);
-  return fetchAPI(`${BASE_URL}/`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/companies/', {
+    body: company,
+  }));
 };
 
 export const updateCompany = async (token: string, id: string, company: CompanyUpdate): Promise<CompanyRead> => {
-  const requestOptions = createRequestOptions(token, "PUT", company);
-  return fetchAPI(`${BASE_URL}/${id}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.PUT('/companies/{id}', {
+    params: { path: { id } },
+    body: company,
+  }));
 };
 
 export const deleteCompany = async (token: string, id: string): Promise<void> => {
-  const requestOptions = createRequestOptions(token, "DELETE");
-  await fetchAPI(`${BASE_URL}/${id}`, requestOptions);
+  const client = createApiClient(token);
+  unwrap(await client.DELETE('/companies/{id}', {
+    params: { path: { id } },
+  }));
 };
 
-export const getCompanyLeads = async (token: string, id: string): Promise<any[]> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}/${id}/leads`, requestOptions);
+export const getCompanyLeads = async (token: string, id: string): Promise<components['schemas']['LeadRead'][]> => {
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/companies/{id}/leads', {
+    params: { path: { id } },
+  }));
 };
 
 export const extractCompany = async (token: string, extractionUrl: string): Promise<CompanyRead> => {
-  const requestOptions = createRequestOptions(token, "POST");
-  return fetchAPI(`${BASE_URL}/extract?extraction_url=${encodeURIComponent(extractionUrl)}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/companies/extract', {
+    params: { query: { extraction_url: extractionUrl } },
+  }));
 };

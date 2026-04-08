@@ -1,7 +1,7 @@
 // Path: frontend/src/service/crawlers.tsx
 
 import { components } from '../schema';
-import { API_URL } from '../config/env';
+import { createApiClient } from './api-client';
 
 export type CrawlerPipelineCreate = components['schemas']['CrawlerPipelineCreate'];
 export type CrawlerPipelineRead = components['schemas']['CrawlerPipelineRead'];
@@ -12,40 +12,18 @@ export type CrawlerRunStatus = components['schemas']['CrawlerRunStatus'];
 export type CrawlerSourceType = components['schemas']['CrawlerSourceType'];
 export type CrawlerTriggerType = components['schemas']['CrawlerTriggerType'];
 
-const BASE_URL = `${API_URL}/crawlers`;
-
-const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
-  if (!token) {
-    throw new Error("Authorization token is required");
-  }
-  return {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: body ? JSON.stringify(body) : null,
-  };
-};
-
-const fetchAPI = async (url: string, options: RequestInit) => {
-  const response = await fetch(url, options);
-  if (!response.ok) {
+const unwrap = <T,>(
+  result: { data?: T; error?: unknown; response: Response },
+): T => {
+  if (result.error !== undefined) {
+    const detail = result.error as { detail?: unknown };
     let message = 'API request failed';
-    try {
-      const data = await response.json();
-      if (data?.detail) {
-        message = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-      }
-    } catch {
-      // Keep the default message when the error response is not JSON.
+    if (detail?.detail) {
+      message = typeof detail.detail === 'string' ? detail.detail : JSON.stringify(detail.detail);
     }
     throw new Error(message);
   }
-  if (response.status === 204 || response.status === 205) {
-    return null;
-  }
-  return response.json();
+  return result.data as T;
 };
 
 // ---------------------------------------------------------------------------
@@ -53,23 +31,30 @@ const fetchAPI = async (url: string, options: RequestInit) => {
 // ---------------------------------------------------------------------------
 
 export const getCrawlerPipelines = async (token: string): Promise<CrawlerPipelineRead[]> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}/pipelines/`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/crawlers/pipelines'));
 };
 
 export const getCrawlerPipeline = async (token: string, id: string): Promise<CrawlerPipelineRead> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}/pipelines/${id}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/crawlers/pipelines/{pipeline_id}', {
+    params: { path: { pipeline_id: id } },
+  }));
 };
 
 export const createCrawlerPipeline = async (token: string, pipeline: CrawlerPipelineCreate): Promise<CrawlerPipelineRead> => {
-  const requestOptions = createRequestOptions(token, "POST", pipeline);
-  return fetchAPI(`${BASE_URL}/pipelines/`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/crawlers/pipelines', {
+    body: pipeline,
+  }));
 };
 
 export const updateCrawlerPipeline = async (token: string, id: string, pipeline: CrawlerPipelineUpdate): Promise<CrawlerPipelineRead> => {
-  const requestOptions = createRequestOptions(token, "PATCH", pipeline);
-  return fetchAPI(`${BASE_URL}/pipelines/${id}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.PATCH('/crawlers/pipelines/{pipeline_id}', {
+    params: { path: { pipeline_id: id } },
+    body: pipeline,
+  }));
 };
 
 // ---------------------------------------------------------------------------
@@ -77,39 +62,50 @@ export const updateCrawlerPipeline = async (token: string, id: string, pipeline:
 // ---------------------------------------------------------------------------
 
 export const getCrawlerRuns = async (token: string, pipelineId?: string): Promise<CrawlerRunRead[]> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  const url = pipelineId
-    ? `${BASE_URL}/runs/?pipeline_id=${pipelineId}`
-    : `${BASE_URL}/runs/`;
-  return fetchAPI(url, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/crawlers/runs', {
+    params: { query: pipelineId ? { pipeline_id: pipelineId } : {} },
+  }));
 };
 
 export const getCrawlerRunDetail = async (token: string, runId: string): Promise<CrawlerRunDetailRead> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}/runs/${runId}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/crawlers/runs/{run_id}', {
+    params: { path: { run_id: runId } },
+  }));
 };
 
 export const triggerCrawlerRun = async (token: string, pipelineId: string): Promise<CrawlerRunRead> => {
-  const requestOptions = createRequestOptions(token, "POST");
-  return fetchAPI(`${BASE_URL}/pipelines/${pipelineId}/runs`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/crawlers/pipelines/{pipeline_id}/runs', {
+    params: { path: { pipeline_id: pipelineId } },
+  }));
 };
 
 export const cancelCrawlerRun = async (token: string, runId: string): Promise<CrawlerRunRead> => {
-  const requestOptions = createRequestOptions(token, "POST");
-  return fetchAPI(`${BASE_URL}/runs/${runId}/cancel`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/crawlers/runs/{run_id}/cancel', {
+    params: { path: { run_id: runId } },
+  }));
 };
 
 export const pauseCrawlerRun = async (token: string, runId: string): Promise<CrawlerRunRead> => {
-  const requestOptions = createRequestOptions(token, "POST");
-  return fetchAPI(`${BASE_URL}/runs/${runId}/pause`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/crawlers/runs/{run_id}/pause', {
+    params: { path: { run_id: runId } },
+  }));
 };
 
 export const resumeCrawlerRun = async (token: string, runId: string): Promise<CrawlerRunRead> => {
-  const requestOptions = createRequestOptions(token, "POST");
-  return fetchAPI(`${BASE_URL}/runs/${runId}/resume`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/crawlers/runs/{run_id}/resume', {
+    params: { path: { run_id: runId } },
+  }));
 };
 
 export const retryCrawlerRun = async (token: string, runId: string): Promise<CrawlerRunRead> => {
-  const requestOptions = createRequestOptions(token, "POST");
-  return fetchAPI(`${BASE_URL}/runs/${runId}/retry`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/crawlers/runs/{run_id}/retry', {
+    params: { path: { run_id: runId } },
+  }));
 };

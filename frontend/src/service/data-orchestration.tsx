@@ -1,7 +1,7 @@
 // Path: frontend/src/service/data-orchestration.tsx
 
-import { components } from "../schema";
-import { API_URL } from '../config/env';
+import { components } from '../schema';
+import { createApiClient } from './api-client';
 
 // ---------------------------------------------------------------------------
 // Types re-exported from the generated OpenAPI schema
@@ -76,44 +76,21 @@ export const normalizePayload = (raw: unknown): Record<string, unknown> | null =
 };
 
 // ---------------------------------------------------------------------------
-// HTTP helpers
+// Helpers
 // ---------------------------------------------------------------------------
 
-const BASE_URL = `${API_URL}/data_orchestration`;
-
-const createRequestOptions = (token: string, method: string, body?: unknown): RequestInit => {
-  if (!token) {
-    throw new Error("Authorization token is required");
-  }
-
-  return {
-    method: method,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: body ? JSON.stringify(body) : null,
-  };
-};
-
-const fetchAPI = async <T,>(url: string, options: RequestInit): Promise<T> => {
-  const response = await fetch(url, options);
-  if (!response.ok) {
+const unwrap = <T,>(
+  result: { data?: T; error?: unknown; response: Response },
+): T => {
+  if (result.error !== undefined) {
+    const detail = result.error as { detail?: unknown };
     let message = 'API request failed';
-    try {
-      const data = await response.json();
-      if (data?.detail) {
-        message = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-      }
-    } catch {
-      // Keep the default message when the error response is not JSON.
+    if (detail?.detail) {
+      message = typeof detail.detail === 'string' ? detail.detail : JSON.stringify(detail.detail);
     }
     throw new Error(message);
   }
-  if (response.status === 204 || response.status === 205) {
-    return null as T;
-  }
-  return response.json() as Promise<T>;
+  return result.data as T;
 };
 
 const normalizePipeline = (
@@ -135,37 +112,48 @@ const normalizePipeline = (
 // ---------------------------------------------------------------------------
 
 export const createOrchestrationEvent = async (token: string, body: OrchestrationEventCreate): Promise<OrchestrationEventRead> => {
-  const requestOptions = createRequestOptions(token, "POST", body);
-  return fetchAPI<OrchestrationEventRead>(`${BASE_URL}/events`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/data_orchestration/events', { body }));
 };
 
 export const getOrchestrationEvent = async (token: string, id: string): Promise<OrchestrationEventRead> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI<OrchestrationEventRead>(`${BASE_URL}/events/${id}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/data_orchestration/events/{id}', {
+    params: { path: { id } },
+  }));
 };
 
 export const getOrchestrationEvents = async (
   token: string,
   params?: EventQueryParams,
 ): Promise<OrchestrationEventPaginatedRead> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  const qs = new URLSearchParams();
-  if (params?.status) qs.set('status', params.status);
-  if (params?.pipeline_id) qs.set('pipeline_id', params.pipeline_id);
-  if (params?.page) qs.set('page', String(params.page));
-  if (params?.page_size) qs.set('page_size', String(params.page_size));
-  const suffix = qs.toString() ? `?${qs.toString()}` : '';
-  return fetchAPI<OrchestrationEventPaginatedRead>(`${BASE_URL}/events${suffix}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/data_orchestration/events', {
+    params: {
+      query: {
+        status: params?.status ?? undefined,
+        pipeline_id: params?.pipeline_id ?? undefined,
+        page: params?.page,
+        page_size: params?.page_size,
+      },
+    },
+  })) as OrchestrationEventPaginatedRead;
 };
 
 export const updateOrchestrationEvent = async (token: string, id: string, body: OrchestrationEventUpdate): Promise<OrchestrationEventRead> => {
-  const requestOptions = createRequestOptions(token, "PUT", body);
-  return fetchAPI<OrchestrationEventRead>(`${BASE_URL}/events/${id}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.PUT('/data_orchestration/events/{id}', {
+    params: { path: { id } },
+    body,
+  }));
 };
 
 export const deleteOrchestrationEvent = async (token: string, id: string): Promise<void> => {
-  const requestOptions = createRequestOptions(token, "DELETE");
-  await fetchAPI<void>(`${BASE_URL}/events/${id}`, requestOptions);
+  const client = createApiClient(token);
+  // DELETE not exposed in schema for this path; cast to bypass type check
+  unwrap(await (client.DELETE as Function)('/data_orchestration/events/{id}', {
+    params: { path: { id } },
+  }));
 };
 
 // ---------------------------------------------------------------------------
@@ -173,35 +161,44 @@ export const deleteOrchestrationEvent = async (token: string, id: string): Promi
 // ---------------------------------------------------------------------------
 
 export const createOrchestrationPipeline = async (token: string, body: OrchestrationPipelineCreate): Promise<OrchestrationPipelineRead> => {
-  const requestOptions = createRequestOptions(token, "POST", body);
-  const pipeline = await fetchAPI<RawOrchestrationPipelineRead>(`${BASE_URL}/pipelines`, requestOptions);
+  const client = createApiClient(token);
+  const pipeline = unwrap(await client.POST('/data_orchestration/pipelines', { body }));
   return normalizePipeline(pipeline);
 };
 
 export const getOrchestrationPipeline = async (token: string, id: string): Promise<OrchestrationPipelineRead> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  const pipeline = await fetchAPI<RawOrchestrationPipelineRead>(`${BASE_URL}/pipelines/${id}`, requestOptions);
+  const client = createApiClient(token);
+  const pipeline = unwrap(await client.GET('/data_orchestration/pipelines/{id}', {
+    params: { path: { id } },
+  }));
   return normalizePipeline(pipeline);
 };
 
 export const updateOrchestrationPipeline = async (token: string, id: string, body: OrchestrationPipelineUpdate): Promise<OrchestrationPipelineRead> => {
-  const requestOptions = createRequestOptions(token, "PUT", body);
-  const pipeline = await fetchAPI<RawOrchestrationPipelineRead>(`${BASE_URL}/pipelines/${id}`, requestOptions);
+  const client = createApiClient(token);
+  const pipeline = unwrap(await client.PUT('/data_orchestration/pipelines/{id}', {
+    params: { path: { id } },
+    body,
+  }));
   return normalizePipeline(pipeline);
 };
 
 export const getOrchestrationPipelines = async (token: string): Promise<OrchestrationPipelineRead[]> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  const pipelines = await fetchAPI<RawOrchestrationPipelineRead[]>(`${BASE_URL}/pipelines`, requestOptions);
+  const client = createApiClient(token);
+  const pipelines = unwrap(await client.GET('/data_orchestration/pipelines'));
   return pipelines.map(normalizePipeline);
 };
 
 export const deleteOrchestrationPipeline = async (token: string, id: string): Promise<void> => {
-  const requestOptions = createRequestOptions(token, "DELETE");
-  await fetchAPI<void>(`${BASE_URL}/pipelines/${id}`, requestOptions);
+  const client = createApiClient(token);
+  unwrap(await client.DELETE('/data_orchestration/pipelines/{id}', {
+    params: { path: { id } },
+  }));
 };
 
 export const retryOrchestrationEvent = async (token: string, eventId: string): Promise<OrchestrationEventRead> => {
-  const requestOptions = createRequestOptions(token, "POST");
-  return fetchAPI<OrchestrationEventRead>(`${BASE_URL}/events/${eventId}/retry`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/data_orchestration/events/{event_id}/retry', {
+    params: { path: { event_id: eventId } },
+  }));
 };

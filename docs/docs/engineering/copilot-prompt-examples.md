@@ -5,11 +5,13 @@ title: Rewrite Weak Prompts
 description: Turn vague prompts into scoped requests with validation and handback rules.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-08 -->
 
 # Rewrite Weak Prompts
 
 Use this page as a companion to [Prompt The Right Agent](./copilot-prompt-cookbook.md). The fastest way to get better results from Baldin's agents is to be explicit about owner, scope, validation, the standard handback, and when to stop and hand off.
+
+If you want a repeatable prompt-rewrite workflow instead of tuning prompt files by hand, use `/baldin-agent-prompt-tuner` against a `.github/prompts/*.prompt.md` file or a weak draft prompt.
 
 ## What Usually Separates A Good Prompt From A Bad One
 

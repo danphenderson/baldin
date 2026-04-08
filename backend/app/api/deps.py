@@ -5,7 +5,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path  # noqa
-from typing import Any, Sequence
+from typing import Any, Awaitable, Callable, Sequence
 
 from fastapi import (  # noqa
     BackgroundTasks,
@@ -806,6 +806,43 @@ async def run_extractor(
         db,
         retry_of_id=retry_of_id,
     )
+
+
+async def extract_and_create_records(
+    *,
+    extractor_name: str,
+    extractor_description: str,
+    extractor_instruction: str,
+    json_schema: dict[str, Any],
+    payload: schemas.ExtractorRun,
+    record_factory: Callable[[dict[str, Any]], Awaitable[Any]],
+    db: AsyncSession,
+    user: schemas.UserRead,
+) -> list[Any]:
+    """Get-or-create an extractor, run it, and create records from the results."""
+    try:
+        extractor = await get_extractor_by_name(extractor_name, db)
+    except HTTPException as e:
+        if e.status_code == 404:
+            extractor = await create_extractor(
+                schemas.ExtractorCreate(
+                    name=extractor_name,
+                    description=extractor_description,
+                    instruction=extractor_instruction,
+                    json_schema=json_schema,
+                    extractor_examples=[],
+                ),
+                db=db,
+                user=user,
+            )
+        else:
+            raise e
+
+    resp = await run_extractor(
+        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+    )
+
+    return [await record_factory(item) for item in resp.data]
 
 
 async def get_extractor_example(

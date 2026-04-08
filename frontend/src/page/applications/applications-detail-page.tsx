@@ -20,7 +20,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import {
-  getApplications, updateApplication, deleteApplication,
+  getApplication, updateApplication, deleteApplication,
   getApplicationDocuments, addApplicationDocument, detachApplicationDocument,
   type ApplicationRead,
 } from '../../service/applications';
@@ -84,17 +84,12 @@ const ApplicationDetailPage: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const all = await getApplications(token);
+        const match = await getApplication(token, applicationId);
         if (cancelled) return;
-        const match = (all || []).find((a) => a.id === applicationId);
-        if (!match) {
-          setError('Application not found');
-          setApp(null);
-        } else {
-          setApp(match);
-        }
+        setApp(match);
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load application');
+        if (!cancelled) setApp(null);
       }
       if (!cancelled) setLoading(false);
     };

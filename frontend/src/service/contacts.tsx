@@ -1,77 +1,61 @@
-// Path: frontend/src/service/skills.tsx
-import { components } from "../schema";
-import { API_URL } from '../config/env';
+// Path: frontend/src/service/contacts.tsx
+
+import { components } from '../schema';
+import { createApiClient } from './api-client';
 
 export type ContactRead = components['schemas']['ContactRead'];
 export type ContactCreate = components['schemas']['ContactCreate'];
 export type ContactUpdate = components['schemas']['ContactUpdate'];
 
-
-const BASE_URL = `${API_URL}/contacts/`;
-
-const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
-  if (!token) {
-    throw new Error("Authorization token is required");
-  }
-
-  return {
-    method: method,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: body ? JSON.stringify(body) : null,
-  };
-};
-
-const fetchAPI = async (url: string, options: RequestInit) => {
-  const response = await fetch(url, options);
-  if (!response.ok) {
+const unwrap = <T,>(
+  result: { data?: T; error?: unknown; response: Response },
+): T => {
+  if (result.error !== undefined) {
+    const detail = result.error as { detail?: unknown };
     let message = 'API request failed';
-    try {
-      const data = await response.json();
-      if (data?.detail) {
-        message = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-      }
-    } catch {
-      // Keep the default message when the error response is not JSON.
+    if (detail?.detail) {
+      message = typeof detail.detail === 'string' ? detail.detail : JSON.stringify(detail.detail);
     }
     throw new Error(message);
   }
-  if (response.status === 204 || response.status === 205) {
-    return null;
-  }
-  return response.json();
+  return result.data as T;
 };
 
 export const getContacts = async (token: string): Promise<ContactRead[]> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/contacts/'));
 };
 
 export const getContact = async (token: string, id: string): Promise<ContactRead> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return fetchAPI(`${BASE_URL}${id}`, requestOptions);
-}
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/contacts/{contact_id}', {
+    params: { query: { id } },
+  }));
+};
 
 export const createContact = async (token: string, contact: ContactCreate): Promise<ContactRead> => {
-  const requestOptions = createRequestOptions(token, "POST", contact);
-  return fetchAPI(BASE_URL, requestOptions);
-}
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/contacts/', {
+    body: contact,
+  }));
+};
 
 export const updateContact = async (token: string, id: string, contact: ContactUpdate): Promise<ContactRead> => {
-  const requestOptions = createRequestOptions(token, "PATCH", contact);
-  return fetchAPI(`${BASE_URL}${id}`, requestOptions);
-}
+  const client = createApiClient(token);
+  return unwrap(await client.PUT('/contacts/{contact_id}', {
+    params: { query: { id } },
+    body: contact,
+  }));
+};
 
 export const deleteContact = async (token: string, id: string): Promise<void> => {
-  const requestOptions = createRequestOptions(token, "DELETE");
-  await fetchAPI(`${BASE_URL}${id}`, requestOptions);
-}
+  const client = createApiClient(token);
+  unwrap(await client.DELETE('/contacts/{contact_id}', {
+    params: { query: { id } },
+  }));
+};
 
 export const seedContacts = async (token: string): Promise<void> => {
-  const requestOptions = createRequestOptions(token, "POST");
-  return fetchAPI(`${BASE_URL}seed`, requestOptions);
-}
-
-// Path: frontend/src/services/skills.tsx
+  const client = createApiClient(token);
+  unwrap(await client.POST('/contacts/seed'));
+};

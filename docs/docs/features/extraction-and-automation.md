@@ -51,9 +51,8 @@ Crawlers are superuser-managed ETL pipelines that ingest job data from external 
 
 - **CrawlerPipeline** — Defines what to crawl and how
 - **CrawlerRun** — Tracks individual execution results
-- **Execution modes** — Inline (direct) or worker (Redis-backed queue)
 
-The crawler scheduler polls for due pipelines at a configurable interval (default 60 seconds). In worker mode, jobs are pushed to a Redis queue and processed by a separate crawler worker process.
+The crawler scheduler runs as an in-process asyncio background task that polls for due pipelines at a configurable interval (default 60 seconds). It uses a Postgres advisory lock to prevent duplicate scheduling when multiple app instances are running. Scheduled runs are dispatched through the same execution path used by manual triggers.
 
 ETL source modules live under `backend/etl/` and include base, LinkedIn, and Glassdoor crawlers.
 

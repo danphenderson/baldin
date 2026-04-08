@@ -57,7 +57,7 @@ Treat this as review and synthesis only.
 
 ## Schema Management
 
-The repo does not include Alembic migrations. Schema changes rely on SQLAlchemy `create_all` during startup. This is a known launch blocker tracked in the execution plan (Phase 5).
+The repo does not include Alembic migrations. Startup currently runs `create_db_and_tables()`, which still relies on SQLAlchemy `create_all` and applies limited additive repair for missing columns and explicitly named unique constraints. This remains a known launch blocker tracked in the execution plan (Phase 5).
 
 ## Roadmap
 

@@ -5,7 +5,7 @@ title: Planned Deployment
 description: Current deployment posture, planned production topology, and what is supported today.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-08 -->
 
 # Planned Deployment
 
@@ -47,7 +47,7 @@ The CI workflow validates lint, tests, typecheck, build, and API contract freshn
 
 ## What Is Planned
 
-Production deployment follows the seven-phase roadmap. Phases 2–7 are not yet started:
+Production deployment follows the seven-phase roadmap. Phase 2 is in progress, and Phases 3–7 are not yet started:
 
 | Phase | Title | What It Unlocks |
 |-------|-------|-----------------|
@@ -75,7 +75,7 @@ The `cdk/` directory contains partially restored AWS infrastructure code (VPC, E
 
 ### Implicit Schema Bootstrap
 
-The backend currently uses SQLAlchemy `create_all` for schema management during startup. This is a known launch blocker — Phase 5 will replace it with proper database migrations.
+The backend currently runs `create_db_and_tables()` during startup. That path still relies on SQLAlchemy `create_all`, but it also performs limited additive repair for missing columns and explicitly named unique constraints on existing local tables. This remains a known launch blocker — Phase 5 will replace it with proper database migrations.
 
 ## Deployment Decision Tree
 

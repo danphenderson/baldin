@@ -1,83 +1,83 @@
 // Path: frontend/src/service/review.tsx
 
-import { API_URL } from '../config/env';
+import { components } from '../schema';
+import { createApiClient } from './api-client';
 
-const BASE_URL = `${API_URL}/review`;
-
-const createRequestOptions = (token: string, method: string, body?: unknown): RequestInit => {
-  if (!token) throw new Error('Authorization token is required');
-  return {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: body ? JSON.stringify(body) : null,
-  };
-};
-
-const fetchAPI = async (url: string, options: RequestInit) => {
-  const response = await fetch(url, options);
-  if (!response.ok) {
+const unwrap = <T,>(
+  result: { data?: T; error?: unknown; response: Response },
+): T => {
+  if (result.error !== undefined) {
+    const detail = result.error as { detail?: unknown };
     let message = 'API request failed';
-    try {
-      const data = await response.json();
-      if (data?.detail) {
-        message = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-      }
-    } catch { /* ignore parse errors */ }
+    if (detail?.detail) {
+      message = typeof detail.detail === 'string' ? detail.detail : JSON.stringify(detail.detail);
+    }
     throw new Error(message);
   }
-  if (response.status === 204 || response.status === 205) return null;
-  return response.json();
+  return result.data as T;
 };
 
-export interface ReviewItem {
-  item_type: 'crawler_run' | 'extraction_event' | 'lead';
-  item_id: string;
-  created_at: string;
-  summary: string | null;
-  detail: Record<string, unknown> | null;
-}
+export type ReviewItemType = components['schemas']['ReviewItemType'];
+
+export type ReviewItem = components['schemas']['ReviewItemRead'];
 
 export interface ReviewBatchItem {
-  item_type: string;
+  item_type: ReviewItemType;
   item_id: string;
   action: 'approve' | 'reject';
 }
 
 export interface ReviewBatchResponse {
   processed: number;
-  errors: string[];
+  errors?: string[];
 }
 
 export const getReviewItems = async (
   token: string,
-  itemType?: string,
+  itemType?: ReviewItemType,
   page = 1,
   pageSize = 20,
 ): Promise<ReviewItem[]> => {
-  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
-  if (itemType) params.set('item_type', itemType);
-  return fetchAPI(`${BASE_URL}/items?${params}`, createRequestOptions(token, 'GET'));
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/review/items', {
+    params: {
+      query: {
+        item_type: itemType,
+        page,
+        page_size: pageSize,
+      },
+    },
+  }));
 };
 
 export const approveReviewItem = async (
   token: string,
-  itemType: string,
+  itemType: ReviewItemType,
   itemId: string,
-): Promise<{ message: string }> =>
-  fetchAPI(`${BASE_URL}/items/${itemType}/${itemId}/approve`, createRequestOptions(token, 'POST'));
+): Promise<{ message: string }> => {
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/review/items/{item_type}/{item_id}/approve', {
+    params: { path: { item_type: itemType, item_id: itemId } },
+  })) as { message: string };
+};
 
 export const rejectReviewItem = async (
   token: string,
-  itemType: string,
+  itemType: ReviewItemType,
   itemId: string,
-): Promise<{ message: string }> =>
-  fetchAPI(`${BASE_URL}/items/${itemType}/${itemId}/reject`, createRequestOptions(token, 'POST'));
+): Promise<{ message: string }> => {
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/review/items/{item_type}/{item_id}/reject', {
+    params: { path: { item_type: itemType, item_id: itemId } },
+  })) as { message: string };
+};
 
 export const batchReviewItems = async (
   token: string,
   items: ReviewBatchItem[],
-): Promise<ReviewBatchResponse> =>
-  fetchAPI(`${BASE_URL}/items/batch`, createRequestOptions(token, 'POST', { items }));
+): Promise<ReviewBatchResponse> => {
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/review/items/batch', {
+    body: { items },
+  }));
+};

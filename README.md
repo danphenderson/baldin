@@ -4,7 +4,7 @@
 
 **AI-Powered Employment Autopilot** — a local-first, developer-preview job-search automation workspace.
 
-> Take control of your job search. Track applications, extract leads, collaborate on documents, and manage your network — all running locally under your control.
+> Take control of your job search. Track applications, extract leads, collaborate on Agentic Workflows, and discover your network — all running locally under your control.
 
 **[Landing Page](https://danphenderson.github.io/baldin/)** · **[Documentation](https://danphenderson.github.io/baldin/docs)** · **[Release Posture](plans/REPO_EXECUTION_PLAN.md)**
 

@@ -31,10 +31,10 @@ describe('documents service', () => {
     const result = await getDocumentShareCandidates('token-123', 'doc-1', { q: 'alice', limit: 5 });
 
     expect(result[0]?.full_name).toBe('Alice Zhang');
-    const [requestUrl, requestOptions] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(requestUrl).toContain('/documents/doc-1/share-candidates?q=alice&limit=5');
-    expect(requestOptions.method).toBe('GET');
-    expect(requestOptions.headers).toMatchObject({ Authorization: 'Bearer token-123' });
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain('/documents/doc-1/share-candidates?q=alice&limit=5');
+    expect(request.method).toBe('GET');
+    expect(request.headers.get('Authorization')).toBe('Bearer token-123');
   });
 
   it('calls the document activity endpoint and returns the activity payload', async () => {
@@ -63,10 +63,10 @@ describe('documents service', () => {
     const result = await getDocumentActivity('token-123', 'doc-1', { limit: 12 });
 
     expect(result[0]?.activity_type).toBe('share_created');
-    const [requestUrl, requestOptions] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(requestUrl).toContain('/documents/doc-1/activity?limit=12');
-    expect(requestOptions.method).toBe('GET');
-    expect(requestOptions.headers).toMatchObject({ Authorization: 'Bearer token-123' });
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain('/documents/doc-1/activity?limit=12');
+    expect(request.method).toBe('GET');
+    expect(request.headers.get('Authorization')).toBe('Bearer token-123');
   });
 
   it('claims collaboration bootstrap state from the document route', async () => {
@@ -88,10 +88,10 @@ describe('documents service', () => {
     const result = await requestDocumentCollaborationBootstrap('token-123', 'doc-1');
 
     expect(result.status).toBe('seed');
-    const [requestUrl, requestOptions] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(requestUrl).toContain('/documents/doc-1/collaborate/bootstrap');
-    expect(requestUrl).not.toContain('token=');
-    expect(requestOptions.method).toBe('POST');
-    expect(requestOptions.headers).toMatchObject({ Authorization: 'Bearer token-123' });
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain('/documents/doc-1/collaborate/bootstrap');
+    expect(request.url).not.toContain('token=');
+    expect(request.method).toBe('POST');
+    expect(request.headers.get('Authorization')).toBe('Bearer token-123');
   });
 });

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getApplications, updateApplication, deleteApplication,
-  getApplicationDocuments,
   type ApplicationRead,
 } from '../../service/applications';
 
@@ -81,9 +80,9 @@ export function useApplications(token: string | null): UseApplicationsReturn {
 
   const [deleteTarget, setDeleteTarget] = useState<ApplicationRead | null>(null);
 
-  /* ---- Document metadata for filters ---- */
-  const [appDocMeta, setAppDocMeta] = useState<Map<string, { hasResume: boolean; hasCoverLetter: boolean }>>(new Map());
-  const [appDocMetaLoading, setAppDocMetaLoading] = useState(false);
+  /* ---- Document metadata for filters (loaded on demand, not per-item) ---- */
+  const [appDocMeta] = useState<Map<string, { hasResume: boolean; hasCoverLetter: boolean }>>(new Map());
+  const appDocMetaLoading = false;
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -98,41 +97,6 @@ export function useApplications(token: string | null): UseApplicationsReturn {
   }, [token]);
 
   useEffect(() => { refresh(); }, [refresh]);
-
-  /* ---- Fetch document metadata for each application ---- */
-  useEffect(() => {
-    if (!token || applications.length === 0) {
-      setAppDocMeta(new Map());
-      return;
-    }
-
-    let cancelled = false;
-    setAppDocMetaLoading(true);
-
-    const load = async () => {
-      const meta = new Map<string, { hasResume: boolean; hasCoverLetter: boolean }>();
-      await Promise.all(
-        applications.map(async (app) => {
-          try {
-            const docs = await getApplicationDocuments(token, app.id);
-            meta.set(app.id, {
-              hasResume: Array.isArray(docs) && docs.some((d) => d.kind === 'resume'),
-              hasCoverLetter: Array.isArray(docs) && docs.some((d) => d.kind === 'cover_letter'),
-            });
-          } catch {
-            meta.set(app.id, { hasResume: false, hasCoverLetter: false });
-          }
-        }),
-      );
-      if (!cancelled) {
-        setAppDocMeta(meta);
-        setAppDocMetaLoading(false);
-      }
-    };
-
-    load();
-    return () => { cancelled = true; };
-  }, [token, applications]);
 
   const buckets = useMemo(() => {
     const map = new Map<string, ApplicationRead[]>();

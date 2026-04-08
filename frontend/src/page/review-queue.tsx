@@ -34,6 +34,7 @@ import EmptyState from '../component/common/empty-state';
 import RichJsonDisplay from '../component/common/json-modal';
 import {
   type ReviewItem,
+  type ReviewItemType,
   getReviewItems,
   approveReviewItem,
   rejectReviewItem,
@@ -72,7 +73,7 @@ const ReviewQueuePage: React.FC = () => {
   const { token } = useContext(UserContext);
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>('');
+  const [filter, setFilter] = useState<ReviewItemType | ''>('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [batchLoading, setBatchLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -149,7 +150,7 @@ const ReviewQueuePage: React.FC = () => {
       }));
     try {
       const result = await batchReviewItems(token, batchItems);
-      if (result.errors.length > 0) {
+      if (result.errors?.length) {
         showFeedback(`Batch completed with errors: ${result.errors.join('; ')}`, 'error');
       } else {
         showFeedback(`${result.processed} item${result.processed !== 1 ? 's' : ''} ${action}d`, 'success');

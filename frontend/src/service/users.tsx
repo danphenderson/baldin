@@ -1,6 +1,7 @@
 // Path: frontend/src/service/users.tsx
 
 import { components } from '../schema';
+import { createApiClient } from './api-client';
 import { API_URL } from '../config/env';
 
 export type UserRead = components['schemas']['UserRead'];
@@ -24,61 +25,60 @@ export interface ProfileExtractRequest {
   sources?: ProfileExtractSource[];
 }
 
-const BASE_URL = `${API_URL}/users/me`;
-
-const createRequestOptions = (token: string, method: string, body?: any): RequestInit => {
-  if (!token) {
-    throw new Error("Authorization token is required");
+const unwrap = <T,>(
+  result: { data?: T; error?: unknown; response: Response },
+): T => {
+  if (result.error !== undefined) {
+    const detail = result.error as { detail?: unknown };
+    let message = 'API request failed';
+    if (detail?.detail) {
+      message = typeof detail.detail === 'string' ? detail.detail : JSON.stringify(detail.detail);
+    }
+    throw new Error(message);
   }
-
-  return {
-    method: method,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: body ? JSON.stringify(body) : null,
-  };
-};
-
-const fetchApi = async (url: string, options: RequestInit) => {
-  const response = await fetch(url, options);
-  if (!response.ok) {
-    // Custom error handling can be implemented here
-    throw new Error('API request failed');
-  }
-  return response.json();
+  return result.data as T;
 };
 
 export const getUser = async (token: string): Promise<UserRead> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return await fetchApi(BASE_URL, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/users/me'));
 };
 
 export const updateUser = async (token: string, user: UserUpdate): Promise<UserRead> => {
-  const requestOptions = createRequestOptions(token, "PATCH", user);
-  return await fetchApi(BASE_URL, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.PATCH('/users/me', {
+    body: user,
+  }));
 };
 
 export const getUserProfile = async (token: string): Promise<UserProfile> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return await fetchApi(`${BASE_URL}/profile`, requestOptions);
-}
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/users/me/profile'));
+};
 
-// super-user only
+// CONTRACT GAP: GET /users (list all users, superuser only) is not in schema.d.ts typed paths.
+// Keeping a thin manual fetch until the backend adds it to the OpenAPI spec.
 export const getUsers = async (token: string): Promise<UserRead[]> => {
-  const requestOptions = createRequestOptions(token, "GET");
-  return await fetchApi(`${API_URL}/users`, requestOptions);
+  const response = await fetch(`${API_URL}/users`, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) throw new Error('API request failed');
+  return response.json();
 };
 
 export const seedUsers = async (token: string): Promise<void> => {
-  const requestOptions = createRequestOptions(token, "POST");
-  return await fetchApi(`${API_URL}/users/seed`, requestOptions);
-}
+  const client = createApiClient(token);
+  unwrap(await client.POST('/users/seed'));
+};
 
 export const updatePlacement = async (token: string, data: PlacementUpdate): Promise<UserRead> => {
-  const requestOptions = createRequestOptions(token, "PATCH", data);
-  return await fetchApi(`${BASE_URL}/placement`, requestOptions);
+  const client = createApiClient(token);
+  return unwrap(await client.PATCH('/users/me/placement', {
+    body: data,
+  }));
 };
 
 const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -87,6 +87,7 @@ const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
  * Upload or replace the current user's avatar image.
  * Accepts JPEG, PNG, WebP, or GIF up to 5 MB.
  */
+// TODO: Migrate to shared client once openapi-fetch multipart/form-data support is verified
 export const uploadAvatar = async (token: string, file: File): Promise<UserRead> => {
   if (file.size > MAX_AVATAR_SIZE_BYTES) {
     throw new Error(
@@ -97,7 +98,7 @@ export const uploadAvatar = async (token: string, file: File): Promise<UserRead>
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`${BASE_URL}/avatar`, {
+  const response = await fetch(`${API_URL}/users/me/avatar`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
@@ -128,6 +129,7 @@ export const avatarUrl = (
   return `${API_URL}/users/${userId}/avatar`;
 };
 
+// TODO: Migrate to shared client once openapi-fetch multipart/form-data support is verified
 export const extractProfile = async (
   token: string,
   data: ProfileExtractRequest,
@@ -169,7 +171,7 @@ export const extractProfile = async (
     formData.append('llm', data.llm);
   }
 
-  const response = await fetch(`${BASE_URL}/profile/extract`, {
+  const response = await fetch(`${API_URL}/users/me/profile/extract`, {
     method: 'POST',
     headers,
     body: formData,

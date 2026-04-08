@@ -5,6 +5,7 @@ argument-hint: "Describe which Baldin issues or backlog slice to clean up, or sa
 agent: "Baldin Project Manager"
 model: "GPT-5 (copilot)"
 ---
+<!-- classification: maintenance -->
 Clean up the targeted Baldin issue backlog in a strict multi-pass sequence.
 
 Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), [REPO_EXECUTION_PLAN](../../plans/REPO_EXECUTION_PLAN.md), [BACKLOG_AUDIT](../../plans/BACKLOG_AUDIT.md), the current issue templates under [ISSUE_TEMPLATE](../ISSUE_TEMPLATE), and [apply_backlog_audit.sh](../../scripts/apply_backlog_audit.sh).

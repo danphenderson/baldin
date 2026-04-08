@@ -1,6 +1,7 @@
 // Path: frontend/src/service/documents.tsx
 
 import { components } from '../schema';
+import { createApiClient } from './api-client';
 import { API_URL } from '../config/env';
 
 /* ------------------------------------------------------------------ */
@@ -25,57 +26,22 @@ export type DocumentActivityRead = components['schemas']['DocumentActivityRead']
 export type DocumentActivityType = components['schemas']['DocumentActivityType'];
 export type DocumentCollaborationBootstrapRead = components['schemas']['DocumentCollaborationBootstrapRead'];
 
-const BASE_URL = `${API_URL}/documents`;
-
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-const createRequestOptions = (token: string, method: string, body?: unknown): RequestInit => {
-  if (!token) throw new Error('Authorization token is required');
-  const headers: HeadersInit = {
-    Authorization: `Bearer ${token}`,
-  };
-
-  if (body !== undefined) {
-    headers['Content-Type'] = 'application/json';
-  }
-
-  return {
-    method,
-    headers,
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-  };
-};
-
-const withQuery = (
-  path: string,
-  query?: Record<string, string | number | boolean | null | undefined>,
-): string => {
-  const params = new URLSearchParams();
-  Object.entries(query ?? {}).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      params.set(key, String(value));
-    }
-  });
-  const suffix = params.toString();
-  return `${path}${suffix ? `?${suffix}` : ''}`;
-};
-
-const fetchAPI = async (url: string, options: RequestInit) => {
-  const response = await fetch(url, options);
-  if (!response.ok) {
+const unwrap = <T,>(
+  result: { data?: T; error?: unknown; response: Response },
+): T => {
+  if (result.error !== undefined) {
+    const detail = result.error as { detail?: unknown };
     let message = 'API request failed';
-    try {
-      const data = await response.json();
-      if (data?.detail) {
-        message = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-      }
-    } catch { /* keep default */ }
+    if (detail?.detail) {
+      message = typeof detail.detail === 'string' ? detail.detail : JSON.stringify(detail.detail);
+    }
     throw new Error(message);
   }
-  if (response.status === 204 || response.status === 205) return null;
-  return response.json();
+  return result.data as T;
 };
 
 /* ------------------------------------------------------------------ */
@@ -84,33 +50,48 @@ const fetchAPI = async (url: string, options: RequestInit) => {
 
 export const getDocuments = async (
   token: string,
-  filters?: { kind?: string; status?: string; is_pinned?: boolean; search?: string },
+  filters?: { kind?: DocumentKind; status?: DocumentStatus; is_pinned?: boolean; search?: string },
 ): Promise<DocumentRead[]> => {
-  return fetchAPI(
-    withQuery(`${BASE_URL}/`, {
-      kind: filters?.kind,
-      status: filters?.status,
-      is_pinned: filters?.is_pinned,
-      search: filters?.search,
-    }),
-    createRequestOptions(token, 'GET'),
-  );
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/documents/', {
+    params: {
+      query: {
+        kind: filters?.kind,
+        status: filters?.status,
+        is_pinned: filters?.is_pinned,
+        search: filters?.search,
+      },
+    },
+  }));
 };
 
 export const getDocument = async (token: string, id: string): Promise<DocumentDetailRead> => {
-  return fetchAPI(`${BASE_URL}/${id}`, createRequestOptions(token, 'GET'));
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/documents/{document_id}', {
+    params: { path: { document_id: id } },
+  }));
 };
 
 export const createDocument = async (token: string, payload: DocumentCreate): Promise<DocumentDetailRead> => {
-  return fetchAPI(`${BASE_URL}/`, createRequestOptions(token, 'POST', payload));
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/documents/', {
+    body: payload,
+  }));
 };
 
 export const updateDocument = async (token: string, id: string, payload: DocumentUpdate): Promise<DocumentRead> => {
-  return fetchAPI(`${BASE_URL}/${id}`, createRequestOptions(token, 'PATCH', payload));
+  const client = createApiClient(token);
+  return unwrap(await client.PATCH('/documents/{document_id}', {
+    params: { path: { document_id: id } },
+    body: payload,
+  }));
 };
 
 export const deleteDocument = async (token: string, id: string): Promise<void> => {
-  await fetchAPI(`${BASE_URL}/${id}`, createRequestOptions(token, 'DELETE'));
+  const client = createApiClient(token);
+  unwrap(await client.DELETE('/documents/{document_id}', {
+    params: { path: { document_id: id } },
+  }));
 };
 
 /* ------------------------------------------------------------------ */
@@ -118,7 +99,10 @@ export const deleteDocument = async (token: string, id: string): Promise<void> =
 /* ------------------------------------------------------------------ */
 
 export const getVersions = async (token: string, docId: string): Promise<DocumentVersionRead[]> => {
-  return fetchAPI(`${BASE_URL}/${docId}/versions`, createRequestOptions(token, 'GET'));
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/documents/{document_id}/versions', {
+    params: { path: { document_id: docId } },
+  }));
 };
 
 export const createVersion = async (
@@ -126,7 +110,11 @@ export const createVersion = async (
   docId: string,
   payload: DocumentVersionCreate,
 ): Promise<DocumentVersionRead> => {
-  return fetchAPI(`${BASE_URL}/${docId}/versions`, createRequestOptions(token, 'POST', payload));
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/documents/{document_id}/versions', {
+    params: { path: { document_id: docId } },
+    body: payload,
+  }));
 };
 
 export const getVersion = async (
@@ -134,7 +122,10 @@ export const getVersion = async (
   docId: string,
   versionId: string,
 ): Promise<DocumentVersionRead> => {
-  return fetchAPI(`${BASE_URL}/${docId}/versions/${versionId}`, createRequestOptions(token, 'GET'));
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/documents/{document_id}/versions/{version_id}', {
+    params: { path: { document_id: docId, version_id: versionId } },
+  }));
 };
 
 /* ------------------------------------------------------------------ */
@@ -142,11 +133,16 @@ export const getVersion = async (
 /* ------------------------------------------------------------------ */
 
 export const pinDocument = async (token: string, id: string, pinned = true): Promise<DocumentRead> => {
-  return fetchAPI(`${BASE_URL}/${id}/pin`, createRequestOptions(token, 'POST', { pinned }));
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/documents/{document_id}/pin', {
+    params: { path: { document_id: id } },
+    body: { pinned },
+  }));
 };
 
 export const getPinnedDocuments = async (token: string): Promise<DocumentRead[]> => {
-  return fetchAPI(`${BASE_URL}/pinned`, createRequestOptions(token, 'GET'));
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/documents/pinned'));
 };
 
 /* ------------------------------------------------------------------ */
@@ -157,16 +153,30 @@ export const generateDocument = async (
   token: string,
   payload: DocumentGenerateRequest,
 ): Promise<DocumentDetailRead> => {
-  return fetchAPI(`${BASE_URL}/generate`, createRequestOptions(token, 'POST', payload));
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/documents/generate', {
+    body: payload,
+  }));
 };
 
 /* ------------------------------------------------------------------ */
-/*  Download                                                           */
+/*  Shared with me                                                     */
 /* ------------------------------------------------------------------ */
 
+export const getSharedWithMe = async (token: string): Promise<DocumentRead[]> => {
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/documents/shared-with-me'));
+};
+
+/* ------------------------------------------------------------------ */
+/*  Download (binary — kept as thin manual wrapper)                    */
+/* ------------------------------------------------------------------ */
+
+// TODO: Migrate to shared client once binary/blob download support is verified in openapi-fetch
 export const downloadDocument = async (token: string, id: string): Promise<void> => {
-  const options = createRequestOptions(token, 'GET');
-  const response = await fetch(`${BASE_URL}/${id}/download`, options);
+  const response = await fetch(`${API_URL}/documents/${id}/download`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!response.ok) throw new Error('Download failed');
   const blob = await response.blob();
   const url = window.URL.createObjectURL(blob);
@@ -180,9 +190,10 @@ export const downloadDocument = async (token: string, id: string): Promise<void>
 };
 
 /* ------------------------------------------------------------------ */
-/*  Upload                                                             */
+/*  Upload (multipart — kept as thin manual wrapper)                   */
 /* ------------------------------------------------------------------ */
 
+// TODO: Migrate to shared client once openapi-fetch multipart/form-data support is verified
 export async function uploadDocument(
   token: string,
   file: File,
@@ -207,9 +218,10 @@ export async function uploadDocument(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Original PDF download                                              */
+/*  Original PDF download (binary — kept as thin manual wrapper)       */
 /* ------------------------------------------------------------------ */
 
+// TODO: Migrate to shared client once binary/blob download support is verified in openapi-fetch
 export async function downloadOriginal(token: string, documentId: string): Promise<void> {
   const response = await fetch(`${API_URL}/documents/${documentId}/original`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -231,7 +243,10 @@ export async function downloadOriginal(token: string, documentId: string): Promi
 /* ------------------------------------------------------------------ */
 
 export async function getDocumentShares(token: string, documentId: string): Promise<DocumentShareRead[]> {
-  return fetchAPI(`${BASE_URL}/${documentId}/shares`, createRequestOptions(token, 'GET'));
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/documents/{document_id}/shares', {
+    params: { path: { document_id: documentId } },
+  }));
 }
 
 export async function getDocumentShareCandidates(
@@ -239,13 +254,13 @@ export async function getDocumentShareCandidates(
   documentId: string,
   params?: { q?: string; limit?: number },
 ): Promise<DocumentShareCandidateRead[]> {
-  return fetchAPI(
-    withQuery(`${BASE_URL}/${documentId}/share-candidates`, {
-      q: params?.q,
-      limit: params?.limit,
-    }),
-    createRequestOptions(token, 'GET'),
-  );
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/documents/{document_id}/share-candidates', {
+    params: {
+      path: { document_id: documentId },
+      query: { q: params?.q, limit: params?.limit },
+    },
+  }));
 }
 
 export async function createDocumentShare(
@@ -254,10 +269,11 @@ export async function createDocumentShare(
   sharedWithUserId: string,
   role: DocumentShareRole = 'viewer',
 ): Promise<DocumentShareRead> {
-  return fetchAPI(
-    `${BASE_URL}/${documentId}/shares`,
-    createRequestOptions(token, 'POST', { shared_with_user_id: sharedWithUserId, role }),
-  );
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/documents/{document_id}/shares', {
+    params: { path: { document_id: documentId } },
+    body: { shared_with_user_id: sharedWithUserId, role },
+  }));
 }
 
 export async function updateDocumentShare(
@@ -266,35 +282,18 @@ export async function updateDocumentShare(
   shareId: string,
   role: DocumentShareRole,
 ): Promise<DocumentShareRead> {
-  return fetchAPI(
-    `${BASE_URL}/${documentId}/shares/${shareId}`,
-    createRequestOptions(token, 'PATCH', { role }),
-  );
+  const client = createApiClient(token);
+  return unwrap(await client.PATCH('/documents/{document_id}/shares/{share_id}', {
+    params: { path: { document_id: documentId, share_id: shareId } },
+    body: { role },
+  }));
 }
 
 export async function revokeDocumentShare(token: string, documentId: string, shareId: string): Promise<void> {
-  await fetchAPI(
-    `${BASE_URL}/${documentId}/shares/${shareId}`,
-    createRequestOptions(token, 'DELETE'),
-  );
-}
-
-export async function getSharedWithMe(token: string): Promise<DocumentRead[]> {
-  return fetchAPI(`${BASE_URL}/shared-with-me`, createRequestOptions(token, 'GET'));
-}
-
-/* ------------------------------------------------------------------ */
-/*  Collaboration bootstrap                                            */
-/* ------------------------------------------------------------------ */
-
-export async function requestDocumentCollaborationBootstrap(
-  token: string,
-  documentId: string,
-): Promise<DocumentCollaborationBootstrapRead> {
-  return fetchAPI(
-    `${BASE_URL}/${documentId}/collaborate/bootstrap`,
-    createRequestOptions(token, 'POST'),
-  );
+  const client = createApiClient(token);
+  unwrap(await client.DELETE('/documents/{document_id}/shares/{share_id}', {
+    params: { path: { document_id: documentId, share_id: shareId } },
+  }));
 }
 
 /* ------------------------------------------------------------------ */
@@ -306,8 +305,25 @@ export async function getDocumentActivity(
   documentId: string,
   params?: { limit?: number },
 ): Promise<DocumentActivityRead[]> {
-  return fetchAPI(
-    withQuery(`${BASE_URL}/${documentId}/activity`, { limit: params?.limit }),
-    createRequestOptions(token, 'GET'),
-  );
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/documents/{document_id}/activity', {
+    params: {
+      path: { document_id: documentId },
+      query: { limit: params?.limit },
+    },
+  }));
+}
+
+/* ------------------------------------------------------------------ */
+/*  Collaboration                                                      */
+/* ------------------------------------------------------------------ */
+
+export async function requestDocumentCollaborationBootstrap(
+  token: string,
+  documentId: string,
+): Promise<DocumentCollaborationBootstrapRead> {
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/documents/{document_id}/collaborate/bootstrap', {
+    params: { path: { document_id: documentId } },
+  }));
 }

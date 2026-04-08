@@ -1,17 +1,15 @@
 # app/api/routes/certificate.py
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy import select
 
 from app.api.deps import (
     AsyncSession,
     create_certificate,
-    create_extractor,
+    extract_and_create_records,
     get_async_session,
     get_certificate,
     get_current_user,
-    get_extractor_by_name,
     models,
-    run_extractor,
     schemas,
 )
 from app.api.routes.seed_tasks import (
@@ -92,34 +90,18 @@ async def extract_certificates(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    try:
-        extractor = await get_extractor_by_name("certificates", db)
-    except HTTPException as e:
-        if e.status_code == 404:
-            extractor = await create_extractor(
-                schemas.ExtractorCreate(
-                    name="certificates",
-                    description="Certificate data extractor",
-                    instruction="Extract certificates JSON data from a given context",
-                    json_schema=schemas.CertificateCreate.model_json_schema(),
-                    extractor_examples=[],
-                ),
-                db=db,
-                user=user,
-            )
-        else:
-            raise e
-
-    # Run the extractor with the given payload
-    resp = await run_extractor(
-        schemas.ExtractorRead(**extractor.__dict__), payload, user, db
+    return await extract_and_create_records(
+        extractor_name="certificates",
+        extractor_description="Certificate data extractor",
+        extractor_instruction="Extract certificates JSON data from a given context",
+        json_schema=schemas.CertificateCreate.model_json_schema(),
+        payload=payload,
+        record_factory=lambda data: create_certificate(
+            schemas.CertificateCreate(**data), db=db, user=user
+        ),
+        db=db,
+        user=user,
     )
-
-    # Save the extracted certificates to the database
-    return [
-        await create_certificate(schemas.CertificateCreate(**cert), db, user)
-        for cert in resp.data
-    ]
 
 
 @router.post("/seed", status_code=202, response_model=schemas.SeedOperationAccepted)

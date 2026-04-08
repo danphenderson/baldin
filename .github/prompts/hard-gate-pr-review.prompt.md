@@ -12,7 +12,7 @@ Default target:
 - If the user supplied arguments, use them to narrow or override the target.
 - If there is no active pull request context, inspect the current branch diff against `main`. In this workspace that is usually `feat-sprint` against `main`.
 
-Use [Baldin Project Conventions](../instructions/baldin-project.instructions.md) when evaluating architectural fit, validation expectations, generated artifacts, and documentation completeness.
+Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md) when evaluating architectural fit, validation expectations, generated artifacts, and documentation completeness.
 
 Review standard:
 - Inspect the actual diff first. Do not review from summaries alone.

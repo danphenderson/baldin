@@ -17,6 +17,18 @@ Need concrete before-and-after wording examples? See [Rewrite Weak Prompts](./co
 
 The Executive Summary review supports a local-first operating model for Baldin: keep most work inside the repo with clear specialist ownership, use asynchronous cloud-style workflows only for bounded tasks, and treat automated review as an extra check instead of a merge authority.
 
+## Instruction Layers
+
+Keep Baldin's Copilot guidance layered so repo policy does not get duplicated across every prompt and agent.
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Always-on baseline | `.github/copilot-instructions.md` | Repo posture, boundaries, generated artifacts, and default validation expectations |
+| Product and delivery edits | `.github/instructions/baldin-project.instructions.md` | Edit-time guardrails for backend, frontend, docs, scripts, workflows, contracts, and deployment files |
+| Copilot asset edits | `.github/instructions/baldin-agent-customization.instructions.md` | Rules for prompts, agents, skills, instructions, and Copilot workflow docs |
+
+Prompts and agents should link back to these layers and to the docs below instead of re-embedding the same repo policy in every file.
+
 | Workflow | When to prefer it | Baldin guidance |
 |----------|-------------------|-----------------|
 | Local-first workspace agents | Day-to-day features, fixes, and investigations | Default path. Start with Baldin Project Manager if ownership is unclear, then hand work to the smallest correct specialist. |

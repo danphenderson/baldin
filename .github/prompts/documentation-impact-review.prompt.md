@@ -7,7 +7,7 @@ model: "GPT-5 (copilot)"
 ---
 Audit the documentation impact of this Baldin change.
 
-Use [Baldin Docs Drift Auditor](../skills/baldin-docs-drift-auditor/SKILL.md), [Baldin Project Conventions](../instructions/baldin-project.instructions.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), [Run The Right Checks](../../docs/docs/engineering/testing.md), and [See Merge Gates](../../docs/docs/engineering/ci-pipeline.md).
+Use [Baldin Docs Drift Auditor](../skills/baldin-docs-drift-auditor/SKILL.md), [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), [Run The Right Checks](../../docs/docs/engineering/testing.md), and [See Merge Gates](../../docs/docs/engineering/ci-pipeline.md).
 
 Task:
 - Determine which documentation surfaces are actually affected by the user's change or the active diff.

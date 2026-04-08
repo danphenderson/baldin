@@ -7,7 +7,7 @@ model: "GPT-5 (copilot)"
 ---
 Build the smallest effective Baldin validation sequence for the user's change.
 
-Use [Baldin Project Conventions](../instructions/baldin-project.instructions.md), [Run The Right Checks](../../docs/docs/engineering/testing.md), [See Merge Gates](../../docs/docs/engineering/ci-pipeline.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), and [Regenerate API Contracts](../../docs/docs/engineering/contract-management.md).
+Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Run The Right Checks](../../docs/docs/engineering/testing.md), [See Merge Gates](../../docs/docs/engineering/ci-pipeline.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), and [Regenerate API Contracts](../../docs/docs/engineering/contract-management.md).
 
 Task:
 - Infer the touched surfaces from the user's request, active diff, or named files.

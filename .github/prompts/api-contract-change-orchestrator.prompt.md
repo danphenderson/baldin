@@ -7,7 +7,7 @@ model: "GPT-5 (copilot)"
 ---
 Own this Baldin API contract change from backend surface to generated artifacts and downstream validation.
 
-Use [Baldin Project Conventions](../instructions/baldin-project.instructions.md), [Regenerate API Contracts](../../docs/docs/engineering/contract-management.md), [Run The Right Checks](../../docs/docs/engineering/testing.md), and [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md).
+Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Regenerate API Contracts](../../docs/docs/engineering/contract-management.md), [Run The Right Checks](../../docs/docs/engineering/testing.md), and [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md).
 
 Task:
 - Determine whether the user's requested or existing change affects the backend contract surface.

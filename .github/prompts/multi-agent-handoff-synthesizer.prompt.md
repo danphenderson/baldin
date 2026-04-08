@@ -7,7 +7,7 @@ model: "GPT-5 (copilot)"
 ---
 Synthesize the current Baldin work state into one clean handoff packet.
 
-Use [Baldin Project Conventions](../instructions/baldin-project.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), and [Baldin Project Manager](../agents/baldin-project-manager.agent.md).
+Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), and [Baldin Project Manager](../agents/baldin-project-manager.agent.md).
 
 Task:
 - Gather the relevant evidence from the user's request, active diff, current branch, prior agent outputs, PR context, tests already run, and any named files.

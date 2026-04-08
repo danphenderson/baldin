@@ -1,20 +1,17 @@
 ---
-description: "Use when modifying Baldin backend, frontend, scripts, CI, docs, contracts, or deployment files. Covers repo-wide conventions for local-first design, generated artifacts, validation, and release-path decisions."
-name: "Baldin Project Conventions"
-applyTo: backend/**, frontend/**, scripts/**, .github/**, docs/**, plans/**, README.md, openapi.json, docker-compose*.yml
+description: "Use when modifying Baldin backend, frontend, scripts, workflows, docs, plans, contracts, or deployment files. Covers edit-time guardrails for runtime surfaces, generated artifacts, and release-path validation."
+name: "Baldin Project Delivery Rules"
+applyTo: backend/**, frontend/**, frontend/src/schema.d.ts, scripts/**, .github/workflows/**, docs/**, docs/build/**, plans/**, cdk/**, README.md, openapi.json, docker-compose*.yml
 ---
-# Baldin Project Conventions
+# Baldin Project Delivery Rules
 
-- Baldin is local-first and still in developer-preview. Treat it as a still-evolving prototype that is getting close to a deployable POC, not as a mature production SaaS baseline.
-- Prefer the smallest complete solution that fits the current repo and the next controlled-launch step instead of introducing speculative platform abstractions.
-- Optimize for developer-preview robustness, local reproducibility, and credible launch-path progress. Do not assume multi-tenant requirements, cloud-scale or high-availability architecture, enterprise compliance programs, or inactive deployment paths unless the task explicitly calls for them.
-- Keep work aligned with the existing boundaries: backend application code in `backend/app`, ETL code in `backend/etl`, frontend product code in `frontend/src`, local integration in `docker-compose.yml`, and documentation in `docs/`.
-- Do not hand-edit generated contract artifacts such as `frontend/src/schema.d.ts` or `openapi.json`. When backend API routes or schemas change, regenerate them through `scripts/update_frontend_schemas.sh`. If regeneration is intentionally deferred, name the follow-on owner responsible for completing it and for downstream frontend review.
-- The top-level `docs/` directory is a Docusaurus project. Edit Markdown sources under `docs/docs/` and validate with `cd docs && npm run build`. Build output in `docs/build/` is gitignored. Do not commit Docusaurus build artifacts.
-- Avoid modifying vendored, environment-specific, or generated directories such as `backend/.venv/`, `backend/baldin.egg-info/`, and runtime log assets unless the task explicitly targets those artifacts.
-- Backend Python changes should stay compatible with the repo's pre-commit flow: `ruff check --fix` and `ruff format` are scoped to `backend/`, and API changes should preserve FastAPI/OpenAPI correctness.
-- Material behavior changes should include targeted validation in the owning surface: backend tests, frontend tests or type checks, docs builds, or the closest equivalent task-specific check.
-- Frontend changes should preserve the current React/Vite/MUI architecture and validate with the relevant local checks: `npm run test`, `./node_modules/.bin/tsc --noEmit`, and `npm run build` when the change affects production behavior.
-- Production frontend builds require `VITE_API_URL` to be set to a non-localhost origin. Do not weaken that guardrail in `frontend/vite.config.ts` unless the deployment contract itself is changing.
-- Keep deployment and release work aligned with the current repo: local development uses `docker-compose.yml`, the backend candidate image builds from `backend/Dockerfile`, and the frontend release artifact is a static Vite bundle. `scripts/sync_frontend_to_s3.sh` is intentionally disabled and should not be treated as an active deployment path.
-- When a task crosses backend, frontend, schema generation, CI, or deployment boundaries, update the supporting scripts or docs that make the change complete instead of leaving the repo in a partially migrated state.
+- This instruction covers runtime, delivery, docs, and release-path edits. For Copilot prompts, agents, skills, or instructions under `.github/**`, use [Baldin Agentic Configuration Rules](./baldin-agent-customization.instructions.md).
+- Keep changes aligned with the current repo boundaries instead of introducing new abstraction layers for problems the repo does not have yet.
+- Do not hand-edit generated artifacts such as `openapi.json`, `frontend/src/schema.d.ts`, or `docs/build/**`. Regenerate or rebuild them from the owning source.
+- When backend API routes or schemas change, run `./scripts/update_frontend_schemas.sh` or return a concrete follow-on that names the contract owner and downstream frontend review.
+- Edit Docusaurus source under `docs/docs/**`; do not patch generated output as the primary change.
+- Avoid modifying vendored, environment-specific, or runtime-state directories such as `backend/.venv/`, `backend/baldin.egg-info/`, `public/`, or `var/` unless the task explicitly targets them.
+- Backend changes should preserve FastAPI and OpenAPI correctness and stay compatible with the repo's backend lint and test flow.
+- Frontend changes should stay inside the current React, Vite, and MUI architecture and preserve the non-localhost `VITE_API_URL` production-build guard.
+- Deployment or release-path changes should stay aligned with the current repo reality: local development through `docker-compose.yml`, backend image builds from `backend/Dockerfile`, frontend output as a static Vite bundle, `cdk/` as a controlled deployment surface, and `scripts/sync_frontend_to_s3.sh` treated as inactive unless the deployment contract itself is changing.
+- When a task crosses backend, frontend, contracts, docs, CI, scripts, compose, or `cdk/`, finish the supporting repo updates that make the slice coherent instead of leaving a partial migration.

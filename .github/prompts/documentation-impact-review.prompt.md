@@ -13,7 +13,7 @@ Task:
 - Determine which documentation surfaces are actually affected by the user's change or the active diff.
 - Prefer a targeted audit tied to the changed workflow, feature, or repo surface instead of a generic repo-wide docs review unless the user explicitly asks for a broad audit.
 - Compare documentation claims against the current source of truth in code, scripts, CI, plans being treated as current truth, contracts, and repo configuration.
-- Audit docs source under [docs/docs](../../docs/docs), not [docs/build](../../docs/build).
+- Audit docs source under [docs/docs](../../docs/docs), not `docs/build`.
 - Include `.github/**` prompt, agent, instruction, workflow, and review docs when the change affects Copilot workflows or repo operating rules.
 - Report only confirmed drift or clearly missing updates that would mislead contributors, reviewers, or operators.
 

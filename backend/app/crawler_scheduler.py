@@ -3,7 +3,9 @@
 
 Runs as an asyncio task during the app lifespan, checking for due pipelines
 at the configured interval and dispatching scheduled runs through the same
-queue-aware scheduling helper used by manual triggers.
+queue-aware scheduling helper used by manual triggers. Each tick elects a
+single leader via a Postgres advisory lock so multiple API processes can host
+the loop without duplicate scheduled dispatches.
 """
 
 import asyncio

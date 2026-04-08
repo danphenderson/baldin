@@ -7,10 +7,13 @@ from uuid import UUID
 
 import pytest
 import y_py as Y
+from fastapi.testclient import TestClient
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
+from starlette.websockets import WebSocketDisconnect
 
 from app import models
+from app.api.routes.collaboration import COLLABORATION_WEBSOCKET_PROTOCOL
 from app.core import conf
 from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
 from app.core.document_collaboration import (
@@ -18,6 +21,7 @@ from app.core.document_collaboration import (
     DocumentYStore,
     _document_bootstrap_claims,
     claim_document_collaboration_bootstrap,
+    stop_document_collaboration_server,
 )
 from app.main import app
 from app.tests import utils
@@ -76,6 +80,21 @@ async def _auth_headers(
     assert response.status_code == 200
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+async def _request_collaboration_token(
+    client: AsyncClient,
+    document_id: UUID,
+    headers: dict[str, str],
+) -> str:
+    response = await client.post(
+        f"/documents/{document_id}/collaborate/bootstrap",
+        headers=headers,
+    )
+    assert response.status_code == 200
+    collaboration_token = response.json()["collaboration_token"]
+    assert collaboration_token
+    return collaboration_token
 
 
 async def _read_document_state(document_id: UUID) -> bytes | None:
@@ -268,6 +287,63 @@ async def test_collaboration_bootstrap_skips_invalid_or_plain_text_content() -> 
     assert plain_text_result.status is DocumentCollaborationBootstrapClaimStatus.CONNECT
     assert plain_text_result.content is None
     assert plain_text_result.retry_after_ms is None
+
+
+async def test_collaboration_websocket_reads_bootstrap_token_from_subprotocol() -> None:
+    await _ensure_db_ready()
+
+    async with _client() as client:
+        owner_email, owner_id = await _create_user(
+            "collab-ws-pass",
+            first_name="Wes",
+            last_name="Socket",
+        )
+        headers = await _auth_headers(client, owner_email, "collab-ws-pass")
+        document_id = await _create_document(owner_id)
+        collaboration_token = await _request_collaboration_token(
+            client,
+            document_id,
+            headers,
+        )
+
+    try:
+        with TestClient(app) as client:
+            with client.websocket_connect(
+                f"/documents/{document_id}/collaborate",
+                subprotocols=[
+                    COLLABORATION_WEBSOCKET_PROTOCOL,
+                    collaboration_token,
+                ],
+            ) as websocket:
+                assert (
+                    websocket.accepted_subprotocol == COLLABORATION_WEBSOCKET_PROTOCOL
+                )
+    finally:
+        await stop_document_collaboration_server()
+
+
+async def test_collaboration_websocket_rejects_missing_subprotocol_token() -> None:
+    await _ensure_db_ready()
+    _, owner_id = await _create_user(
+        "collab-ws-missing-pass",
+        first_name="Mina",
+        last_name="Token",
+    )
+    document_id = await _create_document(owner_id)
+
+    try:
+        with TestClient(app) as client:
+            with pytest.raises(WebSocketDisconnect) as exc_info:
+                with client.websocket_connect(
+                    f"/documents/{document_id}/collaborate",
+                    subprotocols=[COLLABORATION_WEBSOCKET_PROTOCOL],
+                ):
+                    pass
+    finally:
+        await stop_document_collaboration_server()
+
+    assert exc_info.value.code == 4003
+    assert exc_info.value.reason == "Unauthorized"
 
 
 async def test_collaboration_bootstrap_yjs_state_remains_authoritative() -> None:

@@ -7,6 +7,8 @@ ETL adapter normalization, and scheduler guard.
 """
 
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
@@ -14,7 +16,7 @@ import pytest
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
 
-from app import models, schemas
+from app import crawler_scheduler, models, schemas
 from app.api import deps as api_deps
 from app.core import conf
 from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
@@ -95,6 +97,61 @@ def _pipeline_payload(**overrides) -> dict:
     }
     payload.update(overrides)
     return payload
+
+
+class _FakeSchedulerScalarResult:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def all(self):
+        return self._rows
+
+
+class _FakeSchedulerExecuteResult:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def scalars(self):
+        return _FakeSchedulerScalarResult(self._rows)
+
+
+class _FakeSchedulerSession:
+    def __init__(self, rows):
+        self.execute = AsyncMock(return_value=_FakeSchedulerExecuteResult(rows))
+        self.commit = AsyncMock(return_value=None)
+
+
+def _scheduler_session_context(session: _FakeSchedulerSession):
+    @asynccontextmanager
+    async def _ctx():
+        yield session
+
+    return _ctx()
+
+
+def _install_scheduler_logger(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
+    logger = SimpleNamespace(
+        info=AsyncMock(return_value=None),
+        debug=AsyncMock(return_value=None),
+        exception=AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(crawler_scheduler, "log", logger)
+    return logger
+
+
+def _due_pipeline(*, requires_approval: bool = False) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=uuid4(),
+        name="Scheduled Pipeline",
+        schedule_definition={
+            "next_run_at": (
+                datetime.now(timezone.utc) - timedelta(minutes=15)
+            ).isoformat(),
+            "interval_minutes": 5,
+        },
+        requires_approval=requires_approval,
+        created_by_user_id=uuid4(),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -838,7 +895,7 @@ async def test_async_retry_does_not_retry_non_retryable():
 
 
 # ---------------------------------------------------------------------------
-# 8. Scheduler guard
+# 8. Scheduler coordination
 # ---------------------------------------------------------------------------
 
 
@@ -846,3 +903,125 @@ async def test_scheduler_disabled_in_pytest_environment():
     """SHOULD_RUN_CRAWLER_SCHEDULER is False when ENVIRONMENT=PYTEST."""
     assert conf.settings.ENVIRONMENT == "PYTEST"
     assert conf.settings.SHOULD_RUN_CRAWLER_SCHEDULER is False
+
+
+async def test_scheduler_tick_skips_dispatch_without_leader_lock(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Non-leader processes skip scheduled dispatch work for the tick."""
+    session = _FakeSchedulerSession([])
+    acquire_mock = AsyncMock(return_value=False)
+    release_mock = AsyncMock(return_value=None)
+    create_mock = AsyncMock(return_value=None)
+    schedule_mock = AsyncMock(return_value=None)
+    logger = _install_scheduler_logger(monkeypatch)
+
+    monkeypatch.setattr(
+        crawler_scheduler,
+        "session_context",
+        lambda: _scheduler_session_context(session),
+    )
+    monkeypatch.setattr(
+        crawler_scheduler,
+        "_acquire_scheduler_leader_lock",
+        acquire_mock,
+    )
+    monkeypatch.setattr(
+        crawler_scheduler,
+        "_release_scheduler_leader_lock",
+        release_mock,
+    )
+    monkeypatch.setattr(api_deps, "create_crawler_run", create_mock)
+    monkeypatch.setattr(api_deps, "schedule_crawler_run_execution", schedule_mock)
+
+    await crawler_scheduler._tick()
+
+    acquire_mock.assert_awaited_once_with(session)
+    session.execute.assert_not_awaited()
+    create_mock.assert_not_awaited()
+    schedule_mock.assert_not_awaited()
+    release_mock.assert_not_awaited()
+    logger.debug.assert_awaited_once()
+
+
+async def test_scheduler_tick_dispatches_due_pipeline_once_for_leader(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Leader process dispatches due pipelines and releases the lock."""
+    pipeline = _due_pipeline()
+    original_next_run_at = pipeline.schedule_definition["next_run_at"]
+    run_id = uuid4()
+    run = SimpleNamespace(id=run_id, status="pending")
+    session = _FakeSchedulerSession([pipeline])
+    acquire_mock = AsyncMock(return_value=True)
+    release_mock = AsyncMock(return_value=None)
+    create_mock = AsyncMock(return_value=run)
+    schedule_mock = AsyncMock(return_value=None)
+
+    _install_scheduler_logger(monkeypatch)
+    monkeypatch.setattr(
+        crawler_scheduler,
+        "session_context",
+        lambda: _scheduler_session_context(session),
+    )
+    monkeypatch.setattr(
+        crawler_scheduler,
+        "_acquire_scheduler_leader_lock",
+        acquire_mock,
+    )
+    monkeypatch.setattr(
+        crawler_scheduler,
+        "_release_scheduler_leader_lock",
+        release_mock,
+    )
+    monkeypatch.setattr(api_deps, "create_crawler_run", create_mock)
+    monkeypatch.setattr(api_deps, "schedule_crawler_run_execution", schedule_mock)
+
+    await crawler_scheduler._tick()
+
+    acquire_mock.assert_awaited_once_with(session)
+    session.execute.assert_awaited_once()
+    create_mock.assert_awaited_once_with(pipeline, "scheduled", session)
+    schedule_mock.assert_awaited_once_with(run_id, pipeline.created_by_user_id)
+    release_mock.assert_awaited_once_with(session)
+    assert session.commit.await_count == 1
+    assert pipeline.schedule_definition["next_run_at"] != original_next_run_at
+
+
+async def test_scheduler_tick_releases_leader_lock_on_dispatch_error(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Leader lock is released even when the scheduled dispatch raises."""
+    pipeline = _due_pipeline()
+    session = _FakeSchedulerSession([pipeline])
+    acquire_mock = AsyncMock(return_value=True)
+    release_mock = AsyncMock(return_value=None)
+    create_mock = AsyncMock(side_effect=RuntimeError("dispatch failed"))
+    schedule_mock = AsyncMock(return_value=None)
+
+    _install_scheduler_logger(monkeypatch)
+    monkeypatch.setattr(
+        crawler_scheduler,
+        "session_context",
+        lambda: _scheduler_session_context(session),
+    )
+    monkeypatch.setattr(
+        crawler_scheduler,
+        "_acquire_scheduler_leader_lock",
+        acquire_mock,
+    )
+    monkeypatch.setattr(
+        crawler_scheduler,
+        "_release_scheduler_leader_lock",
+        release_mock,
+    )
+    monkeypatch.setattr(api_deps, "create_crawler_run", create_mock)
+    monkeypatch.setattr(api_deps, "schedule_crawler_run_execution", schedule_mock)
+
+    with pytest.raises(RuntimeError, match="dispatch failed"):
+        await crawler_scheduler._tick()
+
+    acquire_mock.assert_awaited_once_with(session)
+    create_mock.assert_awaited_once_with(pipeline, "scheduled", session)
+    schedule_mock.assert_not_awaited()
+    release_mock.assert_awaited_once_with(session)

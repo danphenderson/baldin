@@ -28,6 +28,8 @@ from app.utils import compute_version_hash
 
 log = get_async_logger(__name__)
 
+ExtractorLike = models.Extractor | schemas.ExtractorRead
+
 
 async def _resolve_extractor_input_text(
     payload: schemas.ExtractorRun,
@@ -66,7 +68,7 @@ async def _resolve_extractor_input_text(
 
 
 async def _get_or_create_extractor_pipeline(
-    extractor: schemas.ExtractorRead,
+    extractor: ExtractorLike,
     user: schemas.UserRead,
     db: AsyncSession,
 ) -> models.OrchestrationPipeline:
@@ -83,7 +85,7 @@ async def _get_or_create_extractor_pipeline(
 
 async def _create_running_event(
     *,
-    extractor: schemas.ExtractorRead,
+    extractor: ExtractorLike,
     payload: schemas.ExtractorRun,
     pipeline_id: UUID4,
     file_source_path: str | None,
@@ -115,7 +117,7 @@ async def _create_running_event(
 async def _stamp_event_traceability(
     *,
     event_id: UUID4,
-    extractor: schemas.ExtractorRead,
+    extractor: ExtractorLike,
     db: AsyncSession,
     retry_of_id: UUID4 | None,
 ) -> None:
@@ -135,7 +137,7 @@ async def _stamp_event_traceability(
 async def _run_extraction(
     *,
     text: str,
-    extractor: schemas.ExtractorRead,
+    extractor: ExtractorLike,
     payload: schemas.ExtractorRun,
 ) -> schemas.ExtractorResponse:
     llm = payload.llm or conf.openai.COMPLETION_MODEL
@@ -151,7 +153,7 @@ async def _run_extraction(
 async def _finalize_success_event(
     *,
     event_id: UUID4,
-    extractor: schemas.ExtractorRead,
+    extractor: ExtractorLike,
     result: schemas.ExtractorResponse,
     db: AsyncSession,
 ) -> None:
@@ -178,7 +180,7 @@ async def _finalize_success_event(
 async def _finalize_failure_event(
     *,
     event_id: UUID4,
-    extractor: schemas.ExtractorRead,
+    extractor: ExtractorLike,
     error: Exception,
     db: AsyncSession,
 ) -> None:
@@ -197,7 +199,7 @@ async def _finalize_failure_event(
 
 
 async def run_extractor(
-    extractor: schemas.ExtractorRead,
+    extractor: ExtractorLike,
     payload: schemas.ExtractorRun,
     user: schemas.UserRead,
     db: AsyncSession,

@@ -48,6 +48,7 @@ const COLORS = [
   '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3',
   '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#ff9800',
 ];
+const COLLABORATION_WEBSOCKET_PROTOCOL = 'baldin-collaboration';
 
 function randomColor(): string {
   return COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -189,7 +190,10 @@ export function useCollaborativeEditor(
         roomName,
         ydocInstance,
         {
-          params: { collaboration_token: bootstrap.collaboration_token },
+          protocols: [
+            COLLABORATION_WEBSOCKET_PROTOCOL,
+            bootstrap.collaboration_token,
+          ],
           connect: false,
         },
       );

@@ -9451,8 +9451,8 @@ export interface operations {
   delete_extractor_example_extractor__id__examples__example_id__delete: {
     parameters: {
       path: {
-        id: string;
         example_id: string;
+        id: string;
       };
     };
     responses: {

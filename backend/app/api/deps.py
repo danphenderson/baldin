@@ -786,7 +786,7 @@ async def create_extractor(
 
 
 async def run_extractor(
-    extractor: schemas.ExtractorRead,
+    extractor: models.Extractor | schemas.ExtractorRead,
     payload: schemas.ExtractorRun,
     user: schemas.UserRead,
     db: AsyncSession = Depends(get_async_session),
@@ -840,15 +840,20 @@ async def extract_and_create_records(
 
 async def get_extractor_example(
     example_id: UUID4,
+    extractor: models.Extractor = Depends(get_extractor),
     db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
 ) -> models.ExtractorExample:
-    example = await db.get(models.ExtractorExample, example_id)
+    result = await db.execute(
+        select(models.ExtractorExample).where(
+            models.ExtractorExample.id == example_id,
+            models.ExtractorExample.extractor_id == extractor.id,
+        )
+    )
+    example = result.scalars().first()
     if not example:
         raise HTTPException(
             status_code=404, detail=f"Example with id {example_id} not found"
         )
-    # Further checks for user access to this example can be performed here
     await log.info(f"get_extractor_example: {example}")
     return example
 

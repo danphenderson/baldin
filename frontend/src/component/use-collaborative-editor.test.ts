@@ -12,6 +12,7 @@ import {
   type ConnectionStatus,
 } from './use-collaborative-editor';
 
+const COLLABORATION_WEBSOCKET_PROTOCOL = 'baldin-collaboration';
 const websocketProviderMock = vi.fn();
 
 vi.mock('y-websocket', () => ({
@@ -106,7 +107,7 @@ describe('useCollaborativeEditor', () => {
 
     expect(providerDouble.connect).toHaveBeenCalledTimes(1);
     expect(websocketProviderMock.mock.calls[0]?.[3]).toMatchObject({
-      params: { collaboration_token: 'collab-token-123' },
+      protocols: [COLLABORATION_WEBSOCKET_PROTOCOL, 'collab-token-123'],
       connect: false,
     });
   });

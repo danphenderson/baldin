@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import jwt
-from fastapi import APIRouter, Depends, Query, WebSocket
+from fastapi import APIRouter, Depends, WebSocket
 from sqlalchemy import select
 
 from app.api.deps import schemas
@@ -23,8 +23,10 @@ from app.models import Document, DocumentShare, User
 
 router: APIRouter = APIRouter()
 COLLABORATION_TOKEN_AUDIENCE = "document-collaboration"
-# Keep collaboration session keys short-lived to limit the impact of URL logging
-# while still allowing brief reconnect windows during editor bootstrap.
+COLLABORATION_WEBSOCKET_PROTOCOL = "baldin-collaboration"
+# Keep collaboration session keys short-lived to limit exposure if handshake
+# metadata is logged while still allowing brief reconnect windows during editor
+# bootstrap.
 COLLABORATION_TOKEN_EXPIRE_MINUTES = 5
 
 
@@ -102,6 +104,32 @@ async def _check_editor_access(
         return None
 
 
+def _get_requested_websocket_subprotocols(websocket: WebSocket) -> list[str]:
+    subprotocols = websocket.scope.get("subprotocols")
+    if isinstance(subprotocols, (list, tuple)):
+        return [
+            value.strip()
+            for value in subprotocols
+            if isinstance(value, str) and value.strip()
+        ]
+
+    requested_subprotocols = websocket.headers.get("sec-websocket-protocol", "")
+    return [
+        value.strip() for value in requested_subprotocols.split(",") if value.strip()
+    ]
+
+
+def _extract_collaboration_token_from_websocket(
+    websocket: WebSocket,
+) -> Optional[str]:
+    subprotocols = _get_requested_websocket_subprotocols(websocket)
+    if len(subprotocols) < 2:
+        return None
+    if subprotocols[0] != COLLABORATION_WEBSOCKET_PROTOCOL:
+        return None
+    return subprotocols[1]
+
+
 # ---------------------------------------------------------------------------
 #  WebSocket endpoint
 # ---------------------------------------------------------------------------
@@ -152,12 +180,16 @@ async def request_collaboration_bootstrap(
 async def collaborate(
     websocket: WebSocket,
     document_id: str,
-    collaboration_token: str = Query(...),
 ) -> None:
     try:
         doc_uuid = uuid.UUID(document_id)
     except ValueError:
         await websocket.close(code=4004, reason="Invalid document ID")
+        return
+
+    collaboration_token = _extract_collaboration_token_from_websocket(websocket)
+    if collaboration_token is None:
+        await websocket.close(code=4003, reason="Unauthorized")
         return
 
     user = await _authenticate_collaboration_session(collaboration_token, doc_uuid)
@@ -171,7 +203,7 @@ async def collaborate(
         return
 
     await ensure_document_collaboration_server_started()
-    await websocket.accept()
+    await websocket.accept(subprotocol=COLLABORATION_WEBSOCKET_PROTOCOL)
     try:
         await document_collaboration_server.serve(
             FastAPIWebsocketAdapter(websocket, document_id)

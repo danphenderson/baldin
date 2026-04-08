@@ -88,12 +88,16 @@ async def _startup(app: FastAPI) -> None:
             "Skipping automatic schema creation and default superuser bootstrap outside DEV/PYTEST."
         )
 
-    # Start crawler scheduler if enabled
+    # Local-first preview keeps the scheduler in-process. Each tick takes
+    # a Postgres advisory leader lock in app.crawler_scheduler so multiple
+    # web processes do not dispatch the same scheduled run twice.
     if conf.settings.SHOULD_RUN_CRAWLER_SCHEDULER:
         from app.crawler_scheduler import crawler_scheduler_loop
 
         app.state.crawler_scheduler_task = asyncio.create_task(crawler_scheduler_loop())
-        console_log.info("Crawler scheduler started.")
+        console_log.info(
+            "Crawler scheduler started in-process for the local-first preview; scheduled dispatches are coordinated by a Postgres leader lock."
+        )
     else:
         console_log.info("Crawler scheduler disabled for this environment.")
 

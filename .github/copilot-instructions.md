@@ -6,6 +6,7 @@
 - Scoped delivery and Copilot-asset rules live in `.github/instructions/`.
 
 ## Reference Docs
+- [Copilot Asset Inventory](COPILOT_SURFACE.md)
 - [Prompt The Right Agent](../docs/docs/engineering/copilot-prompt-cookbook.md)
 - [Run The Right Checks](../docs/docs/engineering/testing.md)
 - [Regenerate API Contracts](../docs/docs/engineering/contract-management.md)

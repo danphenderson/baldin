@@ -46,3 +46,4 @@ backend/public/datalake/
 
 public/*
 **.coverage
+.vscode/*

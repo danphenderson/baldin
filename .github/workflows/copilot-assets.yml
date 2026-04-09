@@ -14,7 +14,7 @@ on:
       - ".github/instructions/**"
       - ".github/prompts/**"
       - ".github/skills/**"
-      - ".github/README.md"
+      - ".github/COPILOT_SURFACE.md"
       - "scripts/validate_copilot_assets.py"
     branches:
       - main
@@ -25,7 +25,7 @@ on:
       - ".github/instructions/**"
       - ".github/prompts/**"
       - ".github/skills/**"
-      - ".github/README.md"
+      - ".github/COPILOT_SURFACE.md"
       - "scripts/validate_copilot_assets.py"
 
 permissions:

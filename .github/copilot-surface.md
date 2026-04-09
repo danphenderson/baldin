@@ -1,5 +1,7 @@
 # Baldin Copilot Customization Surface
 
+This document inventories Baldin's Copilot customization surface without overriding the repository README on GitHub.
+
 ## Layer Model
 
 | Layer | Path | Scope |

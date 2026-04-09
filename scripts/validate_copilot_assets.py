@@ -6,7 +6,7 @@ Checks:
   2. applyTo globs in instructions resolve to at least one existing path
   3. Agent files declaring agents: also include agent in tools:
   4. Local markdown links in asset bodies resolve to existing files
-  5. .github/README.md inventory matches actual file list
+    5. .github/COPILOT_SURFACE.md inventory matches actual file list
 
 Requires: Python 3.9+ (stdlib only, no third-party deps).
 Exit 0 on pass, exit 1 with diagnostics on failure.
@@ -217,17 +217,17 @@ def check_local_links(all_fm: dict[Path, dict[str, str | list[str]]]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Check 5: .github/README.md inventory matches actual files
+# Check 5: .github/COPILOT_SURFACE.md inventory matches actual files
 # ---------------------------------------------------------------------------
 
-def check_readme_inventory() -> None:
-    """Validate that .github/README.md references all actual Copilot assets."""
-    readme_path = GITHUB_DIR / "README.md"
-    if not readme_path.exists():
-        error(".github/README.md does not exist")
+def check_copilot_surface_inventory() -> None:
+    """Validate that .github/COPILOT_SURFACE.md references all actual Copilot assets."""
+    surface_path = GITHUB_DIR / "COPILOT_SURFACE.md"
+    if not surface_path.exists():
+        error(".github/COPILOT_SURFACE.md does not exist")
         return
 
-    readme_text = readme_path.read_text(encoding="utf-8")
+    surface_text = surface_path.read_text(encoding="utf-8")
 
     # Check agents
     agent_files = sorted(GITHUB_DIR.glob("agents/*.agent.md"))
@@ -239,11 +239,14 @@ def check_readme_inventory() -> None:
             agent_name = fm.get("name", "")
         except Exception:
             agent_name = ""
-        if agent_name and agent_name in readme_text:
+        if agent_name and agent_name in surface_text:
             continue
-        if stem in readme_text or af.name in readme_text:
+        if stem in surface_text or af.name in surface_text:
             continue
-        error(f".github/README.md: missing reference to agent '{af.name}' (name='{agent_name}', slug='{stem}')")
+        error(
+            f".github/COPILOT_SURFACE.md: missing reference to agent '{af.name}' "
+            f"(name='{agent_name}', slug='{stem}')"
+        )
 
     # Check prompts — README lists them by backtick-delimited name
     prompt_files = sorted(GITHUB_DIR.glob("prompts/*.prompt.md"))
@@ -257,23 +260,26 @@ def check_readme_inventory() -> None:
 
         # Check for the prompt name (from frontmatter) or the slug
         slug = pf.stem.replace(".prompt", "")
-        if name and name in readme_text:
+        if name and name in surface_text:
             continue
-        if slug in readme_text:
+        if slug in surface_text:
             continue
-        error(f".github/README.md: missing reference to prompt '{pf.name}' (name='{name}', slug='{slug}')")
+        error(
+            f".github/COPILOT_SURFACE.md: missing reference to prompt '{pf.name}' "
+            f"(name='{name}', slug='{slug}')"
+        )
 
     # Check skills
     skill_dirs = sorted(d for d in (GITHUB_DIR / "skills").iterdir() if d.is_dir()) if (GITHUB_DIR / "skills").exists() else []
     for sd in skill_dirs:
-        if sd.name not in readme_text:
-            error(f".github/README.md: missing reference to skill '{sd.name}'")
+        if sd.name not in surface_text:
+            error(f".github/COPILOT_SURFACE.md: missing reference to skill '{sd.name}'")
 
     # Check instructions
     instr_files = sorted(GITHUB_DIR.glob("instructions/*.instructions.md"))
     for inf in instr_files:
-        if inf.name not in readme_text and inf.stem.replace(".instructions", "") not in readme_text:
-            error(f".github/README.md: missing reference to instruction '{inf.name}'")
+        if inf.name not in surface_text and inf.stem.replace(".instructions", "") not in surface_text:
+            error(f".github/COPILOT_SURFACE.md: missing reference to instruction '{inf.name}'")
 
 
 # ---------------------------------------------------------------------------
@@ -287,7 +293,7 @@ def main() -> int:
     check_apply_to(all_fm)
     check_agent_tool_alias(all_fm)
     check_local_links(all_fm)
-    check_readme_inventory()
+    check_copilot_surface_inventory()
 
     for w in WARNINGS:
         print(f"WARN: {w}", file=sys.stderr)

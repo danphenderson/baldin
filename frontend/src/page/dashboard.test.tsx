@@ -109,9 +109,12 @@ const emptyUserContextValue = {
   user: { id: 'u1', first_name: 'Jane', last_name: 'Doe', email: 'jane@test.com' } as never,
 };
 
-function renderPage(ctxOverrides: Partial<typeof userContextValue> = {}) {
+function renderPage(
+  ctxOverrides: Partial<typeof userContextValue> = {},
+  setToolbarHeader = vi.fn(),
+) {
   return render(
-    <ToolbarHeaderContext.Provider value={vi.fn()}>
+    <ToolbarHeaderContext.Provider value={setToolbarHeader}>
       <UserContext.Provider value={{ ...userContextValue, ...ctxOverrides }}>
         <MemoryRouter>
           <DashboardPage />
@@ -126,6 +129,7 @@ function renderPage(ctxOverrides: Partial<typeof userContextValue> = {}) {
 describe('DashboardPage', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-04-09T09:00:00'));
     mockedGetCommandCenterSummary.mockReset();
     mockedGetActivityFeed.mockReset();
     mockedGetActionItems.mockReset();
@@ -157,6 +161,27 @@ describe('DashboardPage', () => {
     renderPage();
 
     expect(screen.getByLabelText('Loading dashboard')).toBeInTheDocument();
+  });
+
+  it('sets the toolbar header to the greeting and long date', async () => {
+    mockedGetCommandCenterSummary.mockResolvedValue(makeSummary() as never);
+    mockedGetActivityFeed.mockResolvedValue({ items: [], total: 0 } as never);
+    mockedGetActionItems.mockResolvedValue([] as never);
+    mockedGetLeads.mockResolvedValue({ leads: [], pagination: { page: 1 } } as never);
+
+    const setToolbarHeader = vi.fn();
+    const expectedSubtitle = new Date('2026-04-09T09:00:00').toLocaleDateString(undefined, {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    });
+
+    renderPage({}, setToolbarHeader);
+
+    await waitFor(() => {
+      expect(setToolbarHeader).toHaveBeenCalledWith({
+        title: 'Good morning, Jane',
+        subtitle: expectedSubtitle,
+      });
+    });
   });
 
   it('renders action items when data loads', async () => {

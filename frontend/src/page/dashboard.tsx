@@ -118,10 +118,6 @@ function formatDate(iso?: string | null): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function todayFormatted(): string {
-  return new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-}
-
 function linkedEntityLabel(item: ActionItemDetailRead): { text: string; path: string } | null {
   if (item.application_id) {
     const label = item.application?.lead?.title || 'Application';
@@ -373,6 +369,7 @@ const DashboardPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { token, user } = useContext(UserContext);
+  const greeting = `${getGreeting()}${user?.first_name ? `, ${user.first_name}` : ''}`;
 
   /* ---- state ---- */
   const [summary, setSummary] = useState<CommandCenterSummary | null>(null);
@@ -404,7 +401,7 @@ const DashboardPage: React.FC = () => {
   const [statusMenuItem, setStatusMenuItem] = useState<ActionItemDetailRead | null>(null);
 
   /* ---- page header ---- */
-  usePageToolbarHeader('Dashboard', todayFormatted());
+  usePageToolbarHeader(greeting, formatLongDate());
 
   /* ---- data fetch ---- */
   const refresh = useCallback(async () => {
@@ -741,16 +738,6 @@ const DashboardPage: React.FC = () => {
           {successMsg}
         </Alert>
       </Fade>
-
-      {/* ── Greeting + date ── */}
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-          {getGreeting()}{user?.first_name ? `, ${user.first_name}` : ''}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {formatLongDate()}
-        </Typography>
-      </Box>
 
       {/* ── Onboarding quick-start (no apps AND no leads) ── */}
       {summary && summary.application_count === 0 && summary.lead_count === 0 && (

@@ -19,7 +19,6 @@ Use this skill to decide what backend tests Baldin actually needs for a change, 
 
 - `docs/docs/engineering/testing.md`
 - `.github/workflows/ci.yml`
-- `plans/POLISH_PHASE_PLAN.md`
 - `backend/app/conftest.py`
 - `backend/app/tests/**`
 

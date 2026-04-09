@@ -1,20 +1,10 @@
 from __future__ import annotations
 
 from time import perf_counter
-from uuid import uuid4
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from app import schemas
-from app.core import conf
-from app.core.correlation_id import correlation_id
 from app.core.langchain import ainvoke_structured_prompt
-from app.core.orchestration import (
-    build_status_message,
-    create_orchestration_event,
-    get_or_create_orchestration_pipeline,
-    update_orchestration_event,
-)
 from app.core.rag.shared import (
     EXPANDED_K_DELTA,
     EXPANDED_SCORE_FLOOR,
@@ -26,16 +16,17 @@ from app.core.rag.shared import (
     mark_failure,
     sanitize_exception,
     select_results,
+    shared_finalize_failure,
+    shared_finalize_success,
+    shared_initialize_run,
 )
 from app.core.rag.state import (
     WORKFLOW_NAME,
     LeadEnrichmentDraft,
     LeadEnrichmentState,
-    active_rag_event_id,
     build_orchestration_payload,
     fingerprint_text,
     render_lead_enrichment,
-    utc_now,
 )
 
 
@@ -72,54 +63,13 @@ def _build_generation_prompt(repair_note: str | None = None) -> ChatPromptTempla
 
 
 async def initialize_run(state: LeadEnrichmentState) -> LeadEnrichmentState:
-    started = perf_counter()
-    workflow_name = state.get("workflow_name", WORKFLOW_NAME)
-    thread_id = correlation_id.get("") or uuid4().hex
-    request_started_at = utc_now()
-    pipeline = await get_or_create_orchestration_pipeline(
-        workflow_name,
-        db=state["db"],
-        user=state["user"],
+    return await shared_initialize_run(
+        state,
+        workflow_name=state.get("workflow_name", WORKFLOW_NAME),
         description="LangGraph orchestration pipeline for lead enrichment",
-        definition={
-            "kind": "langgraph",
-            "entrypoint": "documents.rag.enrich_lead",
-            "schema_version": 1,
-        },
+        entrypoint="documents.rag.enrich_lead",
+        build_payload_fn=build_orchestration_payload,
     )
-    update: LeadEnrichmentState = {
-        "workflow_name": workflow_name,
-        "thread_id": thread_id,
-        "request_started_at": request_started_at,
-        "pipeline_id": pipeline.id,
-        "outcome_result": "running",
-        "http_status": None,
-        "error_code": None,
-        "error_summary": None,
-        "retrieval_attempts": 0,
-        "generation_attempts": 0,
-        "repair_used": False,
-    }
-    update["trace"] = append_trace(
-        {**state, **update},
-        node="initialize_run",
-        status="success",
-        attempt=1,
-        started_at=started,
-    )
-    event = await create_orchestration_event(
-        schemas.OrchestrationEventCreate(
-            message=build_status_message(workflow_name, "running", "initialized"),
-            payload=build_orchestration_payload({**state, **update}),
-            environment=conf.settings.ENVIRONMENT,
-            status=schemas.OrchestrationEventStatusType.RUNNING,
-            pipeline_id=pipeline.id,
-        ),
-        db=state["db"],
-    )
-    active_rag_event_id.set(str(event.id))
-    update["event_id"] = event.id
-    return update
 
 
 async def retrieve_context(state: LeadEnrichmentState) -> LeadEnrichmentState:
@@ -381,79 +331,19 @@ async def repair_generation(state: LeadEnrichmentState) -> LeadEnrichmentState:
 
 
 async def finalize_success(state: LeadEnrichmentState) -> LeadEnrichmentState:
-    started = perf_counter()
-    rendered = render_lead_enrichment(state["draft"])
-    request_finished_at = utc_now()
-    update: LeadEnrichmentState = {
-        "rendered_enrichment": rendered,
-        "request_finished_at": request_finished_at,
-        "outcome_result": "success",
-        "http_status": 200,
-        "error_code": None,
-        "error_summary": None,
-    }
-    update["trace"] = append_trace(
-        {**state, **update},
-        node="finalize_success",
-        status="success",
-        attempt=1,
-        started_at=started,
+    return await shared_finalize_success(
+        state,
+        render_fn=render_lead_enrichment,
+        build_payload_fn=build_orchestration_payload,
+        rendered_field="rendered_enrichment",
     )
-    payload = build_orchestration_payload({**state, **update})
-    await update_orchestration_event(
-        state["event_id"],
-        schemas.OrchestrationEventUpdate(
-            message=build_status_message(
-                state.get("workflow_name", WORKFLOW_NAME),
-                "success",
-                f"completed in {payload['request']['duration_ms']} ms",
-            ),
-            payload=payload,
-            status=schemas.OrchestrationEventStatusType.SUCCESS,
-        ),
-        state["db"],
-    )
-    return update
 
 
 async def finalize_failure(state: LeadEnrichmentState) -> LeadEnrichmentState:
-    started = perf_counter()
-    request_finished_at = utc_now()
-    error_summary = state.get("error_summary")
-    if not error_summary:
-        error_summary = (
-            "Structured enrichment generation failed after one repair attempt."
-        )
-    update: LeadEnrichmentState = {
-        "request_finished_at": request_finished_at,
-        "outcome_result": "failure",
-        "http_status": state.get("http_status", 500) or 500,
-        "error_code": state.get("error_code") or "generation_failed",
-        "error_summary": error_summary,
-    }
-    update["trace"] = append_trace(
-        {**state, **update},
-        node="finalize_failure",
-        status="failure",
-        attempt=1,
-        started_at=started,
-        warning_codes=[update["error_code"]],
+    return await shared_finalize_failure(
+        state,
+        build_payload_fn=build_orchestration_payload,
     )
-    payload = build_orchestration_payload({**state, **update})
-    await update_orchestration_event(
-        state["event_id"],
-        schemas.OrchestrationEventUpdate(
-            message=build_status_message(
-                state.get("workflow_name", WORKFLOW_NAME),
-                "failure",
-                error_summary,
-            ),
-            payload=payload,
-            status=schemas.OrchestrationEventStatusType.FAILED,
-        ),
-        state["db"],
-    )
-    return update
 
 
 def route_after_retrieve(state: LeadEnrichmentState) -> str:

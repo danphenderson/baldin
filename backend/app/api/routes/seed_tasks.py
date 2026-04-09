@@ -64,11 +64,10 @@ def _seed_operations_by_name() -> dict[str, SeedOperation]:
     from app.api.routes import (
         certificate,
         contacts,
-        cover_letters,
+        documents,
         education,
         experiences,
         leads,
-        resumes,
         skills,
         users,
     )
@@ -76,11 +75,10 @@ def _seed_operations_by_name() -> dict[str, SeedOperation]:
     operations = (
         certificate.CERTIFICATE_SEED_OPERATION,
         contacts.CONTACT_SEED_OPERATION,
-        cover_letters.COVER_LETTER_SEED_OPERATION,
+        documents.DOCUMENT_SEED_OPERATION,
         education.EDUCATION_SEED_OPERATION,
         experiences.EXPERIENCE_SEED_OPERATION,
         leads.LEAD_SEED_OPERATION,
-        resumes.RESUME_SEED_OPERATION,
         skills.SKILL_SEED_OPERATION,
         users.USER_SEED_OPERATION,
     )

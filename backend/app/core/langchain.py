@@ -4,7 +4,7 @@
 Client for interacting with the Langchain API.
 """
 
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar
 
 import httpx
 from bs4 import BeautifulSoup
@@ -151,10 +151,17 @@ async def _extract_text_with_playwright(url: str) -> str:
 
 
 async def extract_text_from_url(url: str) -> str:
+    text, _ = await extract_text_from_url_with_method(url)
+    return text
+
+
+async def extract_text_from_url_with_method(
+    url: str,
+) -> tuple[str, Literal["playwright", "httpx"]]:
     safe_url = validate_url_safe_for_fetch(url)
 
     try:
-        return await _extract_text_with_playwright(safe_url)
+        return await _extract_text_with_playwright(safe_url), "playwright"
     except PlaywrightError as exc:
         if not _should_fallback_to_http_fetch(exc):
             raise
@@ -164,7 +171,7 @@ async def extract_text_from_url(url: str) -> str:
             safe_url,
             exc,
         )
-        return await _extract_text_with_httpx(safe_url)
+        return await _extract_text_with_httpx(safe_url), "httpx"
 
 
 def generate_cover_letter(profile, job, template) -> str:

@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyUserDatabase
-from sqlalchemy import UniqueConstraint, delete, inspect, or_, select
+from sqlalchemy import UniqueConstraint, delete, false, inspect, or_, select, update
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -34,6 +34,12 @@ USER_PROFILE_FIELDS = (
 )
 
 PYTEST_DB_OPERATION_TIMEOUT_SECONDS = 5
+OBSOLETE_TABLES = (
+    "resumes_x_applications",
+    "cover_letters_x_applications",
+    "resumes",
+    "cover_letters",
+)
 
 # Determine the appropriate SQLAlchemy database URI based on the environment
 if conf.settings.ENVIRONMENT == "PYTEST":
@@ -332,8 +338,16 @@ def _sync_missing_named_unique_constraints(connection: Connection) -> None:
             )
 
 
+def _drop_obsolete_tables(connection: Connection) -> None:
+    quoted_tables = ", ".join(
+        _quote_identifier(connection, table_name) for table_name in OBSOLETE_TABLES
+    )
+    connection.execute(text(f"DROP TABLE IF EXISTS {quoted_tables} CASCADE"))
+
+
 def _create_and_sync_schema(connection: Connection) -> None:
     connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    _drop_obsolete_tables(connection)
     models.Base.metadata.create_all(connection)
     _sync_missing_columns(connection)
     _sync_missing_named_unique_constraints(connection)
@@ -510,11 +524,17 @@ class DataBaseManager:
         application_ids = await self._list_ids(
             select(models.Application.id).where(models.Application.user_id == user_id)
         )
-        resume_ids = await self._list_ids(
-            select(models.Resume.id).where(models.Resume.user_id == user_id)
+        document_ids = await self._list_ids(
+            select(models.Document.id).where(models.Document.user_id == user_id)
         )
-        cover_letter_ids = await self._list_ids(
-            select(models.CoverLetter.id).where(models.CoverLetter.user_id == user_id)
+        document_version_ids = (
+            await self._list_ids(
+                select(models.DocumentVersion.id).where(
+                    models.DocumentVersion.document_id.in_(document_ids)
+                )
+            )
+            if document_ids
+            else []
         )
         extractor_ids = await self._list_ids(
             select(models.Extractor.id).where(models.Extractor.user_id == user_id)
@@ -530,16 +550,18 @@ class DataBaseManager:
             models.ExtractorExample.__tablename__: 0,
             models.LeadRegistration.__tablename__: 0,
             models.LeadComment.__tablename__: 0,
-            models.ResumeXApplication.__tablename__: 0,
-            models.CoverLetterXApplication.__tablename__: 0,
+            models.DocumentXApplication.__tablename__: 0,
+            models.DocumentEmbedding.__tablename__: 0,
+            models.DocumentShare.__tablename__: 0,
+            models.DocumentActivity.__tablename__: 0,
+            models.DocumentVersion.__tablename__: 0,
             models.Application.__tablename__: 0,
             models.Skill.__tablename__: 0,
             models.Experience.__tablename__: 0,
             models.Education.__tablename__: 0,
             models.Certificate.__tablename__: 0,
             models.Contact.__tablename__: 0,
-            models.Resume.__tablename__: 0,
-            models.CoverLetter.__tablename__: 0,
+            models.Document.__tablename__: 0,
             models.Extractor.__tablename__: 0,
             models.OrchestrationPipeline.__tablename__: 0,
         }
@@ -560,34 +582,63 @@ class DataBaseManager:
                 models.ExtractorExample.extractor_id.in_(extractor_ids),
             )
 
-        resume_link_conditions: list[Any] = []
+        document_link_conditions: list[Any] = []
         if application_ids:
-            resume_link_conditions.append(
-                models.ResumeXApplication.application_id.in_(application_ids)
+            document_link_conditions.append(
+                models.DocumentXApplication.application_id.in_(application_ids)
             )
-        if resume_ids:
-            resume_link_conditions.append(
-                models.ResumeXApplication.resume_id.in_(resume_ids)
+        if document_ids:
+            document_link_conditions.append(
+                models.DocumentXApplication.document_id.in_(document_ids)
             )
         deleted_records[
-            models.ResumeXApplication.__tablename__
+            models.DocumentXApplication.__tablename__
         ] = await self._delete_rows_matching_any(
-            models.ResumeXApplication, resume_link_conditions
+            models.DocumentXApplication, document_link_conditions
         )
 
-        cover_letter_link_conditions: list[Any] = []
-        if application_ids:
-            cover_letter_link_conditions.append(
-                models.CoverLetterXApplication.application_id.in_(application_ids)
+        document_activity_conditions: list[Any] = []
+        if document_ids:
+            document_activity_conditions.append(
+                models.DocumentActivity.document_id.in_(document_ids)
             )
-        if cover_letter_ids:
-            cover_letter_link_conditions.append(
-                models.CoverLetterXApplication.cover_letter_id.in_(cover_letter_ids)
-            )
+        document_activity_conditions.append(
+            models.DocumentActivity.actor_user_id == user_id
+        )
         deleted_records[
-            models.CoverLetterXApplication.__tablename__
+            models.DocumentActivity.__tablename__
         ] = await self._delete_rows_matching_any(
-            models.CoverLetterXApplication, cover_letter_link_conditions
+            models.DocumentActivity, document_activity_conditions
+        )
+
+        deleted_records[models.DocumentShare.__tablename__] = await self._delete_rows(
+            models.DocumentShare,
+            or_(
+                models.DocumentShare.document_id.in_(document_ids)
+                if document_ids
+                else false(),
+                models.DocumentShare.shared_with_user_id == user_id,
+                models.DocumentShare.shared_by_user_id == user_id,
+            ),
+        )
+        if document_version_ids:
+            deleted_records[
+                models.DocumentEmbedding.__tablename__
+            ] = await self._delete_rows(
+                models.DocumentEmbedding,
+                models.DocumentEmbedding.document_version_id.in_(document_version_ids),
+            )
+        if document_ids:
+            await self.session.execute(
+                update(models.Document)
+                .where(models.Document.id.in_(document_ids))
+                .values(head_version_id=None)
+            )
+        deleted_records[models.DocumentVersion.__tablename__] = await self._delete_rows(
+            models.DocumentVersion,
+            models.DocumentVersion.document_id.in_(document_ids)
+            if document_ids
+            else false(),
         )
 
         deleted_records[
@@ -617,11 +668,8 @@ class DataBaseManager:
         deleted_records[models.Contact.__tablename__] = await self._delete_rows(
             models.Contact, models.Contact.user_id == user_id
         )
-        deleted_records[models.Resume.__tablename__] = await self._delete_rows(
-            models.Resume, models.Resume.user_id == user_id
-        )
-        deleted_records[models.CoverLetter.__tablename__] = await self._delete_rows(
-            models.CoverLetter, models.CoverLetter.user_id == user_id
+        deleted_records[models.Document.__tablename__] = await self._delete_rows(
+            models.Document, models.Document.user_id == user_id
         )
         deleted_records[models.Extractor.__tablename__] = await self._delete_rows(
             models.Extractor, models.Extractor.user_id == user_id

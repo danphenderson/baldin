@@ -28,11 +28,10 @@ password_helper = PasswordHelper()
 USER_SEED_PATHS = (
     "/certificate/seed",
     "/contacts/seed",
-    "/cover_letters/seed",
+    "/documents/seed",
     "/education/seed",
     "/experiences/seed",
     "/leads/seed",
-    "/resumes/seed",
     "/skills/seed",
 )
 

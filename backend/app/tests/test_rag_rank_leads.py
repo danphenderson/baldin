@@ -116,6 +116,19 @@ def _valid_draft() -> LeadRankingDraft:
     )
 
 
+def _out_of_range_draft() -> LeadRankingDraft:
+    return LeadRankingDraft(
+        ranked_leads=[
+            RankedLeadEntry(
+                lead_index=4,
+                title="Out Of Range Role",
+                relevance_score=9,
+                explanation="This explanation is long enough to satisfy validation even though the lead index is invalid.",
+            )
+        ]
+    )
+
+
 def _install_orchestration_recorder(
     monkeypatch: pytest.MonkeyPatch,
 ) -> _OrchestrationRecorder:
@@ -333,6 +346,35 @@ async def test_ranking_graph_fails_after_repair_exhausted(
         recorder.updated_payloads[-1][1].status
         == schemas.OrchestrationEventStatusType.FAILED
     )
+
+
+@pytest.mark.asyncio
+async def test_ranking_graph_rejects_out_of_range_lead_indices(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = _FakeStore(
+        [[_result("OUT_OF_RANGE_CONTEXT", 0.9), _result("SECOND_CONTEXT", 0.83)]]
+    )
+    recorder = _install_orchestration_recorder(monkeypatch)
+    _install_generator(
+        monkeypatch,
+        [_out_of_range_draft(), _out_of_range_draft()],
+    )
+
+    graph = build_lead_ranking_graph()
+    final_state = await graph.ainvoke(_base_state(store))
+
+    assert final_state["outcome_result"] == "failure"
+    assert final_state["http_status"] == 500
+    assert final_state["error_code"] == "generation_failed"
+    assert final_state["generation_attempts"] == 2
+    assert final_state["repair_used"] is True
+    assert "input leads range" in final_state["generation_error_summary"]
+
+    payload = recorder.updated_payloads[-1][1].payload
+    assert payload is not None
+    assert payload["generation"]["attempts"] == 2
+    assert payload["outcome"]["error_code"] == "generation_failed"
 
 
 def test_render_lead_ranking_is_stable_and_sorted() -> None:

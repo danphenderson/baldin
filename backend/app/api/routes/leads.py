@@ -721,13 +721,8 @@ async def purge_leads(
     )
 
     await db.execute(
-        delete(models.ResumeXApplication).where(
-            models.ResumeXApplication.application_id.in_(application_ids)
-        )
-    )
-    await db.execute(
-        delete(models.CoverLetterXApplication).where(
-            models.CoverLetterXApplication.application_id.in_(application_ids)
+        delete(models.DocumentXApplication).where(
+            models.DocumentXApplication.application_id.in_(application_ids)
         )
     )
     await db.execute(

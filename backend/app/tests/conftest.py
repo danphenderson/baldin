@@ -15,11 +15,9 @@ from app.main import app
 from app.models import (
     Application,
     Contact,
-    CoverLetter,
     Experience,
     Lead,
     OrchestrationEvent,
-    Resume,
     Skill,
     User,
 )
@@ -92,13 +90,3 @@ async def application(db: AsyncSession, default_user: User, lead: Lead) -> Appli
 @pytest.fixture
 async def contact(db: AsyncSession, default_user: User) -> Contact:
     return await utils.create_contact(db, default_user.id)
-
-
-@pytest.fixture
-async def resume(db: AsyncSession, default_user: User) -> Resume:
-    return await utils.create_resume(db, default_user.id)
-
-
-@pytest.fixture
-async def cover_letter(db: AsyncSession, default_user: User) -> CoverLetter:
-    return await utils.create_cover_letter(db, default_user.id)

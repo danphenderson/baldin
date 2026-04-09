@@ -78,7 +78,7 @@ async def _create_lead_and_application(
     async with session_context() as session:
         lead = await utils.create_lead(session)
         application = models.Application(
-            status="submitted",
+            status="applied",
             lead_id=lead.id,
             user_id=user_id,
             next_step=next_step,

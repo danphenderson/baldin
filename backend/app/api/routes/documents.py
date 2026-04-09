@@ -2,7 +2,16 @@
 import json
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+)
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import UUID4
 from PyPDF2 import PdfReader
@@ -24,6 +33,11 @@ from app.api.deps import (
     model_to_dict,
     models,
     schemas,
+)
+from app.api.routes.seed_tasks import (
+    SeedOperation,
+    build_user_seed_creator,
+    schedule_seed_operation,
 )
 from app.core.document_storage import (
     MAX_DOCUMENT_UPLOAD_BYTES,
@@ -715,6 +729,30 @@ async def create_document(
     await db.commit()
     await db.refresh(doc)
     return _document_detail(doc)
+
+
+DOCUMENT_SEED_OPERATION = SeedOperation(
+    pipeline_name="seed_documents",
+    resource_name="Documents",
+    seed_filename="documents.json",
+    destination_table="documents",
+    creator=build_user_seed_creator(schemas.DocumentCreate, create_document),
+)
+
+
+@router.post(
+    "/seed",
+    status_code=202,
+    response_model=schemas.SeedOperationAccepted,
+)
+async def seed_documents(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+):
+    return await schedule_seed_operation(
+        background_tasks, db, user, DOCUMENT_SEED_OPERATION
+    )
 
 
 @router.get("/{document_id}", response_model=schemas.DocumentDetailRead)

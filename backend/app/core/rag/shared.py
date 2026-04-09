@@ -239,6 +239,7 @@ async def shared_initialize_run(
     workflow_name: str,
     description: str,
     entrypoint: str,
+    build_payload_fn=None,
 ) -> dict[str, Any]:
     started = perf_counter()
     thread_id = correlation_id.get("") or uuid4().hex
@@ -277,7 +278,7 @@ async def shared_initialize_run(
     event = await create_orchestration_event(
         schemas.OrchestrationEventCreate(
             message=build_status_message(workflow_name, "running", "initialized"),
-            payload={},
+            payload=build_payload_fn({**state, **update}) if build_payload_fn else {},
             environment=conf.settings.ENVIRONMENT,
             status=schemas.OrchestrationEventStatusType.RUNNING,
             pipeline_id=pipeline.id,
@@ -294,18 +295,21 @@ async def shared_finalize_success(
     *,
     render_fn,
     build_payload_fn,
+    rendered_field: str = "rendered_output",
 ) -> dict[str, Any]:
     started = perf_counter()
     rendered = render_fn(state["draft"])
     request_finished_at = utc_now()
     update: dict[str, Any] = {
-        "rendered_output": rendered,
         "request_finished_at": request_finished_at,
         "outcome_result": "success",
         "http_status": 200,
         "error_code": None,
         "error_summary": None,
     }
+    update[rendered_field] = rendered
+    if rendered_field != "rendered_output":
+        update["rendered_output"] = rendered
     update["trace"] = append_trace(
         {**state, **update},
         node="finalize_success",

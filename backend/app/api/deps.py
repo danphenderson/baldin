@@ -496,32 +496,6 @@ async def create_skill(
     return skill
 
 
-async def create_cover_letter(
-    payload: schemas.CoverLetterCreate,
-    db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
-) -> models.CoverLetter:
-    cover_letter = models.CoverLetter(**payload.model_dump(), user_id=user.id)
-    db.add(cover_letter)
-    await db.commit()
-    await db.refresh(cover_letter)
-    await log.info(f"create_cover_letter: {cover_letter}")
-    return cover_letter
-
-
-async def create_resume(
-    payload: schemas.ResumeCreate,
-    db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
-) -> models.Resume:
-    resume = models.Resume(**payload.model_dump(), user_id=user.id)
-    db.add(resume)
-    await db.commit()
-    await db.refresh(resume)
-    await log.info(f"create_resume: {resume}")
-    return resume
-
-
 async def get_document(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),
@@ -581,20 +555,6 @@ async def create_experience(
     return experience
 
 
-async def get_resume(
-    id: UUID4,
-    db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
-) -> models.Resume:
-    resume = await db.get(models.Resume, id)
-    if not resume:
-        raise await _404(resume, id)
-    if resume.user_id != user.id:  # type: ignore
-        raise await _403(user.id, resume, id)
-    await log.info(f"get_resume: {resume}")
-    return resume
-
-
 async def get_contact(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),
@@ -620,20 +580,6 @@ async def create_contact(
     await db.refresh(contact)
     await log.info(f"create_contact: {contact}")
     return contact
-
-
-async def get_cover_letter(
-    id: UUID4,
-    db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
-) -> models.CoverLetter:
-    cover_letter = await db.get(models.CoverLetter, id)
-    if not cover_letter:
-        raise await _404(cover_letter, id)
-    if cover_letter.user_id != user.id:  # type: ignore
-        raise await _403(user.id, cover_letter, id)
-    await log.info(f"get_cover_letter: {cover_letter}")
-    return cover_letter
 
 
 async def get_application(
@@ -883,9 +829,9 @@ def model_to_dict(model_instance):
     and converting non-serializable types like UUID and datetime to strings.
     FIXME: Hack solution, langchain should be using my schemas instead of JSON strings
     - start by updating schemas.py to include a UserProfileRead type
-    - modify the parameter types in generate_cover_letter to accept schemas.UserProfileRead, schemas.LeadRead, and schemas.CoverLetterRead
-    - modify the return type of generate_cover_letter to return schemas.CoverLetterRead
-    - update generate_cover_letter to use the schemas instead of JSON strings
+        - modify the generation helpers to accept schemas.UserProfileRead, schemas.LeadRead,
+            and the relevant document payload schema
+        - update the generation helpers to use schemas instead of JSON strings
     """
     if model_instance is None:
         return None

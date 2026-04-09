@@ -11,6 +11,7 @@ from app.core.rag.rank_leads.state import (
     LeadRankingState,
     build_ranking_orchestration_payload,
     render_lead_ranking,
+    validate_lead_ranking_draft,
 )
 from app.core.rag.shared import (
     EXPANDED_K_DELTA,
@@ -256,6 +257,10 @@ async def generate_ranking(state: LeadRankingState) -> LeadRankingState:
             LeadRankingDraft,
             model_name=state.get("model_name"),
         )
+        draft = validate_lead_ranking_draft(
+            draft,
+            lead_count=len(state.get("leads", [])),
+        )
     except Exception as exc:
         update: LeadRankingState = {
             "generation_attempts": attempt,
@@ -300,6 +305,10 @@ async def repair_generation(state: LeadRankingState) -> LeadRankingState:
             },
             LeadRankingDraft,
             model_name=state.get("model_name"),
+        )
+        draft = validate_lead_ranking_draft(
+            draft,
+            lead_count=len(state.get("leads", [])),
         )
     except Exception as exc:
         failure_summary = sanitize_exception(exc)

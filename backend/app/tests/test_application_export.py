@@ -106,7 +106,7 @@ async def test_export_404_when_no_materials():
     uid = uuid4()
     app = _fake_app(user_id=uid)
     user = SimpleNamespace(id=uid)
-    db = _FakeSession([[], [], []])
+    db = _FakeSession([[]])
 
     with pytest.raises(HTTPException) as exc_info:
         await app_routes.export_application_materials(app=app, db=db, user=user)
@@ -119,10 +119,39 @@ async def test_export_zip_with_resume_and_cover_letter():
     app = _fake_app(user_id=uid)
     user = SimpleNamespace(id=uid)
 
-    resume = SimpleNamespace(name="My Resume", content="Resume body text")
-    cover_letter = SimpleNamespace(name="My CL", content="CL body text")
+    resume_version = SimpleNamespace(
+        source_file=None,
+        content="Resume body text",
+        content_format="plain_text",
+    )
+    cover_letter_version = SimpleNamespace(
+        source_file=None,
+        content="CL body text",
+        content_format="plain_text",
+    )
+    resume_doc = SimpleNamespace(
+        id=uuid4(),
+        kind="resume",
+        title="My Resume",
+        head_version=resume_version,
+        versions=[],
+    )
+    cover_letter_doc = SimpleNamespace(
+        id=uuid4(),
+        kind="cover_letter",
+        title="My CL",
+        head_version=cover_letter_version,
+        versions=[],
+    )
+    resume_link = SimpleNamespace(document_id=resume_doc.id, version_id=None)
+    cover_letter_link = SimpleNamespace(
+        document_id=cover_letter_doc.id,
+        version_id=None,
+    )
 
-    db = _FakeSession([[resume], [cover_letter], []])
+    db = _FakeSession(
+        [[resume_link, cover_letter_link], [resume_doc, cover_letter_doc]]
+    )
 
     response = await app_routes.export_application_materials(app=app, db=db, user=user)
     assert response.media_type == "application/zip"
@@ -161,13 +190,14 @@ async def test_export_zip_with_document_source_file(tmp_path):
     doc_id = uuid4()
     doc = SimpleNamespace(
         id=doc_id,
+        kind="freeform",
         title="Uploaded Doc",
         head_version=head_version,
         versions=[],
     )
     link = SimpleNamespace(document_id=doc_id, version_id=None)
 
-    db = _FakeSession([[], [], [link], [doc]])
+    db = _FakeSession([[link], [doc]])
 
     with patch.object(
         app_routes,
@@ -199,13 +229,14 @@ async def test_export_zip_document_falls_back_to_content():
     doc_id = uuid4()
     doc = SimpleNamespace(
         id=doc_id,
+        kind="freeform",
         title="Text Doc",
         head_version=head_version,
         versions=[],
     )
     link = SimpleNamespace(document_id=doc_id, version_id=None)
 
-    db = _FakeSession([[], [], [link], [doc]])
+    db = _FakeSession([[link], [doc]])
 
     response = await app_routes.export_application_materials(app=app, db=db, user=user)
 
@@ -226,14 +257,52 @@ async def test_export_zip_uses_fallback_names_when_none():
     app = _fake_app(user_id=uid)
     user = SimpleNamespace(id=uid)
 
-    resume = SimpleNamespace(name=None, content="resume text")
-    cover_letter = SimpleNamespace(name=None, content="cover letter text")
-    head_version = SimpleNamespace(source_file=None, content="doc text")
+    resume_version = SimpleNamespace(
+        source_file=None,
+        content="resume text",
+        content_format="plain_text",
+    )
+    cover_letter_version = SimpleNamespace(
+        source_file=None,
+        content="cover letter text",
+        content_format="plain_text",
+    )
+    head_version = SimpleNamespace(
+        source_file=None,
+        content="doc text",
+        content_format="plain_text",
+    )
+    resume_id = uuid4()
+    cover_letter_id = uuid4()
+    resume_doc = SimpleNamespace(
+        id=resume_id,
+        kind="resume",
+        title=None,
+        head_version=resume_version,
+        versions=[],
+    )
+    cover_letter_doc = SimpleNamespace(
+        id=cover_letter_id,
+        kind="cover_letter",
+        title=None,
+        head_version=cover_letter_version,
+        versions=[],
+    )
     doc_id = uuid4()
-    doc = SimpleNamespace(id=doc_id, title=None, head_version=head_version, versions=[])
-    link = SimpleNamespace(document_id=doc_id, version_id=None)
+    doc = SimpleNamespace(
+        id=doc_id,
+        kind="freeform",
+        title=None,
+        head_version=head_version,
+        versions=[],
+    )
+    links = [
+        SimpleNamespace(document_id=resume_id, version_id=None),
+        SimpleNamespace(document_id=cover_letter_id, version_id=None),
+        SimpleNamespace(document_id=doc_id, version_id=None),
+    ]
 
-    db = _FakeSession([[resume], [cover_letter], [link], [doc]])
+    db = _FakeSession([links, [resume_doc, cover_letter_doc, doc]])
 
     response = await app_routes.export_application_materials(app=app, db=db, user=user)
 
@@ -245,8 +314,8 @@ async def test_export_zip_uses_fallback_names_when_none():
 
     zf = zipfile.ZipFile(BytesIO(body))
     names = zf.namelist()
-    assert "resumes/resume.pdf" in names
-    assert "cover_letters/cover_letter.pdf" in names
+    assert "resumes/document.pdf" in names
+    assert "cover_letters/document.pdf" in names
     assert "documents/document.pdf" in names
 
 
@@ -263,13 +332,14 @@ async def test_export_zip_document_source_file_value_error_falls_back():
     doc_id = uuid4()
     doc = SimpleNamespace(
         id=doc_id,
+        kind="freeform",
         title="Bad Path Doc",
         head_version=head_version,
         versions=[],
     )
     link = SimpleNamespace(document_id=doc_id, version_id=None)
 
-    db = _FakeSession([[], [], [link], [doc]])
+    db = _FakeSession([[link], [doc]])
 
     with patch.object(
         app_routes,
@@ -306,13 +376,14 @@ async def test_export_zip_document_source_file_missing_falls_back(tmp_path):
     doc_id = uuid4()
     doc = SimpleNamespace(
         id=doc_id,
+        kind="freeform",
         title="Missing File Doc",
         head_version=head_version,
         versions=[],
     )
     link = SimpleNamespace(document_id=doc_id, version_id=None)
 
-    db = _FakeSession([[], [], [link], [doc]])
+    db = _FakeSession([[link], [doc]])
 
     with patch.object(
         app_routes,
@@ -354,13 +425,14 @@ async def test_export_zip_uses_pinned_document_version():
     )
     doc = SimpleNamespace(
         id=uuid4(),
+        kind="freeform",
         title="Pinned Doc",
         head_version=head_version,
         versions=[pinned_version, head_version],
     )
     link = SimpleNamespace(document_id=doc.id, version_id=pinned_version.id)
 
-    db = _FakeSession([[], [], [link], [doc]])
+    db = _FakeSession([[link], [doc]])
 
     with patch.object(
         app_routes,

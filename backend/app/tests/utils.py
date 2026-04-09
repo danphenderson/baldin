@@ -11,11 +11,9 @@ from app import utils as app_utils
 from app.models import (
     Application,
     Contact,
-    CoverLetter,
     Experience,
     Lead,
     OrchestrationEvent,
-    Resume,
     Skill,
     User,
 )
@@ -101,8 +99,7 @@ async def create_experience(session: AsyncSession, user_id: UUID4):
 
 async def create_application(session: AsyncSession, user_id: UUID4, lead_id: UUID4):
     application = Application(
-        cover_letter="Test Cover Letter",
-        status="submitted",
+        status="applied",
         lead_id=lead_id,
         user_id=user_id,
     )
@@ -124,27 +121,3 @@ async def create_contact(session: AsyncSession, user_id: UUID4):
     session.add(contact)
     await session.commit()
     return contact
-
-
-async def create_resume(session: AsyncSession, user_id: UUID4):
-    resume = Resume(
-        name="Test Resume",
-        content="Test Content",
-        content_type="custom",
-        user_id=user_id,
-    )
-    session.add(resume)
-    await session.commit()
-    return resume
-
-
-async def create_cover_letter(session: AsyncSession, user_id: UUID4):
-    cover_letter = CoverLetter(
-        name="Test Cover Letter",
-        content="Test Content",
-        content_type="custom",
-        user_id=user_id,
-    )
-    session.add(cover_letter)
-    await session.commit()
-    return cover_letter

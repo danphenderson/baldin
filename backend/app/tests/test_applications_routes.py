@@ -670,7 +670,7 @@ async def test_application_export_includes_shared_attached_documents() -> None:
     from io import BytesIO
 
     with zipfile.ZipFile(BytesIO(body)) as archive:
-        assert "documents/Shared Export Doc.pdf" in archive.namelist()
+        assert "resumes/Shared Export Doc.pdf" in archive.namelist()
 
 
 async def test_detach_document_not_attached_returns_404() -> None:

@@ -116,6 +116,7 @@ async def test_enrich_lead_route_uses_langgraph_and_persists_compact_payload(
 
     from app.core.rag import nodes as rag_nodes
     from app.core.rag import service as rag_service
+    from app.core.rag import shared as rag_shared
 
     class _FakeVectorStore:
         def __init__(self, db) -> None:
@@ -145,8 +146,8 @@ async def test_enrich_lead_route_uses_langgraph_and_persists_compact_payload(
 
     monkeypatch.setattr(rag_service, "PGVectorStore", _FakeVectorStore)
     monkeypatch.setattr(rag_nodes, "ainvoke_structured_prompt", _fake_generator)
-    monkeypatch.setattr(rag_nodes, "create_orchestration_event", _recording_create)
-    monkeypatch.setattr(rag_nodes, "update_orchestration_event", _recording_update)
+    monkeypatch.setattr(rag_shared, "create_orchestration_event", _recording_create)
+    monkeypatch.setattr(rag_shared, "update_orchestration_event", _recording_update)
 
     async with _client() as client:
         email, _user_id = await _create_user("rag-route-pass")
@@ -218,6 +219,7 @@ async def test_enrich_lead_route_persists_terminal_failure_after_repair_attempt(
 
     from app.core.rag import nodes as rag_nodes
     from app.core.rag import service as rag_service
+    from app.core.rag import shared as rag_shared
 
     class _FakeVectorStore:
         def __init__(self, db) -> None:
@@ -248,8 +250,8 @@ async def test_enrich_lead_route_persists_terminal_failure_after_repair_attempt(
 
     monkeypatch.setattr(rag_service, "PGVectorStore", _FakeVectorStore)
     monkeypatch.setattr(rag_nodes, "ainvoke_structured_prompt", _failing_generator)
-    monkeypatch.setattr(rag_nodes, "create_orchestration_event", _recording_create)
-    monkeypatch.setattr(rag_nodes, "update_orchestration_event", _recording_update)
+    monkeypatch.setattr(rag_shared, "create_orchestration_event", _recording_create)
+    monkeypatch.setattr(rag_shared, "update_orchestration_event", _recording_update)
 
     async with _client() as client:
         email, _user_id = await _create_user("rag-route-fail-pass")

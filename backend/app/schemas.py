@@ -2,8 +2,6 @@
 import json
 from datetime import datetime
 from enum import Enum
-from io import BytesIO
-from pathlib import Path
 from typing import Any, Literal, Optional, Sequence, TypeVar
 
 from fastapi import UploadFile
@@ -18,7 +16,6 @@ from pydantic import (
     model_validator,
 )
 from pydantic import BaseModel as _BaseModel
-from PyPDF2 import PdfReader
 
 from app import utils
 from app.core.url_safety import validate_url_safe_for_fetch
@@ -712,69 +709,6 @@ class ContactCreate(BaseContact):
 
 
 class ContactUpdate(BaseContact):
-    pass
-
-
-class BaseResume(BaseSchema):
-    name: str | None = Field(None, description="Resume name")
-    content: str | None = Field(None, description="Resume content")
-    content_type: ContentType | None = Field(None, description="Resume content type")
-
-
-class ResumeRead(BaseRead, BaseResume):
-    pass
-
-
-class ResumeCreate(BaseResume):
-    pass
-
-    @classmethod
-    async def from_pdf(cls, filepath: str | Path) -> ResumeRead:
-        pdf_dict = await utils.pdf_to_dict(filepath)
-        # TODO: content may need to be a list of strings.
-        # This may only load the first page.
-        return cls(name=pdf_dict["name"], content=pdf_dict["content"][0])  # type: ignore
-
-
-class ResumeUpdate(BaseResume):
-    pass
-
-
-class BaseCoverLetter(BaseSchema):
-    name: str | None = Field(None, description="Cover letter name")
-    content: str | None = Field(None, description="Cover letter content")
-    content_type: ContentType | None = Field(
-        None, description="Cover letter content type"
-    )
-
-
-class CoverLetterRead(BaseRead, BaseCoverLetter):
-    pass
-
-
-class CoverLetterCreate(BaseCoverLetter):
-    pass
-
-    @classmethod
-    async def from_pdf(cls, filepath: str) -> CoverLetterRead:
-        pdf_dict = await utils.pdf_to_dict(filepath)
-        # TODO: content may need to be a list of strings.
-        # This may only load the first page.
-        return cls(name=pdf_dict["name"], content=pdf_dict["content"][0])  # type: ignore
-
-    @classmethod
-    def from_bytes(cls, name: str, content: BytesIO) -> CoverLetterRead:
-        reader = PdfReader(content)
-        text_content = []
-        for page_num in range(len(reader.pages)):
-            page = reader.pages[page_num]
-            text_content.append(page.or_text())
-        return cls(
-            name=name, content=text_content[0], content_type=ContentType.GENERATED
-        )  # type: ignore
-
-
-class CoverLetterUpdate(BaseCoverLetter):
     pass
 
 
@@ -1748,14 +1682,6 @@ class ApplicationUpdate(BaseSchema):
     notes: str | None = None
     next_step: str | None = None
     next_step_due: datetime | None = None
-
-
-class ApplicationResumeAttach(BaseSchema):
-    resume_id: UUID4
-
-
-class ApplicationCoverLetterAttach(BaseSchema):
-    cover_letter_id: UUID4
 
 
 ActionItemDetailRead.model_rebuild()

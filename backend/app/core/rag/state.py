@@ -223,7 +223,9 @@ def build_orchestration_payload(state: LeadEnrichmentState) -> dict[str, Any]:
     }
 
     # Enrichment stores rendered output as "rendered_enrichment"
-    rendered_enrichment = state.get("rendered_enrichment", "")
+    rendered_enrichment = state.get("rendered_enrichment") or state.get(
+        "rendered_output", ""
+    )
     augmented = {**state, "rendered_output": rendered_enrichment}
 
     return build_rag_orchestration_payload(

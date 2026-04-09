@@ -56,6 +56,27 @@ class LeadRankingDraft(BaseSchema):
         return self
 
 
+def validate_lead_ranking_draft(
+    draft: LeadRankingDraft,
+    *,
+    lead_count: int,
+) -> LeadRankingDraft:
+    invalid_indices = sorted(
+        {
+            entry.lead_index
+            for entry in draft.ranked_leads
+            if entry.lead_index > lead_count
+        }
+    )
+    if invalid_indices:
+        joined_indices = ", ".join(str(index) for index in invalid_indices[:5])
+        raise ValueError(
+            "lead_index values must be within the input leads range; "
+            f"received {joined_indices} for {lead_count} leads"
+        )
+    return draft
+
+
 class LeadRankingState(TypedDict, total=False):
     db: Any
     store: Any

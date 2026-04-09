@@ -104,14 +104,17 @@ def _install_generator(
 
 def _install_fetcher(
     monkeypatch: pytest.MonkeyPatch,
-    page_text: str | Exception,
+    page_text: tuple[str, str] | str | Exception,
 ) -> None:
-    async def _fake_extract(url: str) -> str:
+    async def _fake_extract(url: str) -> tuple[str, str]:
+        del url
         if isinstance(page_text, Exception):
             raise page_text
-        return page_text
+        if isinstance(page_text, tuple):
+            return page_text
+        return page_text, "playwright"
 
-    monkeypatch.setattr(nodes, "extract_text_from_url", _fake_extract)
+    monkeypatch.setattr(nodes, "extract_text_from_url_with_method", _fake_extract)
 
 
 @pytest.mark.asyncio
@@ -153,6 +156,7 @@ async def test_summarization_graph_succeeds_with_fetched_content(
     )
     assert payload["fetch"]["status"] == "success"
     assert payload["fetch"]["fetched_chars"] > 0
+    assert payload["fetch"]["fetch_method"] == "playwright"
     assert payload["generation"]["attempts"] == 1
     assert payload["outcome"]["result"] == "success"
     assert payload["input"]["url"] == _SAMPLE_URL
@@ -272,6 +276,24 @@ async def test_summarization_graph_fails_after_repair_exhausted(
         recorder.updated_payloads[-1][1].status
         == schemas.OrchestrationEventStatusType.FAILED
     )
+
+
+@pytest.mark.asyncio
+async def test_summarization_graph_records_httpx_fallback_method(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recorder = _install_orchestration_recorder(monkeypatch)
+    _install_fetcher(monkeypatch, (_SAMPLE_PAGE_TEXT, "httpx"))
+    _install_generator(monkeypatch, [_valid_draft()])
+
+    graph = build_company_summarization_graph()
+    final_state = await graph.ainvoke(_base_state())
+
+    assert final_state["outcome_result"] == "success"
+
+    payload = recorder.updated_payloads[-1][1].payload
+    assert payload is not None
+    assert payload["fetch"]["fetch_method"] == "httpx"
 
 
 def test_render_company_summary_omits_empty_optional_sections() -> None:

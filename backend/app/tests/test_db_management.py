@@ -73,16 +73,18 @@ def _expected_deleted_records() -> dict[str, int]:
         "extractor_examples": 1,
         "lead_registrations": 1,
         "lead_comments": 1,
-        "resumes_x_applications": 1,
-        "cover_letters_x_applications": 1,
+        "documents_x_applications": 1,
+        "document_embeddings": 1,
+        "document_shares": 1,
+        "document_activities": 1,
+        "document_versions": 1,
         "applications": 1,
         "user_skills": 1,
         "user_experiences": 1,
         "user_education": 1,
         "user_certificates": 1,
         "contacts": 1,
-        "resumes": 1,
-        "cover_letters": 1,
+        "documents": 1,
         "extractors": 1,
         "orchestration_pipelines": 1,
     }
@@ -134,19 +136,13 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
             email=f"{utils.random_lower_string(8)}@example.com",
             user_id=user_id,
         )
-        resume = models.Resume(
-            name="Resume",
-            content="Resume content",
-            content_type="custom",
+        document = models.Document(
+            title="Resume",
+            kind="resume",
+            status="draft",
             user_id=user_id,
         )
-        cover_letter = models.CoverLetter(
-            name="Cover Letter",
-            content="Cover letter content",
-            content_type="custom",
-            user_id=user_id,
-        )
-        application = models.Application(status="submitted", lead=lead, user_id=user_id)
+        application = models.Application(status="applied", lead=lead, user_id=user_id)
         lead_comment = models.LeadComment(
             lead=lead,
             author=user,
@@ -175,14 +171,24 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
                 education,
                 certificate,
                 contact,
-                resume,
-                cover_letter,
+                document,
                 application,
                 extractor,
                 pipeline,
             ]
         )
         await session.flush()
+
+        document_version = models.DocumentVersion(
+            document_id=document.id,
+            version_number=1,
+            name="Resume v1",
+            content="Resume content",
+            content_format="plain_text",
+        )
+        session.add(document_version)
+        await session.flush()
+        document.head_version_id = document_version.id
 
         extractor_example = models.ExtractorExample(
             content="Input example",
@@ -196,21 +202,41 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
             environment="PYTEST",
             pipeline_id=pipeline.id,
         )
-        resume_link = models.ResumeXApplication(
+        document_link = models.DocumentXApplication(
             application_id=application.id,
-            resume_id=resume.id,
+            document_id=document.id,
+            version_id=document_version.id,
         )
-        cover_letter_link = models.CoverLetterXApplication(
-            application_id=application.id,
-            cover_letter_id=cover_letter.id,
+        document_share = models.DocumentShare(
+            document_id=document.id,
+            shared_with_user_id=user_id,
+            shared_by_user_id=user_id,
+            role="editor",
+        )
+        document_activity = models.DocumentActivity(
+            document_id=document.id,
+            actor_user_id=user_id,
+            activity_type="document_created",
+            message="Created document",
+            details={},
+        )
+        document_embedding = models.DocumentEmbedding(
+            document_id=document.id,
+            document_version_id=document_version.id,
+            user_id=user_id,
+            chunk_index=0,
+            chunk_text="Resume content",
+            embedding=[0.0] * 1536,
         )
 
         session.add_all(
             [
                 extractor_example,
                 orchestration_event,
-                resume_link,
-                cover_letter_link,
+                document_link,
+                document_share,
+                document_activity,
+                document_embedding,
             ]
         )
         await session.commit()
@@ -223,8 +249,8 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
         "education_id": education.id,
         "certificate_id": certificate.id,
         "contact_id": contact.id,
-        "resume_id": resume.id,
-        "cover_letter_id": cover_letter.id,
+        "document_id": document.id,
+        "document_version_id": document_version.id,
         "application_id": application.id,
         "extractor_id": extractor.id,
         "extractor_example_id": extractor_example.id,
@@ -321,9 +347,11 @@ async def test_db_management_purges_user_data_without_deleting_user() -> None:
             await session.get(models.Certificate, target_data["certificate_id"]) is None
         )
         assert await session.get(models.Contact, target_data["contact_id"]) is None
-        assert await session.get(models.Resume, target_data["resume_id"]) is None
+        assert await session.get(models.Document, target_data["document_id"]) is None
         assert (
-            await session.get(models.CoverLetter, target_data["cover_letter_id"])
+            await session.get(
+                models.DocumentVersion, target_data["document_version_id"]
+            )
             is None
         )
         assert (
@@ -352,23 +380,14 @@ async def test_db_management_purges_user_data_without_deleting_user() -> None:
             )
         )
         assert lead_registration.scalar_one_or_none() is None
-        resume_link = await session.execute(
-            select(models.ResumeXApplication).where(
-                models.ResumeXApplication.application_id
+        document_link = await session.execute(
+            select(models.DocumentXApplication).where(
+                models.DocumentXApplication.application_id
                 == target_data["application_id"],
-                models.ResumeXApplication.resume_id == target_data["resume_id"],
+                models.DocumentXApplication.document_id == target_data["document_id"],
             )
         )
-        assert resume_link.scalar_one_or_none() is None
-        cover_letter_link = await session.execute(
-            select(models.CoverLetterXApplication).where(
-                models.CoverLetterXApplication.application_id
-                == target_data["application_id"],
-                models.CoverLetterXApplication.cover_letter_id
-                == target_data["cover_letter_id"],
-            )
-        )
-        assert cover_letter_link.scalar_one_or_none() is None
+        assert document_link.scalar_one_or_none() is None
         assert await session.get(models.Skill, other_skill_id) is not None
 
 
@@ -405,9 +424,11 @@ async def test_db_management_deletes_user_and_owned_data() -> None:
             await session.get(models.Certificate, target_data["certificate_id"]) is None
         )
         assert await session.get(models.Contact, target_data["contact_id"]) is None
-        assert await session.get(models.Resume, target_data["resume_id"]) is None
+        assert await session.get(models.Document, target_data["document_id"]) is None
         assert (
-            await session.get(models.CoverLetter, target_data["cover_letter_id"])
+            await session.get(
+                models.DocumentVersion, target_data["document_version_id"]
+            )
             is None
         )
         assert (

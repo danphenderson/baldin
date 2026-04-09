@@ -6,6 +6,7 @@ import pytest
 
 from app import schemas
 from app.core.rag import nodes
+from app.core.rag import shared as rag_shared
 from app.core.rag.graphs import build_lead_enrichment_graph
 from app.core.rag.state import LeadEnrichmentDraft, render_lead_enrichment
 
@@ -101,12 +102,12 @@ def _install_orchestration_recorder(
         return SimpleNamespace(id=uuid4(), name="rag.enrich_lead")
 
     monkeypatch.setattr(
-        nodes,
+        rag_shared,
         "get_or_create_orchestration_pipeline",
         _fake_get_or_create_pipeline,
     )
-    monkeypatch.setattr(nodes, "create_orchestration_event", recorder.create)
-    monkeypatch.setattr(nodes, "update_orchestration_event", recorder.update)
+    monkeypatch.setattr(rag_shared, "create_orchestration_event", recorder.create)
+    monkeypatch.setattr(rag_shared, "update_orchestration_event", recorder.update)
     return recorder
 
 

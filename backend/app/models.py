@@ -443,7 +443,7 @@ class Certificate(Base):
 class Application(Base):
     """
     Model for job applications.
-    Contains cover letter, resume, notes, status.
+    Contains notes, status, and linked versioned documents.
     Linked to users and job leads through many-to-one relationships.
     """
 
@@ -465,14 +465,6 @@ class Application(Base):
     user_id = Column(UUID, ForeignKey("users.id"))
     lead = relationship("Lead", back_populates="application", uselist=False)
     user = relationship("User", back_populates="applications")
-    resumes = relationship(
-        "Resume", secondary="resumes_x_applications", back_populates="applications"
-    )
-    cover_letters = relationship(
-        "CoverLetter",
-        secondary="cover_letters_x_applications",
-        back_populates="applications",
-    )
     documents = relationship(
         "Document",
         secondary="documents_x_applications",
@@ -497,66 +489,6 @@ class Contact(Base):
     user = relationship("User", back_populates="contacts")
 
 
-class Resume(Base):
-    """
-    Represents a user's resume.
-    Contains name, content, type.
-    Linked to users and job applications via many-to-one and many-to-many relationships.
-    """
-
-    __tablename__ = "resumes"
-    name = Column(String)
-    content = Column(Text)
-    content_type = Column(String)  # Add validator in schemas.py BaseResume
-    user_id = Column(UUID, ForeignKey("users.id"))
-    user = relationship("User", back_populates="resumes")
-    applications = relationship(
-        "Application",
-        secondary="resumes_x_applications",
-        back_populates="resumes",
-    )
-
-
-class ResumeXApplication(Base):
-    """
-    Crosswalk table for resumes and job applications many-to-many relationship.
-    """
-
-    __tablename__ = "resumes_x_applications"
-    application_id = Column(UUID, ForeignKey("applications.id"), primary_key=True)
-    resume_id = Column(UUID, ForeignKey("resumes.id"), primary_key=True)
-
-
-class CoverLetter(Base):
-    """
-    Represents a user's cover letter.
-    Includes name, content, type.
-    Linked to users and job applications via many-to-one and many-to-many relationships, respectively.
-    """
-
-    __tablename__ = "cover_letters"
-    name = Column(String)
-    content = Column(Text)
-    content_type = Column(String)  # Add validator in schemas.py BaseResume
-    user_id = Column(UUID, ForeignKey("users.id"))
-    user = relationship("User", back_populates="cover_letters")
-    applications = relationship(
-        "Application",
-        secondary="cover_letters_x_applications",
-        back_populates="cover_letters",
-    )
-
-
-class CoverLetterXApplication(Base):
-    """
-    Crosswalk table for cover letters and job applications many-to-many relationship.
-    """
-
-    __tablename__ = "cover_letters_x_applications"
-    application_id = Column(UUID, ForeignKey("applications.id"), primary_key=True)
-    cover_letter_id = Column(UUID, ForeignKey("cover_letters.id"), primary_key=True)
-
-
 # ---------------------------------------------------------------------------
 #  Unified Document models (versioned, multi-kind)
 # ---------------------------------------------------------------------------
@@ -564,7 +496,7 @@ class CoverLetterXApplication(Base):
 
 class Document(Base):
     """
-    Unified document model replacing separate Resume / CoverLetter tables.
+    Unified document model replacing legacy flat material tables.
     Each document has a kind discriminator and append-only version history.
     """
 
@@ -874,10 +806,8 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     contacts = relationship("Contact", back_populates="user")
     skills = relationship("Skill", back_populates="user")
     experiences = relationship("Experience", back_populates="user")
-    resumes = relationship("Resume", back_populates="user")
     education = relationship("Education", back_populates="user")
     certificates = relationship("Certificate", back_populates="user")
-    cover_letters = relationship("CoverLetter", back_populates="user")
     documents = relationship("Document", back_populates="user")
     extractors = relationship("Extractor", back_populates="user")
     orchestration_pipelines = relationship(

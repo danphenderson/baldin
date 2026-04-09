@@ -4,7 +4,10 @@ from time import perf_counter
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from app.core.langchain import ainvoke_structured_prompt, extract_text_from_url
+from app.core.langchain import (
+    ainvoke_structured_prompt,
+    extract_text_from_url_with_method,
+)
 from app.core.rag.shared import (
     append_trace,
     fingerprint_text,
@@ -72,7 +75,7 @@ async def fetch_content(state: CompanySummaryState) -> CompanySummaryState:
     started = perf_counter()
     url = state.get("url", "")
     try:
-        page_text = await extract_text_from_url(url)
+        page_text, fetch_method = await extract_text_from_url_with_method(url)
     except Exception:
         failure = mark_failure(
             http_status=400,
@@ -108,7 +111,7 @@ async def fetch_content(state: CompanySummaryState) -> CompanySummaryState:
             "page_text": "",
             "page_text_chars": 0,
             "content_fingerprint": None,
-            "fetch_method": "playwright",
+            "fetch_method": fetch_method,
             "trace": append_trace(
                 {**state, **failure},
                 node="fetch_content",
@@ -125,7 +128,7 @@ async def fetch_content(state: CompanySummaryState) -> CompanySummaryState:
         "page_text": truncated,
         "page_text_chars": len(truncated),
         "content_fingerprint": fingerprint_text(truncated),
-        "fetch_method": "playwright",
+        "fetch_method": fetch_method,
         "trace": append_trace(
             state,
             node="fetch_content",

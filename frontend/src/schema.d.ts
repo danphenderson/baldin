@@ -331,99 +331,6 @@ export interface paths {
     /** Seed Skills */
     post: operations["seed_skills_skills_seed_post"];
   };
-  "/cover_letters/{cover_letter_id}/download": {
-    /**
-     * Download Cover Letter
-     * @deprecated
-     */
-    get: operations["download_cover_letter_cover_letters__cover_letter_id__download_get"];
-  };
-  "/cover_letters/generate": {
-    /**
-     * Generate User Cover Letter
-     * @deprecated
-     */
-    post: operations["generate_user_cover_letter_cover_letters_generate_post"];
-  };
-  "/cover_letters/": {
-    /**
-     * Get Current User Cover Letters
-     * @deprecated
-     */
-    get: operations["get_current_user_cover_letters_cover_letters__get"];
-    /**
-     * Create User Cover Letter
-     * @deprecated
-     */
-    post: operations["create_user_cover_letter_cover_letters__post"];
-  };
-  "/cover_letters/{cover_letter_id}": {
-    /**
-     * Get Cover Letter By Id
-     * @deprecated
-     */
-    get: operations["get_cover_letter_by_id_cover_letters__cover_letter_id__get"];
-    /**
-     * Delete User Cover Letter
-     * @deprecated
-     */
-    delete: operations["delete_user_cover_letter_cover_letters__cover_letter_id__delete"];
-    /**
-     * Update User Cover Letter
-     * @deprecated
-     */
-    patch: operations["update_user_cover_letter_cover_letters__cover_letter_id__patch"];
-  };
-  "/cover_letters/seed": {
-    /**
-     * Seed Cover Letters
-     * @deprecated
-     */
-    post: operations["seed_cover_letters_cover_letters_seed_post"];
-  };
-  "/resumes/{resume_id}/download": {
-    /**
-     * Download Resume
-     * @deprecated
-     */
-    get: operations["download_resume_resumes__resume_id__download_get"];
-  };
-  "/resumes/": {
-    /**
-     * Get Current User Resumes
-     * @deprecated
-     */
-    get: operations["get_current_user_resumes_resumes__get"];
-    /**
-     * Create User Resume
-     * @deprecated
-     */
-    post: operations["create_user_resume_resumes__post"];
-  };
-  "/resumes/{resume_id}": {
-    /**
-     * Get User Resume
-     * @deprecated
-     */
-    get: operations["get_user_resume_resumes__resume_id__get"];
-    /**
-     * Delete User Resume
-     * @deprecated
-     */
-    delete: operations["delete_user_resume_resumes__resume_id__delete"];
-    /**
-     * Update User Resume
-     * @deprecated
-     */
-    patch: operations["update_user_resume_resumes__resume_id__patch"];
-  };
-  "/resumes/seed": {
-    /**
-     * Seed Resumes
-     * @deprecated
-     */
-    post: operations["seed_resumes_resumes_seed_post"];
-  };
   "/applications/": {
     /**
      * Get Applications
@@ -441,45 +348,14 @@ export interface paths {
     /** Update Application */
     patch: operations["update_application_applications__id__patch"];
   };
-  "/applications/{id}/resumes": {
-    /**
-     * Get Application Resumes
-     * @deprecated
-     */
-    get: operations["get_application_resumes_applications__id__resumes_get"];
-    /**
-     * Add Resume To Application
-     * @deprecated
-     */
-    post: operations["add_resume_to_application_applications__id__resumes_post"];
-  };
-  "/applications/{id}/cover_letters": {
-    /**
-     * Get Application Cover Letters
-     * @deprecated
-     */
-    get: operations["get_application_cover_letters_applications__id__cover_letters_get"];
-    /**
-     * Add Cover Letter To Application
-     * @deprecated
-     */
-    post: operations["add_cover_letter_to_application_applications__id__cover_letters_post"];
-  };
-  "/applications/{id}/cover_letters/generate": {
-    /**
-     * Generate Cover Letter For Application
-     * @deprecated
-     */
-    post: operations["generate_cover_letter_for_application_applications__id__cover_letters_generate_post"];
-  };
   "/applications/{id}/export": {
     /**
      * Export Application Materials
      * @description Export all materials linked to an application as a ZIP archive.
      *
      * The archive contains up to three subdirectories — ``resumes/``,
-     * ``cover_letters/``, and ``documents/`` — each holding PDF files for
-     * the linked records.
+     * ``cover_letters/``, and ``documents/`` — each holding PDF files derived
+     * from the application's attached documents.
      */
     get: operations["export_application_materials_applications__id__export_get"];
   };
@@ -541,6 +417,10 @@ export interface paths {
      * version; otherwise a brand-new Document is created.
      */
     post: operations["generate_document_documents_generate_post"];
+  };
+  "/documents/seed": {
+    /** Seed Documents */
+    post: operations["seed_documents_documents_seed_post"];
   };
   "/documents/{document_id}": {
     /** Get Document Detail */
@@ -1199,14 +1079,6 @@ export interface components {
       /** Page Size */
       page_size: number;
     };
-    /** ApplicationCoverLetterAttach */
-    ApplicationCoverLetterAttach: {
-      /**
-       * Cover Letter Id
-       * Format: uuid4
-       */
-      cover_letter_id: string;
-    };
     /** ApplicationCreate */
     ApplicationCreate: {
       /**
@@ -1295,14 +1167,6 @@ export interface components {
       status_history?: {
           [key: string]: unknown;
         }[] | null;
-    };
-    /** ApplicationResumeAttach */
-    ApplicationResumeAttach: {
-      /**
-       * Resume Id
-       * Format: uuid4
-       */
-      resume_id: string;
     };
     /**
      * ApplicationStatus
@@ -2128,69 +1992,6 @@ export interface components {
        * @default 20
        */
       page_size?: number;
-    };
-    /** CoverLetterCreate */
-    CoverLetterCreate: {
-      /**
-       * Name
-       * @description Cover letter name
-       */
-      name?: string | null;
-      /**
-       * Content
-       * @description Cover letter content
-       */
-      content?: string | null;
-      /** @description Cover letter content type */
-      content_type?: components["schemas"]["ContentType"] | null;
-    };
-    /** CoverLetterRead */
-    CoverLetterRead: {
-      /**
-       * Name
-       * @description Cover letter name
-       */
-      name?: string | null;
-      /**
-       * Content
-       * @description Cover letter content
-       */
-      content?: string | null;
-      /** @description Cover letter content type */
-      content_type?: components["schemas"]["ContentType"] | null;
-      /**
-       * Id
-       * Format: uuid4
-       * @description The unique uuid4 record identifier.
-       */
-      id: string;
-      /**
-       * Created At
-       * Format: date-time
-       * @description The time the item was created
-       */
-      created_at: string;
-      /**
-       * Updated At
-       * Format: date-time
-       * @description The time the item was last updated
-       */
-      updated_at: string;
-    };
-    /** CoverLetterUpdate */
-    CoverLetterUpdate: {
-      /**
-       * Name
-       * @description Cover letter name
-       */
-      name?: string | null;
-      /**
-       * Content
-       * @description Cover letter content
-       */
-      content?: string | null;
-      /** @description Cover letter content type */
-      content_type?: components["schemas"]["ContentType"] | null;
     };
     /** CrawlerPipelineCreate */
     CrawlerPipelineCreate: {
@@ -4997,69 +4798,6 @@ export interface components {
        */
       text?: string | null;
     };
-    /** ResumeCreate */
-    ResumeCreate: {
-      /**
-       * Name
-       * @description Resume name
-       */
-      name?: string | null;
-      /**
-       * Content
-       * @description Resume content
-       */
-      content?: string | null;
-      /** @description Resume content type */
-      content_type?: components["schemas"]["ContentType"] | null;
-    };
-    /** ResumeRead */
-    ResumeRead: {
-      /**
-       * Name
-       * @description Resume name
-       */
-      name?: string | null;
-      /**
-       * Content
-       * @description Resume content
-       */
-      content?: string | null;
-      /** @description Resume content type */
-      content_type?: components["schemas"]["ContentType"] | null;
-      /**
-       * Id
-       * Format: uuid4
-       * @description The unique uuid4 record identifier.
-       */
-      id: string;
-      /**
-       * Created At
-       * Format: date-time
-       * @description The time the item was created
-       */
-      created_at: string;
-      /**
-       * Updated At
-       * Format: date-time
-       * @description The time the item was last updated
-       */
-      updated_at: string;
-    };
-    /** ResumeUpdate */
-    ResumeUpdate: {
-      /**
-       * Name
-       * @description Resume name
-       */
-      name?: string | null;
-      /**
-       * Content
-       * @description Resume content
-       */
-      content?: string | null;
-      /** @description Resume content type */
-      content_type?: components["schemas"]["ContentType"] | null;
-    };
     /**
      * ReviewAction
      * @enum {string}
@@ -7628,353 +7366,6 @@ export interface operations {
     };
   };
   /**
-   * Download Cover Letter
-   * @deprecated
-   */
-  download_cover_letter_cover_letters__cover_letter_id__download_get: {
-    parameters: {
-      path: {
-        cover_letter_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: never;
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Generate User Cover Letter
-   * @deprecated
-   */
-  generate_user_cover_letter_cover_letters_generate_post: {
-    parameters: {
-      query: {
-        lead_id: string;
-        /** @description Template ID for the cover letter */
-        template_id?: string | null;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["CoverLetterRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get Current User Cover Letters
-   * @deprecated
-   */
-  get_current_user_cover_letters_cover_letters__get: {
-    parameters: {
-      query?: {
-        /** @description Filter by content type */
-        content_type?: components["schemas"]["ContentType"] | null;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["CoverLetterRead"][];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Create User Cover Letter
-   * @deprecated
-   */
-  create_user_cover_letter_cover_letters__post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CoverLetterCreate"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        content: {
-          "application/json": components["schemas"]["CoverLetterRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get Cover Letter By Id
-   * @deprecated
-   */
-  get_cover_letter_by_id_cover_letters__cover_letter_id__get: {
-    parameters: {
-      query: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["CoverLetterRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Delete User Cover Letter
-   * @deprecated
-   */
-  delete_user_cover_letter_cover_letters__cover_letter_id__delete: {
-    parameters: {
-      query: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      204: {
-        content: never;
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Update User Cover Letter
-   * @deprecated
-   */
-  update_user_cover_letter_cover_letters__cover_letter_id__patch: {
-    parameters: {
-      query: {
-        id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CoverLetterUpdate"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["CoverLetterRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Seed Cover Letters
-   * @deprecated
-   */
-  seed_cover_letters_cover_letters_seed_post: {
-    responses: {
-      /** @description Successful Response */
-      202: {
-        content: {
-          "application/json": components["schemas"]["SeedOperationAccepted"];
-        };
-      };
-    };
-  };
-  /**
-   * Download Resume
-   * @deprecated
-   */
-  download_resume_resumes__resume_id__download_get: {
-    parameters: {
-      path: {
-        resume_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: never;
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get Current User Resumes
-   * @deprecated
-   */
-  get_current_user_resumes_resumes__get: {
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ResumeRead"][];
-        };
-      };
-    };
-  };
-  /**
-   * Create User Resume
-   * @deprecated
-   */
-  create_user_resume_resumes__post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ResumeCreate"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        content: {
-          "application/json": components["schemas"]["ResumeRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get User Resume
-   * @deprecated
-   */
-  get_user_resume_resumes__resume_id__get: {
-    parameters: {
-      query: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ResumeRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Delete User Resume
-   * @deprecated
-   */
-  delete_user_resume_resumes__resume_id__delete: {
-    parameters: {
-      query: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      204: {
-        content: never;
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Update User Resume
-   * @deprecated
-   */
-  update_user_resume_resumes__resume_id__patch: {
-    parameters: {
-      query: {
-        id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ResumeUpdate"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ResumeRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Seed Resumes
-   * @deprecated
-   */
-  seed_resumes_resumes_seed_post: {
-    responses: {
-      /** @description Successful Response */
-      202: {
-        content: {
-          "application/json": components["schemas"]["SeedOperationAccepted"];
-        };
-      };
-    };
-  };
-  /**
    * Get Applications
    * @description Get all applications for the current user.
    */
@@ -8080,151 +7471,12 @@ export interface operations {
     };
   };
   /**
-   * Get Application Resumes
-   * @deprecated
-   */
-  get_application_resumes_applications__id__resumes_get: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ResumeRead"][];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Add Resume To Application
-   * @deprecated
-   */
-  add_resume_to_application_applications__id__resumes_post: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ApplicationResumeAttach"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        content: {
-          "application/json": components["schemas"]["ResumeRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get Application Cover Letters
-   * @deprecated
-   */
-  get_application_cover_letters_applications__id__cover_letters_get: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["CoverLetterRead"][];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Add Cover Letter To Application
-   * @deprecated
-   */
-  add_cover_letter_to_application_applications__id__cover_letters_post: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ApplicationCoverLetterAttach"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        content: {
-          "application/json": components["schemas"]["CoverLetterRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Generate Cover Letter For Application
-   * @deprecated
-   */
-  generate_cover_letter_for_application_applications__id__cover_letters_generate_post: {
-    parameters: {
-      query?: {
-        /** @description Template ID for cover letter generation */
-        template_id?: string | null;
-      };
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        content: {
-          "application/json": components["schemas"]["CoverLetterRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
    * Export Application Materials
    * @description Export all materials linked to an application as a ZIP archive.
    *
    * The archive contains up to three subdirectories — ``resumes/``,
-   * ``cover_letters/``, and ``documents/`` — each holding PDF files for
-   * the linked records.
+   * ``cover_letters/``, and ``documents/`` — each holding PDF files derived
+   * from the application's attached documents.
    */
   export_application_materials_applications__id__export_get: {
     parameters: {
@@ -8481,6 +7733,17 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Documents */
+  seed_documents_documents_seed_post: {
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["SeedOperationAccepted"];
         };
       };
     };

@@ -13,7 +13,6 @@ from app.api.routes import (
     companies,
     connections,
     contacts,
-    cover_letters,
     crawlers,
     data_orchestration,
     db_management,
@@ -25,7 +24,6 @@ from app.api.routes import (
     leads,
     messages,
     mfa,
-    resumes,
     review,
     skills,
     users,
@@ -95,16 +93,6 @@ api_router.include_router(
     skills.router,
     prefix="/skills",
     tags=["skills"],
-)
-api_router.include_router(
-    cover_letters.router,
-    prefix="/cover_letters",
-    tags=["cover_letters"],
-)
-api_router.include_router(
-    resumes.router,
-    prefix="/resumes",
-    tags=["resumes"],
 )
 api_router.include_router(
     applications.router,

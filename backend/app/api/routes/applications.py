@@ -1,10 +1,9 @@
 # Path: app/api/routes/applications.py
-import json
 import zipfile
 from html import escape as html_escape
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import UUID4
 from reportlab.lib.pagesizes import letter
@@ -15,14 +14,10 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.api.deps import (
     AsyncSession,
-    generate_cover_letter,
     get_application,
     get_async_session,
-    get_cover_letter,
     get_current_user,
     get_document,
-    get_resume,
-    model_to_dict,
     models,
     schemas,
 )
@@ -31,12 +26,6 @@ from app.core.datetime_utils import format_utc_datetime, normalize_utc_datetime,
 from app.core.document_storage import resolve_document_source_path
 
 router: APIRouter = APIRouter()
-
-
-async def _inject_legacy_deprecation_headers(response: Response) -> None:
-    """Inject RFC 8594 Deprecation + Sunset headers on legacy resume/cover-letter sub-routes."""
-    response.headers["Deprecation"] = "true"
-    response.headers["Sunset"] = "2026-06-01"
 
 
 def _normalize_status_history(history: list[dict] | None) -> list[dict]:
@@ -226,209 +215,6 @@ async def delete_application(
     return {"message": "Application deleted successfully"}
 
 
-@router.get(
-    "/{id}/resumes",
-    response_model=list[schemas.ResumeRead],
-    deprecated=True,
-    dependencies=[Depends(_inject_legacy_deprecation_headers)],
-)
-async def get_application_resumes(
-    app: schemas.ApplicationRead = Depends(get_application),
-    db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
-):
-
-    # Confirm that the user owns the application
-    if app.user_id != user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to view this application",
-        )
-
-    # Fetch resumes associated with the application
-    result = await db.execute(
-        select(models.Resume)
-        .join(models.ResumeXApplication)
-        .where(models.ResumeXApplication.application_id == app.id)
-    )
-    resumes = result.scalars().all()
-    return resumes
-
-
-@router.get(
-    "/{id}/cover_letters",
-    response_model=list[schemas.CoverLetterRead],
-    deprecated=True,
-    dependencies=[Depends(_inject_legacy_deprecation_headers)],
-)
-async def get_application_cover_letters(
-    app: schemas.ApplicationRead = Depends(get_application),
-    db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
-):
-
-    # Confirm that the user owns the application
-    if app.user_id != user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to view this application",
-        )
-
-    # Fetch cover letters associated with the application
-    result = await db.execute(
-        select(models.CoverLetter)
-        .join(models.CoverLetterXApplication)
-        .where(models.CoverLetterXApplication.application_id == app.id)
-    )
-    cover_letters = result.scalars().all()
-    return cover_letters
-
-
-@router.post(
-    "/{id}/resumes",
-    status_code=201,
-    response_model=schemas.ResumeRead,
-    deprecated=True,
-    dependencies=[Depends(_inject_legacy_deprecation_headers)],
-)
-async def add_resume_to_application(
-    payload: schemas.ApplicationResumeAttach,
-    application: models.Application = Depends(get_application),
-    user: schemas.UserRead = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    resume = await get_resume(payload.resume_id, db, user)
-
-    association = await db.get(
-        models.ResumeXApplication,
-        (application.id, resume.id),
-    )
-    if not association:
-        association = models.ResumeXApplication(
-            application_id=application.id,
-            resume_id=resume.id,
-        )
-        db.add(association)
-        await db.commit()
-
-    return resume
-
-
-@router.post(
-    "/{id}/cover_letters",
-    status_code=201,
-    response_model=schemas.CoverLetterRead,
-    deprecated=True,
-    dependencies=[Depends(_inject_legacy_deprecation_headers)],
-)
-async def add_cover_letter_to_application(
-    payload: schemas.ApplicationCoverLetterAttach,
-    application: models.Application = Depends(get_application),
-    db: AsyncSession = Depends(get_async_session),
-    user: schemas.UserRead = Depends(get_current_user),
-):
-    cover_letter = await get_cover_letter(payload.cover_letter_id, db, user)
-
-    association = await db.get(
-        models.CoverLetterXApplication,
-        (application.id, cover_letter.id),
-    )
-    if not association:
-        association = models.CoverLetterXApplication(
-            application_id=application.id,
-            cover_letter_id=cover_letter.id,
-        )
-        db.add(association)
-        await db.commit()
-
-    return cover_letter
-
-
-@router.post(
-    "/{id}/cover_letters/generate",
-    status_code=201,
-    response_model=schemas.CoverLetterRead,
-    deprecated=True,
-    dependencies=[Depends(_inject_legacy_deprecation_headers)],
-)
-async def generate_cover_letter_for_application(
-    id: UUID4,
-    template_id: str | None = Query(
-        None, description="Template ID for cover letter generation"
-    ),
-    db: AsyncSession = Depends(get_async_session),  # noqa
-    user: schemas.UserRead = Depends(get_current_user),
-):
-
-    # Eagerly load the lead with the application
-    app = await db.execute(
-        select(models.Application)
-        .options(joinedload(models.Application.lead))
-        .where(models.Application.id == id)
-    )
-    app = app.scalars().first()
-
-    if not app:
-        raise HTTPException(status_code=404, detail="Application not found")
-
-    if app.user_id != user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to generate a cover letter for this application",
-        )
-
-    # Fetch the user profile details
-    user_details = await db.execute(
-        select(models.User)
-        .options(
-            joinedload(models.User.education),
-            joinedload(models.User.certificates),
-            joinedload(models.User.skills),
-            joinedload(models.User.experiences),
-        )
-        .filter(models.User.id == user.id)  # type: ignore
-    )
-    user_profile = user_details.scalars().first()
-
-    # Convert user_profile and lead to JSON
-    user_profile_json = json.dumps(model_to_dict(user_profile))
-    lead_json = json.dumps(model_to_dict(app.lead))
-
-    # Get the cover letter template if a template_id is provided
-    template_content = ""
-    if template_id:
-        template = await db.get(models.CoverLetter, template_id)
-        if template and template.content_type == "template":
-            template_content = template.content
-
-    # Ensure template_content is a JSON string
-    template_json = json.dumps({"content": template_content})
-
-    # Generate the cover letter
-    generated_content = generate_cover_letter(
-        profile=user_profile_json, job=lead_json, template=template_json
-    )
-
-    # Create a new cover letter entry in the database
-    cover_letter = models.CoverLetter(
-        name=f"Cover Letter for {app.lead.title}",
-        content=generated_content,
-        content_type="generated",
-        user_id=user.id,
-    )
-    db.add(cover_letter)
-    await db.commit()
-    await db.refresh(cover_letter)
-
-    # Create an association between the cover letter and the application
-    association = models.CoverLetterXApplication(
-        application_id=app.id, cover_letter_id=cover_letter.id
-    )
-    db.add(association)
-    await db.commit()
-    return cover_letter
-
-
 @router.get("/{id}", response_model=schemas.ApplicationRead)
 async def get_application_by_id(
     application: schemas.ApplicationRead = Depends(get_application),
@@ -531,40 +317,14 @@ async def export_application_materials(
     """Export all materials linked to an application as a ZIP archive.
 
     The archive contains up to three subdirectories — ``resumes/``,
-    ``cover_letters/``, and ``documents/`` — each holding PDF files for
-    the linked records.
+    ``cover_letters/``, and ``documents/`` — each holding PDF files derived
+    from the application's attached documents.
     """
     if app.user_id != user.id:
         raise HTTPException(
             status_code=403,
             detail="You do not have permission to export this application",
         )
-
-    # -- Fetch linked resumes ----------------------------------------------
-    resumes = (
-        (
-            await db.execute(
-                select(models.Resume)
-                .join(models.ResumeXApplication)
-                .where(models.ResumeXApplication.application_id == app.id)
-            )
-        )
-        .scalars()
-        .all()
-    )
-
-    # -- Fetch linked cover letters ----------------------------------------
-    cover_letters = (
-        (
-            await db.execute(
-                select(models.CoverLetter)
-                .join(models.CoverLetterXApplication)
-                .where(models.CoverLetterXApplication.application_id == app.id)
-            )
-        )
-        .scalars()
-        .all()
-    )
 
     # -- Fetch linked document attachments ---------------------------------
     document_links = (
@@ -605,7 +365,7 @@ async def export_application_materials(
         link for link in document_links if link.document_id in documents_by_id
     ]
 
-    if not resumes and not cover_letters and not accessible_document_links:
+    if not accessible_document_links:
         raise HTTPException(
             status_code=404,
             detail="No materials linked to this application",
@@ -614,16 +374,6 @@ async def export_application_materials(
     # -- Build ZIP in memory -----------------------------------------------
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        for resume in resumes:
-            if resume.content:
-                fname = _safe_filename(resume.name or "resume") + ".pdf"
-                zf.writestr(f"resumes/{fname}", _text_to_pdf(resume.content))
-
-        for cl in cover_letters:
-            if cl.content:
-                fname = _safe_filename(cl.name or "cover_letter") + ".pdf"
-                zf.writestr(f"cover_letters/{fname}", _text_to_pdf(cl.content))
-
         for link in accessible_document_links:
             doc = documents_by_id.get(link.document_id)
             if not doc:
@@ -644,23 +394,27 @@ async def export_application_materials(
                 continue
 
             fname = _safe_filename(doc.title or "document") + ".pdf"
+            if doc.kind == schemas.DocumentKind.RESUME.value:
+                target_dir = "resumes"
+            elif doc.kind == schemas.DocumentKind.COVER_LETTER.value:
+                target_dir = "cover_letters"
+            else:
+                target_dir = "documents"
+            archive_path = f"{target_dir}/{fname}"
 
             # Prefer the original uploaded PDF when available on disk.
             if version.source_file:
                 try:
                     abs_path = resolve_document_source_path(version.source_file)
                     if abs_path.is_file():
-                        zf.write(abs_path, f"documents/{fname}")
+                        zf.write(abs_path, archive_path)
                         continue
                 except ValueError:
                     pass  # path outside uploads root — fall through
 
             # Fall back to generating a PDF from the linked version content.
             if version.content:
-                zf.writestr(
-                    f"documents/{fname}",
-                    _document_version_to_pdf(version),
-                )
+                zf.writestr(archive_path, _document_version_to_pdf(version))
 
     zip_buffer.seek(0)
 

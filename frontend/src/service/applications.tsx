@@ -6,13 +6,7 @@ import { createApiClient } from './api-client';
 export type ApplicationRead = components['schemas']['ApplicationRead'];
 export type ApplicationCreate = components['schemas']['ApplicationCreate'];
 export type ApplicationUpdate = components['schemas']['ApplicationUpdate'];
-type ApplicationResumeAttach = components['schemas']['ApplicationResumeAttach'];
-type ApplicationCoverLetterAttach = components['schemas']['ApplicationCoverLetterAttach'];
 type ApplicationDocumentAttach = components['schemas']['ApplicationDocumentAttach'];
-
-// do not export these types, as they should be asscessed from the resume and cover-letter services
-type ResumeRead = components['schemas']['ResumeRead'];
-type CoverLetterRead = components['schemas']['CoverLetterRead'];
 type DocumentRead = components['schemas']['DocumentRead'];
 
 const unwrap = <T,>(
@@ -41,38 +35,6 @@ export const getApplication = async (token: string, id: string): Promise<Applica
   }));
 };
 
-export const getApplicationResumes = async (token: string, id: string): Promise<ResumeRead[]> => {
-  const client = createApiClient(token);
-  return unwrap(await client.GET('/applications/{id}/resumes', {
-    params: { path: { id } },
-  }));
-};
-
-export const getApplicationCoverLetters = async (token: string, id: string): Promise<CoverLetterRead[]> => {
-  const client = createApiClient(token);
-  return unwrap(await client.GET('/applications/{id}/cover_letters', {
-    params: { path: { id } },
-  }));
-};
-
-export const createApplicationResume = async (token: string, id: string, resumeId: string): Promise<ResumeRead> => {
-  const payload: ApplicationResumeAttach = { resume_id: resumeId };
-  const client = createApiClient(token);
-  return unwrap(await client.POST('/applications/{id}/resumes', {
-    params: { path: { id } },
-    body: payload,
-  }));
-};
-
-export const createApplicationCoverLetter = async (token: string, id: string, coverLetterId: string): Promise<CoverLetterRead> => {
-  const payload: ApplicationCoverLetterAttach = { cover_letter_id: coverLetterId };
-  const client = createApiClient(token);
-  return unwrap(await client.POST('/applications/{id}/cover_letters', {
-    params: { path: { id } },
-    body: payload,
-  }));
-};
-
 export const createApplication = async (token: string, application: ApplicationCreate): Promise<ApplicationRead> => {
   const client = createApiClient(token);
   return unwrap(await client.POST('/applications/', {
@@ -92,13 +54,6 @@ export const deleteApplication = async (token: string, id: string): Promise<void
   const client = createApiClient(token);
   unwrap(await client.DELETE('/applications/{id}', {
     params: { path: { id } },
-  }));
-};
-
-export const generatecoverLetter = async (token: string, id: string, template_id: string): Promise<CoverLetterRead> => {
-  const client = createApiClient(token);
-  return unwrap(await client.POST('/applications/{id}/cover_letters/generate', {
-    params: { path: { id }, query: { template_id } },
   }));
 };
 

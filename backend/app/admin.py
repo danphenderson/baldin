@@ -218,7 +218,6 @@ admin.add_view(ModelView(models.Extractor, pydantic_model=schemas.ExtractorCreat
 admin.add_view(ModelView(models.Lead, pydantic_model=schemas.LeadCreate))
 admin.add_view(ModelView(models.Company, pydantic_model=schemas.CompanyCreate))
 admin.add_view(ModelView(models.Application, pydantic_model=schemas.ApplicationCreate))
-admin.add_view(ModelView(models.Resume, pydantic_model=schemas.ResumeCreate))
 admin.add_view(ModelView(models.Skill, pydantic_model=schemas.SkillCreate))
 admin.add_view(ModelView(models.Experience, pydantic_model=schemas.ExperienceCreate))
 admin.add_view(

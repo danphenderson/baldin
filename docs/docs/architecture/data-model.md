@@ -267,10 +267,8 @@ erDiagram
 | `documents_x_applications` | Application attachment bridge for versioned documents |
 | `document_shares` | Per-user viewer/editor access grants |
 | `document_activities` | Audit-style document events |
-| `resumes`, `cover_letters` | **Deprecated.** Legacy flat document tables. Routes return `Deprecation: true` and `Sunset: 2026-06-01` headers. Frontend has migrated to the unified Document API. |
-| `resumes_x_applications`, `cover_letters_x_applications` | **Deprecated.** Legacy attachment bridges. Use `documents_x_applications` instead. |
 
-The unified `Document` model is the primary direction. All frontend code now uses the Document API exclusively, filtering by `kind` (resume, cover_letter, etc.) where needed. Legacy resume and cover-letter routes remain functional but are marked deprecated in OpenAPI and will be removed after the sunset date.
+The unified `Document` model is the only remaining material model. Frontend document and application-material flows use the Document API exclusively, filtering by `kind` (resume, cover_letter, etc.) where needed, and bootstrap schema sync drops the removed legacy resume and cover-letter tables when present in older local databases.
 
 ### Automation and Review
 

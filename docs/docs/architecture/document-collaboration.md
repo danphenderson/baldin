@@ -83,7 +83,7 @@ The frontend helper clamps retry delays between 100 ms and 1000 ms and falls bac
 | `document_activities` | Audit-style document events |
 | `document_shares` | Viewer/editor grants to other users |
 
-This is the document architecture that should keep evolving with the codebase. The older `resumes` and `cover_letters` tables still exist, but they are no longer the only document surface.
+This is the document architecture that should keep evolving with the codebase. The older `resumes` and `cover_letters` tables have been removed, so `documents` is now the only application-material surface.
 
 ## Storage and Upload Safety
 

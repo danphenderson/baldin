@@ -32,10 +32,8 @@ graph TD
 	Search --> S7[/companies]
 	Search --> S8[/leads]
 	Search --> S9[/applications]
-	Docs --> D1[/resumes]
-	Docs --> D2[/cover_letters]
-	Docs --> D3[/documents]
-	Docs --> D4[/documents/{id}/collaborate*]
+	Docs --> D1[/documents]
+	Docs --> D2[/documents/{id}/collaborate*]
 	Automation --> AU1[/extractor]
 	Automation --> AU2[/data_orchestration]
 	Automation --> AU3[/crawlers]
@@ -74,12 +72,10 @@ graph TD
 
 | Tag | Prefix | Purpose |
 | --- | --- | --- |
-| `resumes` | `/resumes` | Legacy resume CRUD |
-| `cover_letters` | `/cover_letters` | Legacy cover-letter CRUD |
-| `documents` | `/documents` | Versioned multi-kind documents, version history, sharing, upload/download, and application attachment |
+| `documents` | `/documents` | Versioned multi-kind documents, version history, AI generation, seed/import flows, sharing, upload/download, and application attachment |
 | `collaboration` | `/documents` | Bootstrap claim and WebSocket collaboration endpoints under `/documents/{document_id}/collaborate*` |
 
-The document surface currently spans both the legacy resume and cover-letter APIs and the newer versioned document system. Treat `/documents` as the forward-looking canonical surface for new work.
+The document surface is now the canonical API for resumes, cover letters, and other user-authored materials. Legacy `/resumes` and `/cover_letters` routes have been retired from the public API.
 
 ### Automation and Review
 

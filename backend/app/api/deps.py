@@ -93,7 +93,12 @@ async def _404(obj: Any, id: UUID4 | str | None = None) -> HTTPException:
 
 async def get_pagination_params(
     page: int = Query(1, ge=1, description="Page number starting from 1"),
-    page_size: int = Query(10, ge=1, description="Number of records per page"),
+    page_size: int = Query(
+        10,
+        ge=1,
+        le=schemas.PAGINATION_MAX_PAGE_SIZE,
+        description="Number of records per page",
+    ),
     request_count: bool = Query(False, description="Return total count of records"),
 ) -> schemas.Pagination:
     return schemas.Pagination(

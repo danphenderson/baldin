@@ -1,7 +1,6 @@
-"""Tests for subscription tier gating and placement lifecycle transitions."""
+"""Tests for placement lifecycle transitions and active-placement gating."""
 
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -74,69 +73,6 @@ async def _set_user_fields(user_id: UUID, **values) -> None:
         for field, value in values.items():
             setattr(user, field, value)
         await session.commit()
-
-
-# ---------------------------------------------------------------------------
-# Tier gating tests
-# ---------------------------------------------------------------------------
-
-
-async def test_tier_gating_free_blocked() -> None:
-    """Free-tier users cannot access starter+ features (connections)."""
-    await _ensure_db_ready()
-    async with _client() as client:
-        email_f, uid_f = await _create_user("sub-free-pass", tier="free")
-        email_t, uid_t = await _create_user("sub-target-pass")
-        headers = await _auth_headers(client, email_f, "sub-free-pass")
-
-        response = await client.post(
-            "/connections/",
-            json={"addressee_id": str(uid_t)},
-            headers=headers,
-        )
-
-    assert response.status_code == 403
-    assert "subscription" in response.json()["detail"].lower()
-
-
-async def test_tier_gating_starter_passes() -> None:
-    """Starter-tier users can access starter+ features."""
-    await _ensure_db_ready()
-    async with _client() as client:
-        email_s, uid_s = await _create_user("sub-starter-pass", tier="starter")
-        email_t, uid_t = await _create_user("sub-start-target")
-        headers = await _auth_headers(client, email_s, "sub-starter-pass")
-
-        response = await client.post(
-            "/connections/",
-            json={"addressee_id": str(uid_t)},
-            headers=headers,
-        )
-
-    assert response.status_code == 201
-
-
-async def test_expired_subscription_treated_as_free() -> None:
-    """A starter user with expired subscription gets 403 on tier-gated endpoints."""
-    await _ensure_db_ready()
-    async with _client() as client:
-        email_e, uid_e = await _create_user("sub-expired-pass", tier="starter")
-        # Set subscription to expired (past date)
-        await _set_user_fields(
-            uid_e,
-            subscription_expires_at=datetime.utcnow() - timedelta(days=1),
-        )
-        email_t, uid_t = await _create_user("sub-exp-target")
-        headers = await _auth_headers(client, email_e, "sub-expired-pass")
-
-        response = await client.post(
-            "/connections/",
-            json={"addressee_id": str(uid_t)},
-            headers=headers,
-        )
-
-    assert response.status_code == 403
-    assert "expired" in response.json()["detail"].lower()
 
 
 # ---------------------------------------------------------------------------

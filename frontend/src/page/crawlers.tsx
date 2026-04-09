@@ -3,7 +3,7 @@ import {
   Box, Card, CardContent, Typography, Chip, Stack, Button, TextField,
   useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   Tooltip, Skeleton, Alert, Divider, Select, MenuItem, FormControl, InputLabel,
-  Switch, FormControlLabel, Collapse,
+  Switch, FormControlLabel, Collapse, TablePagination,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import Grid from '@mui/material/Grid';
@@ -27,6 +27,7 @@ import {
   type CrawlerPipelineCreate,
   type CrawlerPipelineUpdate,
   type CrawlerRunRead,
+  type CrawlerRunsPaginatedRead,
   type CrawlerRunStatus,
   type CrawlerSourceType,
   getCrawlerPipelines, createCrawlerPipeline, updateCrawlerPipeline,
@@ -94,6 +95,15 @@ const INITIAL_FORM: PipelineFormState = {
   requires_approval: false,
   execution_policy: '{}',
   extraction_policy: '{}',
+};
+
+const DEFAULT_RUN_PAGE_SIZE = 10;
+
+const EMPTY_RUNS_PAGE: CrawlerRunsPaginatedRead = {
+  items: [],
+  total: 0,
+  page: 1,
+  page_size: DEFAULT_RUN_PAGE_SIZE,
 };
 
 // ---------------------------------------------------------------------------
@@ -186,13 +196,37 @@ const CrawlerPipelineCard: React.FC<{
   expandedId: string | null;
   onToggleExpand: (id: string) => void;
   runs: CrawlerRunRead[];
+  runsTotal: number;
+  runPage: number;
+  runPageSize: number;
   runsLoading: boolean;
+  onRunPageChange: (page: number) => void;
+  onRunPageSizeChange: (pageSize: number) => void;
   onCancelRun: (runId: string) => void;
   onPauseRun: (runId: string) => void;
   onResumeRun: (runId: string) => void;
   onRetryRun: (runId: string) => void;
   index: number;
-}> = ({ pipe, onEdit, onTrigger, onToggleEnabled, expandedId, onToggleExpand, runs, runsLoading, onCancelRun, onPauseRun, onResumeRun, onRetryRun, index }) => {
+}> = ({
+  pipe,
+  onEdit,
+  onTrigger,
+  onToggleEnabled,
+  expandedId,
+  onToggleExpand,
+  runs,
+  runsTotal,
+  runPage,
+  runPageSize,
+  runsLoading,
+  onRunPageChange,
+  onRunPageSizeChange,
+  onCancelRun,
+  onPauseRun,
+  onResumeRun,
+  onRetryRun,
+  index,
+}) => {
   const theme = useTheme();
   const lastStatusKey = pipe.last_run_status ?? null;
   const lastCfg = lastStatusKey ? STATUS_CONFIG[lastStatusKey] : null;
@@ -338,7 +372,12 @@ const CrawlerPipelineCard: React.FC<{
         <Collapse in={expanded}>
           <Divider sx={{ my: 1 }} />
           <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-            Recent Runs
+            Run History
+            {runsTotal > 0 && (
+              <Box component="span" sx={{ ml: 0.75, color: 'text.secondary', fontWeight: 500 }}>
+                ({runsTotal} total)
+              </Box>
+            )}
           </Typography>
           {runsLoading ? (
             <Stack spacing={1}>
@@ -347,65 +386,87 @@ const CrawlerPipelineCard: React.FC<{
           ) : runs.length === 0 ? (
             <Typography variant="caption" color="text.secondary">No runs yet.</Typography>
           ) : (
-            <Stack spacing={1}>
-              {runs.slice(0, 10).map((run) => (
-                <Box
-                  key={run.id}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.5,
-                    px: 1.5,
-                    py: 1,
-                    borderRadius: 1.5,
-                    border: `1px solid ${theme.palette.divider}`,
-                  }}
-                >
-                  <RunStatusChip status={run.status} />
-                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <ScheduleIcon sx={{ fontSize: 11 }} />
-                      {formatRelativeTime(run.created_at)}
-                    </Typography>
-                    {run.error_summary && (
-                      <Typography variant="caption" color="error" noWrap sx={{ display: 'block' }}>
-                        {run.error_summary}
+            <>
+              <Stack spacing={1}>
+                {runs.map((run) => (
+                  <Box
+                    key={run.id}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.5,
+                      px: 1.5,
+                      py: 1,
+                      borderRadius: 1.5,
+                      border: `1px solid ${theme.palette.divider}`,
+                    }}
+                  >
+                    <RunStatusChip status={run.status} />
+                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <ScheduleIcon sx={{ fontSize: 11 }} />
+                        {formatRelativeTime(run.created_at)}
                       </Typography>
-                    )}
+                      {run.error_summary && (
+                        <Typography variant="caption" color="error" noWrap sx={{ display: 'block' }}>
+                          {run.error_summary}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Stack direction="row" spacing={0.5}>
+                      {(run.status === 'running' || run.status === 'pending') && (
+                        <Tooltip title="Cancel">
+                          <IconButton size="small" onClick={() => onCancelRun(run.id)}>
+                            <CancelIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {run.status === 'running' && (
+                        <Tooltip title="Pause">
+                          <IconButton size="small" onClick={() => onPauseRun(run.id)}>
+                            <PauseIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {run.status === 'paused' && (
+                        <Tooltip title="Resume">
+                          <IconButton size="small" onClick={() => onResumeRun(run.id)}>
+                            <ResumeIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {(run.status === 'failed' || run.status === 'cancelled') && (
+                        <Tooltip title="Retry">
+                          <IconButton size="small" onClick={() => onRetryRun(run.id)}>
+                            <RefreshIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Stack>
                   </Box>
-                  <Stack direction="row" spacing={0.5}>
-                    {(run.status === 'running' || run.status === 'pending') && (
-                      <Tooltip title="Cancel">
-                        <IconButton size="small" onClick={() => onCancelRun(run.id)}>
-                          <CancelIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {run.status === 'running' && (
-                      <Tooltip title="Pause">
-                        <IconButton size="small" onClick={() => onPauseRun(run.id)}>
-                          <PauseIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {run.status === 'paused' && (
-                      <Tooltip title="Resume">
-                        <IconButton size="small" onClick={() => onResumeRun(run.id)}>
-                          <ResumeIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {(run.status === 'failed' || run.status === 'cancelled') && (
-                      <Tooltip title="Retry">
-                        <IconButton size="small" onClick={() => onRetryRun(run.id)}>
-                          <RefreshIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                  </Stack>
-                </Box>
-              ))}
-            </Stack>
+                ))}
+              </Stack>
+              {runsTotal > 0 && (
+                <TablePagination
+                  component="div"
+                  count={runsTotal}
+                  page={runPage}
+                  onPageChange={(_, nextPage) => onRunPageChange(nextPage)}
+                  rowsPerPage={runPageSize}
+                  onRowsPerPageChange={(event) => onRunPageSizeChange(parseInt(event.target.value, 10))}
+                  rowsPerPageOptions={[5, 10, 20]}
+                  labelRowsPerPage="Runs per page"
+                  sx={{
+                    mt: 1,
+                    px: 0,
+                    '& .MuiTablePagination-toolbar': { minHeight: 44, px: 0 },
+                    '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                      fontSize: '0.75rem',
+                    },
+                  }}
+                />
+              )}
+            </>
           )}
         </Collapse>
       </CardContent>
@@ -538,8 +599,11 @@ const CrawlersPage: React.FC = () => {
 
   // Expanded card run history
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [runsMap, setRunsMap] = useState<Record<string, CrawlerRunRead[]>>({});
-  const [runsLoading, setRunsLoading] = useState<string | null>(null);
+  const [expandedRunsPipelineId, setExpandedRunsPipelineId] = useState<string | null>(null);
+  const [expandedRunsPage, setExpandedRunsPage] = useState<CrawlerRunsPaginatedRead>(EMPTY_RUNS_PAGE);
+  const [runsLoading, setRunsLoading] = useState(false);
+  const [runPage, setRunPage] = useState(0);
+  const [runPageSize, setRunPageSize] = useState(DEFAULT_RUN_PAGE_SIZE);
 
   // -----------------------------------------------------------------------
   // Data fetching
@@ -560,30 +624,59 @@ const CrawlersPage: React.FC = () => {
 
   useEffect(() => { fetchPipelines(); }, [fetchPipelines]);
 
-  const fetchRuns = useCallback(async (pipelineId: string) => {
+  const fetchRuns = useCallback(async (pipelineId: string, page: number, pageSize: number) => {
     if (!token) return;
-    setRunsLoading(pipelineId);
+    if (expandedRunsPipelineId !== pipelineId) {
+      setExpandedRunsPage(EMPTY_RUNS_PAGE);
+    }
+    setExpandedRunsPipelineId(pipelineId);
+    setRunsLoading(true);
     try {
-      const data = await getCrawlerRuns(token, pipelineId);
-      setRunsMap((prev) => ({ ...prev, [pipelineId]: data }));
+      const data = await getCrawlerRuns(token, {
+        pipeline_id: pipelineId,
+        page: page + 1,
+        page_size: pageSize,
+      });
+      setExpandedRunsPage(data);
+      setRunPage(page);
+      setRunPageSize(pageSize);
     } catch (e: unknown) {
       setError(getErrorMessage(e));
     } finally {
-      setRunsLoading(null);
+      setRunsLoading(false);
     }
-  }, [token]);
+  }, [expandedRunsPipelineId, token]);
+
+  const refreshPageData = useCallback(async (pipelineId?: string, page = runPage) => {
+    await Promise.all([
+      fetchPipelines(),
+      pipelineId ? fetchRuns(pipelineId, page, runPageSize) : Promise.resolve(),
+    ]);
+  }, [fetchPipelines, fetchRuns, runPage, runPageSize]);
 
   // -----------------------------------------------------------------------
   // Handlers
   // -----------------------------------------------------------------------
 
   const handleToggleExpand = useCallback((id: string) => {
-    setExpandedId((prev) => {
-      const nextId = prev === id ? null : id;
-      if (nextId && !runsMap[id]) fetchRuns(id);
-      return nextId;
-    });
-  }, [runsMap, fetchRuns]);
+    if (expandedId === id) {
+      setExpandedId(null);
+      return;
+    }
+
+    setExpandedId(id);
+    void fetchRuns(id, 0, runPageSize);
+  }, [expandedId, fetchRuns, runPageSize]);
+
+  const handleRunPageChange = useCallback((page: number) => {
+    if (!expandedId) return;
+    void fetchRuns(expandedId, page, runPageSize);
+  }, [expandedId, fetchRuns, runPageSize]);
+
+  const handleRunPageSizeChange = useCallback((pageSize: number) => {
+    if (!expandedId) return;
+    void fetchRuns(expandedId, 0, pageSize);
+  }, [expandedId, fetchRuns]);
 
   const handleCreate = async () => {
     if (!token) return;
@@ -669,8 +762,10 @@ const CrawlersPage: React.FC = () => {
       await triggerCrawlerRun(token, triggerPipelineId);
       setTriggerConfirmOpen(false);
       setTriggerPipelineId(null);
-      fetchPipelines();
-      if (expandedId === triggerPipelineId) fetchRuns(triggerPipelineId);
+      await refreshPageData(
+        expandedId === triggerPipelineId ? triggerPipelineId : undefined,
+        0,
+      );
     } catch (e: unknown) {
       setError(getErrorMessage(e));
     }
@@ -680,8 +775,7 @@ const CrawlersPage: React.FC = () => {
     if (!token) return;
     try {
       await cancelCrawlerRun(token, runId);
-      if (expandedId) fetchRuns(expandedId);
-      fetchPipelines();
+      await refreshPageData(expandedId ?? undefined);
     } catch (e: unknown) { setError(getErrorMessage(e)); }
   };
 
@@ -689,8 +783,7 @@ const CrawlersPage: React.FC = () => {
     if (!token) return;
     try {
       await pauseCrawlerRun(token, runId);
-      if (expandedId) fetchRuns(expandedId);
-      fetchPipelines();
+      await refreshPageData(expandedId ?? undefined);
     } catch (e: unknown) { setError(getErrorMessage(e)); }
   };
 
@@ -698,8 +791,7 @@ const CrawlersPage: React.FC = () => {
     if (!token) return;
     try {
       await resumeCrawlerRun(token, runId);
-      if (expandedId) fetchRuns(expandedId);
-      fetchPipelines();
+      await refreshPageData(expandedId ?? undefined);
     } catch (e: unknown) { setError(getErrorMessage(e)); }
   };
 
@@ -707,8 +799,7 @@ const CrawlersPage: React.FC = () => {
     if (!token) return;
     try {
       await retryCrawlerRun(token, runId);
-      if (expandedId) fetchRuns(expandedId);
-      fetchPipelines();
+      await refreshPageData(expandedId ?? undefined, 0);
     } catch (e: unknown) { setError(getErrorMessage(e)); }
   };
 
@@ -735,7 +826,7 @@ const CrawlersPage: React.FC = () => {
         <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormState(INITIAL_FORM); setCreateOpen(true); }}>
           New Pipeline
         </Button>
-        <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchPipelines} disabled={loading}>
+        <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => void refreshPageData(expandedId ?? undefined)} disabled={loading || runsLoading}>
           Refresh
         </Button>
       </Stack>
@@ -774,8 +865,13 @@ const CrawlersPage: React.FC = () => {
                   onToggleEnabled={() => handleToggleEnabled(pipe)}
                   expandedId={expandedId}
                   onToggleExpand={handleToggleExpand}
-                  runs={runsMap[pipe.id] ?? []}
-                  runsLoading={runsLoading === pipe.id}
+                  runs={expandedId === pipe.id && expandedRunsPipelineId === pipe.id ? expandedRunsPage.items : []}
+                  runsTotal={expandedId === pipe.id && expandedRunsPipelineId === pipe.id ? expandedRunsPage.total : 0}
+                  runPage={runPage}
+                  runPageSize={runPageSize}
+                  runsLoading={expandedId === pipe.id && runsLoading}
+                  onRunPageChange={handleRunPageChange}
+                  onRunPageSizeChange={handleRunPageSizeChange}
                   onCancelRun={handleCancelRun}
                   onPauseRun={handlePauseRun}
                   onResumeRun={handleResumeRun}

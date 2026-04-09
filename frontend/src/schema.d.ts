@@ -2529,6 +2529,32 @@ export interface components {
      * @enum {string}
      */
     CrawlerRunStatus: "pending" | "running" | "success" | "failed" | "cancelled" | "paused" | "pending_review";
+    /** CrawlerRunsPaginatedRead */
+    CrawlerRunsPaginatedRead: {
+      /**
+       * Items
+       * @description Paginated crawler runs
+       */
+      items?: components["schemas"]["CrawlerRunRead"][];
+      /**
+       * Total
+       * @description Total matching crawler runs
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 10
+       */
+      page_size?: number;
+    };
     /**
      * CrawlerSourceType
      * @enum {string}
@@ -9640,13 +9666,19 @@ export interface operations {
         pipeline_id?: string | null;
         /** @description Filter by trigger type */
         trigger_type?: string | null;
+        /** @description Page number starting from 1 */
+        page?: number;
+        /** @description Number of records per page */
+        page_size?: number;
+        /** @description Return total count of records */
+        request_count?: boolean;
       };
     };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["CrawlerRunRead"][];
+          "application/json": components["schemas"]["CrawlerRunsPaginatedRead"];
         };
       };
       /** @description Validation Error */

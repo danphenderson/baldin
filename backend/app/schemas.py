@@ -107,9 +107,17 @@ class BaseRead(BaseSchema):
     updated_at: datetime = Field(description="The time the item was last updated")
 
 
+PAGINATION_MAX_PAGE_SIZE = 100
+
+
 class Pagination(BaseSchema):
     page: int = Field(1, ge=1, description="The page number")
-    page_size: int = Field(10, ge=1, description="The number of items per page")
+    page_size: int = Field(
+        10,
+        ge=1,
+        le=PAGINATION_MAX_PAGE_SIZE,
+        description="The number of items per page",
+    )
     request_count: bool = Field(False, description="Request a query for total count")
 
 
@@ -1886,6 +1894,15 @@ class CrawlerRunRead(BaseRead):
     retry_of_id: UUID4 | None = Field(
         None, description="ID of the original run this is a retry of"
     )
+
+
+class CrawlerRunsPaginatedRead(BaseSchema):
+    items: list[CrawlerRunRead] = Field(
+        default_factory=list, description="Paginated crawler runs"
+    )
+    total: int = Field(0, description="Total matching crawler runs")
+    page: int = Field(1, ge=1, description="Current page number")
+    page_size: int = Field(10, ge=1, description="Items per page")
 
 
 class CrawlerRunCreate(BaseSchema):

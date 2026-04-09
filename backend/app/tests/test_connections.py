@@ -232,7 +232,7 @@ async def test_connection_list_exposes_superuser_metadata() -> None:
 
         response = await client.get(
             "/connections/",
-            params={"status": "pending", "page": 1, "page_size": 500},
+            params={"status": "pending", "page": 1, "page_size": 100},
             headers=headers_a,
         )
 

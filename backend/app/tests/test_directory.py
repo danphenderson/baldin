@@ -104,6 +104,28 @@ async def test_directory_returns_paginated_results() -> None:
     assert all("is_superuser" in item for item in body["items"])
 
 
+async def test_directory_rejects_page_sizes_over_max() -> None:
+    """GET /directory/ rejects shared pagination requests above the global cap."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        email_viewer, _ = await _create_user("dir-limit-viewer-pass")
+        headers = await _auth_headers(client, email_viewer, "dir-limit-viewer-pass")
+
+        response = await client.get(
+            "/directory/",
+            params={"page_size": 101},
+            headers=headers,
+        )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert any(
+        error["loc"] == ["query", "page_size"]
+        and "less than or equal to 100" in error["msg"]
+        for error in body["detail"]
+    )
+
+
 async def test_directory_filters_by_placement_status() -> None:
     """GET /directory/?placement_status=graduated returns only graduated users."""
     await _ensure_db_ready()

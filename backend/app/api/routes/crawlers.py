@@ -4,10 +4,16 @@ from datetime import timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import UUID4
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_async_session, get_current_superuser, models, schemas
+from app.api.deps import (
+    get_async_session,
+    get_current_superuser,
+    get_pagination_params,
+    models,
+    schemas,
+)
 from app.core.datetime_utils import now_utc_naive
 from app.core.rate_limit import limiter
 
@@ -84,9 +90,10 @@ async def trigger_crawler_run(
     return run
 
 
-@router.get("/runs", response_model=list[schemas.CrawlerRunRead])
+@router.get("/runs", response_model=schemas.CrawlerRunsPaginatedRead)
 async def list_crawler_runs(
     db: AsyncSession = Depends(get_async_session),
+    pagination: schemas.Pagination = Depends(get_pagination_params),
     source: str | None = Query(None, description="Filter by pipeline source"),
     status: str | None = Query(None, description="Filter by run status"),
     pipeline_id: UUID4 | None = Query(None, description="Filter by pipeline ID"),
@@ -105,9 +112,23 @@ async def list_crawler_runs(
             models.CrawlerPipeline.source == source
         )
 
-    query = query.order_by(models.CrawlerRun.created_at.desc())
-    result = await db.execute(query)
-    return result.scalars().all()
+    total_result = await db.execute(
+        select(func.count()).select_from(query.order_by(None).subquery())
+    )
+    total = total_result.scalar_one()
+
+    offset = (pagination.page - 1) * pagination.page_size
+    result = await db.execute(
+        query.order_by(models.CrawlerRun.created_at.desc())
+        .offset(offset)
+        .limit(pagination.page_size)
+    )
+    return schemas.CrawlerRunsPaginatedRead(
+        items=result.scalars().all(),
+        total=total,
+        page=pagination.page,
+        page_size=pagination.page_size,
+    )
 
 
 @router.delete("/runs/prune", dependencies=[Depends(get_current_superuser)])

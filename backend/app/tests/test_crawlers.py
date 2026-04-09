@@ -99,6 +99,35 @@ def _pipeline_payload(**overrides) -> dict:
     return payload
 
 
+async def _insert_runs_for_pipeline(
+    pipeline_id: str,
+    *,
+    count: int,
+    status: models.CrawlerRunStatus = models.CrawlerRunStatus.PENDING,
+    trigger_type: str = "manual",
+) -> list[str]:
+    base_created_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    run_ids: list[str] = []
+
+    async with session_context() as session:
+        for index in range(count):
+            run_id = uuid4()
+            session.add(
+                models.CrawlerRun(
+                    id=run_id,
+                    crawler_pipeline_id=UUID(pipeline_id),
+                    trigger_type=trigger_type,
+                    status=status,
+                    created_at=base_created_at - timedelta(minutes=index),
+                )
+            )
+            run_ids.append(str(run_id))
+
+        await session.commit()
+
+    return run_ids
+
+
 class _FakeSchedulerScalarResult:
     def __init__(self, rows):
         self._rows = rows
@@ -361,25 +390,32 @@ async def test_superuser_triggers_manual_run_awaits_checked_queue_handoff(
 # ---------------------------------------------------------------------------
 
 
-async def test_superuser_lists_runs():
-    """GET /crawlers/runs lists runs."""
+async def test_superuser_lists_runs_paginated_by_default():
+    """GET /crawlers/runs returns the default bounded first page."""
     await _ensure_db_ready()
     async with _client() as client:
         email, _ = await _create_user("super-runs-list", is_superuser=True)
         headers = await _auth_headers(client, email, "super-runs-list")
 
-        # Create a pipeline and trigger a run
         create_resp = await client.post(
             "/crawlers/pipelines", json=_pipeline_payload(), headers=headers
         )
         pipeline_id = create_resp.json()["id"]
-        await client.post(f"/crawlers/pipelines/{pipeline_id}/runs", headers=headers)
+        inserted_ids = await _insert_runs_for_pipeline(pipeline_id, count=12)
 
-        resp = await client.get("/crawlers/runs", headers=headers)
-        assert resp.status_code == 200
-        runs = resp.json()
-        assert isinstance(runs, list)
-        assert len(runs) >= 1
+        resp = await client.get(
+            "/crawlers/runs",
+            params={"pipeline_id": pipeline_id, "request_count": True},
+            headers=headers,
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 12
+    assert body["page"] == 1
+    assert body["page_size"] == 10
+    assert len(body["items"]) == 10
+    assert [run["id"] for run in body["items"]] == inserted_ids[:10]
 
 
 async def test_superuser_lists_runs_with_filters():
@@ -398,20 +434,75 @@ async def test_superuser_lists_runs_with_filters():
         # Filter by pipeline_id
         resp = await client.get(
             "/crawlers/runs",
-            params={"pipeline_id": pipeline_id},
+            params={"pipeline_id": pipeline_id, "request_count": True},
             headers=headers,
         )
         assert resp.status_code == 200
-        runs = resp.json()
+        runs = resp.json()["items"]
         assert all(r["crawler_pipeline_id"] == pipeline_id for r in runs)
 
         # Filter by status — pending runs from the trigger above
         resp = await client.get(
             "/crawlers/runs",
-            params={"status": "pending"},
+            params={"pipeline_id": pipeline_id, "status": "pending"},
             headers=headers,
         )
         assert resp.status_code == 200
+        assert all(run["status"] == "pending" for run in resp.json()["items"])
+
+
+async def test_superuser_lists_runs_with_explicit_page_and_page_size():
+    """GET /crawlers/runs respects explicit page and page_size parameters."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, _ = await _create_user("super-runs-page", is_superuser=True)
+        headers = await _auth_headers(client, email, "super-runs-page")
+
+        create_resp = await client.post(
+            "/crawlers/pipelines", json=_pipeline_payload(), headers=headers
+        )
+        pipeline_id = create_resp.json()["id"]
+        inserted_ids = await _insert_runs_for_pipeline(pipeline_id, count=5)
+
+        resp = await client.get(
+            "/crawlers/runs",
+            params={
+                "pipeline_id": pipeline_id,
+                "page": 2,
+                "page_size": 2,
+                "request_count": True,
+            },
+            headers=headers,
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 5
+    assert body["page"] == 2
+    assert body["page_size"] == 2
+    assert [run["id"] for run in body["items"]] == inserted_ids[2:4]
+
+
+async def test_superuser_lists_runs_rejects_page_sizes_over_max() -> None:
+    """GET /crawlers/runs rejects shared pagination requests above the global cap."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, _ = await _create_user("super-runs-limit", is_superuser=True)
+        headers = await _auth_headers(client, email, "super-runs-limit")
+
+        response = await client.get(
+            "/crawlers/runs",
+            params={"page_size": 101},
+            headers=headers,
+        )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert any(
+        error["loc"] == ["query", "page_size"]
+        and "less than or equal to 100" in error["msg"]
+        for error in body["detail"]
+    )
 
 
 async def test_superuser_gets_run_detail():

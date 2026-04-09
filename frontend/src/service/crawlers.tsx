@@ -7,10 +7,27 @@ export type CrawlerPipelineCreate = components['schemas']['CrawlerPipelineCreate
 export type CrawlerPipelineRead = components['schemas']['CrawlerPipelineRead'];
 export type CrawlerPipelineUpdate = components['schemas']['CrawlerPipelineUpdate'];
 export type CrawlerRunRead = components['schemas']['CrawlerRunRead'];
+type RawCrawlerRunsPaginatedRead = components['schemas']['CrawlerRunsPaginatedRead'];
+export type CrawlerRunsPaginatedRead = {
+  items: CrawlerRunRead[];
+  total: number;
+  page: number;
+  page_size: number;
+};
 export type CrawlerRunDetailRead = components['schemas']['CrawlerRunDetailRead'];
 export type CrawlerRunStatus = components['schemas']['CrawlerRunStatus'];
 export type CrawlerSourceType = components['schemas']['CrawlerSourceType'];
 export type CrawlerTriggerType = components['schemas']['CrawlerTriggerType'];
+
+export interface CrawlerRunQueryParams {
+  pipeline_id?: string;
+  source?: CrawlerSourceType;
+  status?: CrawlerRunStatus;
+  trigger_type?: CrawlerTriggerType;
+  page?: number;
+  page_size?: number;
+  request_count?: boolean;
+}
 
 const unwrap = <T,>(
   result: { data?: T; error?: unknown; response: Response },
@@ -61,11 +78,30 @@ export const updateCrawlerPipeline = async (token: string, id: string, pipeline:
 // Run operations
 // ---------------------------------------------------------------------------
 
-export const getCrawlerRuns = async (token: string, pipelineId?: string): Promise<CrawlerRunRead[]> => {
+export const getCrawlerRuns = async (
+  token: string,
+  params?: CrawlerRunQueryParams,
+): Promise<CrawlerRunsPaginatedRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/crawlers/runs', {
-    params: { query: pipelineId ? { pipeline_id: pipelineId } : {} },
+  const response = unwrap<RawCrawlerRunsPaginatedRead>(await client.GET('/crawlers/runs', {
+    params: {
+      query: {
+        pipeline_id: params?.pipeline_id ?? undefined,
+        source: params?.source ?? undefined,
+        status: params?.status ?? undefined,
+        trigger_type: params?.trigger_type ?? undefined,
+        page: params?.page,
+        page_size: params?.page_size,
+        request_count: params?.request_count,
+      },
+    },
   }));
+  return {
+    items: response.items ?? [],
+    total: response.total ?? 0,
+    page: response.page ?? params?.page ?? 1,
+    page_size: response.page_size ?? params?.page_size ?? 10,
+  };
 };
 
 export const getCrawlerRunDetail = async (token: string, runId: string): Promise<CrawlerRunDetailRead> => {

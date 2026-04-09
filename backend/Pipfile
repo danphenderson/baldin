@@ -50,6 +50,7 @@ slowapi = "*"
 ypy-websocket = "*"
 pyotp = "*"
 redis = {extras = ["hiredis"], version = "*"}
+sentry-sdk = "*"
 
 [dev-packages]
 ipython = "*"

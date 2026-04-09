@@ -75,6 +75,10 @@ class Settings(_BaseSettings):
     FIRST_SUPERUSER_EMAIL: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
 
+    # SENTRY
+    SENTRY_DSN: str = ""
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.0
+
     # CRAWLER QUEUE SETTINGS
     # Optional Redis URL. When absent the crawler falls back to inline execution.
     REDIS_URL: str | None = None

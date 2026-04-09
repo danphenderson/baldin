@@ -10,6 +10,7 @@ import tracemalloc
 from contextlib import asynccontextmanager
 from time import time
 
+import sentry_sdk
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -32,7 +33,12 @@ from app.core.document_collaboration import (
 )
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 from app.core.security import create_default_superuser
+from app.core.sentry import init_sentry
 from app.logging import console_log, get_async_logger
+
+# Sentry must be initialised before the FastAPI app is created so the SDK
+# can instrument all auto-detected integrations.
+init_sentry()
 
 # Setup basic logging
 logging.basicConfig()
@@ -179,6 +185,10 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
         request.url.path,
         request_id,
     )
+    # The custom handler consumes the exception before Sentry's ASGI
+    # middleware sees it, so forward it explicitly.
+    sentry_sdk.capture_exception(exc)
+
     content: dict[str, str] = {"detail": _internal_server_error_detail(exc)}
     headers: dict[str, str] | None = None
     if request_id:

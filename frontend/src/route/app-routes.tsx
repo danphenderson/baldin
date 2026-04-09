@@ -110,6 +110,7 @@ const AppRoutes: React.FC = () => {
 
           {/* ── Network group ── */}
           <Route path="network" element={<NetworkGroupLayout />}>
+            <Route index element={<Navigate to="/network/directory" replace />} />
             <Route path="directory" element={<DirectoryPage />} />
             <Route path="directory/:userId" element={<UserProfilePage />} />
             <Route path="connections" element={<ConnectionsPage />} />
@@ -120,9 +121,6 @@ const AppRoutes: React.FC = () => {
           {/* ── Settings group ── */}
           <Route path="settings" element={<SettingsGroupLayout />}>
             <Route index element={<AccountPage />} />
-            <Route path="subscription" element={<Navigate to="/settings" replace />} />
-            <Route path="discoverability" element={<Navigate to="/settings" replace />} />
-            <Route path="graduation" element={<Navigate to="/settings" replace />} />
           </Route>
 
           {/* ── Legacy redirects ── */}

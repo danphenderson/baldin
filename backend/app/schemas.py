@@ -107,7 +107,7 @@ class BaseRead(BaseSchema):
     updated_at: datetime = Field(description="The time the item was last updated")
 
 
-PAGINATION_MAX_PAGE_SIZE = 100
+PAGINATION_MAX_PAGE_SIZE = 500
 
 
 class Pagination(BaseSchema):

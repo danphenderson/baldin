@@ -92,50 +92,37 @@ export const drawerSections: DrawerSection[] = [
     ],
   },
   {
-    key: 'jobs',
-    label: 'Jobs',
+    key: 'job-search',
+    label: 'Job Search',
     items: [
       { label: 'Leads', path: '/leads' },
       { label: 'Applications', path: '/applications' },
-    ],
-  },
-  {
-    key: 'documents',
-    label: 'Documents',
-    items: [
       { label: 'Documents', path: '/documents' },
-    ],
-  },
-  {
-    key: 'profile',
-    label: 'Profile',
-    items: [
-      { label: 'Profile', path: '/me' },
     ],
   },
   {
     key: 'network',
     label: 'Network',
     items: [
-      { label: 'Directory', path: '/network/directory' },
-      { label: 'Connections', path: '/network/connections' },
-      { label: 'Messages', path: '/network/messages' },
+      { label: 'Network', path: '/network' },
     ],
   },
   {
-    key: 'workflows',
-    label: 'Workflows',
+    key: 'automation',
+    label: 'Automation',
     items: [
-      { label: 'Pipelines', path: '/workflows' },
+      { label: 'Workflows', path: '/workflows' },
     ],
   },
-  {
-    key: 'settings',
-    label: 'Settings',
-    items: [
-      { label: 'Settings', path: '/settings' },
-    ],
-  },
+];
+
+// ---------------------------------------------------------------------------
+// Drawer footer items (Phase 2 will move these out of the main nav list)
+// ---------------------------------------------------------------------------
+
+export const drawerFooterItems: DrawerItem[] = [
+  { label: 'Profile', path: '/me' },
+  { label: 'Settings', path: '/settings' },
 ];
 
 // ---------------------------------------------------------------------------

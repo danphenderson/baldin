@@ -14,9 +14,16 @@ import asyncio
 import signal
 import uuid
 
+import sentry_sdk
+
 from app.core import conf
+from app.core.sentry import init_sentry
 from app.crawler_queue import dequeue_job
 from app.logging import get_async_logger
+
+# Initialise Sentry before the worker loop so exceptions and breadcrumbs are
+# captured for the baldin-api Sentry project.
+init_sentry()
 
 log = get_async_logger(__name__)
 
@@ -90,6 +97,7 @@ async def worker_loop() -> None:
                 continue  # timeout, loop again to check _shutdown
             await _process_job(job)
         except Exception as exc:
+            sentry_sdk.capture_exception(exc)
             await log.error(f"Worker: unhandled error: {exc}")
             # Short back-off to avoid tight error loops
             await asyncio.sleep(2)

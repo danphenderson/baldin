@@ -86,6 +86,7 @@ If you already know the task shape, use these workspace prompts from chat with `
 | `Documentation Impact Review` | You changed code, workflow docs, plans, prompts, or repo rules and want a targeted docs-impact audit before stale guidance spreads. |
 | `Cross-Stack Workstream Router` | You have a backend plus frontend plus docs or CI style task and want the smallest low-conflict owner split with explicit handoff packets. |
 | `Multi-Agent Handoff Synthesizer` | You already have outputs from one or more Baldin agents and need a single evidence-backed handoff packet for the next owner, reviewer, or operator. |
+| `UX Redesign Spike Dispatch` | You want three materially different redesign concepts for a Baldin page or flow compared and a recommendation before implementation. |
 
 ## Prompt Decision Table
 
@@ -106,6 +107,7 @@ Use this table to choose the right prompt for a task. Prompts are classified as 
 | Plan Slice Kickoff | core | Turn a plan section into a work slice | When starting from plans/ rather than issues |
 | Deep Think Spike | advanced | Bounded technical spike | When the answer requires deep research before choosing an implementation path |
 | Deep Think Epic Planner | advanced | Phased epic planning from a theme or plan | When a large feature needs story breakdown and dependency mapping |
+| UX Redesign Spike Dispatch | advanced | Three UX redesign concepts with recommendation | When you need structured concept comparison before committing to a UX direction; use Deep Think Spike for general technical spikes |
 | Issue Cleanup Orchestrator | maintenance | Multi-pass backlog cleanup | When the issue backlog needs deduplication, rescoping, or enrichment |
 
 ## Prompt Lifecycle Rules
@@ -147,6 +149,7 @@ Prompt files use the prompt `name` after `/`, and workspace skills use the skill
 | `Documentation Impact Review` | `/Documentation Impact Review applications detail page now uses GET /applications/{id}` |
 | `Cross-Stack Workstream Router` | `/Cross-Stack Workstream Router add crawler pause status to backend, frontend, docs, and validation` |
 | `Multi-Agent Handoff Synthesizer` | `/Multi-Agent Handoff Synthesizer backend applications tests landed and frontend service migration is next` |
+| `UX Redesign Spike Dispatch` | `/UX Redesign Spike Dispatch the applications detail page feels dense and confusing after adding attachments and status history` |
 
 ## Prompt Shape
 

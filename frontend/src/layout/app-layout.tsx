@@ -17,9 +17,9 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   AutoAwesome as AutoAwesomeIcon,
-  Explore as DirectoryIcon,
-  People as ConnectionsIcon,
-  Chat as MessagesIcon,
+  Description as DocumentsIcon,
+  Groups as NetworkIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import { logout as logoutApi } from '../service/auth';
@@ -30,7 +30,7 @@ import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-heade
 import SecondaryNavBar from '../component/common/secondary-nav-bar';
 import ErrorBoundary from '../component/common/error-boundary';
 import UserAvatar from '../component/common/user-avatar';
-import { getSecondaryNavItems, drawerSections } from '../route/navigation';
+import { getSecondaryNavItems, drawerSections, drawerFooterItems } from '../route/navigation';
 import { userInitials as getUserInitials } from '../util/format';
 
 const DRAWER_WIDTH = 260;
@@ -41,11 +41,11 @@ const drawerIcons: Record<string, React.ReactNode> = {
   '/': <DashboardIcon />,
   '/leads': <LeadsIcon />,
   '/applications': <ApplicationsIcon />,
+  '/documents': <DocumentsIcon />,
   '/me': <ProfileIcon />,
   '/workflows': <PipelinesIcon />,
-  '/network/directory': <DirectoryIcon />,
-  '/network/connections': <ConnectionsIcon />,
-  '/network/messages': <MessagesIcon />,
+  '/network': <NetworkIcon />,
+  '/settings': <SettingsIcon />,
 };
 
 const HEADER_ACTION_DIAL_ID = 'header-account-actions';
@@ -223,6 +223,8 @@ const AppLayout: React.FC = () => {
             width: drawerWidth,
             transition: 'width 0.2s ease',
             boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column',
             background: theme.palette.mode === 'dark'
               ? 'linear-gradient(180deg, #0f1629 0%, #0a0e1a 100%)'
               : theme.palette.background.paper,
@@ -311,7 +313,7 @@ const AppLayout: React.FC = () => {
         <Divider sx={{ opacity: 0.5 }} />
 
         {/* Nav Items */}
-        <List component="nav" aria-label="Main navigation" sx={{ px: 1, py: 1.5, flexGrow: 1 }}>
+        <List component="nav" aria-label="Main navigation" sx={{ px: 1, py: 1.5, flexGrow: 0, overflowY: 'auto' }}>
           {drawerSections.map((section) => (
             <React.Fragment key={section.key}>
               {section.label != null && (
@@ -370,7 +372,7 @@ const AppLayout: React.FC = () => {
                             justifyContent: 'center',
                           }}
                         >
-                          {item.path === '/network/messages' ? (
+                          {item.path === '/network' ? (
                             <Badge badgeContent={unreadCount} color="error" max={99}>
                               {drawerIcons[item.path]}
                             </Badge>
@@ -407,6 +409,143 @@ const AppLayout: React.FC = () => {
             </React.Fragment>
           ))}
         </List>
+
+        {/* Spacer pushes footer to bottom */}
+        <Box sx={{ flexGrow: 1 }} />
+
+        <Divider sx={{ opacity: 0.4 }} />
+
+        {/* Sidebar footer */}
+        <Box sx={{ flexShrink: 0, px: 1, py: 1 }}>
+          {/* Profile row */}
+          {(() => {
+            const profileItem = drawerFooterItems[0];
+            const isProfileActive = location.pathname === profileItem.path || location.pathname.startsWith(`${profileItem.path}/`);
+            const displayName = (user as any)?.first_name
+              ? `${(user as any).first_name} ${(user as any).last_name ?? ''}`.trim()
+              : user?.email ?? 'Profile';
+            return (
+              <ListItem disablePadding sx={{ mb: 0.5 }}>
+                <Tooltip title={profileItem.label} placement="right" disableHoverListener={!collapsed}>
+                  <ListItemButton
+                    onClick={() => navigate(profileItem.path)}
+                    sx={{
+                      borderRadius: 2,
+                      minHeight: 44,
+                      px: collapsed ? 1.75 : 2,
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      ...(isProfileActive && {
+                        background: alpha(theme.palette.primary.main, 0.12),
+                        borderLeft: `3px solid ${theme.palette.primary.main}`,
+                        '&:hover': { background: alpha(theme.palette.primary.main, 0.18) },
+                      }),
+                      ...(!isProfileActive && {
+                        '&:hover': { background: alpha(theme.palette.text.primary, 0.04) },
+                      }),
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: collapsed ? 'auto' : 40,
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <UserAvatar
+                        userId={user?.id}
+                        avatarUri={(user as any)?.avatar_uri}
+                        firstName={(user as any)?.first_name}
+                        lastName={(user as any)?.last_name}
+                        email={user?.email}
+                        sx={{ width: 28, height: 28, fontSize: '0.75rem' }}
+                      />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={displayName}
+                      sx={{
+                        flex: collapsed ? '0 0 0' : '1 1 auto',
+                        opacity: collapsed ? 0 : 1,
+                        maxWidth: collapsed ? 0 : 160,
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        transition: textTransition,
+                        '& .MuiTypography-root': {
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        },
+                      }}
+                      primaryTypographyProps={{
+                        fontSize: '0.875rem',
+                        fontWeight: isProfileActive ? 600 : 400,
+                        color: isProfileActive ? theme.palette.primary.main : theme.palette.text.primary,
+                      }}
+                    />
+                  </ListItemButton>
+                </Tooltip>
+              </ListItem>
+            );
+          })()}
+
+          {/* Settings row */}
+          {(() => {
+            const settingsItem = drawerFooterItems[1];
+            const isSettingsActive = location.pathname === settingsItem.path || location.pathname.startsWith(`${settingsItem.path}/`);
+            return (
+              <ListItem disablePadding>
+                <Tooltip title={settingsItem.label} placement="right" disableHoverListener={!collapsed}>
+                  <ListItemButton
+                    onClick={() => navigate(settingsItem.path)}
+                    sx={{
+                      borderRadius: 2,
+                      minHeight: 44,
+                      px: collapsed ? 1.75 : 2,
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      ...(isSettingsActive && {
+                        background: alpha(theme.palette.primary.main, 0.12),
+                        borderLeft: `3px solid ${theme.palette.primary.main}`,
+                        '&:hover': { background: alpha(theme.palette.primary.main, 0.18) },
+                      }),
+                      ...(!isSettingsActive && {
+                        '&:hover': { background: alpha(theme.palette.text.primary, 0.04) },
+                      }),
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: collapsed ? 'auto' : 40,
+                        color: isSettingsActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <SettingsIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={settingsItem.label}
+                      sx={{
+                        flex: collapsed ? '0 0 0' : '1 1 auto',
+                        opacity: collapsed ? 0 : 1,
+                        maxWidth: collapsed ? 0 : 160,
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        transition: textTransition,
+                        '& .MuiTypography-root': {
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        },
+                      }}
+                      primaryTypographyProps={{
+                        fontSize: '0.875rem',
+                        fontWeight: isSettingsActive ? 600 : 400,
+                        color: isSettingsActive ? theme.palette.primary.main : theme.palette.text.primary,
+                      }}
+                    />
+                  </ListItemButton>
+                </Tooltip>
+              </ListItem>
+            );
+          })()}
+        </Box>
       </Drawer>
 
       {/* Main content */}

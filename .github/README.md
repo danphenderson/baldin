@@ -26,8 +26,8 @@
 | Baldin Frontend Agent | Frontend implementation in `./frontend` |
 | Baldin Lead Full-Stack Architect | Cross-stack architecture and integration |
 
-### Prompts (14)
-`api-contract-change-orchestrator` · `backend-runtime-slice` · `change-aware-validation-sequence` · `cross-stack-workstream-router` · `deep-think-epic-planner` · `deep-think-spike` · `documentation-impact-review` · `frontend-product-slice` · `hard-gate-pr-review` · `issue-cleanup-orchestrator` · `issue-dispatch-kickoff` · `local-preview-integration-fix` · `multi-agent-handoff-synthesizer` · `plan-slice-kickoff`
+### Prompts (15)
+`api-contract-change-orchestrator` · `backend-runtime-slice` · `change-aware-validation-sequence` · `cross-stack-workstream-router` · `deep-think-epic-planner` · `deep-think-spike` · `documentation-impact-review` · `frontend-product-slice` · `hard-gate-pr-review` · `issue-cleanup-orchestrator` · `issue-dispatch-kickoff` · `local-preview-integration-fix` · `multi-agent-handoff-synthesizer` · `plan-slice-kickoff` · `ux-redesign-spike-dispatch`
 
 Prompts are classified as **core** (11), **advanced** (2), or **maintenance** (1) per the [cookbook decision table](../docs/docs/engineering/copilot-prompt-cookbook.md#prompt-decision-table).
 

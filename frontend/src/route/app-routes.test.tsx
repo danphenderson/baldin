@@ -8,7 +8,7 @@ import AppRoutes from './app-routes';
 
 /* ── Mock all lazy page imports to lightweight stubs ───────────────── */
 
-vi.mock('../page/command-center', () => ({
+vi.mock('../page/dashboard', () => ({
   default: () => <div data-testid="page-dashboard">Dashboard</div>,
 }));
 vi.mock('../page/leads', () => ({

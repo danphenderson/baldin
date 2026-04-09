@@ -9,7 +9,7 @@ description: Directory profiles, peer connections, direct and group conversation
 
 # Networking & Messaging
 
-Baldin's network layer connects users through discoverable profiles, peer connections, and real-time messaging — all feeding into the activity feed and action items on the Command Center.
+Baldin's network layer connects users through discoverable profiles, peer connections, and real-time messaging — all feeding into the activity feed and action items on the Dashboard.
 
 ## Directory
 
@@ -64,12 +64,12 @@ Messages support single-level threading for focused discussions within a convers
 
 ## Activity Feed
 
-The activity feed aggregates events from connections, conversations, applications, and documents into a single chronological stream. A summary endpoint groups counts by event type for quick-glance metrics on the Command Center.
+The activity feed aggregates events from connections, conversations, applications, and documents into a single chronological stream. A summary endpoint groups counts by event type for quick-glance metrics on the Dashboard.
 
 **API:** `/activity-feed` — Feed list and summary endpoints
 
 ## Related Docs
 
 - [Networking and Messaging Architecture](../architecture/networking-and-messaging.md) — Data model, access rules, and conversation lifecycle
-- [Command Center](./command-center.md) — Activity feed and action items integration
+- [Dashboard](./dashboard.md) — Activity feed and action items integration
 - [Map The Data Model](../architecture/data-model.md) — Connection, Conversation, Message, and ActionItem entities

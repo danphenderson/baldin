@@ -68,4 +68,4 @@ A typical path: discover a **Company** → find a **Lead** → register interest
 - [Map The Data Model](../architecture/data-model.md) — Full entity diagram with Lead, Application, and Company relationships
 - [Browse API Routes](../architecture/api-surface.md) — Route groups for leads, companies, and applications
 - [Document Workspace](./document-workspace.md) — Attaching documents to applications
-- [Command Center](./command-center.md) — Action items linked to applications and leads
+- [Dashboard](./dashboard.md) — Action items linked to applications and leads

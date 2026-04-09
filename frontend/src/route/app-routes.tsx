@@ -16,7 +16,7 @@ import { UserContext } from '../context/user-context';
 
 /* ── Lazy page imports ─────────────────────────────────────────────── */
 
-const CommandCenterPage = React.lazy(() => import('../page/command-center'));
+const DashboardPage = React.lazy(() => import('../page/dashboard'));
 const LeadsPage = React.lazy(() => import('../page/leads'));
 const ApplicationsQueuePage = React.lazy(() => import('../page/applications/applications-queue-page'));
 const ApplicationsBoardPage = React.lazy(() => import('../page/applications/applications-board-page'));
@@ -71,7 +71,7 @@ const AppRoutes: React.FC = () => {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<UserRoute />}>
-          <Route index element={<CommandCenterPage />} />
+          <Route index element={<DashboardPage />} />
 
           {/* ── Leads group ── */}
           <Route path="leads" element={<LeadsGroupLayout />}>

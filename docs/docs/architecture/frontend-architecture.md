@@ -35,7 +35,7 @@ graph TD
 	AppRoutes --> HomeLayout[HomeLayout]
 
 	AppLayout --> UserRoute[UserRoute]
-	UserRoute --> CommandCenter[/]
+	UserRoute --> Dashboard[/]
 	UserRoute --> LeadsGroup[/leads]
 	UserRoute --> ApplicationsGroup[/applications]
 	UserRoute --> IdentityGroup[/me]
@@ -54,7 +54,7 @@ The route tree is defined in `frontend/src/route/app-routes.tsx` and uses nested
 
 | Group | Routes | Pages |
 | --- | --- | --- |
-| Command center | `/` | `command-center.tsx` |
+| Dashboard | `/` | `dashboard.tsx` |
 | Leads | `/leads`, `/leads/companies` | lead list and company directory |
 | Applications | `/applications`, `/applications/board`, `/applications/:applicationId` | queue, board, and detail views |
 | Identity | `/me`, `/me/documents`, `/me/documents/new`, `/me/documents/:id`, `/me/documents/:id/edit`, `/me/documents/:id/compare` | profile and document library/editor views |

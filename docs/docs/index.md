@@ -26,7 +26,7 @@ Pick the path that matches what you need right now:
 
 - **First local boot:** [Boot The Stack](getting-started/quickstart) → [Work Locally](engineering/local-development) → [Look Up Settings](reference/environment-variables)
 - **New contributor:** [Orient Yourself](getting-started/overview) → [Contribute Safely](getting-started/contributing) → [Run The Right Checks](engineering/testing)
-- **Explore what Baldin does:** [Command Center](features/command-center) → [Job Search Pipeline](features/job-search-pipeline) → [Document Workspace](features/document-workspace)
+- **Explore what Baldin does:** [Dashboard](features/dashboard) → [Job Search Pipeline](features/job-search-pipeline) → [Document Workspace](features/document-workspace)
 - **Backend or API work:** [See System Boundaries](architecture/system-overview) → [Map The Data Model](architecture/data-model) → [Browse API Routes](architecture/api-surface) → [Regenerate API Contracts](engineering/contract-management)
 - **Document editor work:** [Document Workspace](features/document-workspace) → [Understand Document Collaboration](architecture/document-collaboration) → [See Frontend Boundaries](architecture/frontend-architecture)
 - **Networking and messaging work:** [Networking & Messaging](features/networking) → [Follow Network Flows](architecture/networking-and-messaging) → [Browse API Routes](architecture/api-surface)
@@ -45,7 +45,7 @@ Once you are oriented, the next layer usually is:
 
 ## Explore Features
 
-- **[Command Center](features/command-center)** — Action items, application pipeline, metrics, and activity feed
+- **[Dashboard](features/dashboard)** — Action items, application pipeline, metrics, and activity feed
 - **[Job Search Pipeline](features/job-search-pipeline)** — Companies, leads, and applications
 - **[Document Workspace](features/document-workspace)** — Versioned documents, collaboration, and sharing
 - **[Extraction & Automation](features/extraction-and-automation)** — Extractors, pipelines, crawlers, and review

@@ -39,7 +39,7 @@ Baldin is **local-first** right now. This private repository is Baldin's main en
 ## Start Here Next
 
 - For setup: [Boot The Stack](./quickstart.md)
-- For feature overviews: [Command Center](../features/command-center.md), [Job Search Pipeline](../features/job-search-pipeline.md), [Document Workspace](../features/document-workspace.md), [Extraction & Automation](../features/extraction-and-automation.md), [Networking](../features/networking.md)
+- For feature overviews: [Dashboard](../features/dashboard.md), [Job Search Pipeline](../features/job-search-pipeline.md), [Document Workspace](../features/document-workspace.md), [Extraction & Automation](../features/extraction-and-automation.md), [Networking](../features/networking.md)
 - For deployment: [Planned Deployment](./deployment-guide.md)
 - For architecture: [See System Boundaries](../architecture/system-overview.md)
 - For backend boundaries: [Map The Data Model](../architecture/data-model.md) and [Browse API Routes](../architecture/api-surface.md)

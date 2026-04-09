@@ -217,7 +217,7 @@ Key changes:
 | Task | Files Likely Affected |
 |------|-----------------------|
 | Auto-login after registration | `page/register.tsx`, `context/user-context.tsx`, `service/auth.tsx` |
-| Rename sidebar: Command Center → Dashboard | `route/navigation.ts`, `page/command-center.tsx` |
+| Rename sidebar: Command Center → Dashboard | `route/navigation.ts`, `page/dashboard.tsx` |
 | Rename sidebar: Pursue → Jobs | `route/navigation.ts` |
 | Promote Documents to top-level sidebar item | `route/navigation.ts`, `route/app-routes.tsx`, layout files |
 | Promote Profile to top-level sidebar item | `route/navigation.ts`, `route/app-routes.tsx` |
@@ -245,8 +245,8 @@ Key changes:
 | Add "Create document for this application" on application detail | `page/applications/applications-detail-page.tsx`, `service/documents.tsx` |
 | Surface tier gate on Connect button before click | `page/directory.tsx`, `component/tier-gate.tsx` |
 | Consolidate Settings into single Account page | `page/settings/*`, `route/navigation.ts`, `route/app-routes.tsx` |
-| Improve welcome state on empty dashboard | `page/command-center.tsx` |
-| Add contextual help text on Dashboard sections | `page/command-center.tsx` |
+| Improve welcome state on empty dashboard | `page/dashboard.tsx` |
+| Add contextual help text on Dashboard sections | `page/dashboard.tsx` |
 
 **Validation:**
 - Same frontend checks as M1

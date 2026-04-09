@@ -369,7 +369,7 @@ function SortableActionItem({ item, overdue, linked, priorityColor, onComplete, 
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
 
-const CommandCenterPage: React.FC = () => {
+const DashboardPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { token, user } = useContext(UserContext);
@@ -757,7 +757,7 @@ const CommandCenterPage: React.FC = () => {
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>Welcome to Baldin</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Your job search command center. Start by importing a lead, building your profile, or browsing the community.
+            Your job search dashboard. Start by importing a lead, building your profile, or browsing the community.
           </Typography>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -1293,4 +1293,4 @@ const CommandCenterPage: React.FC = () => {
   );
 };
 
-export default CommandCenterPage;
+export default DashboardPage;

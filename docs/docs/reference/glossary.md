@@ -19,7 +19,7 @@ JSONB history stored on `applications.status_history`. It records status transit
 
 Short-lived lease used by the collaboration backend to ensure only one client seeds a Yjs document from saved TipTap JSON when no persisted `yjs_state` exists yet.
 
-## Command center
+## Dashboard
 
 The frontend dashboard at `/` backed by the activity-feed summary endpoint.
 

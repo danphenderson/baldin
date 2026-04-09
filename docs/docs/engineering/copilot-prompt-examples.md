@@ -28,7 +28,7 @@ If you want a repeatable prompt-rewrite workflow instead of tuning prompt files 
 Bad prompt:
 
 ```text
-Fix the stale command center counts.
+Fix the stale dashboard counts.
 ```
 
 Why it is weak:
@@ -43,7 +43,7 @@ Good prompt:
 Plan the smallest low-conflict workstreams for this Baldin issue.
 
 Objective:
-Find and fix why the command center shows stale action-item counts after edits.
+Find and fix why the dashboard shows stale action-item counts after edits.
 
 Context:
 The bug might be in frontend state updates, backend aggregation, or both.
@@ -127,7 +127,7 @@ Good prompt:
 Implement this in frontend only.
 
 Objective:
-Improve the command center loading, empty, and error states.
+Improve the dashboard loading, empty, and error states.
 
 Context:
 The page feels blank and ambiguous while data is loading or when no activity exists.

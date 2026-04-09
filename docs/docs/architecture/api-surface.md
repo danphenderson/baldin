@@ -94,7 +94,7 @@ The document surface is now the canonical API for resumes, cover letters, and ot
 | `connections` | `/connections` | Connection request lifecycle with superuser-aware entitlement rules |
 | `messaging` | `/conversations` | Direct and group conversations, messages, unread counts |
 | `action-items` | `/action-items` | Cross-entity user task management |
-| `activity-feed` | `/activity-feed` | Aggregated activity stream and command-center summary |
+| `activity-feed` | `/activity-feed` | Aggregated activity stream and dashboard summary |
 
 ### Operational Helpers
 

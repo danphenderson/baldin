@@ -10,7 +10,7 @@
 
 Baldin's prototype is functionally broad: 197 backend endpoints, 20+ frontend
 pages, auth with MFA, collaborative document editing, messaging, networking,
-extraction pipelines, and a command center. The architecture is clean and the
+extraction pipelines, and a dashboard. The architecture is clean and the
 stack is modern (FastAPI, React 19, MUI 7, TypeScript strict, pgvector).
 
 The main gap is not a lack of major feature surface — it is **cohesion, trust
@@ -102,7 +102,7 @@ four milestones that move the prototype from "functional but rough" to
 9. **ActionItem polymorphic constraint** — No DB constraint ensures exactly one
    FK is set. Add a check constraint.
 
-10. **Frontend test coverage expansion** — Page-level tests for command center,
+10. **Frontend test coverage expansion** — Page-level tests for dashboard,
     leads, and applications pages are the highest-value missing tests.
 
 11. **Collaboration offline resilience** — WebSocket retry and degraded-mode

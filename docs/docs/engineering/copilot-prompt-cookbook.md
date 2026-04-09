@@ -135,7 +135,7 @@ Prompt files use the prompt `name` after `/`, and workspace skills use the skill
 
 | Prompt | Example |
 |--------|---------|
-| `Issue Dispatch Kickoff` | `/Issue Dispatch Kickoff issue #126 stale command center counts after action-item edits` |
+| `Issue Dispatch Kickoff` | `/Issue Dispatch Kickoff issue #126 stale dashboard counts after action-item edits` |
 | `Backend Runtime Slice` | `/Backend Runtime Slice fix duplicate lead creation when the same source URL is processed twice` |
 | `Frontend Product Slice` | `/Frontend Product Slice improve the applications detail loading and empty states` |
 | `Local Preview Integration Fix` | `/Local Preview Integration Fix frontend board loads but the applications detail flow fails after docker-compose boot` |
@@ -414,7 +414,7 @@ Start with Baldin Frontend Agent.
 Implement this in frontend only.
 
 Objective:
-Improve the command center loading, empty, and error states.
+Improve the dashboard loading, empty, and error states.
 
 Context:
 The page feels blank and ambiguous while data is loading or when no activity exists.
@@ -458,7 +458,7 @@ Start with Baldin Project Manager.
 Plan the smallest low-conflict workstreams for this Baldin issue.
 
 Objective:
-Find and fix why the command center shows stale action-item counts after edits.
+Find and fix why the dashboard shows stale action-item counts after edits.
 
 Context:
 The bug might be in frontend state updates, backend aggregation, or both.

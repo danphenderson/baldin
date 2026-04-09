@@ -53,7 +53,7 @@ const features = [
       'Version-controlled resumes, cover letters, and notes with real-time collaborative editing. Link documents directly to applications.',
   },
   {
-    title: 'Command Center',
+    title: 'Dashboard',
     icon: '🎯',
     description:
       'Action items, pipeline metrics, and an activity feed — everything you need to see what to do next at a glance.',

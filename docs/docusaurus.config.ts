@@ -54,7 +54,8 @@ const config: Config = {
           {from: '/getting-started/quickstart', to: '/docs/getting-started/quickstart'},
           {from: '/getting-started/contributing', to: '/docs/getting-started/contributing'},
           {from: '/getting-started/deployment-guide', to: '/docs/getting-started/deployment-guide'},
-          {from: '/features/command-center', to: '/docs/features/command-center'},
+          {from: '/features/command-center', to: '/docs/features/dashboard'},
+          {from: '/features/dashboard', to: '/docs/features/dashboard'},
           {from: '/features/job-search-pipeline', to: '/docs/features/job-search-pipeline'},
           {from: '/features/document-workspace', to: '/docs/features/document-workspace'},
           {from: '/features/extraction-and-automation', to: '/docs/features/extraction-and-automation'},
@@ -140,7 +141,7 @@ const config: Config = {
           title: 'Start Here Next',
           items: [
             {label: 'Start Here', to: '/docs/getting-started/overview'},
-            {label: 'Explore Features', to: '/docs/features/command-center'},
+            {label: 'Explore Features', to: '/docs/features/dashboard'},
             {label: 'Understand The System', to: '/docs/architecture/system-overview'},
             {label: 'Build, Validate, Release', to: '/docs/engineering/local-development'},
           ],

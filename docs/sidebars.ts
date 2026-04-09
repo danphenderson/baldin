@@ -17,7 +17,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Explore Features',
       items: [
-        'features/command-center',
+        'features/dashboard',
         'features/job-search-pipeline',
         'features/document-workspace',
         'features/extraction-and-automation',

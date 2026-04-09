@@ -30,7 +30,7 @@ vi.mock('../component/create-action-item-dialog', () => ({
 import * as activityFeedService from '../service/activity-feed';
 import * as actionItemsService from '../service/action-items';
 import * as leadsService from '../service/leads';
-import CommandCenterPage from './command-center';
+import DashboardPage from './dashboard';
 
 const mockedGetCommandCenterSummary = vi.mocked(activityFeedService.getCommandCenterSummary);
 const mockedGetActivityFeed = vi.mocked(activityFeedService.getActivityFeed);
@@ -114,7 +114,7 @@ function renderPage(ctxOverrides: Partial<typeof userContextValue> = {}) {
     <ToolbarHeaderContext.Provider value={vi.fn()}>
       <UserContext.Provider value={{ ...userContextValue, ...ctxOverrides }}>
         <MemoryRouter>
-          <CommandCenterPage />
+          <DashboardPage />
         </MemoryRouter>
       </UserContext.Provider>
     </ToolbarHeaderContext.Provider>,
@@ -123,7 +123,7 @@ function renderPage(ctxOverrides: Partial<typeof userContextValue> = {}) {
 
 /* ── Tests ────────────────────────────────────────────────────────── */
 
-describe('CommandCenterPage', () => {
+describe('DashboardPage', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockedGetCommandCenterSummary.mockReset();

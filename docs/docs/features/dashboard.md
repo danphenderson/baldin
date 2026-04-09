@@ -1,15 +1,15 @@
 ---
 sidebar_position: 1
-slug: /features/command-center
-title: Command Center
+slug: /features/dashboard
+title: Dashboard
 description: Unified dashboard for action items, application pipeline, metrics, and activity.
 ---
 
 <!-- last-verified: 2026-04-06 -->
 
-# Command Center
+# Dashboard
 
-The Command Center is the landing page at `/` that replaces the earlier dashboard. It brings together action items, application status, aggregate metrics, and the activity feed into one surface.
+The Dashboard is the landing page at `/`. It brings together action items, application status, aggregate metrics, and the activity feed into one surface.
 
 ## What It Includes
 
@@ -37,7 +37,7 @@ The activity feed at `/activity-feed` aggregates events from across Baldin into 
 
 ## Frontend Surface
 
-The Command Center page lives at `frontend/src/page/command-center.tsx`. It uses the action-items and activity-feed services:
+The Dashboard page lives at `frontend/src/page/dashboard.tsx`. It uses the action-items and activity-feed services:
 
 - `frontend/src/service/action-items.tsx` — CRUD for action items
 - `frontend/src/service/activity-feed.tsx` — Feed and summary queries
@@ -46,6 +46,6 @@ Action items can also be created from the application detail page and lead modal
 
 ## Related Docs
 
-- [Browse API Routes](../architecture/api-surface.md) — Route groups that power the command center
+- [Browse API Routes](../architecture/api-surface.md) — Route groups that power the dashboard
 - [Follow Network Flows](../architecture/networking-and-messaging.md) — Activity and action item data model
 - [Map The Data Model](../architecture/data-model.md) — ActionItem entity and relationships

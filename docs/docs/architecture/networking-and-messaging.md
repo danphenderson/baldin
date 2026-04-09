@@ -31,7 +31,7 @@ graph TD
 | `directory` | `/directory` | Discoverable user directory and profile previews |
 | `connections` | `/connections` | Connection request lifecycle |
 | `messaging` | `/conversations` | Direct and group conversations, messages, unread counts |
-| `activity-feed` | `/activity-feed` | Aggregated activity stream and command-center summary |
+| `activity-feed` | `/activity-feed` | Aggregated activity stream and dashboard summary |
 | `action-items` | `/action-items` | User-facing tasks linked to applications, leads, documents, or conversations |
 
 ## Data Model
@@ -90,9 +90,9 @@ API client access lives in:
 - `frontend/src/service/action-items.tsx`
 - `frontend/src/service/directory.tsx`
 
-## Command Center Coupling
+## Dashboard Coupling
 
-The command-center summary endpoint reuses networking and activity data to drive dashboard counts. That means changes to connection semantics, conversation read tracking, or activity aggregation can affect the homepage even if the visible networking screens still seem correct.
+The dashboard summary endpoint reuses networking and activity data to drive homepage counts. That means changes to connection semantics, conversation read tracking, or activity aggregation can affect the homepage even if the visible networking screens still seem correct.
 
 ## Maintenance Notes
 

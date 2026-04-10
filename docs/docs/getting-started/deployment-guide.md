@@ -81,6 +81,8 @@ The backend currently runs `create_db_and_tables()` during startup. That path st
 
 ```mermaid
 flowchart TD
+    accTitle: Deployment Decision Tree
+    accDescr: Decision tree starting at Want to run Baldin — if local development choose docker-compose up --build; if production deployment that path is not yet supported and links to the release roadmap in plans/REPO_EXECUTION_PLAN.md.
     A[Want to run Baldin?] --> B{Local development?}
     B -- Yes --> C[docker-compose up --build]
     B -- No --> D{Production deployment?}

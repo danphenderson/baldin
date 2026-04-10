@@ -6,6 +6,7 @@ import { createApiClient } from './api-client';
 export type ApplicationRead = components['schemas']['ApplicationRead'];
 export type ApplicationCreate = components['schemas']['ApplicationCreate'];
 export type ApplicationUpdate = components['schemas']['ApplicationUpdate'];
+export type ApplicationCreationIntent = 'registered' | 'applied';
 type ApplicationDocumentAttach = components['schemas']['ApplicationDocumentAttach'];
 type DocumentRead = components['schemas']['DocumentRead'];
 
@@ -27,6 +28,15 @@ export const getApplications = async (token: string): Promise<ApplicationRead[]>
   const client = createApiClient(token);
   return unwrap(await client.GET('/applications/'));
 };
+
+export const findExistingApplicationForLead = async (token: string, leadId: string): Promise<ApplicationRead | null> => {
+  const applications = await getApplications(token);
+  return applications.find((application) => application.lead_id === leadId) ?? null;
+};
+
+export const getApplicationStateLabel = (
+  application: Pick<ApplicationRead, 'outcome' | 'stage' | 'status'>,
+): string => (application.outcome ?? application.stage ?? application.status ?? 'tracked').replace(/_/g, ' ');
 
 export const getApplication = async (token: string, id: string): Promise<ApplicationRead> => {
   const client = createApiClient(token);

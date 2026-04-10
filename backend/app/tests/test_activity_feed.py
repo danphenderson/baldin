@@ -1,6 +1,7 @@
 """Tests for the /activity-feed endpoints (feed, summary)."""
 
 import json
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from uuid import UUID, uuid4
@@ -23,7 +24,7 @@ _db_ready = False
 
 
 @asynccontextmanager
-async def _client() -> AsyncClient:
+async def _client() -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=app)
     async with AsyncClient(
         transport=transport,
@@ -78,6 +79,34 @@ def _action_payload(**overrides) -> dict:
     }
     base.update(overrides)
     return base
+
+
+async def _create_application_with_history(
+    *,
+    user_id: UUID,
+    title: str,
+    current_status: models.ApplicationStatus,
+    status_history: list[dict[str, object]],
+) -> UUID:
+    job_slug = uuid4()
+    async with session_context() as session:
+        lead = models.Lead(
+            url=f"https://example.com/jobs/{job_slug}",
+            canonical_url=f"https://example.com/jobs/{job_slug}",
+            title=title,
+        )
+        session.add(lead)
+        await session.flush()
+
+        application = models.Application(
+            status=current_status,
+            user_id=user_id,
+            lead_id=lead.id,
+            status_history=status_history,
+        )
+        session.add(application)
+        await session.commit()
+        return application.id
 
 
 # ---------------------------------------------------------------------------
@@ -261,12 +290,23 @@ async def test_summary_endpoint() -> None:
     async with _client() as client:
         email, uid = await _create_user("feed-summary-pass")
         headers = await _auth_headers(client, email, "feed-summary-pass")
+        app_id = await _create_application_with_history(
+            user_id=uid,
+            title="Summary-linked application",
+            current_status=models.ApplicationStatus.APPLIED,
+            status_history=[
+                {"from": None, "to": "applied", "changed_at": "2026-04-01T00:00:00Z"}
+            ],
+        )
 
         # Create some action items to be counted
         for i in range(2):
             await client.post(
                 "/action-items/",
-                json=_action_payload(title=f"Summary task {i}"),
+                json=_action_payload(
+                    title=f"Summary task {i}",
+                    application_id=str(app_id),
+                ),
                 headers=headers,
             )
 
@@ -280,6 +320,8 @@ async def test_summary_endpoint() -> None:
     assert "application_count" in body
     assert "active_application_count" in body
     assert "status_breakdown" in body
+    assert "avg_days_per_stage" in body
+    assert "offer_conversion_funnel" in body
     assert "pending_action_items" in body
     assert "overdue_action_items" in body
     assert "action_items_due_today" in body
@@ -290,6 +332,90 @@ async def test_summary_endpoint() -> None:
     assert "draft_documents_count" in body
     # Action item counts should reflect creation
     assert body["pending_action_items"] >= 2
+
+
+async def test_summary_endpoint_returns_stage_velocity_and_offer_conversion() -> None:
+    """Dashboard summary exposes dwell-time and monotonic offer-funnel analytics."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, uid = await _create_user("feed-summary-analytics-pass")
+        headers = await _auth_headers(client, email, "feed-summary-analytics-pass")
+
+        await _create_application_with_history(
+            user_id=uid,
+            title="Analytics app one",
+            current_status=models.ApplicationStatus.REJECTED,
+            status_history=[
+                {"from": None, "to": "applied", "changed_at": "2026-04-01T00:00:00Z"},
+                {
+                    "from": "applied",
+                    "to": "screening",
+                    "changed_at": "2026-04-04T00:00:00Z",
+                },
+                {
+                    "from": "screening",
+                    "to": "interview",
+                    "changed_at": "2026-04-07T00:00:00Z",
+                },
+                {
+                    "from": "interview",
+                    "to": "rejected",
+                    "changed_at": "2026-04-10T00:00:00Z",
+                },
+            ],
+        )
+        await _create_application_with_history(
+            user_id=uid,
+            title="Analytics app two",
+            current_status=models.ApplicationStatus.WITHDRAWN,
+            status_history=[
+                {"from": None, "to": "applied", "changed_at": "2026-04-02T00:00:00Z"},
+                {
+                    "from": "applied",
+                    "to": "screening",
+                    "changed_at": "2026-04-06T00:00:00Z",
+                },
+                {
+                    "from": "screening",
+                    "to": "offer",
+                    "changed_at": "2026-04-10T00:00:00Z",
+                },
+                {
+                    "from": "offer",
+                    "to": "withdrawn",
+                    "changed_at": "2026-04-12T00:00:00Z",
+                },
+            ],
+        )
+
+        response = await client.get("/activity-feed/summary", headers=headers)
+
+    assert response.status_code == 200
+    body = response.json()
+
+    velocity = {entry["stage"]: entry for entry in body["avg_days_per_stage"]}
+    assert velocity["applied"]["avg_days"] == 3.5
+    assert velocity["applied"]["sample_size"] == 2
+    assert velocity["screening"]["avg_days"] == 3.5
+    assert velocity["screening"]["sample_size"] == 2
+    assert velocity["interview"]["avg_days"] == 3.0
+    assert velocity["interview"]["sample_size"] == 1
+    assert velocity["offer"]["avg_days"] == 2.0
+    assert velocity["offer"]["sample_size"] == 1
+
+    funnel = {entry["stage"]: entry for entry in body["offer_conversion_funnel"]}
+    assert funnel["applied"]["reached_count"] == 2
+    assert funnel["applied"]["conversion_from_previous"] is None
+    assert funnel["applied"]["conversion_from_applied"] == 100.0
+    assert funnel["screening"]["reached_count"] == 2
+    assert funnel["screening"]["conversion_from_previous"] == 100.0
+    assert funnel["screening"]["conversion_from_applied"] == 100.0
+    assert funnel["interview"]["reached_count"] == 2
+    assert funnel["interview"]["conversion_from_previous"] == 100.0
+    assert funnel["interview"]["conversion_from_applied"] == 100.0
+    assert funnel["offer"]["reached_count"] == 1
+    assert funnel["offer"]["conversion_from_previous"] == 50.0
+    assert funnel["offer"]["conversion_from_applied"] == 50.0
 
 
 async def test_summary_empty_user() -> None:
@@ -308,6 +434,9 @@ async def test_summary_empty_user() -> None:
     assert body["application_count"] == 0
     assert body["active_application_count"] == 0
     assert body["status_breakdown"] == {}
+    assert body["avg_days_per_stage"] == []
+    assert len(body["offer_conversion_funnel"]) == 4
+    assert all(entry["reached_count"] == 0 for entry in body["offer_conversion_funnel"])
     assert body["pending_action_items"] == 0
     assert body["overdue_action_items"] == 0
     assert body["action_items_due_today"] == 0

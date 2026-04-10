@@ -30,6 +30,8 @@ The Baldin frontend is a React 19 single-page application built with Vite, TypeS
 
 ```mermaid
 graph TD
+	accTitle: Frontend Route Composition
+	accDescr: Shows how app-routes.tsx composes three layout roots — AppLayout (authenticated), AuthLayout (login and register), and HomeLayout (public terms page) — and how AppLayout nests UserRoute which in turn owns the Dashboard, Leads, Applications, Identity, Workflows, Network, and Settings route groups.
 	AppRoutes[app-routes.tsx] --> AppLayout[AppLayout]
 	AppRoutes --> AuthLayout[AuthLayout]
 	AppRoutes --> HomeLayout[HomeLayout]

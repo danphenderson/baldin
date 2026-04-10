@@ -19,12 +19,28 @@ import {
   getCompanies, createCompany, updateCompany, deleteCompany, getCompanyLeads, extractCompany,
   type CompanyRead, type CompanyCreate, type CompanyUpdate,
 } from '../service/companies';
-import { createApplication } from '../service/applications';
+import {
+  createApplication,
+  findExistingApplicationForLead,
+  getApplicationStateLabel,
+  type ApplicationCreationIntent,
+} from '../service/applications';
 import { components } from '../schema';
 import { timeAgo, monogram, monogramColor } from '../util/format';
 import EmptyState from '../component/common/empty-state';
+import ApplicationIntentButton from '../component/application-intent-button';
 
 type LeadRead = components['schemas']['LeadRead'];
+
+const creationSuccessMessage = (intent: ApplicationCreationIntent, title: string): string => (
+  intent === 'registered'
+    ? `Registered interest for "${title}".`
+    : `Application created for "${title}".`
+);
+
+const duplicateApplicationMessage = (title: string, statusLabel: string): string => (
+  `"${title}" already exists in your applications as ${statusLabel}.`
+);
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                         */
@@ -63,6 +79,8 @@ const CompaniesPage: React.FC = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [companyLeads, setCompanyLeads] = useState<Record<string, LeadRead[]>>({});
   const [loadingLeads, setLoadingLeads] = useState<string | null>(null);
+  const [creatingLeadId, setCreatingLeadId] = useState<string | null>(null);
+  const [warning, setWarning] = useState('');
 
   /* -- Feedback helpers -------------------------------------------- */
 
@@ -194,13 +212,24 @@ const CompaniesPage: React.FC = () => {
     }
   };
 
-  const handleQuickApply = async (lead: LeadRead) => {
+  const handleQuickApply = async (lead: LeadRead, intent: ApplicationCreationIntent) => {
     if (!token) return;
+    setCreatingLeadId(lead.id);
+    setWarning('');
     try {
-      await createApplication(token, { lead_id: lead.id, status: 'applied' });
-      showSuccess(`Applied to ${lead.title ?? 'position'}!`);
+      const title = lead.title ?? 'Untitled position';
+      const existingApp = await findExistingApplicationForLead(token, lead.id);
+      if (existingApp) {
+        setWarning(duplicateApplicationMessage(title, getApplicationStateLabel(existingApp)));
+        return;
+      }
+      setError('');
+      await createApplication(token, { lead_id: lead.id, status: intent });
+      showSuccess(creationSuccessMessage(intent, title));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Application failed');
+    } finally {
+      setCreatingLeadId(null);
     }
   };
 
@@ -231,6 +260,7 @@ const CompaniesPage: React.FC = () => {
     <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 1400, mx: 'auto' }}>
       {/* Feedback banners */}
       <Collapse in={!!error}><Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }} role="alert">{error}</Alert></Collapse>
+      <Collapse in={!!warning}><Alert severity="warning" onClose={() => setWarning('')} sx={{ mb: 2 }} role="alert">{warning}</Alert></Collapse>
       <Collapse in={!!success}><Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }} role="status" aria-live="polite">{success}</Alert></Collapse>
 
       {/* -------- AI Extraction Bar -------------------------------- */}
@@ -585,16 +615,16 @@ const CompaniesPage: React.FC = () => {
                                       </IconButton>
                                     </Tooltip>
                                   )}
-                                  <Tooltip title="Quick apply">
-                                    <Button
-                                      size="small"
-                                      variant="outlined"
-                                      onClick={() => handleQuickApply(lead)}
-                                      sx={{ minWidth: 0, px: 1, fontSize: '0.7rem' }}
-                                    >
-                                      Apply
-                                    </Button>
-                                  </Tooltip>
+                                  <ApplicationIntentButton
+                                    size="small"
+                                    variant="outlined"
+                                    label="Create"
+                                    loadingLabel="Creating..."
+                                    loading={creatingLeadId === lead.id}
+                                    ariaLabel={`Create application for ${lead.title ?? 'job'}`}
+                                    onSelect={(selectedIntent) => handleQuickApply(lead, selectedIntent)}
+                                    sx={{ minWidth: 0, px: 1, fontSize: '0.7rem' }}
+                                  />
                                 </Stack>
                               }
                             >

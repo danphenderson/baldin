@@ -172,7 +172,12 @@ const config: Config = {
       additionalLanguages: ['bash', 'python', 'json', 'yaml', 'toml'],
     },
     mermaid: {
-      theme: {light: 'neutral', dark: 'dark'},
+      theme: {light: 'default', dark: 'dark'},
+      options: {
+        er: {useMaxWidth: true},
+        flowchart: {useMaxWidth: true},
+        sequence: {useMaxWidth: true},
+      },
     },
   } satisfies Preset.ThemeConfig,
 };

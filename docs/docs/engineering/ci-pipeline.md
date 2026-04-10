@@ -19,6 +19,8 @@ Triggers on push to `main` and pull requests. Ignores changes to `*.md`, `docs/*
 
 ```mermaid
 flowchart TD
+    accTitle: CI Pipeline Job Graph
+    accDescr: Shows five CI jobs that all depend on lint passing first — backend-tests (pytest with coverage), frontend-tests (vitest), frontend-typecheck (tsc), frontend-build (vite build), and schema-freshness (contract guard).
     L["lint<br/>pre-commit hooks"] --> BT["backend-tests<br/>pytest + coverage"]
     L --> FT["frontend-tests<br/>vitest"]
     L --> FC["frontend-typecheck<br/>tsc --noEmit"]

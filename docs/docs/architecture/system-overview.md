@@ -14,19 +14,25 @@ Baldin is a full-stack local-first workspace for job-search automation. The syst
 ## Service Topology
 
 ```mermaid
-graph TB
-    subgraph Docker Compose
+graph LR
+    accTitle: Baldin Service Topology
+    accDescr: Shows the Docker Compose stack — Frontend (React/Vite on port 5173), Backend API (FastAPI/Uvicorn on port 8000), Main PostgreSQL DB (5432), Test DB (5431), and an external OpenAI LLM — and the connection direction between them.
+    Browser["Browser"]
+    LLM["OpenAI"]
+
+    subgraph dc["Docker Compose"]
+        direction TB
         FE["Frontend<br/>React / Vite<br/>:5173"]
         API["Backend API<br/>FastAPI / Uvicorn<br/>:8004 → :8000"]
         DB["PostgreSQL 15<br/>Main DB<br/>:5432"]
         TDB["PostgreSQL 15<br/>Test DB<br/>:5431"]
     end
 
-    Browser["Browser"] --> FE
+    Browser --> FE
     FE -->|VITE_API_URL| API
     API --> DB
     API --> TDB
-    API -->|OpenAI API| LLM["OpenAI"]
+    API -->|OpenAI API| LLM
 ```
 
 ## Services

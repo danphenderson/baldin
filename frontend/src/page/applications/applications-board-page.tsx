@@ -1,8 +1,8 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import {
-  Box, Card, CardContent, Typography, Chip, Stack, Button, useTheme, alpha,
+  Box, Card, CardContent, Typography, Chip, Stack, Button, TextField, useTheme, alpha,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  IconButton, Tooltip, Skeleton, Alert, Fade,
+  IconButton, Tooltip, Skeleton, Alert, Fade, Menu, MenuItem,
   useMediaQuery,
 } from '@mui/material';
 import {
@@ -12,19 +12,77 @@ import {
   LocationOn as LocationIcon, AttachMoney as SalaryIcon,
   Warning as WarningIcon, Schedule as ScheduleIcon,
   Block as RejectIcon, Undo as WithdrawIcon,
+  Description as DocIcon, DragIndicator as DragIcon, SwapHoriz as MoveIcon,
 } from '@mui/icons-material';
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import type { ApplicationRead } from '../../service/applications';
 import {
-  useApplications, COLUMNS, COLUMN_EMPTY_HINTS, relativeDate, nextStage,
+  useApplications, ALL_STATUS_COLUMNS, COLUMNS, COLUMN_EMPTY_HINTS, relativeDate, nextStage,
   type Column, type Outcome,
 } from './use-applications';
 
 /* ------------------------------------------------------------------ */
 /*  ApplicationCard                                                    */
 /* ------------------------------------------------------------------ */
+
+type BoardStatus = Exclude<ApplicationRead['status'], null | undefined>;
+
+const REGISTERED_COLUMN = ALL_STATUS_COLUMNS.find((column) => column.key === 'registered')!;
+const CLOSED_COLUMNS = ALL_STATUS_COLUMNS.filter(
+  (column) => column.key === 'rejected' || column.key === 'withdrawn',
+);
+const BOARD_EMPTY_HINTS: Record<string, string> = {
+  registered: 'Registered applications stay here until you are ready to work them in the pipeline.',
+  ...COLUMN_EMPTY_HINTS,
+  rejected: 'Drop here or use Move to mark an application as rejected.',
+  withdrawn: 'Drop here or use Move to mark an application as withdrawn.',
+};
+const BOARD_SECTIONS: Array<{ key: string; title: string; description: string; columns: Column[] }> = [
+  {
+    key: 'intake',
+    title: 'Intake',
+    description: 'Registered applications stay separate until you deliberately enter the active pipeline.',
+    columns: [REGISTERED_COLUMN],
+  },
+  {
+    key: 'pipeline',
+    title: 'Active Pipeline',
+    description: 'Drag cards or use Move to keep the funnel current without opening the detail page.',
+    columns: COLUMNS,
+  },
+  {
+    key: 'closed',
+    title: 'Closed',
+    description: 'Rejected and withdrawn cards remain movable so reopening still goes through the explicit backend semantics.',
+    columns: CLOSED_COLUMNS,
+  },
+];
+
+function boardStatusKey(app: ApplicationRead): BoardStatus {
+  return ((app.outcome ?? app.stage ?? app.status ?? 'applied') as string).toLowerCase() as BoardStatus;
+}
+
+function laneId(status: BoardStatus): string {
+  return `lane:${status}`;
+}
+
+function statusFromLaneId(id: string | null | undefined): BoardStatus | null {
+  if (!id || !id.startsWith('lane:')) return null;
+  return id.slice('lane:'.length) as BoardStatus;
+}
 
 interface AppCardProps {
   app: ApplicationRead;
@@ -33,21 +91,109 @@ interface AppCardProps {
   onAdvance: (app: ApplicationRead) => void;
   onClose: (app: ApplicationRead, outcome: Outcome) => void;
   onDelete: (app: ApplicationRead) => void;
+  onMove: (app: ApplicationRead, targetStatus: BoardStatus) => void;
+  onReminderSave: (app: ApplicationRead, reminder: Pick<ApplicationRead, 'next_step' | 'next_step_due'>) => Promise<ApplicationRead>;
+  dragHandleProps?: Record<string, unknown>;
+  isDragging?: boolean;
 }
 
-const ApplicationCard: React.FC<AppCardProps> = ({ app, column, onView, onAdvance, onClose, onDelete }) => {
+const ApplicationCard: React.FC<AppCardProps> = ({
+  app,
+  column,
+  onView,
+  onAdvance,
+  onClose,
+  onDelete,
+  onMove,
+  onReminderSave,
+  dragHandleProps,
+  isDragging = false,
+}) => {
   const theme = useTheme();
   const lead = app.lead;
   const companyName = lead?.companies?.[0]?.name;
+  const currentStatus = boardStatusKey(app);
   const isRegistered = column.key === 'registered';
+  const isClosedStatus = currentStatus === 'rejected' || currentStatus === 'withdrawn';
   const canAdvance = nextStage(column.key) !== null;
   const isOverdue = !!(app.next_step_due && new Date(app.next_step_due) < new Date());
+  const hasReminder = Boolean(app.next_step || app.next_step_due);
+  const documentCount = app.document_count ?? 0;
+  const moveTargets = ALL_STATUS_COLUMNS.filter((option) => option.key !== currentStatus) as Column[];
+  const [editingReminder, setEditingReminder] = useState(false);
+  const [draftNextStep, setDraftNextStep] = useState(app.next_step ?? '');
+  const [draftNextStepDue, setDraftNextStepDue] = useState(app.next_step_due ? app.next_step_due.slice(0, 10) : '');
+  const [savingReminder, setSavingReminder] = useState(false);
+  const [reminderError, setReminderError] = useState('');
+  const [moveAnchorEl, setMoveAnchorEl] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!editingReminder) {
+      setDraftNextStep(app.next_step ?? '');
+      setDraftNextStepDue(app.next_step_due ? app.next_step_due.slice(0, 10) : '');
+      setReminderError('');
+    }
+  }, [app.next_step, app.next_step_due, editingReminder]);
+
+  const currentNextStep = app.next_step ?? '';
+  const currentNextStepDue = app.next_step_due ? app.next_step_due.slice(0, 10) : '';
+  const trimmedNextStep = draftNextStep.trim();
+  const reminderDueLabel = app.next_step_due ? new Date(app.next_step_due).toLocaleDateString() : null;
+  const reminderDirty = trimmedNextStep !== currentNextStep || draftNextStepDue !== currentNextStepDue;
+
+  const openMoveMenu = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setMoveAnchorEl(event.currentTarget);
+  };
+
+  const selectMoveTarget = (targetStatus: BoardStatus) => (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setMoveAnchorEl(null);
+    onMove(app, targetStatus);
+  };
+
+  const startEditingReminder = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setReminderError('');
+    setEditingReminder(true);
+  };
+
+  const cancelEditingReminder = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setDraftNextStep(app.next_step ?? '');
+    setDraftNextStepDue(app.next_step_due ? app.next_step_due.slice(0, 10) : '');
+    setReminderError('');
+    setEditingReminder(false);
+  };
+
+  const saveReminder = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!reminderDirty) {
+      setEditingReminder(false);
+      return;
+    }
+
+    setSavingReminder(true);
+    setReminderError('');
+    try {
+      await onReminderSave(app, {
+        next_step: trimmedNextStep || null,
+        next_step_due: draftNextStepDue ? `${draftNextStepDue}T00:00:00` : null,
+      });
+      setEditingReminder(false);
+    } catch (error: unknown) {
+      setReminderError(error instanceof Error ? error.message : 'Failed to update reminder');
+    } finally {
+      setSavingReminder(false);
+    }
+  };
 
   return (
     <Card
       onClick={() => onView(app)}
       sx={{
         cursor: 'pointer',
+        opacity: isDragging ? 0.6 : 1,
         transition: 'transform 0.15s ease, box-shadow 0.15s ease',
         '&:hover': {
           transform: 'translateY(-2px)',
@@ -94,36 +240,114 @@ const ApplicationCard: React.FC<AppCardProps> = ({ app, column, onView, onAdvanc
               sx={{ fontSize: '0.65rem', height: 22, '& .MuiChip-icon': { ml: 0.5, mr: -0.25 } }}
             />
           )}
+          <Chip
+            icon={<DocIcon sx={{ fontSize: '0.75rem !important' }} />}
+            label={`${documentCount} doc${documentCount === 1 ? '' : 's'}`}
+            size="small"
+            variant={documentCount > 0 ? 'filled' : 'outlined'}
+            sx={{
+              fontSize: '0.65rem',
+              height: 22,
+              bgcolor: documentCount > 0 ? alpha(theme.palette.primary.main, 0.12) : undefined,
+              color: documentCount > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
+              '& .MuiChip-icon': { ml: 0.5, mr: -0.25 },
+            }}
+          />
         </Stack>
 
-        {isOverdue && (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5,
-              mb: 0.75,
-              px: 1,
-              py: 0.5,
-              borderRadius: 1.5,
-              bgcolor: alpha(theme.palette.warning.main, 0.12),
-              border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
-            }}
-          >
-            <WarningIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />
-            <Typography variant="caption" fontWeight={600} color="warning.main" noWrap sx={{ fontSize: '0.7rem' }}>
-              Overdue{app.next_step ? ` · ${app.next_step}` : ''}
-            </Typography>
-          </Box>
-        )}
-        {!isOverdue && app.next_step && (
-          <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.75 }}>
-            <ScheduleIcon sx={{ fontSize: '0.7rem', color: 'text.secondary' }} />
-            <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem' }}>
-              {app.next_step}
-            </Typography>
-          </Stack>
-        )}
+        <Box sx={{ mb: 0.75 }}>
+          {editingReminder ? (
+            <Box
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+              sx={{
+                p: 1.25,
+                borderRadius: 2,
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
+                bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.08 : 0.04),
+              }}
+            >
+              <Stack spacing={1}>
+                <TextField
+                  label="Reminder next step"
+                  size="small"
+                  value={draftNextStep}
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={(event) => setDraftNextStep(event.target.value)}
+                />
+                <TextField
+                  label="Reminder due date"
+                  type="date"
+                  size="small"
+                  value={draftNextStepDue}
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={(event) => setDraftNextStepDue(event.target.value)}
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+                {reminderError && <Alert severity="error">{reminderError}</Alert>}
+                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                  <Button size="small" onClick={cancelEditingReminder} disabled={savingReminder}>
+                    Cancel
+                  </Button>
+                  <Button size="small" variant="contained" onClick={saveReminder} disabled={savingReminder}>
+                    {savingReminder ? 'Saving...' : 'Save'}
+                  </Button>
+                </Stack>
+              </Stack>
+            </Box>
+          ) : (
+            <>
+              {isOverdue && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    mb: 0.75,
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 1.5,
+                    bgcolor: alpha(theme.palette.warning.main, 0.12),
+                    border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+                  }}
+                >
+                  <WarningIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />
+                  <Typography variant="caption" fontWeight={600} color="warning.main" noWrap sx={{ fontSize: '0.7rem' }}>
+                    Overdue{app.next_step ? ` · ${app.next_step}` : ''}
+                  </Typography>
+                </Box>
+              )}
+              {!isOverdue && hasReminder && (
+                <Stack spacing={0.25} sx={{ mb: 0.75 }}>
+                  {(app.next_step || app.next_step_due) && (
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <ScheduleIcon sx={{ fontSize: '0.7rem', color: 'text.secondary' }} />
+                      <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem' }}>
+                        {app.next_step || 'Reminder scheduled'}
+                      </Typography>
+                    </Stack>
+                  )}
+                  {reminderDueLabel && (
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem', ml: 2.3 }}>
+                      Due {reminderDueLabel}
+                    </Typography>
+                  )}
+                </Stack>
+              )}
+              <Box onClick={(event) => event.stopPropagation()} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={startEditingReminder}
+                  aria-label={`${hasReminder ? 'Edit' : 'Add'} reminder for ${lead?.title || 'application'}`}
+                  sx={{ px: 0, minWidth: 0, fontSize: '0.72rem', textTransform: 'none' }}
+                >
+                  {hasReminder ? 'Edit reminder' : 'Add reminder'}
+                </Button>
+              </Box>
+            </>
+          )}
+        </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.7, fontSize: '0.7rem' }}>
@@ -136,6 +360,38 @@ const ApplicationCard: React.FC<AppCardProps> = ({ app, column, onView, onAdvanc
             spacing={0}
             alignItems="center"
           >
+            <Tooltip title="Move to another lane">
+              <IconButton
+                size="small"
+                aria-label={`Move ${lead?.title || 'application'} to another lane`}
+                onClick={openMoveMenu}
+                sx={{ p: 0.5 }}
+              >
+                <MoveIcon sx={{ fontSize: '0.875rem' }} />
+              </IconButton>
+            </Tooltip>
+            {dragHandleProps && (
+              <Tooltip title="Drag to another lane">
+                <Box
+                  component="span"
+                  onClick={(event) => event.stopPropagation()}
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    p: 0.5,
+                    color: theme.palette.text.secondary,
+                    cursor: 'grab',
+                    touchAction: 'none',
+                    borderRadius: 1,
+                    '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.05) },
+                  }}
+                  {...dragHandleProps}
+                >
+                  <DragIcon sx={{ fontSize: '0.95rem' }} />
+                </Box>
+              </Tooltip>
+            )}
             {isRegistered && canAdvance ? (
               <Tooltip title="Move to Applied and start tracking">
                 <Button
@@ -161,7 +417,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({ app, column, onView, onAdvanc
                   Add to Pipeline
                 </Button>
               </Tooltip>
-            ) : canAdvance ? (
+            ) : !isClosedStatus && canAdvance ? (
               <Tooltip title={`Move to ${COLUMNS[COLUMNS.findIndex((c) => c.key === column.key) + 1]?.label}`}>
                 <IconButton
                   size="small"
@@ -174,40 +430,44 @@ const ApplicationCard: React.FC<AppCardProps> = ({ app, column, onView, onAdvanc
                 </IconButton>
               </Tooltip>
             ) : null}
-            <Tooltip title="Reject">
-              <IconButton
-                size="small"
-                aria-label="Reject application"
-                onClick={(e) => { e.stopPropagation(); onClose(app, 'rejected'); }}
-                sx={{
-                  p: 0.5,
-                  color: theme.palette.text.secondary,
-                  opacity: 0,
-                  transition: 'opacity 0.15s ease',
-                  '.MuiCard-root:hover &, .MuiCard-root:focus-within &': { opacity: 1 },
-                  '&:focus': { opacity: 1 },
-                }}
-              >
-                <RejectIcon sx={{ fontSize: '0.875rem' }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Withdraw">
-              <IconButton
-                size="small"
-                aria-label="Withdraw application"
-                onClick={(e) => { e.stopPropagation(); onClose(app, 'withdrawn'); }}
-                sx={{
-                  p: 0.5,
-                  color: theme.palette.text.secondary,
-                  opacity: 0,
-                  transition: 'opacity 0.15s ease',
-                  '.MuiCard-root:hover &, .MuiCard-root:focus-within &': { opacity: 1 },
-                  '&:focus': { opacity: 1 },
-                }}
-              >
-                <WithdrawIcon sx={{ fontSize: '0.875rem' }} />
-              </IconButton>
-            </Tooltip>
+            {!isClosedStatus && (
+              <>
+                <Tooltip title="Reject">
+                  <IconButton
+                    size="small"
+                    aria-label="Reject application"
+                    onClick={(e) => { e.stopPropagation(); onClose(app, 'rejected'); }}
+                    sx={{
+                      p: 0.5,
+                      color: theme.palette.text.secondary,
+                      opacity: 0,
+                      transition: 'opacity 0.15s ease',
+                      '.MuiCard-root:hover &, .MuiCard-root:focus-within &': { opacity: 1 },
+                      '&:focus': { opacity: 1 },
+                    }}
+                  >
+                    <RejectIcon sx={{ fontSize: '0.875rem' }} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Withdraw">
+                  <IconButton
+                    size="small"
+                    aria-label="Withdraw application"
+                    onClick={(e) => { e.stopPropagation(); onClose(app, 'withdrawn'); }}
+                    sx={{
+                      p: 0.5,
+                      color: theme.palette.text.secondary,
+                      opacity: 0,
+                      transition: 'opacity 0.15s ease',
+                      '.MuiCard-root:hover &, .MuiCard-root:focus-within &': { opacity: 1 },
+                      '&:focus': { opacity: 1 },
+                    }}
+                  >
+                    <WithdrawIcon sx={{ fontSize: '0.875rem' }} />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
             <Tooltip title="Delete">
               <IconButton
                 size="small"
@@ -227,6 +487,21 @@ const ApplicationCard: React.FC<AppCardProps> = ({ app, column, onView, onAdvanc
             </Tooltip>
           </Stack>
         </Box>
+        <Menu
+          anchorEl={moveAnchorEl}
+          open={Boolean(moveAnchorEl)}
+          onClose={() => setMoveAnchorEl(null)}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {moveTargets.map((target) => (
+            <MenuItem
+              key={target.key}
+              onClick={selectMoveTarget(target.key as BoardStatus)}
+            >
+              {target.label}
+            </MenuItem>
+          ))}
+        </Menu>
       </CardContent>
     </Card>
   );
@@ -306,6 +581,157 @@ const EmptyState: React.FC = () => {
   );
 };
 
+interface DraggableApplicationCardProps {
+  app: ApplicationRead;
+  column: Column;
+  onView: (app: ApplicationRead) => void;
+  onAdvance: (app: ApplicationRead) => void;
+  onClose: (app: ApplicationRead, outcome: Outcome) => void;
+  onDelete: (app: ApplicationRead) => void;
+  onMove: (app: ApplicationRead, targetStatus: BoardStatus) => void;
+  onReminderSave: (app: ApplicationRead, reminder: Pick<ApplicationRead, 'next_step' | 'next_step_due'>) => Promise<ApplicationRead>;
+}
+
+const DraggableApplicationCard: React.FC<DraggableApplicationCardProps> = ({
+  app,
+  column,
+  onView,
+  onAdvance,
+  onClose,
+  onDelete,
+  onMove,
+  onReminderSave,
+}) => {
+  const { listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: app.id,
+  });
+
+  return (
+    <Box
+      ref={setNodeRef}
+      sx={{
+        transform: CSS.Transform.toString(transform),
+        transition: 'transform 0.2s ease',
+        zIndex: isDragging ? 2 : 'auto',
+      }}
+    >
+      <ApplicationCard
+        app={app}
+        column={column}
+        onView={onView}
+        onAdvance={onAdvance}
+        onClose={onClose}
+        onDelete={onDelete}
+        onMove={onMove}
+        onReminderSave={onReminderSave}
+        dragHandleProps={listeners}
+        isDragging={isDragging}
+      />
+    </Box>
+  );
+};
+
+interface BoardLaneProps {
+  column: Column;
+  apps: ApplicationRead[];
+  isNarrow: boolean;
+  onView: (app: ApplicationRead) => void;
+  onAdvance: (app: ApplicationRead) => void;
+  onClose: (app: ApplicationRead, outcome: Outcome) => void;
+  onDelete: (app: ApplicationRead) => void;
+  onMove: (app: ApplicationRead, targetStatus: BoardStatus) => void;
+  onReminderSave: (app: ApplicationRead, reminder: Pick<ApplicationRead, 'next_step' | 'next_step_due'>) => Promise<ApplicationRead>;
+}
+
+const BoardLane: React.FC<BoardLaneProps> = ({
+  column,
+  apps,
+  isNarrow,
+  onView,
+  onAdvance,
+  onClose,
+  onDelete,
+  onMove,
+  onReminderSave,
+}) => {
+  const theme = useTheme();
+  const { isOver, setNodeRef } = useDroppable({ id: laneId(column.key as BoardStatus) });
+
+  return (
+    <Box
+      sx={{
+        minWidth: isNarrow ? 280 : 240,
+        maxWidth: 320,
+        flexShrink: 0,
+        flexGrow: column.key === 'registered' ? 0 : 1,
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          mb: 1.5,
+          px: 1,
+          py: 1,
+        }}
+      >
+        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: column.color, flexShrink: 0 }} />
+        <Typography variant="subtitle2" color="text.secondary" sx={{ flexGrow: 1 }}>
+          {column.label}
+        </Typography>
+        <Chip
+          label={apps.length}
+          size="small"
+          sx={{
+            height: 22,
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            bgcolor: alpha(column.color, 0.12),
+            color: column.color,
+          }}
+        />
+      </Box>
+
+      <Stack
+        ref={setNodeRef}
+        spacing={1.5}
+        sx={{
+          p: 1,
+          borderRadius: 3,
+          minHeight: 220,
+          background: alpha(column.color, isOver ? 0.1 : (theme.palette.mode === 'dark' ? 0.03 : 0.025)),
+          border: `1px solid ${alpha(column.color, isOver ? 0.32 : (theme.palette.mode === 'dark' ? 0.1 : 0.12))}`,
+          boxShadow: isOver ? `0 0 0 2px ${alpha(column.color, 0.14)}` : 'none',
+          transition: 'background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+        }}
+      >
+        {apps.length === 0 ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexGrow: 1, minHeight: 120 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.6, fontStyle: 'italic', textAlign: 'center', px: 2 }}>
+              {BOARD_EMPTY_HINTS[column.key] || 'No applications'}
+            </Typography>
+          </Box>
+        ) : (
+          apps.map((app) => (
+            <DraggableApplicationCard
+              key={app.id}
+              app={app}
+              column={column}
+              onView={onView}
+              onAdvance={onAdvance}
+              onClose={onClose}
+              onDelete={onDelete}
+              onMove={onMove}
+              onReminderSave={onReminderSave}
+            />
+          ))
+        )}
+      </Stack>
+    </Box>
+  );
+};
+
 /* ------------------------------------------------------------------ */
 /*  Board page                                                         */
 /* ------------------------------------------------------------------ */
@@ -324,9 +750,11 @@ const ApplicationsBoardPage: React.FC = () => {
     setError,
     setSuccess,
     refresh,
+    handleStatusChange,
     handleAdvance,
     handleClose,
     handleDelete,
+    handleReminderUpdate,
     confirmDelete,
     deleteTarget,
     setDeleteTarget,
@@ -341,11 +769,49 @@ const ApplicationsBoardPage: React.FC = () => {
     + (buckets.get('interview')?.length ?? 0);
   const interviewCount = buckets.get('interview')?.length ?? 0;
   const offerCount = buckets.get('offer')?.length ?? 0;
+  const closedBuckets = useMemo(() => {
+    const map = new Map<string, ApplicationRead[]>([
+      ['rejected', []],
+      ['withdrawn', []],
+    ]);
+
+    for (const app of closedApps) {
+      const status = boardStatusKey(app);
+      const bucket = map.get(status);
+      if (bucket) bucket.push(app);
+    }
+
+    return map;
+  }, [closedApps]);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
 
   usePageToolbarHeader('Board', `${applications.length} total \u00b7 ${interviewCount} interviewing`);
 
   const viewApplication = (app: ApplicationRead) => {
     navigate(`/applications/${app.id}`);
+  };
+
+  const moveApplication = (app: ApplicationRead, targetStatus: BoardStatus) => {
+    if (boardStatusKey(app) === targetStatus) return;
+    void handleStatusChange(app.id, targetStatus);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const targetStatus = statusFromLaneId(event.over ? String(event.over.id) : null);
+    if (!targetStatus) return;
+
+    const movedApp = applications.find((app) => app.id === String(event.active.id));
+    if (!movedApp || boardStatusKey(movedApp) === targetStatus) return;
+
+    void handleStatusChange(movedApp.id, targetStatus);
+  };
+
+  const appsForLane = (laneKey: string) => {
+    if (laneKey === 'registered') return registeredApps;
+    if (laneKey === 'rejected' || laneKey === 'withdrawn') return closedBuckets.get(laneKey) ?? [];
+    return buckets.get(laneKey) ?? [];
   };
 
   return (
@@ -421,179 +887,58 @@ const ApplicationsBoardPage: React.FC = () => {
       ) : applications.length === 0 ? (
         <EmptyState />
       ) : (
-        <>
-          {/* Registered intake container */}
-          {registeredApps.length > 0 && (
-            <Box
-              sx={{
-                mb: 3,
-                p: 2,
-                borderRadius: 3,
-                bgcolor: alpha('#94a3b8', theme.palette.mode === 'dark' ? 0.06 : 0.04),
-                border: `1px solid ${alpha('#94a3b8', 0.15)}`,
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#94a3b8', flexShrink: 0 }} />
-                <Typography variant="subtitle2" color="text.secondary" sx={{ flexGrow: 1 }}>
-                  Registered — not yet in the active pipeline
-                </Typography>
-                <Chip
-                  label={registeredApps.length}
-                  size="small"
-                  sx={{ height: 22, fontSize: '0.75rem', fontWeight: 600, bgcolor: alpha('#94a3b8', 0.12), color: '#94a3b8' }}
-                />
-              </Box>
-              <Stack direction="row" spacing={1.5} sx={{ overflowX: 'auto', pb: 0.5 }}>
-                {registeredApps.map((app) => (
-                  <Box key={app.id} sx={{ minWidth: isNarrow ? 260 : 220, maxWidth: 280, flexShrink: 0 }}>
-                    <ApplicationCard
-                      app={app}
-                      column={{ key: 'registered', label: 'Registered', color: '#94a3b8' }}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <Stack spacing={3}>
+            {BOARD_SECTIONS.map((section) => (
+              <Box key={section.key}>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={0.75}
+                  justifyContent="space-between"
+                  alignItems={{ sm: 'center' }}
+                  sx={{ mb: 1.5 }}
+                >
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      {section.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.8 }}>
+                      {section.description}
+                    </Typography>
+                  </Box>
+                </Stack>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    gap: 2,
+                    overflowX: 'auto',
+                    pb: 2,
+                    minHeight: 220,
+                    ...(isNarrow && {
+                      scrollSnapType: 'x mandatory',
+                      '& > *': { scrollSnapAlign: 'start' },
+                    }),
+                  }}
+                >
+                  {section.columns.map((column) => (
+                    <BoardLane
+                      key={column.key}
+                      column={column}
+                      apps={appsForLane(column.key)}
+                      isNarrow={isNarrow}
                       onView={viewApplication}
                       onAdvance={handleAdvance}
                       onClose={handleClose}
                       onDelete={handleDelete}
+                      onMove={moveApplication}
+                      onReminderSave={(application, reminder) => handleReminderUpdate(application.id, reminder)}
                     />
-                  </Box>
-                ))}
-              </Stack>
-            </Box>
-          )}
-
-          {/* Active pipeline board */}
-          <Box
-          sx={{
-            display: 'flex',
-            gap: 2,
-            overflowX: 'auto',
-            pb: 2,
-            minHeight: 420,
-            ...(isNarrow && {
-              scrollSnapType: 'x mandatory',
-              '& > *': { scrollSnapAlign: 'start' },
-            }),
-          }}
-        >
-          {COLUMNS.map((col) => {
-            const apps = buckets.get(col.key) || [];
-            return (
-              <Box
-                key={col.key}
-                sx={{
-                  minWidth: isNarrow ? 280 : 240,
-                  maxWidth: 320,
-                  flexShrink: 0,
-                  flexGrow: 1,
-                }}
-              >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    mb: 1.5,
-                    px: 1,
-                    py: 1,
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 2,
-                    bgcolor: 'background.default',
-                  }}
-                >
-                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: col.color, flexShrink: 0 }} />
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ flexGrow: 1 }}>
-                    {col.label}
-                  </Typography>
-                  <Chip
-                    label={apps.length}
-                    size="small"
-                    sx={{
-                      height: 22,
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      bgcolor: alpha(col.color, 0.12),
-                      color: col.color,
-                    }}
-                  />
+                  ))}
                 </Box>
-
-                <Stack
-                  spacing={1.5}
-                  sx={{
-                    p: 1,
-                    borderRadius: 3,
-                    minHeight: 380,
-                    background: alpha(col.color, theme.palette.mode === 'dark' ? 0.03 : 0.025),
-                    border: `1px solid ${alpha(col.color, theme.palette.mode === 'dark' ? 0.1 : 0.12)}`,
-                    transition: 'background 0.2s ease',
-                  }}
-                >
-                  {apps.length === 0 ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexGrow: 1, minHeight: 120 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.6, fontStyle: 'italic' }}>
-                        {COLUMN_EMPTY_HINTS[col.key] || 'No applications'}
-                      </Typography>
-                    </Box>
-                  ) : (
-                    apps.map((app) => (
-                      <ApplicationCard
-                        key={app.id}
-                        app={app}
-                        column={col}
-                        onView={viewApplication}
-                        onAdvance={handleAdvance}
-                        onClose={handleClose}
-                        onDelete={handleDelete}
-                      />
-                    ))
-                  )}
-                </Stack>
               </Box>
-            );
-          })}
-        </Box>
-
-          {/* Closed applications summary */}
-          {closedApps.length > 0 && (
-            <Box
-              sx={{
-                mt: 3,
-                p: 2,
-                borderRadius: 3,
-                bgcolor: alpha('#f43f5e', theme.palette.mode === 'dark' ? 0.04 : 0.025),
-                border: `1px solid ${alpha('#f43f5e', 0.12)}`,
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <RejectIcon sx={{ fontSize: '1rem', color: '#f43f5e' }} />
-                <Typography variant="subtitle2" color="text.secondary" sx={{ flexGrow: 1 }}>
-                  Closed
-                </Typography>
-                <Chip
-                  label={closedApps.length}
-                  size="small"
-                  sx={{ height: 22, fontSize: '0.75rem', fontWeight: 600, bgcolor: alpha('#f43f5e', 0.12), color: '#f43f5e' }}
-                />
-              </Box>
-              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                {closedApps.slice(0, 8).map((app) => (
-                  <Chip
-                    key={app.id}
-                    label={`${app.lead?.title || 'Untitled'} · ${(app.outcome ?? app.status ?? '').toLowerCase()}`}
-                    size="small"
-                    variant="outlined"
-                    onClick={() => viewApplication(app)}
-                    sx={{ cursor: 'pointer', fontSize: '0.7rem', maxWidth: 240, textOverflow: 'ellipsis' }}
-                  />
-                ))}
-                {closedApps.length > 8 && (
-                  <Chip label={`+${closedApps.length - 8} more`} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
-                )}
-              </Stack>
-            </Box>
-          )}
-        </>
+            ))}
+          </Stack>
+        </DndContext>
       )}
 
       <DeleteConfirmDialog

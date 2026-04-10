@@ -15,6 +15,8 @@ Baldin exposes a FastAPI JSON API with OpenAPI 3.1 generated directly from the b
 
 ```mermaid
 graph TD
+	accTitle: Baldin API Route Map
+	accDescr: Shows the FastAPI api_router broken into six functional groups — Auth and identity, Job search and profile, Documents and collaboration, Automation and review, Networking and messaging, and Operational helpers — with each group's URL prefix listed below it.
 	API[api_router] --> Auth[Auth and identity]
 	API --> Search[Job search and profile]
 	API --> Docs[Documents and collaboration]

@@ -14,6 +14,8 @@ import {
   ArrowForward as ArrowIcon,
 } from '@mui/icons-material';
 import type { LeadRead } from '../service/leads';
+import type { ApplicationCreationIntent } from '../service/applications';
+import ApplicationIntentButton from './application-intent-button';
 import { timeAgo } from '../util/format';
 
 /* ------------------------------------------------------------------ */
@@ -26,7 +28,7 @@ export interface LeadCardProps {
   onOpen: (lead: LeadRead) => void;
   onEdit: (lead: LeadRead) => void;
   onDelete: (lead: LeadRead) => void;
-  onApply: (lead: LeadRead) => void;
+  onApply: (lead: LeadRead, intent: ApplicationCreationIntent) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -276,15 +278,16 @@ const LeadCard: React.FC<LeadCardProps> = ({
           sx={{ justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' } }}
         >
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} onClick={stopCardClick}>
-            <Button
+            <ApplicationIntentButton
               size="small"
               variant="contained"
-              onClick={() => onApply(lead)}
-              disabled={applying}
+              onSelect={(intent) => onApply(lead, intent)}
+              loading={applying}
+              label="Create Application"
+              loadingLabel="Creating..."
+              ariaLabel={`Create application for ${lead.title || 'this lead'}`}
               sx={{ background: gradientBg, px: 2.5, fontSize: '0.8rem' }}
-            >
-              {applying ? 'Applying...' : 'Quick Apply'}
-            </Button>
+            />
             <Button size="small" endIcon={<ArrowIcon />} onClick={() => onOpen(lead)}>
               View Lead
             </Button>

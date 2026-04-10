@@ -17,6 +17,8 @@ This is the runtime path exercised when a user triggers extraction through the A
 
 ```mermaid
 flowchart LR
+    accTitle: User-Triggered Extraction Flow
+    accDescr: Starting from an API Request, deps.run_extractor determines the input source (URL, File, or Text), then dispatches to either extraction_runnable.extract_entire_document for full-document mode or retrieval.extract_from_content for content-retrieval mode.
     A["API Request"] --> B["deps.run_extractor"]
     B --> C{"Input source"}
     C -->|"URL"| D["langchain.extract_text_from_url"]

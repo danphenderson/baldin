@@ -480,6 +480,7 @@ class Application(Base):
     notes = Column(Text)
     next_step = Column(String)
     next_step_due = Column(DateTime)
+    outcome_reason = Column(Text)
     status_history = Column(JSONB, server_default="[]")
     lead_id = Column(UUID, ForeignKey("leads.id"), index=True)
     user_id = Column(UUID, ForeignKey("users.id"))

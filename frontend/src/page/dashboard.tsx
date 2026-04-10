@@ -170,6 +170,22 @@ function feedEntityPath(item: ActivityFeedItem): string | null {
   return null;
 }
 
+type SummaryStageVelocity = CommandCenterSummary['avg_days_per_stage'][number];
+type SummaryFunnelStage = CommandCenterSummary['offer_conversion_funnel'][number];
+
+function formatMetricNumber(value: number): string {
+  return Number.isInteger(value) ? `${value}` : value.toFixed(1).replace(/\.0$/, '');
+}
+
+function formatPercent(value: number | null | undefined): string {
+  if (value == null) return 'n/a';
+  return `${formatMetricNumber(value)}%`;
+}
+
+function formatDays(value: number): string {
+  return `${formatMetricNumber(value)} day${value === 1 ? '' : 's'}`;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Compact stat tile                                                  */
 /* ------------------------------------------------------------------ */
@@ -662,6 +678,26 @@ const DashboardPage: React.FC = () => {
     [actionItems],
   );
 
+  const stageVelocity = summary?.avg_days_per_stage ?? [];
+  const offerConversionFunnel = summary?.offer_conversion_funnel ?? [];
+  const appliedFunnelStage = offerConversionFunnel.find((entry) => entry.stage === 'applied');
+  const offerFunnelStage = offerConversionFunnel.find((entry) => entry.stage === 'offer');
+  const appliedBaseline = appliedFunnelStage?.reached_count ?? 0;
+  const offerYield = offerFunnelStage?.conversion_from_applied ?? null;
+  const slowestStage = stageVelocity.reduce<SummaryStageVelocity | null>(
+    (currentSlowest, entry) => (
+      currentSlowest === null || entry.avg_days > currentSlowest.avg_days
+        ? entry
+        : currentSlowest
+    ),
+    null,
+  );
+  const maxVelocityDays = stageVelocity.reduce(
+    (currentMax, entry) => Math.max(currentMax, entry.avg_days),
+    0,
+  );
+  const analyticsReady = stageVelocity.length > 0 || appliedBaseline > 0;
+
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -944,6 +980,194 @@ const DashboardPage: React.FC = () => {
                       );
                     })}
                   </Stack>
+                </CardContent>
+              </Card>
+            )}
+
+            {summary && (
+              <Card>
+                <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      PIPELINE ANALYTICS
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, maxWidth: 720 }}>
+                      Stage dwell time comes from recorded application status-history spans. Offer conversion carries each application forward to the deepest pipeline stage it reached so the funnel stays monotonic even when a step was skipped in the UI.
+                    </Typography>
+                  </Box>
+
+                  {analyticsReady ? (
+                    <>
+                      <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                        <Chip
+                          label={`Offer yield ${formatPercent(offerYield)}`}
+                          size="small"
+                          sx={{
+                            fontWeight: 700,
+                            bgcolor: alpha('#10b981', 0.12),
+                            color: '#10b981',
+                          }}
+                        />
+                        <Chip
+                          label={`Offers reached ${offerFunnelStage?.reached_count ?? 0}`}
+                          size="small"
+                          sx={{
+                            fontWeight: 700,
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                            color: theme.palette.primary.main,
+                          }}
+                        />
+                        {slowestStage && (
+                          <Chip
+                            label={`Slowest stage ${statusLabel(slowestStage.stage)} · ${formatDays(slowestStage.avg_days)}`}
+                            size="small"
+                            sx={{
+                              fontWeight: 700,
+                              bgcolor: alpha('#f59e0b', 0.12),
+                              color: '#f59e0b',
+                            }}
+                          />
+                        )}
+                      </Stack>
+
+                      <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                          <Box
+                            sx={{
+                              p: 2,
+                              borderRadius: 3,
+                              bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.12 : 0.05),
+                              border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+                              height: '100%',
+                            }}
+                          >
+                            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.08em' }}>
+                              Stage Velocity
+                            </Typography>
+                            <Stack spacing={1.75} sx={{ mt: 1.5 }}>
+                              {stageVelocity.map((entry) => {
+                                const color = STATUS_CHIP_COLORS[entry.stage] ?? theme.palette.primary.main;
+                                const width = maxVelocityDays > 0
+                                  ? Math.max(14, (entry.avg_days / maxVelocityDays) * 100)
+                                  : 14;
+
+                                return (
+                                  <Box key={`velocity-${entry.stage}`}>
+                                    <Stack direction="row" justifyContent="space-between" alignItems="baseline" spacing={1}>
+                                      <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                        {statusLabel(entry.stage)}
+                                      </Typography>
+                                      <Typography variant="body2" sx={{ fontWeight: 800, color }}>
+                                        {formatDays(entry.avg_days)}
+                                      </Typography>
+                                    </Stack>
+                                    <Box
+                                      sx={{
+                                        mt: 0.75,
+                                        height: 10,
+                                        borderRadius: 999,
+                                        bgcolor: alpha(color, 0.12),
+                                        overflow: 'hidden',
+                                      }}
+                                    >
+                                      <Box
+                                        sx={{
+                                          width: `${width}%`,
+                                          height: '100%',
+                                          borderRadius: 999,
+                                          background: `linear-gradient(90deg, ${alpha(color, 0.68)} 0%, ${color} 100%)`,
+                                        }}
+                                      />
+                                    </Box>
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                      {entry.sample_size} recorded span{entry.sample_size === 1 ? '' : 's'}
+                                    </Typography>
+                                  </Box>
+                                );
+                              })}
+                            </Stack>
+                          </Box>
+                        </Grid>
+
+                        <Grid size={{ xs: 12, md: 6 }}>
+                          <Box
+                            sx={{
+                              p: 2,
+                              borderRadius: 3,
+                              bgcolor: alpha('#10b981', theme.palette.mode === 'dark' ? 0.1 : 0.04),
+                              border: `1px solid ${alpha('#10b981', 0.14)}`,
+                              height: '100%',
+                            }}
+                          >
+                            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.08em' }}>
+                              Offer Conversion
+                            </Typography>
+                            <Stack spacing={1.25} sx={{ mt: 1.5 }}>
+                              {offerConversionFunnel.map((entry, index) => {
+                                const color = STATUS_CHIP_COLORS[entry.stage] ?? '#10b981';
+                                const width = appliedBaseline > 0
+                                  ? 38 + ((entry.reached_count / appliedBaseline) * 62)
+                                  : 38;
+                                const previousStage = index > 0 ? offerConversionFunnel[index - 1] : null;
+
+                                return (
+                                  <Box key={`funnel-${entry.stage}`}>
+                                    <Box
+                                      sx={{
+                                        width: `${width}%`,
+                                        maxWidth: '100%',
+                                        mx: 'auto',
+                                        borderRadius: 2.5,
+                                        px: 1.5,
+                                        py: 1.1,
+                                        bgcolor: alpha(color, 0.14),
+                                        border: `1px solid ${alpha(color, 0.22)}`,
+                                      }}
+                                    >
+                                      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                                        <Typography variant="body2" sx={{ fontWeight: 700, color }}>
+                                          {statusLabel(entry.stage)}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                                          {entry.reached_count}
+                                        </Typography>
+                                      </Stack>
+                                    </Box>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      sx={{ display: 'block', mt: 0.5, textAlign: 'center' }}
+                                    >
+                                      {previousStage === null
+                                        ? 'Baseline for the active pipeline'
+                                        : `${formatPercent(entry.conversion_from_previous)} from ${statusLabel(previousStage.stage)} · ${formatPercent(entry.conversion_from_applied)} from Applied`}
+                                    </Typography>
+                                  </Box>
+                                );
+                              })}
+                            </Stack>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </>
+                  ) : (
+                    <Box
+                      sx={{
+                        borderRadius: 3,
+                        border: `1px dashed ${alpha(theme.palette.text.primary, 0.14)}`,
+                        px: 2,
+                        py: 3,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                        Analytics unlock as pipeline history accumulates
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Once applications move through Applied, Screening, Interview, and Offer, this panel will surface bottlenecks and yield automatically.
+                      </Typography>
+                    </Box>
+                  )}
                 </CardContent>
               </Card>
             )}

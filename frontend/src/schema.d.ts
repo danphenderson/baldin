@@ -1097,6 +1097,11 @@ export interface components {
       next_step?: string | null;
       /** Next Step Due */
       next_step_due?: string | null;
+      /**
+       * Outcome Reason
+       * @description Why the application was rejected or withdrawn
+       */
+      outcome_reason?: string | null;
       /** Document Ids */
       document_ids?: string[] | null;
     };
@@ -1174,13 +1179,21 @@ export interface components {
        */
       next_step_due?: string | null;
       /**
+       * Outcome Reason
+       * @description Why the application was rejected or withdrawn
+       */
+      outcome_reason?: string | null;
+      /**
+       * Document Count
+       * @description Number of attached documents the caller can access
+       * @default 0
+       */
+      document_count?: number;
+      /**
        * Status History
        * @description Append-only log of status transitions
-       * @default []
        */
-      status_history?: {
-          [key: string]: unknown;
-        }[] | null;
+      status_history?: components["schemas"]["ApplicationStatusHistoryEntry"][];
     };
     /**
      * ApplicationStage
@@ -1193,6 +1206,19 @@ export interface components {
      * @enum {string}
      */
     ApplicationStatus: "registered" | "applied" | "screening" | "interview" | "offer" | "rejected" | "withdrawn";
+    /** ApplicationStatusHistoryEntry */
+    ApplicationStatusHistoryEntry: {
+      /** @description Previous application status, null for the initial creation entry */
+      from?: components["schemas"]["ApplicationStatus"] | null;
+      /** @description Application status after the transition */
+      to: components["schemas"]["ApplicationStatus"];
+      /**
+       * Changed At
+       * Format: date-time
+       * @description When the status transition was recorded
+       */
+      changed_at: string;
+    };
     /** ApplicationUpdate */
     ApplicationUpdate: {
       status?: components["schemas"]["ApplicationStatus"] | null;
@@ -1204,6 +1230,17 @@ export interface components {
       next_step?: string | null;
       /** Next Step Due */
       next_step_due?: string | null;
+      /**
+       * Outcome Reason
+       * @description Why the application was rejected or withdrawn
+       */
+      outcome_reason?: string | null;
+      /**
+       * Reopen
+       * @description Set true when moving a rejected or withdrawn application back into an active stage
+       * @default false
+       */
+      reopen?: boolean;
     };
     /**
      * BearerResponse
@@ -1427,6 +1464,41 @@ export interface components {
        */
       issued_date?: string | null;
     };
+    /** CommandCenterFunnelStage */
+    CommandCenterFunnelStage: {
+      /** @description Pipeline stage included in the offer conversion funnel */
+      stage: components["schemas"]["ApplicationStage"];
+      /**
+       * Reached Count
+       * @description Number of applications that reached this stage or a later stage
+       */
+      reached_count: number;
+      /**
+       * Conversion From Previous
+       * @description Percent of the previous funnel stage that advanced to this stage
+       */
+      conversion_from_previous?: number | null;
+      /**
+       * Conversion From Applied
+       * @description Percent of applied applications that eventually reached this stage
+       */
+      conversion_from_applied?: number | null;
+    };
+    /** CommandCenterStageVelocity */
+    CommandCenterStageVelocity: {
+      /** @description Pipeline stage measured from application status history */
+      stage: components["schemas"]["ApplicationStage"];
+      /**
+       * Avg Days
+       * @description Average number of days applications spent in this stage
+       */
+      avg_days: number;
+      /**
+       * Sample Size
+       * @description Number of recorded stage spans included in the average
+       */
+      sample_size: number;
+    };
     /** CommandCenterSummary */
     CommandCenterSummary: {
       /** Lead Count */
@@ -1441,6 +1513,10 @@ export interface components {
       status_breakdown: {
         [key: string]: number;
       };
+      /** Avg Days Per Stage */
+      avg_days_per_stage: components["schemas"]["CommandCenterStageVelocity"][];
+      /** Offer Conversion Funnel */
+      offer_conversion_funnel: components["schemas"]["CommandCenterFunnelStage"][];
       /** Pending Action Items */
       pending_action_items: number;
       /** Overdue Action Items */

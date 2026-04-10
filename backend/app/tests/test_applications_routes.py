@@ -150,6 +150,22 @@ async def _create_versioned_document_via_db(
         return doc.id
 
 
+async def _create_application_via_api(
+    client: AsyncClient,
+    headers: dict[str, str],
+    lead_id: UUID,
+    *,
+    status: str = "applied",
+) -> dict[str, object]:
+    response = await client.post(
+        "/applications/",
+        json={"lead_id": str(lead_id), "status": status},
+        headers=headers,
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
 # ---------------------------------------------------------------------------
 # POST /applications/ — create
 # ---------------------------------------------------------------------------
@@ -177,6 +193,32 @@ async def test_create_application_happy_path() -> None:
     assert isinstance(body.get("status_history"), list)
     assert len(body["status_history"]) >= 1
     assert body["status_history"][0]["to"] == "applied"
+    assert body["document_count"] == 0
+
+
+async def test_create_application_with_document_ids_returns_document_count() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        uid, headers = await _get_auth(client)
+        lead_id = await _create_lead()
+        document_ids = [
+            await _create_document_via_db(uid),
+            await _create_document_via_db(uid),
+        ]
+
+        response = await client.post(
+            "/applications/",
+            json={
+                "lead_id": str(lead_id),
+                "status": "applied",
+                "document_ids": [str(document_id) for document_id in document_ids],
+            },
+            headers=headers,
+        )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["document_count"] == 2
 
 
 async def test_create_application_duplicate_lead_returns_400() -> None:
@@ -240,6 +282,75 @@ async def test_list_applications() -> None:
     assert "lead_id" in body[0]
     assert "status" in body[0]
     assert "user_id" in body[0]
+    assert "document_count" in body[0]
+
+
+async def test_application_responses_include_accessible_document_count() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        viewer_id, viewer_headers = await _get_auth(client)
+        _, shared_owner_id = await _create_user("SharedCountOwnerPass1!")
+        _, hidden_owner_id = await _create_user("HiddenCountOwnerPass1!")
+        lead_id = await _create_lead()
+
+        create_resp = await client.post(
+            "/applications/",
+            json={"lead_id": str(lead_id), "status": "applied"},
+            headers=viewer_headers,
+        )
+        assert create_resp.status_code == 201, create_resp.text
+        app_id = create_resp.json()["id"]
+
+        owned_doc_id = await _create_document_via_db(viewer_id)
+        shared_doc_id = await _create_document_via_db(shared_owner_id)
+        hidden_doc_id = await _create_document_via_db(hidden_owner_id)
+
+        async with session_context() as session:
+            session.add(
+                models.DocumentShare(
+                    document_id=shared_doc_id,
+                    shared_with_user_id=viewer_id,
+                    shared_by_user_id=shared_owner_id,
+                    role="viewer",
+                )
+            )
+            session.add(
+                models.DocumentXApplication(
+                    application_id=UUID(app_id),
+                    document_id=hidden_doc_id,
+                )
+            )
+            await session.commit()
+
+        for document_id in (owned_doc_id, shared_doc_id):
+            attach_resp = await client.post(
+                f"/applications/{app_id}/documents",
+                json={"document_id": str(document_id)},
+                headers=viewer_headers,
+            )
+            assert attach_resp.status_code == 201, attach_resp.text
+
+        list_resp = await client.get("/applications/", headers=viewer_headers)
+        detail_resp = await client.get(
+            f"/applications/{app_id}", headers=viewer_headers
+        )
+        update_resp = await client.patch(
+            f"/applications/{app_id}",
+            json={"notes": "Count should stay in sync"},
+            headers=viewer_headers,
+        )
+
+    assert list_resp.status_code == 200
+    list_body = next(
+        application for application in list_resp.json() if application["id"] == app_id
+    )
+    assert list_body["document_count"] == 2
+
+    assert detail_resp.status_code == 200
+    assert detail_resp.json()["document_count"] == 2
+
+    assert update_resp.status_code == 200
+    assert update_resp.json()["document_count"] == 2
 
 
 async def test_list_applications_empty_for_new_user() -> None:
@@ -354,6 +465,178 @@ async def test_update_application_status_appends_history() -> None:
     last = history[-1]
     assert last["from"] == "applied"
     assert last["to"] == "screening"
+
+
+@pytest.mark.parametrize(
+    ("terminal_status", "outcome_reason"),
+    [
+        ("rejected", "Role closed internally"),
+        ("withdrawn", "Accepted another offer"),
+    ],
+)
+async def test_update_application_sets_outcome_reason_for_terminal_status(
+    terminal_status: str,
+    outcome_reason: str,
+) -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        uid, headers = await _get_auth(client)
+        lead_id = await _create_lead()
+
+        created = await _create_application_via_api(client, headers, lead_id)
+        app_id = created["id"]
+
+        response = await client.patch(
+            f"/applications/{app_id}",
+            json={"status": terminal_status, "outcome_reason": outcome_reason},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == terminal_status
+    assert body["outcome"] == terminal_status
+    assert body["outcome_reason"] == outcome_reason
+
+
+@pytest.mark.parametrize(
+    ("terminal_status", "outcome_reason"),
+    [
+        ("rejected", "Need a hybrid schedule"),
+        ("withdrawn", "Accepted another offer"),
+    ],
+)
+async def test_update_application_allows_outcome_reason_on_closed_application_without_status_change(
+    terminal_status: str,
+    outcome_reason: str,
+) -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        uid, headers = await _get_auth(client)
+        lead_id = await _create_lead()
+
+        created = await _create_application_via_api(client, headers, lead_id)
+        app_id = created["id"]
+
+        close_response = await client.patch(
+            f"/applications/{app_id}",
+            json={"status": terminal_status},
+            headers=headers,
+        )
+        assert close_response.status_code == 200, close_response.text
+
+        response = await client.patch(
+            f"/applications/{app_id}",
+            json={"outcome_reason": outcome_reason},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == terminal_status
+    assert body["outcome_reason"] == outcome_reason
+
+
+async def test_update_application_rejects_outcome_reason_for_active_application() -> (
+    None
+):
+    await _ensure_db_ready()
+    async with _client() as client:
+        uid, headers = await _get_auth(client)
+        lead_id = await _create_lead()
+
+        created = await _create_application_via_api(client, headers, lead_id)
+        app_id = created["id"]
+
+        response = await client.patch(
+            f"/applications/{app_id}",
+            json={"outcome_reason": "No longer interested"},
+            headers=headers,
+        )
+
+    assert response.status_code == 400
+    assert "outcome_reason" in response.json()["detail"]
+
+
+@pytest.mark.parametrize("terminal_status", ["rejected", "withdrawn"])
+async def test_update_application_rejects_implicit_reopen_from_terminal_status(
+    terminal_status: str,
+) -> None:
+    """Closed applications cannot move back to an active stage without reopen=true."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        uid, headers = await _get_auth(client)
+        lead_id = await _create_lead()
+
+        created = await _create_application_via_api(client, headers, lead_id)
+        app_id = created["id"]
+
+        close_response = await client.patch(
+            f"/applications/{app_id}",
+            json={"status": terminal_status},
+            headers=headers,
+        )
+        assert close_response.status_code == 200, close_response.text
+
+        response = await client.patch(
+            f"/applications/{app_id}",
+            json={"stage": "screening"},
+            headers=headers,
+        )
+        assert response.status_code == 400
+        assert "reopen=true" in response.json()["detail"]
+
+        get_response = await client.get(f"/applications/{app_id}", headers=headers)
+
+    assert get_response.status_code == 200
+    body = get_response.json()
+    assert body["status"] == terminal_status
+    assert body["outcome"] == terminal_status
+    history = body.get("status_history", [])
+    assert len(history) == 2
+    assert history[-1]["from"] == "applied"
+    assert history[-1]["to"] == terminal_status
+
+
+@pytest.mark.parametrize("terminal_status", ["rejected", "withdrawn"])
+async def test_update_application_reopens_terminal_status_when_reopen_true(
+    terminal_status: str,
+) -> None:
+    """reopen=true allows a terminal application to move back into an active stage."""
+    await _ensure_db_ready()
+    async with _client() as client:
+        uid, headers = await _get_auth(client)
+        lead_id = await _create_lead()
+
+        created = await _create_application_via_api(client, headers, lead_id)
+        app_id = created["id"]
+
+        close_response = await client.patch(
+            f"/applications/{app_id}",
+            json={
+                "status": terminal_status,
+                "outcome_reason": "Team paused hiring",
+            },
+            headers=headers,
+        )
+        assert close_response.status_code == 200, close_response.text
+
+        response = await client.patch(
+            f"/applications/{app_id}",
+            json={"stage": "screening", "reopen": True},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "screening"
+    assert body["stage"] == "screening"
+    assert body["outcome"] is None
+    assert body["outcome_reason"] is None
+    history = body.get("status_history", [])
+    assert len(history) == 3
+    assert history[-1]["from"] == terminal_status
+    assert history[-1]["to"] == "screening"
 
 
 async def test_update_application_not_found() -> None:

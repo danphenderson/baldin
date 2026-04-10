@@ -36,6 +36,87 @@ import type { ActionItemRead, ActionItemCreate } from '../../service/action-item
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
+interface StatusHistoryEntry {
+  from?: ApplicationRead['status'] | null;
+  to: NonNullable<ApplicationRead['status']>;
+  changed_at: string;
+}
+
+type ApplicationDetailRecord = ApplicationRead & {
+  outcome_reason?: string | null;
+  status_history?: StatusHistoryEntry[] | null;
+};
+
+type ApplicationUpdatePayload = Parameters<typeof updateApplication>[2] & {
+  reopen?: boolean;
+  outcome_reason?: string | null;
+};
+
+const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
+function isTerminalStatus(status: string | null | undefined): boolean {
+  return status === 'rejected' || status === 'withdrawn';
+}
+
+function statusLabel(status: string | null | undefined): string {
+  if (!status) return 'Unknown';
+  return ALL_STATUS_COLUMNS.find((column) => column.key === status)?.label ?? status.replace(/_/g, ' ');
+}
+
+function formatTimelineTimestamp(iso: string): string {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return iso;
+  return TIMESTAMP_FORMATTER.format(parsed);
+}
+
+function formatTimelineDuration(startIso: string, endIso?: string): string {
+  const start = new Date(startIso).getTime();
+  const end = endIso ? new Date(endIso).getTime() : Date.now();
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return 'unknown duration';
+
+  const diff = Math.max(0, end - start);
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return 'under a minute';
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'}`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} day${days === 1 ? '' : 's'}`;
+
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'}`;
+
+  const years = Math.floor(months / 12);
+  return `${years} year${years === 1 ? '' : 's'}`;
+}
+
+function buildTimelineEntries(history: StatusHistoryEntry[] | null | undefined) {
+  const entries = (history ?? [])
+    .filter((entry): entry is StatusHistoryEntry => Boolean(entry?.to && entry?.changed_at))
+    .slice()
+    .sort((left, right) => new Date(left.changed_at).getTime() - new Date(right.changed_at).getTime());
+
+  return entries.map((entry, index) => {
+    const nextEntry = entries[index + 1];
+    return {
+      key: `${entry.changed_at}-${entry.to}-${index}`,
+      from: entry.from ?? null,
+      to: entry.to,
+      changedAt: entry.changed_at,
+      durationLabel: formatTimelineDuration(entry.changed_at, nextEntry?.changed_at),
+      isCurrent: index === entries.length - 1,
+    };
+  });
+}
+
 const ApplicationDetailPage: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
   const navigate = useNavigate();
@@ -44,7 +125,7 @@ const ApplicationDetailPage: React.FC = () => {
   const { token } = useContext(UserContext);
 
   /* application state */
-  const [app, setApp] = useState<ApplicationRead | null>(null);
+  const [app, setApp] = useState<ApplicationDetailRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -67,6 +148,7 @@ const ApplicationDetailPage: React.FC = () => {
   const [localNotes, setLocalNotes] = useState('');
   const [localNextStep, setLocalNextStep] = useState('');
   const [localNextStepDue, setLocalNextStepDue] = useState('');
+  const [localOutcomeReason, setLocalOutcomeReason] = useState('');
 
   const lead = app?.lead;
 
@@ -86,7 +168,7 @@ const ApplicationDetailPage: React.FC = () => {
       try {
         const match = await getApplication(token, applicationId);
         if (cancelled) return;
-        setApp(match);
+        setApp(match as ApplicationDetailRecord);
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load application');
         if (!cancelled) setApp(null);
@@ -136,6 +218,7 @@ const ApplicationDetailPage: React.FC = () => {
     setLocalNotes(app.notes ?? '');
     setLocalNextStep(app.next_step ?? '');
     setLocalNextStepDue(app.next_step_due ? app.next_step_due.slice(0, 10) : '');
+    setLocalOutcomeReason(app.outcome_reason ?? '');
   }, [app?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---------------------------------------------------------------- */
@@ -152,10 +235,15 @@ const ApplicationDetailPage: React.FC = () => {
   const handleStatusChange = async (newStatus: ApplicationRead['status']) => {
     if (!token || !app) return;
     const prev = app.status;
+    const shouldReopen = isTerminalStatus(app.outcome ?? app.status) && !isTerminalStatus(newStatus);
     setApp((a) => a ? { ...a, status: newStatus } : a);
     try {
-      const updated = await updateApplication(token, app.id, { status: newStatus });
-      setApp(updated);
+      const updated = await updateApplication(token, app.id, {
+        status: newStatus,
+        ...(shouldReopen ? { reopen: true } : {}),
+      } as ApplicationUpdatePayload);
+      setApp(updated as ApplicationDetailRecord);
+      setLocalOutcomeReason((updated as ApplicationDetailRecord).outcome_reason ?? '');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to update status');
       setApp((a) => a ? { ...a, status: prev } : a);
@@ -201,6 +289,25 @@ const ApplicationDetailPage: React.FC = () => {
       showSuccess('Saved');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to save due date');
+    }
+  };
+
+  const handleOutcomeReasonSave = async () => {
+    if (!token || !app || !isTerminalStatus(app.outcome ?? app.status)) return;
+    const nextValue = localOutcomeReason.trim() || null;
+    const currentValue = (app.outcome_reason ?? '').trim() || null;
+    if (nextValue === currentValue) return;
+
+    showSuccess('Saving\u2026');
+    try {
+      const updated = await updateApplication(token, app.id, {
+        outcome_reason: nextValue,
+      } as ApplicationUpdatePayload);
+      setApp(updated as ApplicationDetailRecord);
+      setLocalOutcomeReason((updated as ApplicationDetailRecord).outcome_reason ?? '');
+      showSuccess('Saved');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to save outcome reason');
     }
   };
 
@@ -356,6 +463,9 @@ const ApplicationDetailPage: React.FC = () => {
 
   const companyName = lead?.companies?.[0]?.name;
   const column = ALL_STATUS_COLUMNS.find((c) => c.key === (app.status || 'applied').toLowerCase()) ?? ALL_STATUS_COLUMNS[0];
+  const isClosedApplication = isTerminalStatus(app.outcome ?? app.status);
+  const currentOutcomeLabel = statusLabel(app.outcome ?? app.status);
+  const timelineEntries = buildTimelineEntries(app.status_history);
 
   return (
     <Box sx={{ py: 2 }}>
@@ -513,32 +623,116 @@ const ApplicationDetailPage: React.FC = () => {
           </Stack>
         </Box>
 
+        {/* -------- Outcome Details -------- */}
+        {isClosedApplication && (
+          <Box sx={{ px: 3, py: 3 }}>
+            <Stack direction={isNarrow ? 'column' : 'row'} spacing={1.5} sx={{ mb: 1.5 }} alignItems={isNarrow ? 'flex-start' : 'center'}>
+              <Typography variant="subtitle1" fontWeight={700}>
+                Outcome Details
+              </Typography>
+              <Chip
+                label={currentOutcomeLabel}
+                size="small"
+                sx={{
+                  fontWeight: 600,
+                  bgcolor: alpha(column.color, 0.12),
+                  color: column.color,
+                }}
+              />
+            </Stack>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, maxWidth: 640 }}>
+              Capture why this application ended so the closure is still understandable when you review the history later.
+            </Typography>
+            <TextField
+              multiline
+              minRows={2}
+              fullWidth
+              label="Outcome reason"
+              placeholder={app.outcome === 'withdrawn'
+                ? 'e.g. Accepted another offer before the final round'
+                : 'e.g. Team closed the role after the onsite'
+              }
+              value={localOutcomeReason}
+              onChange={(e) => setLocalOutcomeReason(e.target.value)}
+              onBlur={handleOutcomeReasonSave}
+              variant="outlined"
+              size="small"
+            />
+          </Box>
+        )}
+
         {/* -------- Status History -------- */}
         <Box sx={{ px: 3, py: 3 }}>
           <Typography variant="subtitle1" fontWeight={700} gutterBottom>
             Status History
           </Typography>
-          {!app.status_history || app.status_history.length === 0 ? (
+          {timelineEntries.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.6 }}>
               No status history recorded
             </Typography>
           ) : (
-            <Stack spacing={1.5}>
-              {app.status_history.map((entry, idx) => {
-                const from = entry.from as string | null;
-                const to = entry.to as string;
-                const changedAt = entry.changed_at as string;
-                const col = ALL_STATUS_COLUMNS.find((c) => c.key === to) ?? ALL_STATUS_COLUMNS[0];
+            <Stack spacing={0}>
+              {timelineEntries.map((entry, idx) => {
+                const col = ALL_STATUS_COLUMNS.find((c) => c.key === entry.to) ?? ALL_STATUS_COLUMNS[0];
                 return (
-                  <Box key={idx} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: col.color, mt: 0.5, flexShrink: 0 }} />
-                    <Box>
-                      <Typography variant="body2">
-                        {from ? `${from} → ${to}` : `Created as ${to}`}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {relativeDate(changedAt)}
-                      </Typography>
+                  <Box key={entry.key} sx={{ position: 'relative', pl: 4, pb: idx === timelineEntries.length - 1 ? 0 : 2.5 }}>
+                    {idx < timelineEntries.length - 1 && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          left: 11,
+                          top: 24,
+                          bottom: -10,
+                          width: 2,
+                          bgcolor: alpha(col.color, 0.18),
+                        }}
+                      />
+                    )}
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 2,
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        bgcolor: alpha(col.color, 0.14),
+                        border: `2px solid ${col.color}`,
+                        boxShadow: `0 0 0 4px ${alpha(col.color, 0.08)}`,
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        border: `1px solid ${alpha(col.color, 0.16)}`,
+                        borderRadius: 2.5,
+                        px: 2,
+                        py: 1.5,
+                        bgcolor: alpha(col.color, theme.palette.mode === 'dark' ? 0.08 : 0.04),
+                      }}
+                    >
+                      <Stack direction={isNarrow ? 'column' : 'row'} justifyContent="space-between" alignItems={isNarrow ? 'flex-start' : 'center'} gap={1}>
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>
+                            {entry.from ? `${statusLabel(entry.from)} → ${statusLabel(entry.to)}` : `Created in ${statusLabel(entry.to)}`}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {formatTimelineTimestamp(entry.changedAt)} · {relativeDate(entry.changedAt)}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          size="small"
+                          label={entry.isCurrent
+                            ? `In ${statusLabel(entry.to)} for ${entry.durationLabel}`
+                            : `Stayed in ${statusLabel(entry.to)} for ${entry.durationLabel}`
+                          }
+                          sx={{
+                            alignSelf: isNarrow ? 'flex-start' : 'center',
+                            fontWeight: 600,
+                            bgcolor: alpha(col.color, 0.12),
+                            color: col.color,
+                          }}
+                        />
+                      </Stack>
                     </Box>
                   </Box>
                 );

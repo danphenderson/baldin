@@ -100,6 +100,10 @@ export interface UseApplicationsReturn {
   setSuccess: (msg: string) => void;
   refresh: () => Promise<void>;
   handleStatusChange: (appId: string, newStatus: ApplicationRead['status']) => Promise<void>;
+  handleReminderUpdate: (
+    appId: string,
+    reminder: Pick<ApplicationUpdate, 'next_step' | 'next_step_due'>,
+  ) => Promise<ApplicationRead>;
   handleAdvance: (app: ApplicationRead) => void;
   handleClose: (app: ApplicationRead, outcome: Outcome) => void;
   handleDelete: (app: ApplicationRead) => void;
@@ -143,6 +147,11 @@ export function useApplications(token: string | null): UseApplicationsReturn {
     setLoading(false);
   }, [token]);
 
+  const showSuccess = useCallback((msg: string) => {
+    setSuccess(msg);
+    window.setTimeout(() => setSuccess(''), 3000);
+  }, []);
+
   useEffect(() => { refresh(); }, [refresh]);
 
   /* ---- Bucket apps into registered, board columns, and closed ---- */
@@ -178,9 +187,18 @@ export function useApplications(token: string | null): UseApplicationsReturn {
 
   const handleStatusChange = async (appId: string, newStatus: ApplicationRead['status']) => {
     if (!token) return;
-    const previousStatus = applications.find((app) => app.id === appId)?.status ?? null;
-    const previousStage = applications.find((app) => app.id === appId)?.stage ?? null;
-    const previousOutcome = applications.find((app) => app.id === appId)?.outcome ?? null;
+
+    const previousApplication = applications.find((app) => app.id === appId);
+    if (!previousApplication) return;
+
+    const previousStatus = previousApplication.status ?? null;
+    const previousStage = previousApplication.stage ?? null;
+    const previousOutcome = previousApplication.outcome ?? null;
+    const shouldReopen = (
+      (previousOutcome === 'rejected' || previousOutcome === 'withdrawn' || previousStatus === 'rejected' || previousStatus === 'withdrawn')
+      && newStatus !== 'rejected'
+      && newStatus !== 'withdrawn'
+    );
 
     // Determine whether the new status is a stage or outcome for optimistic update
     const isOutcome = newStatus === 'rejected' || newStatus === 'withdrawn';
@@ -193,7 +211,10 @@ export function useApplications(token: string | null): UseApplicationsReturn {
         : a)),
     );
     try {
-      const updatedApp = await updateApplication(token, appId, { status: newStatus } as ApplicationUpdate);
+      const updatedApp = await updateApplication(token, appId, {
+        status: newStatus,
+        ...(shouldReopen ? { reopen: true } : {}),
+      } as ApplicationUpdate);
       setApplications((prev) =>
         prev.map((a) => (a.id === appId ? updatedApp : a)),
       );
@@ -218,6 +239,39 @@ export function useApplications(token: string | null): UseApplicationsReturn {
     handleStatusChange(app.id, outcome as ApplicationRead['status']);
   };
 
+  const handleReminderUpdate = async (
+    appId: string,
+    reminder: Pick<ApplicationUpdate, 'next_step' | 'next_step_due'>,
+  ): Promise<ApplicationRead> => {
+    if (!token) throw new Error('Missing auth token');
+
+    const previousApplication = applications.find((app) => app.id === appId);
+    if (!previousApplication) throw new Error('Application not found');
+
+    const normalizedReminder: Pick<ApplicationUpdate, 'next_step' | 'next_step_due'> = {
+      next_step: reminder.next_step ?? null,
+      next_step_due: reminder.next_step_due ?? null,
+    };
+
+    setApplications((prev) => prev.map((app) => (
+      app.id === appId
+        ? { ...app, ...normalizedReminder }
+        : app
+    )));
+
+    try {
+      const updatedApp = await updateApplication(token, appId, normalizedReminder as ApplicationUpdate);
+      setApplications((prev) => prev.map((app) => (app.id === appId ? updatedApp : app)));
+      showSuccess(normalizedReminder.next_step || normalizedReminder.next_step_due ? 'Reminder updated' : 'Reminder cleared');
+      return updatedApp;
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to update reminder');
+      setApplications((prev) => prev.map((app) => (app.id === appId ? previousApplication : app)));
+      void refresh();
+      throw (e instanceof Error ? e : new Error('Failed to update reminder'));
+    }
+  };
+
   const confirmDelete = async () => {
     if (!token || !deleteTarget) return;
     try {
@@ -228,12 +282,6 @@ export function useApplications(token: string | null): UseApplicationsReturn {
       setError(e instanceof Error ? e.message : 'Failed to delete application');
     }
     setDeleteTarget(null);
-  };
-
-  const showSuccess = (msg: string) => {
-    setSuccess(msg);
-    const id = window.setTimeout(() => setSuccess(''), 3000);
-    return () => clearTimeout(id);
   };
 
   const handleDelete = (app: ApplicationRead) => {
@@ -249,6 +297,7 @@ export function useApplications(token: string | null): UseApplicationsReturn {
     setSuccess,
     refresh,
     handleStatusChange,
+    handleReminderUpdate,
     handleAdvance,
     handleClose,
     handleDelete,

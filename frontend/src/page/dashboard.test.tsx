@@ -46,12 +46,22 @@ function makeSummary(overrides: Partial<Record<string, unknown>> = {}) {
     application_count: 5,
     active_application_count: 3,
     status_breakdown: { applied: 2, interview: 2, offer: 1 } as Record<string, number>,
+    avg_days_per_stage: [
+      { stage: 'applied', avg_days: 4.5, sample_size: 6 },
+      { stage: 'interview', avg_days: 7, sample_size: 2 },
+    ],
+    offer_conversion_funnel: [
+      { stage: 'applied', reached_count: 12, conversion_from_applied: 100 },
+      { stage: 'screening', reached_count: 8, conversion_from_previous: 66.7, conversion_from_applied: 66.7 },
+      { stage: 'interview', reached_count: 4, conversion_from_previous: 50, conversion_from_applied: 33.3 },
+      { stage: 'offer', reached_count: 2, conversion_from_previous: 50, conversion_from_applied: 16.7 },
+    ],
     pending_action_items: 4,
     overdue_action_items: 1,
     action_items_due_today: 2,
     pending_connections: 6,
     unread_messages: 0,
-    profile_completion: 0.75,
+    profile_completion: 75,
     documents_count: 2,
     draft_documents_count: 1,
     ...overrides,
@@ -82,13 +92,12 @@ function makeActionItem(overrides: Partial<Record<string, unknown>> = {}) {
 
 function makeFeedItem(overrides: Partial<Record<string, unknown>> = {}) {
   return {
-    id: 'feed-1',
-    event_type: 'status_change',
+    type: 'status_change',
     entity_type: 'application',
     entity_id: 'app-1',
     title: 'Application moved to Interview',
-    description: 'Your application for the SWE role was advanced.',
-    created_at: '2026-04-05T10:00:00',
+    detail: 'Your application for the SWE role was advanced.',
+    timestamp: '2026-04-05T10:00:00Z',
     ...overrides,
   };
 }
@@ -207,7 +216,7 @@ describe('DashboardPage', () => {
     mockedGetActivityFeed.mockResolvedValue({
       items: [
         makeFeedItem(),
-        makeFeedItem({ id: 'feed-2', title: 'New connection accepted', event_type: 'connection' }),
+        makeFeedItem({ entity_id: 'conn-2', title: 'New connection accepted', type: 'connection' }),
       ],
       total: 2,
     } as never);
@@ -218,6 +227,33 @@ describe('DashboardPage', () => {
 
     expect(await screen.findByText('Application moved to Interview')).toBeInTheDocument();
     expect(screen.getByText('New connection accepted')).toBeInTheDocument();
+  });
+
+  it('renders the pipeline analytics card from the summary response', async () => {
+    mockedGetCommandCenterSummary.mockResolvedValue(makeSummary({
+      avg_days_per_stage: [
+        { stage: 'applied', avg_days: 4.5, sample_size: 6 },
+        { stage: 'interview', avg_days: 7, sample_size: 2 },
+      ],
+      offer_conversion_funnel: [
+        { stage: 'applied', reached_count: 12, conversion_from_applied: 100 },
+        { stage: 'screening', reached_count: 8, conversion_from_previous: 66.7, conversion_from_applied: 66.7 },
+        { stage: 'interview', reached_count: 4, conversion_from_previous: 50, conversion_from_applied: 33.3 },
+        { stage: 'offer', reached_count: 2, conversion_from_previous: 50, conversion_from_applied: 16.7 },
+      ],
+    }) as never);
+    mockedGetActivityFeed.mockResolvedValue({ items: [], total: 0 } as never);
+    mockedGetActionItems.mockResolvedValue([] as never);
+    mockedGetLeads.mockResolvedValue({ leads: [], pagination: { page: 1 } } as never);
+
+    renderPage();
+
+    expect(await screen.findByText('PIPELINE ANALYTICS')).toBeInTheDocument();
+    expect(screen.getByText('Offer yield 16.7%')).toBeInTheDocument();
+    expect(screen.getByText('Slowest stage Interview · 7 days')).toBeInTheDocument();
+    expect(screen.getByText('4.5 days')).toBeInTheDocument();
+    expect(screen.getByText('2 recorded spans')).toBeInTheDocument();
+    expect(screen.getByText('50% from Interview · 16.7% from Applied')).toBeInTheDocument();
   });
 
   it('renders empty state when there are no action items', async () => {

@@ -74,7 +74,9 @@ import {
   updateLead,
   updateLeadRegistration,
 } from '../service/leads';
+import type { ApplicationCreationIntent } from '../service/applications';
 import { createConnection } from '../service/connections';
+import ApplicationIntentButton from './application-intent-button';
 
 type LeadTab = 'overview' | 'edit' | 'notes' | 'comments' | 'people';
 export type LeadModalTab = LeadTab;
@@ -106,7 +108,7 @@ interface LeadModalProps {
   extractContext: LeadExtractResponse | null;
   initialTab?: LeadTab;
   onClose: () => void;
-  onApply: (lead: LeadRead) => void;
+  onApply: (lead: LeadRead, intent: ApplicationCreationIntent) => void;
   onLeadChange: (lead: LeadRead) => void;
   onLeadDeleted: (leadId: string) => void;
   onNotify: (message: string, severity?: 'success' | 'error') => void;
@@ -1253,9 +1255,13 @@ const LeadModal: React.FC<LeadModalProps> = ({
 
               {lead && (
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
-                  <Button variant="contained" onClick={() => onApply(lead)} disabled={applying}>
-                    {applying ? 'Applying...' : 'Quick Apply'}
-                  </Button>
+                  <ApplicationIntentButton
+                    onSelect={(intent) => onApply(lead, intent)}
+                    loading={applying}
+                    label="Create Application"
+                    loadingLabel="Creating..."
+                    ariaLabel={`Create application for ${lead.title || 'this lead'}`}
+                  />
                   <Button
                     variant="outlined"
                     size="small"

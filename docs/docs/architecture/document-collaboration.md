@@ -33,6 +33,8 @@ The backend solves this with a short-lived bootstrap claim.
 
 ```mermaid
 sequenceDiagram
+    accTitle: Document Collaboration Bootstrap Sequence
+    accDescr: Sequence diagram showing the three-way handshake between the Frontend client, the POST /documents/{id}/collaborate/bootstrap endpoint, the Bootstrap claim store, the Document DB, and the WebSocket endpoint. Covers the connect, seed, and pending response states.
     participant Client as Frontend client
     participant API as POST /documents/{id}/collaborate/bootstrap
     participant Claim as Bootstrap claim store

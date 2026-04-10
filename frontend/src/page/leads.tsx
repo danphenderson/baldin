@@ -24,7 +24,12 @@ import type {
   LeadExtractResponse,
   LeadSharedUpdate,
 } from '../service/leads';
-import { createApplication } from '../service/applications';
+import {
+  createApplication,
+  findExistingApplicationForLead,
+  getApplicationStateLabel,
+  type ApplicationCreationIntent,
+} from '../service/applications';
 import { getCompanies, type CompanyRead } from '../service/companies';
 import LeadFormDialog from '../component/lead-form-dialog';
 import LeadCard from '../component/lead-card';
@@ -71,6 +76,16 @@ const extractMessage = (response: LeadExtractResponse): string => {
       return 'Matched a shared lead you are already tracking.';
   }
 };
+
+const creationSuccessMessage = (intent: ApplicationCreationIntent, title: string): string => (
+  intent === 'registered'
+    ? `Registered interest for "${title}"`
+    : `Application created for "${title}"`
+);
+
+const duplicateApplicationMessage = (title: string, statusLabel: string): string => (
+  `"${title}" already exists in your applications as ${statusLabel}.`
+);
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -233,16 +248,23 @@ const LeadsPage: React.FC = () => {
     }
   };
 
-  const handleApply = async (lead: LeadRead) => {
+  const handleApply = async (lead: LeadRead, intent: ApplicationCreationIntent) => {
     if (!token) return;
     setApplyingId(lead.id);
     try {
-      await createApplication(token, { lead_id: lead.id, status: 'applied' });
-      notify(`Application created for "${lead.title || 'Untitled'}"`);
+      const title = lead.title || 'Untitled';
+      const existingApp = await findExistingApplicationForLead(token, lead.id);
+      if (existingApp) {
+        notify(duplicateApplicationMessage(title, getApplicationStateLabel(existingApp)), 'warning');
+        return;
+      }
+      await createApplication(token, { lead_id: lead.id, status: intent });
+      notify(creationSuccessMessage(intent, title));
     } catch (e: unknown) {
       notify(e instanceof Error ? e.message : 'Failed to create application', 'error');
+    } finally {
+      setApplyingId(null);
     }
-    setApplyingId(null);
   };
 
   const openCreate = () => { setFormLead(null); setFormOpen(true); };

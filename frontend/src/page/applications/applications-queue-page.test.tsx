@@ -45,6 +45,9 @@ function makeApplication(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: 'app-1',
     status: 'applied',
+    stage: 'applied',
+    outcome: null,
+    document_count: 0,
     created_at: '2026-04-01T00:00:00',
     updated_at: '2026-04-03T00:00:00',
     next_step: null,
@@ -152,6 +155,18 @@ describe('ApplicationsQueuePage', () => {
     expect(screen.getByText('Backend Engineer')).toBeInTheDocument();
   });
 
+  it('renders document-count badges from application list data', () => {
+    mockUseApplications.mockReturnValue(
+      makeHookReturn({
+        applications: [makeApplication({ document_count: 3 })],
+      }),
+    );
+
+    renderPage();
+
+    expect(screen.getByText('3 docs')).toBeInTheDocument();
+  });
+
   it('renders stage filter chips for each pipeline column', () => {
     mockUseApplications.mockReturnValue(
       makeHookReturn({ applications: [makeApplication()] }),
@@ -182,9 +197,9 @@ describe('ApplicationsQueuePage', () => {
       makeHookReturn({
         applications: [
           makeApplication({ id: 'a1', status: 'applied' }),
-          makeApplication({ id: 'a2', status: 'interview' }),
-          makeApplication({ id: 'a3', status: 'offer' }),
-          makeApplication({ id: 'a4', status: 'rejected', outcome: 'rejected' }),
+          makeApplication({ id: 'a2', status: 'interview', stage: 'interview' }),
+          makeApplication({ id: 'a3', status: 'offer', stage: 'offer' }),
+          makeApplication({ id: 'a4', status: 'rejected', stage: null, outcome: 'rejected' }),
         ],
       }),
     );

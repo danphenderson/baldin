@@ -1323,12 +1323,50 @@ class ActivityFeedRead(BaseSchema):
     page_size: int
 
 
+class CommandCenterStageVelocity(BaseSchema):
+    stage: ApplicationStage = Field(
+        description="Pipeline stage measured from application status history"
+    )
+    avg_days: float = Field(
+        ge=0,
+        description="Average number of days applications spent in this stage",
+    )
+    sample_size: int = Field(
+        ge=0,
+        description="Number of recorded stage spans included in the average",
+    )
+
+
+class CommandCenterFunnelStage(BaseSchema):
+    stage: ApplicationStage = Field(
+        description="Pipeline stage included in the offer conversion funnel"
+    )
+    reached_count: int = Field(
+        ge=0,
+        description="Number of applications that reached this stage or a later stage",
+    )
+    conversion_from_previous: float | None = Field(
+        None,
+        ge=0,
+        le=100,
+        description="Percent of the previous funnel stage that advanced to this stage",
+    )
+    conversion_from_applied: float | None = Field(
+        None,
+        ge=0,
+        le=100,
+        description="Percent of applied applications that eventually reached this stage",
+    )
+
+
 class CommandCenterSummary(BaseSchema):
     lead_count: int
     unapplied_lead_count: int
     application_count: int
     active_application_count: int
     status_breakdown: dict[str, int]
+    avg_days_per_stage: list[CommandCenterStageVelocity]
+    offer_conversion_funnel: list[CommandCenterFunnelStage]
     pending_action_items: int
     overdue_action_items: int
     action_items_due_today: int
@@ -1658,6 +1696,33 @@ class ExtractorRun(BaseSchema):
         return value
 
 
+_TERMINAL_APPLICATION_STATUSES = {status.value for status in ApplicationOutcome}
+
+
+def _normalize_optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    stripped = value.strip()
+    return stripped or None
+
+
+class ApplicationStatusHistoryEntry(BaseSchema):
+    from_: ApplicationStatus | None = Field(
+        None,
+        alias="from",
+        description="Previous application status, null for the initial creation entry",
+    )
+    to: ApplicationStatus = Field(
+        ...,
+        description="Application status after the transition",
+    )
+    changed_at: datetime = Field(
+        ...,
+        description="When the status transition was recorded",
+    )
+
+
 class ApplicationRead(BaseRead):
     lead_id: UUID4
     user_id: UUID4
@@ -1676,9 +1741,24 @@ class ApplicationRead(BaseRead):
     next_step_due: datetime | None = Field(
         None, description="When the next step is due"
     )
-    status_history: list[dict] | None = Field(
-        default=[], description="Append-only log of status transitions"
+    outcome_reason: str | None = Field(
+        None,
+        description="Why the application was rejected or withdrawn",
     )
+    document_count: int = Field(
+        0,
+        ge=0,
+        description="Number of attached documents the caller can access",
+    )
+    status_history: list[ApplicationStatusHistoryEntry] = Field(
+        default_factory=list,
+        description="Append-only log of status transitions",
+    )
+
+    @field_validator("outcome_reason", mode="before")
+    @classmethod
+    def _normalize_outcome_reason(cls, value: str | None) -> str | None:
+        return _normalize_optional_text(value)
 
     @model_validator(mode="after")
     def _derive_stage_outcome(self) -> "ApplicationRead":
@@ -1690,6 +1770,8 @@ class ApplicationRead(BaseRead):
                 # Keep last known stage from status_history if available
             elif raw in {e.value for e in ApplicationStage}:
                 self.stage = ApplicationStage(raw)
+        if raw not in _TERMINAL_APPLICATION_STATUSES:
+            self.outcome_reason = None
         return self
 
 
@@ -1703,7 +1785,16 @@ class ApplicationCreate(BaseSchema):
     notes: str | None = None
     next_step: str | None = None
     next_step_due: datetime | None = None
+    outcome_reason: str | None = Field(
+        None,
+        description="Why the application was rejected or withdrawn",
+    )
     document_ids: list[UUID4] | None = None
+
+    @field_validator("outcome_reason", mode="before")
+    @classmethod
+    def _normalize_outcome_reason(cls, value: str | None) -> str | None:
+        return _normalize_optional_text(value)
 
     @model_validator(mode="after")
     def _default_status(self) -> "ApplicationCreate":
@@ -1721,6 +1812,15 @@ class ApplicationCreate(BaseSchema):
                 self.stage = ApplicationStage(v)
             elif v in {e.value for e in ApplicationOutcome} and self.outcome is None:
                 self.outcome = ApplicationOutcome(v)
+
+        if (
+            self.outcome_reason is not None
+            and self.status is not None
+            and self.status.value not in _TERMINAL_APPLICATION_STATUSES
+        ):
+            raise ValueError(
+                "outcome_reason can only be set for rejected or withdrawn applications"
+            )
         return self
 
 
@@ -1731,6 +1831,21 @@ class ApplicationUpdate(BaseSchema):
     notes: str | None = None
     next_step: str | None = None
     next_step_due: datetime | None = None
+    outcome_reason: str | None = Field(
+        None,
+        description="Why the application was rejected or withdrawn",
+    )
+    reopen: bool = Field(
+        False,
+        description=(
+            "Set true when moving a rejected or withdrawn application back into an active stage"
+        ),
+    )
+
+    @field_validator("outcome_reason", mode="before")
+    @classmethod
+    def _normalize_outcome_reason(cls, value: str | None) -> str | None:
+        return _normalize_optional_text(value)
 
     @model_validator(mode="after")
     def _sync_status(self) -> "ApplicationUpdate":
@@ -1745,6 +1860,15 @@ class ApplicationUpdate(BaseSchema):
                 self.stage = ApplicationStage(v)
             elif v in {e.value for e in ApplicationOutcome} and self.outcome is None:
                 self.outcome = ApplicationOutcome(v)
+
+        if (
+            self.outcome_reason is not None
+            and self.status is not None
+            and self.status.value not in _TERMINAL_APPLICATION_STATUSES
+        ):
+            raise ValueError(
+                "outcome_reason can only be set for rejected or withdrawn applications"
+            )
         return self
 
 

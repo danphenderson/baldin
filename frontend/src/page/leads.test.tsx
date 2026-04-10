@@ -19,6 +19,10 @@ vi.mock('../service/leads', () => ({
 
 vi.mock('../service/applications', () => ({
   createApplication: vi.fn(),
+  findExistingApplicationForLead: vi.fn(),
+  getApplicationStateLabel: vi.fn((application: { outcome?: string | null; stage?: string | null; status?: string | null }) => (
+    application.outcome ?? application.stage ?? application.status ?? 'tracked'
+  )),
 }));
 
 vi.mock('../service/companies', () => ({
@@ -30,8 +34,22 @@ vi.mock('../component/lead-form-dialog', () => ({
 }));
 
 vi.mock('../component/lead-card', () => ({
-  default: ({ lead }: { lead: { title?: string } }) => (
-    <div data-testid="lead-card">{lead.title ?? 'Untitled'}</div>
+  default: ({
+    lead,
+    onApply,
+  }: {
+    lead: { title?: string } & Record<string, unknown>;
+    onApply: (lead: Record<string, unknown>, intent: 'registered' | 'applied') => void;
+  }) => (
+    <div data-testid="lead-card">
+      <span>{lead.title ?? 'Untitled'}</span>
+      <button onClick={() => onApply(lead, 'registered')}>
+        Register interest for {lead.title ?? 'Untitled'}
+      </button>
+      <button onClick={() => onApply(lead, 'applied')}>
+        Apply now for {lead.title ?? 'Untitled'}
+      </button>
+    </div>
   ),
 }));
 
@@ -83,11 +101,14 @@ vi.mock('../component/common/empty-state', () => ({
 }));
 
 import * as leadsService from '../service/leads';
+import * as applicationsService from '../service/applications';
 import * as companiesService from '../service/companies';
 import LeadsPage from './leads';
 
 const mockedGetLeads = vi.mocked(leadsService.getLeads);
 const mockedGetCompanies = vi.mocked(companiesService.getCompanies);
+const mockedCreateApplication = vi.mocked(applicationsService.createApplication);
+const mockedFindExistingApplicationForLead = vi.mocked(applicationsService.findExistingApplicationForLead);
 
 /* ── Test data ────────────────────────────────────────────────────── */
 
@@ -140,6 +161,8 @@ describe('LeadsPage', () => {
   beforeEach(() => {
     mockedGetLeads.mockReset();
     mockedGetCompanies.mockReset();
+    mockedCreateApplication.mockReset();
+    mockedFindExistingApplicationForLead.mockReset();
   });
 
   afterEach(() => {
@@ -220,5 +243,48 @@ describe('LeadsPage', () => {
       expect(screen.queryByText('Senior Frontend Engineer')).not.toBeInTheDocument();
     });
     expect(screen.getByText('Data Scientist')).toBeInTheDocument();
+  });
+
+  it('creates a registered application when register interest is selected', async () => {
+    const user = userEvent.setup();
+
+    mockedGetLeads.mockResolvedValue({ leads: [makeLead()], pagination: {} } as never);
+    mockedGetCompanies.mockResolvedValue([] as never);
+    mockedFindExistingApplicationForLead.mockResolvedValue(null);
+    mockedCreateApplication.mockResolvedValue({ id: 'app-1' } as never);
+
+    renderPage();
+
+    await screen.findByText('Senior Frontend Engineer');
+    await user.click(screen.getByRole('button', { name: 'Register interest for Senior Frontend Engineer' }));
+
+    await waitFor(() => {
+      expect(mockedFindExistingApplicationForLead).toHaveBeenCalledWith('test-token', 'lead-1');
+      expect(mockedCreateApplication).toHaveBeenCalledWith('test-token', {
+        lead_id: 'lead-1',
+        status: 'registered',
+      });
+    });
+  });
+
+  it('warns before creating a duplicate application for the same lead', async () => {
+    const user = userEvent.setup();
+
+    mockedGetLeads.mockResolvedValue({ leads: [makeLead()], pagination: {} } as never);
+    mockedGetCompanies.mockResolvedValue([] as never);
+    mockedFindExistingApplicationForLead.mockResolvedValue({
+      id: 'app-1',
+      status: 'applied',
+      stage: 'applied',
+      outcome: null,
+    } as never);
+
+    renderPage();
+
+    await screen.findByText('Senior Frontend Engineer');
+    await user.click(screen.getByRole('button', { name: 'Apply now for Senior Frontend Engineer' }));
+
+    expect(mockedCreateApplication).not.toHaveBeenCalled();
+    expect(await screen.findByText('"Senior Frontend Engineer" already exists in your applications as applied.')).toBeInTheDocument();
   });
 });

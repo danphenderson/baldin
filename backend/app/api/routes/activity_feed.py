@@ -17,9 +17,160 @@ from app.core.datetime_utils import (
 
 router: APIRouter = APIRouter()
 
+_APPLICATION_STAGE_ORDER = [stage.value for stage in models.ApplicationStage]
+_APPLICATION_STAGE_INDEX = {
+    stage: index for index, stage in enumerate(_APPLICATION_STAGE_ORDER)
+}
+_FUNNEL_STAGE_ORDER = [
+    models.ApplicationStage.APPLIED.value,
+    models.ApplicationStage.SCREENING.value,
+    models.ApplicationStage.INTERVIEW.value,
+    models.ApplicationStage.OFFER.value,
+]
+_FUNNEL_STAGE_INDEX = {stage: index for index, stage in enumerate(_FUNNEL_STAGE_ORDER)}
+
 
 def _application_status_text_expression():
     return func.lower(cast(models.Application.__table__.c.status, String))
+
+
+def _application_status_value(
+    status: models.ApplicationStatus | str | None,
+) -> str | None:
+    if status is None:
+        return None
+    if isinstance(status, models.ApplicationStatus):
+        return status.value.lower()
+    return str(status).lower()
+
+
+def _build_application_history_entries(
+    status_history: list[dict] | None,
+    *,
+    current_status: models.ApplicationStatus | str | None,
+    created_at: datetime,
+) -> list[tuple[str, datetime]]:
+    entries: list[tuple[str, datetime]] = []
+
+    for entry in status_history or []:
+        stage = _application_status_value(entry.get("to"))
+        changed_at_raw = entry.get("changed_at")
+        if not stage or not changed_at_raw:
+            continue
+
+        changed_at = parse_utc_datetime(changed_at_raw)
+        if changed_at is None:
+            continue
+        entries.append((stage, changed_at))
+
+    entries.sort(key=lambda item: item[1])
+
+    if not entries:
+        fallback_status = _application_status_value(current_status)
+        if fallback_status is not None:
+            entries.append((fallback_status, ensure_utc(created_at)))
+
+    return entries
+
+
+def _build_avg_days_per_stage(
+    application_rows: list[
+        tuple[list[dict] | None, models.ApplicationStatus | str | None, datetime]
+    ],
+    *,
+    current_time: datetime,
+) -> list[schemas.CommandCenterStageVelocity]:
+    totals = {stage: 0.0 for stage in _APPLICATION_STAGE_ORDER}
+    counts = {stage: 0 for stage in _APPLICATION_STAGE_ORDER}
+
+    for status_history, current_status, created_at in application_rows:
+        history_entries = _build_application_history_entries(
+            status_history,
+            current_status=current_status,
+            created_at=created_at,
+        )
+
+        for index, (stage, started_at) in enumerate(history_entries):
+            if stage not in _APPLICATION_STAGE_INDEX:
+                continue
+
+            ended_at = (
+                history_entries[index + 1][1]
+                if index + 1 < len(history_entries)
+                else current_time
+            )
+            if ended_at < started_at:
+                continue
+
+            totals[stage] += (ended_at - started_at).total_seconds() / 86_400
+            counts[stage] += 1
+
+    return [
+        schemas.CommandCenterStageVelocity(
+            stage=stage,
+            avg_days=round(totals[stage] / counts[stage], 1),
+            sample_size=counts[stage],
+        )
+        for stage in _APPLICATION_STAGE_ORDER
+        if counts[stage] > 0
+    ]
+
+
+def _build_offer_conversion_funnel(
+    application_rows: list[
+        tuple[list[dict] | None, models.ApplicationStatus | str | None, datetime]
+    ],
+) -> list[schemas.CommandCenterFunnelStage]:
+    counts = {stage: 0 for stage in _FUNNEL_STAGE_ORDER}
+
+    for status_history, current_status, created_at in application_rows:
+        history_entries = _build_application_history_entries(
+            status_history,
+            current_status=current_status,
+            created_at=created_at,
+        )
+
+        highest_stage_index = -1
+        current_stage = _application_status_value(current_status)
+        if current_stage in _FUNNEL_STAGE_INDEX:
+            highest_stage_index = _FUNNEL_STAGE_INDEX[current_stage]
+
+        for stage, _ in history_entries:
+            stage_index = _FUNNEL_STAGE_INDEX.get(stage)
+            if stage_index is not None:
+                highest_stage_index = max(highest_stage_index, stage_index)
+
+        if highest_stage_index < 0:
+            continue
+
+        for stage in _FUNNEL_STAGE_ORDER[: highest_stage_index + 1]:
+            counts[stage] += 1
+
+    applied_count = counts[_FUNNEL_STAGE_ORDER[0]]
+    funnel: list[schemas.CommandCenterFunnelStage] = []
+    previous_count: int | None = None
+
+    for stage in _FUNNEL_STAGE_ORDER:
+        reached_count = counts[stage]
+        funnel.append(
+            schemas.CommandCenterFunnelStage(
+                stage=stage,
+                reached_count=reached_count,
+                conversion_from_previous=(
+                    None
+                    if previous_count is None or previous_count == 0
+                    else round((reached_count / previous_count) * 100, 1)
+                ),
+                conversion_from_applied=(
+                    None
+                    if applied_count == 0
+                    else round((reached_count / applied_count) * 100, 1)
+                ),
+            )
+        )
+        previous_count = reached_count
+
+    return funnel
 
 
 @router.get("/", response_model=schemas.ActivityFeedRead)
@@ -205,6 +356,7 @@ async def get_command_center_summary(
     db: AsyncSession = Depends(get_async_session),
 ):
     now = now_utc_naive()
+    analytics_now = now_utc()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
     application_status_text = _application_status_text_expression()
@@ -263,6 +415,20 @@ async def get_command_center_summary(
     )
     breakdown_result = await db.execute(breakdown_q)
     status_breakdown = {(row[0] or "unknown"): row[1] for row in breakdown_result.all()}
+
+    analytics_rows_result = await db.execute(
+        select(
+            models.Application.status_history,
+            models.Application.status,
+            models.Application.created_at,
+        ).where(models.Application.user_id == user.id)
+    )
+    analytics_rows = [(row[0], row[1], row[2]) for row in analytics_rows_result.all()]
+    avg_days_per_stage = _build_avg_days_per_stage(
+        analytics_rows,
+        current_time=analytics_now,
+    )
+    offer_conversion_funnel = _build_offer_conversion_funnel(analytics_rows)
 
     # ActionItem counts
     pending_ai_q = (
@@ -364,6 +530,8 @@ async def get_command_center_summary(
         application_count=application_count,
         active_application_count=active_application_count,
         status_breakdown=status_breakdown,
+        avg_days_per_stage=avg_days_per_stage,
+        offer_conversion_funnel=offer_conversion_funnel,
         pending_action_items=pending_action_items,
         overdue_action_items=overdue_action_items,
         action_items_due_today=action_items_due_today,

@@ -76,8 +76,11 @@ describe('LeadCard', () => {
     await user.click(screen.getByRole('button', { name: 'Open lead Senior Product Designer' }));
     expect(onOpen).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByRole('button', { name: 'Quick Apply' }));
+    await user.click(screen.getByRole('button', { name: 'Create application for Senior Product Designer' }));
+    await user.click(await screen.findByText('Apply now'));
+
     expect(onApply).toHaveBeenCalledTimes(1);
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ id: 'lead-1' }), 'applied');
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 

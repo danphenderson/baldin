@@ -15,10 +15,14 @@ Every entity inherits `id`, `created_at`, and `updated_at` from the shared `Base
 
 ## Current Entity Map
 
-The diagram below is intentionally structural rather than field-complete. It shows the entities and ownership links that matter when navigating the codebase.
+The diagrams below are intentionally structural rather than field-complete. The six domain diagrams that follow correspond directly to the Domain Breakdown section and show only the ownership links that matter when navigating the codebase.
+
+### User Profile Entities
 
 ```mermaid
 erDiagram
+	accTitle: User Profile Entities
+	accDescr: Shows the USER entity and its directly owned profile records — CONTACT, SKILL, EXPERIENCE, EDUCATION, and CERTIFICATE.
 	USER {
 		uuid id PK
 		string subscription_tier
@@ -43,6 +47,25 @@ erDiagram
 	CERTIFICATE {
 		uuid id PK
 		uuid user_id FK
+	}
+
+	USER ||--o{ CONTACT : owns
+	USER ||--o{ SKILL : owns
+	USER ||--o{ EXPERIENCE : owns
+	USER ||--o{ EDUCATION : owns
+	USER ||--o{ CERTIFICATE : owns
+```
+
+*Figure 1 — USER owns all profile sub-records (contacts, skills, experiences, education, certificates) through a direct foreign key.*
+
+### Job Search Pipeline Entities
+
+```mermaid
+erDiagram
+	accTitle: Job Search Pipeline Entities
+	accDescr: Shows COMPANY, LEAD, LEAD_X_COMPANY bridge, LEAD_REGISTRATION, LEAD_COMMENT, and APPLICATION and how USER relates to each.
+	USER {
+		uuid id PK
 	}
 	COMPANY {
 		uuid id PK
@@ -73,21 +96,30 @@ erDiagram
 		uuid lead_id FK
 		enum status
 	}
-	RESUME["RESUME (deprecated)"] {
+
+	COMPANY ||--o{ LEAD_X_COMPANY : linked_to
+	LEAD ||--o{ LEAD_X_COMPANY : linked_to
+	LEAD ||--o{ LEAD_REGISTRATION : registrations
+	LEAD ||--o{ LEAD_COMMENT : comments
+	LEAD ||--o{ APPLICATION : applications
+	USER ||--o{ APPLICATION : submits
+	USER ||--o{ LEAD_REGISTRATION : registers
+	USER ||--o{ LEAD_COMMENT : authors
+```
+
+*Figure 2 — LEAD is the hub of the job-search pipeline. COMPANY and LEAD are linked through a many-to-many bridge. USER registers interest, comments, and submits applications against a LEAD.*
+
+### Document and Attachment Entities
+
+```mermaid
+erDiagram
+	accTitle: Document and Attachment Entities
+	accDescr: Shows DOCUMENT and its child records — DOCUMENT_VERSION, DOCUMENT_SHARE, DOCUMENT_ACTIVITY, and DOCUMENT_X_APPLICATION bridge — plus the deprecated RESUME and COVER_LETTER tables and their application attachment bridges.
+	USER {
 		uuid id PK
-		uuid user_id FK
 	}
-	RESUME_X_APPLICATION["RESUME_X_APPLICATION (deprecated)"] {
-		uuid application_id PK_FK
-		uuid resume_id PK_FK
-	}
-	COVER_LETTER["COVER_LETTER (deprecated)"] {
+	APPLICATION {
 		uuid id PK
-		uuid user_id FK
-	}
-	COVER_LETTER_X_APPLICATION["COVER_LETTER_X_APPLICATION (deprecated)"] {
-		uuid application_id PK_FK
-		uuid cover_letter_id PK_FK
 	}
 	DOCUMENT {
 		uuid id PK
@@ -118,6 +150,51 @@ erDiagram
 		uuid document_id FK
 		uuid actor_user_id FK
 		string activity_type
+	}
+	RESUME["RESUME (deprecated)"] {
+		uuid id PK
+		uuid user_id FK
+	}
+	RESUME_X_APPLICATION["RESUME_X_APPLICATION (deprecated)"] {
+		uuid application_id PK_FK
+		uuid resume_id PK_FK
+	}
+	COVER_LETTER["COVER_LETTER (deprecated)"] {
+		uuid id PK
+		uuid user_id FK
+	}
+	COVER_LETTER_X_APPLICATION["COVER_LETTER_X_APPLICATION (deprecated)"] {
+		uuid application_id PK_FK
+		uuid cover_letter_id PK_FK
+	}
+
+	USER ||--o{ DOCUMENT : owns
+	USER ||--o{ RESUME : owns
+	USER ||--o{ COVER_LETTER : owns
+	USER ||--o{ DOCUMENT_SHARE : shared_with
+	USER ||--o{ DOCUMENT_SHARE : shared_by
+	USER ||--o{ DOCUMENT_ACTIVITY : acts_on
+	APPLICATION ||--o{ DOCUMENT_X_APPLICATION : uses
+	APPLICATION ||--o{ RESUME_X_APPLICATION : uses
+	APPLICATION ||--o{ COVER_LETTER_X_APPLICATION : uses
+	DOCUMENT ||--o{ DOCUMENT_VERSION : versions
+	DOCUMENT ||--o{ DOCUMENT_X_APPLICATION : attached_to
+	DOCUMENT ||--o{ DOCUMENT_SHARE : shares
+	DOCUMENT ||--o{ DOCUMENT_ACTIVITY : activity
+	RESUME ||--o{ RESUME_X_APPLICATION : attached_to
+	COVER_LETTER ||--o{ COVER_LETTER_X_APPLICATION : attached_to
+```
+
+*Figure 3 — DOCUMENT is the live material model with versioning, sharing, and activity tracking. RESUME and COVER_LETTER exist only as deprecated bridges; new material flows use DOCUMENT filtered by `kind`.*
+
+### Automation and Review Entities
+
+```mermaid
+erDiagram
+	accTitle: Automation and Review Entities
+	accDescr: Shows EXTRACTOR and its EXTRACTOR_EXAMPLE and EXTRACTOR_VERSION children, ORCHESTRATION_PIPELINE with ORCHESTRATION_EVENT, and CRAWLER_PIPELINE with CRAWLER_RUN — all owned by USER.
+	USER {
+		uuid id PK
 	}
 	EXTRACTOR {
 		uuid id PK
@@ -153,11 +230,26 @@ erDiagram
 		uuid crawler_pipeline_id FK
 		string status
 	}
-	ACTION_ITEM {
+
+	USER ||--o{ EXTRACTOR : owns
+	USER ||--o{ ORCHESTRATION_PIPELINE : owns
+	USER ||--o{ CRAWLER_PIPELINE : creates
+	EXTRACTOR ||--o{ EXTRACTOR_EXAMPLE : examples
+	EXTRACTOR ||--o{ EXTRACTOR_VERSION : versions
+	ORCHESTRATION_PIPELINE ||--o{ ORCHESTRATION_EVENT : events
+	CRAWLER_PIPELINE ||--o{ CRAWLER_RUN : runs
+```
+
+*Figure 4 — Extraction, orchestration, and crawler automation entities. EXTRACTOR and ORCHESTRATION_PIPELINE are user-owned. CRAWLER_PIPELINE is superuser-managed.*
+
+### Networking and Messaging Entities
+
+```mermaid
+erDiagram
+	accTitle: Networking and Messaging Entities
+	accDescr: Shows CONNECTION between two USER records, CONVERSATION with its CONVERSATION_PARTICIPANT bridge and MESSAGE children, and ACTION_ITEM owned by USER.
+	USER {
 		uuid id PK
-		uuid user_id FK
-		string kind
-		string status
 	}
 	CONNECTION {
 		uuid id PK
@@ -181,58 +273,24 @@ erDiagram
 		uuid author_user_id FK
 		uuid parent_message_id FK
 	}
+	ACTION_ITEM {
+		uuid id PK
+		uuid user_id FK
+		string kind
+		string status
+	}
 
-	USER ||--o{ CONTACT : owns
-	USER ||--o{ SKILL : owns
-	USER ||--o{ EXPERIENCE : owns
-	USER ||--o{ EDUCATION : owns
-	USER ||--o{ CERTIFICATE : owns
-	USER ||--o{ APPLICATION : submits
-	USER ||--o{ RESUME : owns
-	USER ||--o{ COVER_LETTER : owns
-	USER ||--o{ DOCUMENT : owns
-	USER ||--o{ EXTRACTOR : owns
-	USER ||--o{ ORCHESTRATION_PIPELINE : owns
-	USER ||--o{ CRAWLER_PIPELINE : creates
-	USER ||--o{ ACTION_ITEM : tracks
-	USER ||--o{ LEAD_REGISTRATION : registers
-	USER ||--o{ LEAD_COMMENT : authors
-	USER ||--o{ DOCUMENT_SHARE : shared_with
-	USER ||--o{ DOCUMENT_SHARE : shared_by
-	USER ||--o{ DOCUMENT_ACTIVITY : acts_on
 	USER ||--o{ CONNECTION : requests
 	USER ||--o{ CONNECTION : receives
 	USER ||--o{ CONVERSATION_PARTICIPANT : joins
 	USER ||--o{ MESSAGE : authors
-
-	COMPANY ||--o{ LEAD_X_COMPANY : linked_to
-	LEAD ||--o{ LEAD_X_COMPANY : linked_to
-	LEAD ||--o{ LEAD_REGISTRATION : registrations
-	LEAD ||--o{ LEAD_COMMENT : comments
-	LEAD ||--o{ APPLICATION : applications
-
-	APPLICATION ||--o{ RESUME_X_APPLICATION : uses
-	APPLICATION ||--o{ COVER_LETTER_X_APPLICATION : uses
-	APPLICATION ||--o{ DOCUMENT_X_APPLICATION : uses
-
-	RESUME ||--o{ RESUME_X_APPLICATION : attached_to
-	COVER_LETTER ||--o{ COVER_LETTER_X_APPLICATION : attached_to
-
-	DOCUMENT ||--o{ DOCUMENT_VERSION : versions
-	DOCUMENT ||--o{ DOCUMENT_X_APPLICATION : attached_to
-	DOCUMENT ||--o{ DOCUMENT_SHARE : shares
-	DOCUMENT ||--o{ DOCUMENT_ACTIVITY : activity
-
-	EXTRACTOR ||--o{ EXTRACTOR_EXAMPLE : examples
-	EXTRACTOR ||--o{ EXTRACTOR_VERSION : versions
-
-	ORCHESTRATION_PIPELINE ||--o{ ORCHESTRATION_EVENT : events
-	CRAWLER_PIPELINE ||--o{ CRAWLER_RUN : runs
-
+	USER ||--o{ ACTION_ITEM : tracks
 	CONVERSATION ||--o{ CONVERSATION_PARTICIPANT : participants
 	CONVERSATION ||--o{ MESSAGE : messages
 	MESSAGE ||--o{ MESSAGE : replies
 ```
+
+*Figure 5 — Networking and messaging entities. CONNECTION is a peer relationship. CONVERSATION holds both direct and group threads. ACTION_ITEM links tasks back to applications, leads, documents, or conversations.*
 
 ## Domain Breakdown
 

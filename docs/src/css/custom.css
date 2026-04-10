@@ -20,3 +20,171 @@
   --ifm-color-primary-lightest: #c1dbfa;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* ─── Mermaid diagram zoom trigger ──────────────────────────────────────── */
+
+.mermaid-zoom-trigger {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  cursor: zoom-in;
+  border-radius: 6px;
+  transition: box-shadow 0.15s ease;
+}
+
+.mermaid-zoom-trigger:hover,
+.mermaid-zoom-trigger:focus-visible {
+  box-shadow: 0 0 0 2px var(--ifm-color-primary);
+  outline: none;
+}
+
+.mermaid-zoom-hint {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--ifm-color-primary);
+  color: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.mermaid-zoom-trigger:hover .mermaid-zoom-hint,
+.mermaid-zoom-trigger:focus-visible .mermaid-zoom-hint {
+  opacity: 1;
+}
+
+/* ─── Overlay backdrop ───────────────────────────────────────────────────── */
+
+.mermaid-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: mermaid-fade-in 0.18s ease;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+@keyframes mermaid-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Overlay content panel ──────────────────────────────────────────────── */
+
+.mermaid-overlay-content {
+  position: relative;
+  background: var(--ifm-background-color);
+  border-radius: 10px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+  width: min(95vw, 1440px);
+  max-width: 95vw;
+  max-height: 92vh;
+  overflow: auto;
+  padding: 40px 24px 24px;
+  box-sizing: border-box;
+}
+
+.mermaid-overlay-diagram {
+  display: block;
+}
+
+.mermaid-overlay-diagram .docusaurus-mermaid-container {
+  width: max-content;
+  min-width: 100%;
+}
+
+.mermaid-overlay-diagram .docusaurus-mermaid-container > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: none;
+  min-width: 960px;
+}
+
+@media (max-width: 768px) {
+  .mermaid-overlay {
+    padding: 8px;
+  }
+
+  .mermaid-overlay-content {
+    width: 100%;
+    max-width: none;
+    padding: 40px 12px 12px;
+  }
+
+  .mermaid-overlay-diagram .docusaurus-mermaid-container > svg {
+    min-width: 720px;
+  }
+}
+
+/* ─── Close button ───────────────────────────────────────────────────────── */
+
+.mermaid-overlay-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--ifm-font-color-base);
+  opacity: 0.65;
+  transition: opacity 0.1s ease;
+}
+
+.mermaid-overlay-close:hover,
+.mermaid-overlay-close:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .mermaid-overlay {
+    animation: none;
+  }
+
+  .mermaid-zoom-trigger,
+  .mermaid-zoom-hint,
+  .mermaid-overlay-close {
+    transition: none;
+  }
+}
+
+/* ─── High contrast ──────────────────────────────────────────────────────── */
+
+@media (prefers-contrast: more) {
+  .mermaid-zoom-trigger:hover,
+  .mermaid-zoom-trigger:focus-visible {
+    box-shadow: 0 0 0 3px ButtonText;
+  }
+
+  .mermaid-overlay-close:focus-visible {
+    outline: 3px solid ButtonText;
+  }
+
+  /* Increase SVG line weight for diagram readability */
+  .mermaid-zoom-trigger svg path,
+  .mermaid-zoom-trigger svg line,
+  .mermaid-zoom-trigger svg polyline,
+  .mermaid-overlay-content svg path,
+  .mermaid-overlay-content svg line,
+  .mermaid-overlay-content svg polyline {
+    stroke-width: max(1.5px, 0.08em);
+  }
+}

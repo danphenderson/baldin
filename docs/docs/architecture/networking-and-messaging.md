@@ -15,6 +15,8 @@ Baldin is not only a job-search tracker. The codebase also includes a lightweigh
 
 ```mermaid
 graph TD
+    accTitle: Networking Feature Map
+    accDescr: Shows how Directory feeds Connections, which enables Direct conversations; Group conversations and Document versions feed into the Activity feed alongside Applications; and the Activity feed drives Action items.
     Directory[Directory] --> Connections[Connections]
     Connections --> DirectMessages[Direct conversations]
     DirectMessages --> ActivityFeed[Activity feed]

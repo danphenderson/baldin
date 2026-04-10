@@ -523,6 +523,19 @@ const ApplicationsQueuePage: React.FC = () => {
                           }}
                         />
                       )}
+                      <Chip
+                        icon={<DocIcon sx={{ fontSize: '0.75rem !important' }} />}
+                        label={`${app.document_count ?? 0} doc${(app.document_count ?? 0) === 1 ? '' : 's'}`}
+                        size="small"
+                        variant={(app.document_count ?? 0) > 0 ? 'filled' : 'outlined'}
+                        sx={{
+                          fontSize: '0.7rem',
+                          height: 22,
+                          bgcolor: (app.document_count ?? 0) > 0 ? alpha(theme.palette.primary.main, 0.12) : undefined,
+                          color: (app.document_count ?? 0) > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
+                          '& .MuiChip-icon': { ml: 0.5, mr: -0.25 },
+                        }}
+                      />
                       <Typography
                         variant="caption"
                         color="text.secondary"

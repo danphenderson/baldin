@@ -9,7 +9,7 @@ from pydantic import UUID4
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Paragraph, SimpleDocTemplate
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.api.deps import (
@@ -26,6 +26,9 @@ from app.core.datetime_utils import format_utc_datetime, normalize_utc_datetime,
 from app.core.document_storage import resolve_document_source_path
 
 router: APIRouter = APIRouter()
+
+_ACTIVE_APPLICATION_STATUSES = {status.value for status in models.ApplicationStage}
+_CLOSED_APPLICATION_STATUSES = {status.value for status in models.ApplicationOutcome}
 
 
 def _normalize_status_history(history: list[dict] | None) -> list[dict]:
@@ -52,6 +55,64 @@ def _build_status_history_entry(
     }
 
 
+def _status_to_value(status: str | models.ApplicationStatus | None) -> str | None:
+    if status is None:
+        return None
+    return status.value if isinstance(status, models.ApplicationStatus) else status
+
+
+def _is_closed_to_active_transition(
+    previous_status: str | models.ApplicationStatus | None,
+    next_status: str | models.ApplicationStatus | None,
+) -> bool:
+    previous_value = _status_to_value(previous_status)
+    next_value = _status_to_value(next_status)
+    return (
+        previous_value in _CLOSED_APPLICATION_STATUSES
+        and next_value in _ACTIVE_APPLICATION_STATUSES
+    )
+
+
+def _is_terminal_status(status: str | models.ApplicationStatus | None) -> bool:
+    return _status_to_value(status) in _CLOSED_APPLICATION_STATUSES
+
+
+def _apply_outcome_reason_update(
+    application: models.Application,
+    payload: schemas.ApplicationUpdate,
+    *,
+    previous_status: str | models.ApplicationStatus | None,
+    resulting_status: str | models.ApplicationStatus | None,
+    status_change_requested: bool,
+) -> None:
+    reason_requested = "outcome_reason" in payload.model_fields_set
+    normalized_reason = payload.outcome_reason
+
+    if not _is_terminal_status(resulting_status):
+        if reason_requested and normalized_reason is not None:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "outcome_reason can only be set for rejected or withdrawn applications"
+                ),
+            )
+        application.outcome_reason = None
+        return
+
+    if reason_requested:
+        application.outcome_reason = normalized_reason
+        return
+
+    previous_value = _status_to_value(previous_status)
+    resulting_value = _status_to_value(resulting_status)
+    if (
+        status_change_requested
+        and previous_value in _CLOSED_APPLICATION_STATUSES
+        and previous_value != resulting_value
+    ):
+        application.outcome_reason = None
+
+
 @router.post("/", status_code=201, response_model=schemas.ApplicationRead)
 async def create_application(
     payload: schemas.ApplicationCreate,
@@ -75,7 +136,7 @@ async def create_application(
 
     # Create a new application
     application_data = {
-        **payload.dict(
+        **payload.model_dump(
             exclude_unset=True, exclude={"document_ids", "stage", "outcome"}
         ),
         "user_id": user.id,
@@ -83,6 +144,8 @@ async def create_application(
     application_data["status_history"] = [
         _build_status_history_entry(None, payload.status)
     ]
+    if not _is_terminal_status(payload.status):
+        application_data["outcome_reason"] = None
 
     application = models.Application(**application_data)
     db.add(application)
@@ -123,6 +186,9 @@ async def create_application(
     )
     application = result.scalars().first()  # type: ignore
 
+    if application is not None:
+        await _populate_document_counts([application], db=db, user_id=user.id)
+
     return application
 
 
@@ -144,6 +210,7 @@ async def get_applications(
     )
     # Ensure that unique rows are considered to avoid duplicates due to joinedload
     applications = result.scalars().unique().all()
+    await _populate_document_counts(applications, db=db, user_id=user.id)
     return applications
 
 
@@ -171,16 +238,42 @@ async def update_application(
         )
 
     # Update the application's attributes
-    update_data = payload.dict(exclude_unset=True)
-    new_status = update_data.get("status")
-    if new_status is not None and new_status != application.status:
-        history = _normalize_status_history(application.status_history)
-        history.append(_build_status_history_entry(application.status, new_status))
-        application.status_history = history
+    previous_status = application.status
+    status_change_requested = bool(
+        {"status", "stage", "outcome"} & payload.model_fields_set
+    )
+    new_status = payload.status if status_change_requested else None
+    if status_change_requested and new_status != application.status:
+        if _is_closed_to_active_transition(application.status, new_status):
+            if payload.reopen is not True:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Closed applications require reopen=true before moving back to an active stage"
+                    ),
+                )
 
+        if new_status is not None:
+            history = _normalize_status_history(application.status_history)
+            history.append(_build_status_history_entry(application.status, new_status))
+            application.status_history = history
+
+        application.status = new_status
+
+    _apply_outcome_reason_update(
+        application,
+        payload,
+        previous_status=previous_status,
+        resulting_status=new_status if status_change_requested else application.status,
+        status_change_requested=status_change_requested,
+    )
+
+    update_data = payload.model_dump(
+        exclude_unset=True,
+        exclude={"status", "stage", "outcome", "reopen", "outcome_reason"},
+    )
     for var, value in update_data.items():
-        if var != "status_history":
-            setattr(application, var, value)
+        setattr(application, var, value)
 
     await db.commit()
     await db.refresh(application)
@@ -194,6 +287,9 @@ async def update_application(
         .where(models.Application.id == id)
     )
     application = result.scalars().first()
+
+    if application is not None:
+        await _populate_document_counts([application], db=db, user_id=user.id)
 
     return application
 
@@ -236,6 +332,9 @@ async def get_application_by_id(
     )
 
     application = result.scalars().first()  # type: ignore
+
+    if application is not None:
+        await _populate_document_counts([application], db=db, user_id=user.id)
 
     # Fetch company details for the application
 
@@ -308,6 +407,39 @@ def _document_access_filter(user_id: UUID4):
         models.Document.user_id == user_id,
         models.Document.id.in_(shared_document_ids),
     )
+
+
+async def _populate_document_counts(
+    applications: list[models.Application],
+    *,
+    db: AsyncSession,
+    user_id: UUID4,
+) -> None:
+    if not applications:
+        return
+
+    application_ids = [application.id for application in applications]
+    count_rows = await db.execute(
+        select(
+            models.DocumentXApplication.application_id,
+            func.count(models.Document.id).label("document_count"),
+        )
+        .join(
+            models.Document,
+            models.Document.id == models.DocumentXApplication.document_id,
+        )
+        .where(
+            models.DocumentXApplication.application_id.in_(application_ids),
+            _document_access_filter(user_id),
+        )
+        .group_by(models.DocumentXApplication.application_id)
+    )
+    count_map = {
+        application_id: document_count
+        for application_id, document_count in count_rows.all()
+    }
+    for application in applications:
+        application.document_count = count_map.get(application.id, 0)
 
 
 @router.get("/{id}/export")

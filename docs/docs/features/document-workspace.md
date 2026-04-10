@@ -5,7 +5,7 @@ title: Document Workspace
 description: Versioned documents with rich-text collaboration, sharing, and application attachments.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-09 -->
 
 # Document Workspace
 
@@ -15,7 +15,7 @@ The document workspace lets you create, edit, version, and share rich-text docum
 
 Baldin's versioned document model supports multiple document kinds through a `kind` discriminator field. Documents can represent resumes, cover letters, or free-form notes. Each kind shares the same versioning, collaboration, and sharing infrastructure.
 
-Legacy `Resume` and `CoverLetter` tables still exist in the data model and coexist with the newer versioned document system.
+The legacy `Resume` and `CoverLetter` tables are retired. The versioned document model is the active material surface for resumes, cover letters, and other working documents.
 
 ## Versioning
 
@@ -25,7 +25,7 @@ Every document maintains an immutable version history through the `DocumentVersi
 - The content and `content_format` (plain text, Markdown, Tiptap JSON)
 - A reference back to the parent document
 
-The document's `head_version_id` always points to the latest version. Version comparisons are available per document in the frontend at `/me/documents/:id/compare`.
+The document's `head_version_id` always points to the latest version. Version comparisons are available per document in the frontend at `/documents/:id/compare`.
 
 ## Real-Time Collaboration
 
@@ -45,6 +45,7 @@ Document access is controlled through:
 - **Shares** — per-user grants with `viewer` or `editor` roles via the `DocumentShare` table
 
 Shared documents appear in the recipient's studio alongside their own documents.
+Shared documents appear in the recipient's document library alongside their own documents.
 
 ## Application Attachments
 
@@ -54,10 +55,30 @@ Documents can be attached to applications through the `DocumentXApplication` bri
 
 | Path | Page | Purpose |
 |------|------|---------|
-| `/me/documents` | Studio / Document Library | Browse and manage documents |
-| `/me/documents/:id` | Document Detail | Inspect the latest version, metadata, and sharing |
-| `/me/documents/:id/edit` | Document Editor | Rich-text editing with collaboration |
-| `/me/documents/:id/compare` | Version Compare | Side-by-side version diff for a specific document |
+| `/documents` | Document Library | Browse and manage documents |
+| `/documents/:id` | Document Detail | Inspect the latest version, metadata, and sharing |
+| `/documents/:id/edit` | Document Editor | Rich-text editing with collaboration |
+| `/documents/:id/compare` | Version Compare | Side-by-side version diff for a specific document |
+
+Legacy `/me/documents/*` URLs still redirect to the canonical `/documents/*` routes.
+
+## User Story Book
+
+### Current UI State
+
+- Canonical document routes now live under `/documents`, with dedicated list, detail, edit, and compare pages plus legacy redirects from `/me/documents/*`.
+- Document detail, editor, and compare views all include explicit back navigation instead of relying on browser history.
+- Application detail already offers a `New Document` path and supports attaching or detaching existing documents from the same workflow.
+
+### Story Threads
+
+**Canonical backlog — application document context (`BACKLOG_APPLICATIONS_STORY.md`)**
+Status: Partial
+Application surfaces already show document-count badges and the detail page can create or attach documents. The remaining open gap is metadata-driven filtering in the applications queue because `appDocMeta` is still stubbed.
+
+**Draft UX context — documents information architecture (`plans/UX_POLISH_PLAN.md`)**
+Status: Superseded
+The draft critique assumed documents still lived under an Identity → Studio section and lacked clear return paths. The current UI uses top-level `/documents` routes and ships back links on detail, editor, and compare pages, so this part of the draft no longer matches the live product.
 
 ## Related Docs
 

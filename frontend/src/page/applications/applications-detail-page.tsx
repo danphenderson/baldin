@@ -28,7 +28,7 @@ import {
   getDocuments, downloadDocument, generateDocument,
   type DocumentRead, type DocumentGenerateRequest,
 } from '../../service/documents';
-import { COLUMNS, relativeDate } from './use-applications';
+import { ALL_STATUS_COLUMNS, relativeDate } from './use-applications';
 import CreateActionItemDialog from '../../component/create-action-item-dialog';
 import type { ActionItemRead, ActionItemCreate } from '../../service/action-items';
 
@@ -355,7 +355,7 @@ const ApplicationDetailPage: React.FC = () => {
   /* ---------------------------------------------------------------- */
 
   const companyName = lead?.companies?.[0]?.name;
-  const column = COLUMNS.find((c) => c.key === (app.status || 'applied').toLowerCase()) ?? COLUMNS[0];
+  const column = ALL_STATUS_COLUMNS.find((c) => c.key === (app.status || 'applied').toLowerCase()) ?? ALL_STATUS_COLUMNS[0];
 
   return (
     <Box sx={{ py: 2 }}>
@@ -402,7 +402,7 @@ const ApplicationDetailPage: React.FC = () => {
                 value={app.status || 'applied'}
                 onChange={(e) => handleStatusChange(e.target.value)}
               >
-                {COLUMNS.map((c) => (
+                {ALL_STATUS_COLUMNS.map((c) => (
                   <MenuItem key={c.key} value={c.key}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: c.color, flexShrink: 0 }} />
@@ -528,7 +528,7 @@ const ApplicationDetailPage: React.FC = () => {
                 const from = entry.from as string | null;
                 const to = entry.to as string;
                 const changedAt = entry.changed_at as string;
-                const col = COLUMNS.find((c) => c.key === to) ?? COLUMNS[0];
+                const col = ALL_STATUS_COLUMNS.find((c) => c.key === to) ?? ALL_STATUS_COLUMNS[0];
                 return (
                   <Box key={idx} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                     <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: col.color, mt: 0.5, flexShrink: 0 }} />

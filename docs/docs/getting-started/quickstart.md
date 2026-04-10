@@ -5,7 +5,7 @@ title: Boot The Stack
 description: Boot the local stack quickly, then jump to workflow, API access, and configuration details.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-09 -->
 
 # Boot The Stack
 
@@ -48,6 +48,7 @@ Optional local toolchain if you want to work outside containers:
    | Service | URL |
    |---------|-----|
    | Frontend | [http://localhost:5173](http://localhost:5173) |
+   | Product docs | [http://localhost:3001/baldin/docs](http://localhost:3001/baldin/docs) |
    | API | [http://localhost:8004](http://localhost:8004) |
    | Swagger UI | [http://localhost:8004/docs](http://localhost:8004/docs) |
    | ReDoc | [http://localhost:8004/redoc](http://localhost:8004/redoc) |

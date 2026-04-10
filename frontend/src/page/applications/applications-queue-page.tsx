@@ -20,7 +20,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
-import { useApplications, COLUMNS, relativeDate, nextStatus } from './use-applications';
+import { useApplications, COLUMNS, ALL_STATUS_COLUMNS, relativeDate, nextStatus, effectiveStage, isClosed } from './use-applications';
 import type { ApplicationRead } from '../../service/applications';
 import ConfirmDialog from '../../component/common/confirm-dialog';
 import EmptyState from '../../component/common/empty-state';
@@ -38,14 +38,14 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'due', label: 'Due Date' },
 ];
 
-const STAGE_ORDER = Object.fromEntries(COLUMNS.map((c, i) => [c.key, i]));
+const STAGE_ORDER = Object.fromEntries(ALL_STATUS_COLUMNS.map((c, i) => [c.key, i]));
 
 function stageOf(app: ApplicationRead): string {
-  return (app.status || 'applied').toLowerCase();
+  return effectiveStage(app);
 }
 
 function columnFor(status: string) {
-  return COLUMNS.find((c) => c.key === status) ?? COLUMNS[0];
+  return ALL_STATUS_COLUMNS.find((c) => c.key === status) ?? ALL_STATUS_COLUMNS[0];
 }
 
 /* ------------------------------------------------------------------ */
@@ -76,7 +76,7 @@ const ApplicationsQueuePage: React.FC = () => {
   /* ---- Metrics ---- */
   const totalCount = applications.length;
   const activeCount = useMemo(
-    () => applications.filter((a) => stageOf(a) !== 'rejected').length,
+    () => applications.filter((a) => !isClosed(a)).length,
     [applications],
   );
   const interviewCount = useMemo(
@@ -88,7 +88,7 @@ const ApplicationsQueuePage: React.FC = () => {
     [applications],
   );
   const rejectedCount = useMemo(
-    () => applications.filter((a) => stageOf(a) === 'rejected').length,
+    () => applications.filter((a) => isClosed(a)).length,
     [applications],
   );
 
@@ -114,8 +114,8 @@ const ApplicationsQueuePage: React.FC = () => {
 
       const matchesActive =
         activeFilter === 'all' ||
-        (activeFilter === 'active' && stage !== 'rejected') ||
-        (activeFilter === 'closed' && stage === 'rejected');
+        (activeFilter === 'active' && !isClosed(app)) ||
+        (activeFilter === 'closed' && isClosed(app));
 
       const docMeta = appDocMeta.get(app.id);
       const matchesResume =
@@ -247,12 +247,12 @@ const ApplicationsQueuePage: React.FC = () => {
           } : undefined}
         />
         <Chip
-          label={`${rejectedCount} rejected`}
+          label={`${rejectedCount} closed`}
           size="small"
           variant={rejectedCount ? 'filled' : 'outlined'}
           sx={rejectedCount ? {
-            bgcolor: alpha(COLUMNS[4].color, 0.12),
-            color: COLUMNS[4].color,
+            bgcolor: alpha(ALL_STATUS_COLUMNS.find((c) => c.key === 'rejected')!.color, 0.12),
+            color: ALL_STATUS_COLUMNS.find((c) => c.key === 'rejected')!.color,
             fontWeight: 600,
           } : undefined}
         />
@@ -313,7 +313,7 @@ const ApplicationsQueuePage: React.FC = () => {
           color={stageFilter === 'all' ? 'primary' : 'default'}
           onClick={() => setStageFilter('all')}
         />
-        {COLUMNS.map((col) => (
+        {ALL_STATUS_COLUMNS.map((col) => (
           <Chip
             key={col.key}
             label={col.label}
@@ -574,7 +574,7 @@ const ApplicationsQueuePage: React.FC = () => {
                   >
                     {canAdvance && (
                       <Tooltip
-                        title={`Move to ${COLUMNS[COLUMNS.findIndex((c) => c.key === stage) + 1]?.label}`}
+                        title={`Move to ${ALL_STATUS_COLUMNS[ALL_STATUS_COLUMNS.findIndex((c) => c.key === stage) + 1]?.label}`}
                       >
                         <IconButton
                           size="small"

@@ -5,11 +5,13 @@ title: Rewrite Weak Prompts
 description: Turn vague prompts into scoped requests with validation and handback rules.
 ---
 
-<!-- last-verified: 2026-04-08 -->
+<!-- last-verified: 2026-04-09 -->
 
 # Rewrite Weak Prompts
 
 Use this page as a companion to [Prompt The Right Agent](./copilot-prompt-cookbook.md). The fastest way to get better results from Baldin's agents is to be explicit about owner, scope, validation, the standard handback, and when to stop and hand off.
+
+If the owner is already obvious, skip routing prompts and start with that specialist directly.
 
 If you want a repeatable prompt-rewrite workflow instead of tuning prompt files by hand, use `/baldin-agent-prompt-tuner` against a `.github/prompts/*.prompt.md` file or a weak draft prompt.
 
@@ -92,13 +94,14 @@ Allowed paths:
 - ./backend/app/tests/**
 
 Validation:
-- run the most relevant pytest scope
+- run the most relevant pytest scope first
 - add a regression test
+- run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` only if routes or schemas changed
 
 Return:
 - use the Standard Handback fields from the Copilot Prompt Cookbook.
 
-Stop and hand off if this changes the public API contract.
+Stop and hand off if this changes the public API contract and downstream frontend validation is not straightforward.
 ```
 
 Why it works:
@@ -136,8 +139,8 @@ Allowed paths:
 - ./frontend/**
 
 Validation:
-- run npm run test
-- run ./node_modules/.bin/tsc --noEmit
+- run the smallest useful frontend test first
+- run ./node_modules/.bin/tsc --noEmit if shared types or typed service usage changed
 
 Return:
 - use the Standard Handback fields from the Copilot Prompt Cookbook.
@@ -179,7 +182,7 @@ This requires a schema change, API update, generated type refresh, and frontend 
 Validation:
 - run relevant backend tests
 - run relevant frontend tests and typecheck
-- run ./scripts/update_frontend_schemas.sh
+- run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh`
 
 Return:
 - use the Standard Handback fields from the Copilot Prompt Cookbook.
@@ -318,11 +321,11 @@ Own cross-stack design, delegation, and integration across backend, frontend, an
 ## Rules Of Thumb
 
 - If ownership is unclear, start with Baldin Project Manager.
-- If the task is obviously backend-only or frontend-only, start with that specialist directly.
+- If the task is obviously backend-only or frontend-only, start with that specialist directly instead of routing through issue-dispatch prompts.
 - If the task changes backend responses consumed by the frontend, either start with Baldin Lead Full-Stack Architect or explicitly require a next-owner handoff.
 - Ask for the standard handback fields whenever an agent is expected to implement or validate changes.
 - Ask for generated-artifact status whenever API routes or schemas might move.
-- Ask for validation evidence every time.
+- Ask for validation evidence every time, but prefer a smoke check first and broader gates only when the touched surface needs them.
 
 ## Related Docs
 

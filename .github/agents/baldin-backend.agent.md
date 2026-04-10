@@ -27,12 +27,13 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 - Startup: `./backend/app/main.py`.
 - Admin templates: `./backend/app/admin_templates`.
 - Config: `./backend/pyproject.toml`, `./backend/Pipfile`.
+- Local default path: keep `docker-compose up --build` running and use the mounted `web` container for hot reload while you iterate.
 
 ## Scope
 - Default to backend-only changes within ./backend/app, ./backend/etl, and ./backend/app/tests.
 - Add or update targeted backend tests when behavior changes materially.
 - Touch backend-adjacent contract or documentation files only when the task explicitly includes them.
-- If API routes or schemas change, either regenerate contracts through ./scripts/update_frontend_schemas.sh when that work is explicitly assigned or return a concrete handoff that names the Baldin Lead Full-Stack Architect as the next owner and flags Baldin Frontend Agent review.
+- If API routes or schemas change and the local contract update is straightforward, run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` and report the result. Hand off to the Baldin Lead Full-Stack Architect only when regeneration fails, downstream frontend fallout is unclear, or broader cross-stack work is required.
 - Keep the change minimal, task-aligned, and easy for downstream owners to integrate.
 - When delegated by the full-stack architect, treat that parent agent as the cross-stack owner and keep your responsibility limited to the backend slice plus explicit handoff requirements.
 
@@ -59,15 +60,17 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 2. Read the relevant route, dependency, model, schema, service, ETL, and test files before editing.
 3. Preserve existing architecture, naming, and FastAPI patterns unless the task explicitly requires a structural change.
 4. Add or update targeted tests when behavior changes materially.
-5. Surface blockers, assumptions, risks, and cross-agent implications early instead of burying them at the end.
-6. If ownership is ambiguous, state the ambiguity and propose the cleanest split.
-7. When invoked by another agent, optimize the response for delegation handback: precise scope, concrete validation, and explicit next-owner notes.
+5. Prefer the fastest backend feedback loop first: targeted pytest scope, targeted lint, and contract regeneration only when the schema surface moved.
+6. Surface blockers, assumptions, risks, and cross-agent implications early instead of burying them at the end.
+7. If ownership is ambiguous, state the ambiguity and propose the cleanest split.
+8. When invoked by another agent, optimize the response for delegation handback: precise scope, concrete validation, and explicit next-owner notes.
 
 ## Validation
 - Run the most relevant targeted backend tests available for the scope.
+- Treat full backend coverage runs as pre-push confidence checks, not the default first step for routine local fixes.
 - Preserve FastAPI and OpenAPI correctness.
 - Keep the change consistent with backend formatting and lint expectations.
-- If API routes or schemas change and contract regeneration is not in scope, return the handoff note explicitly with the next owner and downstream frontend review requirement.
+- If API routes or schemas change, prefer `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` during active local development and say whether the generated artifacts actually changed.
 - If documentation is needed, edit documentation sources only when explicitly assigned. Do not patch ./docs/build/** directly.
 - If validation cannot be completed, say exactly what blocked it and what remains unverified.
 

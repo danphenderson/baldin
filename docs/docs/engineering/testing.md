@@ -2,10 +2,10 @@
 sidebar_position: 4
 slug: /engineering/testing
 title: Run The Right Checks
-description: Run the smallest effective backend, frontend, contract, and docs checks.
+description: Run the smallest effective smoke check first, then widen validation only when the change actually needs it.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-09 -->
 
 # Run The Right Checks
 
@@ -13,16 +13,24 @@ Use the smallest validation surface that proves your change. Backend, frontend, 
 
 If you use Baldin's workspace skills, `/baldin-backend-test-gap-planner` helps choose the smallest useful backend pytest coverage, and `/baldin-contract-regen-resolver` handles backend-to-contract regeneration fallout.
 
+## Choose Your Validation Speed
+
+| When | Preferred path | Why |
+| --- | --- | --- |
+| Active editing | One targeted backend or frontend smoke check, or forced contract regeneration when the schema surface changed | Fastest feedback while the Compose stack stays warm |
+| Handoff or local review | The smallest relevant test set plus any required contract, type, or build checks | Confirms the slice without paying the full CI cost |
+| Pre-push confidence | Broader suite, stricter gates, and docs build when the branch is ready | Matches merge expectations without slowing the first edit loop |
+
 ## Choose The Right Check
 
-| Surface | Primary local check |
-| --- | --- |
-| Backend behavior | `cd backend && pipenv run pytest --cov=app --cov=etl --cov-report=term-missing` |
-| Frontend behavior | `cd frontend && npm run test` |
-| Frontend typing | `cd frontend && node ./node_modules/typescript/bin/tsc --noEmit` |
-| Production-style frontend build | `cd frontend && VITE_API_URL=https://api.preview.invalid npm run build` |
-| Contract changes | `./scripts/update_frontend_schemas.sh` plus the affected backend and frontend checks |
-| Docs changes | `npm --prefix docs run build` |
+| Surface | Fast local check | When to widen |
+| --- | --- | --- |
+| Backend behavior | `cd backend && pipenv run pytest -xvs app/tests/test_target.py -k "case"` | Expand to a larger pytest scope when no targeted coverage exists or the change crosses multiple backend paths |
+| Frontend behavior | `cd frontend && npm run test -- --watch` | Run the non-watch test command for handoff or when you need a clean one-shot result |
+| Frontend typing | `cd frontend && node ./node_modules/typescript/bin/tsc --noEmit` | Use when shared types, typed service consumption, or broader component contracts changed |
+| Production-style frontend build | `cd frontend && VITE_API_URL=https://api.preview.invalid npm run build` | Use when shipped behavior or bundling assumptions changed |
+| Contract changes | `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` plus the directly affected backend and frontend checks | Run the normal script before push or review to confirm staged changes trigger regeneration |
+| Docs changes | `npm --prefix docs run build` | Keep it to docs-source changes; do not rebuild docs for unrelated code work |
 
 ## Backend Tests
 
@@ -32,8 +40,10 @@ Backend tests use `pytest` with a dedicated PostgreSQL test database.
 
 ```bash
 cd backend
-pipenv run pytest --cov=app --cov=etl --cov-report=term-missing
+pipenv run pytest -xvs app/tests/test_target.py -k "case"
 ```
+
+Start with the narrowest test file or `-k` selection that exercises the edited route, model, ETL path, or bug. Only widen to the broader backend suite when the changed surface or missing coverage makes that necessary.
 
 ### Coverage gate
 
@@ -67,9 +77,11 @@ Frontend tests use Vitest with React Testing Library.
 
 ```bash
 cd frontend
-npm run test
 npm run test:watch
+npm run test
 ```
+
+Use watch mode during active editing. Treat the clean one-shot test run, typecheck, and build as handoff or pre-push checks unless the task specifically depends on them.
 
 ### TypeScript validation
 
@@ -95,7 +107,7 @@ The build guard rejects missing or localhost `VITE_API_URL` values. Use any non-
 npm --prefix docs run build
 ```
 
-This catches broken links, sidebar mismatches, and Mermaid/frontmatter issues in the documentation site.
+This catches broken links, sidebar mismatches, and Mermaid/frontmatter issues in the documentation site. Use it when docs source changed; it is not part of the default validation path for unrelated backend or frontend work.
 
 ## Related Docs
 

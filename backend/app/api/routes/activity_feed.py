@@ -246,8 +246,8 @@ async def get_command_center_summary(
             models.Application.user_id == user.id,
             ~application_status_text.in_(
                 [
-                    schemas.ApplicationStatus.REJECTED.value,
-                    schemas.ApplicationStatus.WITHDRAWN.value,
+                    schemas.ApplicationOutcome.REJECTED.value,
+                    schemas.ApplicationOutcome.WITHDRAWN.value,
                 ]
             ),
         )

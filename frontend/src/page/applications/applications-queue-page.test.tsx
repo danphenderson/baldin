@@ -75,6 +75,9 @@ function makeHookReturn(overrides: Partial<Record<string, unknown>> = {}) {
     deleteTarget: null,
     setDeleteTarget: vi.fn(),
     handleStatusChange: vi.fn(),
+    handleClose: vi.fn(),
+    registeredApps: [],
+    closedApps: [],
     buckets: new Map(),
     appDocMeta: new Map(),
     appDocMetaLoading: false,
@@ -181,7 +184,7 @@ describe('ApplicationsQueuePage', () => {
           makeApplication({ id: 'a1', status: 'applied' }),
           makeApplication({ id: 'a2', status: 'interview' }),
           makeApplication({ id: 'a3', status: 'offer' }),
-          makeApplication({ id: 'a4', status: 'rejected' }),
+          makeApplication({ id: 'a4', status: 'rejected', outcome: 'rejected' }),
         ],
       }),
     );
@@ -192,7 +195,7 @@ describe('ApplicationsQueuePage', () => {
     expect(screen.getByText('3 active')).toBeInTheDocument();
     expect(screen.getByText('1 interviewing')).toBeInTheDocument();
     expect(screen.getByText('1 offers')).toBeInTheDocument();
-    expect(screen.getByText('1 rejected')).toBeInTheDocument();
+    expect(screen.getByText('1 closed')).toBeInTheDocument();
   });
 
   it('renders empty state when there are no applications', () => {

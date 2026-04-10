@@ -1086,7 +1086,11 @@ export interface components {
        * Format: uuid4
        */
       lead_id: string;
-      status: components["schemas"]["ApplicationStatus"];
+      /** @description Legacy status value (prefer stage/outcome) */
+      status?: components["schemas"]["ApplicationStatus"] | null;
+      /** @description Initial pipeline stage */
+      stage?: components["schemas"]["ApplicationStage"] | null;
+      outcome?: components["schemas"]["ApplicationOutcome"] | null;
       /** Notes */
       notes?: string | null;
       /** Next Step */
@@ -1110,6 +1114,12 @@ export interface components {
        */
       version_id?: string | null;
     };
+    /**
+     * ApplicationOutcome
+     * @description Terminal closure states — mutually exclusive with further stage progression.
+     * @enum {string}
+     */
+    ApplicationOutcome: "rejected" | "withdrawn";
     /** ApplicationRead */
     ApplicationRead: {
       /**
@@ -1144,6 +1154,10 @@ export interface components {
       user: components["schemas"]["UserRead"];
       /** @description Application status */
       status?: components["schemas"]["ApplicationStatus"] | null;
+      /** @description Current pipeline stage (registered → applied → screening → interview → offer) */
+      stage?: components["schemas"]["ApplicationStage"] | null;
+      /** @description Terminal closure (rejected or withdrawn), null while active */
+      outcome?: components["schemas"]["ApplicationOutcome"] | null;
       /**
        * Notes
        * @description Free-form user notes
@@ -1169,13 +1183,21 @@ export interface components {
         }[] | null;
     };
     /**
+     * ApplicationStage
+     * @description Pipeline progression stages — only forward movement through the funnel.
+     * @enum {string}
+     */
+    ApplicationStage: "registered" | "applied" | "screening" | "interview" | "offer";
+    /**
      * ApplicationStatus
      * @enum {string}
      */
-    ApplicationStatus: "applied" | "screening" | "interview" | "offer" | "rejected" | "withdrawn";
+    ApplicationStatus: "registered" | "applied" | "screening" | "interview" | "offer" | "rejected" | "withdrawn";
     /** ApplicationUpdate */
     ApplicationUpdate: {
       status?: components["schemas"]["ApplicationStatus"] | null;
+      stage?: components["schemas"]["ApplicationStage"] | null;
+      outcome?: components["schemas"]["ApplicationOutcome"] | null;
       /** Notes */
       notes?: string | null;
       /** Next Step */

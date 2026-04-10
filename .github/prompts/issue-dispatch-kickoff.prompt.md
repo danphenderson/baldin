@@ -1,5 +1,5 @@
 ---
-description: "Use when starting from a Baldin GitHub issue, PR comment, or backlog ticket and you need it turned into the smallest dispatch-ready execution slice with the right owner, validation, and handoff packet."
+description: "Use when starting from a Baldin GitHub issue, PR comment, or backlog ticket and the right owner or execution slice is not already obvious."
 name: "Issue Dispatch Kickoff"
 argument-hint: "GitHub issue number, copied issue body, PR comment, or backlog ticket to dispatch"
 agent: "Baldin Project Manager"
@@ -15,6 +15,7 @@ Task:
 - Reconcile the ticket text against the current repo evidence before proposing implementation.
 - Choose the smallest correct owner: [Baldin Backend Agent](../agents/baldin-backend.agent.md), [Baldin Frontend Agent](../agents/baldin-frontend-agent.agent.md), [Baldin Lead Full-Stack Architect](../agents/baldin-lead-full-stack-architect.agent.md), or keep ownership with [Baldin Project Manager](../agents/baldin-project-manager.agent.md) if the ticket still needs coordination.
 - Keep single-owner execution as the default. Split into at most three workstreams only when paths are truly non-overlapping and the split reduces conflict.
+- If the owner is already obvious and the ticket is actionable, return a direct handoff packet immediately instead of adding an extra planning layer.
 - Call out generated-artifact, docs-source, local-development, or external-permission obligations before implementation starts.
 - Produce a handoff packet that is ready to paste to the selected owner.
 

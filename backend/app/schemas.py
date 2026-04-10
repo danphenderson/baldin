@@ -19,7 +19,13 @@ from pydantic import BaseModel as _BaseModel
 
 from app import utils
 from app.core.url_safety import validate_url_safe_for_fetch
-from app.models import ApplicationStatus, CrawlerRunStatus, LeadReviewStatus
+from app.models import (
+    ApplicationOutcome,
+    ApplicationStage,
+    ApplicationStatus,
+    CrawlerRunStatus,
+    LeadReviewStatus,
+)
 
 
 # Base Model
@@ -1658,6 +1664,13 @@ class ApplicationRead(BaseRead):
     lead: LeadRead
     user: UserRead
     status: ApplicationStatus | None = Field(None, description="Application status")
+    stage: ApplicationStage | None = Field(
+        None,
+        description="Current pipeline stage (registered → applied → screening → interview → offer)",
+    )
+    outcome: ApplicationOutcome | None = Field(
+        None, description="Terminal closure (rejected or withdrawn), null while active"
+    )
     notes: str | None = Field(None, description="Free-form user notes")
     next_step: str | None = Field(None, description="Next action for this application")
     next_step_due: datetime | None = Field(
@@ -1667,21 +1680,72 @@ class ApplicationRead(BaseRead):
         default=[], description="Append-only log of status transitions"
     )
 
+    @model_validator(mode="after")
+    def _derive_stage_outcome(self) -> "ApplicationRead":
+        """Back-fill stage/outcome from legacy status when not stored explicitly."""
+        raw = self.status.value if self.status else None
+        if raw and self.stage is None and self.outcome is None:
+            if raw in {e.value for e in ApplicationOutcome}:
+                self.outcome = ApplicationOutcome(raw)
+                # Keep last known stage from status_history if available
+            elif raw in {e.value for e in ApplicationStage}:
+                self.stage = ApplicationStage(raw)
+        return self
+
 
 class ApplicationCreate(BaseSchema):
     lead_id: UUID4
-    status: ApplicationStatus
+    status: ApplicationStatus | None = Field(
+        None, description="Legacy status value (prefer stage/outcome)"
+    )
+    stage: ApplicationStage | None = Field(None, description="Initial pipeline stage")
+    outcome: ApplicationOutcome | None = None
     notes: str | None = None
     next_step: str | None = None
     next_step_due: datetime | None = None
     document_ids: list[UUID4] | None = None
 
+    @model_validator(mode="after")
+    def _default_status(self) -> "ApplicationCreate":
+        """Reconcile stage/outcome into the legacy status column."""
+        if self.stage is None and self.outcome is None and self.status is None:
+            self.stage = ApplicationStage.REGISTERED
+            self.status = ApplicationStatus.REGISTERED
+        elif self.stage is not None and self.status is None:
+            self.status = ApplicationStatus(self.stage.value)
+        elif self.outcome is not None and self.status is None:
+            self.status = ApplicationStatus(self.outcome.value)
+        elif self.status is not None:
+            v = self.status.value
+            if v in {e.value for e in ApplicationStage} and self.stage is None:
+                self.stage = ApplicationStage(v)
+            elif v in {e.value for e in ApplicationOutcome} and self.outcome is None:
+                self.outcome = ApplicationOutcome(v)
+        return self
+
 
 class ApplicationUpdate(BaseSchema):
     status: ApplicationStatus | None = None
+    stage: ApplicationStage | None = None
+    outcome: ApplicationOutcome | None = None
     notes: str | None = None
     next_step: str | None = None
     next_step_due: datetime | None = None
+
+    @model_validator(mode="after")
+    def _sync_status(self) -> "ApplicationUpdate":
+        """Keep legacy status in sync when callers use stage/outcome."""
+        if self.stage is not None and self.status is None:
+            self.status = ApplicationStatus(self.stage.value)
+        elif self.outcome is not None and self.status is None:
+            self.status = ApplicationStatus(self.outcome.value)
+        elif self.status is not None:
+            v = self.status.value
+            if v in {e.value for e in ApplicationStage} and self.stage is None:
+                self.stage = ApplicationStage(v)
+            elif v in {e.value for e in ApplicationOutcome} and self.outcome is None:
+                self.outcome = ApplicationOutcome(v)
+        return self
 
 
 ActionItemDetailRead.model_rebuild()

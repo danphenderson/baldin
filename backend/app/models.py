@@ -30,7 +30,27 @@ from sqlalchemy.orm import DeclarativeBase, relationship
 # ---------------------------------------------------------------------------
 
 
+class ApplicationStage(str, enum.Enum):
+    """Pipeline progression stages — only forward movement through the funnel."""
+
+    REGISTERED = "registered"
+    APPLIED = "applied"
+    SCREENING = "screening"
+    INTERVIEW = "interview"
+    OFFER = "offer"
+
+
+class ApplicationOutcome(str, enum.Enum):
+    """Terminal closure states — mutually exclusive with further stage progression."""
+
+    REJECTED = "rejected"
+    WITHDRAWN = "withdrawn"
+
+
+# Kept as the union of stage + outcome values for the native Postgres enum column.
+# The DB column name and enum type name stay the same so existing rows remain valid.
 class ApplicationStatus(str, enum.Enum):
+    REGISTERED = "registered"
     APPLIED = "applied"
     SCREENING = "screening"
     INTERVIEW = "interview"

@@ -26,6 +26,7 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 - Primary workspace: `./frontend`.
 - Visual system uses Source Sans 3 and Space Grotesk through the theme layer.
 - Prefer the existing separation of page, layout, component, context, service, route, and theme concerns.
+- Local default path: keep `docker-compose up --build` running and use the mounted frontend container plus Vite HMR for fast iteration.
 
 ## Scope
 - Default to frontend-only changes within ./frontend.
@@ -48,14 +49,15 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 4. Treat accessibility and responsiveness as default requirements, not optional hardening.
 5. When visual changes repeat, move them into shared primitives or the theme instead of scattering one-off styles.
 6. Keep service contracts typed and aligned with generated schema artifacts.
-7. Surface backend contract gaps early instead of silently working around them in the UI.
+7. Prefer the quickest UI feedback loop first: targeted frontend tests or watch mode while the Compose stack stays warm.
+8. Surface backend contract gaps early instead of silently working around them in the UI.
 
 ## Validation
 - Run the relevant frontend checks whenever possible.
 - Add or update targeted frontend tests when behavior changes materially.
-- Use npm run test for unit and component validation.
-- Use ./node_modules/.bin/tsc --noEmit for strict typechecking.
-- Use npm run build for production readiness checks.
+- Use the smallest relevant frontend test first; watch mode is preferred during active editing.
+- Use ./node_modules/.bin/tsc --noEmit when the touched surface changes typed service usage, shared types, or broader component contracts.
+- Use npm run build for production readiness checks when the task changes shipped behavior significantly or the user asked for build validation.
 - Treat release readiness as readiness for the current preview bundle and controlled-launch path, not as a signal to add speculative deployment or enterprise UX requirements.
 - Treat production builds as valid only when VITE_API_URL is set to a non-localhost origin.
 - If API changes affect generated frontend types and regeneration is explicitly in scope, use ./scripts/update_frontend_schemas.sh instead of editing generated files by hand. Otherwise, return a clear follow-on note to the Baldin Lead Full-Stack Architect.

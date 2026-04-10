@@ -75,7 +75,9 @@ async def create_application(
 
     # Create a new application
     application_data = {
-        **payload.dict(exclude_unset=True, exclude={"document_ids"}),
+        **payload.dict(
+            exclude_unset=True, exclude={"document_ids", "stage", "outcome"}
+        ),
         "user_id": user.id,
     }
     application_data["status_history"] = [

@@ -38,12 +38,20 @@ If you use the published docs site, the same material is available at **[danphen
 
 1. Clone the repository.
 2. Copy `backend/.env.example` to `backend/.env`.
-3. Review the backend environment variables you need for local development.
+3. Review the backend environment variables you need for local development. For local-only contract regeneration, a non-empty `OPENAI_API_KEY` value is enough.
 4. Start the local stack from the repository root:
 
 ```bash
 docker-compose up --build
 ```
+
+Keep the stack running while you iterate. The backend reloads through Uvicorn and the frontend uses Vite HMR, so the fast path is inspect -> patch -> smoke-check instead of restarting services.
+
+For routine local work, start with the smallest check that proves the change:
+
+- Backend slice: `cd backend && pipenv run pytest -xvs path/to/test.py -k "case"`
+- Frontend slice: `cd frontend && npm run test -- --watch`
+- Backend API or schema change: `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh`
 
 If you hit local schema drift after pulling breaking model changes, reset the developer databases and restart the stack:
 
@@ -53,10 +61,13 @@ If you hit local schema drift after pulling breaking model changes, reset the de
 
 5. Open the local services:
    - Frontend: [http://localhost:5173](http://localhost:5173)
+   - Product docs: [http://localhost:3001/baldin/docs](http://localhost:3001/baldin/docs)
    - API: [http://localhost:8004](http://localhost:8004)
    - Swagger UI: [http://localhost:8004/docs](http://localhost:8004/docs)
    - ReDoc: [http://localhost:8004/redoc](http://localhost:8004/redoc)
    - Admin: [http://localhost:8004/admin](http://localhost:8004/admin) using the bootstrapped superuser email and password from `FIRST_SUPERUSER_EMAIL` and `FIRST_SUPERUSER_PASSWORD`
+
+The product docs now run inside the same Compose stack and are available at [http://localhost:3001/baldin/docs](http://localhost:3001/baldin/docs).
 
 For deeper setup, service topology, and environment details, use [docs/docs/getting-started/quickstart.md](docs/docs/getting-started/quickstart.md), [docs/docs/engineering/local-development.md](docs/docs/engineering/local-development.md), and [docs/docs/reference/environment-variables.md](docs/docs/reference/environment-variables.md).
 
@@ -70,6 +81,7 @@ For deeper setup, service topology, and environment details, use [docs/docs/gett
 | `web` | FastAPI backend, API, and admin surface |
 | `crawler-worker` | Background worker consuming Redis jobs |
 | `frontend` | React/Vite frontend |
+| `docs` | Docusaurus product documentation |
 
 ## Contributing
 
@@ -79,7 +91,7 @@ Use the normal branch-and-pull-request flow against `main`, and install hooks be
 pre-commit install
 ```
 
-If you change backend API routes or schemas, regenerate contracts with `./scripts/update_frontend_schemas.sh` instead of editing `openapi.json` or `frontend/src/schema.d.ts` by hand. The canonical contributor workflow lives in [docs/docs/getting-started/contributing.md](docs/docs/getting-started/contributing.md).
+If you change backend API routes or schemas, regenerate contracts with `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` during active iteration and the normal `./scripts/update_frontend_schemas.sh` before push or review. Do not edit `openapi.json` or `frontend/src/schema.d.ts` by hand. The canonical contributor workflow lives in [docs/docs/getting-started/contributing.md](docs/docs/getting-started/contributing.md).
 
 ## Status And Caveats
 

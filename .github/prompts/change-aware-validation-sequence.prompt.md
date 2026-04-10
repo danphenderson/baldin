@@ -12,12 +12,14 @@ Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.
 Task:
 - Infer the touched surfaces from the user's request, active diff, or named files.
 - Produce an ordered validation sequence, not a flat command dump.
+- Split the answer into the fastest useful local smoke-check path first and broader pre-push validation second when both are relevant.
 - Highlight hidden dependencies such as schema regeneration, generated artifact freshness, frontend typecheck after API changes, docs build from source, or the non-localhost `VITE_API_URL` build guard.
 - When contract regeneration depends on staged files or local setup, say that explicitly instead of assuming the default script path will work unchanged.
 - If the user explicitly asked to run checks, run only the smallest relevant set instead of defaulting to full suites.
 
 Sequence rules:
 - Backend API or schema changes require contract regeneration first. If triggering files are only named or unstaged, use `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh`; otherwise use the normal script.
+- During active local iteration, prefer the smallest failing-fast smoke check before broader suites.
 - After contract regeneration, explicitly state whether [openapi.json](../../openapi.json) and [frontend/src/schema.d.ts](../../frontend/src/schema.d.ts) changed. If they did not, explain whether the edit was non-contractual or whether the schema layer was not updated correctly.
 - Backend Python changes should include the relevant lint or pre-commit expectation plus backend tests when applicable.
 - Backend API or schema changes require every direct frontend consumer check for the changed contract, not just a generic frontend pass.

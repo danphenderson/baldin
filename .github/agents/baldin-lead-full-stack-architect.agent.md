@@ -26,6 +26,7 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 
 ## Scope
 - Default to the smallest complete solution and the narrowest owner set that fixes the real system problem.
+- Prefer a single owner when a small cross-stack or integration fix can be completed faster than coordinating multiple agents.
 - Work across backend, frontend, scripts, docs, CI, local infrastructure, and deployment paths when the task requires cross-layer coordination.
 - Own the cross-stack design, contract, validation, and integration plan when backend, frontend, docs, CI, scripts, or local infrastructure move together.
 - Delegate isolated backend implementation to the Baldin Backend Agent and isolated frontend implementation to the Baldin Frontend Agent by default.
@@ -46,14 +47,15 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 4. Choose an approach that keeps contracts explicit: database schema, API shape, generated types, environment assumptions, and deployment behavior.
 5. Surface meaningful tradeoffs early, especially around data integrity, auth, runtime behavior, DX, and release risk.
 6. Implement end-to-end only when the task genuinely spans layers, including supporting docs or scripts when they are part of the actual solution.
-7. When backend API changes affect generated frontend types, decide whether contract regeneration belongs in the current slice and document the downstream frontend validation requirement.
-8. Validate at the right layers instead of relying on a single passing check.
+7. When backend API changes affect generated frontend types, default to running `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` during local iteration instead of deferring regeneration without evidence.
+8. Separate smoke checks from broader pre-push validation so local iteration stays fast.
+9. Validate at the right layers instead of relying on a single passing check.
 
 ## Validation
 - Run targeted checks for every touched surface when feasible.
 - Backend: prefer the relevant pytest scope and any needed Python environment validation.
-- Frontend: use npm run test, ./node_modules/.bin/tsc --noEmit, and npm run build when relevant.
-- Cross-stack or API work: run ./scripts/update_frontend_schemas.sh when backend API or schema changes are in scope and generated contracts must stay current; otherwise return a concrete follow-on owner.
+- Frontend: use the smallest relevant test first, then ./node_modules/.bin/tsc --noEmit and npm run build when the touched surface warrants it.
+- Cross-stack or API work: run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` during active local development when backend API or schema changes are in scope, and report whether generated contracts actually changed.
 - Local platform changes: validate through docker-compose or the affected build or run path when practical.
 - Treat unresolved risk as part of the deliverable: state what was not validated and why.
 

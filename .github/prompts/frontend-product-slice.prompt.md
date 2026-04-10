@@ -7,7 +7,7 @@ model: "GPT-5 (copilot)"
 ---
 Implement this in frontend only.
 
-Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Run The Right Checks](../../docs/docs/engineering/testing.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), and [Regenerate API Contracts](../../docs/docs/engineering/contract-management.md) when a contract concern is suspected.
+Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Work Locally](../../docs/docs/engineering/local-development.md), [Run The Right Checks](../../docs/docs/engineering/testing.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), and [Regenerate API Contracts](../../docs/docs/engineering/contract-management.md) when a contract concern is suspected.
 
 Task:
 - Confirm the user-facing problem in the current frontend code before editing: page flow, component state, service consumption, route behavior, loading or error state, accessibility, or information architecture.
@@ -15,7 +15,8 @@ Task:
 - Implement the smallest complete product-facing fix or improvement that solves the stated issue.
 - Preserve the established design and interaction language unless the user explicitly asked for a redesign.
 - Add or update targeted frontend tests when shipped behavior changes materially.
-- Run `npm run test`, strict TypeScript validation, and the production build when shipped behavior changes. Use a non-localhost `VITE_API_URL` for build validation.
+- Start with the smallest useful frontend test or watch loop while the local Compose stack stays warm.
+- Run strict TypeScript validation and the production build only when the touched surface, changed contract usage, or user request makes them necessary. Use a non-localhost `VITE_API_URL` for build validation.
 - Treat generated frontend types as read-only. Do not hand-edit [frontend/src/schema.d.ts](../../frontend/src/schema.d.ts).
 
 Return:

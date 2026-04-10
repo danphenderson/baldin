@@ -7,16 +7,17 @@ model: "GPT-5 (copilot)"
 ---
 Implement this in backend only.
 
-Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Run The Right Checks](../../docs/docs/engineering/testing.md), [Regenerate API Contracts](../../docs/docs/engineering/contract-management.md), and [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md).
+Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Work Locally](../../docs/docs/engineering/local-development.md), [Run The Right Checks](../../docs/docs/engineering/testing.md), [Regenerate API Contracts](../../docs/docs/engineering/contract-management.md), and [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md).
 
 Task:
 - Inspect the actual backend code path before editing: routes, schemas, models, services, extractor logic, ETL flow, or tests.
 - Keep the change inside `backend/app/**`, `backend/etl/**`, and `backend/app/tests/**` unless a stop condition is hit.
 - Implement the smallest complete fix or slice that resolves the stated backend problem.
 - Add or update targeted backend tests when behavior changes materially.
-- Prefer the narrowest useful pytest scope and the relevant `ruff` checks instead of the full backend suite unless the touched surface demands broader coverage.
+- Prefer the narrowest useful pytest scope and the relevant `ruff` checks first. Treat full backend coverage as a later confidence pass unless the touched surface demands broader coverage immediately.
 - Preserve current API behavior unless the request explicitly requires a contract change.
 - Do not hand-edit generated artifacts such as [openapi.json](../../openapi.json) or [frontend/src/schema.d.ts](../../frontend/src/schema.d.ts).
+- If routes or schemas change and contract regeneration is straightforward, run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` in the same local loop and report whether the generated artifacts changed.
 
 Return:
 - Status: complete, partial, or blocked.
@@ -29,6 +30,6 @@ Return:
 - Recommended next owner, if any.
 
 Stop and hand off if:
-- The change affects the public API contract, schema generation, or downstream frontend consumers. Use [API Contract Change Orchestrator](./api-contract-change-orchestrator.prompt.md) or hand off to [Baldin Lead Full-Stack Architect](../agents/baldin-lead-full-stack-architect.agent.md).
+- The change affects the public API contract and contract regeneration or downstream frontend fallout is not straightforward. Use [API Contract Change Orchestrator](./api-contract-change-orchestrator.prompt.md) or hand off to [Baldin Lead Full-Stack Architect](../agents/baldin-lead-full-stack-architect.agent.md).
 - The real fix requires frontend, docs, CI, scripts, docker-compose, or broader repo-boundary work.
 - The user is actually asking for planning or owner selection rather than direct backend execution. Use [Plan Slice Kickoff](./plan-slice-kickoff.prompt.md) or [Cross-Stack Workstream Router](./cross-stack-workstream-router.prompt.md).

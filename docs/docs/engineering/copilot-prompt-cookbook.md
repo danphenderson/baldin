@@ -5,7 +5,7 @@ title: Prompt The Right Agent
 description: Choose the right agent, scope prompts cleanly, and require consistent handbacks.
 ---
 
-<!-- last-verified: 2026-04-08 -->
+<!-- last-verified: 2026-04-09 -->
 
 # Prompt The Right Agent
 
@@ -16,6 +16,16 @@ Need concrete before-and-after wording examples? See [Rewrite Weak Prompts](./co
 ## Recommended Operating Model
 
 The Executive Summary review supports a local-first operating model for Baldin: keep most work inside the repo with clear specialist ownership, use asynchronous cloud-style workflows only for bounded tasks, and treat automated review as an extra check instead of a merge authority.
+
+## Fast Local Entry Path
+
+Assume the local `docker-compose.yml` stack is the default development environment and optimize for inspect -> patch -> smoke-check loops.
+
+- Backend-only and already clear: start with `Backend Runtime Slice`.
+- Frontend-only and already clear: start with `Frontend Product Slice`.
+- Small cross-stack, contract, compose, or local integration fix: start with `Local Preview Integration Fix` or the Baldin Lead Full-Stack Architect directly.
+- Use `Issue Dispatch Kickoff`, `Plan Slice Kickoff`, or Baldin Project Manager only when the owner, scope, or sequencing is not already obvious.
+- Ask for the lightest useful smoke check first. Add broader type, build, docs, or full-suite validation only when the touched surface or handoff needs it.
 
 ## Instruction Layers
 
@@ -31,7 +41,7 @@ Prompts and agents should link back to these layers and to the docs below instea
 
 | Workflow | When to prefer it | Baldin guidance |
 |----------|-------------------|-----------------|
-| Local-first workspace agents | Day-to-day features, fixes, and investigations | Default path. Start with Baldin Project Manager if ownership is unclear, then hand work to the smallest correct specialist. |
+| Local-first workspace agents | Day-to-day features, fixes, and investigations | Default path. If ownership is obvious, start with the specialist directly. Use Baldin Project Manager only when ownership or sequencing is unclear. |
 | Async issue or PR agent work | Well-scoped backlog items or long-running tasks | Good for bounded follow-up work, but keep the prompt explicit and review the resulting branch or PR like any other change. |
 | Copilot code review | Pull-request review and missed-routine-issue detection | Recommended as a second reviewer, not a replacement for human approval. |
 | Explore scouting | Read-only repository discovery before implementation | Use it to reduce search overhead and confirm ownership, not to make edits. |
@@ -72,7 +82,7 @@ If you already know the task shape, use these workspace prompts from chat with `
 
 | Prompt | Use when |
 |--------|----------|
-| `Issue Dispatch Kickoff` | You are starting from a GitHub issue, PR comment, or backlog ticket and want a dispatch-ready execution slice with the right owner and handoff packet. |
+| `Issue Dispatch Kickoff` | You are starting from a GitHub issue, PR comment, or backlog ticket and the right owner or execution slice is not already obvious. |
 | `Backend Runtime Slice` | You want a backend-only implementation entry point for FastAPI, auth, model, extractor, ETL, or backend test work that should stay inside `backend/`. |
 | `Frontend Product Slice` | You want a frontend-only implementation entry point for page, UX, IA, accessibility, route, state, or typed service-consumption work against the current contract. |
 | `Local Preview Integration Fix` | You want one cross-stack owner to reproduce and fix a local-first preview bug that may touch backend, frontend, contracts, scripts, or docker-compose. |
@@ -82,11 +92,10 @@ If you already know the task shape, use these workspace prompts from chat with `
 | `API Contract Change Orchestrator` | You changed routes, schemas, response shapes, or generated frontend types and need contract ownership, regeneration, and downstream validation. |
 | `Change-Aware Validation Sequence` | You want the exact ordered Baldin checks for a specific backend, frontend, docs, CI, or contract change. |
 | `Issue Cleanup Orchestrator` | You want the Baldin Project Manager to clean up open issues in order: dedupe or rescope, rewrite for dispatch, then assign labels, project fields, milestones, and relationships. |
-| `Plan Slice Kickoff` | You want a plan section turned into a bounded work slice with the correct owner, scope, stop conditions, and validation. |
+| `Plan Slice Kickoff` | You want a plan section turned into a bounded work slice and the owner or sequencing still needs routing. |
 | `Documentation Impact Review` | You changed code, workflow docs, plans, prompts, or repo rules and want a targeted docs-impact audit before stale guidance spreads. |
 | `Cross-Stack Workstream Router` | You have a backend plus frontend plus docs or CI style task and want the smallest low-conflict owner split with explicit handoff packets. |
 | `Multi-Agent Handoff Synthesizer` | You already have outputs from one or more Baldin agents and need a single evidence-backed handoff packet for the next owner, reviewer, or operator. |
-| `UX Redesign Spike Dispatch` | You want three materially different redesign concepts for a Baldin page or flow compared and a recommendation before implementation. |
 
 ## Prompt Decision Table
 
@@ -94,7 +103,7 @@ Use this table to choose the right prompt for a task. Prompts are classified as 
 
 | Prompt | Classification | Purpose | When to use instead of a simpler alternative |
 |--------|---------------|---------|----------------------------------------------|
-| Issue Dispatch Kickoff | core | Start from a GitHub issue or backlog ticket | Default entry for issue-driven work |
+| Issue Dispatch Kickoff | advanced | Route issue-shaped input when owner or scope is unclear | When a ticket is not already dispatch-ready for a known specialist |
 | Backend Runtime Slice | core | Backend-only implementation entry point | When the task is confirmed backend-only |
 | Frontend Product Slice | core | Frontend-only implementation entry point | When the task is confirmed frontend-only |
 | Local Preview Integration Fix | core | Cross-stack local preview bug | When a local bug spans backend + frontend |
@@ -104,10 +113,9 @@ Use this table to choose the right prompt for a task. Prompts are classified as 
 | Hard-Gate PR Review | core | Pre-merge review of the active PR | Before merging significant changes |
 | Cross-Stack Workstream Router | core | Owner split for multi-surface tasks | When a task touches backend + frontend + docs/CI |
 | Multi-Agent Handoff Synthesizer | core | Consolidate agent outputs into one handoff | After multiple agents return results |
-| Plan Slice Kickoff | core | Turn a plan section into a work slice | When starting from plans/ rather than issues |
+| Plan Slice Kickoff | advanced | Turn a plan section into a work slice | When starting from plans/ and the owner or sequencing is still not obvious |
 | Deep Think Spike | advanced | Bounded technical spike | When the answer requires deep research before choosing an implementation path |
 | Deep Think Epic Planner | advanced | Phased epic planning from a theme or plan | When a large feature needs story breakdown and dependency mapping |
-| UX Redesign Spike Dispatch | advanced | Three UX redesign concepts with recommendation | When you need structured concept comparison before committing to a UX direction; use Deep Think Spike for general technical spikes |
 | Issue Cleanup Orchestrator | maintenance | Multi-pass backlog cleanup | When the issue backlog needs deduplication, rescoping, or enrichment |
 
 ## Prompt Lifecycle Rules
@@ -149,7 +157,6 @@ Prompt files use the prompt `name` after `/`, and workspace skills use the skill
 | `Documentation Impact Review` | `/Documentation Impact Review applications detail page now uses GET /applications/{id}` |
 | `Cross-Stack Workstream Router` | `/Cross-Stack Workstream Router add crawler pause status to backend, frontend, docs, and validation` |
 | `Multi-Agent Handoff Synthesizer` | `/Multi-Agent Handoff Synthesizer backend applications tests landed and frontend service migration is next` |
-| `UX Redesign Spike Dispatch` | `/UX Redesign Spike Dispatch the applications detail page feels dense and confusing after adding attachments and status history` |
 
 ## Prompt Shape
 
@@ -402,8 +409,9 @@ Allowed paths:
 Validation:
 - run the most relevant pytest scope
 - add a regression test
+- run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` only if routes or schemas changed
 
-Stop and hand off if this changes the public API contract.
+Stop and hand off if the API contract changes and downstream frontend validation is not straightforward.
 ```
 
 ### Frontend-only UX improvement
@@ -423,8 +431,8 @@ Allowed paths:
 - ./frontend/**
 
 Validation:
-- run npm run test
-- run ./node_modules/.bin/tsc --noEmit
+- run the smallest useful frontend test first
+- run ./node_modules/.bin/tsc --noEmit when shared typed surfaces changed
 
 Stop and hand off if the needed state is not available from the current API contract.
 ```
@@ -445,7 +453,7 @@ This requires a schema change, API update, generated type refresh, and frontend 
 Validation:
 - run relevant backend tests
 - run relevant frontend tests and typecheck
-- run ./scripts/update_frontend_schemas.sh
+- run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` during active iteration
 
 Delegate isolated backend-only and frontend-only slices by default, but keep contract ownership here.
 ```

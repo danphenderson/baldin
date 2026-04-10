@@ -8,11 +8,11 @@ model: "GPT-5 (copilot)"
 <!-- classification: maintenance -->
 Clean up the targeted Baldin issue backlog in a strict multi-pass sequence.
 
-Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), [REPO_EXECUTION_PLAN](../../plans/REPO_EXECUTION_PLAN.md), [BACKLOG_AUDIT](../../plans/BACKLOG_AUDIT.md), the current issue templates under [ISSUE_TEMPLATE](../ISSUE_TEMPLATE), and [apply_backlog_audit.sh](../../scripts/apply_backlog_audit.sh).
+Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), [REPO_EXECUTION_PLAN](../../plans/REPO_EXECUTION_PLAN.md), the current issue templates under [ISSUE_TEMPLATE](../ISSUE_TEMPLATE), and [apply_backlog_audit.sh](../../scripts/apply_backlog_audit.sh).
 
 Task:
 - Build a live inventory of the targeted issues before making any edits. Capture current title, state, body shape, labels, assignees, project membership, milestone, and relationship state.
-- Reconcile the live issue state against the latest repo evidence before changing anything. If [BACKLOG_AUDIT](../../plans/BACKLOG_AUDIT.md) or current code contradicts an issue body, use the repo evidence as the source of truth and call out the drift explicitly.
+- Reconcile the live issue state against the latest repo evidence before changing anything. If the earlier backlog audit reflected in [apply_backlog_audit.sh](../../scripts/apply_backlog_audit.sh) or current code contradicts an issue body, use the repo evidence as the source of truth and call out the drift explicitly.
 - Treat the workflow as operator-assisted whenever GitHub permissions, Project v2 setup, milestone creation, or relationship writes are unavailable. Do not pretend blocked GitHub writes were completed.
 - Run the cleanup passes in this exact order and do not skip ahead.
 
@@ -56,7 +56,7 @@ Current backlog defaults to check explicitly when they appear in scope:
 
 Return:
 - Objective summary.
-- Live backlog snapshot and any drift from [BACKLOG_AUDIT](../../plans/BACKLOG_AUDIT.md).
+- Live backlog snapshot and any drift from the earlier backlog audit reflected in [apply_backlog_audit.sh](../../scripts/apply_backlog_audit.sh).
 - Pass-by-pass actions taken in order.
 - Issues closed, merged, rewritten, or left unchanged and why.
 - Label, project, milestone, and relationship summary.

@@ -104,3 +104,19 @@ services:
       - 5173:5173
     depends_on:
       - web
+
+  docs:
+    build:
+      context: ./docs
+      dockerfile: ./Dockerfile
+    command: npm run start -- --host 0.0.0.0 --port 3000 --no-open
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./docs:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - 3001:3000

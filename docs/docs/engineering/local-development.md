@@ -2,16 +2,26 @@
 sidebar_position: 1
 slug: /engineering/local-development
 title: Work Locally
-description: Work locally with Docker Compose or outside-container loops and the shortest next steps.
+description: Work locally with Docker Compose first, then use the shortest smoke-check loop that proves the change.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-09 -->
 
 # Work Locally
 
-Baldin uses Docker Compose as the local-first entry point. All six services start with a single command.
+Baldin uses Docker Compose as the local-first entry point. All seven app services start with a single command.
 
 If you use Baldin's workspace skills, `/baldin-local-stack-doctor` helps triage local Compose failures, `test_db` connectivity problems, schema-drift resets, and PostgreSQL collation-repair decisions.
+
+## Fastest Iteration Loop
+
+1. Start the stack once from the repo root with `docker-compose up --build`.
+2. Keep it running while you work. Backend edits reload through Uvicorn and frontend edits reload through Vite HMR.
+3. Use the smallest smoke check that proves the current slice instead of starting with full suites.
+4. If backend API routes or schemas changed before you staged files, run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh`.
+5. Use broader validation only when the touched surface needs it or the branch is ready for handoff or push.
+
+Host-side backend tests should use `127.0.0.1:5431` for `test_db`. Compose service-to-service traffic uses `test_db` as the hostname.
 
 ## Services
 
@@ -23,6 +33,7 @@ If you use Baldin's workspace skills, `/baldin-local-stack-doctor` helps triage 
 | `web` | FastAPI (Uvicorn, hot-reload) | 8004→8000 | `./backend` mounted |
 | `crawler-worker` | Python background worker | none | `./backend` mounted |
 | `frontend` | Vite dev server | 5173 | `./frontend` mounted |
+| `docs` | Docusaurus dev server | 3001→3000 | `./docs` mounted |
 
 ## Starting the Stack
 
@@ -30,7 +41,9 @@ If you use Baldin's workspace skills, `/baldin-local-stack-doctor` helps triage 
 docker-compose up --build
 ```
 
-The backend mounts `./backend` as a volume and runs Uvicorn with `--reload`, so Python changes take effect immediately. The frontend mounts `./frontend` and uses Vite's HMR.
+The backend mounts `./backend` as a volume and runs Uvicorn with `--reload`, so Python changes take effect immediately. The frontend mounts `./frontend` and uses Vite's HMR. The docs service mounts `./docs` and serves the Docusaurus site through the same stack at `http://localhost:3001/baldin/docs`.
+
+Leave the stack running across multiple edits. Rebuild only when Docker image inputs changed, such as dependencies or Dockerfiles.
 
 Redis backs the local background-job queue, and `crawler-worker` consumes crawler and seed jobs from that queue while the API stays responsive.
 
@@ -58,6 +71,8 @@ If startup logs show a PostgreSQL `collation version mismatch` warning after a D
 This reindexes `postgres`, `template1`, and the app database in both local Postgres clusters, then refreshes PostgreSQL's stored collation version metadata. If you do not need to preserve local data, `./scripts/reset_local_db.sh` remains the simpler option.
 
 ## Working Outside Containers
+
+Outside-container loops are secondary debug paths. Use them when you specifically need host tooling or an isolated service run.
 
 You can also run backend or frontend outside Docker:
 
@@ -90,13 +105,21 @@ npm run dev
 
 Requires `VITE_API_URL` to be set (defaults to `http://localhost:8004` for local development).
 
+If you want a live docs server outside Compose, run:
+
+```bash
+npm --prefix docs run start
+```
+
 ## Related Local Tasks
 
 | Task | Command |
 | --- | --- |
 | Reset local databases | `./scripts/reset_local_db.sh` |
-| Regenerate API contracts | `./scripts/update_frontend_schemas.sh` |
+| Regenerate API contracts during active work | `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` |
+| Regenerate API contracts from staged files | `./scripts/update_frontend_schemas.sh` |
 | Build docs site | `npm --prefix docs run build` |
+| Run docs dev server | `npm --prefix docs run start` |
 
 ## Related Docs
 
@@ -110,6 +133,7 @@ Requires `VITE_API_URL` to be set (defaults to `http://localhost:8004` for local
 | URL | What |
 |-----|------|
 | http://localhost:5173 | Frontend |
+| http://localhost:3001/baldin/docs | Product docs |
 | http://localhost:8004 | API root |
 | http://localhost:8004/docs | Swagger UI |
 | http://localhost:8004/redoc | ReDoc |

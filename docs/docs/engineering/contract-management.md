@@ -2,10 +2,10 @@
 sidebar_position: 3
 slug: /engineering/contract-management
 title: Regenerate API Contracts
-description: Regenerate OpenAPI and frontend types without drifting from the backend contract.
+description: Regenerate OpenAPI and frontend types without drifting from the backend contract or slowing local iteration unnecessarily.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-09 -->
 
 # Regenerate API Contracts
 
@@ -34,6 +34,12 @@ Both files are **generated artifacts** — do not hand-edit them.
 SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh
 ```
 
+## During Active Local Iteration
+
+Use `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` while you are still editing unstaged backend schema or route files. This keeps the local inspect -> patch -> smoke-check loop moving without waiting for a staged-file gate.
+
+After the script runs, confirm whether `openapi.json` and `frontend/src/schema.d.ts` actually changed. The script can exit successfully without updating anything when the backend change does not alter the FastAPI schema surface.
+
 ### What the script does
 
 1. **Gate check:** Exits early unless `backend/app/schemas.py` or `backend/app/api/**/*.py` files are staged in git (or `SCHEMA_UPDATE_FORCE=1` is set).
@@ -57,10 +63,10 @@ The **schema-freshness** CI job regenerates the contract in a clean environment 
 ## Common Issues
 
 **Script exits without doing anything:**
-The script only runs when it detects staged backend schema or API route files. Set `SCHEMA_UPDATE_FORCE=1` when validating unstaged changes or broader backend work.
+The script only runs when it detects staged backend schema or API route files. A quiet exit with code 0 is normal in that case. Set `SCHEMA_UPDATE_FORCE=1` when validating unstaged changes or broader backend work.
 
 **OpenAPI generation fails while importing the FastAPI app:**
-The script imports `app.main`, so backend env requirements still apply during regeneration. Load `backend/.env.example` or otherwise provide the required backend env values, including a non-empty `OPENAI_API_KEY`, before rerunning.
+The script imports `app.main`, so backend env requirements still apply during regeneration. Load `backend/.env.example` or otherwise provide the required backend env values, including a non-empty `OPENAI_API_KEY`, before rerunning. A dummy local value is fine when real API access is not needed.
 
 **TypeScript generation fails because `openapi-typescript` is unavailable:**
 Install frontend dependencies in `frontend/` so `npm exec openapi-typescript` can resolve the local dev dependency.

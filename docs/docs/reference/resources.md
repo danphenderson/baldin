@@ -5,7 +5,7 @@ title: Documentation Resources
 description: Links to all Baldin documentation assets — API docs, admin, repo files, and related guides.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-09 -->
 
 # Documentation Resources
 
@@ -20,6 +20,7 @@ These links work when the local Docker Compose stack is running (`docker-compose
 | Resource | URL | Description |
 |----------|-----|-------------|
 | **Frontend** | [http://localhost:5173](http://localhost:5173) | React/Vite application UI |
+| **Product docs** | [http://localhost:3001/baldin/docs](http://localhost:3001/baldin/docs) | Docusaurus product documentation |
 | **Swagger UI** | [http://localhost:8004/docs](http://localhost:8004/docs) | Interactive API explorer |
 | **ReDoc** | [http://localhost:8004/redoc](http://localhost:8004/redoc) | Readable API reference |
 | **OpenAPI JSON** | [http://localhost:8004/openapi.json](http://localhost:8004/openapi.json) | Machine-readable API spec |
@@ -50,6 +51,7 @@ See [Regenerate API Contracts](../engineering/contract-management.md) for when a
 | **Backend Dockerfile** | `backend/Dockerfile` | Candidate image build |
 | **Backend Dockerfile (dev target)** | `backend/Dockerfile` | Local development image via the `dev` build target |
 | **Frontend Dockerfile** | `frontend/Dockerfile` | Dev server container |
+| **Docs Dockerfile** | `docs/Dockerfile` | Docusaurus dev server container |
 | **CDK Stacks** | `cdk/` | Reference only — not production-approved |
 | **Environment Template** | `backend/.env.example` | Starting point for `backend/.env` |
 
@@ -65,7 +67,7 @@ See [Regenerate API Contracts](../engineering/contract-management.md) for when a
 
 | Resource | Description |
 |----------|-------------|
-| **This site** | Docusaurus documentation at `docs/` — architecture, engineering, features, and reference |
+| **This site** | Docusaurus documentation at `docs/`, served locally through Docker Compose at `http://localhost:3001/baldin/docs` |
 | **Source files** | `docs/docs/` — Markdown sources for all pages |
 
 ## Related Docs

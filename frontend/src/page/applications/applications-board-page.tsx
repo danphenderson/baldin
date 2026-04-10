@@ -39,6 +39,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({ app, column, onView, onAdvanc
   const theme = useTheme();
   const lead = app.lead;
   const companyName = lead?.companies?.[0]?.name;
+  const isRegistered = column.key === 'registered';
   const canAdvance = nextStage(column.key) !== null;
   const isOverdue = !!(app.next_step_due && new Date(app.next_step_due) < new Date());
 
@@ -133,8 +134,34 @@ const ApplicationCard: React.FC<AppCardProps> = ({ app, column, onView, onAdvanc
             className="card-actions"
             direction="row"
             spacing={0}
+            alignItems="center"
           >
-            {canAdvance && (
+            {isRegistered && canAdvance ? (
+              <Tooltip title="Move to Applied and start tracking">
+                <Button
+                  size="small"
+                  variant="outlined"
+                  endIcon={<ArrowIcon sx={{ fontSize: '0.75rem !important' }} />}
+                  onClick={(e) => { e.stopPropagation(); onAdvance(app); }}
+                  aria-label="Add to pipeline"
+                  sx={{
+                    fontSize: '0.7rem',
+                    px: 1,
+                    py: 0.25,
+                    minHeight: 0,
+                    lineHeight: 1.5,
+                    borderRadius: 1.5,
+                    borderColor: '#06b6d4',
+                    color: '#06b6d4',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    '&:hover': { borderColor: '#0891b2', bgcolor: alpha('#06b6d4', 0.07) },
+                  }}
+                >
+                  Add to Pipeline
+                </Button>
+              </Tooltip>
+            ) : canAdvance ? (
               <Tooltip title={`Move to ${COLUMNS[COLUMNS.findIndex((c) => c.key === column.key) + 1]?.label}`}>
                 <IconButton
                   size="small"
@@ -146,7 +173,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({ app, column, onView, onAdvanc
                   <ArrowIcon sx={{ fontSize: '0.875rem' }} />
                 </IconButton>
               </Tooltip>
-            )}
+            ) : null}
             <Tooltip title="Reject">
               <IconButton
                 size="small"

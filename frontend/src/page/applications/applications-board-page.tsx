@@ -29,8 +29,10 @@ import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import type { ApplicationRead } from '../../service/applications';
+import { getStatusColors } from '../../theme/status-colors';
+import { PageTitle } from '../../component/common/text';
 import {
-  useApplications, ALL_STATUS_COLUMNS, COLUMNS, COLUMN_EMPTY_HINTS, relativeDate, nextStage,
+  useApplications, useStageColumns, COLUMN_EMPTY_HINTS, relativeDate, nextStage,
   applicationDocumentCount,
   type Column, type Outcome,
 } from './use-applications';
@@ -41,36 +43,12 @@ import {
 
 type BoardStatus = Exclude<ApplicationRead['status'], null | undefined>;
 
-const REGISTERED_COLUMN = ALL_STATUS_COLUMNS.find((column) => column.key === 'registered')!;
-const CLOSED_COLUMNS = ALL_STATUS_COLUMNS.filter(
-  (column) => column.key === 'rejected' || column.key === 'withdrawn',
-);
 const BOARD_EMPTY_HINTS: Record<string, string> = {
   registered: 'Registered applications stay here until you are ready to work them in the pipeline.',
   ...COLUMN_EMPTY_HINTS,
   rejected: 'Drop here or use Move to mark an application as rejected.',
   withdrawn: 'Drop here or use Move to mark an application as withdrawn.',
 };
-const BOARD_SECTIONS: Array<{ key: string; title: string; description: string; columns: Column[] }> = [
-  {
-    key: 'intake',
-    title: 'Intake',
-    description: 'Registered applications stay separate until you deliberately enter the active pipeline.',
-    columns: [REGISTERED_COLUMN],
-  },
-  {
-    key: 'pipeline',
-    title: 'Active Pipeline',
-    description: 'Drag cards or use Move to keep the funnel current without opening the detail page.',
-    columns: COLUMNS,
-  },
-  {
-    key: 'closed',
-    title: 'Closed',
-    description: 'Rejected and withdrawn cards remain movable so reopening still goes through the explicit backend semantics.',
-    columns: CLOSED_COLUMNS,
-  },
-];
 
 function boardStatusKey(app: ApplicationRead): BoardStatus {
   return ((app.outcome ?? app.stage ?? app.status ?? 'applied') as string).toLowerCase() as BoardStatus;
@@ -111,6 +89,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
   isDragging = false,
 }) => {
   const theme = useTheme();
+  const { columns: stageColumns, allStatusColumns } = useStageColumns();
   const lead = app.lead;
   const companyName = lead?.companies?.[0]?.name;
   const currentStatus = boardStatusKey(app);
@@ -120,7 +99,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
   const isOverdue = !!(app.next_step_due && new Date(app.next_step_due) < new Date());
   const hasReminder = Boolean(app.next_step || app.next_step_due);
   const documentCount = applicationDocumentCount(app);
-  const moveTargets = ALL_STATUS_COLUMNS.filter((option) => option.key !== currentStatus) as Column[];
+  const moveTargets = allStatusColumns.filter((option) => option.key !== currentStatus) as Column[];
   const [editingReminder, setEditingReminder] = useState(false);
   const [draftNextStep, setDraftNextStep] = useState(app.next_step ?? '');
   const [draftNextStepDue, setDraftNextStepDue] = useState(app.next_step_due ? app.next_step_due.slice(0, 10) : '');
@@ -408,18 +387,18 @@ const ApplicationCard: React.FC<AppCardProps> = ({
                     minHeight: 0,
                     lineHeight: 1.5,
                     borderRadius: 1.5,
-                    borderColor: '#06b6d4',
-                    color: '#06b6d4',
+                    borderColor: theme.palette.primary.main,
+                    color: theme.palette.primary.main,
                     fontWeight: 600,
                     textTransform: 'none',
-                    '&:hover': { borderColor: '#0891b2', bgcolor: alpha('#06b6d4', 0.07) },
+                    '&:hover': { borderColor: theme.palette.primary.dark, bgcolor: alpha(theme.palette.primary.main, 0.07) },
                   }}
                 >
                   Add to Pipeline
                 </Button>
               </Tooltip>
             ) : !isClosedStatus && canAdvance ? (
-              <Tooltip title={`Move to ${COLUMNS[COLUMNS.findIndex((c) => c.key === column.key) + 1]?.label}`}>
+              <Tooltip title={`Move to ${stageColumns[stageColumns.findIndex((c) => c.key === column.key) + 1]?.label}`}>
                 <IconButton
                   size="small"
                   color="primary"
@@ -569,9 +548,9 @@ const EmptyState: React.FC = () => {
       >
         <AssignmentIcon sx={{ fontSize: 36, color: theme.palette.primary.main }} />
       </Box>
-      <Typography variant="h5" fontWeight={700} gutterBottom>
+      <PageTitle gutterBottom>
         No applications yet
-      </Typography>
+      </PageTitle>
       <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400, mb: 2 }}>
         When you apply to leads, they&apos;ll appear here as a pipeline board so you can track every stage of your job search.
       </Typography>
@@ -743,6 +722,20 @@ const ApplicationsBoardPage: React.FC = () => {
   const navigate = useNavigate();
   const { token } = useContext(UserContext);
 
+  const { columns: COLUMNS, allStatusColumns: ALL_STATUS_COLUMNS } = useStageColumns();
+  const sc = getStatusColors(theme);
+
+  const { REGISTERED_COLUMN, CLOSED_COLUMNS, BOARD_SECTIONS } = useMemo(() => {
+    const reg = ALL_STATUS_COLUMNS.find((c) => c.key === 'registered')!;
+    const closed = ALL_STATUS_COLUMNS.filter((c) => c.key === 'rejected' || c.key === 'withdrawn');
+    const sections: Array<{ key: string; title: string; description: string; columns: Column[] }> = [
+      { key: 'intake', title: 'Intake', description: 'Registered applications stay separate until you deliberately enter the active pipeline.', columns: [reg] },
+      { key: 'pipeline', title: 'Active Pipeline', description: 'Drag cards or use Move to keep the funnel current without opening the detail page.', columns: COLUMNS },
+      { key: 'closed', title: 'Closed', description: 'Rejected and withdrawn cards remain movable so reopening still goes through the explicit backend semantics.', columns: closed },
+    ];
+    return { REGISTERED_COLUMN: reg, CLOSED_COLUMNS: closed, BOARD_SECTIONS: sections };
+  }, [COLUMNS, ALL_STATUS_COLUMNS]);
+
   const {
     applications,
     loading,
@@ -848,11 +841,11 @@ const ApplicationsBoardPage: React.FC = () => {
         >
           {[
             { label: 'Total', value: applications.length, color: theme.palette.text.primary },
-            { label: 'Registered', value: registeredApps.length, color: '#94a3b8' },
-            { label: 'Active', value: activeCount, color: '#06b6d4' },
-            { label: 'Interviewing', value: interviewCount, color: '#f59e0b' },
-            { label: 'Offers', value: offerCount, color: '#10b981' },
-            { label: 'Closed', value: closedApps.length, color: '#f43f5e' },
+            { label: 'Registered', value: registeredApps.length, color: sc.registered },
+            { label: 'Active', value: activeCount, color: sc.applied },
+            { label: 'Interviewing', value: interviewCount, color: sc.interviewing },
+            { label: 'Offers', value: offerCount, color: sc.offer },
+            { label: 'Closed', value: closedApps.length, color: sc.rejected },
             { label: 'Overdue', value: overdueCount, color: theme.palette.warning.main },
           ].map((stat) => (
             <Box key={stat.label} sx={{ textAlign: 'center', minWidth: 64, flexShrink: 0 }}>

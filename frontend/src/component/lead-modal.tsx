@@ -344,7 +344,7 @@ const CommentThread: React.FC<{
         p: { xs: 1.5, sm: 2 },
         borderRadius: 3,
         backgroundColor: nested ? 'transparent' : 'background.paper',
-        borderColor: nested ? 'divider' : alpha('#94a3b8', 0.16),
+        borderColor: 'divider',
       }}
     >
       <Stack spacing={1.25}>

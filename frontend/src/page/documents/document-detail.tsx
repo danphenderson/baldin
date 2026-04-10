@@ -23,6 +23,7 @@ import {
   type DocumentActivityRead, type DocumentActivityType, type DocumentDetailRead, type DocumentVersionRead, type DocumentKind, type DocumentStatus,
 } from '../../service/documents';
 import ShareDocumentDialog from '../../component/share-document-dialog';
+import { PageTitle } from '../../component/common/text';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -306,7 +307,7 @@ const DocumentDetailPage: React.FC = () => {
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>{doc.title}</Typography>
+              <PageTitle>{doc.title}</PageTitle>
               {doc.is_pinned && (
                 <PushPinIcon sx={{ fontSize: 18, color: accent, transform: 'rotate(45deg)' }} />
               )}

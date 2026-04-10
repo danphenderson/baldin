@@ -70,7 +70,7 @@ const LoginPage: React.FC = () => {
               boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}`,
             }}
           >
-            <Lock sx={{ color: '#fff', fontSize: 28 }} />
+            <Lock sx={{ color: 'common.white', fontSize: 28 }} />
           </Box>
           <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5 }}>Two-Factor Authentication</Typography>
           <Typography variant="body2" color="text.secondary">
@@ -78,7 +78,7 @@ const LoginPage: React.FC = () => {
           </Typography>
         </Box>
 
-        <Card sx={{ boxShadow: `0 8px 40px ${alpha('#000', 0.2)}` }}>
+        <Card sx={{ boxShadow: `0 8px 40px ${alpha(theme.palette.common.black, 0.2)}` }}>
           <CardContent sx={{ p: 4 }}>
             {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
 
@@ -105,7 +105,7 @@ const LoginPage: React.FC = () => {
                   },
                 }}
               >
-                {loading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Verify'}
+                {loading ? <CircularProgress size={24} sx={{ color: 'common.white' }} /> : 'Verify'}
               </Button>
             </form>
           </CardContent>
@@ -135,13 +135,13 @@ const LoginPage: React.FC = () => {
             boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}`,
           }}
         >
-          <LogoIcon sx={{ color: '#fff', fontSize: 28 }} />
+          <LogoIcon sx={{ color: 'common.white', fontSize: 28 }} />
         </Box>
         <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5 }}>Welcome back</Typography>
         <Typography variant="body2" color="text.secondary">Sign in to your employment autopilot</Typography>
       </Box>
 
-      <Card sx={{ boxShadow: `0 8px 40px ${alpha('#000', 0.2)}` }}>
+      <Card sx={{ boxShadow: `0 8px 40px ${alpha(theme.palette.common.black, 0.2)}` }}>
         <CardContent sx={{ p: 4 }}>
           {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
 
@@ -180,7 +180,7 @@ const LoginPage: React.FC = () => {
                 },
               }}
             >
-              {loading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Sign In'}
+              {loading ? <CircularProgress size={24} sx={{ color: 'common.white' }} /> : 'Sign In'}
             </Button>
           </form>
         </CardContent>

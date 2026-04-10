@@ -34,6 +34,7 @@ import {
   getCrawlerRuns, triggerCrawlerRun, cancelCrawlerRun, pauseCrawlerRun, resumeCrawlerRun,
   retryCrawlerRun,
 } from '../service/crawlers';
+import { getStatusColors } from '../theme/status-colors';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -58,19 +59,25 @@ const formatRelativeTime = (iso: string): string => {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
-const STATUS_CONFIG: Record<CrawlerRunStatus, { icon: React.ReactElement; color: string; label: string }> = {
-  success: { icon: <SuccessIcon fontSize="small" />, color: '#10b981', label: 'Success' },
-  failed: { icon: <ErrorIcon fontSize="small" />, color: '#f43f5e', label: 'Failed' },
-  pending: { icon: <PendingIcon fontSize="small" />, color: '#f59e0b', label: 'Pending' },
-  running: { icon: <RunningIcon fontSize="small" />, color: '#06b6d4', label: 'Running' },
-  cancelled: { icon: <CancelIcon fontSize="small" />, color: '#94a3b8', label: 'Cancelled' },
-  paused: { icon: <PauseIcon fontSize="small" />, color: '#eab308', label: 'Paused' },
-  pending_review: { icon: <PendingIcon fontSize="small" />, color: '#8b5cf6', label: 'Pending Review' },
+const getCrawlerStatusConfig = (theme: import('@mui/material/styles').Theme) => {
+  const sc = getStatusColors(theme);
+  return {
+    success: { icon: <SuccessIcon fontSize="small" />, color: sc.success, label: 'Success' },
+    failed: { icon: <ErrorIcon fontSize="small" />, color: sc.failed, label: 'Failed' },
+    pending: { icon: <PendingIcon fontSize="small" />, color: sc.pending, label: 'Pending' },
+    running: { icon: <RunningIcon fontSize="small" />, color: sc.running, label: 'Running' },
+    cancelled: { icon: <CancelIcon fontSize="small" />, color: sc.cancelled, label: 'Cancelled' },
+    paused: { icon: <PauseIcon fontSize="small" />, color: sc.paused, label: 'Paused' },
+    pending_review: { icon: <PendingIcon fontSize="small" />, color: sc.pending_review, label: 'Pending Review' },
+  } as Record<CrawlerRunStatus, { icon: React.ReactElement; color: string; label: string }>;
 };
 
-const SOURCE_COLORS: Record<CrawlerSourceType, string> = {
-  linkedin: '#0a66c2',
-  glassdoor: '#0caa41',
+const getSourceColors = (theme: import('@mui/material/styles').Theme) => {
+  const sc = getStatusColors(theme);
+  return {
+    linkedin: sc.linkedin,
+    glassdoor: sc.glassdoor,
+  } as Record<CrawlerSourceType, string>;
 };
 
 type PipelineFormState = {
@@ -113,6 +120,8 @@ const EMPTY_RUNS_PAGE: CrawlerRunsPaginatedRead = {
 const MotionCard = motion.create(Card);
 
 const RunStatusChip: React.FC<{ status: CrawlerRunStatus }> = ({ status }) => {
+  const theme = useTheme();
+  const STATUS_CONFIG = getCrawlerStatusConfig(theme);
   const cfg = STATUS_CONFIG[status];
   return (
     <Chip
@@ -155,7 +164,7 @@ const OverviewStrip: React.FC<{ pipelines: CrawlerPipelineRead[] }> = ({ pipelin
     { label: 'Pipelines', value: stats.total, icon: <PipelineIcon fontSize="small" /> },
     { label: 'Active', value: stats.active, icon: <SuccessIcon fontSize="small" /> },
     { label: 'Total runs', value: stats.totalRuns, icon: <TrendingIcon fontSize="small" /> },
-    { label: 'Failed runs', value: stats.failedRuns, color: stats.failedRuns > 0 ? '#f43f5e' : undefined, icon: <ErrorIcon fontSize="small" /> },
+    { label: 'Failed runs', value: stats.failedRuns, color: stats.failedRuns > 0 ? theme.palette.error.main : undefined, icon: <ErrorIcon fontSize="small" /> },
   ];
 
   return (
@@ -228,6 +237,8 @@ const CrawlerPipelineCard: React.FC<{
   index,
 }) => {
   const theme = useTheme();
+  const STATUS_CONFIG = getCrawlerStatusConfig(theme);
+  const SOURCE_COLORS = getSourceColors(theme);
   const lastStatusKey = pipe.last_run_status ?? null;
   const lastCfg = lastStatusKey ? STATUS_CONFIG[lastStatusKey] : null;
   const expanded = expandedId === pipe.id;
@@ -286,7 +297,7 @@ const CrawlerPipelineCard: React.FC<{
               </IconButton>
             </Tooltip>
             <Tooltip title={pipe.enabled ? 'Disable' : 'Enable'}>
-              <IconButton size="small" aria-label={`Toggle ${pipe.name}`} onClick={onToggleEnabled} sx={{ color: pipe.enabled ? '#10b981' : theme.palette.text.disabled }}>
+              <IconButton size="small" aria-label={`Toggle ${pipe.name}`} onClick={onToggleEnabled} sx={{ color: pipe.enabled ? theme.palette.success.main : theme.palette.text.disabled }}>
                 <DotIcon sx={{ fontSize: 14 }} />
               </IconButton>
             </Tooltip>
@@ -311,8 +322,8 @@ const CrawlerPipelineCard: React.FC<{
             label={pipe.enabled ? 'Enabled' : 'Disabled'}
             size="small"
             sx={{
-              backgroundColor: alpha(pipe.enabled ? '#10b981' : '#94a3b8', 0.12),
-              color: pipe.enabled ? '#10b981' : '#94a3b8',
+              backgroundColor: alpha(pipe.enabled ? theme.palette.success.main : theme.palette.text.secondary, 0.12),
+              color: pipe.enabled ? theme.palette.success.main : theme.palette.text.secondary,
               fontWeight: 600,
               fontSize: '0.65rem',
               height: 22,

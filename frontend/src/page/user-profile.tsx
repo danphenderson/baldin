@@ -30,6 +30,7 @@ import { createConnection, getConnections } from '../service/connections';
 import { createConversation } from '../service/messages';
 import { avatarUrl } from '../service/users';
 import { useNotification } from '../context/notification-context';
+import { PageTitle } from '../component/common/text';
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -147,7 +148,7 @@ const UserProfilePage: React.FC = () => {
               {profile.display_name.charAt(0)}
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="h5" fontWeight={700}>{profile.display_name}</Typography>
+              <PageTitle>{profile.display_name}</PageTitle>
               {profile.is_superuser && (
                 <Chip
                   icon={<AutoAwesomeIcon fontSize="small" />}

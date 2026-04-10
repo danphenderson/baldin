@@ -101,7 +101,7 @@ const MFASetupCard: React.FC = () => {
 
   if (loading || enabled === null) {
     return (
-      <Card sx={{ boxShadow: `0 2px 12px ${alpha('#000', 0.08)}` }}>
+      <Card sx={{ boxShadow: `0 2px 12px ${alpha(theme.palette.common.black, 0.08)}` }}>
         <CardContent sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
           <CircularProgress size={28} />
         </CardContent>
@@ -111,7 +111,7 @@ const MFASetupCard: React.FC = () => {
 
   return (
     <>
-      <Card sx={{ boxShadow: `0 2px 12px ${alpha('#000', 0.08)}` }}>
+      <Card sx={{ boxShadow: `0 2px 12px ${alpha(theme.palette.common.black, 0.08)}` }}>
         <CardContent sx={{ p: 3 }}>
           <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
             <SecurityIcon sx={{ color: 'primary.main' }} />
@@ -168,7 +168,7 @@ const MFASetupCard: React.FC = () => {
 
               {/* Client-side QR code generation – secret never leaves the browser */}
               <Box sx={{ textAlign: 'center', mb: 2 }}>
-                <Box sx={{ display: 'inline-block', p: 1.5, borderRadius: 2, border: `1px solid ${alpha('#000', 0.08)}`, bgcolor: '#fff' }}>
+                <Box sx={{ display: 'inline-block', p: 1.5, borderRadius: 2, border: `1px solid ${alpha(theme.palette.common.black, 0.08)}`, bgcolor: 'common.white' }}>
                   <QRCodeSVG value={setupData.provisioning_uri} size={200} />
                 </Box>
               </Box>
@@ -191,7 +191,7 @@ const MFASetupCard: React.FC = () => {
                   onClick={handleVerify}
                   sx={{ minWidth: 100 }}
                 >
-                  {setupLoading ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Verify'}
+                  {setupLoading ? <CircularProgress size={20} sx={{ color: 'common.white' }} /> : 'Verify'}
                 </Button>
               </Stack>
             </Box>

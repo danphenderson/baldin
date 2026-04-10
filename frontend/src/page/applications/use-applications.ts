@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTheme } from '@mui/material/styles';
 import {
   getApplications, updateApplication, deleteApplication,
   type ApplicationRead, type ApplicationUpdate,
 } from '../../service/applications';
+import { getStatusColors } from '../../theme/status-colors';
 
 /* ------------------------------------------------------------------ */
 /*  Pipeline stage columns (progression only — no terminal outcomes)   */
@@ -14,21 +16,34 @@ export interface Column {
   color: string;
 }
 
-/** Active board columns — stage progression from applied → offer. */
-export const COLUMNS: Column[] = [
-  { key: 'applied', label: 'Applied', color: '#06b6d4' },
-  { key: 'screening', label: 'Screening', color: '#8b5cf6' },
-  { key: 'interview', label: 'Interview', color: '#f59e0b' },
-  { key: 'offer', label: 'Offer', color: '#10b981' },
-];
+/** Hook that returns stage columns with theme-aware colors. */
+export function useStageColumns() {
+  const theme = useTheme();
+  const sc = getStatusColors(theme);
 
-/** All stage+outcome column metadata (for queue page stage chips, etc.). */
-export const ALL_STATUS_COLUMNS: Column[] = [
-  { key: 'registered', label: 'Registered', color: '#94a3b8' },
-  ...COLUMNS,
-  { key: 'rejected', label: 'Rejected', color: '#f43f5e' },
-  { key: 'withdrawn', label: 'Withdrawn', color: '#a1a1aa' },
-];
+  return useMemo(() => {
+    /** Active board columns — stage progression from applied → offer. */
+    const columns: Column[] = [
+      { key: 'applied', label: 'Applied', color: sc.applied },
+      { key: 'screening', label: 'Screening', color: sc.screening },
+      { key: 'interview', label: 'Interview', color: sc.interview },
+      { key: 'offer', label: 'Offer', color: sc.offer },
+    ];
+
+    /** All stage+outcome column metadata (for queue page stage chips, etc.). */
+    const allStatusColumns: Column[] = [
+      { key: 'registered', label: 'Registered', color: sc.registered },
+      ...columns,
+      { key: 'rejected', label: 'Rejected', color: sc.rejected },
+      { key: 'withdrawn', label: 'Withdrawn', color: sc.withdrawn },
+    ];
+
+    return { columns, allStatusColumns };
+  }, [sc]);
+}
+
+/** Static stage progression keys for pure logic (no color needed). */
+const STAGE_KEYS = ['applied', 'screening', 'interview', 'offer'];
 
 /** Terminal closure outcomes — not board lanes. */
 export const OUTCOMES = ['rejected', 'withdrawn'] as const;
@@ -62,9 +77,9 @@ export function effectiveStage(app: ApplicationRead): string {
 /** Return the next stage in the pipeline, or null at the end. */
 export function nextStage(current: string): string | null {
   if (current === 'registered') return 'applied';
-  const idx = COLUMNS.findIndex((c) => c.key === current);
-  if (idx < 0 || idx >= COLUMNS.length - 1) return null;
-  return COLUMNS[idx + 1].key;
+  const idx = STAGE_KEYS.indexOf(current);
+  if (idx < 0 || idx >= STAGE_KEYS.length - 1) return null;
+  return STAGE_KEYS[idx + 1];
 }
 
 /** @deprecated Use nextStage instead. Kept for backward compat with queue page. */
@@ -162,7 +177,7 @@ export function useApplications(token: string | null): UseApplicationsReturn {
   /* ---- Bucket apps into registered, board columns, and closed ---- */
   const { buckets, registeredApps, closedApps } = useMemo(() => {
     const map = new Map<string, ApplicationRead[]>();
-    for (const col of COLUMNS) map.set(col.key, []);
+    for (const key of STAGE_KEYS) map.set(key, []);
     const registered: ApplicationRead[] = [];
     const closed: ApplicationRead[] = [];
 

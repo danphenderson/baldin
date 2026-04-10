@@ -46,7 +46,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest --passWithNoTests",
-    "install:clean": "rm -rf node_modules package-lock.json && npm install"
+    "install:clean": "rm -rf node_modules package-lock.json && npm install",
+    "lint:theme": "node ./scripts/lint-theme.mjs"
   },
   "browserslist": {
     "production": [

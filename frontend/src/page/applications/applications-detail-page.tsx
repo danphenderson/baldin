@@ -28,7 +28,8 @@ import {
   getDocuments, downloadDocument, generateDocument,
   type DocumentRead, type DocumentGenerateRequest,
 } from '../../service/documents';
-import { ALL_STATUS_COLUMNS, relativeDate } from './use-applications';
+import { useStageColumns, relativeDate, type Column } from './use-applications';
+import { PageTitle } from '../../component/common/text';
 import CreateActionItemDialog from '../../component/create-action-item-dialog';
 import type { ActionItemRead, ActionItemCreate } from '../../service/action-items';
 
@@ -64,9 +65,9 @@ function isTerminalStatus(status: string | null | undefined): boolean {
   return status === 'rejected' || status === 'withdrawn';
 }
 
-function statusLabel(status: string | null | undefined): string {
+function statusLabel(status: string | null | undefined, columns: Column[]): string {
   if (!status) return 'Unknown';
-  return ALL_STATUS_COLUMNS.find((column) => column.key === status)?.label ?? status.replace(/_/g, ' ');
+  return columns.find((column) => column.key === status)?.label ?? status.replace(/_/g, ' ');
 }
 
 function formatTimelineTimestamp(iso: string): string {
@@ -123,6 +124,7 @@ const ApplicationDetailPage: React.FC = () => {
   const theme = useTheme();
   const isNarrow = useMediaQuery(theme.breakpoints.down('md'));
   const { token } = useContext(UserContext);
+  const { allStatusColumns: ALL_STATUS_COLUMNS } = useStageColumns();
 
   /* application state */
   const [app, setApp] = useState<ApplicationDetailRecord | null>(null);
@@ -464,7 +466,7 @@ const ApplicationDetailPage: React.FC = () => {
   const companyName = lead?.companies?.[0]?.name;
   const column = ALL_STATUS_COLUMNS.find((c) => c.key === (app.status || 'applied').toLowerCase()) ?? ALL_STATUS_COLUMNS[0];
   const isClosedApplication = isTerminalStatus(app.outcome ?? app.status);
-  const currentOutcomeLabel = statusLabel(app.outcome ?? app.status);
+  const currentOutcomeLabel = statusLabel(app.outcome ?? app.status, ALL_STATUS_COLUMNS);
   const timelineEntries = buildTimelineEntries(app.status_history);
 
   return (
@@ -494,9 +496,9 @@ const ApplicationDetailPage: React.FC = () => {
       <Stack spacing={0} divider={<Divider />} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden', bgcolor: theme.palette.background.paper }}>
         {/* -------- Overview -------- */}
         <Box sx={{ px: 3, py: 3 }}>
-          <Typography variant="h5" fontWeight={700} gutterBottom>
+          <PageTitle gutterBottom>
             {lead?.title || 'Untitled Position'}
-          </Typography>
+          </PageTitle>
           {companyName && (
             <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
               {companyName}
@@ -713,7 +715,7 @@ const ApplicationDetailPage: React.FC = () => {
                       <Stack direction={isNarrow ? 'column' : 'row'} justifyContent="space-between" alignItems={isNarrow ? 'flex-start' : 'center'} gap={1}>
                         <Box>
                           <Typography variant="body2" fontWeight={600}>
-                            {entry.from ? `${statusLabel(entry.from)} → ${statusLabel(entry.to)}` : `Created in ${statusLabel(entry.to)}`}
+                            {entry.from ? `${statusLabel(entry.from, ALL_STATUS_COLUMNS)} → ${statusLabel(entry.to, ALL_STATUS_COLUMNS)}` : `Created in ${statusLabel(entry.to, ALL_STATUS_COLUMNS)}`}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {formatTimelineTimestamp(entry.changedAt)} · {relativeDate(entry.changedAt)}
@@ -722,8 +724,8 @@ const ApplicationDetailPage: React.FC = () => {
                         <Chip
                           size="small"
                           label={entry.isCurrent
-                            ? `In ${statusLabel(entry.to)} for ${entry.durationLabel}`
-                            : `Stayed in ${statusLabel(entry.to)} for ${entry.durationLabel}`
+                            ? `In ${statusLabel(entry.to, ALL_STATUS_COLUMNS)} for ${entry.durationLabel}`
+                            : `Stayed in ${statusLabel(entry.to, ALL_STATUS_COLUMNS)} for ${entry.durationLabel}`
                           }
                           sx={{
                             alignSelf: isNarrow ? 'flex-start' : 'center',

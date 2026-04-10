@@ -37,7 +37,13 @@ vi.mock('../../component/common/empty-state', () => ({
 }));
 
 import ApplicationsQueuePage from './applications-queue-page';
-import { COLUMNS } from './use-applications';
+// Static stage columns for assertions (colors not needed in tests)
+const STAGE_COLUMNS = [
+  { key: 'applied', label: 'Applied' },
+  { key: 'screening', label: 'Screening' },
+  { key: 'interview', label: 'Interview' },
+  { key: 'offer', label: 'Offer' },
+];
 
 /* ── Test data ────────────────────────────────────────────────────── */
 
@@ -283,7 +289,7 @@ describe('ApplicationsQueuePage', () => {
     renderPage();
 
     expect(screen.getByText('All Stages')).toBeInTheDocument();
-    for (const col of COLUMNS) {
+    for (const col of STAGE_COLUMNS) {
       // Stage labels may appear in both summary strip and filter chips
       const matches = screen.getAllByText(col.label);
       expect(matches.length).toBeGreaterThanOrEqual(1);

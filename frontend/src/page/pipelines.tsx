@@ -32,6 +32,8 @@ import {
   retryOrchestrationEvent,
   formatURI,
 } from '../service/data-orchestration';
+import { getStatusColors } from '../theme/status-colors';
+import { mutedGradient, jsonTreeTheme, ALPHA_CHIP, ALPHA_BORDER } from '../theme/effects';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -62,33 +64,18 @@ const formatRelativeTime = (iso: string): string => {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
-const STATUS_CONFIG: Record<OrchestrationEventStatus, { icon: React.ReactElement; color: string; label: string }> = {
-  success: { icon: <SuccessIcon fontSize="small" />, color: '#10b981', label: 'Success' },
-  failure: { icon: <ErrorIcon fontSize="small" />, color: '#f43f5e', label: 'Failed' },
-  pending: { icon: <PendingIcon fontSize="small" />, color: '#f59e0b', label: 'Pending' },
-  running: { icon: <RunningIcon fontSize="small" />, color: '#06b6d4', label: 'Running' },
-  pending_review: { icon: <PendingIcon fontSize="small" />, color: '#8b5cf6', label: 'Pending Review' },
+const getStatusConfigForTheme = (theme: import('@mui/material/styles').Theme) => {
+  const sc = getStatusColors(theme);
+  return {
+    success: { icon: <SuccessIcon fontSize="small" />, color: sc.success, label: 'Success' },
+    failure: { icon: <ErrorIcon fontSize="small" />, color: sc.failure, label: 'Failed' },
+    pending: { icon: <PendingIcon fontSize="small" />, color: sc.pending, label: 'Pending' },
+    running: { icon: <RunningIcon fontSize="small" />, color: sc.running, label: 'Running' },
+    pending_review: { icon: <PendingIcon fontSize="small" />, color: sc.pending_review, label: 'Pending Review' },
+  } as Record<OrchestrationEventStatus, { icon: React.ReactElement; color: string; label: string }>;
 };
 
-const JSON_TREE_THEME = {
-  scheme: 'baldin',
-  base00: 'transparent',
-  base01: '#1e293b',
-  base02: '#334155',
-  base03: '#64748b',
-  base04: '#94a3b8',
-  base05: '#cbd5e1',
-  base06: '#e2e8f0',
-  base07: '#f1f5f9',
-  base08: '#f43f5e',
-  base09: '#f59e0b',
-  base0A: '#fbbf24',
-  base0B: '#10b981',
-  base0C: '#06b6d4',
-  base0D: '#06b6d4',
-  base0E: '#8b5cf6',
-  base0F: '#f43f5e',
-};
+// JSON tree theme — see theme/effects.ts
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -97,6 +84,8 @@ const JSON_TREE_THEME = {
 const MotionCard = motion.create(Card);
 
 const StatusDot: React.FC<{ status: OrchestrationEventStatus }> = ({ status }) => {
+  const theme = useTheme();
+  const STATUS_CONFIG = getStatusConfigForTheme(theme);
   const cfg = STATUS_CONFIG[status];
   return (
     <Tooltip title={cfg.label}>
@@ -106,6 +95,8 @@ const StatusDot: React.FC<{ status: OrchestrationEventStatus }> = ({ status }) =
 };
 
 const EventStatusChip: React.FC<{ status: OrchestrationEventStatus }> = ({ status }) => {
+  const theme = useTheme();
+  const STATUS_CONFIG = getStatusConfigForTheme(theme);
   const cfg = STATUS_CONFIG[status];
   return (
     <Chip
@@ -152,7 +143,7 @@ const OverviewStrip: React.FC<{ pipelines: OrchestrationPipelineRead[] }> = ({ p
   const items: { label: string; value: string | number; color?: string; icon: React.ReactElement }[] = [
     { label: 'Workflows', value: stats.workflows, icon: <PipelineIcon fontSize="small" /> },
     { label: 'Total runs', value: stats.totalRuns, icon: <TrendingIcon fontSize="small" /> },
-    { label: 'Failures', value: stats.totalFailures, color: stats.totalFailures > 0 ? '#f43f5e' : undefined, icon: <ErrorIcon fontSize="small" /> },
+    { label: 'Failures', value: stats.totalFailures, color: stats.totalFailures > 0 ? theme.palette.error.main : undefined, icon: <ErrorIcon fontSize="small" /> },
     { label: 'Recent (24h)', value: stats.recentRuns, icon: <RunningIcon fontSize="small" /> },
     { label: 'Last success', value: stats.lastSuccess ? formatRelativeTime(stats.lastSuccess) : '—', icon: <SuccessIcon fontSize="small" /> },
   ];
@@ -196,6 +187,7 @@ const PipelineCard: React.FC<{
   index: number;
 }> = ({ pipe, onView, onEdit, onTrigger, onDelete, index }) => {
   const theme = useTheme();
+  const STATUS_CONFIG = getStatusConfigForTheme(theme);
   const lastStatusKey = (pipe.last_run_status as OrchestrationEventStatus) ?? null;
   const lastCfg = lastStatusKey ? STATUS_CONFIG[lastStatusKey] : null;
 
@@ -230,7 +222,7 @@ const PipelineCard: React.FC<{
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)}, ${alpha(theme.palette.secondary.main, 0.10)})`,
+                background: mutedGradient(theme),
               }}
             >
               <PipelineIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
@@ -285,7 +277,7 @@ const PipelineCard: React.FC<{
           <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
             {srcLabel && (
               <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <DotIcon sx={{ fontSize: 6, color: '#06b6d4' }} /> {srcLabel}
+                <DotIcon sx={{ fontSize: 6, color: theme.palette.primary.main }} /> {srcLabel}
               </Typography>
             )}
             {srcLabel && dstLabel && (
@@ -293,7 +285,7 @@ const PipelineCard: React.FC<{
             )}
             {dstLabel && (
               <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <DotIcon sx={{ fontSize: 6, color: '#8b5cf6' }} /> {dstLabel}
+                <DotIcon sx={{ fontSize: 6, color: theme.palette.secondary.main }} /> {dstLabel}
               </Typography>
             )}
           </Stack>
@@ -325,7 +317,7 @@ const PipelineCard: React.FC<{
           <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
             {pipe.run_count} run{pipe.run_count !== 1 ? 's' : ''}
             {pipe.failure_count > 0 && (
-              <Typography component="span" variant="caption" sx={{ color: '#f43f5e', ml: 0.5 }}>
+              <Typography component="span" variant="caption" sx={{ color: theme.palette.error.main, ml: 0.5 }}>
                 ({pipe.failure_count} failed)
               </Typography>
             )}
@@ -348,6 +340,7 @@ const EventRow: React.FC<{
   index: number;
 }> = ({ evt, pipelineName, onStatusChange, onRetry, index }) => {
   const theme = useTheme();
+  const STATUS_CONFIG = getStatusConfigForTheme(theme);
   const statusKey = evt.status ?? 'pending';
   const cfg = STATUS_CONFIG[statusKey];
 
@@ -453,6 +446,7 @@ const EventRow: React.FC<{
 
 const PipelinesPage: React.FC = () => {
   const theme = useTheme();
+  const STATUS_CONFIG = getStatusConfigForTheme(theme);
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { token } = useContext(UserContext);
 
@@ -770,7 +764,7 @@ const PipelinesPage: React.FC = () => {
                       justifyContent: 'center',
                       mx: 'auto',
                       mb: 2,
-                      background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.12)}, ${alpha(theme.palette.secondary.main, 0.08)})`,
+                      background: mutedGradient(theme, 0.12),
                     }}
                   >
                     <PipelineIcon sx={{ fontSize: 28, color: alpha(theme.palette.primary.main, 0.5) }} />
@@ -850,7 +844,7 @@ const PipelinesPage: React.FC = () => {
                       justifyContent: 'center',
                       mx: 'auto',
                       mb: 2,
-                      background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.12)}, ${alpha(theme.palette.secondary.main, 0.08)})`,
+                      background: mutedGradient(theme, 0.12),
                     }}
                   >
                     <ScheduleIcon sx={{ fontSize: 28, color: alpha(theme.palette.primary.main, 0.5) }} />
@@ -1153,6 +1147,7 @@ const PipelineDetailContent: React.FC<{
   onTrigger: () => void;
 }> = ({ pipeline, onClose, onEdit, onTrigger }) => {
   const theme = useTheme();
+  const STATUS_CONFIG = getStatusConfigForTheme(theme);
   const [definitionOpen, setDefinitionOpen] = useState(false);
   const [eventsOpen, setEventsOpen] = useState(true);
 
@@ -1173,7 +1168,7 @@ const PipelineDetailContent: React.FC<{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)}, ${alpha(theme.palette.secondary.main, 0.10)})`,
+              background: mutedGradient(theme),
             }}
           >
             <PipelineIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
@@ -1202,7 +1197,7 @@ const PipelineDetailContent: React.FC<{
               {pipeline.run_count} run{pipeline.run_count !== 1 ? 's' : ''}
             </Typography>
             {pipeline.failure_count > 0 && (
-              <Typography variant="caption" sx={{ color: '#f43f5e' }}>
+              <Typography variant="caption" sx={{ color: theme.palette.error.main }}>
                 {pipeline.failure_count} failed
               </Typography>
             )}
@@ -1234,13 +1229,13 @@ const PipelineDetailContent: React.FC<{
               <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
                 {srcLabel && (
                   <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <DotIcon sx={{ fontSize: 8, color: '#06b6d4' }} /> Source: {srcLabel}
+                    <DotIcon sx={{ fontSize: 8, color: theme.palette.primary.main }} /> Source: {srcLabel}
                   </Typography>
                 )}
                 {srcLabel && dstLabel && <Typography variant="body2" color="text.disabled">&rarr;</Typography>}
                 {dstLabel && (
                   <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <DotIcon sx={{ fontSize: 8, color: '#8b5cf6' }} /> Dest: {dstLabel}
+                    <DotIcon sx={{ fontSize: 8, color: theme.palette.secondary.main }} /> Dest: {dstLabel}
                   </Typography>
                 )}
               </Stack>
@@ -1275,7 +1270,7 @@ const PipelineDetailContent: React.FC<{
               >
                 <JSONTree
                   data={pipeline.definition ?? {}}
-                  theme={JSON_TREE_THEME}
+                  theme={jsonTreeTheme(theme)}
                   invertTheme={theme.palette.mode === 'light'}
                   hideRoot
                   shouldExpandNodeInitially={() => true}

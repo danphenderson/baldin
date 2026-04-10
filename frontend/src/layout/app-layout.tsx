@@ -34,6 +34,7 @@ import { UserContext } from '../context/user-context';
 import { logout as logoutApi } from '../service/auth';
 import { getUnreadCount } from '../service/messages';
 import { useThemeMode } from '../theme/theme-provider';
+import { sidebarGradient } from '../theme/effects';
 import { avatarUrl } from '../service/users';
 import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-header-context';
 import SecondaryNavBar from '../component/common/secondary-nav-bar';
@@ -454,9 +455,7 @@ const AppLayout: React.FC = () => {
             boxSizing: 'border-box',
             display: 'flex',
             flexDirection: 'column',
-            background: theme.palette.mode === 'dark'
-              ? 'linear-gradient(180deg, #0f1629 0%, #0a0e1a 100%)'
-              : theme.palette.background.paper,
+            background: sidebarGradient(theme),
             borderRight: `1px solid ${theme.palette.divider}`,
             overflowX: 'hidden',
           },
@@ -508,7 +507,7 @@ const AppLayout: React.FC = () => {
                   background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
                 }}
               >
-                <AutoAwesomeIcon sx={{ color: '#fff', fontSize: 20 }} />
+                <AutoAwesomeIcon sx={{ color: theme.palette.common.white, fontSize: 20 }} />
               </Box>
               <Typography
                 variant="h6"

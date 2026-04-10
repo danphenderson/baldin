@@ -10,6 +10,7 @@ import {
 } from '@mui/icons-material';
 import type { UserRead, UserUpdate } from '../../../service/users';
 import { avatarUrl } from '../../../service/users';
+import { PageTitle } from '../../../component/common/text';
 
 export interface SectionCounts {
   skills: number;
@@ -195,9 +196,9 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
                 <Box>
-                  <Typography variant="h5" fontWeight={700} sx={{ lineHeight: 1.2 }}>
+                  <PageTitle sx={{ lineHeight: 1.2 }}>
                     {fullName}
-                  </Typography>
+                  </PageTitle>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
                     {profile?.email}
                   </Typography>

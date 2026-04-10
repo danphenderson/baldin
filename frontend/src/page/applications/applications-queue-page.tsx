@@ -22,8 +22,7 @@ import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import {
   useApplications,
-  COLUMNS,
-  ALL_STATUS_COLUMNS,
+  useStageColumns,
   relativeDate,
   nextStatus,
   effectiveStage,
@@ -31,6 +30,7 @@ import {
   applicationDocumentCount,
   applicationHasResume,
   applicationHasCoverLetter,
+  type Column,
 } from './use-applications';
 import type { ApplicationRead } from '../../service/applications';
 import ConfirmDialog from '../../component/common/confirm-dialog';
@@ -49,14 +49,12 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'due', label: 'Due Date' },
 ];
 
-const STAGE_ORDER = Object.fromEntries(ALL_STATUS_COLUMNS.map((c, i) => [c.key, i]));
+/** Static stage ordering (no colors needed for sort comparisons). */
+const STAGE_KEYS = ['registered', 'applied', 'screening', 'interview', 'offer', 'rejected', 'withdrawn'];
+const STAGE_ORDER = Object.fromEntries(STAGE_KEYS.map((k, i) => [k, i]));
 
 function stageOf(app: ApplicationRead): string {
   return effectiveStage(app);
-}
-
-function columnFor(status: string) {
-  return ALL_STATUS_COLUMNS.find((c) => c.key === status) ?? ALL_STATUS_COLUMNS[0];
 }
 
 /* ------------------------------------------------------------------ */
@@ -68,6 +66,10 @@ const ApplicationsQueuePage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const { token } = useContext(UserContext);
+  const { columns: COLUMNS, allStatusColumns: ALL_STATUS_COLUMNS } = useStageColumns();
+
+  const columnFor = (status: string): Column =>
+    ALL_STATUS_COLUMNS.find((c) => c.key === status) ?? ALL_STATUS_COLUMNS[0];
 
   const {
     applications, loading, error, success, setError, setSuccess,
@@ -329,7 +331,7 @@ const ApplicationsQueuePage: React.FC = () => {
             onClick={() => setStageFilter(stageFilter === col.key ? 'all' : col.key)}
             sx={
               stageFilter === col.key
-                ? { bgcolor: col.color, color: '#fff', fontWeight: 600 }
+                ? { bgcolor: col.color, color: theme.palette.getContrastText(col.color), fontWeight: 600 }
                 : { borderColor: alpha(col.color, 0.4), color: col.color }
             }
           />

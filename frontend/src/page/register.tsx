@@ -88,13 +88,13 @@ const RegisterPage: React.FC = () => {
             boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}`,
           }}
         >
-          <LogoIcon sx={{ color: '#fff', fontSize: 28 }} />
+          <LogoIcon sx={{ color: 'common.white', fontSize: 28 }} />
         </Box>
         <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5 }}>Get started</Typography>
         <Typography variant="body2" color="text.secondary">Create your account and automate your job search</Typography>
       </Box>
 
-      <Card sx={{ boxShadow: `0 8px 40px ${alpha('#000', 0.2)}` }}>
+      <Card sx={{ boxShadow: `0 8px 40px ${alpha(theme.palette.common.black, 0.2)}` }}>
         <CardContent sx={{ p: 4 }}>
           {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
           <form onSubmit={handleSubmit}>
@@ -159,7 +159,7 @@ const RegisterPage: React.FC = () => {
                 '&:hover': { background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`, boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.4)}` },
               }}
             >
-              {loading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Create Account'}
+              {loading ? <CircularProgress size={24} sx={{ color: 'common.white' }} /> : 'Create Account'}
             </Button>
           </form>
         </CardContent>

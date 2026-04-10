@@ -8,6 +8,7 @@ import {
   Alert, Fade, Popover, Menu, MenuItem, Collapse, Link,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
+import { PageTitle, SectionTitle } from '../component/common/text';
 import {
   Add as AddIcon,
   Bolt as BoltIcon,
@@ -58,19 +59,13 @@ import {
   type CommandCenterSummary,
 } from '../service/activity-feed';
 import CreateActionItemDialog from '../component/create-action-item-dialog';
+import { getStatusColors } from '../theme/status-colors';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
 
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
-
-const PRIORITY_COLORS: Record<string, string> = {
-  urgent: '#f43f5e',
-  high: '#f97316',
-  medium: '#3b82f6',
-  low: '#94a3b8',
-};
 
 const KIND_LABELS: Record<string, string> = {
   follow_up: 'Follow-up',
@@ -79,16 +74,6 @@ const KIND_LABELS: Record<string, string> = {
   review_lead: 'Review Lead',
   schedule_interview: 'Interview',
   custom: 'Custom',
-};
-
-const STATUS_CHIP_COLORS: Record<string, string> = {
-  applied: '#06b6d4',
-  screening: '#8b5cf6',
-  interviewing: '#6366f1',
-  interview: '#f59e0b',
-  offer: '#10b981',
-  rejected: '#f43f5e',
-  withdrawn: '#94a3b8',
 };
 
 const FEED_ICONS: Record<string, React.ReactElement> = {
@@ -239,9 +224,9 @@ const StatTile: React.FC<StatTileProps> = ({ label, value, icon, accent, highlig
           {icon}
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.1, fontSize: '1.1rem' }}>
+          <SectionTitle sx={{ fontSize: '1.1rem' }}>
             {value}
-          </Typography>
+          </SectionTitle>
           <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
             {label}
           </Typography>
@@ -383,6 +368,7 @@ function SortableActionItem({ item, overdue, linked, priorityColor, onComplete, 
 
 const DashboardPage: React.FC = () => {
   const theme = useTheme();
+  const sc = getStatusColors(theme);
   const navigate = useNavigate();
   const { token, user } = useContext(UserContext);
   const greeting = `${getGreeting()}${user?.first_name ? `, ${user.first_name}` : ''}`;
@@ -757,7 +743,7 @@ const DashboardPage: React.FC = () => {
   if (error) {
     return (
       <Box sx={{ maxWidth: 1200, mx: 'auto', textAlign: 'center', py: 10 }} role="alert">
-        <Typography variant="h5" sx={{ mb: 1, fontWeight: 700 }}>Something went wrong</Typography>
+        <PageTitle sx={{ mb: 1 }}>Something went wrong</PageTitle>
         <Typography color="text.secondary" sx={{ mb: 3 }}>{error}</Typography>
         <Button variant="contained" onClick={refresh} startIcon={<RefreshIcon />}>Retry</Button>
       </Box>
@@ -926,7 +912,7 @@ const DashboardPage: React.FC = () => {
                         {filteredActions.map((item) => {
                           const overdue = isOverdue(item);
                           const linked = linkedEntityLabel(item);
-                          const priorityColor = PRIORITY_COLORS[item.priority] ?? '#94a3b8';
+                          const priorityColor = sc[item.priority as keyof typeof sc] ?? sc.low;
 
                           return (
                             <SortableActionItem
@@ -961,7 +947,7 @@ const DashboardPage: React.FC = () => {
                   </Typography>
                   <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
                     {Object.entries(summary.status_breakdown).map(([status, count]) => {
-                      const color = STATUS_CHIP_COLORS[status] ?? theme.palette.text.secondary;
+                      const color = sc[status as keyof typeof sc] ?? theme.palette.text.secondary;
                       return (
                         <Chip
                           key={status}
@@ -1004,8 +990,8 @@ const DashboardPage: React.FC = () => {
                           size="small"
                           sx={{
                             fontWeight: 700,
-                            bgcolor: alpha('#10b981', 0.12),
-                            color: '#10b981',
+                            bgcolor: alpha(sc.offer, 0.12),
+                            color: sc.offer,
                           }}
                         />
                         <Chip
@@ -1023,8 +1009,8 @@ const DashboardPage: React.FC = () => {
                             size="small"
                             sx={{
                               fontWeight: 700,
-                              bgcolor: alpha('#f59e0b', 0.12),
-                              color: '#f59e0b',
+                              bgcolor: alpha(sc.pending, 0.12),
+                              color: sc.pending,
                             }}
                           />
                         )}
@@ -1046,7 +1032,7 @@ const DashboardPage: React.FC = () => {
                             </Typography>
                             <Stack spacing={1.75} sx={{ mt: 1.5 }}>
                               {stageVelocity.map((entry) => {
-                                const color = STATUS_CHIP_COLORS[entry.stage] ?? theme.palette.primary.main;
+                                const color = sc[entry.stage as keyof typeof sc] ?? theme.palette.primary.main;
                                 const width = maxVelocityDays > 0
                                   ? Math.max(14, (entry.avg_days / maxVelocityDays) * 100)
                                   : 14;
@@ -1094,8 +1080,8 @@ const DashboardPage: React.FC = () => {
                             sx={{
                               p: 2,
                               borderRadius: 3,
-                              bgcolor: alpha('#10b981', theme.palette.mode === 'dark' ? 0.1 : 0.04),
-                              border: `1px solid ${alpha('#10b981', 0.14)}`,
+                              bgcolor: alpha(sc.offer, theme.palette.mode === 'dark' ? 0.1 : 0.04),
+                              border: `1px solid ${alpha(sc.offer, 0.14)}`,
                               height: '100%',
                             }}
                           >
@@ -1104,7 +1090,7 @@ const DashboardPage: React.FC = () => {
                             </Typography>
                             <Stack spacing={1.25} sx={{ mt: 1.5 }}>
                               {offerConversionFunnel.map((entry, index) => {
-                                const color = STATUS_CHIP_COLORS[entry.stage] ?? '#10b981';
+                                const color = sc[entry.stage as keyof typeof sc] ?? sc.offer;
                                 const width = appliedBaseline > 0
                                   ? 38 + ((entry.reached_count / appliedBaseline) * 62)
                                   : 38;
@@ -1273,28 +1259,28 @@ const DashboardPage: React.FC = () => {
                       label="Overdue Actions"
                       value={summary.overdue_action_items}
                       icon={<OverdueIcon fontSize="small" />}
-                      accent="#f43f5e"
+                      accent={sc.urgent}
                       highlight={summary.overdue_action_items > 0}
                     />
                     <StatTile
                       label="Due Today"
                       value={summary.action_items_due_today}
                       icon={<TodayIcon fontSize="small" />}
-                      accent="#f59e0b"
+                      accent={sc.pending}
                       highlight={summary.action_items_due_today > 0}
                     />
                     <StatTile
                       label="Unread Messages"
                       value={summary.unread_messages}
                       icon={<MessageIcon fontSize="small" />}
-                      accent="#6366f1"
+                      accent={sc.interviewing}
                       onClick={() => navigate('/network/messages')}
                     />
                     <StatTile
                       label="Pending Connections"
                       value={summary.pending_connections}
                       icon={<ConnectionsIcon fontSize="small" />}
-                      accent="#8b5cf6"
+                      accent={sc.screening}
                       onClick={() => navigate('/network/connections')}
                     />
                     <StatTile

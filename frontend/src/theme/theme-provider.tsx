@@ -11,6 +11,9 @@ const ThemeModeContext = createContext<{ mode: ThemeMode; toggleMode: () => void
 
 export const useThemeMode = () => useContext(ThemeModeContext);
 
+const DARK_PAPER = '#111827';
+const DARK_DIVIDER = 'rgba(148, 163, 184, 0.12)';
+
 const getDesignTokens = (mode: ThemeMode) => ({
   palette: {
     mode,
@@ -21,9 +24,9 @@ const getDesignTokens = (mode: ThemeMode) => ({
           success: { main: '#10b981', light: '#34d399', dark: '#059669' },
           warning: { main: '#f59e0b', light: '#fbbf24', dark: '#d97706' },
           error: { main: '#f43f5e', light: '#fb7185', dark: '#e11d48' },
-          background: { default: '#0a0e1a', paper: '#111827' },
+          background: { default: '#0a0e1a', paper: DARK_PAPER },
           text: { primary: '#f1f5f9', secondary: '#94a3b8' },
-          divider: 'rgba(148, 163, 184, 0.12)',
+          divider: DARK_DIVIDER,
         }
       : {
           primary: { main: '#0891b2', light: '#06b6d4', dark: '#0e7490' },
@@ -95,12 +98,50 @@ const getDesignTokens = (mode: ThemeMode) => ({
       styleOverrides: {
         paper: {
           borderRadius: 16,
-          ...(mode === 'dark' && { background: '#111827', border: '1px solid rgba(148,163,184,0.12)' }),
+          ...(mode === 'dark' && { background: DARK_PAPER, border: `1px solid ${DARK_DIVIDER}` }),
         },
       },
     },
     MuiLinearProgress: {
       styleOverrides: { root: { borderRadius: 4, height: 6 } },
+    },
+    MuiTooltip: {
+      styleOverrides: {
+        tooltip: { borderRadius: 8, fontSize: '0.75rem', fontWeight: 500 },
+      },
+    },
+    MuiAlert: {
+      styleOverrides: { root: { borderRadius: 12 } },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: { textTransform: 'none' as const, fontWeight: 600, minHeight: 40 },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          backgroundImage: 'none',
+          ...(mode === 'dark' && { borderColor: DARK_DIVIDER }),
+        },
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: {
+          borderRadius: 12,
+          ...(mode === 'dark' && { background: DARK_PAPER, border: `1px solid ${DARK_DIVIDER}` }),
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+          boxShadow: 'none',
+          borderBottom: `1px solid ${mode === 'dark' ? DARK_DIVIDER : 'rgba(0,0,0,0.08)'}`,
+        },
+      },
     },
   },
 });

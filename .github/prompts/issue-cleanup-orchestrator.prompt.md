@@ -8,7 +8,7 @@ model: "GPT-5 (copilot)"
 <!-- classification: maintenance -->
 Clean up the targeted Baldin issue backlog in a strict multi-pass sequence.
 
-Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), [REPO_EXECUTION_PLAN](../../plans/REPO_EXECUTION_PLAN.md), the current issue templates under [ISSUE_TEMPLATE](../ISSUE_TEMPLATE), and [apply_backlog_audit.sh](../../scripts/apply_backlog_audit.sh).
+Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), [Track Release Readiness](../../docs/docs/engineering/release-roadmap.md), the current issue templates under [ISSUE_TEMPLATE](../ISSUE_TEMPLATE), and [apply_backlog_audit.sh](../../scripts/apply_backlog_audit.sh).
 
 Task:
 - Build a live inventory of the targeted issues before making any edits. Capture current title, state, body shape, labels, assignees, project membership, milestone, and relationship state.

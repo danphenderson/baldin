@@ -6,7 +6,7 @@
 
 > Take control of your job search. Track applications, extract leads, collaborate on Agentic Workflows, and discover your network — all running locally under your control.
 
-**[Landing Page](https://danphenderson.github.io/baldin/)** · **[Documentation](https://danphenderson.github.io/baldin/docs)** · **[Release Posture](plans/REPO_EXECUTION_PLAN.md)**
+**[Landing Page](https://danphenderson.github.io/baldin/)** · **[Documentation](https://danphenderson.github.io/baldin/docs)** · **[Release Posture](docs/docs/engineering/release-roadmap.md)**
 
 ---
 
@@ -23,7 +23,7 @@ Baldin is a private, local-first engineering monorepo for a developer-preview jo
 - Document editor and collaboration: [docs/docs/architecture/document-collaboration.md](docs/docs/architecture/document-collaboration.md)
 - Networking and messaging: [docs/docs/architecture/networking-and-messaging.md](docs/docs/architecture/networking-and-messaging.md)
 - Testing and CI: [docs/docs/engineering/testing.md](docs/docs/engineering/testing.md), [docs/docs/engineering/ci-pipeline.md](docs/docs/engineering/ci-pipeline.md)
-- Release posture: [docs/docs/engineering/release-roadmap.md](docs/docs/engineering/release-roadmap.md) and [plans/REPO_EXECUTION_PLAN.md](plans/REPO_EXECUTION_PLAN.md)
+- Release posture: [docs/docs/engineering/release-roadmap.md](docs/docs/engineering/release-roadmap.md)
 
 If you use the published docs site, the same material is available at **[danphenderson.github.io/baldin/docs](https://danphenderson.github.io/baldin/docs)**.
 
@@ -101,6 +101,6 @@ When you run the full Docker Compose stack, `docker-compose.yml` injects the loc
 
 The supported development path today is the local Docker Compose stack. The material under [cdk/](cdk/) is reference-only while Baldin narrows and rebuilds its deployment path inside this repository.
 
-Launch sequencing, release-boundary work, and remaining runtime hardening are tracked in [plans/REPO_EXECUTION_PLAN.md](plans/REPO_EXECUTION_PLAN.md).
+Launch sequencing, release-boundary work, and remaining runtime hardening are tracked in [docs/docs/engineering/release-roadmap.md](docs/docs/engineering/release-roadmap.md).
 
 If you hit something confusing or broken, raise it through the current Baldin issue workflow.

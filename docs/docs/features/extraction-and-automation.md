@@ -82,11 +82,11 @@ No canonical checked-in backlog file currently maps to this feature page. The ac
 
 ### Story Threads
 
-**Draft UX context — pipelines usability (`plans/UX_POLISH_PLAN.md`)**
+**Draft UX context — pipelines usability**
 Status: Open
 The workflows page still requires JSON definitions and JSON payload editing, so the draft critique about a technical, non-guided pipelines UX remains accurate.
 
-**Draft UX context — admin tool exposure (`plans/UX_POLISH_PLAN.md`)**
+**Draft UX context — admin tool exposure**
 Status: Implemented
 The current navigation already hides Review Queue and Crawlers from non-superusers, and the routes themselves are guarded. That draft concern is still useful historical context, but it no longer describes the live UI.
 

@@ -33,8 +33,8 @@ This document inventories Baldin's Copilot customization surface without overrid
 
 Prompts are classified as **core** (9), **advanced** (4), or **maintenance** (1) per the [cookbook decision table](../docs/docs/engineering/copilot-prompt-cookbook.md#prompt-decision-table).
 
-### Skills (6)
-`baldin-agent-prompt-tuner` · `baldin-ai-slop-audit` · `baldin-backend-test-gap-planner` · `baldin-contract-regen-resolver` · `baldin-docs-drift-auditor` · `baldin-local-stack-doctor`
+### Skills (5)
+`baldin-agent-prompt-tuner` · `baldin-backend-test-gap-planner` · `baldin-contract-regen-resolver` · `baldin-docs-drift-auditor` · `baldin-local-stack-doctor`
 
 ## How To Add
 

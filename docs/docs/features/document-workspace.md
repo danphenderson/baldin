@@ -76,9 +76,9 @@ Legacy `/me/documents/*` URLs still redirect to the canonical `/documents/*` rou
 Status: Partial
 Application surfaces already show document-count badges and the detail page can create or attach documents. The remaining open gap is metadata-driven filtering in the applications queue because `appDocMeta` is still stubbed.
 
-**Draft UX context — documents information architecture (`plans/UX_POLISH_PLAN.md`)**
+**Draft UX context — documents information architecture**
 Status: Superseded
-The draft critique assumed documents still lived under an Identity → Studio section and lacked clear return paths. The current UI uses top-level `/documents` routes and ships back links on detail, editor, and compare pages, so this part of the draft no longer matches the live product.
+The draft critique assumed documents still lived under an Identity → Studio section and lacked clear return paths. The current UI uses top-level `/documents` routes and ships back links on detail, editor, and compare pages, so this concern no longer matches the live product.
 
 ## Related Docs
 

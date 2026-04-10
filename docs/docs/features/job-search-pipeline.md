@@ -88,7 +88,7 @@ Board drag-and-drop, inline reminder editing, the dedicated detail fetch, explic
 Status: Partial
 Board and queue cards already render `document_count`, but the shared applications hook still returns an empty `appDocMeta` map. Resume and cover-letter filters on the queue therefore depend on metadata that is not yet loaded.
 
-**Draft UX context — core job-search loop (`plans/UX_POLISH_PLAN.md`)**
+**Draft UX context — core job-search loop
 Status: Superseded
 The draft's page-local critique no longer matches the live UI. The app now uses plain-language Job Search navigation, provides back links on detail pages, exposes top-level documents routes, and lets application users jump directly into new document creation from the detail view.
 

@@ -7,7 +7,7 @@ model: "GPT-5 (copilot)"
 ---
 Turn this issue-shaped input into a startable Baldin execution slice.
 
-Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), and [REPO_EXECUTION_PLAN](../../plans/REPO_EXECUTION_PLAN.md) when phase or release context matters.
+Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), and [Track Release Readiness](../../docs/docs/engineering/release-roadmap.md) when phase or release context matters.
 
 Task:
 - Accept a single GitHub issue, PR comment, backlog note, or copied ticket body as the starting point.

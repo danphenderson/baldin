@@ -7,7 +7,7 @@ model: "GPT-5 (copilot)"
 ---
 Route this Baldin task into the smallest durable ownership model.
 
-Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Baldin Agentic Configuration Rules](../instructions/baldin-agent-customization.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), and [REPO_EXECUTION_PLAN](../../plans/REPO_EXECUTION_PLAN.md) when the work touches repo-wide phase or release context.
+Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Baldin Agentic Configuration Rules](../instructions/baldin-agent-customization.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), and [Track Release Readiness](../../docs/docs/engineering/release-roadmap.md) when the work touches repo-wide phase or release context.
 
 Task:
 - Identify the real surfaces involved: backend, ETL, frontend, contracts, docs, CI, scripts, docker-compose, `cdk/`, or repo-only coordination.

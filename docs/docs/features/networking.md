@@ -84,15 +84,15 @@ No canonical checked-in backlog file currently maps to networking. The current s
 
 ### Story Threads
 
-**Draft UX context — connection tier gating (`plans/UX_POLISH_PLAN.md`)**
+**Draft UX context — connection tier gating**
 Status: Implemented
 The directory now shows the access gate before a user tries to connect. Starter-limited accounts see a disabled **Starter Required** chip instead of discovering the restriction after clicking.
 
-**Draft UX context — network navigation clarity (`plans/UX_POLISH_PLAN.md`)**
+**Draft UX context — network navigation clarity**
 Status: Implemented
 The current drawer and secondary navigation already use plain `Network`, `Directory`, `Connections`, and `Messages` labels, so this part of the draft is now delivered rather than open.
 
-**Draft UX context — notifications beyond message badges (`plans/UX_POLISH_PLAN.md`)**
+**Draft UX context — notifications beyond message badges**
 Status: Open
 Unread message counts exist in the conversation list and dashboard summary, but the app still lacks a broader notification center spanning conversations, connections, and other network events.
 

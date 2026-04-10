@@ -58,7 +58,7 @@ Action items can also be created from the application detail page and lead modal
 Status: Implemented
 The applications backlog's Phase 5 analytics story is already live on this page. The dashboard consumes `avg_days_per_stage` and `offer_conversion_funnel` from the summary surface, so this source is now historical delivery context instead of open scope for the Dashboard.
 
-**Draft UX context — `plans/UX_POLISH_PLAN.md`**
+**Draft UX context
 Status: Partial
 The current UI already uses the plain-language Dashboard label and shows a welcome state for first-session users, which addresses part of the draft critique. The remaining ideas on richer orientation and contextual help are still design inputs rather than a canonical committed backlog.
 

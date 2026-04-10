@@ -9,7 +9,7 @@ description: Current deployment posture, planned production topology, and what i
 
 # Planned Deployment
 
-Baldin is in developer preview. The only supported deployment path today is the local Docker Compose stack. Production deployment is being planned through a phased roadmap tracked in the private repo at `plans/REPO_EXECUTION_PLAN.md`.
+Baldin is in developer preview. The only supported deployment path today is the local Docker Compose stack. Production deployment is being planned through a phased roadmap documented in [Track Release Readiness](../engineering/release-roadmap.md).
 
 This page explains what works today, what is planned, and what constraints shape the deployment path.
 
@@ -82,13 +82,13 @@ The backend currently runs `create_db_and_tables()` during startup. That path st
 ```mermaid
 flowchart TD
     accTitle: Deployment Decision Tree
-    accDescr: Decision tree starting at Want to run Baldin — if local development choose docker-compose up --build; if production deployment that path is not yet supported and links to the release roadmap in plans/REPO_EXECUTION_PLAN.md.
+    accDescr: Decision tree starting at Want to run Baldin — if local development choose docker-compose up --build; if production deployment that path is not yet supported and links to the release roadmap.
     A[Want to run Baldin?] --> B{Local development?}
     B -- Yes --> C[docker-compose up --build]
     B -- No --> D{Production deployment?}
     D -- Yes --> E[Not yet supported]
     E --> F[Follow the release roadmap]
-    F --> G[plans/REPO_EXECUTION_PLAN.md]
+    F --> G[Track Release Readiness]
 ```
 
 ## Related Docs

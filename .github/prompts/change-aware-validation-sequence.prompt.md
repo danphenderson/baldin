@@ -25,7 +25,7 @@ Sequence rules:
 - Backend API or schema changes require every direct frontend consumer check for the changed contract, not just a generic frontend pass.
 - Frontend production behavior changes require tests, strict typecheck, and build validation with a non-localhost `VITE_API_URL`.
 - Docs changes require `npm --prefix docs run build` against `docs/docs`, not manual edits to `docs/build`.
-- CI or branch-protection work should be checked against [REPO_EXECUTION_PLAN](../../plans/REPO_EXECUTION_PLAN.md) and [.github/branch-protection.md](../branch-protection.md).
+- CI or branch-protection work should be checked against [Track Release Readiness](../../docs/docs/engineering/release-roadmap.md) and [.github/branch-protection.md](../branch-protection.md).
 - Prefer targeted validation over over-testing, but do not omit dependency-driven checks.
 - If no targeted backend or frontend tests exist for the changed surface, say that explicitly and fall back to the repo's primary local checks instead of implying narrow coverage.
 - Do not treat a frontend consumer as a single page by default. Identify the generated type, service module, shared hook, and sibling views that consume the same contract shape when relevant.

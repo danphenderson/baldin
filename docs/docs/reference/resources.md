@@ -32,7 +32,7 @@ These links work when the local Docker Compose stack is running (`docker-compose
 |----------|----------|-------------|
 | **README** | `README.md` | Repository overview, quickstart, and status |
 | **Contributing Guide** | `docs/docs/getting-started/contributing.md` | Contributor workflow, validation expectations, and scope rules |
-| **Execution Plan** | `plans/REPO_EXECUTION_PLAN.md` | Seven-phase release roadmap maintained in the private repo |
+| **Release Roadmap** | `docs/docs/engineering/release-roadmap.md` | Seven-phase release roadmap |
 
 ## Generated Artifacts
 

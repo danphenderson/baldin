@@ -61,7 +61,7 @@ The repo does not include Alembic migrations. Startup currently runs `create_db_
 
 ## Roadmap
 
-The deployment roadmap is tracked in `plans/REPO_EXECUTION_PLAN.md`. The relevant phases:
+The deployment roadmap is tracked in [Track Release Readiness](../engineering/release-roadmap.md). The relevant phases:
 
 1. ~~Phase 1: Reset baseline~~ — Complete
 2. **Phase 2:** Turn CI into a real integration gate

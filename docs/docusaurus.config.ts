@@ -109,7 +109,7 @@ const config: Config = {
     ],
     announcementBar: {
       id: 'developer_preview',
-      content: '🚀 Baldin is in <b>developer preview</b> — <a href="/baldin/docs/getting-started/quickstart">try it locally</a> with Docker Compose',
+      content: '🚀 Baldin is in <b>developer preview</b> — <a href="http://localhost:3001/baldin/docs/getting-started/quickstart">try it locally</a> with Docker Compose',
       backgroundColor: '#0e7490',
       textColor: '#f1f5f9',
       isCloseable: true,

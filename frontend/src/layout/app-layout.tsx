@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState, useCallback, useRef } from 'rea
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
-  AppBar, Toolbar, Typography, IconButton, Avatar, Chip, Divider,
+  AppBar, Toolbar, Typography, IconButton, Chip, Divider, Collapse,
   useTheme, alpha, Tooltip, Badge, ClickAwayListener, useMediaQuery,
 } from '@mui/material';
 import {
@@ -17,9 +17,18 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   AutoAwesome as AutoAwesomeIcon,
-  Description as DocumentsIcon,
-  Groups as NetworkIcon,
+  Description as WorkspaceIcon,
   Settings as SettingsIcon,
+  ForumOutlined as MessagesIcon,
+  PeopleAltOutlined as PeopleIcon,
+  ConnectWithoutContact as ConnectionsIcon,
+  TravelExplore as DiscoverIcon,
+  SmartToyOutlined as AgentsIcon,
+  TrendingUp as AspirationsIcon,
+  Badge as RolesIcon,
+  BusinessOutlined as CompaniesIcon,
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import { logout as logoutApi } from '../service/auth';
@@ -30,23 +39,54 @@ import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-heade
 import SecondaryNavBar from '../component/common/secondary-nav-bar';
 import ErrorBoundary from '../component/common/error-boundary';
 import UserAvatar from '../component/common/user-avatar';
-import { getSecondaryNavItems, drawerSections, drawerFooterItems } from '../route/navigation';
-import { userInitials as getUserInitials } from '../util/format';
+import {
+  getSecondaryNavItems,
+  drawerSections,
+  userRailItems,
+  type NavigationItem,
+  type NavigationLinkItem,
+  type NavigationGroupItem,
+  type NavIconKey,
+} from '../route/navigation';
 
 const DRAWER_WIDTH = 260;
 const DRAWER_COLLAPSED = 72;
 
-/** Maps canonical drawer-item paths to their icons. */
-const drawerIcons: Record<string, React.ReactNode> = {
-  '/': <DashboardIcon />,
-  '/leads': <LeadsIcon />,
-  '/applications': <ApplicationsIcon />,
-  '/documents': <DocumentsIcon />,
-  '/me': <ProfileIcon />,
-  '/workflows': <PipelinesIcon />,
-  '/network': <NetworkIcon />,
-  '/settings': <SettingsIcon />,
+const navIcons: Record<NavIconKey, React.ReactNode> = {
+  dashboard: <DashboardIcon />,
+  leads: <LeadsIcon />,
+  applications: <ApplicationsIcon />,
+  messages: <MessagesIcon />,
+  people: <PeopleIcon />,
+  connections: <ConnectionsIcon />,
+  discover: <DiscoverIcon />,
+  agents: <AgentsIcon />,
+  workflows: <PipelinesIcon />,
+  workspace: <WorkspaceIcon />,
+  profile: <ProfileIcon />,
+  settings: <SettingsIcon />,
+  aspirations: <AspirationsIcon />,
+  roles: <RolesIcon />,
+  companies: <CompaniesIcon />,
 };
+
+function isPathActive(pathname: string, path: string): boolean {
+  if (path === '/') {
+    return pathname === '/';
+  }
+
+  return pathname === path || pathname.startsWith(`${path}/`);
+}
+
+function collectDefaultExpanded(items: NavigationItem[], state: Record<string, boolean> = {}): Record<string, boolean> {
+  for (const item of items) {
+    if (item.kind === 'group') {
+      state[item.id] = Boolean(item.defaultExpanded);
+    }
+  }
+
+  return state;
+}
 
 const HEADER_ACTION_DIAL_ID = 'header-account-actions';
 const HEADER_ACTION_STAGGER_MS = 70;
@@ -59,6 +99,14 @@ const AppLayout: React.FC = () => {
   const { user, token, setToken, setUser } = useContext(UserContext);
   const { mode, toggleMode } = useThemeMode();
   const [collapsed, setCollapsed] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    const initialState = drawerSections.reduce<Record<string, boolean>>((state, section) => {
+      collectDefaultExpanded(section.items, state);
+      return state;
+    }, {});
+
+    return collectDefaultExpanded(userRailItems, initialState);
+  });
   const [isAccountDialOpen, setIsAccountDialOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [toolbarHeader, setToolbarHeader] = useState<ToolbarHeaderContent | null>(null);
@@ -93,8 +141,34 @@ const AppLayout: React.FC = () => {
   const secondaryNavItems = getSecondaryNavItems(location.pathname)
     ?.filter((item) => !item.superuserOnly || user?.is_superuser) ?? null;
   const isSuperuser = Boolean(user?.is_superuser);
+  const displayName = (user as any)?.first_name
+    ? `${(user as any).first_name} ${(user as any).last_name ?? ''}`.trim()
+    : user?.email ?? 'Profile';
 
   const closeAccountDial = () => setIsAccountDialOpen(false);
+
+  useEffect(() => {
+    setExpandedGroups((current) => {
+      const next = { ...current };
+      let changed = false;
+
+      const maybeOpenGroups = (items: NavigationItem[]) => {
+        for (const item of items) {
+          if (item.kind === 'group' && item.children.some((child) => isPathActive(location.pathname, child.path))) {
+            if (!next[item.id]) {
+              next[item.id] = true;
+              changed = true;
+            }
+          }
+        }
+      };
+
+      drawerSections.forEach((section) => maybeOpenGroups(section.items));
+      maybeOpenGroups(userRailItems);
+
+      return changed ? next : current;
+    });
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!isAccountDialOpen) {
@@ -143,10 +217,6 @@ const AppLayout: React.FC = () => {
     closeAccountDial();
   };
 
-  const computedUserInitials = user
-    ? getUserInitials((user as any).first_name, (user as any).last_name, user.email)
-    : '?';
-
   const userAvatarSrc = user
     ? avatarUrl(user.id, (user as any).avatar_uri)
     : undefined;
@@ -175,6 +245,165 @@ const AppLayout: React.FC = () => {
       disabled: isLoggingOut,
     },
   ];
+
+  const toggleGroup = (groupId: string) => {
+    if (collapsed) {
+      setCollapsed(false);
+      setExpandedGroups((current) => ({ ...current, [groupId]: true }));
+      return;
+    }
+
+    setExpandedGroups((current) => ({
+      ...current,
+      [groupId]: !current[groupId],
+    }));
+  };
+
+  const renderNavItem = (item: NavigationItem, depth = 0): React.ReactNode => {
+    const isNested = depth > 0;
+
+    if (item.kind === 'group') {
+      const isActive = item.children.some((child) => isPathActive(location.pathname, child.path));
+      const isOpen = !collapsed && Boolean(expandedGroups[item.id]);
+
+      return (
+        <React.Fragment key={item.id}>
+          <ListItem disablePadding sx={{ mb: 0.5 }}>
+            <Tooltip title={item.label} placement="right" disableHoverListener={!collapsed}>
+              <ListItemButton
+                onClick={() => toggleGroup(item.id)}
+                sx={{
+                  borderRadius: 2,
+                  minHeight: isNested ? 40 : 44,
+                  px: collapsed ? 1.75 : 2,
+                  pl: collapsed ? 1.75 : 2 + (depth * 1.5),
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  ...(isActive && {
+                    background: alpha(theme.palette.primary.main, 0.12),
+                    borderLeft: `3px solid ${theme.palette.primary.main}`,
+                    '&:hover': { background: alpha(theme.palette.primary.main, 0.18) },
+                  }),
+                  ...(!isActive && {
+                    '&:hover': { background: alpha(theme.palette.text.primary, 0.04) },
+                  }),
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: collapsed ? 'auto' : 40,
+                    color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                    justifyContent: 'center',
+                  }}
+                >
+                  {navIcons[item.icon]}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.label}
+                  sx={{
+                    flex: collapsed ? '0 0 0' : '1 1 auto',
+                    opacity: collapsed ? 0 : 1,
+                    maxWidth: collapsed ? 0 : 160,
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    transition: textTransition,
+                    '& .MuiTypography-root': {
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    },
+                  }}
+                  primaryTypographyProps={{
+                    fontSize: isNested ? '0.8125rem' : '0.875rem',
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                  }}
+                />
+                {!collapsed && (
+                  isOpen ? (
+                    <ExpandLessIcon sx={{ color: isActive ? theme.palette.primary.main : theme.palette.text.secondary }} />
+                  ) : (
+                    <ExpandMoreIcon sx={{ color: isActive ? theme.palette.primary.main : theme.palette.text.secondary }} />
+                  )
+                )}
+              </ListItemButton>
+            </Tooltip>
+          </ListItem>
+
+          {!collapsed && (
+            <Collapse in={isOpen} timeout="auto" unmountOnExit>
+              <List disablePadding sx={{ mt: 0.25 }}>
+                {item.children.map((child) => renderNavItem(child, depth + 1))}
+              </List>
+            </Collapse>
+          )}
+        </React.Fragment>
+      );
+    }
+
+    const isActive = isPathActive(location.pathname, item.path);
+
+    return (
+      <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
+        <Tooltip title={item.label} placement="right" disableHoverListener={!collapsed}>
+          <ListItemButton
+            onClick={() => navigate(item.path)}
+            sx={{
+              borderRadius: 2,
+              minHeight: isNested ? 40 : 44,
+              px: collapsed ? 1.75 : 2,
+              pl: collapsed ? 1.75 : 2 + (depth * 1.5),
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              ...(isActive && {
+                background: alpha(theme.palette.primary.main, 0.12),
+                borderLeft: `3px solid ${theme.palette.primary.main}`,
+                '&:hover': { background: alpha(theme.palette.primary.main, 0.18) },
+              }),
+              ...(!isActive && {
+                '&:hover': { background: alpha(theme.palette.text.primary, 0.04) },
+              }),
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: collapsed ? 'auto' : 40,
+                color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                justifyContent: 'center',
+              }}
+            >
+              {item.badge === 'unreadMessages' ? (
+                <Badge badgeContent={unreadCount} color="error" max={99}>
+                  {navIcons[item.icon]}
+                </Badge>
+              ) : (
+                navIcons[item.icon]
+              )}
+            </ListItemIcon>
+            <ListItemText
+              primary={item.label}
+              sx={{
+                flex: collapsed ? '0 0 0' : '1 1 auto',
+                opacity: collapsed ? 0 : 1,
+                maxWidth: collapsed ? 0 : 160,
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                transition: textTransition,
+                '& .MuiTypography-root': {
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                },
+              }}
+              primaryTypographyProps={{
+                fontSize: isNested ? '0.8125rem' : '0.875rem',
+                fontWeight: isActive ? 600 : 400,
+                color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+              }}
+            />
+          </ListItemButton>
+        </Tooltip>
+      </ListItem>
+    );
+  };
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
@@ -341,71 +570,7 @@ const AppLayout: React.FC = () => {
                 )
               )}
 
-              {section.items.map((item) => {
-                const isActive = item.path === '/'
-                  ? location.pathname === '/'
-                  : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
-                return (
-                  <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
-                    <Tooltip title={item.label} placement="right" disableHoverListener={!collapsed}>
-                      <ListItemButton
-                        onClick={() => navigate(item.path)}
-                        sx={{
-                          borderRadius: 2,
-                          minHeight: 44,
-                          px: collapsed ? 1.75 : 2,
-                          justifyContent: collapsed ? 'center' : 'flex-start',
-                          ...(isActive && {
-                            background: alpha(theme.palette.primary.main, 0.12),
-                            borderLeft: `3px solid ${theme.palette.primary.main}`,
-                            '&:hover': { background: alpha(theme.palette.primary.main, 0.18) },
-                          }),
-                          ...(!isActive && {
-                            '&:hover': { background: alpha(theme.palette.text.primary, 0.04) },
-                          }),
-                        }}
-                      >
-                        <ListItemIcon
-                          sx={{
-                            minWidth: collapsed ? 'auto' : 40,
-                            color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {item.path === '/network' ? (
-                            <Badge badgeContent={unreadCount} color="error" max={99}>
-                              {drawerIcons[item.path]}
-                            </Badge>
-                          ) : (
-                            drawerIcons[item.path]
-                          )}
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={item.label}
-                          sx={{
-                            flex: collapsed ? '0 0 0' : '1 1 auto',
-                            opacity: collapsed ? 0 : 1,
-                            maxWidth: collapsed ? 0 : 160,
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                            transition: textTransition,
-                            '& .MuiTypography-root': {
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            },
-                          }}
-                          primaryTypographyProps={{
-                            fontSize: '0.875rem',
-                            fontWeight: isActive ? 600 : 400,
-                            color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
-                          }}
-                        />
-                      </ListItemButton>
-                    </Tooltip>
-                  </ListItem>
-                );
-              })}
+              {section.items.map((item) => renderNavItem(item))}
             </React.Fragment>
           ))}
         </List>
@@ -415,136 +580,46 @@ const AppLayout: React.FC = () => {
 
         <Divider sx={{ opacity: 0.4 }} />
 
-        {/* Sidebar footer */}
+        {/* User rail */}
         <Box sx={{ flexShrink: 0, px: 1, py: 1 }}>
-          {/* Profile row */}
-          {(() => {
-            const profileItem = drawerFooterItems[0];
-            const isProfileActive = location.pathname === profileItem.path || location.pathname.startsWith(`${profileItem.path}/`);
-            const displayName = (user as any)?.first_name
-              ? `${(user as any).first_name} ${(user as any).last_name ?? ''}`.trim()
-              : user?.email ?? 'Profile';
-            return (
-              <ListItem disablePadding sx={{ mb: 0.5 }}>
-                <Tooltip title={profileItem.label} placement="right" disableHoverListener={!collapsed}>
-                  <ListItemButton
-                    onClick={() => navigate(profileItem.path)}
-                    sx={{
-                      borderRadius: 2,
-                      minHeight: 44,
-                      px: collapsed ? 1.75 : 2,
-                      justifyContent: collapsed ? 'center' : 'flex-start',
-                      ...(isProfileActive && {
-                        background: alpha(theme.palette.primary.main, 0.12),
-                        borderLeft: `3px solid ${theme.palette.primary.main}`,
-                        '&:hover': { background: alpha(theme.palette.primary.main, 0.18) },
-                      }),
-                      ...(!isProfileActive && {
-                        '&:hover': { background: alpha(theme.palette.text.primary, 0.04) },
-                      }),
-                    }}
-                  >
-                    <ListItemIcon
-                      sx={{
-                        minWidth: collapsed ? 'auto' : 40,
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <UserAvatar
-                        userId={user?.id}
-                        avatarUri={(user as any)?.avatar_uri}
-                        firstName={(user as any)?.first_name}
-                        lastName={(user as any)?.last_name}
-                        email={user?.email}
-                        sx={{ width: 28, height: 28, fontSize: '0.75rem' }}
-                      />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={displayName}
-                      sx={{
-                        flex: collapsed ? '0 0 0' : '1 1 auto',
-                        opacity: collapsed ? 0 : 1,
-                        maxWidth: collapsed ? 0 : 160,
-                        overflow: 'hidden',
-                        whiteSpace: 'nowrap',
-                        transition: textTransition,
-                        '& .MuiTypography-root': {
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        },
-                      }}
-                      primaryTypographyProps={{
-                        fontSize: '0.875rem',
-                        fontWeight: isProfileActive ? 600 : 400,
-                        color: isProfileActive ? theme.palette.primary.main : theme.palette.text.primary,
-                      }}
-                    />
-                  </ListItemButton>
-                </Tooltip>
-              </ListItem>
-            );
-          })()}
+          <Tooltip title={displayName} placement="right" disableHoverListener={!collapsed}>
+            <Box
+              sx={{
+                px: collapsed ? 0 : 1.5,
+                py: collapsed ? 0.75 : 1.25,
+                mb: 0.75,
+                borderRadius: 3,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                gap: 1.25,
+                backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.14 : 0.08),
+              }}
+            >
+              <UserAvatar
+                userId={user?.id}
+                avatarUri={(user as any)?.avatar_uri}
+                firstName={(user as any)?.first_name}
+                lastName={(user as any)?.last_name}
+                email={user?.email}
+                sx={{ width: 34, height: 34, fontSize: '0.875rem', flexShrink: 0 }}
+              />
+              {!collapsed && (
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" fontWeight={700} noWrap>
+                    {displayName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {user?.email ?? 'Career profile'}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Tooltip>
 
-          {/* Settings row */}
-          {(() => {
-            const settingsItem = drawerFooterItems[1];
-            const isSettingsActive = location.pathname === settingsItem.path || location.pathname.startsWith(`${settingsItem.path}/`);
-            return (
-              <ListItem disablePadding>
-                <Tooltip title={settingsItem.label} placement="right" disableHoverListener={!collapsed}>
-                  <ListItemButton
-                    onClick={() => navigate(settingsItem.path)}
-                    sx={{
-                      borderRadius: 2,
-                      minHeight: 44,
-                      px: collapsed ? 1.75 : 2,
-                      justifyContent: collapsed ? 'center' : 'flex-start',
-                      ...(isSettingsActive && {
-                        background: alpha(theme.palette.primary.main, 0.12),
-                        borderLeft: `3px solid ${theme.palette.primary.main}`,
-                        '&:hover': { background: alpha(theme.palette.primary.main, 0.18) },
-                      }),
-                      ...(!isSettingsActive && {
-                        '&:hover': { background: alpha(theme.palette.text.primary, 0.04) },
-                      }),
-                    }}
-                  >
-                    <ListItemIcon
-                      sx={{
-                        minWidth: collapsed ? 'auto' : 40,
-                        color: isSettingsActive ? theme.palette.primary.main : theme.palette.text.secondary,
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <SettingsIcon />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={settingsItem.label}
-                      sx={{
-                        flex: collapsed ? '0 0 0' : '1 1 auto',
-                        opacity: collapsed ? 0 : 1,
-                        maxWidth: collapsed ? 0 : 160,
-                        overflow: 'hidden',
-                        whiteSpace: 'nowrap',
-                        transition: textTransition,
-                        '& .MuiTypography-root': {
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        },
-                      }}
-                      primaryTypographyProps={{
-                        fontSize: '0.875rem',
-                        fontWeight: isSettingsActive ? 600 : 400,
-                        color: isSettingsActive ? theme.palette.primary.main : theme.palette.text.primary,
-                      }}
-                    />
-                  </ListItemButton>
-                </Tooltip>
-              </ListItem>
-            );
-          })()}
+          <List component="nav" aria-label="Profile navigation" sx={{ p: 0 }}>
+            {userRailItems.map((item) => renderNavItem(item))}
+          </List>
         </Box>
       </Drawer>
 

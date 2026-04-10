@@ -27,7 +27,7 @@ vi.mock('../page/applications/applications-detail-page', () => ({
   default: () => <div data-testid="page-app-detail">AppDetail</div>,
 }));
 vi.mock('../page/documents/document-list', () => ({
-  default: () => <div data-testid="page-documents">Documents</div>,
+  default: () => <div data-testid="page-workspace">Workspace</div>,
 }));
 vi.mock('../page/documents/document-detail', () => ({
   default: () => <div data-testid="page-doc-detail">DocDetail</div>,
@@ -48,13 +48,16 @@ vi.mock('../page/extractor', () => ({
   default: () => <div data-testid="page-extractor">Extractor</div>,
 }));
 vi.mock('../page/directory', () => ({
-  default: () => <div data-testid="page-directory">Directory</div>,
+  default: () => <div data-testid="page-discover">Discover</div>,
 }));
 vi.mock('../page/user-profile', () => ({
   default: () => <div data-testid="page-user-profile">UserProfile</div>,
 }));
 vi.mock('../page/connections', () => ({
   default: () => <div data-testid="page-connections">Connections</div>,
+}));
+vi.mock('../page/agents', () => ({
+  default: () => <div data-testid="page-agents">Agents</div>,
 }));
 vi.mock('../page/messages/conversations-page', () => ({
   default: () => <div data-testid="page-conversations">Conversations</div>,
@@ -64,6 +67,21 @@ vi.mock('../page/messages/conversation-detail-page', () => ({
 }));
 vi.mock('../page/settings/account-page', () => ({
   default: () => <div data-testid="page-settings">Settings</div>,
+}));
+vi.mock('../page/settings/subscription-page', () => ({
+  default: () => <div data-testid="page-settings-subscription">Subscription</div>,
+}));
+vi.mock('../page/settings/discoverability-page', () => ({
+  default: () => <div data-testid="page-settings-discoverability">Discoverability</div>,
+}));
+vi.mock('../page/settings/graduation-page', () => ({
+  default: () => <div data-testid="page-settings-graduation">Graduation</div>,
+}));
+vi.mock('../page/aspirations/roles-page', () => ({
+  default: () => <div data-testid="page-aspiration-roles">AspirationRoles</div>,
+}));
+vi.mock('../page/aspirations/companies-page', () => ({
+  default: () => <div data-testid="page-aspiration-companies">AspirationCompanies</div>,
 }));
 vi.mock('../page/crawlers', () => ({
   default: () => <div data-testid="page-crawlers">Crawlers</div>,
@@ -233,6 +251,36 @@ describe('AppRoutes', () => {
     expect(await screen.findByTestId('page-applications')).toBeInTheDocument();
   });
 
+  it('renders workspace page for /workspace when authenticated', async () => {
+    renderRoutes('/workspace');
+    expect(await screen.findByTestId('page-workspace')).toBeInTheDocument();
+  });
+
+  it('redirects /network to discover when authenticated', async () => {
+    renderRoutes('/network');
+    expect(await screen.findByTestId('page-discover')).toBeInTheDocument();
+  });
+
+  it('renders agents page for /network/agents when authenticated', async () => {
+    renderRoutes('/network/agents');
+    expect(await screen.findByTestId('page-agents')).toBeInTheDocument();
+  });
+
+  it('renders aspiration roles page for /me/aspirations/roles when authenticated', async () => {
+    renderRoutes('/me/aspirations/roles');
+    expect(await screen.findByTestId('page-aspiration-roles')).toBeInTheDocument();
+  });
+
+  it('renders aspiration companies page for /me/aspirations/companies when authenticated', async () => {
+    renderRoutes('/me/aspirations/companies');
+    expect(await screen.findByTestId('page-aspiration-companies')).toBeInTheDocument();
+  });
+
+  it('renders subscription page for /settings/subscription when authenticated', async () => {
+    renderRoutes('/settings/subscription');
+    expect(await screen.findByTestId('page-settings-subscription')).toBeInTheDocument();
+  });
+
   /* ── Legacy redirects ── */
 
   it('redirects /companies to /leads/companies', async () => {
@@ -258,6 +306,31 @@ describe('AppRoutes', () => {
   it('redirects /extractor to /workflows/extractors', async () => {
     renderRoutes('/extractor');
     expect(await screen.findByTestId('page-extractor')).toBeInTheDocument();
+  });
+
+  it('redirects /documents to /workspace', async () => {
+    renderRoutes('/documents');
+    expect(await screen.findByTestId('page-workspace')).toBeInTheDocument();
+  });
+
+  it('redirects /documents/doc-1 to /workspace/:id', async () => {
+    renderRoutes('/documents/doc-1');
+    expect(await screen.findByTestId('page-doc-detail')).toBeInTheDocument();
+  });
+
+  it('redirects /me/documents to /workspace', async () => {
+    renderRoutes('/me/documents');
+    expect(await screen.findByTestId('page-workspace')).toBeInTheDocument();
+  });
+
+  it('redirects /network/directory to /network/discover', async () => {
+    renderRoutes('/network/directory');
+    expect(await screen.findByTestId('page-discover')).toBeInTheDocument();
+  });
+
+  it('redirects /network/directory/user-1 to /network/discover/:userId', async () => {
+    renderRoutes('/network/directory/user-1');
+    expect(await screen.findByTestId('page-user-profile')).toBeInTheDocument();
   });
 
   /* ── 404 fallback ── */

@@ -47,7 +47,12 @@ function makeApplication(overrides: Partial<Record<string, unknown>> = {}) {
     status: 'applied',
     stage: 'applied',
     outcome: null,
-    document_count: 0,
+    document_metadata: {
+      total_count: 0,
+      has_resume: false,
+      has_cover_letter: false,
+      kinds: [],
+    },
     created_at: '2026-04-01T00:00:00',
     updated_at: '2026-04-03T00:00:00',
     next_step: null,
@@ -82,8 +87,6 @@ function makeHookReturn(overrides: Partial<Record<string, unknown>> = {}) {
     registeredApps: [],
     closedApps: [],
     buckets: new Map(),
-    appDocMeta: new Map(),
-    appDocMetaLoading: false,
     ...overrides,
   };
 }
@@ -158,13 +161,118 @@ describe('ApplicationsQueuePage', () => {
   it('renders document-count badges from application list data', () => {
     mockUseApplications.mockReturnValue(
       makeHookReturn({
-        applications: [makeApplication({ document_count: 3 })],
+        applications: [makeApplication({
+          document_metadata: {
+            total_count: 3,
+            has_resume: true,
+            has_cover_letter: true,
+            kinds: ['resume', 'cover_letter'],
+          },
+        })],
       }),
     );
 
     renderPage();
 
     expect(screen.getByText('3 docs')).toBeInTheDocument();
+  });
+
+  it('filters applications by resume metadata from the API response', async () => {
+    const user = userEvent.setup();
+    mockUseApplications.mockReturnValue(
+      makeHookReturn({
+        applications: [
+          makeApplication({
+            id: 'app-1',
+            lead: {
+              id: 'lead-1',
+              title: 'Senior Frontend Engineer',
+              location: 'Remote, US',
+              salary: '$150k',
+              companies: [{ id: 'c-1', name: 'Acme Corp' }],
+            },
+            document_metadata: {
+              total_count: 2,
+              has_resume: true,
+              has_cover_letter: false,
+              kinds: ['resume'],
+            },
+          }),
+          makeApplication({
+            id: 'app-2',
+            lead: {
+              id: 'lead-2',
+              title: 'Backend Engineer',
+              location: 'Hybrid',
+              salary: '$140k',
+              companies: [{ id: 'c-2', name: 'BigCo' }],
+            },
+            document_metadata: {
+              total_count: 1,
+              has_resume: false,
+              has_cover_letter: true,
+              kinds: ['cover_letter'],
+            },
+          }),
+        ],
+      }),
+    );
+
+    renderPage();
+
+    await user.click(screen.getByText('Has Resume'));
+
+    expect(screen.getByText('Senior Frontend Engineer')).toBeInTheDocument();
+    expect(screen.queryByText('Backend Engineer')).not.toBeInTheDocument();
+  });
+
+  it('filters applications by cover-letter metadata from the API response', async () => {
+    const user = userEvent.setup();
+    mockUseApplications.mockReturnValue(
+      makeHookReturn({
+        applications: [
+          makeApplication({
+            id: 'app-1',
+            lead: {
+              id: 'lead-1',
+              title: 'Senior Frontend Engineer',
+              location: 'Remote, US',
+              salary: '$150k',
+              companies: [{ id: 'c-1', name: 'Acme Corp' }],
+            },
+            document_metadata: {
+              total_count: 2,
+              has_resume: true,
+              has_cover_letter: false,
+              kinds: ['resume'],
+            },
+          }),
+          makeApplication({
+            id: 'app-2',
+            lead: {
+              id: 'lead-2',
+              title: 'Backend Engineer',
+              location: 'Hybrid',
+              salary: '$140k',
+              companies: [{ id: 'c-2', name: 'BigCo' }],
+            },
+            document_metadata: {
+              total_count: 1,
+              has_resume: false,
+              has_cover_letter: true,
+              kinds: ['cover_letter'],
+            },
+          }),
+        ],
+      }),
+    );
+
+    renderPage();
+
+    await user.click(screen.getByText('Has Cover Letter'));
+
+    expect(screen.getByText('Backend Engineer')).toBeInTheDocument();
+    expect(screen.queryByText('Senior Frontend Engineer')).not.toBeInTheDocument();
   });
 
   it('renders stage filter chips for each pipeline column', () => {

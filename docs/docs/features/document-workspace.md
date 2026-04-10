@@ -5,7 +5,7 @@ title: Document Workspace
 description: Versioned documents with rich-text collaboration, sharing, and application attachments.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-10 -->
 
 # Document Workspace
 
@@ -25,7 +25,7 @@ Every document maintains an immutable version history through the `DocumentVersi
 - The content and `content_format` (plain text, Markdown, Tiptap JSON)
 - A reference back to the parent document
 
-The document's `head_version_id` always points to the latest version. Version comparisons are available per document in the frontend at `/documents/:id/compare`.
+The document's `head_version_id` always points to the latest version. Version comparisons are available per document in the frontend at `/workspace/:id/compare`.
 
 ## Real-Time Collaboration
 
@@ -44,8 +44,7 @@ Document access is controlled through:
 - **Ownership** — the creating user always has full access
 - **Shares** — per-user grants with `viewer` or `editor` roles via the `DocumentShare` table
 
-Shared documents appear in the recipient's studio alongside their own documents.
-Shared documents appear in the recipient's document library alongside their own documents.
+Shared documents appear in the recipient's workspace alongside their own documents.
 
 ## Application Attachments
 
@@ -55,30 +54,25 @@ Documents can be attached to applications through the `DocumentXApplication` bri
 
 | Path | Page | Purpose |
 |------|------|---------|
-| `/documents` | Document Library | Browse and manage documents |
-| `/documents/:id` | Document Detail | Inspect the latest version, metadata, and sharing |
-| `/documents/:id/edit` | Document Editor | Rich-text editing with collaboration |
-| `/documents/:id/compare` | Version Compare | Side-by-side version diff for a specific document |
+| `/workspace` | Workspace | Browse and manage documents |
+| `/workspace/:id` | Workspace Detail | Inspect the latest version, metadata, and sharing |
+| `/workspace/:id/edit` | Workspace Editor | Rich-text editing with collaboration |
+| `/workspace/:id/compare` | Workspace Compare | Side-by-side version diff for a specific document |
 
-Legacy `/me/documents/*` URLs still redirect to the canonical `/documents/*` routes.
+Legacy `/documents/*` and `/me/documents/*` URLs still redirect to the canonical `/workspace/*` routes.
 
 ## User Story Book
 
 ### Current UI State
 
-- Canonical document routes now live under `/documents`, with dedicated list, detail, edit, and compare pages plus legacy redirects from `/me/documents/*`.
+- Canonical workspace routes now live under `/workspace`, with dedicated list, detail, edit, and compare pages plus legacy redirects from `/documents/*` and `/me/documents/*`.
 - Document detail, editor, and compare views all include explicit back navigation instead of relying on browser history.
 - Application detail already offers a `New Document` path and supports attaching or detaching existing documents from the same workflow.
 
-### Story Threads
+### Planned Improvements
 
-**Canonical backlog — application document context (`BACKLOG_APPLICATIONS_STORY.md`)**
-Status: Partial
-Application surfaces already show document-count badges and the detail page can create or attach documents. The remaining open gap is metadata-driven filtering in the applications queue because `appDocMeta` is still stubbed.
-
-**Draft UX context — documents information architecture**
-Status: Superseded
-The draft critique assumed documents still lived under an Identity → Studio section and lacked clear return paths. The current UI uses top-level `/documents` routes and ships back links on detail, editor, and compare pages, so this concern no longer matches the live product.
+- No separate workspace-specific backlog file is currently checked in for this page.
+- Keep this page aligned to the `/workspace` frontend surface while the underlying document API and collaboration endpoints remain under `/documents/*`.
 
 ## Related Docs
 

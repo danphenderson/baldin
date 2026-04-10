@@ -1723,6 +1723,25 @@ class ApplicationStatusHistoryEntry(BaseSchema):
     )
 
 
+class ApplicationDocumentMetadata(BaseSchema):
+    total_count: int = Field(
+        0,
+        ge=0,
+        description="Number of attached documents the caller can access",
+    )
+    has_resume: bool = Field(
+        False, description="Whether an attached resume is accessible"
+    )
+    has_cover_letter: bool = Field(
+        False,
+        description="Whether an attached cover letter is accessible",
+    )
+    kinds: list[DocumentKind] = Field(
+        default_factory=list,
+        description="Distinct attached document kinds the caller can access",
+    )
+
+
 class ApplicationRead(BaseRead):
     lead_id: UUID4
     user_id: UUID4
@@ -1745,10 +1764,9 @@ class ApplicationRead(BaseRead):
         None,
         description="Why the application was rejected or withdrawn",
     )
-    document_count: int = Field(
-        0,
-        ge=0,
-        description="Number of attached documents the caller can access",
+    document_metadata: ApplicationDocumentMetadata = Field(
+        default_factory=ApplicationDocumentMetadata,
+        description="Summary of attached documents the caller can access",
     )
     status_history: list[ApplicationStatusHistoryEntry] = Field(
         default_factory=list,

@@ -64,7 +64,7 @@ interface FeatureRow {
 }
 
 const FEATURES: FeatureRow[] = [
-  { feature: 'Directory browsing',           free: true,          starter: true,          pro: true },
+  { feature: 'Discover browsing',            free: true,          starter: true,          pro: true },
   { feature: 'Lead collaboration',           free: true,          starter: true,          pro: true },
   { feature: 'Leads limit',                  free: 'Up to 5',    starter: 'Up to 25',    pro: 'Unlimited' },
   { feature: 'Connect with superusers',      free: true,          starter: true,          pro: true },
@@ -127,7 +127,7 @@ const AccountPage: React.FC = () => {
       setUser(updated);
       setSnack({
         open: true,
-        message: checked ? 'Your profile is now visible in the directory.' : 'Your profile is now hidden from the directory.',
+        message: checked ? 'Your profile is now visible in Discover.' : 'Your profile is now hidden from Discover.',
         severity: 'success',
       });
     } catch (error: unknown) {
@@ -276,7 +276,7 @@ const AccountPage: React.FC = () => {
             <Box sx={{ flex: 1 }}>
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                 <Typography variant="subtitle1" fontWeight={700}>
-                  Directory visibility
+                  Discover visibility
                 </Typography>
                 <Chip
                   label={isDiscoverable ? 'Visible' : 'Hidden'}
@@ -287,7 +287,7 @@ const AccountPage: React.FC = () => {
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
                 {user?.is_superuser
                   ? 'Superusers start visible so other members can find them quickly.'
-                  : 'Regular accounts start hidden until you choose to appear in the directory.'}
+                  : 'Regular accounts start hidden until you choose to appear in Discover.'}
               </Typography>
             </Box>
             <FormControlLabel
@@ -315,10 +315,10 @@ const AccountPage: React.FC = () => {
                 <Typography variant="subtitle2" fontWeight={700}>Need help from a superuser?</Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary">
-                Browse the focused superuser directory to send individual connection requests.
+                Browse the focused superuser Discover view to send individual connection requests.
               </Typography>
             </Box>
-            <Button variant="outlined" size="small" onClick={() => navigate('/network/directory?superusers_only=true')}>
+            <Button variant="outlined" size="small" onClick={() => navigate('/network/discover?superusers_only=true')}>
               Browse Superusers
             </Button>
           </Stack>
@@ -387,7 +387,7 @@ const AccountPage: React.FC = () => {
             </Stack>
             <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 480, mx: 'auto' }}>
               You&apos;re part of the Baldin alumni community. Your profile remains visible
-              in the directory for other job seekers to discover.
+              in Discover for other job seekers to find.
             </Typography>
           </CardContent>
         </Card>

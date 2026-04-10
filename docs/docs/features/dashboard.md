@@ -5,7 +5,7 @@ title: Dashboard
 description: Unified dashboard for action items, application pipeline, metrics, and activity.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-10 -->
 
 # Dashboard
 
@@ -52,15 +52,10 @@ Action items can also be created from the application detail page and lead modal
 - `frontend/src/page/dashboard.tsx` loads summary data, action items, the activity feed, and a small lead sample together, then keeps summary and action items fresh with lightweight polling.
 - The metrics area now includes status breakdown, stage dwell time from `avg_days_per_stage`, and the offer-conversion funnel alongside unread messages, pending connections, overdue action items, and profile completion.
 
-### Story Threads
+### Planned Improvements
 
-**Canonical backlog — `BACKLOG_APPLICATIONS_STORY.md`**
-Status: Implemented
-The applications backlog's Phase 5 analytics story is already live on this page. The dashboard consumes `avg_days_per_stage` and `offer_conversion_funnel` from the summary surface, so this source is now historical delivery context instead of open scope for the Dashboard.
-
-**Draft UX context
-Status: Partial
-The current UI already uses the plain-language Dashboard label and shows a welcome state for first-session users, which addresses part of the draft critique. The remaining ideas on richer orientation and contextual help are still design inputs rather than a canonical committed backlog.
+- No dashboard-specific backlog file is currently checked in as committed scope for this page.
+- Update this section when dashboard work moves from design discussion into a checked-in implementation plan.
 
 ## Related Docs
 

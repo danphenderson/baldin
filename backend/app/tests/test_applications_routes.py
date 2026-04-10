@@ -105,18 +105,36 @@ async def _create_lead() -> UUID:
         return lead.id
 
 
-async def _create_document_via_db(user_id: UUID) -> UUID:
+async def _create_document_via_db(
+    user_id: UUID, *, kind: str = "resume", title: str = "Test Doc"
+) -> UUID:
     """Create a minimal document owned by *user_id* and return its id."""
     async with session_context() as session:
         doc = models.Document(
-            title="Test Doc",
-            kind="resume",
+            title=title,
+            kind=kind,
             status="draft",
             user_id=user_id,
         )
         session.add(doc)
         await session.commit()
         return doc.id
+
+
+def _assert_document_metadata(
+    payload: dict[str, object],
+    *,
+    total_count: int,
+    has_resume: bool,
+    has_cover_letter: bool,
+    kinds: set[str],
+) -> None:
+    metadata = payload["document_metadata"]
+    assert isinstance(metadata, dict)
+    assert metadata["total_count"] == total_count
+    assert metadata["has_resume"] is has_resume
+    assert metadata["has_cover_letter"] is has_cover_letter
+    assert set(metadata["kinds"]) == kinds
 
 
 async def _create_versioned_document_via_db(
@@ -193,17 +211,23 @@ async def test_create_application_happy_path() -> None:
     assert isinstance(body.get("status_history"), list)
     assert len(body["status_history"]) >= 1
     assert body["status_history"][0]["to"] == "applied"
-    assert body["document_count"] == 0
+    _assert_document_metadata(
+        body,
+        total_count=0,
+        has_resume=False,
+        has_cover_letter=False,
+        kinds=set(),
+    )
 
 
-async def test_create_application_with_document_ids_returns_document_count() -> None:
+async def test_create_application_with_document_ids_returns_document_metadata() -> None:
     await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
         document_ids = [
-            await _create_document_via_db(uid),
-            await _create_document_via_db(uid),
+            await _create_document_via_db(uid, kind="resume", title="Resume"),
+            await _create_document_via_db(uid, kind="freeform", title="Notes"),
         ]
 
         response = await client.post(
@@ -218,7 +242,13 @@ async def test_create_application_with_document_ids_returns_document_count() -> 
 
     assert response.status_code == 201
     body = response.json()
-    assert body["document_count"] == 2
+    _assert_document_metadata(
+        body,
+        total_count=2,
+        has_resume=True,
+        has_cover_letter=False,
+        kinds={"resume", "freeform"},
+    )
 
 
 async def test_create_application_duplicate_lead_returns_400() -> None:
@@ -282,10 +312,10 @@ async def test_list_applications() -> None:
     assert "lead_id" in body[0]
     assert "status" in body[0]
     assert "user_id" in body[0]
-    assert "document_count" in body[0]
+    assert "document_metadata" in body[0]
 
 
-async def test_application_responses_include_accessible_document_count() -> None:
+async def test_application_responses_include_accessible_document_metadata() -> None:
     await _ensure_db_ready()
     async with _client() as client:
         viewer_id, viewer_headers = await _get_auth(client)
@@ -301,9 +331,21 @@ async def test_application_responses_include_accessible_document_count() -> None
         assert create_resp.status_code == 201, create_resp.text
         app_id = create_resp.json()["id"]
 
-        owned_doc_id = await _create_document_via_db(viewer_id)
-        shared_doc_id = await _create_document_via_db(shared_owner_id)
-        hidden_doc_id = await _create_document_via_db(hidden_owner_id)
+        owned_doc_id = await _create_document_via_db(
+            viewer_id,
+            kind="resume",
+            title="Owned Resume",
+        )
+        shared_doc_id = await _create_document_via_db(
+            shared_owner_id,
+            kind="cover_letter",
+            title="Shared Cover Letter",
+        )
+        hidden_doc_id = await _create_document_via_db(
+            hidden_owner_id,
+            kind="freeform",
+            title="Hidden Notes",
+        )
 
         async with session_context() as session:
             session.add(
@@ -344,13 +386,31 @@ async def test_application_responses_include_accessible_document_count() -> None
     list_body = next(
         application for application in list_resp.json() if application["id"] == app_id
     )
-    assert list_body["document_count"] == 2
+    _assert_document_metadata(
+        list_body,
+        total_count=2,
+        has_resume=True,
+        has_cover_letter=True,
+        kinds={"resume", "cover_letter"},
+    )
 
     assert detail_resp.status_code == 200
-    assert detail_resp.json()["document_count"] == 2
+    _assert_document_metadata(
+        detail_resp.json(),
+        total_count=2,
+        has_resume=True,
+        has_cover_letter=True,
+        kinds={"resume", "cover_letter"},
+    )
 
     assert update_resp.status_code == 200
-    assert update_resp.json()["document_count"] == 2
+    _assert_document_metadata(
+        update_resp.json(),
+        total_count=2,
+        has_resume=True,
+        has_cover_letter=True,
+        kinds={"resume", "cover_letter"},
+    )
 
 
 async def test_list_applications_empty_for_new_user() -> None:

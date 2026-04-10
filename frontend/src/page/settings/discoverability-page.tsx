@@ -44,7 +44,7 @@ const DiscoverabilityPage: React.FC = () => {
       setUser(updated);
       setSnack({
         open: true,
-        message: checked ? 'Your profile is now visible in the directory.' : 'Your profile is now hidden from the directory.',
+        message: checked ? 'Your profile is now visible in Discover.' : 'Your profile is now hidden from Discover.',
         severity: 'success',
       });
     } catch (error: unknown) {
@@ -87,7 +87,7 @@ const DiscoverabilityPage: React.FC = () => {
               <Typography variant="body1" color="text.secondary" sx={{ mt: 1.25 }}>
                 {user?.is_superuser
                   ? 'Superusers start visible so other members can find them quickly, but you can opt out whenever you need privacy.'
-                  : 'Regular accounts start hidden until you choose to appear in the directory and public profile surfaces.'}
+                  : 'Regular accounts start hidden until you choose to appear in Discover and public profile surfaces.'}
               </Typography>
             </Box>
 
@@ -115,13 +115,13 @@ const DiscoverabilityPage: React.FC = () => {
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {isDiscoverable
-                ? 'Your directory card and public network profile are visible to authenticated Baldin members.'
-                : 'Your directory card and public network profile stay hidden until you turn discoverability back on.'}
+                ? 'Your Discover card and public network profile are visible to authenticated Baldin members.'
+                : 'Your Discover card and public network profile stay hidden until you turn discoverability back on.'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {user?.is_superuser
                 ? 'This setting only affects network visibility. Your superuser workflow access stays intact.'
-                : 'You can still browse the directory and request connections to superusers even while your own profile stays hidden.'}
+                : 'You can still browse Discover and request connections to superusers even while your own profile stays hidden.'}
             </Typography>
           </Stack>
         </CardContent>
@@ -138,14 +138,14 @@ const DiscoverabilityPage: React.FC = () => {
                 </Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary">
-                Use the focused superuser directory view to send individual connection requests.
+                Use the focused superuser Discover view to send individual connection requests.
                 This prototype keeps discovery explicit and avoids a bulk-connect action.
               </Typography>
             </Box>
 
             <Button
               variant="contained"
-              onClick={() => navigate('/network/directory?superusers_only=true')}
+              onClick={() => navigate('/network/discover?superusers_only=true')}
             >
               Browse Superusers
             </Button>

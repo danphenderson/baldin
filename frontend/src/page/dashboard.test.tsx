@@ -280,7 +280,7 @@ describe('DashboardPage', () => {
     expect(await screen.findByText('Welcome to Baldin')).toBeInTheDocument();
     expect(screen.getByText('Import a Lead')).toBeInTheDocument();
     expect(screen.getByText('Complete Your Profile')).toBeInTheDocument();
-    expect(screen.getByText('Browse Directory')).toBeInTheDocument();
+    expect(screen.getByText('Discover People')).toBeInTheDocument();
     expect(screen.getByText('Create a Document')).toBeInTheDocument();
   });
 

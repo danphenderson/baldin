@@ -79,7 +79,7 @@ const DirectoryPage: React.FC = () => {
       });
       setUsers(res.items ?? []);
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to load directory', 'error');
+      notify(e instanceof Error ? e.message : 'Failed to load Discover', 'error');
     }
     setLoading(false);
   }, [token, notify, superusersOnly]);
@@ -103,10 +103,10 @@ const DirectoryPage: React.FC = () => {
   useEffect(() => { setPage(1); }, [deferredSearch, placementFilter]);
 
   usePageToolbarHeader(
-    superusersOnly ? 'Superusers' : 'Directory',
+    superusersOnly ? 'Superusers' : 'Discover',
     superusersOnly
       ? 'Browse discoverable superusers open to connection requests'
-      : 'Find and connect with job seekers',
+      : 'Find and connect with people in your network',
   );
 
   const canRequestConnection = useCallback((candidate: UserDirectoryRead) => (
@@ -214,10 +214,10 @@ const DirectoryPage: React.FC = () => {
         users.length === 0 ? (
           <EmptyState
             icon={<PeopleIcon />}
-            title={superusersOnly ? 'No discoverable superusers yet' : 'No users in the directory yet'}
+            title={superusersOnly ? 'No discoverable superusers yet' : 'No people in Discover yet'}
             description={superusersOnly
-              ? 'When mentors and advisors enable directory visibility, they\u0027ll appear here.'
-              : 'The directory shows discoverable members of the Baldin community.'}
+              ? 'When mentors and advisors enable Discover visibility, they\u0027ll appear here.'
+              : 'Discover shows visible members of the Baldin community.'}
             action={superusersOnly
               ? { label: 'Show Everyone', onClick: () => setSuperuserView(false) }
               : undefined}
@@ -239,7 +239,7 @@ const DirectoryPage: React.FC = () => {
             return (
               <Grid key={u.user_id} size={{ xs: 12, sm: 6, md: 4 }}>
                 <Card sx={{ height: '100%' }}>
-                  <CardActionArea onClick={() => navigate(`/network/directory/${u.user_id}`)}>
+                  <CardActionArea onClick={() => navigate(`/network/discover/${u.user_id}`)}>
                     <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
                       <Stack spacing={1.5}>
                         <Stack direction="row" spacing={1.5} alignItems="center">

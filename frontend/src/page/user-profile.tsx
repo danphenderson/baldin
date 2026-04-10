@@ -120,8 +120,8 @@ const UserProfilePage: React.FC = () => {
   if (error || !profile) {
     return (
       <Box>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/network/directory')} sx={{ mb: 2 }}>
-          Back to Directory
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/network/discover')} sx={{ mb: 2 }}>
+          Back to Discover
         </Button>
         <Alert severity="error">{error ?? 'Profile not found.'}</Alert>
       </Box>
@@ -132,8 +132,8 @@ const UserProfilePage: React.FC = () => {
 
   return (
     <Box>
-      <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/network/directory')} sx={{ mb: 3 }}>
-        Back to Directory
+      <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/network/discover')} sx={{ mb: 3 }}>
+        Back to Discover
       </Button>
 
       {/* Header card */}

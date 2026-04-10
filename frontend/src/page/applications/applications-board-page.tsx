@@ -31,6 +31,7 @@ import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import type { ApplicationRead } from '../../service/applications';
 import {
   useApplications, ALL_STATUS_COLUMNS, COLUMNS, COLUMN_EMPTY_HINTS, relativeDate, nextStage,
+  applicationDocumentCount,
   type Column, type Outcome,
 } from './use-applications';
 
@@ -118,7 +119,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
   const canAdvance = nextStage(column.key) !== null;
   const isOverdue = !!(app.next_step_due && new Date(app.next_step_due) < new Date());
   const hasReminder = Boolean(app.next_step || app.next_step_due);
-  const documentCount = app.document_count ?? 0;
+  const documentCount = applicationDocumentCount(app);
   const moveTargets = ALL_STATUS_COLUMNS.filter((option) => option.key !== currentStatus) as Column[];
   const [editingReminder, setEditingReminder] = useState(false);
   const [draftNextStep, setDraftNextStep] = useState(app.next_step ?? '');

@@ -187,7 +187,7 @@ async def create_application(
     application = result.scalars().first()  # type: ignore
 
     if application is not None:
-        await _populate_document_counts([application], db=db, user_id=user.id)
+        await _populate_document_metadata([application], db=db, user_id=user.id)
 
     return application
 
@@ -210,7 +210,7 @@ async def get_applications(
     )
     # Ensure that unique rows are considered to avoid duplicates due to joinedload
     applications = result.scalars().unique().all()
-    await _populate_document_counts(applications, db=db, user_id=user.id)
+    await _populate_document_metadata(applications, db=db, user_id=user.id)
     return applications
 
 
@@ -289,7 +289,7 @@ async def update_application(
     application = result.scalars().first()
 
     if application is not None:
-        await _populate_document_counts([application], db=db, user_id=user.id)
+        await _populate_document_metadata([application], db=db, user_id=user.id)
 
     return application
 
@@ -334,7 +334,7 @@ async def get_application_by_id(
     application = result.scalars().first()  # type: ignore
 
     if application is not None:
-        await _populate_document_counts([application], db=db, user_id=user.id)
+        await _populate_document_metadata([application], db=db, user_id=user.id)
 
     # Fetch company details for the application
 
@@ -409,7 +409,7 @@ def _document_access_filter(user_id: UUID4):
     )
 
 
-async def _populate_document_counts(
+async def _populate_document_metadata(
     applications: list[models.Application],
     *,
     db: AsyncSession,
@@ -419,10 +419,11 @@ async def _populate_document_counts(
         return
 
     application_ids = [application.id for application in applications]
-    count_rows = await db.execute(
+    metadata_rows = await db.execute(
         select(
             models.DocumentXApplication.application_id,
-            func.count(models.Document.id).label("document_count"),
+            models.Document.kind,
+            func.count(models.Document.id).label("kind_count"),
         )
         .join(
             models.Document,
@@ -432,14 +433,35 @@ async def _populate_document_counts(
             models.DocumentXApplication.application_id.in_(application_ids),
             _document_access_filter(user_id),
         )
-        .group_by(models.DocumentXApplication.application_id)
+        .group_by(models.DocumentXApplication.application_id, models.Document.kind)
     )
-    count_map = {
-        application_id: document_count
-        for application_id, document_count in count_rows.all()
-    }
+
+    metadata_map: dict[UUID4, dict[str, object]] = {}
+    for application_id, raw_kind, kind_count in metadata_rows.all():
+        entry = metadata_map.setdefault(
+            application_id,
+            {"total_count": 0, "kinds": set()},
+        )
+        entry["total_count"] = int(entry["total_count"]) + kind_count
+        cast_kinds = entry["kinds"]
+        if isinstance(cast_kinds, set):
+            cast_kinds.add(schemas.DocumentKind(raw_kind))
+
     for application in applications:
-        application.document_count = count_map.get(application.id, 0)
+        entry = metadata_map.get(application.id)
+        total_count = int(entry["total_count"]) if entry is not None else 0
+        kinds = entry["kinds"] if entry is not None else set()
+        ordered_kinds = [
+            kind
+            for kind in schemas.DocumentKind
+            if isinstance(kinds, set) and kind in kinds
+        ]
+        application.document_metadata = schemas.ApplicationDocumentMetadata(
+            total_count=total_count,
+            has_resume=schemas.DocumentKind.RESUME in ordered_kinds,
+            has_cover_letter=schemas.DocumentKind.COVER_LETTER in ordered_kinds,
+            kinds=ordered_kinds,
+        )
 
 
 @router.get("/{id}/export")

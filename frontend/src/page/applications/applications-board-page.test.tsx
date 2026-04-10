@@ -28,7 +28,12 @@ function makeApplication(overrides: Partial<Record<string, unknown>> = {}) {
     status: 'applied',
     stage: 'applied',
     outcome: null,
-    document_count: 0,
+    document_metadata: {
+      total_count: 0,
+      has_resume: false,
+      has_cover_letter: false,
+      kinds: [],
+    },
     created_at: '2026-04-01T00:00:00Z',
     updated_at: '2026-04-03T00:00:00Z',
     next_step: 'Send follow-up note',
@@ -71,8 +76,6 @@ function makeHookReturn(overrides: Partial<Record<string, unknown>> = {}) {
     registeredApps: [],
     closedApps: [],
     overdueCount: 0,
-    appDocMeta: new Map(),
-    appDocMetaLoading: false,
     ...overrides,
   };
 }
@@ -137,9 +140,23 @@ describe('ApplicationsBoardPage', () => {
   it('renders document-count badges on board cards from list data', () => {
     mockUseApplications.mockReturnValue(
       makeHookReturn({
-        applications: [makeApplication({ document_count: 3 })],
+        applications: [makeApplication({
+          document_metadata: {
+            total_count: 3,
+            has_resume: true,
+            has_cover_letter: true,
+            kinds: ['resume', 'cover_letter'],
+          },
+        })],
         buckets: new Map([
-          ['applied', [makeApplication({ document_count: 3 })]],
+          ['applied', [makeApplication({
+            document_metadata: {
+              total_count: 3,
+              has_resume: true,
+              has_cover_letter: true,
+              kinds: ['resume', 'cover_letter'],
+            },
+          })]],
           ['screening', []],
           ['interview', []],
           ['offer', []],
@@ -158,7 +175,12 @@ describe('ApplicationsBoardPage', () => {
       status: 'rejected',
       stage: null,
       outcome: 'rejected',
-      document_count: 2,
+      document_metadata: {
+        total_count: 2,
+        has_resume: true,
+        has_cover_letter: false,
+        kinds: ['resume'],
+      },
     });
     const hookReturn = makeHookReturn({
       applications: [closedApplication],

@@ -30,7 +30,7 @@ interface FeatureRow {
 }
 
 const FEATURES: FeatureRow[] = [
-  { feature: 'Directory browsing',           free: true,          starter: true,          pro: true },
+  { feature: 'Discover browsing',            free: true,          starter: true,          pro: true },
   { feature: 'Lead collaboration',           free: true,          starter: true,          pro: true },
   { feature: 'Leads limit',                  free: 'Up to 5',    starter: 'Up to 25',    pro: 'Unlimited' },
   { feature: 'Connect with superusers',      free: true,          starter: true,          pro: true },

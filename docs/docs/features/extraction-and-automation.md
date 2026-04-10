@@ -5,7 +5,7 @@ title: Extraction & Automation
 description: LLM-backed extraction, orchestration pipelines, and superuser crawler management.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-10 -->
 
 # Extraction & Automation
 
@@ -76,19 +76,10 @@ The review queue at `/workflows/review` surfaces crawled leads and other items t
 - The pipelines page is still JSON-first: users create workflow definitions and trigger payloads by editing raw JSON, then inspect definitions and run payloads through JSON views.
 - Extractors, crawlers, and review queues already have dedicated management screens rather than being described only at the API level.
 
-### Coverage Note
+### Planned Improvements
 
-No canonical checked-in backlog file currently maps to this feature page. The active story context here comes from draft UX planning rather than a feature-specific committed backlog.
-
-### Story Threads
-
-**Draft UX context — pipelines usability**
-Status: Open
-The workflows page still requires JSON definitions and JSON payload editing, so the draft critique about a technical, non-guided pipelines UX remains accurate.
-
-**Draft UX context — admin tool exposure**
-Status: Implemented
-The current navigation already hides Review Queue and Crawlers from non-superusers, and the routes themselves are guarded. That draft concern is still useful historical context, but it no longer describes the live UI.
+- Guided workflow authoring remains the clearest UX gap on this surface because pipeline creation still depends on raw JSON editing.
+- No checked-in feature-specific backlog file currently adds committed scope beyond the live extractor, review, and crawler pages.
 
 ## Related Docs
 

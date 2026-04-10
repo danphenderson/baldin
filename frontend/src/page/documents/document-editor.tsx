@@ -177,7 +177,7 @@ const DocumentEditorPage: React.FC = () => {
           content_format: contentFormat,
         };
         const created = await createDocument(token, payload);
-        navigate(`/documents/${created.id}`);
+        navigate(`/workspace/${created.id}`);
       } else {
         const payload: DocumentVersionCreate & { content_format?: string } = {
           content: persistedContent || undefined,
@@ -186,7 +186,7 @@ const DocumentEditorPage: React.FC = () => {
           content_format: contentFormat,
         };
         await createVersion(token, id!, payload);
-        navigate(`/documents/${id}`);
+        navigate(`/workspace/${id}`);
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Save failed');
@@ -221,11 +221,11 @@ const DocumentEditorPage: React.FC = () => {
       {/* ── Back link ── */}
       <Button
         startIcon={<BackIcon />}
-        onClick={() => navigate(isCreate ? '/documents' : `/documents/${id}`)}
+        onClick={() => navigate(isCreate ? '/workspace' : `/workspace/${id}`)}
         sx={{ mb: 2, alignSelf: 'flex-start' }}
-        aria-label={isCreate ? 'Back to documents' : 'Back to document'}
+        aria-label={isCreate ? 'Back to workspace' : 'Back to document'}
       >
-        {isCreate ? 'Back to Documents' : 'Back to Document'}
+        {isCreate ? 'Back to Workspace' : 'Back to Document'}
       </Button>
 
       {!isCreate && sourceFileName && (
@@ -457,7 +457,7 @@ const DocumentEditorPage: React.FC = () => {
         <Box sx={{ flex: 1 }} />
 
         <Button
-          variant="outlined" onClick={() => navigate(isCreate ? '/documents' : `/documents/${id}`)}
+          variant="outlined" onClick={() => navigate(isCreate ? '/workspace' : `/workspace/${id}`)}
           disabled={saving}
           startIcon={<BackIcon />}
           aria-label="Cancel editing"

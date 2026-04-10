@@ -13,6 +13,7 @@ import WorkflowsGroupLayout from '../layout/workflows-group-layout';
 import NetworkGroupLayout from '../layout/network-group-layout';
 import SettingsGroupLayout from '../layout/settings-group-layout';
 import { UserContext } from '../context/user-context';
+import { legacyRedirects, legacyPrefixRedirects } from './navigation';
 
 /* ── Lazy page imports ─────────────────────────────────────────────── */
 
@@ -21,20 +22,26 @@ const LeadsPage = React.lazy(() => import('../page/leads'));
 const ApplicationsQueuePage = React.lazy(() => import('../page/applications/applications-queue-page'));
 const ApplicationsBoardPage = React.lazy(() => import('../page/applications/applications-board-page'));
 const ApplicationDetailPage = React.lazy(() => import('../page/applications/applications-detail-page'));
-const DocumentListPage = React.lazy(() => import('../page/documents/document-list'));
-const DocumentDetailPage = React.lazy(() => import('../page/documents/document-detail'));
-const DocumentEditorPage = React.lazy(() => import('../page/documents/document-editor'));
-const DocumentComparePage = React.lazy(() => import('../page/documents/document-compare'));
+const WorkspaceListPage = React.lazy(() => import('../page/documents/document-list'));
+const WorkspaceDetailPage = React.lazy(() => import('../page/documents/document-detail'));
+const WorkspaceEditorPage = React.lazy(() => import('../page/documents/document-editor'));
+const WorkspaceComparePage = React.lazy(() => import('../page/documents/document-compare'));
 const ProfilePage = React.lazy(() => import('../page/profile/index'));
 const PipelinesPage = React.lazy(() => import('../page/pipelines'));
 const CompaniesPage = React.lazy(() => import('../page/companies'));
 const ExtractorPage = React.lazy(() => import('../page/extractor'));
-const DirectoryPage = React.lazy(() => import('../page/directory'));
+const DiscoverPage = React.lazy(() => import('../page/directory'));
 const UserProfilePage = React.lazy(() => import('../page/user-profile'));
 const ConnectionsPage = React.lazy(() => import('../page/connections'));
+const AgentsPage = React.lazy(() => import('../page/agents'));
 const ConversationsPage = React.lazy(() => import('../page/messages/conversations-page'));
 const ConversationDetailPage = React.lazy(() => import('../page/messages/conversation-detail-page'));
 const AccountPage = React.lazy(() => import('../page/settings/account-page'));
+const SubscriptionPage = React.lazy(() => import('../page/settings/subscription-page'));
+const DiscoverabilityPage = React.lazy(() => import('../page/settings/discoverability-page'));
+const GraduationPage = React.lazy(() => import('../page/settings/graduation-page'));
+const AspirationRolesPage = React.lazy(() => import('../page/aspirations/roles-page'));
+const AspirationCompaniesPage = React.lazy(() => import('../page/aspirations/companies-page'));
 const CrawlersPage = React.lazy(() => import('../page/crawlers'));
 const ReviewQueuePage = React.lazy(() => import('../page/review-queue'));
 const LoginPage = React.lazy(() => import('../page/login'));
@@ -57,12 +64,13 @@ const SuperuserRoute: React.FC<{ children: React.ReactElement }> = ({ children }
   return children;
 };
 
-/** Redirects /me/documents/* paths to /documents/*. */
-const MeDocumentsRedirect: React.FC = () => {
+/** Redirects legacy path prefixes to their new canonical route families. */
+const LegacyPrefixRedirect: React.FC<{ toPrefix: string }> = ({ toPrefix }) => {
   const params = useParams();
   const location = useLocation();
   const rest = params['*'] ?? '';
-  return <Navigate to={`/documents/${rest}${location.search}`} replace />;
+  const suffix = rest ? `/${rest}` : '';
+  return <Navigate to={`${toPrefix}${suffix}${location.search}`} replace />;
 };
 
 const AppRoutes: React.FC = () => {
@@ -89,15 +97,17 @@ const AppRoutes: React.FC = () => {
           {/* ── Identity group ── */}
           <Route path="me" element={<IdentityGroupLayout />}>
             <Route index element={<ProfilePage />} />
+            <Route path="aspirations/roles" element={<AspirationRolesPage />} />
+            <Route path="aspirations/companies" element={<AspirationCompaniesPage />} />
           </Route>
 
-          {/* ── Documents group ── */}
-          <Route path="documents" element={<DocumentsGroupLayout />}>
-            <Route index element={<DocumentListPage />} />
-            <Route path="new" element={<DocumentEditorPage />} />
-            <Route path=":id" element={<DocumentDetailPage />} />
-            <Route path=":id/edit" element={<DocumentEditorPage />} />
-            <Route path=":id/compare" element={<DocumentComparePage />} />
+          {/* ── Workspace group ── */}
+          <Route path="workspace" element={<DocumentsGroupLayout />}>
+            <Route index element={<WorkspaceListPage />} />
+            <Route path="new" element={<WorkspaceEditorPage />} />
+            <Route path=":id" element={<WorkspaceDetailPage />} />
+            <Route path=":id/edit" element={<WorkspaceEditorPage />} />
+            <Route path=":id/compare" element={<WorkspaceComparePage />} />
           </Route>
 
           {/* ── Workflows group ── */}
@@ -110,27 +120,38 @@ const AppRoutes: React.FC = () => {
 
           {/* ── Network group ── */}
           <Route path="network" element={<NetworkGroupLayout />}>
-            <Route index element={<Navigate to="/network/directory" replace />} />
-            <Route path="directory" element={<DirectoryPage />} />
-            <Route path="directory/:userId" element={<UserProfilePage />} />
+            <Route index element={<Navigate to="/network/discover" replace />} />
+            <Route path="discover" element={<DiscoverPage />} />
+            <Route path="discover/:userId" element={<UserProfilePage />} />
             <Route path="connections" element={<ConnectionsPage />} />
             <Route path="messages" element={<ConversationsPage />} />
             <Route path="messages/:conversationId" element={<ConversationDetailPage />} />
+            <Route path="agents" element={<AgentsPage />} />
           </Route>
 
           {/* ── Settings group ── */}
           <Route path="settings" element={<SettingsGroupLayout />}>
             <Route index element={<AccountPage />} />
+            <Route path="subscription" element={<SubscriptionPage />} />
+            <Route path="discoverability" element={<DiscoverabilityPage />} />
+            <Route path="graduation" element={<GraduationPage />} />
           </Route>
 
           {/* ── Legacy redirects ── */}
-          <Route path="companies" element={<Navigate to="/leads/companies" replace />} />
-          <Route path="me/documents" element={<Navigate to="/documents" replace />} />
-          <Route path="me/documents/*" element={<MeDocumentsRedirect />} />
-          <Route path="profile" element={<Navigate to="/me" replace />} />
-          <Route path="pipelines" element={<Navigate to="/workflows" replace />} />
-          <Route path="data-orchestration" element={<Navigate to="/workflows" replace />} />
-          <Route path="extractor" element={<Navigate to="/workflows/extractors" replace />} />
+          {Object.entries(legacyRedirects).map(([legacyPath, targetPath]) => (
+            <Route
+              key={legacyPath}
+              path={legacyPath.replace(/^\//, '')}
+              element={<Navigate to={targetPath} replace />}
+            />
+          ))}
+          {legacyPrefixRedirects.map(({ fromPrefix, toPrefix }) => (
+            <Route
+              key={`${fromPrefix}-prefix`}
+              path={`${fromPrefix.replace(/^\//, '')}/*`}
+              element={<LegacyPrefixRedirect toPrefix={toPrefix} />}
+            />
+          ))}
 
           <Route path="*" element={<ErrorPage />} />
         </Route>

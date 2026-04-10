@@ -79,6 +79,18 @@ export function isClosed(app: ApplicationRead): boolean {
   return outcome === 'rejected' || outcome === 'withdrawn';
 }
 
+export function applicationDocumentCount(app: Pick<ApplicationRead, 'document_metadata'>): number {
+  return app.document_metadata?.total_count ?? 0;
+}
+
+export function applicationHasResume(app: Pick<ApplicationRead, 'document_metadata'>): boolean {
+  return app.document_metadata?.has_resume ?? false;
+}
+
+export function applicationHasCoverLetter(app: Pick<ApplicationRead, 'document_metadata'>): boolean {
+  return app.document_metadata?.has_cover_letter ?? false;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Shared applications hook                                           */
 /* ------------------------------------------------------------------ */
@@ -118,9 +130,6 @@ export interface UseApplicationsReturn {
   closedApps: ApplicationRead[];
   /** Number of applications with a next_step_due date in the past. */
   overdueCount: number;
-  /** Map of application ID → { hasResume, hasCoverLetter }. Empty while loading. */
-  appDocMeta: Map<string, { hasResume: boolean; hasCoverLetter: boolean }>;
-  appDocMetaLoading: boolean;
 }
 
 export function useApplications(token: string | null): UseApplicationsReturn {
@@ -130,10 +139,6 @@ export function useApplications(token: string | null): UseApplicationsReturn {
   const [success, setSuccess] = useState('');
 
   const [deleteTarget, setDeleteTarget] = useState<ApplicationRead | null>(null);
-
-  /* ---- Document metadata for filters (loaded on demand, not per-item) ---- */
-  const [appDocMeta] = useState<Map<string, { hasResume: boolean; hasCoverLetter: boolean }>>(new Map());
-  const appDocMetaLoading = false;
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -308,7 +313,5 @@ export function useApplications(token: string | null): UseApplicationsReturn {
     registeredApps,
     closedApps,
     overdueCount,
-    appDocMeta,
-    appDocMetaLoading,
   };
 }

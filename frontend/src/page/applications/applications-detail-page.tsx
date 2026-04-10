@@ -751,7 +751,7 @@ const ApplicationDetailPage: React.FC = () => {
               variant="text"
               size="small"
               startIcon={<NoteAddIcon />}
-              onClick={() => navigate('/documents/new')}
+              onClick={() => navigate('/workspace/new')}
               sx={{ textTransform: 'none' }}
             >
               New Document

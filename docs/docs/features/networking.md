@@ -2,28 +2,28 @@
 sidebar_position: 5
 slug: /features/networking
 title: Networking & Messaging
-description: Directory profiles, peer connections, direct and group conversations, and activity tracking.
+description: Discover profiles, peer connections, direct and group conversations, and activity tracking.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-10 -->
 
 # Networking & Messaging
 
 Baldin's network layer connects users through discoverable profiles, peer connections, and real-time messaging — all feeding into the activity feed and action items on the Dashboard.
 
-## Directory
+## Discover
 
-The directory at `/network/directory` surfaces discoverable user profiles. Visibility is governed by subscription tier:
+The Discover surface at `/network/discover` shows discoverable user profiles. Visibility is governed by subscription tier:
 
-| Tier | Directory Access |
+| Tier | Discover Access |
 |------|-----------------|
 | Free | Limited visibility |
 | Starter | Standard discovery |
 | Pro | Full directory access |
 
-Users can browse profiles and initiate connection requests from the directory.
+Users can browse profiles and initiate connection requests from Discover.
 
-**Frontend:** `/network/directory` — Directory (`frontend/src/page/directory.tsx`)
+**Frontend:** `/network/discover` — Discover (`frontend/src/page/directory.tsx`)
 
 **API:** `/directory` — Search and profile discovery endpoints
 
@@ -74,27 +74,14 @@ The activity feed aggregates events from connections, conversations, application
 
 ### Current UI State
 
-- The Network area is organized around `/network/directory`, `/network/connections`, and `/network/messages`, with dedicated conversation list and detail routes plus unread-count badges.
-- Directory cards surface connection eligibility before the user acts: eligible profiles show **Connect**, while starter-limited accounts see a disabled **Starter Required** chip.
-- Accepted connections feed the new-message flow, so direct and group conversations build on the same network relationship model shown elsewhere in the UI.
+- The Network area is organized around `/network/discover`, `/network/connections`, and `/network/messages`, with a placeholder `/network/agents` route reserved for future assistants.
+- Connections and conversations already use dedicated list and detail surfaces rather than a single combined hub.
+- Unread message counts surface through badges and dashboard summaries instead of a dedicated notifications page.
 
-### Coverage Note
+### Planned Improvements
 
-No canonical checked-in backlog file currently maps to networking. The current story context for this page comes from the draft UX plan.
-
-### Story Threads
-
-**Draft UX context — connection tier gating**
-Status: Implemented
-The directory now shows the access gate before a user tries to connect. Starter-limited accounts see a disabled **Starter Required** chip instead of discovering the restriction after clicking.
-
-**Draft UX context — network navigation clarity**
-Status: Implemented
-The current drawer and secondary navigation already use plain `Network`, `Directory`, `Connections`, and `Messages` labels, so this part of the draft is now delivered rather than open.
-
-**Draft UX context — notifications beyond message badges**
-Status: Open
-Unread message counts exist in the conversation list and dashboard summary, but the app still lacks a broader notification center spanning conversations, connections, and other network events.
+- The `/network/agents` route is intentionally a placeholder empty state today.
+- The app still relies on unread badges and dashboard activity summaries rather than a broader notification center for network events.
 
 ## Related Docs
 

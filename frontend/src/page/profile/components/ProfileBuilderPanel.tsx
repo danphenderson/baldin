@@ -198,10 +198,10 @@ export const ProfileBuilderPanel: React.FC<ProfileBuilderPanelProps> = ({
             size="small"
             variant="text"
             endIcon={<ArrowForwardIcon sx={{ fontSize: 16 }} />}
-            onClick={() => navigate('/documents')}
+            onClick={() => navigate('/workspace')}
             sx={{ fontWeight: 600, fontSize: '0.8rem', color: 'text.secondary' }}
           >
-            Open Documents
+            Open Workspace
           </Button>
         </Box>
       </CardContent>

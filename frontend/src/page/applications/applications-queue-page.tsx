@@ -20,7 +20,18 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
-import { useApplications, COLUMNS, ALL_STATUS_COLUMNS, relativeDate, nextStatus, effectiveStage, isClosed } from './use-applications';
+import {
+  useApplications,
+  COLUMNS,
+  ALL_STATUS_COLUMNS,
+  relativeDate,
+  nextStatus,
+  effectiveStage,
+  isClosed,
+  applicationDocumentCount,
+  applicationHasResume,
+  applicationHasCoverLetter,
+} from './use-applications';
 import type { ApplicationRead } from '../../service/applications';
 import ConfirmDialog from '../../component/common/confirm-dialog';
 import EmptyState from '../../component/common/empty-state';
@@ -61,7 +72,6 @@ const ApplicationsQueuePage: React.FC = () => {
   const {
     applications, loading, error, success, setError, setSuccess,
     handleAdvance, handleDelete, confirmDelete, deleteTarget, setDeleteTarget,
-    appDocMeta, appDocMetaLoading,
   } = useApplications(token);
 
   /* ---- Local UI state ---- */
@@ -117,22 +127,19 @@ const ApplicationsQueuePage: React.FC = () => {
         (activeFilter === 'active' && !isClosed(app)) ||
         (activeFilter === 'closed' && isClosed(app));
 
-      const docMeta = appDocMeta.get(app.id);
       const matchesResume =
         resumeFilter === 'all' ||
-        !docMeta ||
-        (resumeFilter === 'yes' && docMeta.hasResume) ||
-        (resumeFilter === 'no' && !docMeta.hasResume);
+        (resumeFilter === 'yes' && applicationHasResume(app)) ||
+        (resumeFilter === 'no' && !applicationHasResume(app));
 
       const matchesCoverLetter =
         coverLetterFilter === 'all' ||
-        !docMeta ||
-        (coverLetterFilter === 'yes' && docMeta.hasCoverLetter) ||
-        (coverLetterFilter === 'no' && !docMeta.hasCoverLetter);
+        (coverLetterFilter === 'yes' && applicationHasCoverLetter(app)) ||
+        (coverLetterFilter === 'no' && !applicationHasCoverLetter(app));
 
       return matchesSearch && matchesStage && matchesActive && matchesResume && matchesCoverLetter;
     });
-  }, [deferredSearch, stageFilter, activeFilter, applications, resumeFilter, coverLetterFilter, appDocMeta]);
+  }, [deferredSearch, stageFilter, activeFilter, applications, resumeFilter, coverLetterFilter]);
 
   const sorted = useMemo(() => {
     const copy = [...filtered];
@@ -351,7 +358,6 @@ const ApplicationsQueuePage: React.FC = () => {
           size="small"
           variant={resumeFilter === 'yes' ? 'filled' : 'outlined'}
           color={resumeFilter === 'yes' ? 'success' : 'default'}
-          disabled={appDocMetaLoading}
           onClick={() => setResumeFilter(resumeFilter === 'yes' ? 'all' : 'yes')}
         />
         <Chip
@@ -360,7 +366,6 @@ const ApplicationsQueuePage: React.FC = () => {
           size="small"
           variant={coverLetterFilter === 'yes' ? 'filled' : 'outlined'}
           color={coverLetterFilter === 'yes' ? 'success' : 'default'}
-          disabled={appDocMetaLoading}
           onClick={() => setCoverLetterFilter(coverLetterFilter === 'yes' ? 'all' : 'yes')}
         />
       </Stack>
@@ -404,6 +409,7 @@ const ApplicationsQueuePage: React.FC = () => {
             const column = columnFor(stage);
             const companyName = lead?.companies?.[0]?.name;
             const canAdvance = nextStatus(stage) !== null;
+            const documentCount = applicationDocumentCount(app);
 
             return (
               <Card
@@ -525,14 +531,14 @@ const ApplicationsQueuePage: React.FC = () => {
                       )}
                       <Chip
                         icon={<DocIcon sx={{ fontSize: '0.75rem !important' }} />}
-                        label={`${app.document_count ?? 0} doc${(app.document_count ?? 0) === 1 ? '' : 's'}`}
+                        label={`${documentCount} doc${documentCount === 1 ? '' : 's'}`}
                         size="small"
-                        variant={(app.document_count ?? 0) > 0 ? 'filled' : 'outlined'}
+                        variant={documentCount > 0 ? 'filled' : 'outlined'}
                         sx={{
                           fontSize: '0.7rem',
                           height: 22,
-                          bgcolor: (app.document_count ?? 0) > 0 ? alpha(theme.palette.primary.main, 0.12) : undefined,
-                          color: (app.document_count ?? 0) > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
+                          bgcolor: documentCount > 0 ? alpha(theme.palette.primary.main, 0.12) : undefined,
+                          color: documentCount > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
                           '& .MuiChip-icon': { ml: 0.5, mr: -0.25 },
                         }}
                       />

@@ -1119,6 +1119,32 @@ export interface components {
        */
       version_id?: string | null;
     };
+    /** ApplicationDocumentMetadata */
+    ApplicationDocumentMetadata: {
+      /**
+       * Total Count
+       * @description Number of attached documents the caller can access
+       * @default 0
+       */
+      total_count?: number;
+      /**
+       * Has Resume
+       * @description Whether an attached resume is accessible
+       * @default false
+       */
+      has_resume?: boolean;
+      /**
+       * Has Cover Letter
+       * @description Whether an attached cover letter is accessible
+       * @default false
+       */
+      has_cover_letter?: boolean;
+      /**
+       * Kinds
+       * @description Distinct attached document kinds the caller can access
+       */
+      kinds?: components["schemas"]["DocumentKind"][];
+    };
     /**
      * ApplicationOutcome
      * @description Terminal closure states — mutually exclusive with further stage progression.
@@ -1183,12 +1209,8 @@ export interface components {
        * @description Why the application was rejected or withdrawn
        */
       outcome_reason?: string | null;
-      /**
-       * Document Count
-       * @description Number of attached documents the caller can access
-       * @default 0
-       */
-      document_count?: number;
+      /** @description Summary of attached documents the caller can access */
+      document_metadata?: components["schemas"]["ApplicationDocumentMetadata"];
       /**
        * Status History
        * @description Append-only log of status transitions

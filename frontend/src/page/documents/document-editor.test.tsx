@@ -63,8 +63,8 @@ function renderDocumentEditor(route: string) {
       >
         <MemoryRouter initialEntries={[route]}>
           <Routes>
-            <Route path="/documents/new" element={<DocumentEditorPage />} />
-            <Route path="/documents/:id/edit" element={<DocumentEditorPage />} />
+            <Route path="/workspace/new" element={<DocumentEditorPage />} />
+            <Route path="/workspace/:id/edit" element={<DocumentEditorPage />} />
           </Routes>
         </MemoryRouter>
       </UserContext.Provider>
@@ -113,7 +113,7 @@ describe('DocumentEditorPage', () => {
       },
     ] as never);
 
-    renderDocumentEditor('/documents/doc-1/edit');
+    renderDocumentEditor('/workspace/doc-1/edit');
 
     expect(await screen.findByText('2 words · 10 chars')).toBeInTheDocument();
 
@@ -126,7 +126,7 @@ describe('DocumentEditorPage', () => {
   });
 
   it('shows readable plain text and matching counts after rich-to-plain format switch', async () => {
-    renderDocumentEditor('/documents/new');
+    renderDocumentEditor('/workspace/new');
 
     fireEvent.click(screen.getByRole('button', { name: 'Emit rich change' }));
 

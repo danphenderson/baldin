@@ -20,6 +20,43 @@ export interface SecondaryNavItem {
   superuserOnly?: boolean;
 }
 
+export type NavIconKey =
+  | 'dashboard'
+  | 'leads'
+  | 'applications'
+  | 'messages'
+  | 'people'
+  | 'connections'
+  | 'discover'
+  | 'agents'
+  | 'workflows'
+  | 'workspace'
+  | 'profile'
+  | 'settings'
+  | 'aspirations'
+  | 'roles'
+  | 'companies';
+
+interface BaseNavigationItem {
+  id: string;
+  label: string;
+  icon: NavIconKey;
+}
+
+export interface NavigationLinkItem extends BaseNavigationItem {
+  kind: 'link';
+  path: string;
+  badge?: 'unreadMessages';
+}
+
+export interface NavigationGroupItem extends BaseNavigationItem {
+  kind: 'group';
+  children: NavigationLinkItem[];
+  defaultExpanded?: boolean;
+}
+
+export type NavigationItem = NavigationLinkItem | NavigationGroupItem;
+
 // ---------------------------------------------------------------------------
 // Route-group → secondary-nav mapping
 // ---------------------------------------------------------------------------
@@ -38,14 +75,6 @@ export const secondaryNavByGroup: Record<string, SecondaryNavItem[]> = {
     { label: 'Extractors', path: '/workflows/extractors' },
     { label: 'Review Queue', path: '/workflows/review', superuserOnly: true },
     { label: 'Crawlers', path: '/workflows/crawlers', superuserOnly: true },
-  ],
-  '/network': [
-    { label: 'Directory', path: '/network/directory' },
-    { label: 'Connections', path: '/network/connections' },
-    { label: 'Messages', path: '/network/messages' },
-  ],
-  '/settings': [
-    { label: 'Account', path: '/settings' },
   ],
 };
 
@@ -80,7 +109,7 @@ export interface DrawerSection {
   key: string;
   /** Visible section label when the drawer is expanded. `null` = unlabelled. */
   label: string | null;
-  items: DrawerItem[];
+  items: NavigationItem[];
 }
 
 export const drawerSections: DrawerSection[] = [
@@ -88,41 +117,90 @@ export const drawerSections: DrawerSection[] = [
     key: 'top',
     label: null,
     items: [
-      { label: 'Dashboard', path: '/' },
+      { kind: 'link', id: 'dashboard', label: 'Dashboard', path: '/', icon: 'dashboard' },
     ],
   },
   {
     key: 'job-search',
     label: 'Job Search',
     items: [
-      { label: 'Leads', path: '/leads' },
-      { label: 'Applications', path: '/applications' },
-      { label: 'Documents', path: '/documents' },
+      { kind: 'link', id: 'leads', label: 'Leads', path: '/leads', icon: 'leads' },
+      { kind: 'link', id: 'applications', label: 'Applications', path: '/applications', icon: 'applications' },
     ],
   },
   {
     key: 'network',
     label: 'Network',
     items: [
-      { label: 'Network', path: '/network' },
+      {
+        kind: 'link',
+        id: 'messages',
+        label: 'Messages',
+        path: '/network/messages',
+        icon: 'messages',
+        badge: 'unreadMessages',
+      },
+      {
+        kind: 'group',
+        id: 'people',
+        label: 'People',
+        icon: 'people',
+        defaultExpanded: true,
+        children: [
+          {
+            kind: 'link',
+            id: 'connections',
+            label: 'Connections',
+            path: '/network/connections',
+            icon: 'connections',
+          },
+          {
+            kind: 'link',
+            id: 'discover',
+            label: 'Discover',
+            path: '/network/discover',
+            icon: 'discover',
+          },
+        ],
+      },
+      { kind: 'link', id: 'agents', label: 'Agents', path: '/network/agents', icon: 'agents' },
     ],
   },
   {
     key: 'automation',
     label: 'Automation',
     items: [
-      { label: 'Workflows', path: '/workflows' },
+      { kind: 'link', id: 'workflows', label: 'Workflows', path: '/workflows', icon: 'workflows' },
+      { kind: 'link', id: 'workspace', label: 'Workspace', path: '/workspace', icon: 'workspace' },
     ],
   },
 ];
 
-// ---------------------------------------------------------------------------
-// Drawer footer items (Phase 2 will move these out of the main nav list)
-// ---------------------------------------------------------------------------
-
-export const drawerFooterItems: DrawerItem[] = [
-  { label: 'Profile', path: '/me' },
-  { label: 'Settings', path: '/settings' },
+export const userRailItems: NavigationItem[] = [
+  { kind: 'link', id: 'profile', label: 'Profile', path: '/me', icon: 'profile' },
+  { kind: 'link', id: 'settings', label: 'Settings', path: '/settings', icon: 'settings' },
+  {
+    kind: 'group',
+    id: 'aspirations',
+    label: 'Aspirations',
+    icon: 'aspirations',
+    children: [
+      {
+        kind: 'link',
+        id: 'aspiration-roles',
+        label: 'Roles',
+        path: '/me/aspirations/roles',
+        icon: 'roles',
+      },
+      {
+        kind: 'link',
+        id: 'aspiration-companies',
+        label: 'Companies',
+        path: '/me/aspirations/companies',
+        icon: 'companies',
+      },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -130,9 +208,23 @@ export const drawerFooterItems: DrawerItem[] = [
 // ---------------------------------------------------------------------------
 
 export const legacyRedirects: Record<string, string> = {
+  '/documents': '/workspace',
+  '/me/documents': '/workspace',
+  '/network/directory': '/network/discover',
   '/companies': '/leads/companies',
   '/profile': '/me',
   '/pipelines': '/workflows',
   '/data-orchestration': '/workflows',
   '/extractor': '/workflows/extractors',
 };
+
+export interface LegacyPrefixRedirect {
+  fromPrefix: string;
+  toPrefix: string;
+}
+
+export const legacyPrefixRedirects: LegacyPrefixRedirect[] = [
+  { fromPrefix: '/documents', toPrefix: '/workspace' },
+  { fromPrefix: '/me/documents', toPrefix: '/workspace' },
+  { fromPrefix: '/network/directory', toPrefix: '/network/discover' },
+];

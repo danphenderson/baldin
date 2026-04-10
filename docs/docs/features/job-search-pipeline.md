@@ -85,12 +85,12 @@ Status: Implemented
 Board drag-and-drop, inline reminder editing, the dedicated detail fetch, explicit reopen handling, terminal `outcome_reason`, and the status timeline are all present in the current UI. These phases should no longer be described as pending work on this page.
 
 **Canonical backlog — document-aware queue filtering (`BACKLOG_APPLICATIONS_STORY.md`)**
-Status: Partial
-Board and queue cards already render `document_count`, but the shared applications hook still returns an empty `appDocMeta` map. Resume and cover-letter filters on the queue therefore depend on metadata that is not yet loaded.
+Status: Implemented
+Application responses now include backend-populated document metadata. The queue and board both render document totals from that shared contract, and the queue's resume and cover-letter filters run directly against server-provided metadata instead of a stubbed frontend map.
 
 **Draft UX context — core job-search loop
 Status: Superseded
-The draft's page-local critique no longer matches the live UI. The app now uses plain-language Job Search navigation, provides back links on detail pages, exposes top-level documents routes, and lets application users jump directly into new document creation from the detail view.
+The draft's page-local critique no longer matches the live UI. The app now uses plain-language Job Search navigation, provides back links on detail pages, exposes top-level workspace routes, and lets application users jump directly into new document creation from the detail view.
 
 ## Related Docs
 

@@ -184,7 +184,7 @@ const DocumentComparePage: React.FC = () => {
         change_summary: `Restored from v${version.version_number}`,
       };
       await createVersion(token, id, payload);
-      navigate(`/documents/${id}`);
+      navigate(`/workspace/${id}`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Restore failed');
     }
@@ -204,7 +204,7 @@ const DocumentComparePage: React.FC = () => {
   if (!leftVersion || !rightVersion) {
     return (
       <Box>
-        <Button startIcon={<BackIcon />} onClick={() => navigate(`/documents/${id}`)} aria-label="Back to document">
+        <Button startIcon={<BackIcon />} onClick={() => navigate(`/workspace/${id}`)} aria-label="Back to document">
           Back
         </Button>
         <Alert severity="error" sx={{ mt: 2 }}>{error || 'Could not load versions for comparison'}</Alert>
@@ -251,7 +251,7 @@ const DocumentComparePage: React.FC = () => {
       {/* ── Back button ─────────────────────────────────────────── */}
       <Button
         startIcon={<BackIcon />}
-        onClick={() => navigate(`/documents/${id}`)}
+        onClick={() => navigate(`/workspace/${id}`)}
         sx={{ mb: 2 }}
         aria-label="Back to document"
       >

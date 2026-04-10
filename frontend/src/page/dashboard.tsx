@@ -129,7 +129,7 @@ function linkedEntityLabel(item: ActionItemDetailRead): { text: string; path: st
   }
   if (item.document_id) {
     const label = item.document?.title || 'Document';
-    return { text: `Doc: ${label}`, path: `/documents/${item.document_id}` };
+    return { text: `Doc: ${label}`, path: `/workspace/${item.document_id}` };
   }
   if (item.conversation_id) {
     return { text: 'Chat: Conversation', path: `/network/messages/${item.conversation_id}` };
@@ -164,7 +164,7 @@ function feedEntityPath(item: ActivityFeedItem): string | null {
   const id = item.entity_id;
   if (t === 'application') return `/applications/${id}`;
   if (t === 'conversation') return `/network/messages/${id}`;
-  if (t === 'document') return `/documents/${id}`;
+  if (t === 'document') return `/workspace/${id}`;
   if (t === 'connection') return '/network/connections';
   if (t === 'action_item') return '/';
   return null;
@@ -814,13 +814,13 @@ const DashboardPage: React.FC = () => {
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card
                 sx={{ height: '100%', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
-                onClick={() => navigate('/network/directory')}
+                onClick={() => navigate('/network/discover')}
               >
                 <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
                   <PeopleOutlineIcon color="primary" />
                   <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Browse Directory</Typography>
-                    <Typography variant="caption" color="text.secondary">Discover people</Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Discover People</Typography>
+                    <Typography variant="caption" color="text.secondary">Browse your network</Typography>
                   </Box>
                 </CardContent>
               </Card>
@@ -828,7 +828,7 @@ const DashboardPage: React.FC = () => {
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card
                 sx={{ height: '100%', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
-                onClick={() => navigate('/documents/new')}
+                onClick={() => navigate('/workspace/new')}
               >
                 <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
                   <NoteAddIcon color="primary" />

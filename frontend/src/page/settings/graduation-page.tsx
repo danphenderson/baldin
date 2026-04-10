@@ -110,7 +110,7 @@ const GraduationPage: React.FC = () => {
             </Stack>
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 480, mx: 'auto' }}>
               You&apos;re part of the Baldin alumni community. Your profile remains visible
-              in the directory for other job seekers to discover.
+              in Discover for other job seekers to find.
             </Typography>
           </CardContent>
         </Card>

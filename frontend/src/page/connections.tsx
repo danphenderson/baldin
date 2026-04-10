@@ -231,8 +231,8 @@ const ConnectionsPage: React.FC = () => {
             title="No connections yet"
             description="Connect with other users to share documents and collaborate."
             action={{
-              label: 'Browse the Directory',
-              onClick: () => navigate('/network/directory?superusers_only=true'),
+              label: 'Open Discover',
+              onClick: () => navigate('/network/discover?superusers_only=true'),
               icon: <AutoAwesomeIcon />,
             }}
           />

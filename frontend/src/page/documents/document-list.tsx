@@ -142,7 +142,7 @@ const DocumentListPage: React.FC = () => {
     return `${total} document${total !== 1 ? 's' : ''}${pinned ? ` · ${pinned} pinned` : ''}`;
   }, [docs, sharedDocs, tab]);
 
-  usePageToolbarHeader('Documents', summary);
+  usePageToolbarHeader('Workspace', summary);
 
   /* fetch ---------------------------------------------------------- */
   const refresh = useCallback(async () => {
@@ -427,7 +427,7 @@ const DocumentListPage: React.FC = () => {
           {tab === 'my' && !search && kindFilter === 'all' && statusFilter === 'all' && (
             <Button
               variant="contained" size="small" startIcon={<AddIcon />}
-              onClick={() => navigate('/documents/new')}
+              onClick={() => navigate('/workspace/new')}
               sx={{ mt: 3 }}
               aria-label="Create new document"
             >
@@ -465,7 +465,7 @@ const DocumentListPage: React.FC = () => {
                     '& .doc-actions': { opacity: { xs: 1, sm: 0 }, transition: 'opacity 0.15s ease' },
                     '&:hover .doc-actions': { opacity: 1 },
                   }}
-                  onClick={() => navigate(`/documents/${doc.id}`)}
+                  onClick={() => navigate(`/workspace/${doc.id}`)}
                   role="article"
                   aria-label={`Document: ${doc.title}`}
                 >
@@ -577,7 +577,7 @@ const DocumentListPage: React.FC = () => {
                         <Tooltip title="View">
                           <IconButton
                             size="small" aria-label="View document"
-                            onClick={e => { e.stopPropagation(); navigate(`/documents/${doc.id}`); }}
+                            onClick={e => { e.stopPropagation(); navigate(`/workspace/${doc.id}`); }}
                           >
                             <ViewIcon fontSize="small" />
                           </IconButton>
@@ -587,7 +587,7 @@ const DocumentListPage: React.FC = () => {
                             <IconButton
                               size="small" aria-label="Edit document"
                               disabled={viewerRole === 'viewer'}
-                              onClick={e => { e.stopPropagation(); navigate(`/documents/${doc.id}/edit`); }}
+                              onClick={e => { e.stopPropagation(); navigate(`/workspace/${doc.id}/edit`); }}
                             >
                               <EditIcon fontSize="small" />
                             </IconButton>
@@ -626,7 +626,7 @@ const DocumentListPage: React.FC = () => {
       {/* ── FAB ─────────────────────────────────────────────────── */}
       <Fab
         color="primary"
-        onClick={() => navigate('/documents/new')}
+        onClick={() => navigate('/workspace/new')}
         aria-label="Create new document"
         sx={{ position: 'fixed', bottom: 32, right: 32 }}
       >
@@ -637,7 +637,7 @@ const DocumentListPage: React.FC = () => {
       <UploadDocumentDialog
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
-        onSuccess={(doc) => { setUploadOpen(false); navigate(`/documents/${doc.id}`); }}
+        onSuccess={(doc) => { setUploadOpen(false); navigate(`/workspace/${doc.id}`); }}
       />
 
       {/* ── Delete dialog ───────────────────────────────────────── */}

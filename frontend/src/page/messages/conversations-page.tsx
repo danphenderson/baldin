@@ -148,7 +148,7 @@ const ConversationsPage: React.FC = () => {
           <EmptyState
             icon={<ChatIcon />}
             title="No conversations yet"
-            description="Start a conversation from a connection's profile or the directory."
+            description="Start a conversation from a connection's profile or Discover."
             action={{ label: 'New Message', onClick: () => setDialogOpen(true), icon: <AddIcon /> }}
           />
         ) : (

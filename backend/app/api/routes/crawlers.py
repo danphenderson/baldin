@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
     get_async_session,
+    get_capped_pagination_params,
     get_current_superuser,
-    get_pagination_params,
     models,
     schemas,
 )
@@ -93,7 +93,7 @@ async def trigger_crawler_run(
 @router.get("/runs", response_model=schemas.CrawlerRunsPaginatedRead)
 async def list_crawler_runs(
     db: AsyncSession = Depends(get_async_session),
-    pagination: schemas.Pagination = Depends(get_pagination_params),
+    pagination: schemas.Pagination = Depends(get_capped_pagination_params),
     source: str | None = Query(None, description="Filter by pipeline source"),
     status: str | None = Query(None, description="Filter by run status"),
     pipeline_id: UUID4 | None = Query(None, description="Filter by pipeline ID"),

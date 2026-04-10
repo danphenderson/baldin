@@ -9051,7 +9051,7 @@ export interface operations {
         trigger_type?: string | null;
         /** @description Page number starting from 1 */
         page?: number;
-        /** @description Number of records per page */
+        /** @description Number of records per page (max 100) */
         page_size?: number;
         /** @description Return total count of records */
         request_count?: boolean;
@@ -9228,7 +9228,7 @@ export interface operations {
         superusers_only?: boolean;
         /** @description Page number starting from 1 */
         page?: number;
-        /** @description Number of records per page */
+        /** @description Number of records per page (max 100) */
         page_size?: number;
         /** @description Return total count of records */
         request_count?: boolean;

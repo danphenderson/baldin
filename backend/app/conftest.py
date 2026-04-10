@@ -177,3 +177,20 @@ async def auth_headers(
     """Return Bearer-token headers for the ``registered_user``."""
     email, _, password = registered_user
     return await login_and_get_headers(client, email, password)
+
+
+# ---------------------------------------------------------------------------
+# Rate-limiter isolation
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter() -> None:
+    """Reset the in-memory rate-limit counters before every test.
+
+    All tests share the same ``127.0.0.1`` key.  Without a reset, the
+    10-per-minute limit on ``/auth/jwt/login`` is exhausted after the
+    first ~10 login calls across the entire suite, causing every
+    subsequent authentication to return 429.
+    """
+    app.state.limiter.reset()

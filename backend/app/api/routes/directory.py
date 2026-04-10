@@ -7,8 +7,8 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import (
     AsyncSession,
     get_async_session,
+    get_capped_pagination_params,
     get_current_user,
-    get_pagination_params,
     models,
     schemas,
 )
@@ -46,7 +46,7 @@ def _serialize_directory_entry(
 @router.get("/", response_model=schemas.UserDirectoryPaginatedRead)
 async def list_directory(
     db: AsyncSession = Depends(get_async_session),
-    pagination: schemas.Pagination = Depends(get_pagination_params),
+    pagination: schemas.Pagination = Depends(get_capped_pagination_params),
     _current_user: models.User = Depends(get_current_user),
     q: str | None = Query(None, description="Search by name or headline"),
     placement_status: schemas.PlacementStatus | None = Query(

@@ -726,8 +726,8 @@ class ActionItem(Base):
             "(lead_id IS NOT NULL)::int + "
             "(document_id IS NOT NULL)::int + "
             "(conversation_id IS NOT NULL)::int"
-            ") = 1",
-            name="ck_action_items_exactly_one_fk",
+            ") <= 1",
+            name="ck_action_items_at_most_one_fk",
         ),
     )
 

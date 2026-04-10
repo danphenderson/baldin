@@ -106,6 +106,21 @@ async def get_pagination_params(
     )
 
 
+async def get_capped_pagination_params(
+    page: int = Query(1, ge=1, description="Page number starting from 1"),
+    page_size: int = Query(
+        10,
+        ge=1,
+        le=100,
+        description="Number of records per page (max 100)",
+    ),
+    request_count: bool = Query(False, description="Return total count of records"),
+) -> schemas.Pagination:
+    return schemas.Pagination(
+        page=page, page_size=page_size, request_count=request_count
+    )
+
+
 # ---------------------------------------------------------------------------
 # Subscription tier and placement gating
 # ---------------------------------------------------------------------------

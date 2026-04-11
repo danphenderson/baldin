@@ -175,12 +175,14 @@ This epic now builds on a shipped cell-doc baseline rather than waiting for a pr
 
 **Acceptance criteria:**
 
-- [ ] `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` succeeds
-- [ ] openapi.json includes `/agents`, `/agents/{id}`, `/agents/{id}/runs`, and `/agents/{id}/run`
-- [ ] openapi.json and `schema.d.ts` include `AgentRead`, `AgentCreate`, `AgentUpdate`, `AgentRunRead`, and `AgentRunSummaryRead`, with `session_document_id` and `session_version_id` in the run read shapes
-- [ ] Contract regen confirms the current cell-doc document schemas reused by agents remain compatible with the shipped create/version/restore API surface
-- [ ] Any application-document attachment schema changes needed to expose pinned attachment `version_id` are regenerated in the same contract update
-- [ ] Frontend `tsc --noEmit` passes after regen
+- [x] `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` succeeds
+- [x] openapi.json includes `/agents`, `/agents/{id}`, `/agents/{id}/runs`, and `/agents/{id}/run`
+- [x] openapi.json and `schema.d.ts` include `AgentRead`, `AgentCreate`, `AgentUpdate`, `AgentRunRead`, and `AgentRunSummaryRead`, with `session_document_id` and `session_version_id` in the run read shapes
+- [x] Contract regen confirms the current cell-doc document schemas reused by agents remain compatible with the shipped create/version/restore API surface
+- [x] Any application-document attachment schema changes needed to expose pinned attachment `version_id` are regenerated in the same contract update
+- [x] Frontend `tsc --noEmit` passes after regen
+
+Verification note (2026-04-11): forced contract regeneration completed successfully and produced no diff in `openapi.json` or `frontend/src/schema.d.ts`; the committed artifacts already reflect the shipped agent and pinned-attachment contract surface.
 
 **Surfaces:** contracts
 **Dependencies:** Stories 3, 4

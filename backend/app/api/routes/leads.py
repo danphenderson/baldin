@@ -479,9 +479,10 @@ async def read_leads(
     total_count = total_count_result.scalar_one()
 
     return schemas.LeadsPaginatedRead(
-        leads=[_serialize_lead(lead, user) for lead in lead_list],
-        pagination=pagination,
-        total_count=total_count,
+        items=[_serialize_lead(lead, user) for lead in lead_list],
+        total=total_count,
+        page=pagination.page,
+        page_size=pagination.page_size,
     )
 
 

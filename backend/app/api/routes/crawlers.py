@@ -6,6 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from pydantic import UUID4
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import (
     get_async_session,
@@ -34,13 +35,32 @@ async def create_crawler_pipeline(
     return await _create(payload, user, db)
 
 
-@router.get("/pipelines", response_model=list[schemas.CrawlerPipelineRead])
+@router.get(
+    "/pipelines", response_model=schemas.PaginatedResponse[schemas.CrawlerPipelineRead]
+)
 async def list_crawler_pipelines(
     db: AsyncSession = Depends(get_async_session),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=500),
 ):
-    from app.api.deps import list_crawler_pipelines as _list
-
-    return await _list(db)
+    count_result = await db.execute(
+        select(func.count()).select_from(models.CrawlerPipeline)
+    )
+    total = count_result.scalar_one()
+    offset = (page - 1) * page_size
+    result = await db.execute(
+        select(models.CrawlerPipeline)
+        .options(selectinload(models.CrawlerPipeline.runs))
+        .order_by(models.CrawlerPipeline.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    return schemas.PaginatedResponse[schemas.CrawlerPipelineRead](
+        items=list(result.scalars().all()),
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/pipelines/{pipeline_id}", response_model=schemas.CrawlerPipelineRead)

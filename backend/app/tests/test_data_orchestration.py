@@ -111,7 +111,7 @@ async def test_read_orch_pipelines_only_returns_current_users_records() -> None:
         )
 
     assert response.status_code == 200
-    returned_ids = {item["id"] for item in response.json()}
+    returned_ids = {item["id"] for item in response.json()["items"]}
     assert owner_pipeline["id"] in returned_ids
     assert other_pipeline["id"] not in returned_ids
 
@@ -535,7 +535,7 @@ async def test_pipeline_list_includes_summary_fields() -> None:
         )
 
     assert response.status_code == 200
-    items = response.json()
+    items = response.json()["items"]
     target = next(p for p in items if p["id"] == pipeline["id"])
     assert target["run_count"] == 1
     assert target["failure_count"] == 0

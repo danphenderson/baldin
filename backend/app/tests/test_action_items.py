@@ -180,8 +180,12 @@ async def test_list_action_items() -> None:
         response = await client.get("/api/v1/action-items/", headers=headers)
 
     assert response.status_code == 200
-    items = response.json()
+    body = response.json()
+    items = body["items"]
     assert len(items) == 3
+    assert body["total"] == 3
+    assert body["page"] == 1
+    assert body["page_size"] == 50
 
 
 async def test_list_action_items_filter_by_status() -> None:
@@ -208,7 +212,7 @@ async def test_list_action_items_filter_by_status() -> None:
         )
 
     assert response.status_code == 200
-    items = response.json()
+    items = response.json()["items"]
     assert all(item["status"] == "pending" for item in items)
     assert any(item["title"] == "Pending task" for item in items)
 
@@ -236,7 +240,7 @@ async def test_list_action_items_filter_by_kind() -> None:
         )
 
     assert response.status_code == 200
-    items = response.json()
+    items = response.json()["items"]
     assert all(item["kind"] == "follow_up" for item in items)
 
 
@@ -263,7 +267,7 @@ async def test_list_action_items_filter_by_priority() -> None:
         )
 
     assert response.status_code == 200
-    items = response.json()
+    items = response.json()["items"]
     assert all(item["priority"] == "high" for item in items)
 
 

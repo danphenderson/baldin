@@ -317,7 +317,7 @@ async def test_lead_detail_scopes_registration_notes_and_exposed_participants() 
     assert owner_detail_response.status_code == 200
 
     lead_list_item = next(
-        item for item in lead_list_response.json()["leads"] if item["id"] == lead_id
+        item for item in lead_list_response.json()["items"] if item["id"] == lead_id
     )
     assert lead_list_item["interest_count"] == 2
     assert lead_list_item["viewer_is_registered"] is True

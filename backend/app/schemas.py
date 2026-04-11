@@ -2,7 +2,7 @@
 import json
 from datetime import datetime
 from enum import Enum
-from typing import Any, Literal, Optional, Sequence, TypeVar
+from typing import Any, Generic, Literal, Optional, TypeVar
 
 from fastapi import UploadFile
 from fastapi_users import schemas
@@ -121,6 +121,16 @@ class Pagination(BaseSchema):
         description="The number of items per page",
     )
     request_count: bool = Field(False, description="Request a query for total count")
+
+
+_T = TypeVar("_T")
+
+
+class PaginatedResponse(BaseSchema, Generic[_T]):
+    items: list[_T] = Field(default_factory=list, description="Paginated items")
+    total: int = Field(0, description="Total number of matching records")
+    page: int = Field(1, ge=1, description="Current page number")
+    page_size: int = Field(20, ge=1, description="Items per page")
 
 
 # Model CRUD Schemas
@@ -244,13 +254,7 @@ class OrchestrationEventUpdate(BaseSchema):
         return v
 
 
-class OrchestrationEventPaginatedRead(BaseSchema):
-    items: list[OrchestrationEventRead] = Field(
-        [], description="Paginated list of orchestration events"
-    )
-    total: int = Field(0, description="Total number of matching events")
-    page: int = Field(1, ge=1, description="Current page number")
-    page_size: int = Field(20, ge=1, description="Items per page")
+OrchestrationEventPaginatedRead = PaginatedResponse[OrchestrationEventRead]
 
 
 class SeedOperationAccepted(BaseSchema):
@@ -592,12 +596,7 @@ class LeadDetailRead(LeadRead):
     )
 
 
-class LeadsPaginatedRead(BaseSchema):
-    leads: Sequence[LeadRead]
-    pagination: Pagination
-    total_count: int | None = Field(
-        ..., description="Total number of leads, if pagination requested"
-    )
+LeadsPaginatedRead = PaginatedResponse[LeadRead]
 
 
 class LeadCreate(BaseLeadShared):
@@ -1185,13 +1184,7 @@ class UserDirectoryRead(BaseSchema):
     )
 
 
-class UserDirectoryPaginatedRead(BaseSchema):
-    items: list[UserDirectoryRead] = Field(
-        default_factory=list, description="Paginated user directory entries"
-    )
-    total: int = Field(0, description="Total matching users")
-    page: int = Field(1, ge=1, description="Current page number")
-    page_size: int = Field(20, ge=1, description="Items per page")
+UserDirectoryPaginatedRead = PaginatedResponse[UserDirectoryRead]
 
 
 class UserPublicProfileRead(BaseSchema):
@@ -1406,13 +1399,7 @@ class ConnectionRead(BaseRead):
     message: str | None = Field(None, description="Optional note from the requester")
 
 
-class ConnectionsPaginatedRead(BaseSchema):
-    items: list[ConnectionRead] = Field(
-        default_factory=list, description="Paginated connection records"
-    )
-    total: int = Field(0, description="Total matching connections")
-    page: int = Field(1, ge=1, description="Current page number")
-    page_size: int = Field(20, ge=1, description="Items per page")
+ConnectionsPaginatedRead = PaginatedResponse[ConnectionRead]
 
 
 # ---------------------------------------------------------------------------
@@ -1526,13 +1513,7 @@ class ConversationDetailRead(BaseRead):
     total_messages: int = Field(0, description="Total message count")
 
 
-class ConversationsPaginatedRead(BaseSchema):
-    items: list[ConversationRead] = Field(
-        default_factory=list, description="Paginated conversations"
-    )
-    total: int = Field(0, description="Total matching conversations")
-    page: int = Field(1, ge=1, description="Current page number")
-    page_size: int = Field(20, ge=1, description="Items per page")
+ConversationsPaginatedRead = PaginatedResponse[ConversationRead]
 
 
 class UnreadCountRead(BaseSchema):
@@ -1964,13 +1945,7 @@ class CrawlerRunRead(BaseRead):
     )
 
 
-class CrawlerRunsPaginatedRead(BaseSchema):
-    items: list[CrawlerRunRead] = Field(
-        default_factory=list, description="Paginated crawler runs"
-    )
-    total: int = Field(0, description="Total matching crawler runs")
-    page: int = Field(1, ge=1, description="Current page number")
-    page_size: int = Field(10, ge=1, description="Items per page")
+CrawlerRunsPaginatedRead = PaginatedResponse[CrawlerRunRead]
 
 
 class CrawlerRunCreate(BaseSchema):

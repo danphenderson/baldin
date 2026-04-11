@@ -1812,32 +1812,6 @@ export interface components {
        */
       country?: string | null;
     };
-    /** ConnectionsPaginatedRead */
-    ConnectionsPaginatedRead: {
-      /**
-       * Items
-       * @description Paginated connection records
-       */
-      items?: components["schemas"]["ConnectionRead"][];
-      /**
-       * Total
-       * @description Total matching connections
-       * @default 0
-       */
-      total?: number;
-      /**
-       * Page
-       * @description Current page number
-       * @default 1
-       */
-      page?: number;
-      /**
-       * Page Size
-       * @description Items per page
-       * @default 20
-       */
-      page_size?: number;
-    };
     /** ContactCreate */
     ContactCreate: {
       /**
@@ -2105,32 +2079,6 @@ export interface components {
      * @enum {string}
      */
     ConversationType: "direct" | "group";
-    /** ConversationsPaginatedRead */
-    ConversationsPaginatedRead: {
-      /**
-       * Items
-       * @description Paginated conversations
-       */
-      items?: components["schemas"]["ConversationRead"][];
-      /**
-       * Total
-       * @description Total matching conversations
-       * @default 0
-       */
-      total?: number;
-      /**
-       * Page
-       * @description Current page number
-       * @default 1
-       */
-      page?: number;
-      /**
-       * Page Size
-       * @description Items per page
-       * @default 20
-       */
-      page_size?: number;
-    };
     /** CrawlerPipelineCreate */
     CrawlerPipelineCreate: {
       /**
@@ -2468,32 +2416,6 @@ export interface components {
      * @enum {string}
      */
     CrawlerRunStatus: "pending" | "running" | "success" | "failed" | "cancelled" | "paused" | "pending_review";
-    /** CrawlerRunsPaginatedRead */
-    CrawlerRunsPaginatedRead: {
-      /**
-       * Items
-       * @description Paginated crawler runs
-       */
-      items?: components["schemas"]["CrawlerRunRead"][];
-      /**
-       * Total
-       * @description Total matching crawler runs
-       * @default 0
-       */
-      total?: number;
-      /**
-       * Page
-       * @description Current page number
-       * @default 1
-       */
-      page?: number;
-      /**
-       * Page Size
-       * @description Items per page
-       * @default 10
-       */
-      page_size?: number;
-    };
     /**
      * CrawlerSourceType
      * @enum {string}
@@ -4310,17 +4232,6 @@ export interface components {
        */
       can_post_comments?: boolean;
     };
-    /** LeadsPaginatedRead */
-    LeadsPaginatedRead: {
-      /** Leads */
-      leads: components["schemas"]["LeadRead"][];
-      pagination: components["schemas"]["Pagination"];
-      /**
-       * Total Count
-       * @description Total number of leads, if pagination requested
-       */
-      total_count: number | null;
-    };
     /**
      * MFAAdminResetResponse
      * @description Returned when a superuser resets MFA for another account.
@@ -4518,33 +4429,6 @@ export interface components {
        * Format: uuid4
        */
       pipeline_id: string;
-    };
-    /** OrchestrationEventPaginatedRead */
-    OrchestrationEventPaginatedRead: {
-      /**
-       * Items
-       * @description Paginated list of orchestration events
-       * @default []
-       */
-      items?: components["schemas"]["OrchestrationEventRead-Output"][];
-      /**
-       * Total
-       * @description Total number of matching events
-       * @default 0
-       */
-      total?: number;
-      /**
-       * Page
-       * @description Current page number
-       * @default 1
-       */
-      page?: number;
-      /**
-       * Page Size
-       * @description Items per page
-       * @default 20
-       */
-      page_size?: number;
     };
     /** OrchestrationEventRead */
     "OrchestrationEventRead-Input": {
@@ -4835,26 +4719,473 @@ export interface components {
        */
       events?: components["schemas"]["OrchestrationEventRead-Input"][];
     };
-    /** Pagination */
-    Pagination: {
+    /** PaginatedResponse[ActionItemDetailRead] */
+    PaginatedResponse_ActionItemDetailRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["ActionItemDetailRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
       /**
        * Page
-       * @description The page number
+       * @description Current page number
        * @default 1
        */
       page?: number;
       /**
        * Page Size
-       * @description The number of items per page
-       * @default 10
+       * @description Items per page
+       * @default 20
        */
       page_size?: number;
+    };
+    /** PaginatedResponse[ApplicationRead] */
+    PaginatedResponse_ApplicationRead_: {
       /**
-       * Request Count
-       * @description Request a query for total count
-       * @default false
+       * Items
+       * @description Paginated items
        */
-      request_count?: boolean;
+      items?: components["schemas"]["ApplicationRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[CertificateRead] */
+    PaginatedResponse_CertificateRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["CertificateRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[CompanyRead] */
+    PaginatedResponse_CompanyRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["CompanyRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[ConnectionRead] */
+    PaginatedResponse_ConnectionRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["ConnectionRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[ContactRead] */
+    PaginatedResponse_ContactRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["ContactRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[ConversationRead] */
+    PaginatedResponse_ConversationRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["ConversationRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[CrawlerPipelineRead] */
+    PaginatedResponse_CrawlerPipelineRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["CrawlerPipelineRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[CrawlerRunRead] */
+    PaginatedResponse_CrawlerRunRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["CrawlerRunRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[DocumentRead] */
+    PaginatedResponse_DocumentRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["DocumentRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[EducationRead] */
+    PaginatedResponse_EducationRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["EducationRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[ExperienceRead] */
+    PaginatedResponse_ExperienceRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["ExperienceRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[LeadRead] */
+    PaginatedResponse_LeadRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["LeadRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[OrchestrationEventRead] */
+    PaginatedResponse_OrchestrationEventRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["OrchestrationEventRead-Output"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[OrchestrationPipelineRead] */
+    PaginatedResponse_OrchestrationPipelineRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["OrchestrationPipelineRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[ReviewItemRead] */
+    PaginatedResponse_ReviewItemRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["ReviewItemRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[SkillRead] */
+    PaginatedResponse_SkillRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["SkillRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[UserDirectoryRead] */
+    PaginatedResponse_UserDirectoryRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["UserDirectoryRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
     };
     /**
      * PlacementStatus
@@ -5302,32 +5633,6 @@ export interface components {
       deleted_records?: {
         [key: string]: number;
       };
-    };
-    /** UserDirectoryPaginatedRead */
-    UserDirectoryPaginatedRead: {
-      /**
-       * Items
-       * @description Paginated user directory entries
-       */
-      items?: components["schemas"]["UserDirectoryRead"][];
-      /**
-       * Total
-       * @description Total matching users
-       * @default 0
-       */
-      total?: number;
-      /**
-       * Page
-       * @description Current page number
-       * @default 1
-       */
-      page?: number;
-      /**
-       * Page Size
-       * @description Items per page
-       * @default 20
-       */
-      page_size?: number;
     };
     /** UserDirectoryRead */
     UserDirectoryRead: {
@@ -6402,7 +6707,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["LeadsPaginatedRead"];
+          "application/json": components["schemas"]["PaginatedResponse_LeadRead_"];
         };
       };
       /** @description Validation Error */
@@ -6767,11 +7072,23 @@ export interface operations {
   };
   /** Get Companies */
   get_companies_api_v1_companies__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["CompanyRead"][];
+          "application/json": components["schemas"]["PaginatedResponse_CompanyRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -6845,11 +7162,23 @@ export interface operations {
   };
   /** Read Orch Pipelines */
   read_orch_pipelines_api_v1_orchestration_pipelines_pipelines_get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["OrchestrationPipelineRead"][];
+          "application/json": components["schemas"]["PaginatedResponse_OrchestrationPipelineRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -6963,7 +7292,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventPaginatedRead"];
+          "application/json": components["schemas"]["PaginatedResponse_OrchestrationEventRead_"];
         };
       };
       /** @description Validation Error */
@@ -7098,11 +7427,23 @@ export interface operations {
   };
   /** Get Current User Contacts */
   get_current_user_contacts_api_v1_contacts__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["ContactRead"][];
+          "application/json": components["schemas"]["PaginatedResponse_ContactRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -7233,11 +7574,23 @@ export interface operations {
   };
   /** Read Current User Experiences */
   read_current_user_experiences_api_v1_experiences__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["ExperienceRead"][];
+          "application/json": components["schemas"]["PaginatedResponse_ExperienceRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -7392,11 +7745,23 @@ export interface operations {
   };
   /** Get Current User Skills */
   get_current_user_skills_api_v1_skills__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["SkillRead"][];
+          "application/json": components["schemas"]["PaginatedResponse_SkillRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -7508,11 +7873,23 @@ export interface operations {
    * @description Get all applications for the current user.
    */
   get_applications_api_v1_applications__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["ApplicationRead"][];
+          "application/json": components["schemas"]["PaginatedResponse_ApplicationRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -7758,13 +8135,15 @@ export interface operations {
         is_pinned?: boolean | null;
         /** @description Search by title (case-insensitive) */
         search?: string | null;
+        page?: number;
+        page_size?: number;
       };
     };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["DocumentRead"][];
+          "application/json": components["schemas"]["PaginatedResponse_DocumentRead_"];
         };
       };
       /** @description Validation Error */
@@ -8382,11 +8761,23 @@ export interface operations {
   };
   /** Read Current User Educations */
   read_current_user_educations_api_v1_education__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["EducationRead"][];
+          "application/json": components["schemas"]["PaginatedResponse_EducationRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -8519,11 +8910,23 @@ export interface operations {
   };
   /** Read Current User Certificates */
   read_current_user_certificates_api_v1_certificates__get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["CertificateRead"][];
+          "application/json": components["schemas"]["PaginatedResponse_CertificateRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -8953,11 +9356,23 @@ export interface operations {
   };
   /** List Crawler Pipelines */
   list_crawler_pipelines_api_v1_crawlers_pipelines_get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["CrawlerPipelineRead"][];
+          "application/json": components["schemas"]["PaginatedResponse_CrawlerPipelineRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -9079,7 +9494,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["CrawlerRunsPaginatedRead"];
+          "application/json": components["schemas"]["PaginatedResponse_CrawlerRunRead_"];
         };
       };
       /** @description Validation Error */
@@ -9256,7 +9671,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["UserDirectoryPaginatedRead"];
+          "application/json": components["schemas"]["PaginatedResponse_UserDirectoryRead_"];
         };
       };
       /** @description Validation Error */
@@ -9313,7 +9728,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["ConnectionsPaginatedRead"];
+          "application/json": components["schemas"]["PaginatedResponse_ConnectionRead_"];
         };
       };
       /** @description Validation Error */
@@ -9479,7 +9894,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["ConversationsPaginatedRead"];
+          "application/json": components["schemas"]["PaginatedResponse_ConversationRead_"];
         };
       };
       /** @description Validation Error */
@@ -9738,14 +10153,13 @@ export interface operations {
         due_after?: string | null;
         page?: number;
         page_size?: number;
-        request_count?: boolean;
       };
     };
     responses: {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["ActionItemDetailRead"][];
+          "application/json": components["schemas"]["PaginatedResponse_ActionItemDetailRead_"];
         };
       };
       /** @description Validation Error */
@@ -9945,7 +10359,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["ReviewItemRead"][];
+          "application/json": components["schemas"]["PaginatedResponse_ReviewItemRead_"];
         };
       };
       /** @description Validation Error */

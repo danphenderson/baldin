@@ -1,9 +1,10 @@
 import { components } from '../schema';
 import { API_URL } from '../config/env';
+import type { PaginatedResponse } from './pagination';
 
 export type ConnectionRead = components['schemas']['ConnectionRead'];
 export type ConnectionCreate = components['schemas']['ConnectionCreate'];
-export type ConnectionsPaginatedRead = components['schemas']['ConnectionsPaginatedRead'];
+export type ConnectionsPaginatedRead = PaginatedResponse<ConnectionRead>;
 export type ConnectionStatus = components['schemas']['ConnectionStatus'];
 export type ConnectionUserSummaryRead = components['schemas']['ConnectionUserSummaryRead'];
 

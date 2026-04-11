@@ -176,7 +176,7 @@ describe('DashboardPage', () => {
     mockedGetCommandCenterSummary.mockResolvedValue(makeSummary() as never);
     mockedGetActivityFeed.mockResolvedValue({ items: [], total: 0 } as never);
     mockedGetActionItems.mockResolvedValue([] as never);
-    mockedGetLeads.mockResolvedValue({ leads: [], pagination: { page: 1 } } as never);
+    mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 5 } as never);
 
     const setToolbarHeader = vi.fn();
     const expectedSubtitle = new Date('2026-04-09T09:00:00').toLocaleDateString(undefined, {
@@ -203,7 +203,7 @@ describe('DashboardPage', () => {
       makeActionItem(),
       makeActionItem({ id: 'ai-2', title: 'Prepare resume for Meta', kind: 'prepare_document', priority: 'medium' }),
     ] as never);
-    mockedGetLeads.mockResolvedValue({ leads: [], pagination: { page: 1 } } as never);
+    mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 5 } as never);
 
     renderPage();
 
@@ -221,7 +221,7 @@ describe('DashboardPage', () => {
       total: 2,
     } as never);
     mockedGetActionItems.mockResolvedValue([] as never);
-    mockedGetLeads.mockResolvedValue({ leads: [], pagination: { page: 1 } } as never);
+    mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 5 } as never);
 
     renderPage();
 
@@ -244,7 +244,7 @@ describe('DashboardPage', () => {
     }) as never);
     mockedGetActivityFeed.mockResolvedValue({ items: [], total: 0 } as never);
     mockedGetActionItems.mockResolvedValue([] as never);
-    mockedGetLeads.mockResolvedValue({ leads: [], pagination: { page: 1 } } as never);
+    mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 5 } as never);
 
     renderPage();
 
@@ -260,7 +260,7 @@ describe('DashboardPage', () => {
     mockedGetCommandCenterSummary.mockResolvedValue(makeSummary() as never);
     mockedGetActivityFeed.mockResolvedValue({ items: [], total: 0 } as never);
     mockedGetActionItems.mockResolvedValue([] as never);
-    mockedGetLeads.mockResolvedValue({ leads: [], pagination: { page: 1 } } as never);
+    mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 5 } as never);
 
     renderPage();
 
@@ -273,7 +273,7 @@ describe('DashboardPage', () => {
     );
     mockedGetActivityFeed.mockResolvedValue({ items: [], total: 0 } as never);
     mockedGetActionItems.mockResolvedValue([] as never);
-    mockedGetLeads.mockResolvedValue({ leads: [], pagination: { page: 1 } } as never);
+    mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 5 } as never);
 
     renderPage();
 

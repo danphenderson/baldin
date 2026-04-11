@@ -1,6 +1,6 @@
 # app/api/routes/experiences.py
-from fastapi import APIRouter, BackgroundTasks, Depends
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from sqlalchemy import func, select
 
 from app.api.deps import (
     AsyncSession,
@@ -30,16 +30,24 @@ EXPERIENCE_SEED_OPERATION = SeedOperation(
 )
 
 
-@router.get("/", response_model=list[schemas.ExperienceRead])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.ExperienceRead])
 async def read_current_user_experiences(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=500),
 ):
-    result = await db.execute(
-        select(models.Experience).where(models.Experience.user_id == user.id)
+    base = select(models.Experience).where(models.Experience.user_id == user.id)
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = count_result.scalar_one()
+    offset = (page - 1) * page_size
+    result = await db.execute(base.offset(offset).limit(page_size))
+    return schemas.PaginatedResponse[schemas.ExperienceRead](
+        items=result.scalars().all(),
+        total=total,
+        page=page,
+        page_size=page_size,
     )
-    experiences = result.scalars().all()
-    return experiences
 
 
 @router.post("/", status_code=201, response_model=schemas.ExperienceRead)

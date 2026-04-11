@@ -1,5 +1,6 @@
 import { components } from '../schema';
 import { createApiClient } from './api-client';
+import { normalizePaginatedResponse } from './pagination';
 
 export type ActionItemRead = components['schemas']['ActionItemRead'];
 export type ActionItemDetailRead = components['schemas']['ActionItemDetailRead'];
@@ -8,6 +9,7 @@ export type ActionItemUpdate = components['schemas']['ActionItemUpdate'];
 type ActionItemStatus = components['schemas']['ActionItemStatus'];
 type ActionItemKind = components['schemas']['ActionItemKind'];
 type ActionItemPriority = components['schemas']['ActionItemPriority'];
+type ActionItemsPage = components['schemas']['PaginatedResponse_ActionItemDetailRead_'];
 
 const unwrap = <T,>(
   result: { data?: T; error?: unknown; response: Response },
@@ -33,11 +35,10 @@ export const getActionItems = async (
     due_after?: string;
     page?: number;
     page_size?: number;
-    request_count?: boolean;
   },
 ): Promise<ActionItemDetailRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/action-items/', {
+  const page = unwrap<ActionItemsPage>(await client.GET('/api/v1/action-items/', {
     params: {
       query: {
         status: params?.status,
@@ -47,10 +48,13 @@ export const getActionItems = async (
         due_after: params?.due_after,
         page: params?.page,
         page_size: params?.page_size,
-        request_count: params?.request_count,
       },
     },
   }));
+  return normalizePaginatedResponse(page, {
+    page: params?.page ?? 1,
+    page_size: params?.page_size ?? 50,
+  }).items;
 };
 
 export const createActionItem = async (

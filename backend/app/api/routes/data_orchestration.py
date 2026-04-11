@@ -26,18 +26,37 @@ from app.core.extractor_retry import get_extractor_event_file_source_paths
 router: APIRouter = APIRouter()
 
 
-@router.get("/pipelines", response_model=list[schemas.OrchestrationPipelineRead])
+@router.get(
+    "/pipelines",
+    response_model=schemas.PaginatedResponse[schemas.OrchestrationPipelineRead],
+)
 async def read_orch_pipelines(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=500),
 ):
-    rows = await db.execute(
+    base = (
         select(models.OrchestrationPipeline)
         .where(models.OrchestrationPipeline.user_id == user.id)
         .options(selectinload(models.OrchestrationPipeline.orchestration_events))
     )
-    result = rows.scalars().all()
-    return result
+    count_result = await db.execute(
+        select(func.count()).select_from(
+            select(models.OrchestrationPipeline)
+            .where(models.OrchestrationPipeline.user_id == user.id)
+            .subquery()
+        )
+    )
+    total = count_result.scalar_one()
+    offset = (page - 1) * page_size
+    rows = await db.execute(base.offset(offset).limit(page_size))
+    return schemas.PaginatedResponse[schemas.OrchestrationPipelineRead](
+        items=rows.scalars().all(),
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/pipelines/{id}", response_model=schemas.OrchestrationPipelineRead)

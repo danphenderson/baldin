@@ -85,14 +85,14 @@ async def _auth_headers(
 
 
 async def test_review_items_empty():
-    """GET /review/items returns empty list when nothing is pending."""
+    """GET /review/items returns an empty paginated response when nothing is pending."""
     await _ensure_db_ready()
     async with _client() as client:
         email, _ = await _create_user("super-review-empty", is_superuser=True)
         headers = await _auth_headers(client, email, "super-review-empty")
         resp = await client.get("/api/v1/review/items", headers=headers)
         assert resp.status_code == 200
-        assert resp.json() == []
+        assert resp.json() == {"items": [], "total": 0, "page": 1, "page_size": 20}
 
 
 # ---------------------------------------------------------------------------
@@ -154,7 +154,7 @@ async def test_approve_crawler_run():
         # Verify it appears in the queue
         resp = await client.get("/api/v1/review/items", headers=headers)
         assert resp.status_code == 200
-        items = resp.json()
+        items = resp.json()["items"]
         run_items = [i for i in items if i["item_id"] == str(run_id)]
         assert len(run_items) == 1
 

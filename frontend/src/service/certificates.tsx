@@ -2,10 +2,12 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
+import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
 
 export type CertificateRead = components['schemas']['CertificateRead'];
 export type CertificateCreate = components['schemas']['CertificateCreate'];
 export type CertificateUpdate = components['schemas']['CertificateUpdate'];
+type CertificateListPage = components['schemas']['PaginatedResponse_CertificateRead_'];
 
 const unwrap = <T,>(
   result: { data?: T; error?: unknown; response: Response },
@@ -23,7 +25,15 @@ const unwrap = <T,>(
 
 export const getCertificates = async (token: string): Promise<CertificateRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/certificates/'));
+  const page = unwrap<CertificateListPage>(await client.GET('/api/v1/certificates/', {
+    params: {
+      query: {
+        page: 1,
+        page_size: FULL_LIST_PAGE_SIZE,
+      },
+    },
+  }));
+  return normalizePaginatedResponse(page, { page: 1, page_size: FULL_LIST_PAGE_SIZE }).items;
 };
 
 export const getCertificate = async (token: string, id: string): Promise<CertificateRead> => {

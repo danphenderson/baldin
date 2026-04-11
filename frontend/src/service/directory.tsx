@@ -1,8 +1,9 @@
 import { components } from '../schema';
 import { API_URL } from '../config/env';
+import type { PaginatedResponse } from './pagination';
 
 export type UserDirectoryRead = components['schemas']['UserDirectoryRead'];
-export type UserDirectoryPaginatedRead = components['schemas']['UserDirectoryPaginatedRead'];
+export type UserDirectoryPaginatedRead = PaginatedResponse<UserDirectoryRead>;
 export type UserPublicProfileRead = components['schemas']['UserPublicProfileRead'];
 
 type DirectoryErrorDetail = unknown;

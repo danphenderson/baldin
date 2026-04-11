@@ -26,7 +26,7 @@ import {
   getDirectoryProfile,
   type UserPublicProfileRead,
 } from '../service/directory';
-import { createConnection, getConnections } from '../service/connections';
+import { createConnection, getConnections, type ConnectionRead } from '../service/connections';
 import { createConversation } from '../service/messages';
 import { avatarUrl } from '../service/users';
 import { useNotification } from '../context/notification-context';
@@ -68,7 +68,7 @@ const UserProfilePage: React.FC = () => {
       .then((res) => {
         if (cancelled) return;
         const found = (res.items ?? []).some(
-          (c) => c.requester.user_id === userId || c.addressee.user_id === userId,
+          (c: ConnectionRead) => c.requester.user_id === userId || c.addressee.user_id === userId,
         );
         setIsConnected(found);
       })

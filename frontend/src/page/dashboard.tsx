@@ -422,7 +422,7 @@ const DashboardPage: React.FC = () => {
       setFeedTotal(feedRes.total);
       setFeedPage(1);
       setActionItems(actionRes as ActionItemDetailRead[]);
-      setLeads(leadsRes.leads);
+      setLeads(leadsRes.items);
       setLastRefresh(Date.now());
     } catch (e) {
       console.error(e);

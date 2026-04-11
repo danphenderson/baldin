@@ -2,6 +2,7 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
+import { normalizePaginatedResponse } from './pagination';
 
 const unwrap = <T,>(
   result: { data?: T; error?: unknown; response: Response },
@@ -20,6 +21,7 @@ const unwrap = <T,>(
 export type ReviewItemType = components['schemas']['ReviewItemType'];
 
 export type ReviewItem = components['schemas']['ReviewItemRead'];
+type ReviewItemsPage = components['schemas']['PaginatedResponse_ReviewItemRead_'];
 
 export interface ReviewBatchItem {
   item_type: ReviewItemType;
@@ -39,7 +41,7 @@ export const getReviewItems = async (
   pageSize = 20,
 ): Promise<ReviewItem[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/review/items', {
+  const response = unwrap<ReviewItemsPage>(await client.GET('/api/v1/review/items', {
     params: {
       query: {
         item_type: itemType,
@@ -48,6 +50,7 @@ export const getReviewItems = async (
       },
     },
   }));
+  return normalizePaginatedResponse(response, { page, page_size: pageSize }).items;
 };
 
 export const approveReviewItem = async (

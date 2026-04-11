@@ -2,10 +2,12 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
+import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
 
 export type EducationRead = components['schemas']['EducationRead'];
 export type EducationCreate = components['schemas']['EducationCreate'];
 export type EducationUpdate = components['schemas']['EducationUpdate'];
+type EducationListPage = components['schemas']['PaginatedResponse_EducationRead_'];
 
 const unwrap = <T,>(
   result: { data?: T; error?: unknown; response: Response },
@@ -23,7 +25,15 @@ const unwrap = <T,>(
 
 export const getEducations = async (token: string): Promise<EducationRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/education/'));
+  const page = unwrap<EducationListPage>(await client.GET('/api/v1/education/', {
+    params: {
+      query: {
+        page: 1,
+        page_size: FULL_LIST_PAGE_SIZE,
+      },
+    },
+  }));
+  return normalizePaginatedResponse(page, { page: 1, page_size: FULL_LIST_PAGE_SIZE }).items;
 };
 
 export const getEducation = async (token: string, id: string): Promise<EducationRead> => {

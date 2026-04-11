@@ -1,5 +1,6 @@
 import { components } from '../schema';
 import { createApiClient } from './api-client';
+import { normalizePaginatedResponse, type PaginatedResponse } from './pagination';
 
 export type LeadRead = components['schemas']['LeadRead'];
 export type LeadDetailRead = components['schemas']['LeadDetailRead'];
@@ -14,8 +15,13 @@ export type LeadViewerPermissionsRead = components['schemas']['LeadViewerPermiss
 export type LeadCommentRead = components['schemas']['LeadCommentRead'];
 export type LeadCommentCreate = components['schemas']['LeadCommentCreate'];
 export type LeadParticipantSummaryRead = components['schemas']['LeadParticipantSummaryRead'];
-export type Pagination = components['schemas']['Pagination'];
-export type LeadsPaginatedRead = components['schemas']['LeadsPaginatedRead'];
+type RawLeadsPaginatedRead = components['schemas']['PaginatedResponse_LeadRead_'];
+export type LeadsPaginatedRead = PaginatedResponse<LeadRead>;
+export interface Pagination {
+  page: number;
+  page_size: number;
+  request_count?: boolean;
+}
 
 type LeadErrorDetail = unknown;
 
@@ -92,7 +98,7 @@ const unwrap = <T,>(
 
 export const getLeads = async (token: string, pagination: Pagination): Promise<LeadsPaginatedRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/leads/', {
+  const page = unwrap<RawLeadsPaginatedRead>(await client.GET('/api/v1/leads/', {
     params: {
       query: {
         page: pagination.page,
@@ -101,6 +107,10 @@ export const getLeads = async (token: string, pagination: Pagination): Promise<L
       },
     },
   }));
+  return normalizePaginatedResponse(page, {
+    page: pagination.page,
+    page_size: pagination.page_size,
+  });
 };
 
 export const getLead = async (token: string, id: string): Promise<LeadDetailRead> => {

@@ -2,9 +2,9 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import UUID4
-from sqlalchemy import asc, desc, select
+from sqlalchemy import asc, desc, func, select
 from sqlalchemy.orm import joinedload
 
 from app import models, schemas
@@ -97,9 +97,8 @@ async def create_action_item(
     return result.scalars().first()
 
 
-@router.get("/", response_model=list[schemas.ActionItemDetailRead])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.ActionItemDetailRead])
 async def list_action_items(
-    response: Response,
     status: schemas.ActionItemStatus | None = None,
     kind: schemas.ActionItemKind | None = None,
     priority: schemas.ActionItemPriority | None = None,
@@ -107,7 +106,6 @@ async def list_action_items(
     due_after: datetime | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    request_count: bool = False,
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -124,22 +122,23 @@ async def list_action_items(
     if due_after is not None:
         q = q.where(models.ActionItem.due_at >= due_after)
 
+    count_q = select(func.count()).select_from(q.subquery())
+    total = (await db.execute(count_q)).scalar_one()
+
     q = q.order_by(
         asc(models.ActionItem.sort_order),
         asc(models.ActionItem.due_at).nullslast(),
         desc(models.ActionItem.created_at),
     )
 
-    if request_count:
-        from sqlalchemy import func
-
-        count_q = select(func.count()).select_from(q.subquery())
-        total = (await db.execute(count_q)).scalar() or 0
-        response.headers["X-Total-Count"] = str(total)
-
     q = q.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(q)
-    return result.scalars().all()
+    return schemas.PaginatedResponse[schemas.ActionItemDetailRead](
+        items=result.scalars().all(),
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.post("/reorder", status_code=204)

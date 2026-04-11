@@ -2,18 +2,15 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
+import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse, type PaginatedResponse } from './pagination';
 
 export type CrawlerPipelineCreate = components['schemas']['CrawlerPipelineCreate'];
 export type CrawlerPipelineRead = components['schemas']['CrawlerPipelineRead'];
 export type CrawlerPipelineUpdate = components['schemas']['CrawlerPipelineUpdate'];
 export type CrawlerRunRead = components['schemas']['CrawlerRunRead'];
-type RawCrawlerRunsPaginatedRead = components['schemas']['CrawlerRunsPaginatedRead'];
-export type CrawlerRunsPaginatedRead = {
-  items: CrawlerRunRead[];
-  total: number;
-  page: number;
-  page_size: number;
-};
+type RawCrawlerPipelinesPage = components['schemas']['PaginatedResponse_CrawlerPipelineRead_'];
+type RawCrawlerRunsPaginatedRead = components['schemas']['PaginatedResponse_CrawlerRunRead_'];
+export type CrawlerRunsPaginatedRead = PaginatedResponse<CrawlerRunRead>;
 export type CrawlerRunDetailRead = components['schemas']['CrawlerRunDetailRead'];
 export type CrawlerRunStatus = components['schemas']['CrawlerRunStatus'];
 export type CrawlerSourceType = components['schemas']['CrawlerSourceType'];
@@ -49,7 +46,15 @@ const unwrap = <T,>(
 
 export const getCrawlerPipelines = async (token: string): Promise<CrawlerPipelineRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/crawlers/pipelines'));
+  const page = unwrap<RawCrawlerPipelinesPage>(await client.GET('/api/v1/crawlers/pipelines', {
+    params: {
+      query: {
+        page: 1,
+        page_size: FULL_LIST_PAGE_SIZE,
+      },
+    },
+  }));
+  return normalizePaginatedResponse(page, { page: 1, page_size: FULL_LIST_PAGE_SIZE }).items;
 };
 
 export const getCrawlerPipeline = async (token: string, id: string): Promise<CrawlerPipelineRead> => {
@@ -96,12 +101,10 @@ export const getCrawlerRuns = async (
       },
     },
   }));
-  return {
-    items: response.items ?? [],
-    total: response.total ?? 0,
-    page: response.page ?? params?.page ?? 1,
-    page_size: response.page_size ?? params?.page_size ?? 10,
-  };
+  return normalizePaginatedResponse(response, {
+    page: params?.page ?? 1,
+    page_size: params?.page_size ?? 10,
+  });
 };
 
 export const getCrawlerRunDetail = async (token: string, runId: string): Promise<CrawlerRunDetailRead> => {

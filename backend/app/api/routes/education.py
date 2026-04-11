@@ -1,7 +1,7 @@
 # app/api/routes/education.py
 
-from fastapi import APIRouter, BackgroundTasks, Depends
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from sqlalchemy import func, select
 
 from app.api.deps import (
     AsyncSession,
@@ -30,16 +30,24 @@ EDUCATION_SEED_OPERATION = SeedOperation(
 )
 
 
-@router.get("/", response_model=list[schemas.EducationRead])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.EducationRead])
 async def read_current_user_educations(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=500),
 ):
-    result = await db.execute(
-        select(models.Education).where(models.Education.user_id == user.id)
+    base = select(models.Education).where(models.Education.user_id == user.id)
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = count_result.scalar_one()
+    offset = (page - 1) * page_size
+    result = await db.execute(base.offset(offset).limit(page_size))
+    return schemas.PaginatedResponse[schemas.EducationRead](
+        items=result.scalars().all(),
+        total=total,
+        page=page,
+        page_size=page_size,
     )
-    educations = result.scalars().all()
-    return educations
 
 
 @router.get("/{id}", response_model=schemas.EducationRead)

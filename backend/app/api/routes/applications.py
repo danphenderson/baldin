@@ -3,7 +3,7 @@ import zipfile
 from html import escape as html_escape
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import UUID4
 from reportlab.lib.pagesizes import letter
@@ -127,15 +127,17 @@ async def create_application(
     return application
 
 
-@router.get("/", response_model=list[schemas.ApplicationRead])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.ApplicationRead])
 async def get_applications(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=500),
 ):
     """Get all applications for the current user."""
-    result = await db.execute(
+    base = (
         select(models.Application)
-        .where(models.Application.user_id == user.id)  # Filter by current user's ID
+        .where(models.Application.user_id == user.id)
         .options(
             joinedload(models.Application.lead).options(
                 joinedload(models.Lead.companies)
@@ -143,10 +145,26 @@ async def get_applications(
             joinedload(models.Application.user),
         )
     )
-    # Ensure that unique rows are considered to avoid duplicates due to joinedload
+
+    count_result = await db.execute(
+        select(func.count()).select_from(
+            select(models.Application)
+            .where(models.Application.user_id == user.id)
+            .subquery()
+        )
+    )
+    total = count_result.scalar_one()
+
+    offset = (page - 1) * page_size
+    result = await db.execute(base.offset(offset).limit(page_size))
     applications = result.scalars().unique().all()
     await _populate_document_metadata(applications, db=db, user_id=user.id)
-    return applications
+    return schemas.PaginatedResponse[schemas.ApplicationRead](
+        items=applications,
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.patch("/{id}", response_model=schemas.ApplicationRead)

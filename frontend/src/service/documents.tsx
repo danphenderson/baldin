@@ -3,6 +3,7 @@
 import { components } from '../schema';
 import { createApiClient } from './api-client';
 import { API_URL } from '../config/env';
+import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
 
 /* ------------------------------------------------------------------ */
 /*  Types (derived from generated schema)                              */
@@ -25,6 +26,7 @@ export type DocumentShareCandidateRead = components['schemas']['DocumentShareCan
 export type DocumentActivityRead = components['schemas']['DocumentActivityRead'];
 export type DocumentActivityType = components['schemas']['DocumentActivityType'];
 export type DocumentCollaborationBootstrapRead = components['schemas']['DocumentCollaborationBootstrapRead'];
+type DocumentListPage = components['schemas']['PaginatedResponse_DocumentRead_'];
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -53,16 +55,19 @@ export const getDocuments = async (
   filters?: { kind?: DocumentKind; status?: DocumentStatus; is_pinned?: boolean; search?: string },
 ): Promise<DocumentRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/documents/', {
+  const page = unwrap<DocumentListPage>(await client.GET('/api/v1/documents/', {
     params: {
       query: {
         kind: filters?.kind,
         status: filters?.status,
         is_pinned: filters?.is_pinned,
         search: filters?.search,
+        page: 1,
+        page_size: FULL_LIST_PAGE_SIZE,
       },
     },
   }));
+  return normalizePaginatedResponse(page, { page: 1, page_size: FULL_LIST_PAGE_SIZE }).items;
 };
 
 export const getDocument = async (token: string, id: string): Promise<DocumentDetailRead> => {

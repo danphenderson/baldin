@@ -182,11 +182,13 @@ describe('LeadsPage', () => {
 
   it('renders lead list when data loads', async () => {
     mockedGetLeads.mockResolvedValue({
-      leads: [
+      items: [
         makeLead(),
         makeLead({ id: 'lead-2', title: 'Backend Engineer', location: 'NYC' }),
       ],
-      pagination: { page: 1, page_size: 500 },
+      total: 2,
+      page: 1,
+      page_size: 500,
     } as never);
     mockedGetCompanies.mockResolvedValue([] as never);
 
@@ -197,7 +199,7 @@ describe('LeadsPage', () => {
   });
 
   it('renders the extraction bar', async () => {
-    mockedGetLeads.mockResolvedValue({ leads: [makeLead()], pagination: {} } as never);
+    mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
     mockedGetCompanies.mockResolvedValue([] as never);
 
     renderPage();
@@ -208,7 +210,7 @@ describe('LeadsPage', () => {
   });
 
   it('renders empty state when there are no leads', async () => {
-    mockedGetLeads.mockResolvedValue({ leads: [], pagination: {} } as never);
+    mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 500 } as never);
     mockedGetCompanies.mockResolvedValue([] as never);
 
     renderPage();
@@ -220,11 +222,13 @@ describe('LeadsPage', () => {
     const user = userEvent.setup();
 
     mockedGetLeads.mockResolvedValue({
-      leads: [
+      items: [
         makeLead(),
         makeLead({ id: 'lead-2', title: 'Data Scientist', location: 'London' }),
       ],
-      pagination: {},
+      total: 2,
+      page: 1,
+      page_size: 500,
     } as never);
     mockedGetCompanies.mockResolvedValue([] as never);
 
@@ -248,7 +252,7 @@ describe('LeadsPage', () => {
   it('creates a registered application when register interest is selected', async () => {
     const user = userEvent.setup();
 
-    mockedGetLeads.mockResolvedValue({ leads: [makeLead()], pagination: {} } as never);
+    mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
     mockedGetCompanies.mockResolvedValue([] as never);
     mockedFindExistingApplicationForLead.mockResolvedValue(null);
     mockedCreateApplication.mockResolvedValue({ id: 'app-1' } as never);
@@ -270,7 +274,7 @@ describe('LeadsPage', () => {
   it('warns before creating a duplicate application for the same lead', async () => {
     const user = userEvent.setup();
 
-    mockedGetLeads.mockResolvedValue({ leads: [makeLead()], pagination: {} } as never);
+    mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
     mockedGetCompanies.mockResolvedValue([] as never);
     mockedFindExistingApplicationForLead.mockResolvedValue({
       id: 'app-1',

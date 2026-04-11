@@ -283,9 +283,13 @@ async def test_superuser_lists_pipelines():
 
         resp = await client.get("/api/v1/crawlers/pipelines", headers=headers)
         assert resp.status_code == 200
-        pipelines = resp.json()
+        body = resp.json()
+        pipelines = body["items"]
         assert isinstance(pipelines, list)
         assert len(pipelines) >= 2
+        assert body["total"] >= 2
+        assert body["page"] == 1
+        assert body["page_size"] == 20
         names = [p["name"] for p in pipelines]
         assert "Pipeline A" in names
         assert "Pipeline B" in names

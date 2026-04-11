@@ -2,10 +2,12 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
+import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
 
 export type ExperienceRead = components['schemas']['ExperienceRead'];
 export type ExperienceUpdate = components['schemas']['ExperienceUpdate'];
 export type ExperienceCreate = components['schemas']['ExperienceCreate'];
+type ExperienceListPage = components['schemas']['PaginatedResponse_ExperienceRead_'];
 
 const unwrap = <T,>(
   result: { data?: T; error?: unknown; response: Response },
@@ -23,7 +25,15 @@ const unwrap = <T,>(
 
 export const getExperiences = async (token: string): Promise<ExperienceRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/experiences/'));
+  const page = unwrap<ExperienceListPage>(await client.GET('/api/v1/experiences/', {
+    params: {
+      query: {
+        page: 1,
+        page_size: FULL_LIST_PAGE_SIZE,
+      },
+    },
+  }));
+  return normalizePaginatedResponse(page, { page: 1, page_size: FULL_LIST_PAGE_SIZE }).items;
 };
 
 export const getExperience = async (token: string, id: string): Promise<ExperienceRead> => {

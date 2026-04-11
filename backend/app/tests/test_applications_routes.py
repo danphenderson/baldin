@@ -297,7 +297,7 @@ async def test_create_application_validation_error() -> None:
 
 
 async def test_list_applications() -> None:
-    """GET /applications/ returns a list with the expected shape."""
+    """GET /applications/ returns a paginated list with the expected shape."""
     await _ensure_db_ready()
     async with _client() as client:
         _, headers = await _get_auth(client)
@@ -306,13 +306,16 @@ async def test_list_applications() -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert isinstance(body, list)
+    assert isinstance(body["items"], list)
     # Previous tests created at least one application
-    assert len(body) >= 1
-    assert "lead_id" in body[0]
-    assert "stage" in body[0]
-    assert "user_id" in body[0]
-    assert "document_metadata" in body[0]
+    assert len(body["items"]) >= 1
+    assert body["total"] >= 1
+    assert body["page"] == 1
+    assert body["page_size"] == 20
+    assert "lead_id" in body["items"][0]
+    assert "stage" in body["items"][0]
+    assert "user_id" in body["items"][0]
+    assert "document_metadata" in body["items"][0]
 
 
 async def test_application_responses_include_accessible_document_metadata() -> None:
@@ -384,7 +387,9 @@ async def test_application_responses_include_accessible_document_metadata() -> N
 
     assert list_resp.status_code == 200
     list_body = next(
-        application for application in list_resp.json() if application["id"] == app_id
+        application
+        for application in list_resp.json()["items"]
+        if application["id"] == app_id
     )
     _assert_document_metadata(
         list_body,
@@ -424,7 +429,12 @@ async def test_list_applications_empty_for_new_user() -> None:
         response = await client.get("/api/v1/applications/", headers=headers)
 
     assert response.status_code == 200
-    assert response.json() == []
+    assert response.json() == {
+        "items": [],
+        "total": 0,
+        "page": 1,
+        "page_size": 20,
+    }
 
 
 # ---------------------------------------------------------------------------

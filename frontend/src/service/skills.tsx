@@ -3,11 +3,13 @@
 import { components } from '../schema';
 import { createApiClient } from './api-client';
 import { API_URL } from '../config/env';
+import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
 
 export type SkillRead = components['schemas']['SkillRead'];
 export type SkillCreate = components['schemas']['SkillCreate'];
 export type SkillUpdate = components['schemas']['SkillUpdate'];
 type SkillExtractBody = components['schemas']['Body_extract_user_skills_api_v1_skills_extract_post'];
+type SkillListPage = components['schemas']['PaginatedResponse_SkillRead_'];
 export type SkillExtractRequest = Omit<SkillExtractBody, 'file'> & {
   file?: File | null;
 };
@@ -29,7 +31,15 @@ const unwrap = <T,>(
 
 export const getSkills = async (token: string): Promise<SkillRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/skills/'));
+  const page = unwrap<SkillListPage>(await client.GET('/api/v1/skills/', {
+    params: {
+      query: {
+        page: 1,
+        page_size: FULL_LIST_PAGE_SIZE,
+      },
+    },
+  }));
+  return normalizePaginatedResponse(page, { page: 1, page_size: FULL_LIST_PAGE_SIZE }).items;
 };
 
 export const getSkill = async (token: string, id: string): Promise<SkillRead> => {

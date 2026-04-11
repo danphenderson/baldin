@@ -8,7 +8,7 @@ and leads.
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import UUID4
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_async_session, get_current_superuser, models, schemas
@@ -17,7 +17,7 @@ from app.core.datetime_utils import now_utc_naive
 router = APIRouter(dependencies=[Depends(get_current_superuser)])
 
 
-@router.get("/items", response_model=list[schemas.ReviewItemRead])
+@router.get("/items", response_model=schemas.PaginatedResponse[schemas.ReviewItemRead])
 async def list_review_items(
     db: AsyncSession = Depends(get_async_session),
     item_type: schemas.ReviewItemType | None = Query(
@@ -30,6 +30,14 @@ async def list_review_items(
     offset = (page - 1) * page_size
 
     if item_type == schemas.ReviewItemType.CRAWLER_RUN:
+        total_q = await db.execute(
+            select(func.count()).select_from(
+                select(models.CrawlerRun)
+                .where(models.CrawlerRun.status == "pending_review")
+                .subquery()
+            )
+        )
+        total = total_q.scalar_one()
         result = await db.execute(
             select(models.CrawlerRun)
             .where(models.CrawlerRun.status == "pending_review")
@@ -37,18 +45,31 @@ async def list_review_items(
             .offset(offset)
             .limit(page_size)
         )
-        return [
-            schemas.ReviewItemRead(
-                item_type=schemas.ReviewItemType.CRAWLER_RUN,
-                item_id=run.id,
-                created_at=run.created_at,
-                summary=f"Crawler run ({run.trigger_type}) for pipeline {run.crawler_pipeline_id}",
-                detail=run.stats,
-            )
-            for run in result.scalars().all()
-        ]
+        return schemas.PaginatedResponse[schemas.ReviewItemRead](
+            items=[
+                schemas.ReviewItemRead(
+                    item_type=schemas.ReviewItemType.CRAWLER_RUN,
+                    item_id=run.id,
+                    created_at=run.created_at,
+                    summary=f"Crawler run ({run.trigger_type}) for pipeline {run.crawler_pipeline_id}",
+                    detail=run.stats,
+                )
+                for run in result.scalars().all()
+            ],
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
 
     if item_type == schemas.ReviewItemType.EXTRACTION_EVENT:
+        total_q = await db.execute(
+            select(func.count()).select_from(
+                select(models.OrchestrationEvent)
+                .where(models.OrchestrationEvent.status == "pending_review")
+                .subquery()
+            )
+        )
+        total = total_q.scalar_one()
         result = await db.execute(
             select(models.OrchestrationEvent)
             .where(models.OrchestrationEvent.status == "pending_review")
@@ -56,18 +77,31 @@ async def list_review_items(
             .offset(offset)
             .limit(page_size)
         )
-        return [
-            schemas.ReviewItemRead(
-                item_type=schemas.ReviewItemType.EXTRACTION_EVENT,
-                item_id=event.id,
-                created_at=event.created_at,
-                summary=event.message,
-                detail=event.payload,
-            )
-            for event in result.scalars().all()
-        ]
+        return schemas.PaginatedResponse[schemas.ReviewItemRead](
+            items=[
+                schemas.ReviewItemRead(
+                    item_type=schemas.ReviewItemType.EXTRACTION_EVENT,
+                    item_id=event.id,
+                    created_at=event.created_at,
+                    summary=event.message,
+                    detail=event.payload,
+                )
+                for event in result.scalars().all()
+            ],
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
 
     if item_type == schemas.ReviewItemType.LEAD:
+        total_q = await db.execute(
+            select(func.count()).select_from(
+                select(models.Lead)
+                .where(models.Lead.review_status == "pending_review")
+                .subquery()
+            )
+        )
+        total = total_q.scalar_one()
         result = await db.execute(
             select(models.Lead)
             .where(models.Lead.review_status == "pending_review")
@@ -75,16 +109,51 @@ async def list_review_items(
             .offset(offset)
             .limit(page_size)
         )
-        return [
-            schemas.ReviewItemRead(
-                item_type=schemas.ReviewItemType.LEAD,
-                item_id=lead.id,
-                created_at=lead.created_at,
-                summary=lead.title or lead.url,
-                detail={"url": lead.url, "location": lead.location},
+        return schemas.PaginatedResponse[schemas.ReviewItemRead](
+            items=[
+                schemas.ReviewItemRead(
+                    item_type=schemas.ReviewItemType.LEAD,
+                    item_id=lead.id,
+                    created_at=lead.created_at,
+                    summary=lead.title or lead.url,
+                    detail={"url": lead.url, "location": lead.location},
+                )
+                for lead in result.scalars().all()
+            ],
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
+
+    # Mixed feed: aggregate counts and merge in memory
+    crawler_count = (
+        await db.execute(
+            select(func.count()).select_from(
+                select(models.CrawlerRun)
+                .where(models.CrawlerRun.status == "pending_review")
+                .subquery()
             )
-            for lead in result.scalars().all()
-        ]
+        )
+    ).scalar_one()
+    extraction_count = (
+        await db.execute(
+            select(func.count()).select_from(
+                select(models.OrchestrationEvent)
+                .where(models.OrchestrationEvent.status == "pending_review")
+                .subquery()
+            )
+        )
+    ).scalar_one()
+    lead_count = (
+        await db.execute(
+            select(func.count()).select_from(
+                select(models.Lead)
+                .where(models.Lead.review_status == "pending_review")
+                .subquery()
+            )
+        )
+    ).scalar_one()
+    total = crawler_count + extraction_count + lead_count
 
     fetch_limit = offset + page_size
     items: list[schemas.ReviewItemRead] = []
@@ -146,7 +215,12 @@ async def list_review_items(
         key=lambda x: (x.created_at, x.item_type.value, str(x.item_id)),
         reverse=True,
     )
-    return items[offset : offset + page_size]
+    return schemas.PaginatedResponse[schemas.ReviewItemRead](
+        items=items[offset : offset + page_size],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 async def _approve_item(

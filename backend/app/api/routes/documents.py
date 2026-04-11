@@ -18,7 +18,7 @@ from PyPDF2 import PdfReader
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Paragraph, SimpleDocTemplate
-from sqlalchemy import or_, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -450,15 +450,18 @@ async def get_pinned_documents(
     return [_document_read(d) for d in docs]
 
 
-@router.get("/", response_model=list[schemas.DocumentRead])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.DocumentRead])
 async def list_documents(
     kind: schemas.DocumentKind | None = Query(None, description="Filter by kind"),
     status: schemas.DocumentStatus | None = Query(None, description="Filter by status"),
     is_pinned: bool | None = Query(None, description="Filter by pinned state"),
     search: str | None = Query(None, description="Search by title (case-insensitive)"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=500),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+
     q = select(models.Document).where(models.Document.user_id == user.id)
     if kind is not None:
         q = q.where(models.Document.kind == kind.value)
@@ -468,10 +471,20 @@ async def list_documents(
         q = q.where(models.Document.is_pinned.is_(is_pinned))
     if search:
         q = q.where(models.Document.title.ilike(f"%{search}%"))
+
+    count_result = await db.execute(select(func.count()).select_from(q.subquery()))
+    total = count_result.scalar_one()
+
     q = q.order_by(models.Document.updated_at.desc())
-    result = await db.execute(q)
+    offset = (page - 1) * page_size
+    result = await db.execute(q.offset(offset).limit(page_size))
     docs = result.scalars().all()
-    return [_document_read(d) for d in docs]
+    return schemas.PaginatedResponse[schemas.DocumentRead](
+        items=[_document_read(d) for d in docs],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/shared-with-me", response_model=list[schemas.DocumentRead])

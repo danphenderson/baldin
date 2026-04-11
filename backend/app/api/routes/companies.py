@@ -1,6 +1,6 @@
 # Path: app/api/routes/companies.py
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
 from app.api.deps import (
@@ -31,13 +31,24 @@ async def get_company(
     return company
 
 
-@router.get("/", response_model=list[schemas.CompanyRead])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.CompanyRead])
 async def get_companies(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=500),
 ):
-    companies = await db.execute(select(models.Company))
-    return companies.scalars().all()
+    count_result = await db.execute(select(func.count()).select_from(models.Company))
+    total = count_result.scalar_one()
+
+    offset = (page - 1) * page_size
+    companies = await db.execute(select(models.Company).offset(offset).limit(page_size))
+    return schemas.PaginatedResponse[schemas.CompanyRead](
+        items=companies.scalars().all(),
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.post("/", response_model=schemas.CompanyRead)

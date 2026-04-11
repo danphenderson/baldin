@@ -138,7 +138,7 @@ const LeadsPage: React.FC = () => {
         getLeads(token, { page: 1, page_size: 500, request_count: false }),
         getCompanies(token),
       ]);
-      setLeads(res.leads ?? []);
+      setLeads(res.items ?? []);
       setCompanies(co ?? []);
     } catch (e: unknown) {
       notify(e instanceof Error ? e.message : 'Failed to load leads', 'error');

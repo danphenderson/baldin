@@ -2,10 +2,12 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
+import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
 
 export type ContactRead = components['schemas']['ContactRead'];
 export type ContactCreate = components['schemas']['ContactCreate'];
 export type ContactUpdate = components['schemas']['ContactUpdate'];
+type ContactListPage = components['schemas']['PaginatedResponse_ContactRead_'];
 
 const unwrap = <T,>(
   result: { data?: T; error?: unknown; response: Response },
@@ -23,7 +25,15 @@ const unwrap = <T,>(
 
 export const getContacts = async (token: string): Promise<ContactRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/contacts/'));
+  const page = unwrap<ContactListPage>(await client.GET('/api/v1/contacts/', {
+    params: {
+      query: {
+        page: 1,
+        page_size: FULL_LIST_PAGE_SIZE,
+      },
+    },
+  }));
+  return normalizePaginatedResponse(page, { page: 1, page_size: FULL_LIST_PAGE_SIZE }).items;
 };
 
 export const getContact = async (token: string, id: string): Promise<ContactRead> => {

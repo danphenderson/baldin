@@ -7,7 +7,7 @@ model: "GPT-5 (copilot)"
 ---
 Turn the relevant Baldin plan section into a startable execution slice.
 
-Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), and the active plan sources under [plans/](../../plans).
+Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [Prompt The Right Agent](../../docs/docs/engineering/copilot-prompt-cookbook.md), [Contribute Safely](../../docs/docs/getting-started/contributing.md), and the active plan sources listed in [plans/README.md](../../plans/README.md).
 
 Task:
 - Find the plan section named by the user, or infer the best match from the current repo context.

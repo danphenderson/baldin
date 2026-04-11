@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { NotificationProvider } from '../../context/notification-context';
 import { UserContext } from '../../context/user-context';
 import { ToolbarHeaderContext } from '../../layout/toolbar-header-context';
 
@@ -68,11 +69,13 @@ function renderPage(applicationId = 'app-123') {
   return render(
     <ToolbarHeaderContext.Provider value={vi.fn()}>
       <UserContext.Provider value={userContextValue}>
-        <MemoryRouter initialEntries={[`/applications/${applicationId}`]}>
-          <Routes>
-            <Route path="/applications/:applicationId" element={<ApplicationDetailPage />} />
-          </Routes>
-        </MemoryRouter>
+        <NotificationProvider>
+          <MemoryRouter initialEntries={[`/applications/${applicationId}`]}>
+            <Routes>
+              <Route path="/applications/:applicationId" element={<ApplicationDetailPage />} />
+            </Routes>
+          </MemoryRouter>
+        </NotificationProvider>
       </UserContext.Provider>
     </ToolbarHeaderContext.Provider>,
   );

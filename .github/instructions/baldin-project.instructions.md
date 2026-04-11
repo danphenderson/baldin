@@ -1,7 +1,7 @@
 ---
 description: "Use when modifying Baldin backend, frontend, scripts, workflows, docs, plans, contracts, or deployment files. Covers edit-time guardrails for runtime surfaces, generated artifacts, and release-path validation."
 name: "Baldin Project Delivery Rules"
-applyTo: backend/**, frontend/**, frontend/src/schema.d.ts, scripts/**, .github/workflows/**, docs/**, docs/build/**, plans/**, cdk/**, README.md, openapi.json, docker-compose*.yml
+applyTo: backend/**, frontend/**, frontend/src/schema.d.ts, scripts/**, .github/workflows/**, docs/**, plans/**, cdk/**, README.md, openapi.json, docker-compose*.yml
 ---
 # Baldin Project Delivery Rules
 

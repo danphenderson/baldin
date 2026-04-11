@@ -312,9 +312,11 @@ const AgentDetailPage: React.FC = () => {
           )}
           <Box sx={{ flex: 1 }} />
           <Tooltip title="Refresh run history">
-            <Button size="small" onClick={() => refreshRuns(1)} disabled={runsLoading}>
-              <RefreshIcon fontSize="small" />
-            </Button>
+            <Box component="span">
+              <Button size="small" onClick={() => refreshRuns(1)} disabled={runsLoading}>
+                <RefreshIcon fontSize="small" />
+              </Button>
+            </Box>
           </Tooltip>
         </Stack>
       </Typography>
@@ -394,19 +396,21 @@ const AgentDetailPage: React.FC = () => {
                       <TableCell align="right">
                         {run.status === 'completed' && run.session_document_id && run.application_id && (
                           <Tooltip title="Rerun agent into the same session">
-                            <Button
-                              size="small"
-                              startIcon={
-                                rerunningRunId === run.id
-                                  ? <CircularProgress size={14} color="inherit" />
-                                  : <RerunIcon />
-                              }
-                              disabled={rerunningRunId !== null}
-                              onClick={() => handleRerun(run)}
-                              sx={{ textTransform: 'none' }}
-                            >
-                              Rerun
-                            </Button>
+                            <Box component="span">
+                              <Button
+                                size="small"
+                                startIcon={
+                                  rerunningRunId === run.id
+                                    ? <CircularProgress size={14} color="inherit" />
+                                    : <RerunIcon />
+                                }
+                                disabled={rerunningRunId !== null}
+                                onClick={() => handleRerun(run)}
+                                sx={{ textTransform: 'none' }}
+                              >
+                                Rerun
+                              </Button>
+                            </Box>
                           </Tooltip>
                         )}
                         {run.status === 'failed' && run.error_summary && (

@@ -8,7 +8,7 @@ tools: [search/codebase, search/textSearch, search/fileSearch, search/listDirect
 ---
 You are running a deep-thinking technical spike session. Slow down. Investigate thoroughly, read real code, and validate assumptions against the actual codebase before drawing conclusions. Prefer evidence over intuition.
 
-Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [System Overview](../../docs/docs/architecture/system-overview.md), and the active plan sources under [plans/](../../plans) for repo context.
+Use [Baldin Project Delivery Rules](../instructions/baldin-project.instructions.md), [System Overview](../../docs/docs/architecture/system-overview.md), and the active plan sources listed in [plans/README.md](../../plans/README.md) for repo context.
 
 ## Input
 

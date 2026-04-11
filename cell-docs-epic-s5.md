@@ -1,6 +1,6 @@
 # Story 5 Plan - Frontend Block Extensions
 
-This document replaces the first-pass draft for Story 5 in `cell-docs-epic.md`. It includes an audit of the draft and a corrected implementation plan that is ready to hand to the frontend implementation owner.
+This document replaces the first-pass draft for Story 5 in `cell-docs-epic.md`. It includes an audit of the draft and a corrected implementation plan that is ready to hand to the frontend implementation owner. It also reflects the shipped Phase 1 backend and contract work that landed in commit `136f40b61c05c3b80876356148fa58892e6dd244`.
 
 ## Objective
 
@@ -15,11 +15,33 @@ The goal is to ship reusable TipTap extensions, the minimal interactive UI those
 
 ## Verified Baseline
 
-- `cell_doc` is already present in the generated frontend contract (`frontend/src/schema.d.ts`), so Story 5 is not blocked on `DocumentKind` support alone.
-- The active document editor still routes through `RichTextEditor` (`frontend/src/page/documents/document-editor.tsx`); `CellDocEditor` does not exist yet.
+- Phase 1 is shipped. The backend block model, block CRUD routes, version `block_snapshot`, and regenerated contracts landed in commit `136f40b61c05c3b80876356148fa58892e6dd244`.
+- `frontend/src/schema.d.ts` now includes `cell_doc`, block CRUD/reorder/sync routes, `DocumentBlock*` schemas, extended document activity types, and `DocumentVersionRead.block_snapshot`.
+- `frontend/src/service/documents.tsx` still does not export block type aliases or wrap the shipped block endpoints.
+- `frontend/src/page/documents/document-list.tsx` and `frontend/src/page/documents/document-detail.tsx` recognize `cell_doc` in their kind metadata, but `frontend/src/page/documents/document-editor.tsx` still omits `cell_doc` from `KIND_OPTIONS` and still routes everything through `RichTextEditor`.
+- `frontend/src/page/documents/document-detail.tsx` still uses `RichTextEditor` for read-only TipTap version previews, while `frontend/src/page/documents/document-list.tsx` and `frontend/src/page/documents/document-compare.tsx` still use local plain-text extractors for TipTap JSON.
 - The TipTap schema is duplicated today between `frontend/src/component/rich-text-editor.tsx` and `frontend/src/component/collaboration-bootstrap.ts`.
 - Frontend tests run on Vitest, not Jest (`frontend/package.json`).
 - Story 5 still needs to stay additive: Story 8 owns cell-doc routing, kind picker changes, inline document title UX, and the dedicated editor shell.
+
+## Current Frontend Integration Points
+
+These are the actual integration points Story 5 has to respect after Phase 1.
+
+1. **Generated contract surface is ready.**
+  The frontend already has generated knowledge of block routes and schemas in `frontend/src/schema.d.ts`, so Story 5 should consume existing generated types rather than inventing local block contracts.
+
+2. **The service layer is behind the contract.**
+  `frontend/src/service/documents.tsx` has no block endpoint wrappers yet. Story 5 does not need to consume block CRUD routes, but if it needs type aliases it should add narrow exports instead of bypassing the service layer pattern.
+
+3. **Document list and detail pages are metadata-aware only.**
+  `frontend/src/page/documents/document-list.tsx` and `frontend/src/page/documents/document-detail.tsx` know the `cell_doc` label and icon, but they do not have dedicated block rendering behavior.
+
+4. **The editor entry point is still the flat editor path.**
+  `frontend/src/page/documents/document-editor.tsx` still excludes `cell_doc` from `KIND_OPTIONS` and mounts `RichTextEditor` as the only TipTap editor. Story 5 should prepare reusable block extensions for Story 8, not force premature route integration.
+
+5. **Current text extraction is duplicated and block-naive.**
+  `frontend/src/component/document-content.ts`, `frontend/src/page/documents/document-list.tsx`, and `frontend/src/page/documents/document-compare.tsx` each flatten TipTap JSON to plain text separately. Story 5 should avoid widening into those surfaces unless a new node breaks shared helper assumptions badly enough to require a narrow safety fix.
 
 ## Audit of the First Pass
 
@@ -66,6 +88,7 @@ Story 5 should be implemented as a feature-local, reusable cell-doc extension pa
 2. Freeze the frontend node contract so Story 2 serialization and Story 9 PDF export have stable names and attrs to target.
 3. Ship the smallest interactive UI required by Story 5 itself, especially table controls.
 4. Keep Story 5 additive so Story 8 can compose these primitives into `CellDocEditor` without rewriting them.
+5. Reuse the shipped generated contract surface without prematurely wiring block CRUD into page-level UI.
 
 ## Adopted Node Contract
 
@@ -115,6 +138,8 @@ Create a feature-local folder instead of the generic `component/extensions` path
 
 Use `@tiptap/react/menus` for contextual table controls. No extra menu package needs to be added beyond the current TipTap stack.
 
+If Story 5 needs contract-derived frontend types for the extension surface or tests, add narrow re-exports from `frontend/src/service/documents.tsx` instead of importing generated schema types ad hoc across the feature.
+
 ### Phase 2 - Shared extension factory
 
 Before adding new block nodes, extract the current shared document editor setup into reusable helpers.
@@ -139,6 +164,7 @@ Important constraints:
 - Story 5 should **not** route `cell_doc` through `RichTextEditor` yet.
 - Story 5 should **not** change `KIND_OPTIONS` yet.
 - Story 5 **should** ensure that collaboration bootstrap seeding and future `CellDocEditor` runtime use the same schema and node names.
+- Story 5 should **not** add page-level block CRUD wiring unless an implementation detail makes a tiny service-layer export unavoidable.
 
 ### Phase 3 - Task list extension
 
@@ -276,6 +302,7 @@ Core package and shared editor surfaces:
 - `frontend/package-lock.json`
 - `frontend/src/component/rich-text-editor.tsx`
 - `frontend/src/component/collaboration-bootstrap.ts`
+- optionally `frontend/src/service/documents.tsx` for narrow block type re-exports
 
 New cell-doc feature surface:
 
@@ -310,6 +337,8 @@ Do not absorb the following into this slice:
 
 - `CellDocEditor` route integration
 - `KIND_OPTIONS` updates
+- document list/detail/compare rendering rewrites
+- block CRUD page wiring
 - slash-command menu
 - drag handles or keyboard reorder
 - inline title editing for cell docs

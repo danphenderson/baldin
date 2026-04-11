@@ -14,7 +14,7 @@ from app.schemas import UserRead
 async def test_login_endpoints(test_client, default_user: UserRead):
     async for client in test_client:  # This line handles the async generator
         access_token_res = await client.post(
-            "/auth/jwt/login",
+            "/api/v1/auth/jwt/login",
             data={
                 "username": "geralt@wiedzmin.pl",
                 "password": "geralt",
@@ -27,6 +27,6 @@ async def test_login_endpoints(test_client, default_user: UserRead):
         access_token = token["access_token"]
 
         test_token = await client.get(
-            "/users/me", headers={"Authorization": f"Bearer {access_token}"}
+            "/api/v1/users/me", headers={"Authorization": f"Bearer {access_token}"}
         )
         assert test_token.status_code == 200

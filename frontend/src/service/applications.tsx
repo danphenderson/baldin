@@ -26,7 +26,7 @@ const unwrap = <T,>(
 
 export const getApplications = async (token: string): Promise<ApplicationRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/applications/'));
+  return unwrap(await client.GET('/api/v1/applications/'));
 };
 
 export const findExistingApplicationForLead = async (token: string, leadId: string): Promise<ApplicationRead | null> => {
@@ -40,21 +40,21 @@ export const getApplicationStateLabel = (
 
 export const getApplication = async (token: string, id: string): Promise<ApplicationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/applications/{id}', {
+  return unwrap(await client.GET('/api/v1/applications/{id}', {
     params: { path: { id } },
   }));
 };
 
 export const createApplication = async (token: string, application: ApplicationCreate): Promise<ApplicationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/applications/', {
+  return unwrap(await client.POST('/api/v1/applications/', {
     body: application,
   }));
 };
 
 export const updateApplication = async (token: string, id: string, application: ApplicationUpdate): Promise<ApplicationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PATCH('/applications/{id}', {
+  return unwrap(await client.PATCH('/api/v1/applications/{id}', {
     params: { path: { id } },
     body: application,
   }));
@@ -62,7 +62,7 @@ export const updateApplication = async (token: string, id: string, application: 
 
 export const deleteApplication = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/applications/{id}', {
+  unwrap(await client.DELETE('/api/v1/applications/{id}', {
     params: { path: { id } },
   }));
 };
@@ -73,7 +73,7 @@ export const deleteApplication = async (token: string, id: string): Promise<void
 
 export const getApplicationDocuments = async (token: string, id: string): Promise<DocumentRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/applications/{id}/documents', {
+  return unwrap(await client.GET('/api/v1/applications/{id}/documents', {
     params: { path: { id } },
   }));
 };
@@ -81,7 +81,7 @@ export const getApplicationDocuments = async (token: string, id: string): Promis
 export const addApplicationDocument = async (token: string, id: string, documentId: string, versionId?: string): Promise<DocumentRead> => {
   const payload: ApplicationDocumentAttach = { document_id: documentId, version_id: versionId ?? null };
   const client = createApiClient(token);
-  return unwrap(await client.POST('/applications/{id}/documents', {
+  return unwrap(await client.POST('/api/v1/applications/{id}/documents', {
     params: { path: { id } },
     body: payload,
   }));
@@ -89,7 +89,7 @@ export const addApplicationDocument = async (token: string, id: string, document
 
 export const detachApplicationDocument = async (token: string, id: string, documentId: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/applications/{id}/documents/{document_id}', {
+  unwrap(await client.DELETE('/api/v1/applications/{id}/documents/{document_id}', {
     params: { path: { id, document_id: documentId } },
   }));
 };

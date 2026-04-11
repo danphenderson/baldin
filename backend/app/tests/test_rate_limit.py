@@ -61,7 +61,7 @@ async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -88,7 +88,7 @@ async def test_suggest_extractor_rate_limit_returns_429():
             statuses = []
             for _ in range(7):
                 resp = await client.post(
-                    "/extractor/suggest",
+                    "/api/v1/extractor/suggest",
                     json={"description": "test extractor"},
                     headers=headers,
                 )

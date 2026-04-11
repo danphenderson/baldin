@@ -55,7 +55,7 @@ async def _auth_headers(
     password: str,
 ) -> dict[str, str]:
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -153,7 +153,7 @@ async def test_enrich_lead_route_uses_langgraph_and_persists_compact_payload(
         email, _user_id = await _create_user("rag-route-pass")
         headers = await _auth_headers(client, email, "rag-route-pass")
         response = await client.post(
-            "/documents/rag/enrich-lead",
+            "/api/v1/documents/rag/enrich-lead",
             json={"lead_description": lead_description, "k": 5},
             headers=headers,
         )
@@ -257,7 +257,7 @@ async def test_enrich_lead_route_persists_terminal_failure_after_repair_attempt(
         email, _user_id = await _create_user("rag-route-fail-pass")
         headers = await _auth_headers(client, email, "rag-route-fail-pass")
         response = await client.post(
-            "/documents/rag/enrich-lead",
+            "/api/v1/documents/rag/enrich-lead",
             json={
                 "lead_description": "Backend platform role focused on orchestration and retrieval systems.",
                 "k": 5,
@@ -354,7 +354,7 @@ async def test_enrich_lead_route_marks_running_event_failed_when_graph_crashes(
     async with _client() as client:
         headers = await _auth_headers(client, email, "rag-route-crash-pass")
         response = await client.post(
-            "/documents/rag/enrich-lead",
+            "/api/v1/documents/rag/enrich-lead",
             json={
                 "lead_description": "Backend platform role focused on orchestration reliability.",
                 "k": 5,

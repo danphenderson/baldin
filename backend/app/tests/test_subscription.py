@@ -57,7 +57,7 @@ async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -88,7 +88,7 @@ async def test_placement_active_to_graduated() -> None:
         headers = await _auth_headers(client, email, "sub-place-ag-pass")
 
         response = await client.patch(
-            "/users/me/placement",
+            "/api/v1/users/me/placement",
             json={"placement_status": "graduated"},
             headers=headers,
         )
@@ -106,7 +106,7 @@ async def test_placement_graduated_to_alumni() -> None:
         headers = await _auth_headers(client, email, "sub-place-ga-pass")
 
         response = await client.patch(
-            "/users/me/placement",
+            "/api/v1/users/me/placement",
             json={"placement_status": "alumni"},
             headers=headers,
         )
@@ -123,7 +123,7 @@ async def test_placement_invalid_transition_returns_400() -> None:
         headers = await _auth_headers(client, email, "sub-place-bad-pass")
 
         response = await client.patch(
-            "/users/me/placement",
+            "/api/v1/users/me/placement",
             json={"placement_status": "alumni"},
             headers=headers,
         )

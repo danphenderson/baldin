@@ -31,7 +31,7 @@ async def test_preflight_allows_configured_frontend_origin() -> None:
         base_url=origin,
     ) as client:
         response = await client.options(
-            "/users/me",
+            "/api/v1/users/me",
             headers={
                 "Origin": origin,
                 "Access-Control-Request-Method": "GET",

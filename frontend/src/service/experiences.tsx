@@ -23,26 +23,26 @@ const unwrap = <T,>(
 
 export const getExperiences = async (token: string): Promise<ExperienceRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/experiences/'));
+  return unwrap(await client.GET('/api/v1/experiences/'));
 };
 
 export const getExperience = async (token: string, id: string): Promise<ExperienceRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/experiences/{experience_id}', {
+  return unwrap(await client.GET('/api/v1/experiences/{experience_id}', {
     params: { query: { id } },
   }));
 };
 
 export const createExperience = async (token: string, experience: ExperienceCreate): Promise<ExperienceRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/experiences/', {
+  return unwrap(await client.POST('/api/v1/experiences/', {
     body: experience,
   }));
 };
 
 export const updateExperience = async (token: string, id: string, experience: ExperienceUpdate): Promise<ExperienceRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/experiences/{experience_id}', {
+  return unwrap(await client.PUT('/api/v1/experiences/{experience_id}', {
     params: { query: { id } },
     body: experience,
   }));
@@ -50,12 +50,12 @@ export const updateExperience = async (token: string, id: string, experience: Ex
 
 export const deleteExperience = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/experiences/{experience_id}', {
+  unwrap(await client.DELETE('/api/v1/experiences/{experience_id}', {
     params: { query: { id } },
   }));
 };
 
 export const seedExperiences = async (token: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.POST('/experiences/seed'));
+  unwrap(await client.POST('/api/v1/experiences/seed'));
 };

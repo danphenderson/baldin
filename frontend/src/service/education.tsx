@@ -23,26 +23,26 @@ const unwrap = <T,>(
 
 export const getEducations = async (token: string): Promise<EducationRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/education/'));
+  return unwrap(await client.GET('/api/v1/education/'));
 };
 
 export const getEducation = async (token: string, id: string): Promise<EducationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/education/{education_id}', {
+  return unwrap(await client.GET('/api/v1/education/{education_id}', {
     params: { query: { id } },
   }));
 };
 
 export const createEducation = async (token: string, education: EducationCreate): Promise<EducationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/education/', {
+  return unwrap(await client.POST('/api/v1/education/', {
     body: education,
   }));
 };
 
 export const updateEducation = async (token: string, id: string, education: EducationUpdate): Promise<EducationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/education/{education_id}', {
+  return unwrap(await client.PUT('/api/v1/education/{education_id}', {
     params: { query: { id } },
     body: education,
   }));
@@ -50,12 +50,12 @@ export const updateEducation = async (token: string, id: string, education: Educ
 
 export const deleteEducation = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/education/{education_id}', {
+  unwrap(await client.DELETE('/api/v1/education/{education_id}', {
     params: { query: { id } },
   }));
 };
 
 export const seedEducations = async (token: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.POST('/education/seed'));
+  unwrap(await client.POST('/api/v1/education/seed'));
 };

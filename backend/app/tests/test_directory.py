@@ -58,7 +58,7 @@ async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -92,7 +92,7 @@ async def test_directory_returns_paginated_results() -> None:
         headers = await _auth_headers(client, email_a, "dir-a-pass")
 
         response = await client.get(
-            "/directory/", params={"request_count": True}, headers=headers
+            "/api/v1/directory/", params={"request_count": True}, headers=headers
         )
 
     assert response.status_code == 200
@@ -112,7 +112,7 @@ async def test_directory_rejects_page_sizes_over_max() -> None:
         headers = await _auth_headers(client, email_viewer, "dir-limit-viewer-pass")
 
         response = await client.get(
-            "/directory/",
+            "/api/v1/directory/",
             params={"page_size": 101},
             headers=headers,
         )
@@ -141,7 +141,7 @@ async def test_directory_filters_by_placement_status() -> None:
         headers = await _auth_headers(client, email_v, "dir-viewer-pass")
 
         response = await client.get(
-            "/directory/",
+            "/api/v1/directory/",
             params={"placement_status": "graduated", "request_count": True},
             headers=headers,
         )
@@ -167,7 +167,7 @@ async def test_directory_search_by_query() -> None:
         headers = await _auth_headers(client, email_q, "dir-q-pass")
 
         response = await client.get(
-            "/directory/",
+            "/api/v1/directory/",
             params={"q": f"Searchable{unique}", "request_count": True},
             headers=headers,
         )
@@ -195,7 +195,7 @@ async def test_directory_public_profile() -> None:
         email_v, _ = await _create_user("dir-prof-view-pass")
         headers = await _auth_headers(client, email_v, "dir-prof-view-pass")
 
-        response = await client.get(f"/directory/{uid_p}", headers=headers)
+        response = await client.get(f"/api/v1/directory/{uid_p}", headers=headers)
 
     assert response.status_code == 200
     body = response.json()
@@ -221,7 +221,7 @@ async def test_superusers_are_discoverable_by_default() -> None:
         headers = await _auth_headers(client, email_viewer, "dir-default-view-pass")
 
         response = await client.get(
-            "/directory/",
+            "/api/v1/directory/",
             params={"q": f"Guide{unique}", "request_count": True},
             headers=headers,
         )
@@ -253,7 +253,7 @@ async def test_directory_can_filter_superusers_only() -> None:
         headers = await _auth_headers(client, email_viewer, "dir-filter-view-pass")
 
         list_response = await client.get(
-            "/directory/",
+            "/api/v1/directory/",
             params={
                 "q": f"Scout{unique}",
                 "superusers_only": True,
@@ -261,7 +261,9 @@ async def test_directory_can_filter_superusers_only() -> None:
             },
             headers=headers,
         )
-        profile_response = await client.get(f"/directory/{uid_super}", headers=headers)
+        profile_response = await client.get(
+            f"/api/v1/directory/{uid_super}", headers=headers
+        )
 
     assert list_response.status_code == 200
     body = list_response.json()
@@ -289,12 +291,14 @@ async def test_non_discoverable_users_excluded() -> None:
 
         # Should not appear in directory listing
         list_response = await client.get(
-            "/directory/",
+            "/api/v1/directory/",
             params={"q": f"Hidden{unique}", "request_count": True},
             headers=headers,
         )
         # Direct profile should return 403
-        profile_response = await client.get(f"/directory/{uid_h}", headers=headers)
+        profile_response = await client.get(
+            f"/api/v1/directory/{uid_h}", headers=headers
+        )
 
     assert list_response.status_code == 200
     assert list_response.json()["total"] == 0

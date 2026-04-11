@@ -56,7 +56,7 @@ async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -73,14 +73,14 @@ async def _create_accepted_connection(
 ) -> str:
     """Create and accept a connection. Returns connection ID."""
     resp = await client.post(
-        "/connections/",
+        "/api/v1/connections/",
         json={"addressee_id": str(addressee_id)},
         headers=headers_requester,
     )
     assert resp.status_code == 201
     conn_id = resp.json()["id"]
     accept = await client.patch(
-        f"/connections/{conn_id}/accept", headers=headers_addressee
+        f"/api/v1/connections/{conn_id}/accept", headers=headers_addressee
     )
     assert accept.status_code == 200
     return conn_id
@@ -103,7 +103,7 @@ async def test_create_dm_conversation() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         response = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={
                 "participant_user_ids": [str(uid_b)],
                 "type": "direct",
@@ -129,7 +129,7 @@ async def test_create_group_conversation_pro_only() -> None:
 
         # Pro user can create group
         response = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={
                 "participant_user_ids": [str(uid_b), str(uid_c)],
                 "type": "group",
@@ -151,7 +151,7 @@ async def test_create_group_conversation_pro_only() -> None:
         headers_s = await _auth_headers(client, email_s, "msg-grp-starter")
 
         response = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={
                 "participant_user_ids": [str(uid_t), str(uid_u)],
                 "type": "group",
@@ -172,7 +172,7 @@ async def test_free_tier_cannot_create_conversation() -> None:
         headers_f = await _auth_headers(client, email_f, "msg-free-pass")
 
         response = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={
                 "participant_user_ids": [str(uid_t)],
                 "type": "direct",
@@ -193,7 +193,7 @@ async def test_dm_without_accepted_connection_fails() -> None:
 
         # No connection exists between users — should fail
         response = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={
                 "participant_user_ids": [str(uid_b)],
                 "type": "direct",
@@ -216,12 +216,12 @@ async def test_dm_deduplication() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         first = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
         second = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
@@ -243,12 +243,12 @@ async def test_list_conversations() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
 
-        response = await client.get("/conversations/", headers=headers_a)
+        response = await client.get("/api/v1/conversations/", headers=headers_a)
 
     assert response.status_code == 200
     body = response.json()
@@ -268,7 +268,7 @@ async def test_conversation_detail_with_messages_marks_read() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         conv_resp = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
@@ -276,13 +276,15 @@ async def test_conversation_detail_with_messages_marks_read() -> None:
 
         # Send a message
         await client.post(
-            f"/conversations/{conv_id}/messages",
+            f"/api/v1/conversations/{conv_id}/messages",
             json={"content": "Hello there!"},
             headers=headers_a,
         )
 
         # Other user views conversation → marks as read
-        detail_resp = await client.get(f"/conversations/{conv_id}", headers=headers_b)
+        detail_resp = await client.get(
+            f"/api/v1/conversations/{conv_id}", headers=headers_b
+        )
 
     assert detail_resp.status_code == 200
     body = detail_resp.json()
@@ -302,14 +304,14 @@ async def test_send_message() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         conv_resp = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
         conv_id = conv_resp.json()["id"]
 
         msg_resp = await client.post(
-            f"/conversations/{conv_id}/messages",
+            f"/api/v1/conversations/{conv_id}/messages",
             json={"content": "Test message content"},
             headers=headers_a,
         )
@@ -332,28 +334,28 @@ async def test_edit_own_message() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         conv_resp = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
         conv_id = conv_resp.json()["id"]
 
         msg_resp = await client.post(
-            f"/conversations/{conv_id}/messages",
+            f"/api/v1/conversations/{conv_id}/messages",
             json={"content": "Original"},
             headers=headers_a,
         )
         msg_id = msg_resp.json()["id"]
 
         edit_resp = await client.patch(
-            f"/conversations/{conv_id}/messages/{msg_id}",
+            f"/api/v1/conversations/{conv_id}/messages/{msg_id}",
             json={"content": "Edited"},
             headers=headers_a,
         )
 
         # Other user cannot edit someone else's message
         wrong_edit = await client.patch(
-            f"/conversations/{conv_id}/messages/{msg_id}",
+            f"/api/v1/conversations/{conv_id}/messages/{msg_id}",
             json={"content": "Tampered"},
             headers=headers_b,
         )
@@ -376,14 +378,14 @@ async def test_delete_own_message() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         conv_resp = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
         conv_id = conv_resp.json()["id"]
 
         msg_resp = await client.post(
-            f"/conversations/{conv_id}/messages",
+            f"/api/v1/conversations/{conv_id}/messages",
             json={"content": "To be deleted"},
             headers=headers_a,
         )
@@ -391,14 +393,14 @@ async def test_delete_own_message() -> None:
 
         # Other user cannot delete someone else's message
         wrong_del = await client.delete(
-            f"/conversations/{conv_id}/messages/{msg_id}",
+            f"/api/v1/conversations/{conv_id}/messages/{msg_id}",
             headers=headers_b,
         )
         assert wrong_del.status_code == 403
 
         # Author can delete
         del_resp = await client.delete(
-            f"/conversations/{conv_id}/messages/{msg_id}",
+            f"/api/v1/conversations/{conv_id}/messages/{msg_id}",
             headers=headers_a,
         )
 
@@ -417,7 +419,7 @@ async def test_unread_count() -> None:
         await _create_accepted_connection(client, headers_a, headers_b, uid_b)
 
         conv_resp = await client.post(
-            "/conversations/",
+            "/api/v1/conversations/",
             json={"participant_user_ids": [str(uid_b)], "type": "direct"},
             headers=headers_a,
         )
@@ -425,18 +427,20 @@ async def test_unread_count() -> None:
 
         # User A sends two messages
         await client.post(
-            f"/conversations/{conv_id}/messages",
+            f"/api/v1/conversations/{conv_id}/messages",
             json={"content": "Message 1"},
             headers=headers_a,
         )
         await client.post(
-            f"/conversations/{conv_id}/messages",
+            f"/api/v1/conversations/{conv_id}/messages",
             json={"content": "Message 2"},
             headers=headers_a,
         )
 
         # User B checks unread before reading
-        unread_resp = await client.get("/conversations/unread", headers=headers_b)
+        unread_resp = await client.get(
+            "/api/v1/conversations/unread", headers=headers_b
+        )
 
     assert unread_resp.status_code == 200
     body = unread_resp.json()

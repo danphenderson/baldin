@@ -23,26 +23,26 @@ const unwrap = <T,>(
 
 export const getContacts = async (token: string): Promise<ContactRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/contacts/'));
+  return unwrap(await client.GET('/api/v1/contacts/'));
 };
 
 export const getContact = async (token: string, id: string): Promise<ContactRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/contacts/{contact_id}', {
+  return unwrap(await client.GET('/api/v1/contacts/{contact_id}', {
     params: { query: { id } },
   }));
 };
 
 export const createContact = async (token: string, contact: ContactCreate): Promise<ContactRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/contacts/', {
+  return unwrap(await client.POST('/api/v1/contacts/', {
     body: contact,
   }));
 };
 
 export const updateContact = async (token: string, id: string, contact: ContactUpdate): Promise<ContactRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/contacts/{contact_id}', {
+  return unwrap(await client.PUT('/api/v1/contacts/{contact_id}', {
     params: { query: { id } },
     body: contact,
   }));
@@ -50,12 +50,12 @@ export const updateContact = async (token: string, id: string, contact: ContactU
 
 export const deleteContact = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/contacts/{contact_id}', {
+  unwrap(await client.DELETE('/api/v1/contacts/{contact_id}', {
     params: { query: { id } },
   }));
 };
 
 export const seedContacts = async (token: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.POST('/contacts/seed'));
+  unwrap(await client.POST('/api/v1/contacts/seed'));
 };

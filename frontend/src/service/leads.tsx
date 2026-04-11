@@ -92,7 +92,7 @@ const unwrap = <T,>(
 
 export const getLeads = async (token: string, pagination: Pagination): Promise<LeadsPaginatedRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/leads/', {
+  return unwrap(await client.GET('/api/v1/leads/', {
     params: {
       query: {
         page: pagination.page,
@@ -105,21 +105,21 @@ export const getLeads = async (token: string, pagination: Pagination): Promise<L
 
 export const getLead = async (token: string, id: string): Promise<LeadDetailRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/leads/{id}', {
+  return unwrap(await client.GET('/api/v1/leads/{id}', {
     params: { path: { id } },
   }));
 };
 
 export const createLead = async (token: string, lead: LeadCreate): Promise<LeadRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/leads/', {
+  return unwrap(await client.POST('/api/v1/leads/', {
     body: lead,
   }));
 };
 
 export const updateLead = async (token: string, id: string, lead: LeadSharedUpdate): Promise<LeadRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PATCH('/leads/{id}', {
+  return unwrap(await client.PATCH('/api/v1/leads/{id}', {
     params: { path: { id } },
     body: lead,
   }));
@@ -127,26 +127,26 @@ export const updateLead = async (token: string, id: string, lead: LeadSharedUpda
 
 export const deleteLead = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/leads/{id}', {
+  unwrap(await client.DELETE('/api/v1/leads/{id}', {
     params: { path: { id } },
   }));
 };
 
 export const seedLeads = async (token: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.POST('/leads/seed'));
+  unwrap(await client.POST('/api/v1/leads/seed'));
 };
 
 export const extractLead = async (token: string, extractionUrl: string): Promise<LeadExtractResponse> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/leads/extract', {
+  return unwrap(await client.POST('/api/v1/leads/extract', {
     params: { query: { extraction_url: extractionUrl } },
   }));
 };
 
 export const createLeadRegistration = async (token: string, leadId: string): Promise<LeadRegistrationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/leads/{id}/registration', {
+  return unwrap(await client.POST('/api/v1/leads/{id}/registration', {
     params: { path: { id: leadId } },
   }));
 };
@@ -157,7 +157,7 @@ export const updateLeadRegistration = async (
   registration: LeadRegistrationUpdate,
 ): Promise<LeadRegistrationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PATCH('/leads/{id}/registration', {
+  return unwrap(await client.PATCH('/api/v1/leads/{id}/registration', {
     params: { path: { id: leadId } },
     body: registration,
   }));
@@ -165,14 +165,14 @@ export const updateLeadRegistration = async (
 
 export const deleteLeadRegistration = async (token: string, leadId: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/leads/{id}/registration', {
+  unwrap(await client.DELETE('/api/v1/leads/{id}/registration', {
     params: { path: { id: leadId } },
   }));
 };
 
 export const getLeadComments = async (token: string, leadId: string): Promise<LeadCommentRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/leads/{id}/comments', {
+  return unwrap(await client.GET('/api/v1/leads/{id}/comments', {
     params: { path: { id: leadId } },
   }));
 };
@@ -183,7 +183,7 @@ export const createLeadComment = async (
   comment: LeadCommentCreate,
 ): Promise<LeadCommentRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/leads/{id}/comments', {
+  return unwrap(await client.POST('/api/v1/leads/{id}/comments', {
     params: { path: { id: leadId } },
     body: comment,
   }));
@@ -196,7 +196,7 @@ export const createLeadCommentReply = async (
   comment: LeadCommentCreate,
 ): Promise<LeadCommentRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/leads/{id}/comments/{comment_id}/replies', {
+  return unwrap(await client.POST('/api/v1/leads/{id}/comments/{comment_id}/replies', {
     params: { path: { id: leadId, comment_id: commentId } },
     body: comment,
   }));

@@ -23,26 +23,26 @@ const unwrap = <T,>(
 
 export const getCompanies = async (token: string): Promise<CompanyRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/companies/'));
+  return unwrap(await client.GET('/api/v1/companies/'));
 };
 
 export const getCompany = async (token: string, id: string): Promise<CompanyRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/companies/{id}', {
+  return unwrap(await client.GET('/api/v1/companies/{id}', {
     params: { path: { id } },
   }));
 };
 
 export const createCompany = async (token: string, company: CompanyCreate): Promise<CompanyRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/companies/', {
+  return unwrap(await client.POST('/api/v1/companies/', {
     body: company,
   }));
 };
 
 export const updateCompany = async (token: string, id: string, company: CompanyUpdate): Promise<CompanyRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/companies/{id}', {
+  return unwrap(await client.PUT('/api/v1/companies/{id}', {
     params: { path: { id } },
     body: company,
   }));
@@ -50,21 +50,21 @@ export const updateCompany = async (token: string, id: string, company: CompanyU
 
 export const deleteCompany = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/companies/{id}', {
+  unwrap(await client.DELETE('/api/v1/companies/{id}', {
     params: { path: { id } },
   }));
 };
 
 export const getCompanyLeads = async (token: string, id: string): Promise<components['schemas']['LeadRead'][]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/companies/{id}/leads', {
+  return unwrap(await client.GET('/api/v1/companies/{id}/leads', {
     params: { path: { id } },
   }));
 };
 
 export const extractCompany = async (token: string, extractionUrl: string): Promise<CompanyRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/companies/extract', {
+  return unwrap(await client.POST('/api/v1/companies/extract', {
     params: { query: { extraction_url: extractionUrl } },
   }));
 };

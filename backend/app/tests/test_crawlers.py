@@ -75,7 +75,7 @@ async def _auth_headers(
 ) -> dict[str, str]:
     app.state.limiter.reset()
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -193,16 +193,16 @@ async def test_unauthenticated_user_gets_401_on_crawler_routes():
     await _ensure_db_ready()
     async with _client() as client:
         endpoints = [
-            ("POST", "/crawlers/pipelines"),
-            ("GET", "/crawlers/pipelines"),
-            ("GET", f"/crawlers/pipelines/{uuid4()}"),
-            ("PATCH", f"/crawlers/pipelines/{uuid4()}"),
-            ("POST", f"/crawlers/pipelines/{uuid4()}/runs"),
-            ("GET", "/crawlers/runs"),
-            ("GET", f"/crawlers/runs/{uuid4()}"),
-            ("POST", f"/crawlers/runs/{uuid4()}/cancel"),
-            ("POST", f"/crawlers/runs/{uuid4()}/pause"),
-            ("POST", f"/crawlers/runs/{uuid4()}/resume"),
+            ("POST", "/api/v1/crawlers/pipelines"),
+            ("GET", "/api/v1/crawlers/pipelines"),
+            ("GET", f"/api/v1/crawlers/pipelines/{uuid4()}"),
+            ("PATCH", f"/api/v1/crawlers/pipelines/{uuid4()}"),
+            ("POST", f"/api/v1/crawlers/pipelines/{uuid4()}/runs"),
+            ("GET", "/api/v1/crawlers/runs"),
+            ("GET", f"/api/v1/crawlers/runs/{uuid4()}"),
+            ("POST", f"/api/v1/crawlers/runs/{uuid4()}/cancel"),
+            ("POST", f"/api/v1/crawlers/runs/{uuid4()}/pause"),
+            ("POST", f"/api/v1/crawlers/runs/{uuid4()}/resume"),
         ]
         for method, path in endpoints:
             resp = await client.request(method, path)
@@ -219,16 +219,16 @@ async def test_non_superuser_gets_403_on_crawler_routes():
         headers = await _auth_headers(client, email, "regular-pass")
 
         endpoints = [
-            ("POST", "/crawlers/pipelines"),
-            ("GET", "/crawlers/pipelines"),
-            ("GET", f"/crawlers/pipelines/{uuid4()}"),
-            ("PATCH", f"/crawlers/pipelines/{uuid4()}"),
-            ("POST", f"/crawlers/pipelines/{uuid4()}/runs"),
-            ("GET", "/crawlers/runs"),
-            ("GET", f"/crawlers/runs/{uuid4()}"),
-            ("POST", f"/crawlers/runs/{uuid4()}/cancel"),
-            ("POST", f"/crawlers/runs/{uuid4()}/pause"),
-            ("POST", f"/crawlers/runs/{uuid4()}/resume"),
+            ("POST", "/api/v1/crawlers/pipelines"),
+            ("GET", "/api/v1/crawlers/pipelines"),
+            ("GET", f"/api/v1/crawlers/pipelines/{uuid4()}"),
+            ("PATCH", f"/api/v1/crawlers/pipelines/{uuid4()}"),
+            ("POST", f"/api/v1/crawlers/pipelines/{uuid4()}/runs"),
+            ("GET", "/api/v1/crawlers/runs"),
+            ("GET", f"/api/v1/crawlers/runs/{uuid4()}"),
+            ("POST", f"/api/v1/crawlers/runs/{uuid4()}/cancel"),
+            ("POST", f"/api/v1/crawlers/runs/{uuid4()}/pause"),
+            ("POST", f"/api/v1/crawlers/runs/{uuid4()}/resume"),
         ]
         for method, path in endpoints:
             resp = await client.request(method, path, headers=headers)
@@ -250,7 +250,9 @@ async def test_superuser_creates_pipeline():
         headers = await _auth_headers(client, email, "super-create")
 
         payload = _pipeline_payload()
-        resp = await client.post("/crawlers/pipelines", json=payload, headers=headers)
+        resp = await client.post(
+            "/api/v1/crawlers/pipelines", json=payload, headers=headers
+        )
         assert resp.status_code == 200
         body = resp.json()
         assert body["name"] == payload["name"]
@@ -269,17 +271,17 @@ async def test_superuser_lists_pipelines():
 
         # Create two pipelines
         await client.post(
-            "/crawlers/pipelines",
+            "/api/v1/crawlers/pipelines",
             json=_pipeline_payload(name="Pipeline A"),
             headers=headers,
         )
         await client.post(
-            "/crawlers/pipelines",
+            "/api/v1/crawlers/pipelines",
             json=_pipeline_payload(name="Pipeline B"),
             headers=headers,
         )
 
-        resp = await client.get("/crawlers/pipelines", headers=headers)
+        resp = await client.get("/api/v1/crawlers/pipelines", headers=headers)
         assert resp.status_code == 200
         pipelines = resp.json()
         assert isinstance(pipelines, list)
@@ -297,11 +299,13 @@ async def test_superuser_gets_single_pipeline():
         headers = await _auth_headers(client, email, "super-get")
 
         create_resp = await client.post(
-            "/crawlers/pipelines", json=_pipeline_payload(), headers=headers
+            "/api/v1/crawlers/pipelines", json=_pipeline_payload(), headers=headers
         )
         pipeline_id = create_resp.json()["id"]
 
-        resp = await client.get(f"/crawlers/pipelines/{pipeline_id}", headers=headers)
+        resp = await client.get(
+            f"/api/v1/crawlers/pipelines/{pipeline_id}", headers=headers
+        )
         assert resp.status_code == 200
         assert resp.json()["id"] == pipeline_id
 
@@ -314,12 +318,12 @@ async def test_superuser_updates_pipeline():
         headers = await _auth_headers(client, email, "super-update")
 
         create_resp = await client.post(
-            "/crawlers/pipelines", json=_pipeline_payload(), headers=headers
+            "/api/v1/crawlers/pipelines", json=_pipeline_payload(), headers=headers
         )
         pipeline_id = create_resp.json()["id"]
 
         resp = await client.patch(
-            f"/crawlers/pipelines/{pipeline_id}",
+            f"/api/v1/crawlers/pipelines/{pipeline_id}",
             json={"name": "Updated Name", "enabled": False},
             headers=headers,
         )
@@ -342,12 +346,12 @@ async def test_superuser_triggers_manual_run():
         headers = await _auth_headers(client, email, "super-run")
 
         create_resp = await client.post(
-            "/crawlers/pipelines", json=_pipeline_payload(), headers=headers
+            "/api/v1/crawlers/pipelines", json=_pipeline_payload(), headers=headers
         )
         pipeline_id = create_resp.json()["id"]
 
         resp = await client.post(
-            f"/crawlers/pipelines/{pipeline_id}/runs", headers=headers
+            f"/api/v1/crawlers/pipelines/{pipeline_id}/runs", headers=headers
         )
         assert resp.status_code == 200
         body = resp.json()
@@ -369,12 +373,12 @@ async def test_superuser_triggers_manual_run_awaits_checked_queue_handoff(
         headers = await _auth_headers(client, email, "super-await-run")
 
         create_resp = await client.post(
-            "/crawlers/pipelines", json=_pipeline_payload(), headers=headers
+            "/api/v1/crawlers/pipelines", json=_pipeline_payload(), headers=headers
         )
         pipeline_id = create_resp.json()["id"]
 
         resp = await client.post(
-            f"/crawlers/pipelines/{pipeline_id}/runs", headers=headers
+            f"/api/v1/crawlers/pipelines/{pipeline_id}/runs", headers=headers
         )
         assert resp.status_code == 200
         run_id = UUID(resp.json()["id"])
@@ -398,13 +402,13 @@ async def test_superuser_lists_runs_paginated_by_default():
         headers = await _auth_headers(client, email, "super-runs-list")
 
         create_resp = await client.post(
-            "/crawlers/pipelines", json=_pipeline_payload(), headers=headers
+            "/api/v1/crawlers/pipelines", json=_pipeline_payload(), headers=headers
         )
         pipeline_id = create_resp.json()["id"]
         inserted_ids = await _insert_runs_for_pipeline(pipeline_id, count=12)
 
         resp = await client.get(
-            "/crawlers/runs",
+            "/api/v1/crawlers/runs",
             params={"pipeline_id": pipeline_id, "request_count": True},
             headers=headers,
         )
@@ -426,14 +430,16 @@ async def test_superuser_lists_runs_with_filters():
         headers = await _auth_headers(client, email, "super-runs-filter")
 
         create_resp = await client.post(
-            "/crawlers/pipelines", json=_pipeline_payload(), headers=headers
+            "/api/v1/crawlers/pipelines", json=_pipeline_payload(), headers=headers
         )
         pipeline_id = create_resp.json()["id"]
-        await client.post(f"/crawlers/pipelines/{pipeline_id}/runs", headers=headers)
+        await client.post(
+            f"/api/v1/crawlers/pipelines/{pipeline_id}/runs", headers=headers
+        )
 
         # Filter by pipeline_id
         resp = await client.get(
-            "/crawlers/runs",
+            "/api/v1/crawlers/runs",
             params={"pipeline_id": pipeline_id, "request_count": True},
             headers=headers,
         )
@@ -443,7 +449,7 @@ async def test_superuser_lists_runs_with_filters():
 
         # Filter by status — pending runs from the trigger above
         resp = await client.get(
-            "/crawlers/runs",
+            "/api/v1/crawlers/runs",
             params={"pipeline_id": pipeline_id, "status": "pending"},
             headers=headers,
         )
@@ -459,13 +465,13 @@ async def test_superuser_lists_runs_with_explicit_page_and_page_size():
         headers = await _auth_headers(client, email, "super-runs-page")
 
         create_resp = await client.post(
-            "/crawlers/pipelines", json=_pipeline_payload(), headers=headers
+            "/api/v1/crawlers/pipelines", json=_pipeline_payload(), headers=headers
         )
         pipeline_id = create_resp.json()["id"]
         inserted_ids = await _insert_runs_for_pipeline(pipeline_id, count=5)
 
         resp = await client.get(
-            "/crawlers/runs",
+            "/api/v1/crawlers/runs",
             params={
                 "pipeline_id": pipeline_id,
                 "page": 2,
@@ -491,7 +497,7 @@ async def test_superuser_lists_runs_rejects_page_sizes_over_max() -> None:
         headers = await _auth_headers(client, email, "super-runs-limit")
 
         response = await client.get(
-            "/crawlers/runs",
+            "/api/v1/crawlers/runs",
             params={"page_size": 101},
             headers=headers,
         )
@@ -513,15 +519,15 @@ async def test_superuser_gets_run_detail():
         headers = await _auth_headers(client, email, "super-run-detail")
 
         create_resp = await client.post(
-            "/crawlers/pipelines", json=_pipeline_payload(), headers=headers
+            "/api/v1/crawlers/pipelines", json=_pipeline_payload(), headers=headers
         )
         pipeline_id = create_resp.json()["id"]
         run_resp = await client.post(
-            f"/crawlers/pipelines/{pipeline_id}/runs", headers=headers
+            f"/api/v1/crawlers/pipelines/{pipeline_id}/runs", headers=headers
         )
         run_id = run_resp.json()["id"]
 
-        resp = await client.get(f"/crawlers/runs/{run_id}", headers=headers)
+        resp = await client.get(f"/api/v1/crawlers/runs/{run_id}", headers=headers)
         assert resp.status_code == 200
         body = resp.json()
         assert body["id"] == run_id
@@ -541,11 +547,11 @@ async def _create_run_with_status(
 ) -> str:
     """Helper: create a pipeline + run, then set the run to desired status."""
     create_resp = await client.post(
-        "/crawlers/pipelines", json=_pipeline_payload(), headers=headers
+        "/api/v1/crawlers/pipelines", json=_pipeline_payload(), headers=headers
     )
     pipeline_id = create_resp.json()["id"]
     run_resp = await client.post(
-        f"/crawlers/pipelines/{pipeline_id}/runs", headers=headers
+        f"/api/v1/crawlers/pipelines/{pipeline_id}/runs", headers=headers
     )
     run_id = run_resp.json()["id"]
 
@@ -568,7 +574,9 @@ async def test_cancel_pending_run():
         headers = await _auth_headers(client, email, "super-cancel-p")
         run_id = await _create_run_with_status(client, headers, "pending")
 
-        resp = await client.post(f"/crawlers/runs/{run_id}/cancel", headers=headers)
+        resp = await client.post(
+            f"/api/v1/crawlers/runs/{run_id}/cancel", headers=headers
+        )
         assert resp.status_code == 200
         assert resp.json()["status"] == "cancelled"
 
@@ -581,7 +589,9 @@ async def test_cancel_running_run():
         headers = await _auth_headers(client, email, "super-cancel-r")
         run_id = await _create_run_with_status(client, headers, "running")
 
-        resp = await client.post(f"/crawlers/runs/{run_id}/cancel", headers=headers)
+        resp = await client.post(
+            f"/api/v1/crawlers/runs/{run_id}/cancel", headers=headers
+        )
         assert resp.status_code == 200
         assert resp.json()["status"] == "cancelled"
 
@@ -594,7 +604,9 @@ async def test_cancel_completed_run_returns_409():
         headers = await _auth_headers(client, email, "super-cancel-s")
         run_id = await _create_run_with_status(client, headers, "success")
 
-        resp = await client.post(f"/crawlers/runs/{run_id}/cancel", headers=headers)
+        resp = await client.post(
+            f"/api/v1/crawlers/runs/{run_id}/cancel", headers=headers
+        )
         assert resp.status_code == 409
 
 
@@ -606,7 +618,9 @@ async def test_pause_running_run():
         headers = await _auth_headers(client, email, "super-pause-r")
         run_id = await _create_run_with_status(client, headers, "running")
 
-        resp = await client.post(f"/crawlers/runs/{run_id}/pause", headers=headers)
+        resp = await client.post(
+            f"/api/v1/crawlers/runs/{run_id}/pause", headers=headers
+        )
         assert resp.status_code == 200
         assert resp.json()["status"] == "paused"
 
@@ -619,7 +633,9 @@ async def test_pause_pending_run_returns_409():
         headers = await _auth_headers(client, email, "super-pause-p")
         run_id = await _create_run_with_status(client, headers, "pending")
 
-        resp = await client.post(f"/crawlers/runs/{run_id}/pause", headers=headers)
+        resp = await client.post(
+            f"/api/v1/crawlers/runs/{run_id}/pause", headers=headers
+        )
         assert resp.status_code == 409
 
 
@@ -631,7 +647,9 @@ async def test_pause_completed_run_returns_409():
         headers = await _auth_headers(client, email, "super-pause-s")
         run_id = await _create_run_with_status(client, headers, "success")
 
-        resp = await client.post(f"/crawlers/runs/{run_id}/pause", headers=headers)
+        resp = await client.post(
+            f"/api/v1/crawlers/runs/{run_id}/pause", headers=headers
+        )
         assert resp.status_code == 409
 
 
@@ -643,7 +661,9 @@ async def test_resume_paused_run():
         headers = await _auth_headers(client, email, "super-resume-p")
         run_id = await _create_run_with_status(client, headers, "paused")
 
-        resp = await client.post(f"/crawlers/runs/{run_id}/resume", headers=headers)
+        resp = await client.post(
+            f"/api/v1/crawlers/runs/{run_id}/resume", headers=headers
+        )
         assert resp.status_code == 200
         assert resp.json()["status"] == "running"
 
@@ -656,7 +676,9 @@ async def test_resume_pending_run_returns_409():
         headers = await _auth_headers(client, email, "super-resume-pend")
         run_id = await _create_run_with_status(client, headers, "pending")
 
-        resp = await client.post(f"/crawlers/runs/{run_id}/resume", headers=headers)
+        resp = await client.post(
+            f"/api/v1/crawlers/runs/{run_id}/resume", headers=headers
+        )
         assert resp.status_code == 409
 
 
@@ -668,7 +690,9 @@ async def test_resume_completed_run_returns_409():
         headers = await _auth_headers(client, email, "super-resume-s")
         run_id = await _create_run_with_status(client, headers, "success")
 
-        resp = await client.post(f"/crawlers/runs/{run_id}/resume", headers=headers)
+        resp = await client.post(
+            f"/api/v1/crawlers/runs/{run_id}/resume", headers=headers
+        )
         assert resp.status_code == 409
 
 
@@ -734,7 +758,7 @@ async def test_create_lead_deduplication_via_canonical_url():
 
         # First creation
         resp1 = await client.post(
-            "/leads/",
+            "/api/v1/leads/",
             json={
                 "url": url,
                 "title": "Dedup Test Job",
@@ -747,7 +771,7 @@ async def test_create_lead_deduplication_via_canonical_url():
 
         # Second creation with same URL
         resp2 = await client.post(
-            "/leads/",
+            "/api/v1/leads/",
             json={
                 "url": url,
                 "title": "Dedup Test Job Again",

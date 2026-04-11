@@ -75,7 +75,7 @@ async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -131,12 +131,14 @@ async def test_create_extractor_creates_initial_version():
 
         # Create extractor
         payload = _extractor_payload()
-        resp = await client.post("/extractor/", json=payload, headers=headers)
+        resp = await client.post("/api/v1/extractor/", json=payload, headers=headers)
         assert resp.status_code == 200, resp.text
         extractor_id = resp.json()["id"]
 
         # List versions
-        resp = await client.get(f"/extractor/{extractor_id}/versions", headers=headers)
+        resp = await client.get(
+            f"/api/v1/extractor/{extractor_id}/versions", headers=headers
+        )
         assert resp.status_code == 200, resp.text
         versions = resp.json()
         assert len(versions) == 1
@@ -154,20 +156,22 @@ async def test_update_extractor_creates_new_version():
 
         # Create extractor
         payload = _extractor_payload()
-        resp = await client.post("/extractor/", json=payload, headers=headers)
+        resp = await client.post("/api/v1/extractor/", json=payload, headers=headers)
         assert resp.status_code == 200, resp.text
         extractor_id = resp.json()["id"]
 
         # Update instruction
         resp = await client.put(
-            f"/extractor/{extractor_id}",
+            f"/api/v1/extractor/{extractor_id}",
             json={"instruction": "Extract person names from the text."},
             headers=headers,
         )
         assert resp.status_code == 200, resp.text
 
         # List versions
-        resp = await client.get(f"/extractor/{extractor_id}/versions", headers=headers)
+        resp = await client.get(
+            f"/api/v1/extractor/{extractor_id}/versions", headers=headers
+        )
         assert resp.status_code == 200, resp.text
         versions = resp.json()
         assert len(versions) == 2
@@ -187,20 +191,22 @@ async def test_update_without_schema_change_no_new_version():
 
         # Create extractor
         payload = _extractor_payload()
-        resp = await client.post("/extractor/", json=payload, headers=headers)
+        resp = await client.post("/api/v1/extractor/", json=payload, headers=headers)
         assert resp.status_code == 200, resp.text
         extractor_id = resp.json()["id"]
 
         # Update name only
         resp = await client.put(
-            f"/extractor/{extractor_id}",
+            f"/api/v1/extractor/{extractor_id}",
             json={"name": "Renamed Extractor"},
             headers=headers,
         )
         assert resp.status_code == 200, resp.text
 
         # List versions — should still be 1
-        resp = await client.get(f"/extractor/{extractor_id}/versions", headers=headers)
+        resp = await client.get(
+            f"/api/v1/extractor/{extractor_id}/versions", headers=headers
+        )
         assert resp.status_code == 200, resp.text
         versions = resp.json()
         assert len(versions) == 1
@@ -215,18 +221,20 @@ async def test_idempotent_update_with_same_payload_no_new_version():
         headers = await _auth_headers(client, email, "testpass123")
 
         payload = _extractor_payload()
-        resp = await client.post("/extractor/", json=payload, headers=headers)
+        resp = await client.post("/api/v1/extractor/", json=payload, headers=headers)
         assert resp.status_code == 200, resp.text
         extractor_id = resp.json()["id"]
 
         resp = await client.put(
-            f"/extractor/{extractor_id}",
+            f"/api/v1/extractor/{extractor_id}",
             json=payload,
             headers=headers,
         )
         assert resp.status_code == 200, resp.text
 
-        resp = await client.get(f"/extractor/{extractor_id}/versions", headers=headers)
+        resp = await client.get(
+            f"/api/v1/extractor/{extractor_id}/versions", headers=headers
+        )
         assert resp.status_code == 200, resp.text
         versions = resp.json()
         assert len(versions) == 1
@@ -241,7 +249,7 @@ async def test_update_with_reordered_schema_no_new_version():
         headers = await _auth_headers(client, email, "testpass123")
 
         payload = _extractor_payload()
-        resp = await client.post("/extractor/", json=payload, headers=headers)
+        resp = await client.post("/api/v1/extractor/", json=payload, headers=headers)
         assert resp.status_code == 200, resp.text
         extractor_id = resp.json()["id"]
 
@@ -262,13 +270,15 @@ async def test_update_with_reordered_schema_no_new_version():
         }
 
         resp = await client.put(
-            f"/extractor/{extractor_id}",
+            f"/api/v1/extractor/{extractor_id}",
             json={"json_schema": reordered_schema},
             headers=headers,
         )
         assert resp.status_code == 200, resp.text
 
-        resp = await client.get(f"/extractor/{extractor_id}/versions", headers=headers)
+        resp = await client.get(
+            f"/api/v1/extractor/{extractor_id}/versions", headers=headers
+        )
         assert resp.status_code == 200, resp.text
         versions = resp.json()
         assert len(versions) == 1
@@ -325,19 +335,21 @@ async def test_concurrent_instruction_updates_keep_monotonic_versions():
         headers = await _auth_headers(client_create, email, "testpass123")
 
         payload = _extractor_payload()
-        resp = await client_create.post("/extractor/", json=payload, headers=headers)
+        resp = await client_create.post(
+            "/api/v1/extractor/", json=payload, headers=headers
+        )
         assert resp.status_code == 200, resp.text
         extractor_id = resp.json()["id"]
 
     async with _client() as client_one, _client() as client_two:
         responses = await asyncio.gather(
             client_one.put(
-                f"/extractor/{extractor_id}",
+                f"/api/v1/extractor/{extractor_id}",
                 json={"instruction": "Extract executive names from the text."},
                 headers=headers,
             ),
             client_two.put(
-                f"/extractor/{extractor_id}",
+                f"/api/v1/extractor/{extractor_id}",
                 json={"instruction": "Extract customer names from the text."},
                 headers=headers,
             ),
@@ -348,7 +360,7 @@ async def test_concurrent_instruction_updates_keep_monotonic_versions():
 
     async with _client() as client_verify:
         resp = await client_verify.get(
-            f"/extractor/{extractor_id}/versions",
+            f"/api/v1/extractor/{extractor_id}/versions",
             headers=headers,
         )
         assert resp.status_code == 200, resp.text

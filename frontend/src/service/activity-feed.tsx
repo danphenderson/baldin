@@ -29,7 +29,7 @@ export const getActivityFeed = async (
   },
 ): Promise<ActivityFeedRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/activity-feed/', {
+  return unwrap(await client.GET('/api/v1/activity-feed/', {
     params: {
       query: {
         page: params?.page,
@@ -45,5 +45,5 @@ export const getCommandCenterSummary = async (
   token: string,
 ): Promise<CommandCenterSummary> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/activity-feed/summary'));
+  return unwrap(await client.GET('/api/v1/activity-feed/summary'));
 };

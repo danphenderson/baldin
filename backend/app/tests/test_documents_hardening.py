@@ -66,7 +66,7 @@ async def _auth_headers(
     password: str,
 ) -> dict[str, str]:
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -83,7 +83,7 @@ async def _create_document(
     content: str = "Base draft",
 ) -> dict:
     response = await client.post(
-        "/documents/",
+        "/api/v1/documents/",
         json={
             "kind": "freeform",
             "title": title,
@@ -142,14 +142,14 @@ async def test_share_candidates_use_authenticated_sharing_contract() -> None:
         document_id = doc["id"]
 
         share_response = await client.post(
-            f"/documents/{document_id}/shares",
+            f"/api/v1/documents/{document_id}/shares",
             json={"shared_with_user_id": str(existing_id), "role": "viewer"},
             headers=owner_headers,
         )
         assert share_response.status_code == 201, share_response.text
 
         response = await client.get(
-            f"/documents/{document_id}/share-candidates",
+            f"/api/v1/documents/{document_id}/share-candidates",
             params={"q": f"Hidden{unique}", "limit": 10},
             headers=owner_headers,
         )
@@ -193,22 +193,22 @@ async def test_share_contracts_include_metadata_for_owner_and_shared_views() -> 
         document_id = doc["id"]
 
         create_share = await client.post(
-            f"/documents/{document_id}/shares",
+            f"/api/v1/documents/{document_id}/shares",
             json={"shared_with_user_id": str(viewer_id), "role": "editor"},
             headers=owner_headers,
         )
         assert create_share.status_code == 201, create_share.text
 
         shares_response = await client.get(
-            f"/documents/{document_id}/shares",
+            f"/api/v1/documents/{document_id}/shares",
             headers=owner_headers,
         )
         detail_response = await client.get(
-            f"/documents/{document_id}",
+            f"/api/v1/documents/{document_id}",
             headers=viewer_headers,
         )
         shared_with_me_response = await client.get(
-            "/documents/shared-with-me",
+            "/api/v1/documents/shared-with-me",
             headers=viewer_headers,
         )
 
@@ -274,7 +274,7 @@ async def test_document_activity_tracks_history_events() -> None:
         document_id = doc["id"]
 
         create_version = await client.post(
-            f"/documents/{document_id}/versions",
+            f"/api/v1/documents/{document_id}/versions",
             json={
                 "name": "v2",
                 "content": "Updated body",
@@ -286,7 +286,7 @@ async def test_document_activity_tracks_history_events() -> None:
         assert create_version.status_code == 201, create_version.text
 
         create_share = await client.post(
-            f"/documents/{document_id}/shares",
+            f"/api/v1/documents/{document_id}/shares",
             json={"shared_with_user_id": str(collaborator_id), "role": "viewer"},
             headers=owner_headers,
         )
@@ -294,48 +294,48 @@ async def test_document_activity_tracks_history_events() -> None:
         share_id = create_share.json()["id"]
 
         update_share = await client.patch(
-            f"/documents/{document_id}/shares/{share_id}",
+            f"/api/v1/documents/{document_id}/shares/{share_id}",
             json={"role": "editor"},
             headers=owner_headers,
         )
         assert update_share.status_code == 200, update_share.text
 
         delete_share = await client.delete(
-            f"/documents/{document_id}/shares/{share_id}",
+            f"/api/v1/documents/{document_id}/shares/{share_id}",
             headers=owner_headers,
         )
         assert delete_share.status_code == 204, delete_share.text
 
         archive_response = await client.patch(
-            f"/documents/{document_id}",
+            f"/api/v1/documents/{document_id}",
             json={"status": "archived"},
             headers=owner_headers,
         )
         assert archive_response.status_code == 200, archive_response.text
 
         restore_response = await client.patch(
-            f"/documents/{document_id}",
+            f"/api/v1/documents/{document_id}",
             json={"status": "active"},
             headers=owner_headers,
         )
         assert restore_response.status_code == 200, restore_response.text
 
         pin_response = await client.post(
-            f"/documents/{document_id}/pin",
+            f"/api/v1/documents/{document_id}/pin",
             json={"pinned": True},
             headers=owner_headers,
         )
         assert pin_response.status_code == 200, pin_response.text
 
         unpin_response = await client.post(
-            f"/documents/{document_id}/pin",
+            f"/api/v1/documents/{document_id}/pin",
             json={"pinned": False},
             headers=owner_headers,
         )
         assert unpin_response.status_code == 200, unpin_response.text
 
         activity_response = await client.get(
-            f"/documents/{document_id}/activity",
+            f"/api/v1/documents/{document_id}/activity",
             headers=owner_headers,
         )
 
@@ -367,7 +367,7 @@ async def test_upload_rules_and_cleanup_are_enforced() -> None:
         owner_headers = await _auth_headers(client, owner_email, "upload-owner-pass")
 
         invalid_upload = await client.post(
-            "/documents/upload",
+            "/api/v1/documents/upload",
             data={"title": "Invalid", "kind": "freeform"},
             files={
                 "file": ("notes.txt", b"plain text", "text/plain"),
@@ -377,7 +377,7 @@ async def test_upload_rules_and_cleanup_are_enforced() -> None:
         assert invalid_upload.status_code == 400
 
         upload_response = await client.post(
-            "/documents/upload",
+            "/api/v1/documents/upload",
             data={"title": "Imported PDF", "kind": "freeform"},
             files={
                 "file": (
@@ -396,14 +396,14 @@ async def test_upload_rules_and_cleanup_are_enforced() -> None:
         assert source_path.exists()
 
         original_response = await client.get(
-            f"/documents/{uploaded['id']}/original",
+            f"/api/v1/documents/{uploaded['id']}/original",
             headers=owner_headers,
         )
         assert original_response.status_code == 200, original_response.text
         assert original_response.headers["content-type"] == "application/pdf"
 
         delete_response = await client.delete(
-            f"/documents/{uploaded['id']}",
+            f"/api/v1/documents/{uploaded['id']}",
             headers=owner_headers,
         )
 

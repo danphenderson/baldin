@@ -59,7 +59,7 @@ async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -112,7 +112,7 @@ async def test_create_action_item() -> None:
         headers = await _auth_headers(client, email, "ai-create-pass")
 
         response = await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(),
             headers=headers,
         )
@@ -135,7 +135,7 @@ async def test_create_action_item_with_application_link() -> None:
         app_id = await _create_lead_and_application(uid)
 
         response = await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(application_id=str(app_id)),
             headers=headers,
         )
@@ -154,7 +154,7 @@ async def test_create_action_item_validation() -> None:
 
         # Missing 'title' and 'kind'
         response = await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json={"priority": "high"},
             headers=headers,
         )
@@ -171,13 +171,13 @@ async def test_list_action_items() -> None:
 
         for i in range(3):
             resp = await client.post(
-                "/action-items/",
+                "/api/v1/action-items/",
                 json=_action_payload(title=f"Task {i}"),
                 headers=headers,
             )
             assert resp.status_code == 201
 
-        response = await client.get("/action-items/", headers=headers)
+        response = await client.get("/api/v1/action-items/", headers=headers)
 
     assert response.status_code == 200
     items = response.json()
@@ -192,19 +192,19 @@ async def test_list_action_items_filter_by_status() -> None:
         headers = await _auth_headers(client, email, "ai-filt-status-pass")
 
         await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(title="Pending task", status="pending"),
             headers=headers,
         )
         resp2 = await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(title="In-progress task", status="in_progress"),
             headers=headers,
         )
         assert resp2.status_code == 201
 
         response = await client.get(
-            "/action-items/", params={"status": "pending"}, headers=headers
+            "/api/v1/action-items/", params={"status": "pending"}, headers=headers
         )
 
     assert response.status_code == 200
@@ -221,18 +221,18 @@ async def test_list_action_items_filter_by_kind() -> None:
         headers = await _auth_headers(client, email, "ai-filt-kind-pass")
 
         await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(title="Follow up", kind="follow_up"),
             headers=headers,
         )
         await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(title="Prep doc", kind="prepare_document"),
             headers=headers,
         )
 
         response = await client.get(
-            "/action-items/", params={"kind": "follow_up"}, headers=headers
+            "/api/v1/action-items/", params={"kind": "follow_up"}, headers=headers
         )
 
     assert response.status_code == 200
@@ -248,18 +248,18 @@ async def test_list_action_items_filter_by_priority() -> None:
         headers = await _auth_headers(client, email, "ai-filt-pri-pass")
 
         await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(title="High", priority="high"),
             headers=headers,
         )
         await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(title="Low", priority="low"),
             headers=headers,
         )
 
         response = await client.get(
-            "/action-items/", params={"priority": "high"}, headers=headers
+            "/api/v1/action-items/", params={"priority": "high"}, headers=headers
         )
 
     assert response.status_code == 200
@@ -275,13 +275,13 @@ async def test_get_action_item() -> None:
         headers = await _auth_headers(client, email, "ai-get-pass")
 
         create_resp = await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(),
             headers=headers,
         )
         item_id = create_resp.json()["id"]
 
-        response = await client.get(f"/action-items/{item_id}", headers=headers)
+        response = await client.get(f"/api/v1/action-items/{item_id}", headers=headers)
 
     assert response.status_code == 200
     body = response.json()
@@ -296,7 +296,7 @@ async def test_get_action_item_not_found() -> None:
         email, uid = await _create_user("ai-notfound-pass")
         headers = await _auth_headers(client, email, "ai-notfound-pass")
 
-        response = await client.get(f"/action-items/{uuid4()}", headers=headers)
+        response = await client.get(f"/api/v1/action-items/{uuid4()}", headers=headers)
 
     assert response.status_code == 404
 
@@ -309,14 +309,14 @@ async def test_update_action_item() -> None:
         headers = await _auth_headers(client, email, "ai-update-pass")
 
         create_resp = await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(),
             headers=headers,
         )
         item_id = create_resp.json()["id"]
 
         response = await client.patch(
-            f"/action-items/{item_id}",
+            f"/api/v1/action-items/{item_id}",
             json={"title": "Updated title", "status": "in_progress"},
             headers=headers,
         )
@@ -335,14 +335,14 @@ async def test_update_action_item_complete_sets_completed_at() -> None:
         headers = await _auth_headers(client, email, "ai-complete-pass")
 
         create_resp = await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(),
             headers=headers,
         )
         item_id = create_resp.json()["id"]
 
         response = await client.patch(
-            f"/action-items/{item_id}",
+            f"/api/v1/action-items/{item_id}",
             json={"status": "completed"},
             headers=headers,
         )
@@ -361,7 +361,7 @@ async def test_update_action_item_uncomplete_clears_completed_at() -> None:
         headers = await _auth_headers(client, email, "ai-uncomplete-pass")
 
         create_resp = await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(),
             headers=headers,
         )
@@ -369,14 +369,14 @@ async def test_update_action_item_uncomplete_clears_completed_at() -> None:
 
         # Complete the item
         await client.patch(
-            f"/action-items/{item_id}",
+            f"/api/v1/action-items/{item_id}",
             json={"status": "completed"},
             headers=headers,
         )
 
         # Uncomplete it
         response = await client.patch(
-            f"/action-items/{item_id}",
+            f"/api/v1/action-items/{item_id}",
             json={"status": "pending"},
             headers=headers,
         )
@@ -395,16 +395,18 @@ async def test_delete_action_item() -> None:
         headers = await _auth_headers(client, email, "ai-delete-pass")
 
         create_resp = await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(),
             headers=headers,
         )
         item_id = create_resp.json()["id"]
 
-        del_resp = await client.delete(f"/action-items/{item_id}", headers=headers)
+        del_resp = await client.delete(
+            f"/api/v1/action-items/{item_id}", headers=headers
+        )
         assert del_resp.status_code == 204
 
-        get_resp = await client.get(f"/action-items/{item_id}", headers=headers)
+        get_resp = await client.get(f"/api/v1/action-items/{item_id}", headers=headers)
 
     assert get_resp.status_code == 404
 
@@ -419,19 +421,23 @@ async def test_action_item_user_isolation() -> None:
         headers_b = await _auth_headers(client, email_b, "ai-iso-b-pass")
 
         create_resp = await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(),
             headers=headers_a,
         )
         item_id = create_resp.json()["id"]
 
-        get_resp = await client.get(f"/action-items/{item_id}", headers=headers_b)
+        get_resp = await client.get(
+            f"/api/v1/action-items/{item_id}", headers=headers_b
+        )
         patch_resp = await client.patch(
-            f"/action-items/{item_id}",
+            f"/api/v1/action-items/{item_id}",
             json={"title": "Hacked"},
             headers=headers_b,
         )
-        del_resp = await client.delete(f"/action-items/{item_id}", headers=headers_b)
+        del_resp = await client.delete(
+            f"/api/v1/action-items/{item_id}", headers=headers_b
+        )
 
     # Route returns 404 for items not owned by the requesting user
     assert get_resp.status_code == 404
@@ -451,7 +457,7 @@ async def test_create_action_item_from_application() -> None:
         )
 
         response = await client.post(
-            f"/action-items/from-application/{app_id}",
+            f"/api/v1/action-items/from-application/{app_id}",
             headers=headers,
         )
 
@@ -472,7 +478,7 @@ async def test_create_action_item_from_application_no_next_step() -> None:
         app_id = await _create_lead_and_application(uid, next_step=None)
 
         response = await client.post(
-            f"/action-items/from-application/{app_id}",
+            f"/api/v1/action-items/from-application/{app_id}",
             headers=headers,
         )
 

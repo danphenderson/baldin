@@ -26,13 +26,13 @@ pytestmark = pytest.mark.asyncio(loop_scope="module")
 password_helper = PasswordHelper()
 
 USER_SEED_PATHS = (
-    "/certificate/seed",
-    "/contacts/seed",
-    "/documents/seed",
-    "/education/seed",
-    "/experiences/seed",
-    "/leads/seed",
-    "/skills/seed",
+    "/api/v1/certificate/seed",
+    "/api/v1/contacts/seed",
+    "/api/v1/documents/seed",
+    "/api/v1/education/seed",
+    "/api/v1/experiences/seed",
+    "/api/v1/leads/seed",
+    "/api/v1/skills/seed",
 )
 
 
@@ -51,7 +51,7 @@ async def _test_client_with_fresh_db() -> AsyncClient:
 async def _register_user(client: AsyncClient, password: str) -> str:
     email = utils.random_email()
     response = await client.post(
-        "/auth/register",
+        "/api/v1/auth/register",
         json={"email": email, "password": password},
     )
     assert response.status_code in {200, 201}
@@ -65,7 +65,7 @@ async def _auth_headers(
 ) -> dict[str, str]:
     app.state.limiter.reset()
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -94,7 +94,7 @@ async def _assert_seed_acceptance(
     assert response.status_code == 202
     body = response.json()
     assert body["status"] == "pending"
-    assert body["poll_url"] == f"/data_orchestration/events/{body['event_id']}"
+    assert body["poll_url"] == f"/api/v1/data_orchestration/events/{body['event_id']}"
 
     event_response = await client.get(body["poll_url"], headers=headers)
 
@@ -122,7 +122,7 @@ async def test_superuser_seed_route_returns_accepted_polling_payload() -> None:
         await _create_superuser(email, password)
         headers = await _auth_headers(client, email, password)
 
-        await _assert_seed_acceptance(client, headers, "/users/seed")
+        await _assert_seed_acceptance(client, headers, "/api/v1/users/seed")
 
 
 async def test_background_seed_failure_marks_event_failed(

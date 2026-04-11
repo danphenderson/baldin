@@ -91,7 +91,7 @@ async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
     resp = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -109,7 +109,7 @@ async def test_upload_avatar_png():
         headers = await _auth_headers(client, email, "testpw")
 
         resp = await client.post(
-            "/users/me/avatar",
+            "/api/v1/users/me/avatar",
             headers=headers,
             files={"file": ("avatar.png", _TINY_PNG, "image/png")},
         )
@@ -135,14 +135,14 @@ async def test_serve_avatar():
 
         # Upload first
         resp = await client.post(
-            "/users/me/avatar",
+            "/api/v1/users/me/avatar",
             headers=headers,
             files={"file": ("avatar.png", _TINY_PNG, "image/png")},
         )
         assert resp.status_code == 200
 
         # Serve endpoint (public, no auth required)
-        resp = await client.get(f"/users/{user_id}/avatar")
+        resp = await client.get(f"/api/v1/users/{user_id}/avatar")
         assert resp.status_code == 200
         assert resp.headers["content-type"].startswith("image/")
         assert len(resp.content) == len(_TINY_PNG)
@@ -155,7 +155,7 @@ async def test_serve_avatar_not_found():
     await _ensure_db_ready()
     async with _client() as client:
         # Random user ID with no avatar
-        resp = await client.get(f"/users/{uuid4()}/avatar")
+        resp = await client.get(f"/api/v1/users/{uuid4()}/avatar")
         assert resp.status_code == 404
 
 
@@ -167,7 +167,7 @@ async def test_upload_avatar_replaces_previous():
 
         # Upload PNG first
         resp = await client.post(
-            "/users/me/avatar",
+            "/api/v1/users/me/avatar",
             headers=headers,
             files={"file": ("avatar.png", _TINY_PNG, "image/png")},
         )
@@ -176,7 +176,7 @@ async def test_upload_avatar_replaces_previous():
 
         # Upload JPEG to replace
         resp = await client.post(
-            "/users/me/avatar",
+            "/api/v1/users/me/avatar",
             headers=headers,
             files={"file": ("avatar.jpg", _TINY_JPEG, "image/jpeg")},
         )
@@ -200,7 +200,7 @@ async def test_upload_avatar_unsupported_type():
         headers = await _auth_headers(client, email, "testpw4")
 
         resp = await client.post(
-            "/users/me/avatar",
+            "/api/v1/users/me/avatar",
             headers=headers,
             files={"file": ("avatar.bmp", b"fake", "image/bmp")},
         )
@@ -217,7 +217,7 @@ async def test_upload_avatar_too_large():
         # Create a file larger than 2 MB
         large_file = b"\x00" * (2 * 1024 * 1024 + 1)
         resp = await client.post(
-            "/users/me/avatar",
+            "/api/v1/users/me/avatar",
             headers=headers,
             files={"file": ("big.png", large_file, "image/png")},
         )
@@ -229,7 +229,7 @@ async def test_upload_avatar_requires_auth():
     await _ensure_db_ready()
     async with _client() as client:
         resp = await client.post(
-            "/users/me/avatar",
+            "/api/v1/users/me/avatar",
             files={"file": ("avatar.png", _TINY_PNG, "image/png")},
         )
         assert resp.status_code == 401

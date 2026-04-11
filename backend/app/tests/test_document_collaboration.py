@@ -73,7 +73,7 @@ async def _auth_headers(
     password: str,
 ) -> dict[str, str]:
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -88,7 +88,7 @@ async def _request_collaboration_token(
     headers: dict[str, str],
 ) -> str:
     response = await client.post(
-        f"/documents/{document_id}/collaborate/bootstrap",
+        f"/api/v1/documents/{document_id}/collaborate/bootstrap",
         headers=headers,
     )
     assert response.status_code == 200
@@ -219,16 +219,16 @@ async def test_collaboration_bootstrap_claims_rich_text_seed_then_waits_until_re
         )
 
         first_response = await client.post(
-            f"/documents/{document_id}/collaborate/bootstrap",
+            f"/api/v1/documents/{document_id}/collaborate/bootstrap",
             headers=headers,
         )
         second_response = await client.post(
-            f"/documents/{document_id}/collaborate/bootstrap",
+            f"/api/v1/documents/{document_id}/collaborate/bootstrap",
             headers=headers,
         )
         _document_bootstrap_claims[str(document_id)] = 0.0
         third_response = await client.post(
-            f"/documents/{document_id}/collaborate/bootstrap",
+            f"/api/v1/documents/{document_id}/collaborate/bootstrap",
             headers=headers,
         )
 
@@ -309,7 +309,7 @@ async def test_collaboration_websocket_reads_bootstrap_token_from_subprotocol() 
     try:
         with TestClient(app) as client:
             with client.websocket_connect(
-                f"/documents/{document_id}/collaborate",
+                f"/api/v1/documents/{document_id}/collaborate",
                 subprotocols=[
                     COLLABORATION_WEBSOCKET_PROTOCOL,
                     collaboration_token,
@@ -335,7 +335,7 @@ async def test_collaboration_websocket_rejects_missing_subprotocol_token() -> No
         with TestClient(app) as client:
             with pytest.raises(WebSocketDisconnect) as exc_info:
                 with client.websocket_connect(
-                    f"/documents/{document_id}/collaborate",
+                    f"/api/v1/documents/{document_id}/collaborate",
                     subprotocols=[COLLABORATION_WEBSOCKET_PROTOCOL],
                 ):
                     pass

@@ -37,7 +37,7 @@ export const getActionItems = async (
   },
 ): Promise<ActionItemDetailRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/action-items/', {
+  return unwrap(await client.GET('/api/v1/action-items/', {
     params: {
       query: {
         status: params?.status,
@@ -58,7 +58,7 @@ export const createActionItem = async (
   payload: ActionItemCreate,
 ): Promise<ActionItemRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/action-items/', {
+  return unwrap(await client.POST('/api/v1/action-items/', {
     body: payload,
   }));
 };
@@ -68,7 +68,7 @@ export const getActionItem = async (
   id: string,
 ): Promise<ActionItemDetailRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/action-items/{id}', {
+  return unwrap(await client.GET('/api/v1/action-items/{id}', {
     params: { path: { id } },
   }));
 };
@@ -79,7 +79,7 @@ export const updateActionItem = async (
   payload: ActionItemUpdate,
 ): Promise<ActionItemRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PATCH('/action-items/{id}', {
+  return unwrap(await client.PATCH('/api/v1/action-items/{id}', {
     params: { path: { id } },
     body: payload,
   }));
@@ -90,7 +90,7 @@ export const deleteActionItem = async (
   id: string,
 ): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/action-items/{id}', {
+  unwrap(await client.DELETE('/api/v1/action-items/{id}', {
     params: { path: { id } },
   }));
 };
@@ -100,7 +100,7 @@ export const reorderActionItems = async (
   itemIds: string[],
 ): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.POST('/action-items/reorder', {
+  unwrap(await client.POST('/api/v1/action-items/reorder', {
     body: { item_ids: itemIds },
   }));
 };
@@ -110,7 +110,7 @@ export const createActionItemFromApplication = async (
   applicationId: string,
 ): Promise<ActionItemRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/action-items/from-application/{application_id}', {
+  return unwrap(await client.POST('/api/v1/action-items/from-application/{application_id}', {
     params: { path: { application_id: applicationId } },
   }));
 };

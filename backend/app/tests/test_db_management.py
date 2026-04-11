@@ -33,7 +33,7 @@ async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -280,7 +280,7 @@ async def _set_superusers(user_ids: set[UUID]) -> None:
 async def test_db_management_requires_authentication() -> None:
     await _ensure_db_ready()
     async with _client() as client:
-        response = await client.get("/db-management/list-tables")
+        response = await client.get("/api/v1/db-management/list-tables")
 
     assert response.status_code == 401
 
@@ -292,7 +292,7 @@ async def test_db_management_rejects_non_superusers() -> None:
         email, _ = await _create_user(password)
         headers = await _auth_headers(client, email, password)
         response = await client.get(
-            "/db-management/table-details/users", headers=headers
+            "/api/v1/db-management/table-details/users", headers=headers
         )
 
     assert response.status_code == 403
@@ -305,7 +305,7 @@ async def test_db_management_allows_superusers() -> None:
         email, _ = await _create_user(password, is_superuser=True)
         headers = await _auth_headers(client, email, password)
         response = await client.get(
-            "/db-management/table-details/users", headers=headers
+            "/api/v1/db-management/table-details/users", headers=headers
         )
 
     assert response.status_code == 200
@@ -323,7 +323,7 @@ async def test_db_management_purges_user_data_without_deleting_user() -> None:
         other_skill_id = await _seed_unrelated_skill(other_user_id)
         headers = await _auth_headers(client, admin_email, admin_password)
         response = await client.patch(
-            f"/db-management/users/{target_user_id}/purge",
+            f"/api/v1/db-management/users/{target_user_id}/purge",
             headers=headers,
         )
 
@@ -404,7 +404,7 @@ async def test_db_management_deletes_user_and_owned_data() -> None:
         other_skill_id = await _seed_unrelated_skill(other_user_id)
         headers = await _auth_headers(client, admin_email, admin_password)
         response = await client.delete(
-            f"/db-management/users/{target_user_id}",
+            f"/api/v1/db-management/users/{target_user_id}",
             headers=headers,
         )
 
@@ -475,7 +475,7 @@ async def test_db_management_rejects_current_superuser_deletion() -> None:
         await _set_superusers({admin_user_id, peer_superuser_id})
         headers = await _auth_headers(client, admin_email, admin_password)
         response = await client.delete(
-            f"/db-management/users/{admin_user_id}",
+            f"/api/v1/db-management/users/{admin_user_id}",
             headers=headers,
         )
 
@@ -498,7 +498,7 @@ async def test_db_management_rejects_deleting_last_remaining_superuser() -> None
         await _set_superusers({admin_user_id})
         headers = await _auth_headers(client, admin_email, admin_password)
         response = await client.delete(
-            f"/db-management/users/{admin_user_id}",
+            f"/api/v1/db-management/users/{admin_user_id}",
             headers=headers,
         )
 

@@ -5,7 +5,7 @@
 
 
 export interface paths {
-  "/auth/jwt/login": {
+  "/api/v1/auth/jwt/login": {
     /**
      * Login
      * @description Authenticate with email + password.
@@ -15,40 +15,40 @@ export interface paths {
      *   and the client must call ``POST /auth/mfa/login-verify`` to
      *   complete authentication.
      */
-    post: operations["login_auth_jwt_login_post"];
+    post: operations["login_api_v1_auth_jwt_login_post"];
   };
-  "/auth/jwt/logout": {
+  "/api/v1/auth/jwt/logout": {
     /** Logout */
-    post: operations["logout_auth_jwt_logout_post"];
+    post: operations["logout_api_v1_auth_jwt_logout_post"];
   };
-  "/auth/register": {
+  "/api/v1/auth/register": {
     /** Register:Register */
-    post: operations["register_register_auth_register_post"];
+    post: operations["register_register_api_v1_auth_register_post"];
   };
-  "/auth/forgot-password": {
+  "/api/v1/auth/forgot-password": {
     /** Reset:Forgot Password */
-    post: operations["reset_forgot_password_auth_forgot_password_post"];
+    post: operations["reset_forgot_password_api_v1_auth_forgot_password_post"];
   };
-  "/auth/reset-password": {
+  "/api/v1/auth/reset-password": {
     /** Reset:Reset Password */
-    post: operations["reset_reset_password_auth_reset_password_post"];
+    post: operations["reset_reset_password_api_v1_auth_reset_password_post"];
   };
-  "/auth/request-verify-token": {
+  "/api/v1/auth/request-verify-token": {
     /** Verify:Request-Token */
-    post: operations["verify_request_token_auth_request_verify_token_post"];
+    post: operations["verify_request_token_api_v1_auth_request_verify_token_post"];
   };
-  "/auth/verify": {
+  "/api/v1/auth/verify": {
     /** Verify:Verify */
-    post: operations["verify_verify_auth_verify_post"];
+    post: operations["verify_verify_api_v1_auth_verify_post"];
   };
-  "/auth/mfa/status": {
+  "/api/v1/auth/mfa/status": {
     /**
      * Mfa Status
      * @description Return whether MFA is currently enabled for the authenticated user.
      */
-    get: operations["mfa_status_auth_mfa_status_get"];
+    get: operations["mfa_status_api_v1_auth_mfa_status_get"];
   };
-  "/auth/mfa/setup": {
+  "/api/v1/auth/mfa/setup": {
     /**
      * Mfa Setup
      * @description Generate a fresh TOTP secret.
@@ -56,32 +56,32 @@ export interface paths {
      * The secret is persisted on the user record but MFA is **not** active
      * until the user confirms setup via ``POST /verify``.
      */
-    post: operations["mfa_setup_auth_mfa_setup_post"];
+    post: operations["mfa_setup_api_v1_auth_mfa_setup_post"];
   };
-  "/auth/mfa/verify": {
+  "/api/v1/auth/mfa/verify": {
     /**
      * Mfa Verify Setup
      * @description Confirm MFA setup by presenting a valid TOTP code.
      *
      * This activates MFA on the account.
      */
-    post: operations["mfa_verify_setup_auth_mfa_verify_post"];
+    post: operations["mfa_verify_setup_api_v1_auth_mfa_verify_post"];
   };
-  "/auth/mfa/disable": {
+  "/api/v1/auth/mfa/disable": {
     /**
      * Mfa Disable
      * @description Disable MFA by presenting a valid TOTP code.
      */
-    post: operations["mfa_disable_auth_mfa_disable_post"];
+    post: operations["mfa_disable_api_v1_auth_mfa_disable_post"];
   };
-  "/auth/mfa/admin-reset/{user_id}": {
+  "/api/v1/auth/mfa/admin-reset/{user_id}": {
     /**
      * Mfa Admin Reset
      * @description Reset MFA for a user when they have lost access to their authenticator.
      */
-    post: operations["mfa_admin_reset_auth_mfa_admin_reset__user_id__post"];
+    post: operations["mfa_admin_reset_api_v1_auth_mfa_admin_reset__user_id__post"];
   };
-  "/auth/mfa/login-verify": {
+  "/api/v1/auth/mfa/login-verify": {
     /**
      * Mfa Login Verify
      * @description Complete the MFA login challenge.
@@ -89,266 +89,266 @@ export interface paths {
      * Accepts the short-lived ``mfa_token`` returned by ``POST /auth/jwt/login``
      * together with a valid TOTP code and returns a full-access JWT.
      */
-    post: operations["mfa_login_verify_auth_mfa_login_verify_post"];
+    post: operations["mfa_login_verify_api_v1_auth_mfa_login_verify_post"];
   };
-  "/db-management/list-tables": {
+  "/api/v1/db-management/list-tables": {
     /** List Tables */
-    get: operations["list_tables_db_management_list_tables_get"];
+    get: operations["list_tables_api_v1_db_management_list_tables_get"];
   };
-  "/db-management/table-details/{table_name}": {
+  "/api/v1/db-management/table-details/{table_name}": {
     /** Get Table Details */
-    get: operations["get_table_details_db_management_table_details__table_name__get"];
+    get: operations["get_table_details_api_v1_db_management_table_details__table_name__get"];
   };
-  "/db-management/users/{user_id}/purge": {
+  "/api/v1/db-management/users/{user_id}/purge": {
     /** Purge User Data */
-    patch: operations["purge_user_data_db_management_users__user_id__purge_patch"];
+    patch: operations["purge_user_data_api_v1_db_management_users__user_id__purge_patch"];
   };
-  "/db-management/users/{user_id}": {
+  "/api/v1/db-management/users/{user_id}": {
     /** Delete User */
-    delete: operations["delete_user_db_management_users__user_id__delete"];
+    delete: operations["delete_user_api_v1_db_management_users__user_id__delete"];
   };
-  "/users/me": {
+  "/api/v1/users/me": {
     /** Users:Current User */
-    get: operations["users_current_user_users_me_get"];
+    get: operations["users_current_user_api_v1_users_me_get"];
     /** Users:Patch Current User */
-    patch: operations["users_patch_current_user_users_me_patch"];
+    patch: operations["users_patch_current_user_api_v1_users_me_patch"];
   };
-  "/users/{id}": {
+  "/api/v1/users/{id}": {
     /** Users:User */
-    get: operations["users_user_users__id__get"];
+    get: operations["users_user_api_v1_users__id__get"];
     /** Users:Delete User */
-    delete: operations["users_delete_user_users__id__delete"];
+    delete: operations["users_delete_user_api_v1_users__id__delete"];
     /** Users:Patch User */
-    patch: operations["users_patch_user_users__id__patch"];
+    patch: operations["users_patch_user_api_v1_users__id__patch"];
   };
-  "/users/me/profile": {
+  "/api/v1/users/me/profile": {
     /** Read Profile */
-    get: operations["read_profile_users_me_profile_get"];
+    get: operations["read_profile_api_v1_users_me_profile_get"];
   };
-  "/users/me/avatar": {
+  "/api/v1/users/me/avatar": {
     /**
      * Upload Avatar
      * @description Upload or replace the current user's profile picture.
      */
-    post: operations["upload_avatar_users_me_avatar_post"];
+    post: operations["upload_avatar_api_v1_users_me_avatar_post"];
   };
-  "/users/{user_id}/avatar": {
+  "/api/v1/users/{user_id}/avatar": {
     /**
      * Serve Avatar
      * @description Serve a user's avatar image. Returns 404 if no avatar is set.
      */
-    get: operations["serve_avatar_users__user_id__avatar_get"];
+    get: operations["serve_avatar_api_v1_users__user_id__avatar_get"];
   };
-  "/users/me/placement": {
+  "/api/v1/users/me/placement": {
     /**
      * Update Placement
      * @description Update the current user's placement status.
      *
      * Valid transitions: active → graduated, graduated → alumni.
      */
-    patch: operations["update_placement_users_me_placement_patch"];
+    patch: operations["update_placement_api_v1_users_me_placement_patch"];
   };
-  "/users/me/profile/extract": {
+  "/api/v1/users/me/profile/extract": {
     /**
      * Extract User Profile
      * @description Extract all profile sections from one or many sources and persist results.
      */
-    post: operations["extract_user_profile_users_me_profile_extract_post"];
+    post: operations["extract_user_profile_api_v1_users_me_profile_extract_post"];
   };
-  "/users/seed": {
+  "/api/v1/users/seed": {
     /** Seed Users */
-    post: operations["seed_users_users_seed_post"];
+    post: operations["seed_users_api_v1_users_seed_post"];
   };
-  "/leads/": {
+  "/api/v1/leads/": {
     /** Read Leads */
-    get: operations["read_leads_leads__get"];
+    get: operations["read_leads_api_v1_leads__get"];
     /** Create Job Lead */
-    post: operations["create_job_lead_leads__post"];
+    post: operations["create_job_lead_api_v1_leads__post"];
   };
-  "/leads/extract": {
+  "/api/v1/leads/extract": {
     /** Extract Lead */
-    post: operations["extract_lead_leads_extract_post"];
+    post: operations["extract_lead_api_v1_leads_extract_post"];
   };
-  "/leads/{id}": {
+  "/api/v1/leads/{id}": {
     /** Read Lead */
-    get: operations["read_lead_leads__id__get"];
+    get: operations["read_lead_api_v1_leads__id__get"];
     /** Delete Lead */
-    delete: operations["delete_lead_leads__id__delete"];
+    delete: operations["delete_lead_api_v1_leads__id__delete"];
     /** Update Lead */
-    patch: operations["update_lead_leads__id__patch"];
+    patch: operations["update_lead_api_v1_leads__id__patch"];
   };
-  "/leads/{id}/registration": {
+  "/api/v1/leads/{id}/registration": {
     /** Create Lead Registration */
-    post: operations["create_lead_registration_leads__id__registration_post"];
+    post: operations["create_lead_registration_api_v1_leads__id__registration_post"];
     /** Delete Lead Registration */
-    delete: operations["delete_lead_registration_leads__id__registration_delete"];
+    delete: operations["delete_lead_registration_api_v1_leads__id__registration_delete"];
     /** Update Lead Registration */
-    patch: operations["update_lead_registration_leads__id__registration_patch"];
+    patch: operations["update_lead_registration_api_v1_leads__id__registration_patch"];
   };
-  "/leads/{id}/comments": {
+  "/api/v1/leads/{id}/comments": {
     /** Read Lead Comments */
-    get: operations["read_lead_comments_leads__id__comments_get"];
+    get: operations["read_lead_comments_api_v1_leads__id__comments_get"];
     /** Create Lead Comment */
-    post: operations["create_lead_comment_leads__id__comments_post"];
+    post: operations["create_lead_comment_api_v1_leads__id__comments_post"];
   };
-  "/leads/{id}/comments/{comment_id}/replies": {
+  "/api/v1/leads/{id}/comments/{comment_id}/replies": {
     /** Create Lead Comment Reply */
-    post: operations["create_lead_comment_reply_leads__id__comments__comment_id__replies_post"];
+    post: operations["create_lead_comment_reply_api_v1_leads__id__comments__comment_id__replies_post"];
   };
-  "/leads/purge": {
+  "/api/v1/leads/purge": {
     /** Purge Leads */
-    delete: operations["purge_leads_leads_purge_delete"];
+    delete: operations["purge_leads_api_v1_leads_purge_delete"];
   };
-  "/leads/seed": {
+  "/api/v1/leads/seed": {
     /** Seed Leads */
-    post: operations["seed_leads_leads_seed_post"];
+    post: operations["seed_leads_api_v1_leads_seed_post"];
   };
-  "/companies/{id}": {
+  "/api/v1/companies/{id}": {
     /** Get Company */
-    get: operations["get_company_companies__id__get"];
+    get: operations["get_company_api_v1_companies__id__get"];
     /** Update Company */
-    put: operations["update_company_companies__id__put"];
+    put: operations["update_company_api_v1_companies__id__put"];
     /** Delete Company */
-    delete: operations["delete_company_companies__id__delete"];
+    delete: operations["delete_company_api_v1_companies__id__delete"];
   };
-  "/companies/": {
+  "/api/v1/companies/": {
     /** Get Companies */
-    get: operations["get_companies_companies__get"];
+    get: operations["get_companies_api_v1_companies__get"];
     /** Create Company */
-    post: operations["create_company_companies__post"];
+    post: operations["create_company_api_v1_companies__post"];
   };
-  "/companies/{id}/leads": {
+  "/api/v1/companies/{id}/leads": {
     /** Get Company Leads */
-    get: operations["get_company_leads_companies__id__leads_get"];
+    get: operations["get_company_leads_api_v1_companies__id__leads_get"];
   };
-  "/companies/extract": {
+  "/api/v1/companies/extract": {
     /** Extract Company */
-    post: operations["extract_company_companies_extract_post"];
+    post: operations["extract_company_api_v1_companies_extract_post"];
   };
-  "/data_orchestration/pipelines": {
+  "/api/v1/data_orchestration/pipelines": {
     /** Read Orch Pipelines */
-    get: operations["read_orch_pipelines_data_orchestration_pipelines_get"];
+    get: operations["read_orch_pipelines_api_v1_data_orchestration_pipelines_get"];
     /** Create Orch Pipeline */
-    post: operations["create_orch_pipeline_data_orchestration_pipelines_post"];
+    post: operations["create_orch_pipeline_api_v1_data_orchestration_pipelines_post"];
   };
-  "/data_orchestration/pipelines/{id}": {
+  "/api/v1/data_orchestration/pipelines/{id}": {
     /** Read Orch Pipeline */
-    get: operations["read_orch_pipeline_data_orchestration_pipelines__id__get"];
+    get: operations["read_orch_pipeline_api_v1_data_orchestration_pipelines__id__get"];
     /** Update Orch Pipeline */
-    put: operations["update_orch_pipeline_data_orchestration_pipelines__id__put"];
+    put: operations["update_orch_pipeline_api_v1_data_orchestration_pipelines__id__put"];
     /** Delete Orch Pipeline */
-    delete: operations["delete_orch_pipeline_data_orchestration_pipelines__id__delete"];
+    delete: operations["delete_orch_pipeline_api_v1_data_orchestration_pipelines__id__delete"];
   };
-  "/data_orchestration/events": {
+  "/api/v1/data_orchestration/events": {
     /** Read Orch Events */
-    get: operations["read_orch_events_data_orchestration_events_get"];
+    get: operations["read_orch_events_api_v1_data_orchestration_events_get"];
     /** Create Orch Event */
-    post: operations["create_orch_event_data_orchestration_events_post"];
+    post: operations["create_orch_event_api_v1_data_orchestration_events_post"];
   };
-  "/data_orchestration/events/prune": {
+  "/api/v1/data_orchestration/events/prune": {
     /**
      * Prune Orchestration Events
      * @description Delete completed/failed orchestration events older than the specified age.
      */
-    delete: operations["prune_orchestration_events_data_orchestration_events_prune_delete"];
+    delete: operations["prune_orchestration_events_api_v1_data_orchestration_events_prune_delete"];
   };
-  "/data_orchestration/events/{id}": {
+  "/api/v1/data_orchestration/events/{id}": {
     /** Read Orch Event */
-    get: operations["read_orch_event_data_orchestration_events__id__get"];
+    get: operations["read_orch_event_api_v1_data_orchestration_events__id__get"];
     /** Update Orch Event */
-    put: operations["update_orch_event_data_orchestration_events__id__put"];
+    put: operations["update_orch_event_api_v1_data_orchestration_events__id__put"];
   };
-  "/data_orchestration/events/{event_id}/retry": {
+  "/api/v1/data_orchestration/events/{event_id}/retry": {
     /**
      * Retry Orch Event
      * @description Retry a failed orchestration event by creating a new event linked to the original.
      */
-    post: operations["retry_orch_event_data_orchestration_events__event_id__retry_post"];
+    post: operations["retry_orch_event_api_v1_data_orchestration_events__event_id__retry_post"];
   };
-  "/contacts/": {
+  "/api/v1/contacts/": {
     /** Get Current User Contacts */
-    get: operations["get_current_user_contacts_contacts__get"];
+    get: operations["get_current_user_contacts_api_v1_contacts__get"];
     /** Create User Contact */
-    post: operations["create_user_contact_contacts__post"];
+    post: operations["create_user_contact_api_v1_contacts__post"];
   };
-  "/contacts/{contact_id}": {
+  "/api/v1/contacts/{contact_id}": {
     /** Get User Contact */
-    get: operations["get_user_contact_contacts__contact_id__get"];
+    get: operations["get_user_contact_api_v1_contacts__contact_id__get"];
     /** Update User Contact */
-    put: operations["update_user_contact_contacts__contact_id__put"];
+    put: operations["update_user_contact_api_v1_contacts__contact_id__put"];
     /** Delete User Contact */
-    delete: operations["delete_user_contact_contacts__contact_id__delete"];
+    delete: operations["delete_user_contact_api_v1_contacts__contact_id__delete"];
   };
-  "/contacts/extract": {
+  "/api/v1/contacts/extract": {
     /** Extract Contacts */
-    post: operations["extract_contacts_contacts_extract_post"];
+    post: operations["extract_contacts_api_v1_contacts_extract_post"];
   };
-  "/contacts/seed": {
+  "/api/v1/contacts/seed": {
     /** Seed Contacts */
-    post: operations["seed_contacts_contacts_seed_post"];
+    post: operations["seed_contacts_api_v1_contacts_seed_post"];
   };
-  "/experiences/": {
+  "/api/v1/experiences/": {
     /** Read Current User Experiences */
-    get: operations["read_current_user_experiences_experiences__get"];
+    get: operations["read_current_user_experiences_api_v1_experiences__get"];
     /** Create User Experience */
-    post: operations["create_user_experience_experiences__post"];
+    post: operations["create_user_experience_api_v1_experiences__post"];
   };
-  "/experiences/{experience_id}": {
+  "/api/v1/experiences/{experience_id}": {
     /** Read User Experience */
-    get: operations["read_user_experience_experiences__experience_id__get"];
+    get: operations["read_user_experience_api_v1_experiences__experience_id__get"];
     /** Update User Experience */
-    put: operations["update_user_experience_experiences__experience_id__put"];
+    put: operations["update_user_experience_api_v1_experiences__experience_id__put"];
     /** Delete User Experience */
-    delete: operations["delete_user_experience_experiences__experience_id__delete"];
+    delete: operations["delete_user_experience_api_v1_experiences__experience_id__delete"];
   };
-  "/experiences/extract": {
+  "/api/v1/experiences/extract": {
     /** Extract User Experiences */
-    post: operations["extract_user_experiences_experiences_extract_post"];
+    post: operations["extract_user_experiences_api_v1_experiences_extract_post"];
   };
-  "/experiences/seed": {
+  "/api/v1/experiences/seed": {
     /** Seed Experiences */
-    post: operations["seed_experiences_experiences_seed_post"];
+    post: operations["seed_experiences_api_v1_experiences_seed_post"];
   };
-  "/skills/extract": {
+  "/api/v1/skills/extract": {
     /** Extract User Skills */
-    post: operations["extract_user_skills_skills_extract_post"];
+    post: operations["extract_user_skills_api_v1_skills_extract_post"];
   };
-  "/skills/": {
+  "/api/v1/skills/": {
     /** Get Current User Skills */
-    get: operations["get_current_user_skills_skills__get"];
+    get: operations["get_current_user_skills_api_v1_skills__get"];
     /** Create User Skill */
-    post: operations["create_user_skill_skills__post"];
+    post: operations["create_user_skill_api_v1_skills__post"];
   };
-  "/skills/{skill_id}": {
+  "/api/v1/skills/{skill_id}": {
     /** Get User Skill */
-    get: operations["get_user_skill_skills__skill_id__get"];
+    get: operations["get_user_skill_api_v1_skills__skill_id__get"];
     /** Update User Skill */
-    put: operations["update_user_skill_skills__skill_id__put"];
+    put: operations["update_user_skill_api_v1_skills__skill_id__put"];
     /** Delete User Skill */
-    delete: operations["delete_user_skill_skills__skill_id__delete"];
+    delete: operations["delete_user_skill_api_v1_skills__skill_id__delete"];
   };
-  "/skills/seed": {
+  "/api/v1/skills/seed": {
     /** Seed Skills */
-    post: operations["seed_skills_skills_seed_post"];
+    post: operations["seed_skills_api_v1_skills_seed_post"];
   };
-  "/applications/": {
+  "/api/v1/applications/": {
     /**
      * Get Applications
      * @description Get all applications for the current user.
      */
-    get: operations["get_applications_applications__get"];
+    get: operations["get_applications_api_v1_applications__get"];
     /** Create Application */
-    post: operations["create_application_applications__post"];
+    post: operations["create_application_api_v1_applications__post"];
   };
-  "/applications/{id}": {
+  "/api/v1/applications/{id}": {
     /** Get Application By Id */
-    get: operations["get_application_by_id_applications__id__get"];
+    get: operations["get_application_by_id_api_v1_applications__id__get"];
     /** Delete Application */
-    delete: operations["delete_application_applications__id__delete"];
+    delete: operations["delete_application_api_v1_applications__id__delete"];
     /** Update Application */
-    patch: operations["update_application_applications__id__patch"];
+    patch: operations["update_application_api_v1_applications__id__patch"];
   };
-  "/applications/{id}/export": {
+  "/api/v1/applications/{id}/export": {
     /**
      * Export Application Materials
      * @description Export all materials linked to an application as a ZIP archive.
@@ -357,56 +357,56 @@ export interface paths {
      * ``cover_letters/``, and ``documents/`` — each holding PDF files derived
      * from the application's attached documents.
      */
-    get: operations["export_application_materials_applications__id__export_get"];
+    get: operations["export_application_materials_api_v1_applications__id__export_get"];
   };
-  "/applications/{id}/documents": {
+  "/api/v1/applications/{id}/documents": {
     /** Get Application Documents */
-    get: operations["get_application_documents_applications__id__documents_get"];
+    get: operations["get_application_documents_api_v1_applications__id__documents_get"];
     /** Add Document To Application */
-    post: operations["add_document_to_application_applications__id__documents_post"];
+    post: operations["add_document_to_application_api_v1_applications__id__documents_post"];
   };
-  "/applications/{id}/documents/{document_id}": {
+  "/api/v1/applications/{id}/documents/{document_id}": {
     /** Detach Document From Application */
-    delete: operations["detach_document_from_application_applications__id__documents__document_id__delete"];
+    delete: operations["detach_document_from_application_api_v1_applications__id__documents__document_id__delete"];
   };
-  "/documents/upload": {
+  "/api/v1/documents/upload": {
     /**
      * Upload Document
      * @description Upload a PDF file, extract its text, and create a new Document + v1.
      */
-    post: operations["upload_document_documents_upload_post"];
+    post: operations["upload_document_api_v1_documents_upload_post"];
   };
-  "/documents/pinned": {
+  "/api/v1/documents/pinned": {
     /**
      * Get Pinned Documents
      * @description Return the user's pinned (active/canonical) documents — at most one per kind.
      */
-    get: operations["get_pinned_documents_documents_pinned_get"];
+    get: operations["get_pinned_documents_api_v1_documents_pinned_get"];
   };
-  "/documents/": {
+  "/api/v1/documents/": {
     /** List Documents */
-    get: operations["list_documents_documents__get"];
+    get: operations["list_documents_api_v1_documents__get"];
     /**
      * Create Document
      * @description Create a document with its initial version (v1).
      */
-    post: operations["create_document_documents__post"];
+    post: operations["create_document_api_v1_documents__post"];
   };
-  "/documents/shared-with-me": {
+  "/api/v1/documents/shared-with-me": {
     /**
      * List Shared With Me
      * @description List documents that other users have shared with the current user.
      */
-    get: operations["list_shared_with_me_documents_shared_with_me_get"];
+    get: operations["list_shared_with_me_api_v1_documents_shared_with_me_get"];
   };
-  "/documents/{document_id}/share-candidates": {
+  "/api/v1/documents/{document_id}/share-candidates": {
     /**
      * List Share Candidates
      * @description Look up authenticated share candidates for a specific document.
      */
-    get: operations["list_share_candidates_documents__document_id__share_candidates_get"];
+    get: operations["list_share_candidates_api_v1_documents__document_id__share_candidates_get"];
   };
-  "/documents/generate": {
+  "/api/v1/documents/generate": {
     /**
      * Generate Document
      * @description Generate document content via AI and persist as a Document + Version.
@@ -416,38 +416,38 @@ export interface paths {
      * If ``document_id`` is provided the generated content is appended as a new
      * version; otherwise a brand-new Document is created.
      */
-    post: operations["generate_document_documents_generate_post"];
+    post: operations["generate_document_api_v1_documents_generate_post"];
   };
-  "/documents/seed": {
+  "/api/v1/documents/seed": {
     /** Seed Documents */
-    post: operations["seed_documents_documents_seed_post"];
+    post: operations["seed_documents_api_v1_documents_seed_post"];
   };
-  "/documents/{document_id}": {
+  "/api/v1/documents/{document_id}": {
     /** Get Document Detail */
-    get: operations["get_document_detail_documents__document_id__get"];
+    get: operations["get_document_detail_api_v1_documents__document_id__get"];
     /** Delete Document */
-    delete: operations["delete_document_documents__document_id__delete"];
+    delete: operations["delete_document_api_v1_documents__document_id__delete"];
     /** Update Document */
-    patch: operations["update_document_documents__document_id__patch"];
+    patch: operations["update_document_api_v1_documents__document_id__patch"];
   };
-  "/documents/{document_id}/activity": {
+  "/api/v1/documents/{document_id}/activity": {
     /**
      * List Document Activity
      * @description Read audit-style activity history for a document.
      */
-    get: operations["list_document_activity_documents__document_id__activity_get"];
+    get: operations["list_document_activity_api_v1_documents__document_id__activity_get"];
   };
-  "/documents/{document_id}/versions": {
+  "/api/v1/documents/{document_id}/versions": {
     /** List Versions */
-    get: operations["list_versions_documents__document_id__versions_get"];
+    get: operations["list_versions_api_v1_documents__document_id__versions_get"];
     /** Create Version */
-    post: operations["create_version_documents__document_id__versions_post"];
+    post: operations["create_version_api_v1_documents__document_id__versions_post"];
   };
-  "/documents/{document_id}/versions/{version_id}": {
+  "/api/v1/documents/{document_id}/versions/{version_id}": {
     /** Get Version */
-    get: operations["get_version_documents__document_id__versions__version_id__get"];
+    get: operations["get_version_api_v1_documents__document_id__versions__version_id__get"];
   };
-  "/documents/{document_id}/pin": {
+  "/api/v1/documents/{document_id}/pin": {
     /**
      * Pin Document
      * @description Pin (or unpin) a document as the active/canonical for its kind.
@@ -455,230 +455,230 @@ export interface paths {
      * When pinning, all other documents of the same kind for this user are
      * unpinned first.
      */
-    post: operations["pin_document_documents__document_id__pin_post"];
+    post: operations["pin_document_api_v1_documents__document_id__pin_post"];
   };
-  "/documents/{document_id}/original": {
+  "/api/v1/documents/{document_id}/original": {
     /**
      * Download Original
      * @description Download the original uploaded PDF for the head version.
      */
-    get: operations["download_original_documents__document_id__original_get"];
+    get: operations["download_original_api_v1_documents__document_id__original_get"];
   };
-  "/documents/{document_id}/download": {
+  "/api/v1/documents/{document_id}/download": {
     /** Download Document */
-    get: operations["download_document_documents__document_id__download_get"];
+    get: operations["download_document_api_v1_documents__document_id__download_get"];
   };
-  "/documents/{document_id}/shares": {
+  "/api/v1/documents/{document_id}/shares": {
     /**
      * List Shares
      * @description List all shares for a document (owner only).
      */
-    get: operations["list_shares_documents__document_id__shares_get"];
+    get: operations["list_shares_api_v1_documents__document_id__shares_get"];
     /**
      * Create Share
      * @description Grant another user access to this document (owner only).
      */
-    post: operations["create_share_documents__document_id__shares_post"];
+    post: operations["create_share_api_v1_documents__document_id__shares_post"];
   };
-  "/documents/{document_id}/shares/{share_id}": {
+  "/api/v1/documents/{document_id}/shares/{share_id}": {
     /**
      * Delete Share
      * @description Revoke a share (owner only).
      */
-    delete: operations["delete_share_documents__document_id__shares__share_id__delete"];
+    delete: operations["delete_share_api_v1_documents__document_id__shares__share_id__delete"];
     /**
      * Update Share
      * @description Update a share's role (owner only).
      */
-    patch: operations["update_share_documents__document_id__shares__share_id__patch"];
+    patch: operations["update_share_api_v1_documents__document_id__shares__share_id__patch"];
   };
-  "/documents/search": {
+  "/api/v1/documents/search": {
     /**
      * Semantic search across user documents
      * @description Perform a semantic similarity search across the authenticated user's
      * embedded documents using pgvector cosine distance.
      */
-    post: operations["search_documents_documents_search_post"];
+    post: operations["search_documents_api_v1_documents_search_post"];
   };
-  "/documents/{document_id}/embed": {
+  "/api/v1/documents/{document_id}/embed": {
     /**
      * Generate embeddings for a document
      * @description Chunk and embed a document's text content, storing the resulting vectors
      * in pgvector for later semantic search.  Replaces any existing embeddings
      * for the same document.
      */
-    post: operations["embed_document_documents__document_id__embed_post"];
+    post: operations["embed_document_api_v1_documents__document_id__embed_post"];
   };
-  "/documents/rag/enrich-lead": {
+  "/api/v1/documents/rag/enrich-lead": {
     /**
      * Enrich a lead using document context
      * @description Retrieve relevant document chunks and use them to enrich a job lead
      * description with personalized analysis.
      */
-    post: operations["enrich_lead_endpoint_documents_rag_enrich_lead_post"];
+    post: operations["enrich_lead_endpoint_api_v1_documents_rag_enrich_lead_post"];
   };
-  "/documents/rag/rank-leads": {
+  "/api/v1/documents/rag/rank-leads": {
     /**
      * Rank leads by relevance to user profile
      * @description Rank job leads based on the user's embedded document context.
      */
-    post: operations["rank_leads_endpoint_documents_rag_rank_leads_post"];
+    post: operations["rank_leads_endpoint_api_v1_documents_rag_rank_leads_post"];
   };
-  "/documents/rag/summarize-company": {
+  "/api/v1/documents/rag/summarize-company": {
     /**
      * Summarize a company website
      * @description Load a company website, extract text, and return an AI summary.
      */
-    post: operations["summarize_company_endpoint_documents_rag_summarize_company_post"];
+    post: operations["summarize_company_endpoint_api_v1_documents_rag_summarize_company_post"];
   };
-  "/education/": {
+  "/api/v1/education/": {
     /** Read Current User Educations */
-    get: operations["read_current_user_educations_education__get"];
+    get: operations["read_current_user_educations_api_v1_education__get"];
     /** Create User Education */
-    post: operations["create_user_education_education__post"];
+    post: operations["create_user_education_api_v1_education__post"];
   };
-  "/education/{education_id}": {
+  "/api/v1/education/{education_id}": {
     /** Read User Education */
-    get: operations["read_user_education_education__education_id__get"];
+    get: operations["read_user_education_api_v1_education__education_id__get"];
     /** Update User Education */
-    put: operations["update_user_education_education__education_id__put"];
+    put: operations["update_user_education_api_v1_education__education_id__put"];
     /** Delete User Education */
-    delete: operations["delete_user_education_education__education_id__delete"];
+    delete: operations["delete_user_education_api_v1_education__education_id__delete"];
   };
-  "/education/extract": {
+  "/api/v1/education/extract": {
     /** Extract Education */
-    post: operations["extract_education_education_extract_post"];
+    post: operations["extract_education_api_v1_education_extract_post"];
   };
-  "/education/seed": {
+  "/api/v1/education/seed": {
     /** Seed Education */
-    post: operations["seed_education_education_seed_post"];
+    post: operations["seed_education_api_v1_education_seed_post"];
   };
-  "/certificate/": {
+  "/api/v1/certificate/": {
     /** Read Current User Certificates */
-    get: operations["read_current_user_certificates_certificate__get"];
+    get: operations["read_current_user_certificates_api_v1_certificate__get"];
     /** Create User Certificate */
-    post: operations["create_user_certificate_certificate__post"];
+    post: operations["create_user_certificate_api_v1_certificate__post"];
   };
-  "/certificate/{certificate_id}": {
+  "/api/v1/certificate/{certificate_id}": {
     /** Read User Certificate */
-    get: operations["read_user_certificate_certificate__certificate_id__get"];
+    get: operations["read_user_certificate_api_v1_certificate__certificate_id__get"];
     /** Update User Certificate */
-    put: operations["update_user_certificate_certificate__certificate_id__put"];
+    put: operations["update_user_certificate_api_v1_certificate__certificate_id__put"];
     /** Delete User Certificate */
-    delete: operations["delete_user_certificate_certificate__certificate_id__delete"];
+    delete: operations["delete_user_certificate_api_v1_certificate__certificate_id__delete"];
   };
-  "/certificate/extract": {
+  "/api/v1/certificate/extract": {
     /** Extract Certificates */
-    post: operations["extract_certificates_certificate_extract_post"];
+    post: operations["extract_certificates_api_v1_certificate_extract_post"];
   };
-  "/certificate/seed": {
+  "/api/v1/certificate/seed": {
     /** Seed Certificates */
-    post: operations["seed_certificates_certificate_seed_post"];
+    post: operations["seed_certificates_api_v1_certificate_seed_post"];
   };
-  "/extractor/configurables": {
+  "/api/v1/extractor/configurables": {
     /**
      * Get Configuration
      * @description Endpoint to show server configuration.
      */
-    get: operations["get_configuration_extractor_configurables_get"];
+    get: operations["get_configuration_api_v1_extractor_configurables_get"];
   };
-  "/extractor/suggest": {
+  "/api/v1/extractor/suggest": {
     /**
      * Suggest Extractor
      * @description Suggest an extractor based on a description.
      */
-    post: operations["suggest_extractor_extractor_suggest_post"];
+    post: operations["suggest_extractor_api_v1_extractor_suggest_post"];
   };
-  "/extractor/{id}": {
+  "/api/v1/extractor/{id}": {
     /** Read Extractor */
-    get: operations["read_extractor_extractor__id__get"];
+    get: operations["read_extractor_api_v1_extractor__id__get"];
     /** Update Extractor */
-    put: operations["update_extractor_extractor__id__put"];
+    put: operations["update_extractor_api_v1_extractor__id__put"];
     /** Delete Extractor */
-    delete: operations["delete_extractor_extractor__id__delete"];
+    delete: operations["delete_extractor_api_v1_extractor__id__delete"];
   };
-  "/extractor/": {
+  "/api/v1/extractor/": {
     /** Read Extractors */
-    get: operations["read_extractors_extractor__get"];
+    get: operations["read_extractors_api_v1_extractor__get"];
     /** Create Extractor */
-    post: operations["create_extractor_extractor__post"];
+    post: operations["create_extractor_api_v1_extractor__post"];
   };
-  "/extractor/{id}/examples": {
+  "/api/v1/extractor/{id}/examples": {
     /** Get Extractor Examples */
-    get: operations["get_extractor_examples_extractor__id__examples_get"];
+    get: operations["get_extractor_examples_api_v1_extractor__id__examples_get"];
     /** Create Extractor Example */
-    post: operations["create_extractor_example_extractor__id__examples_post"];
+    post: operations["create_extractor_example_api_v1_extractor__id__examples_post"];
   };
-  "/extractor/{id}/versions": {
+  "/api/v1/extractor/{id}/versions": {
     /** List Extractor Versions */
-    get: operations["list_extractor_versions_extractor__id__versions_get"];
+    get: operations["list_extractor_versions_api_v1_extractor__id__versions_get"];
   };
-  "/extractor/{id}/examples/{example_id}": {
+  "/api/v1/extractor/{id}/examples/{example_id}": {
     /** Delete Extractor Example */
-    delete: operations["delete_extractor_example_extractor__id__examples__example_id__delete"];
+    delete: operations["delete_extractor_example_api_v1_extractor__id__examples__example_id__delete"];
   };
-  "/extractor/{id}/run": {
+  "/api/v1/extractor/{id}/run": {
     /**
      * Extractor Runner
      * @description Run an extractor on a given payload
      */
-    post: operations["extractor_runner_extractor__id__run_post"];
+    post: operations["extractor_runner_api_v1_extractor__id__run_post"];
   };
-  "/extractor/{id}/run/{event_id}/retry": {
+  "/api/v1/extractor/{id}/run/{event_id}/retry": {
     /**
      * Retry Extractor Run
      * @description Retry a failed extractor run by re-executing against the same source.
      */
-    post: operations["retry_extractor_run_extractor__id__run__event_id__retry_post"];
+    post: operations["retry_extractor_run_api_v1_extractor__id__run__event_id__retry_post"];
   };
-  "/crawlers/pipelines": {
+  "/api/v1/crawlers/pipelines": {
     /** List Crawler Pipelines */
-    get: operations["list_crawler_pipelines_crawlers_pipelines_get"];
+    get: operations["list_crawler_pipelines_api_v1_crawlers_pipelines_get"];
     /** Create Crawler Pipeline */
-    post: operations["create_crawler_pipeline_crawlers_pipelines_post"];
+    post: operations["create_crawler_pipeline_api_v1_crawlers_pipelines_post"];
   };
-  "/crawlers/pipelines/{pipeline_id}": {
+  "/api/v1/crawlers/pipelines/{pipeline_id}": {
     /** Get Crawler Pipeline */
-    get: operations["get_crawler_pipeline_crawlers_pipelines__pipeline_id__get"];
+    get: operations["get_crawler_pipeline_api_v1_crawlers_pipelines__pipeline_id__get"];
     /** Update Crawler Pipeline */
-    patch: operations["update_crawler_pipeline_crawlers_pipelines__pipeline_id__patch"];
+    patch: operations["update_crawler_pipeline_api_v1_crawlers_pipelines__pipeline_id__patch"];
   };
-  "/crawlers/pipelines/{pipeline_id}/runs": {
+  "/api/v1/crawlers/pipelines/{pipeline_id}/runs": {
     /** Trigger Crawler Run */
-    post: operations["trigger_crawler_run_crawlers_pipelines__pipeline_id__runs_post"];
+    post: operations["trigger_crawler_run_api_v1_crawlers_pipelines__pipeline_id__runs_post"];
   };
-  "/crawlers/runs": {
+  "/api/v1/crawlers/runs": {
     /** List Crawler Runs */
-    get: operations["list_crawler_runs_crawlers_runs_get"];
+    get: operations["list_crawler_runs_api_v1_crawlers_runs_get"];
   };
-  "/crawlers/runs/prune": {
+  "/api/v1/crawlers/runs/prune": {
     /**
      * Prune Crawler Runs
      * @description Delete completed or terminal crawler runs older than the specified age.
      */
-    delete: operations["prune_crawler_runs_crawlers_runs_prune_delete"];
+    delete: operations["prune_crawler_runs_api_v1_crawlers_runs_prune_delete"];
   };
-  "/crawlers/runs/{run_id}": {
+  "/api/v1/crawlers/runs/{run_id}": {
     /** Get Crawler Run */
-    get: operations["get_crawler_run_crawlers_runs__run_id__get"];
+    get: operations["get_crawler_run_api_v1_crawlers_runs__run_id__get"];
   };
-  "/crawlers/runs/{run_id}/cancel": {
+  "/api/v1/crawlers/runs/{run_id}/cancel": {
     /** Cancel Crawler Run */
-    post: operations["cancel_crawler_run_crawlers_runs__run_id__cancel_post"];
+    post: operations["cancel_crawler_run_api_v1_crawlers_runs__run_id__cancel_post"];
   };
-  "/crawlers/runs/{run_id}/pause": {
+  "/api/v1/crawlers/runs/{run_id}/pause": {
     /** Pause Crawler Run */
-    post: operations["pause_crawler_run_crawlers_runs__run_id__pause_post"];
+    post: operations["pause_crawler_run_api_v1_crawlers_runs__run_id__pause_post"];
   };
-  "/crawlers/runs/{run_id}/resume": {
+  "/api/v1/crawlers/runs/{run_id}/resume": {
     /** Resume Crawler Run */
-    post: operations["resume_crawler_run_crawlers_runs__run_id__resume_post"];
+    post: operations["resume_crawler_run_api_v1_crawlers_runs__run_id__resume_post"];
   };
-  "/crawlers/runs/{run_id}/retry": {
+  "/api/v1/crawlers/runs/{run_id}/retry": {
     /** Retry Crawler Run */
-    post: operations["retry_crawler_run_crawlers_runs__run_id__retry_post"];
+    post: operations["retry_crawler_run_api_v1_crawlers_runs__run_id__retry_post"];
   };
-  "/directory/": {
+  "/api/v1/directory/": {
     /**
      * List Directory
      * @description Paginated, searchable user directory.
@@ -686,21 +686,21 @@ export interface paths {
      * Only discoverable, active users are returned. ``superusers_only=true`` narrows
      * results to Baldin superusers.
      */
-    get: operations["list_directory_directory__get"];
+    get: operations["list_directory_api_v1_directory__get"];
   };
-  "/directory/{user_id}": {
+  "/api/v1/directory/{user_id}": {
     /**
      * Read Public Profile
      * @description View another user's public profile.
      */
-    get: operations["read_public_profile_directory__user_id__get"];
+    get: operations["read_public_profile_api_v1_directory__user_id__get"];
   };
-  "/connections/": {
+  "/api/v1/connections/": {
     /**
      * List Connections
      * @description List connections for the current user (both sent and received).
      */
-    get: operations["list_connections_connections__get"];
+    get: operations["list_connections_api_v1_connections__get"];
     /**
      * Send Connection Request
      * @description Send a connection request to another user.
@@ -708,157 +708,157 @@ export interface paths {
      * Requests to superusers are available to all authenticated users. Requests to
      * non-superusers still require a Starter subscription or above.
      */
-    post: operations["send_connection_request_connections__post"];
+    post: operations["send_connection_request_api_v1_connections__post"];
   };
-  "/connections/{id}/accept": {
+  "/api/v1/connections/{id}/accept": {
     /**
      * Accept Connection
      * @description Accept a pending connection request. Only the addressee can accept.
      */
-    patch: operations["accept_connection_connections__id__accept_patch"];
+    patch: operations["accept_connection_api_v1_connections__id__accept_patch"];
   };
-  "/connections/{id}/decline": {
+  "/api/v1/connections/{id}/decline": {
     /**
      * Decline Connection
      * @description Decline a pending connection request. Only the addressee can decline.
      */
-    patch: operations["decline_connection_connections__id__decline_patch"];
+    patch: operations["decline_connection_api_v1_connections__id__decline_patch"];
   };
-  "/connections/{id}": {
+  "/api/v1/connections/{id}": {
     /**
      * Remove Connection
      * @description Remove an accepted connection or cancel a pending request. Either party can do this.
      */
-    delete: operations["remove_connection_connections__id__delete"];
+    delete: operations["remove_connection_api_v1_connections__id__delete"];
   };
-  "/connections/{id}/block": {
+  "/api/v1/connections/{id}/block": {
     /**
      * Block Connection
      * @description Block a user via an existing connection record. Sets status to blocked.
      */
-    post: operations["block_connection_connections__id__block_post"];
+    post: operations["block_connection_api_v1_connections__id__block_post"];
   };
-  "/conversations/unread": {
+  "/api/v1/conversations/unread": {
     /**
      * Get Total Unread
      * @description Total unread message count across all conversations (for sidebar badge).
      */
-    get: operations["get_total_unread_conversations_unread_get"];
+    get: operations["get_total_unread_api_v1_conversations_unread_get"];
   };
-  "/conversations/": {
+  "/api/v1/conversations/": {
     /**
      * List Conversations
      * @description List the current user's conversations, sorted by most recent message.
      */
-    get: operations["list_conversations_conversations__get"];
+    get: operations["list_conversations_api_v1_conversations__get"];
     /**
      * Create Conversation
      * @description Create a DM or group conversation.
      */
-    post: operations["create_conversation_conversations__post"];
+    post: operations["create_conversation_api_v1_conversations__post"];
   };
-  "/conversations/{conversation_id}": {
+  "/api/v1/conversations/{conversation_id}": {
     /**
      * Get Conversation
      * @description Get conversation detail with paginated messages. Auto-marks as read.
      */
-    get: operations["get_conversation_conversations__conversation_id__get"];
+    get: operations["get_conversation_api_v1_conversations__conversation_id__get"];
   };
-  "/conversations/{conversation_id}/messages": {
+  "/api/v1/conversations/{conversation_id}/messages": {
     /**
      * Send Message
      * @description Send a message in a conversation.
      */
-    post: operations["send_message_conversations__conversation_id__messages_post"];
+    post: operations["send_message_api_v1_conversations__conversation_id__messages_post"];
   };
-  "/conversations/{conversation_id}/messages/{message_id}": {
+  "/api/v1/conversations/{conversation_id}/messages/{message_id}": {
     /**
      * Delete Message
      * @description Delete your own message (hard delete).
      */
-    delete: operations["delete_message_conversations__conversation_id__messages__message_id__delete"];
+    delete: operations["delete_message_api_v1_conversations__conversation_id__messages__message_id__delete"];
     /**
      * Edit Message
      * @description Edit your own message.
      */
-    patch: operations["edit_message_conversations__conversation_id__messages__message_id__patch"];
+    patch: operations["edit_message_api_v1_conversations__conversation_id__messages__message_id__patch"];
   };
-  "/conversations/{conversation_id}/read": {
+  "/api/v1/conversations/{conversation_id}/read": {
     /**
      * Mark Conversation Read
      * @description Mark a conversation as read (update last_read_at).
      */
-    post: operations["mark_conversation_read_conversations__conversation_id__read_post"];
+    post: operations["mark_conversation_read_api_v1_conversations__conversation_id__read_post"];
   };
-  "/conversations/{conversation_id}/participants": {
+  "/api/v1/conversations/{conversation_id}/participants": {
     /**
      * Add Participant
      * @description Add a participant to a group conversation. Only admins can add.
      */
-    post: operations["add_participant_conversations__conversation_id__participants_post"];
+    post: operations["add_participant_api_v1_conversations__conversation_id__participants_post"];
   };
-  "/conversations/{conversation_id}/participants/{target_user_id}": {
+  "/api/v1/conversations/{conversation_id}/participants/{target_user_id}": {
     /**
      * Remove Participant
      * @description Remove a participant or leave a group. Admins can remove others; anyone can leave.
      */
-    delete: operations["remove_participant_conversations__conversation_id__participants__target_user_id__delete"];
+    delete: operations["remove_participant_api_v1_conversations__conversation_id__participants__target_user_id__delete"];
   };
-  "/documents/{document_id}/collaborate/bootstrap": {
+  "/api/v1/documents/{document_id}/collaborate/bootstrap": {
     /** Request Collaboration Bootstrap */
-    post: operations["request_collaboration_bootstrap_documents__document_id__collaborate_bootstrap_post"];
+    post: operations["request_collaboration_bootstrap_api_v1_documents__document_id__collaborate_bootstrap_post"];
   };
-  "/action-items/": {
+  "/api/v1/action-items/": {
     /** List Action Items */
-    get: operations["list_action_items_action_items__get"];
+    get: operations["list_action_items_api_v1_action_items__get"];
     /** Create Action Item */
-    post: operations["create_action_item_action_items__post"];
+    post: operations["create_action_item_api_v1_action_items__post"];
   };
-  "/action-items/reorder": {
+  "/api/v1/action-items/reorder": {
     /**
      * Reorder Action Items
      * @description Set sort_order for action items based on position in item_ids array.
      */
-    post: operations["reorder_action_items_action_items_reorder_post"];
+    post: operations["reorder_action_items_api_v1_action_items_reorder_post"];
   };
-  "/action-items/{id}": {
+  "/api/v1/action-items/{id}": {
     /** Get Action Item */
-    get: operations["get_action_item_action_items__id__get"];
+    get: operations["get_action_item_api_v1_action_items__id__get"];
     /** Delete Action Item */
-    delete: operations["delete_action_item_action_items__id__delete"];
+    delete: operations["delete_action_item_api_v1_action_items__id__delete"];
     /** Update Action Item */
-    patch: operations["update_action_item_action_items__id__patch"];
+    patch: operations["update_action_item_api_v1_action_items__id__patch"];
   };
-  "/action-items/from-application/{application_id}": {
+  "/api/v1/action-items/from-application/{application_id}": {
     /** Create Action Item From Application */
-    post: operations["create_action_item_from_application_action_items_from_application__application_id__post"];
+    post: operations["create_action_item_from_application_api_v1_action_items_from_application__application_id__post"];
   };
-  "/activity-feed/": {
+  "/api/v1/activity-feed/": {
     /** Get Activity Feed */
-    get: operations["get_activity_feed_activity_feed__get"];
+    get: operations["get_activity_feed_api_v1_activity_feed__get"];
   };
-  "/activity-feed/summary": {
+  "/api/v1/activity-feed/summary": {
     /** Get Command Center Summary */
-    get: operations["get_command_center_summary_activity_feed_summary_get"];
+    get: operations["get_command_center_summary_api_v1_activity_feed_summary_get"];
   };
-  "/review/items": {
+  "/api/v1/review/items": {
     /**
      * List Review Items
      * @description List all items pending human review.
      */
-    get: operations["list_review_items_review_items_get"];
+    get: operations["list_review_items_api_v1_review_items_get"];
   };
-  "/review/items/{item_type}/{item_id}/approve": {
+  "/api/v1/review/items/{item_type}/{item_id}/approve": {
     /** Approve Item */
-    post: operations["approve_item_review_items__item_type___item_id__approve_post"];
+    post: operations["approve_item_api_v1_review_items__item_type___item_id__approve_post"];
   };
-  "/review/items/{item_type}/{item_id}/reject": {
+  "/api/v1/review/items/{item_type}/{item_id}/reject": {
     /** Reject Item */
-    post: operations["reject_item_review_items__item_type___item_id__reject_post"];
+    post: operations["reject_item_api_v1_review_items__item_type___item_id__reject_post"];
   };
-  "/review/items/batch": {
+  "/api/v1/review/items/batch": {
     /** Batch Review */
-    post: operations["batch_review_review_items_batch_post"];
+    post: operations["batch_review_api_v1_review_items_batch_post"];
   };
   "/": {
     /** Root */
@@ -1299,8 +1299,8 @@ export interface components {
        */
       token_type?: string;
     };
-    /** Body_extract_user_profile_users_me_profile_extract_post */
-    Body_extract_user_profile_users_me_profile_extract_post: {
+    /** Body_extract_user_profile_api_v1_users_me_profile_extract_post */
+    Body_extract_user_profile_api_v1_users_me_profile_extract_post: {
       /** File */
       file?: string | null;
       /**
@@ -1322,8 +1322,8 @@ export interface components {
        */
       source_files?: string[];
     };
-    /** Body_extract_user_skills_skills_extract_post */
-    Body_extract_user_skills_skills_extract_post: {
+    /** Body_extract_user_skills_api_v1_skills_extract_post */
+    Body_extract_user_skills_api_v1_skills_extract_post: {
       /** File */
       file?: string | null;
       /** Mode */
@@ -1335,8 +1335,8 @@ export interface components {
       /** Llm */
       llm?: string | null;
     };
-    /** Body_extractor_runner_extractor__id__run_post */
-    Body_extractor_runner_extractor__id__run_post: {
+    /** Body_extractor_runner_api_v1_extractor__id__run_post */
+    Body_extractor_runner_api_v1_extractor__id__run_post: {
       /** File */
       file?: string | null;
       /** Mode */
@@ -1348,8 +1348,8 @@ export interface components {
       /** Llm */
       llm?: string | null;
     };
-    /** Body_login_auth_jwt_login_post */
-    Body_login_auth_jwt_login_post: {
+    /** Body_login_api_v1_auth_jwt_login_post */
+    Body_login_api_v1_auth_jwt_login_post: {
       /** Grant Type */
       grant_type?: string | null;
       /** Username */
@@ -1372,28 +1372,28 @@ export interface components {
        */
       client_secret?: string | null;
     };
-    /** Body_reset_forgot_password_auth_forgot_password_post */
-    Body_reset_forgot_password_auth_forgot_password_post: {
+    /** Body_reset_forgot_password_api_v1_auth_forgot_password_post */
+    Body_reset_forgot_password_api_v1_auth_forgot_password_post: {
       /**
        * Email
        * Format: email
        */
       email: string;
     };
-    /** Body_reset_reset_password_auth_reset_password_post */
-    Body_reset_reset_password_auth_reset_password_post: {
+    /** Body_reset_reset_password_api_v1_auth_reset_password_post */
+    Body_reset_reset_password_api_v1_auth_reset_password_post: {
       /** Token */
       token: string;
       /** Password */
       password: string;
     };
-    /** Body_upload_avatar_users_me_avatar_post */
-    Body_upload_avatar_users_me_avatar_post: {
+    /** Body_upload_avatar_api_v1_users_me_avatar_post */
+    Body_upload_avatar_api_v1_users_me_avatar_post: {
       /** File */
       file: string;
     };
-    /** Body_upload_document_documents_upload_post */
-    Body_upload_document_documents_upload_post: {
+    /** Body_upload_document_api_v1_documents_upload_post */
+    Body_upload_document_api_v1_documents_upload_post: {
       /** File */
       file: string;
       /** Title */
@@ -1404,16 +1404,16 @@ export interface components {
        */
       kind?: string;
     };
-    /** Body_verify_request_token_auth_request_verify_token_post */
-    Body_verify_request_token_auth_request_verify_token_post: {
+    /** Body_verify_request_token_api_v1_auth_request_verify_token_post */
+    Body_verify_request_token_api_v1_auth_request_verify_token_post: {
       /**
        * Email
        * Format: email
        */
       email: string;
     };
-    /** Body_verify_verify_auth_verify_post */
-    Body_verify_verify_auth_verify_post: {
+    /** Body_verify_verify_api_v1_auth_verify_post */
+    Body_verify_verify_api_v1_auth_verify_post: {
       /** Token */
       token: string;
     };
@@ -5729,10 +5729,10 @@ export interface operations {
    *   and the client must call ``POST /auth/mfa/login-verify`` to
    *   complete authentication.
    */
-  login_auth_jwt_login_post: {
+  login_api_v1_auth_jwt_login_post: {
     requestBody: {
       content: {
-        "application/x-www-form-urlencoded": components["schemas"]["Body_login_auth_jwt_login_post"];
+        "application/x-www-form-urlencoded": components["schemas"]["Body_login_api_v1_auth_jwt_login_post"];
       };
     };
     responses: {
@@ -5751,7 +5751,7 @@ export interface operations {
     };
   };
   /** Logout */
-  logout_auth_jwt_logout_post: {
+  logout_api_v1_auth_jwt_logout_post: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -5762,7 +5762,7 @@ export interface operations {
     };
   };
   /** Register:Register */
-  register_register_auth_register_post: {
+  register_register_api_v1_auth_register_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["UserCreate"];
@@ -5790,10 +5790,10 @@ export interface operations {
     };
   };
   /** Reset:Forgot Password */
-  reset_forgot_password_auth_forgot_password_post: {
+  reset_forgot_password_api_v1_auth_forgot_password_post: {
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Body_reset_forgot_password_auth_forgot_password_post"];
+        "application/json": components["schemas"]["Body_reset_forgot_password_api_v1_auth_forgot_password_post"];
       };
     };
     responses: {
@@ -5812,10 +5812,10 @@ export interface operations {
     };
   };
   /** Reset:Reset Password */
-  reset_reset_password_auth_reset_password_post: {
+  reset_reset_password_api_v1_auth_reset_password_post: {
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Body_reset_reset_password_auth_reset_password_post"];
+        "application/json": components["schemas"]["Body_reset_reset_password_api_v1_auth_reset_password_post"];
       };
     };
     responses: {
@@ -5840,10 +5840,10 @@ export interface operations {
     };
   };
   /** Verify:Request-Token */
-  verify_request_token_auth_request_verify_token_post: {
+  verify_request_token_api_v1_auth_request_verify_token_post: {
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Body_verify_request_token_auth_request_verify_token_post"];
+        "application/json": components["schemas"]["Body_verify_request_token_api_v1_auth_request_verify_token_post"];
       };
     };
     responses: {
@@ -5862,10 +5862,10 @@ export interface operations {
     };
   };
   /** Verify:Verify */
-  verify_verify_auth_verify_post: {
+  verify_verify_api_v1_auth_verify_post: {
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Body_verify_verify_auth_verify_post"];
+        "application/json": components["schemas"]["Body_verify_verify_api_v1_auth_verify_post"];
       };
     };
     responses: {
@@ -5893,7 +5893,7 @@ export interface operations {
    * Mfa Status
    * @description Return whether MFA is currently enabled for the authenticated user.
    */
-  mfa_status_auth_mfa_status_get: {
+  mfa_status_api_v1_auth_mfa_status_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -5910,7 +5910,7 @@ export interface operations {
    * The secret is persisted on the user record but MFA is **not** active
    * until the user confirms setup via ``POST /verify``.
    */
-  mfa_setup_auth_mfa_setup_post: {
+  mfa_setup_api_v1_auth_mfa_setup_post: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -5926,7 +5926,7 @@ export interface operations {
    *
    * This activates MFA on the account.
    */
-  mfa_verify_setup_auth_mfa_verify_post: {
+  mfa_verify_setup_api_v1_auth_mfa_verify_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["MFAVerifyRequest"];
@@ -5951,7 +5951,7 @@ export interface operations {
    * Mfa Disable
    * @description Disable MFA by presenting a valid TOTP code.
    */
-  mfa_disable_auth_mfa_disable_post: {
+  mfa_disable_api_v1_auth_mfa_disable_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["MFAVerifyRequest"];
@@ -5976,7 +5976,7 @@ export interface operations {
    * Mfa Admin Reset
    * @description Reset MFA for a user when they have lost access to their authenticator.
    */
-  mfa_admin_reset_auth_mfa_admin_reset__user_id__post: {
+  mfa_admin_reset_api_v1_auth_mfa_admin_reset__user_id__post: {
     parameters: {
       path: {
         user_id: string;
@@ -6004,7 +6004,7 @@ export interface operations {
    * Accepts the short-lived ``mfa_token`` returned by ``POST /auth/jwt/login``
    * together with a valid TOTP code and returns a full-access JWT.
    */
-  mfa_login_verify_auth_mfa_login_verify_post: {
+  mfa_login_verify_api_v1_auth_mfa_login_verify_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["MFALoginVerifyRequest"];
@@ -6026,7 +6026,7 @@ export interface operations {
     };
   };
   /** List Tables */
-  list_tables_db_management_list_tables_get: {
+  list_tables_api_v1_db_management_list_tables_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -6037,7 +6037,7 @@ export interface operations {
     };
   };
   /** Get Table Details */
-  get_table_details_db_management_table_details__table_name__get: {
+  get_table_details_api_v1_db_management_table_details__table_name__get: {
     parameters: {
       path: {
         table_name: string;
@@ -6061,7 +6061,7 @@ export interface operations {
     };
   };
   /** Purge User Data */
-  purge_user_data_db_management_users__user_id__purge_patch: {
+  purge_user_data_api_v1_db_management_users__user_id__purge_patch: {
     parameters: {
       path: {
         user_id: string;
@@ -6083,7 +6083,7 @@ export interface operations {
     };
   };
   /** Delete User */
-  delete_user_db_management_users__user_id__delete: {
+  delete_user_api_v1_db_management_users__user_id__delete: {
     parameters: {
       path: {
         user_id: string;
@@ -6105,7 +6105,7 @@ export interface operations {
     };
   };
   /** Users:Current User */
-  users_current_user_users_me_get: {
+  users_current_user_api_v1_users_me_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -6120,7 +6120,7 @@ export interface operations {
     };
   };
   /** Users:Patch Current User */
-  users_patch_current_user_users_me_patch: {
+  users_patch_current_user_api_v1_users_me_patch: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["UserUpdate"];
@@ -6152,7 +6152,7 @@ export interface operations {
     };
   };
   /** Users:User */
-  users_user_users__id__get: {
+  users_user_api_v1_users__id__get: {
     parameters: {
       path: {
         id: string;
@@ -6186,7 +6186,7 @@ export interface operations {
     };
   };
   /** Users:Delete User */
-  users_delete_user_users__id__delete: {
+  users_delete_user_api_v1_users__id__delete: {
     parameters: {
       path: {
         id: string;
@@ -6218,7 +6218,7 @@ export interface operations {
     };
   };
   /** Users:Patch User */
-  users_patch_user_users__id__patch: {
+  users_patch_user_api_v1_users__id__patch: {
     parameters: {
       path: {
         id: string;
@@ -6263,7 +6263,7 @@ export interface operations {
     };
   };
   /** Read Profile */
-  read_profile_users_me_profile_get: {
+  read_profile_api_v1_users_me_profile_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -6277,10 +6277,10 @@ export interface operations {
    * Upload Avatar
    * @description Upload or replace the current user's profile picture.
    */
-  upload_avatar_users_me_avatar_post: {
+  upload_avatar_api_v1_users_me_avatar_post: {
     requestBody: {
       content: {
-        "multipart/form-data": components["schemas"]["Body_upload_avatar_users_me_avatar_post"];
+        "multipart/form-data": components["schemas"]["Body_upload_avatar_api_v1_users_me_avatar_post"];
       };
     };
     responses: {
@@ -6302,7 +6302,7 @@ export interface operations {
    * Serve Avatar
    * @description Serve a user's avatar image. Returns 404 if no avatar is set.
    */
-  serve_avatar_users__user_id__avatar_get: {
+  serve_avatar_api_v1_users__user_id__avatar_get: {
     parameters: {
       path: {
         user_id: string;
@@ -6329,7 +6329,7 @@ export interface operations {
    *
    * Valid transitions: active → graduated, graduated → alumni.
    */
-  update_placement_users_me_placement_patch: {
+  update_placement_api_v1_users_me_placement_patch: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["PlacementUpdate"];
@@ -6354,10 +6354,10 @@ export interface operations {
    * Extract User Profile
    * @description Extract all profile sections from one or many sources and persist results.
    */
-  extract_user_profile_users_me_profile_extract_post: {
+  extract_user_profile_api_v1_users_me_profile_extract_post: {
     requestBody?: {
       content: {
-        "multipart/form-data": components["schemas"]["Body_extract_user_profile_users_me_profile_extract_post"];
+        "multipart/form-data": components["schemas"]["Body_extract_user_profile_api_v1_users_me_profile_extract_post"];
       };
     };
     responses: {
@@ -6376,7 +6376,7 @@ export interface operations {
     };
   };
   /** Seed Users */
-  seed_users_users_seed_post: {
+  seed_users_api_v1_users_seed_post: {
     responses: {
       /** @description Successful Response */
       202: {
@@ -6387,7 +6387,7 @@ export interface operations {
     };
   };
   /** Read Leads */
-  read_leads_leads__get: {
+  read_leads_api_v1_leads__get: {
     parameters: {
       query?: {
         /** @description Page number starting from 1 */
@@ -6414,7 +6414,7 @@ export interface operations {
     };
   };
   /** Create Job Lead */
-  create_job_lead_leads__post: {
+  create_job_lead_api_v1_leads__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["LeadCreate"];
@@ -6436,7 +6436,7 @@ export interface operations {
     };
   };
   /** Extract Lead */
-  extract_lead_leads_extract_post: {
+  extract_lead_api_v1_leads_extract_post: {
     parameters: {
       query: {
         extraction_url: string;
@@ -6458,7 +6458,7 @@ export interface operations {
     };
   };
   /** Read Lead */
-  read_lead_leads__id__get: {
+  read_lead_api_v1_leads__id__get: {
     parameters: {
       path: {
         id: string;
@@ -6480,7 +6480,7 @@ export interface operations {
     };
   };
   /** Delete Lead */
-  delete_lead_leads__id__delete: {
+  delete_lead_api_v1_leads__id__delete: {
     parameters: {
       path: {
         id: string;
@@ -6500,7 +6500,7 @@ export interface operations {
     };
   };
   /** Update Lead */
-  update_lead_leads__id__patch: {
+  update_lead_api_v1_leads__id__patch: {
     parameters: {
       path: {
         id: string;
@@ -6527,7 +6527,7 @@ export interface operations {
     };
   };
   /** Create Lead Registration */
-  create_lead_registration_leads__id__registration_post: {
+  create_lead_registration_api_v1_leads__id__registration_post: {
     parameters: {
       path: {
         id: string;
@@ -6549,7 +6549,7 @@ export interface operations {
     };
   };
   /** Delete Lead Registration */
-  delete_lead_registration_leads__id__registration_delete: {
+  delete_lead_registration_api_v1_leads__id__registration_delete: {
     parameters: {
       path: {
         id: string;
@@ -6569,7 +6569,7 @@ export interface operations {
     };
   };
   /** Update Lead Registration */
-  update_lead_registration_leads__id__registration_patch: {
+  update_lead_registration_api_v1_leads__id__registration_patch: {
     parameters: {
       path: {
         id: string;
@@ -6596,7 +6596,7 @@ export interface operations {
     };
   };
   /** Read Lead Comments */
-  read_lead_comments_leads__id__comments_get: {
+  read_lead_comments_api_v1_leads__id__comments_get: {
     parameters: {
       path: {
         id: string;
@@ -6618,7 +6618,7 @@ export interface operations {
     };
   };
   /** Create Lead Comment */
-  create_lead_comment_leads__id__comments_post: {
+  create_lead_comment_api_v1_leads__id__comments_post: {
     parameters: {
       path: {
         id: string;
@@ -6645,7 +6645,7 @@ export interface operations {
     };
   };
   /** Create Lead Comment Reply */
-  create_lead_comment_reply_leads__id__comments__comment_id__replies_post: {
+  create_lead_comment_reply_api_v1_leads__id__comments__comment_id__replies_post: {
     parameters: {
       path: {
         comment_id: string;
@@ -6673,7 +6673,7 @@ export interface operations {
     };
   };
   /** Purge Leads */
-  purge_leads_leads_purge_delete: {
+  purge_leads_api_v1_leads_purge_delete: {
     responses: {
       /** @description Successful Response */
       202: {
@@ -6686,7 +6686,7 @@ export interface operations {
     };
   };
   /** Seed Leads */
-  seed_leads_leads_seed_post: {
+  seed_leads_api_v1_leads_seed_post: {
     responses: {
       /** @description Successful Response */
       202: {
@@ -6697,7 +6697,7 @@ export interface operations {
     };
   };
   /** Get Company */
-  get_company_companies__id__get: {
+  get_company_api_v1_companies__id__get: {
     parameters: {
       path: {
         id: string;
@@ -6719,7 +6719,7 @@ export interface operations {
     };
   };
   /** Update Company */
-  update_company_companies__id__put: {
+  update_company_api_v1_companies__id__put: {
     parameters: {
       path: {
         id: string;
@@ -6746,7 +6746,7 @@ export interface operations {
     };
   };
   /** Delete Company */
-  delete_company_companies__id__delete: {
+  delete_company_api_v1_companies__id__delete: {
     parameters: {
       path: {
         id: string;
@@ -6766,7 +6766,7 @@ export interface operations {
     };
   };
   /** Get Companies */
-  get_companies_companies__get: {
+  get_companies_api_v1_companies__get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -6777,7 +6777,7 @@ export interface operations {
     };
   };
   /** Create Company */
-  create_company_companies__post: {
+  create_company_api_v1_companies__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["CompanyCreate"];
@@ -6799,7 +6799,7 @@ export interface operations {
     };
   };
   /** Get Company Leads */
-  get_company_leads_companies__id__leads_get: {
+  get_company_leads_api_v1_companies__id__leads_get: {
     parameters: {
       path: {
         id: string;
@@ -6821,7 +6821,7 @@ export interface operations {
     };
   };
   /** Extract Company */
-  extract_company_companies_extract_post: {
+  extract_company_api_v1_companies_extract_post: {
     parameters: {
       query: {
         /** @description URL for data extraction */
@@ -6844,7 +6844,7 @@ export interface operations {
     };
   };
   /** Read Orch Pipelines */
-  read_orch_pipelines_data_orchestration_pipelines_get: {
+  read_orch_pipelines_api_v1_data_orchestration_pipelines_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -6855,7 +6855,7 @@ export interface operations {
     };
   };
   /** Create Orch Pipeline */
-  create_orch_pipeline_data_orchestration_pipelines_post: {
+  create_orch_pipeline_api_v1_data_orchestration_pipelines_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["OrchestrationPipelineCreate"];
@@ -6877,7 +6877,7 @@ export interface operations {
     };
   };
   /** Read Orch Pipeline */
-  read_orch_pipeline_data_orchestration_pipelines__id__get: {
+  read_orch_pipeline_api_v1_data_orchestration_pipelines__id__get: {
     parameters: {
       path: {
         id: string;
@@ -6899,7 +6899,7 @@ export interface operations {
     };
   };
   /** Update Orch Pipeline */
-  update_orch_pipeline_data_orchestration_pipelines__id__put: {
+  update_orch_pipeline_api_v1_data_orchestration_pipelines__id__put: {
     parameters: {
       path: {
         id: string;
@@ -6926,7 +6926,7 @@ export interface operations {
     };
   };
   /** Delete Orch Pipeline */
-  delete_orch_pipeline_data_orchestration_pipelines__id__delete: {
+  delete_orch_pipeline_api_v1_data_orchestration_pipelines__id__delete: {
     parameters: {
       path: {
         id: string;
@@ -6946,7 +6946,7 @@ export interface operations {
     };
   };
   /** Read Orch Events */
-  read_orch_events_data_orchestration_events_get: {
+  read_orch_events_api_v1_data_orchestration_events_get: {
     parameters: {
       query?: {
         /** @description Filter by run status */
@@ -6975,7 +6975,7 @@ export interface operations {
     };
   };
   /** Create Orch Event */
-  create_orch_event_data_orchestration_events_post: {
+  create_orch_event_api_v1_data_orchestration_events_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["OrchestrationEventCreate"];
@@ -7000,7 +7000,7 @@ export interface operations {
    * Prune Orchestration Events
    * @description Delete completed/failed orchestration events older than the specified age.
    */
-  prune_orchestration_events_data_orchestration_events_prune_delete: {
+  prune_orchestration_events_api_v1_data_orchestration_events_prune_delete: {
     parameters: {
       query?: {
         /** @description Delete events older than N days */
@@ -7023,7 +7023,7 @@ export interface operations {
     };
   };
   /** Read Orch Event */
-  read_orch_event_data_orchestration_events__id__get: {
+  read_orch_event_api_v1_data_orchestration_events__id__get: {
     parameters: {
       path: {
         id: string;
@@ -7045,7 +7045,7 @@ export interface operations {
     };
   };
   /** Update Orch Event */
-  update_orch_event_data_orchestration_events__id__put: {
+  update_orch_event_api_v1_data_orchestration_events__id__put: {
     parameters: {
       path: {
         id: string;
@@ -7075,7 +7075,7 @@ export interface operations {
    * Retry Orch Event
    * @description Retry a failed orchestration event by creating a new event linked to the original.
    */
-  retry_orch_event_data_orchestration_events__event_id__retry_post: {
+  retry_orch_event_api_v1_data_orchestration_events__event_id__retry_post: {
     parameters: {
       path: {
         event_id: string;
@@ -7097,7 +7097,7 @@ export interface operations {
     };
   };
   /** Get Current User Contacts */
-  get_current_user_contacts_contacts__get: {
+  get_current_user_contacts_api_v1_contacts__get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -7108,7 +7108,7 @@ export interface operations {
     };
   };
   /** Create User Contact */
-  create_user_contact_contacts__post: {
+  create_user_contact_api_v1_contacts__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ContactCreate"];
@@ -7130,7 +7130,7 @@ export interface operations {
     };
   };
   /** Get User Contact */
-  get_user_contact_contacts__contact_id__get: {
+  get_user_contact_api_v1_contacts__contact_id__get: {
     parameters: {
       query: {
         id: string;
@@ -7152,7 +7152,7 @@ export interface operations {
     };
   };
   /** Update User Contact */
-  update_user_contact_contacts__contact_id__put: {
+  update_user_contact_api_v1_contacts__contact_id__put: {
     parameters: {
       query: {
         id: string;
@@ -7179,7 +7179,7 @@ export interface operations {
     };
   };
   /** Delete User Contact */
-  delete_user_contact_contacts__contact_id__delete: {
+  delete_user_contact_api_v1_contacts__contact_id__delete: {
     parameters: {
       query: {
         id: string;
@@ -7199,7 +7199,7 @@ export interface operations {
     };
   };
   /** Extract Contacts */
-  extract_contacts_contacts_extract_post: {
+  extract_contacts_api_v1_contacts_extract_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ExtractorRun"];
@@ -7221,7 +7221,7 @@ export interface operations {
     };
   };
   /** Seed Contacts */
-  seed_contacts_contacts_seed_post: {
+  seed_contacts_api_v1_contacts_seed_post: {
     responses: {
       /** @description Successful Response */
       202: {
@@ -7232,7 +7232,7 @@ export interface operations {
     };
   };
   /** Read Current User Experiences */
-  read_current_user_experiences_experiences__get: {
+  read_current_user_experiences_api_v1_experiences__get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -7243,7 +7243,7 @@ export interface operations {
     };
   };
   /** Create User Experience */
-  create_user_experience_experiences__post: {
+  create_user_experience_api_v1_experiences__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ExperienceCreate"];
@@ -7265,7 +7265,7 @@ export interface operations {
     };
   };
   /** Read User Experience */
-  read_user_experience_experiences__experience_id__get: {
+  read_user_experience_api_v1_experiences__experience_id__get: {
     parameters: {
       query: {
         id: string;
@@ -7287,7 +7287,7 @@ export interface operations {
     };
   };
   /** Update User Experience */
-  update_user_experience_experiences__experience_id__put: {
+  update_user_experience_api_v1_experiences__experience_id__put: {
     parameters: {
       query: {
         id: string;
@@ -7314,7 +7314,7 @@ export interface operations {
     };
   };
   /** Delete User Experience */
-  delete_user_experience_experiences__experience_id__delete: {
+  delete_user_experience_api_v1_experiences__experience_id__delete: {
     parameters: {
       query: {
         id: string;
@@ -7334,7 +7334,7 @@ export interface operations {
     };
   };
   /** Extract User Experiences */
-  extract_user_experiences_experiences_extract_post: {
+  extract_user_experiences_api_v1_experiences_extract_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ExtractorRun"];
@@ -7356,7 +7356,7 @@ export interface operations {
     };
   };
   /** Seed Experiences */
-  seed_experiences_experiences_seed_post: {
+  seed_experiences_api_v1_experiences_seed_post: {
     responses: {
       /** @description Successful Response */
       202: {
@@ -7367,10 +7367,10 @@ export interface operations {
     };
   };
   /** Extract User Skills */
-  extract_user_skills_skills_extract_post: {
+  extract_user_skills_api_v1_skills_extract_post: {
     requestBody?: {
       content: {
-        "multipart/form-data": components["schemas"]["Body_extract_user_skills_skills_extract_post"];
+        "multipart/form-data": components["schemas"]["Body_extract_user_skills_api_v1_skills_extract_post"];
       };
     };
     responses: {
@@ -7391,7 +7391,7 @@ export interface operations {
     };
   };
   /** Get Current User Skills */
-  get_current_user_skills_skills__get: {
+  get_current_user_skills_api_v1_skills__get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -7402,7 +7402,7 @@ export interface operations {
     };
   };
   /** Create User Skill */
-  create_user_skill_skills__post: {
+  create_user_skill_api_v1_skills__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["SkillCreate"];
@@ -7424,7 +7424,7 @@ export interface operations {
     };
   };
   /** Get User Skill */
-  get_user_skill_skills__skill_id__get: {
+  get_user_skill_api_v1_skills__skill_id__get: {
     parameters: {
       query: {
         id: string;
@@ -7446,7 +7446,7 @@ export interface operations {
     };
   };
   /** Update User Skill */
-  update_user_skill_skills__skill_id__put: {
+  update_user_skill_api_v1_skills__skill_id__put: {
     parameters: {
       query: {
         id: string;
@@ -7473,7 +7473,7 @@ export interface operations {
     };
   };
   /** Delete User Skill */
-  delete_user_skill_skills__skill_id__delete: {
+  delete_user_skill_api_v1_skills__skill_id__delete: {
     parameters: {
       query: {
         id: string;
@@ -7493,7 +7493,7 @@ export interface operations {
     };
   };
   /** Seed Skills */
-  seed_skills_skills_seed_post: {
+  seed_skills_api_v1_skills_seed_post: {
     responses: {
       /** @description Successful Response */
       202: {
@@ -7507,7 +7507,7 @@ export interface operations {
    * Get Applications
    * @description Get all applications for the current user.
    */
-  get_applications_applications__get: {
+  get_applications_api_v1_applications__get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -7518,7 +7518,7 @@ export interface operations {
     };
   };
   /** Create Application */
-  create_application_applications__post: {
+  create_application_api_v1_applications__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ApplicationCreate"];
@@ -7540,7 +7540,7 @@ export interface operations {
     };
   };
   /** Get Application By Id */
-  get_application_by_id_applications__id__get: {
+  get_application_by_id_api_v1_applications__id__get: {
     parameters: {
       path: {
         id: string;
@@ -7562,7 +7562,7 @@ export interface operations {
     };
   };
   /** Delete Application */
-  delete_application_applications__id__delete: {
+  delete_application_api_v1_applications__id__delete: {
     parameters: {
       path: {
         id: string;
@@ -7582,7 +7582,7 @@ export interface operations {
     };
   };
   /** Update Application */
-  update_application_applications__id__patch: {
+  update_application_api_v1_applications__id__patch: {
     parameters: {
       path: {
         id: string;
@@ -7616,7 +7616,7 @@ export interface operations {
    * ``cover_letters/``, and ``documents/`` — each holding PDF files derived
    * from the application's attached documents.
    */
-  export_application_materials_applications__id__export_get: {
+  export_application_materials_api_v1_applications__id__export_get: {
     parameters: {
       path: {
         id: string;
@@ -7638,7 +7638,7 @@ export interface operations {
     };
   };
   /** Get Application Documents */
-  get_application_documents_applications__id__documents_get: {
+  get_application_documents_api_v1_applications__id__documents_get: {
     parameters: {
       path: {
         id: string;
@@ -7660,7 +7660,7 @@ export interface operations {
     };
   };
   /** Add Document To Application */
-  add_document_to_application_applications__id__documents_post: {
+  add_document_to_application_api_v1_applications__id__documents_post: {
     parameters: {
       path: {
         id: string;
@@ -7687,7 +7687,7 @@ export interface operations {
     };
   };
   /** Detach Document From Application */
-  detach_document_from_application_applications__id__documents__document_id__delete: {
+  detach_document_from_application_api_v1_applications__id__documents__document_id__delete: {
     parameters: {
       path: {
         document_id: string;
@@ -7711,10 +7711,10 @@ export interface operations {
    * Upload Document
    * @description Upload a PDF file, extract its text, and create a new Document + v1.
    */
-  upload_document_documents_upload_post: {
+  upload_document_api_v1_documents_upload_post: {
     requestBody: {
       content: {
-        "multipart/form-data": components["schemas"]["Body_upload_document_documents_upload_post"];
+        "multipart/form-data": components["schemas"]["Body_upload_document_api_v1_documents_upload_post"];
       };
     };
     responses: {
@@ -7736,7 +7736,7 @@ export interface operations {
    * Get Pinned Documents
    * @description Return the user's pinned (active/canonical) documents — at most one per kind.
    */
-  get_pinned_documents_documents_pinned_get: {
+  get_pinned_documents_api_v1_documents_pinned_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -7747,7 +7747,7 @@ export interface operations {
     };
   };
   /** List Documents */
-  list_documents_documents__get: {
+  list_documents_api_v1_documents__get: {
     parameters: {
       query?: {
         /** @description Filter by kind */
@@ -7779,7 +7779,7 @@ export interface operations {
    * Create Document
    * @description Create a document with its initial version (v1).
    */
-  create_document_documents__post: {
+  create_document_api_v1_documents__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["DocumentCreate"];
@@ -7804,7 +7804,7 @@ export interface operations {
    * List Shared With Me
    * @description List documents that other users have shared with the current user.
    */
-  list_shared_with_me_documents_shared_with_me_get: {
+  list_shared_with_me_api_v1_documents_shared_with_me_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -7818,7 +7818,7 @@ export interface operations {
    * List Share Candidates
    * @description Look up authenticated share candidates for a specific document.
    */
-  list_share_candidates_documents__document_id__share_candidates_get: {
+  list_share_candidates_api_v1_documents__document_id__share_candidates_get: {
     parameters: {
       query?: {
         /** @description Search by name, email, or headline */
@@ -7854,7 +7854,7 @@ export interface operations {
    * If ``document_id`` is provided the generated content is appended as a new
    * version; otherwise a brand-new Document is created.
    */
-  generate_document_documents_generate_post: {
+  generate_document_api_v1_documents_generate_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["DocumentGenerateRequest"];
@@ -7876,7 +7876,7 @@ export interface operations {
     };
   };
   /** Seed Documents */
-  seed_documents_documents_seed_post: {
+  seed_documents_api_v1_documents_seed_post: {
     responses: {
       /** @description Successful Response */
       202: {
@@ -7887,7 +7887,7 @@ export interface operations {
     };
   };
   /** Get Document Detail */
-  get_document_detail_documents__document_id__get: {
+  get_document_detail_api_v1_documents__document_id__get: {
     parameters: {
       path: {
         document_id: string;
@@ -7909,7 +7909,7 @@ export interface operations {
     };
   };
   /** Delete Document */
-  delete_document_documents__document_id__delete: {
+  delete_document_api_v1_documents__document_id__delete: {
     parameters: {
       path: {
         document_id: string;
@@ -7929,7 +7929,7 @@ export interface operations {
     };
   };
   /** Update Document */
-  update_document_documents__document_id__patch: {
+  update_document_api_v1_documents__document_id__patch: {
     parameters: {
       path: {
         document_id: string;
@@ -7959,7 +7959,7 @@ export interface operations {
    * List Document Activity
    * @description Read audit-style activity history for a document.
    */
-  list_document_activity_documents__document_id__activity_get: {
+  list_document_activity_api_v1_documents__document_id__activity_get: {
     parameters: {
       query?: {
         /** @description Maximum activity rows to return */
@@ -7985,7 +7985,7 @@ export interface operations {
     };
   };
   /** List Versions */
-  list_versions_documents__document_id__versions_get: {
+  list_versions_api_v1_documents__document_id__versions_get: {
     parameters: {
       path: {
         document_id: string;
@@ -8007,7 +8007,7 @@ export interface operations {
     };
   };
   /** Create Version */
-  create_version_documents__document_id__versions_post: {
+  create_version_api_v1_documents__document_id__versions_post: {
     parameters: {
       path: {
         document_id: string;
@@ -8034,7 +8034,7 @@ export interface operations {
     };
   };
   /** Get Version */
-  get_version_documents__document_id__versions__version_id__get: {
+  get_version_api_v1_documents__document_id__versions__version_id__get: {
     parameters: {
       path: {
         document_id: string;
@@ -8063,7 +8063,7 @@ export interface operations {
    * When pinning, all other documents of the same kind for this user are
    * unpinned first.
    */
-  pin_document_documents__document_id__pin_post: {
+  pin_document_api_v1_documents__document_id__pin_post: {
     parameters: {
       path: {
         document_id: string;
@@ -8093,7 +8093,7 @@ export interface operations {
    * Download Original
    * @description Download the original uploaded PDF for the head version.
    */
-  download_original_documents__document_id__original_get: {
+  download_original_api_v1_documents__document_id__original_get: {
     parameters: {
       path: {
         document_id: string;
@@ -8115,7 +8115,7 @@ export interface operations {
     };
   };
   /** Download Document */
-  download_document_documents__document_id__download_get: {
+  download_document_api_v1_documents__document_id__download_get: {
     parameters: {
       path: {
         document_id: string;
@@ -8140,7 +8140,7 @@ export interface operations {
    * List Shares
    * @description List all shares for a document (owner only).
    */
-  list_shares_documents__document_id__shares_get: {
+  list_shares_api_v1_documents__document_id__shares_get: {
     parameters: {
       path: {
         document_id: string;
@@ -8165,7 +8165,7 @@ export interface operations {
    * Create Share
    * @description Grant another user access to this document (owner only).
    */
-  create_share_documents__document_id__shares_post: {
+  create_share_api_v1_documents__document_id__shares_post: {
     parameters: {
       path: {
         document_id: string;
@@ -8195,7 +8195,7 @@ export interface operations {
    * Delete Share
    * @description Revoke a share (owner only).
    */
-  delete_share_documents__document_id__shares__share_id__delete: {
+  delete_share_api_v1_documents__document_id__shares__share_id__delete: {
     parameters: {
       path: {
         document_id: string;
@@ -8219,7 +8219,7 @@ export interface operations {
    * Update Share
    * @description Update a share's role (owner only).
    */
-  update_share_documents__document_id__shares__share_id__patch: {
+  update_share_api_v1_documents__document_id__shares__share_id__patch: {
     parameters: {
       path: {
         document_id: string;
@@ -8251,7 +8251,7 @@ export interface operations {
    * @description Perform a semantic similarity search across the authenticated user's
    * embedded documents using pgvector cosine distance.
    */
-  search_documents_documents_search_post: {
+  search_documents_api_v1_documents_search_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["DocumentSearchRequest"];
@@ -8278,7 +8278,7 @@ export interface operations {
    * in pgvector for later semantic search.  Replaces any existing embeddings
    * for the same document.
    */
-  embed_document_documents__document_id__embed_post: {
+  embed_document_api_v1_documents__document_id__embed_post: {
     parameters: {
       path: {
         document_id: string;
@@ -8309,7 +8309,7 @@ export interface operations {
    * @description Retrieve relevant document chunks and use them to enrich a job lead
    * description with personalized analysis.
    */
-  enrich_lead_endpoint_documents_rag_enrich_lead_post: {
+  enrich_lead_endpoint_api_v1_documents_rag_enrich_lead_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["LeadEnrichRequest"];
@@ -8334,7 +8334,7 @@ export interface operations {
    * Rank leads by relevance to user profile
    * @description Rank job leads based on the user's embedded document context.
    */
-  rank_leads_endpoint_documents_rag_rank_leads_post: {
+  rank_leads_endpoint_api_v1_documents_rag_rank_leads_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["LeadRankRequest"];
@@ -8359,7 +8359,7 @@ export interface operations {
    * Summarize a company website
    * @description Load a company website, extract text, and return an AI summary.
    */
-  summarize_company_endpoint_documents_rag_summarize_company_post: {
+  summarize_company_endpoint_api_v1_documents_rag_summarize_company_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["CompanySummarizeRequest"];
@@ -8381,7 +8381,7 @@ export interface operations {
     };
   };
   /** Read Current User Educations */
-  read_current_user_educations_education__get: {
+  read_current_user_educations_api_v1_education__get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -8392,7 +8392,7 @@ export interface operations {
     };
   };
   /** Create User Education */
-  create_user_education_education__post: {
+  create_user_education_api_v1_education__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["EducationCreate"];
@@ -8414,7 +8414,7 @@ export interface operations {
     };
   };
   /** Read User Education */
-  read_user_education_education__education_id__get: {
+  read_user_education_api_v1_education__education_id__get: {
     parameters: {
       query: {
         id: string;
@@ -8436,7 +8436,7 @@ export interface operations {
     };
   };
   /** Update User Education */
-  update_user_education_education__education_id__put: {
+  update_user_education_api_v1_education__education_id__put: {
     parameters: {
       query: {
         id: string;
@@ -8463,7 +8463,7 @@ export interface operations {
     };
   };
   /** Delete User Education */
-  delete_user_education_education__education_id__delete: {
+  delete_user_education_api_v1_education__education_id__delete: {
     parameters: {
       query: {
         id: string;
@@ -8485,7 +8485,7 @@ export interface operations {
     };
   };
   /** Extract Education */
-  extract_education_education_extract_post: {
+  extract_education_api_v1_education_extract_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ExtractorRun"];
@@ -8507,7 +8507,7 @@ export interface operations {
     };
   };
   /** Seed Education */
-  seed_education_education_seed_post: {
+  seed_education_api_v1_education_seed_post: {
     responses: {
       /** @description Successful Response */
       202: {
@@ -8518,7 +8518,7 @@ export interface operations {
     };
   };
   /** Read Current User Certificates */
-  read_current_user_certificates_certificate__get: {
+  read_current_user_certificates_api_v1_certificate__get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -8529,7 +8529,7 @@ export interface operations {
     };
   };
   /** Create User Certificate */
-  create_user_certificate_certificate__post: {
+  create_user_certificate_api_v1_certificate__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["CertificateCreate"];
@@ -8551,7 +8551,7 @@ export interface operations {
     };
   };
   /** Read User Certificate */
-  read_user_certificate_certificate__certificate_id__get: {
+  read_user_certificate_api_v1_certificate__certificate_id__get: {
     parameters: {
       query: {
         id: string;
@@ -8573,7 +8573,7 @@ export interface operations {
     };
   };
   /** Update User Certificate */
-  update_user_certificate_certificate__certificate_id__put: {
+  update_user_certificate_api_v1_certificate__certificate_id__put: {
     parameters: {
       query: {
         id: string;
@@ -8600,7 +8600,7 @@ export interface operations {
     };
   };
   /** Delete User Certificate */
-  delete_user_certificate_certificate__certificate_id__delete: {
+  delete_user_certificate_api_v1_certificate__certificate_id__delete: {
     parameters: {
       query: {
         id: string;
@@ -8622,7 +8622,7 @@ export interface operations {
     };
   };
   /** Extract Certificates */
-  extract_certificates_certificate_extract_post: {
+  extract_certificates_api_v1_certificate_extract_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ExtractorRun"];
@@ -8644,7 +8644,7 @@ export interface operations {
     };
   };
   /** Seed Certificates */
-  seed_certificates_certificate_seed_post: {
+  seed_certificates_api_v1_certificate_seed_post: {
     responses: {
       /** @description Successful Response */
       202: {
@@ -8658,7 +8658,7 @@ export interface operations {
    * Get Configuration
    * @description Endpoint to show server configuration.
    */
-  get_configuration_extractor_configurables_get: {
+  get_configuration_api_v1_extractor_configurables_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -8672,7 +8672,7 @@ export interface operations {
    * Suggest Extractor
    * @description Suggest an extractor based on a description.
    */
-  suggest_extractor_extractor_suggest_post: {
+  suggest_extractor_api_v1_extractor_suggest_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["SuggestExtractor"];
@@ -8694,7 +8694,7 @@ export interface operations {
     };
   };
   /** Read Extractor */
-  read_extractor_extractor__id__get: {
+  read_extractor_api_v1_extractor__id__get: {
     parameters: {
       path: {
         id: string;
@@ -8716,7 +8716,7 @@ export interface operations {
     };
   };
   /** Update Extractor */
-  update_extractor_extractor__id__put: {
+  update_extractor_api_v1_extractor__id__put: {
     parameters: {
       path: {
         id: string;
@@ -8743,7 +8743,7 @@ export interface operations {
     };
   };
   /** Delete Extractor */
-  delete_extractor_extractor__id__delete: {
+  delete_extractor_api_v1_extractor__id__delete: {
     parameters: {
       path: {
         id: string;
@@ -8763,7 +8763,7 @@ export interface operations {
     };
   };
   /** Read Extractors */
-  read_extractors_extractor__get: {
+  read_extractors_api_v1_extractor__get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -8774,7 +8774,7 @@ export interface operations {
     };
   };
   /** Create Extractor */
-  create_extractor_extractor__post: {
+  create_extractor_api_v1_extractor__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ExtractorCreate"];
@@ -8796,7 +8796,7 @@ export interface operations {
     };
   };
   /** Get Extractor Examples */
-  get_extractor_examples_extractor__id__examples_get: {
+  get_extractor_examples_api_v1_extractor__id__examples_get: {
     parameters: {
       query?: {
         limit?: number;
@@ -8822,7 +8822,7 @@ export interface operations {
     };
   };
   /** Create Extractor Example */
-  create_extractor_example_extractor__id__examples_post: {
+  create_extractor_example_api_v1_extractor__id__examples_post: {
     parameters: {
       path: {
         id: string;
@@ -8849,7 +8849,7 @@ export interface operations {
     };
   };
   /** List Extractor Versions */
-  list_extractor_versions_extractor__id__versions_get: {
+  list_extractor_versions_api_v1_extractor__id__versions_get: {
     parameters: {
       query?: {
         limit?: number;
@@ -8875,7 +8875,7 @@ export interface operations {
     };
   };
   /** Delete Extractor Example */
-  delete_extractor_example_extractor__id__examples__example_id__delete: {
+  delete_extractor_example_api_v1_extractor__id__examples__example_id__delete: {
     parameters: {
       path: {
         example_id: string;
@@ -8899,7 +8899,7 @@ export interface operations {
    * Extractor Runner
    * @description Run an extractor on a given payload
    */
-  extractor_runner_extractor__id__run_post: {
+  extractor_runner_api_v1_extractor__id__run_post: {
     parameters: {
       path: {
         id: string;
@@ -8907,7 +8907,7 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "multipart/form-data": components["schemas"]["Body_extractor_runner_extractor__id__run_post"];
+        "multipart/form-data": components["schemas"]["Body_extractor_runner_api_v1_extractor__id__run_post"];
       };
     };
     responses: {
@@ -8929,7 +8929,7 @@ export interface operations {
    * Retry Extractor Run
    * @description Retry a failed extractor run by re-executing against the same source.
    */
-  retry_extractor_run_extractor__id__run__event_id__retry_post: {
+  retry_extractor_run_api_v1_extractor__id__run__event_id__retry_post: {
     parameters: {
       path: {
         event_id: string;
@@ -8952,7 +8952,7 @@ export interface operations {
     };
   };
   /** List Crawler Pipelines */
-  list_crawler_pipelines_crawlers_pipelines_get: {
+  list_crawler_pipelines_api_v1_crawlers_pipelines_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -8963,7 +8963,7 @@ export interface operations {
     };
   };
   /** Create Crawler Pipeline */
-  create_crawler_pipeline_crawlers_pipelines_post: {
+  create_crawler_pipeline_api_v1_crawlers_pipelines_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["CrawlerPipelineCreate"];
@@ -8985,7 +8985,7 @@ export interface operations {
     };
   };
   /** Get Crawler Pipeline */
-  get_crawler_pipeline_crawlers_pipelines__pipeline_id__get: {
+  get_crawler_pipeline_api_v1_crawlers_pipelines__pipeline_id__get: {
     parameters: {
       path: {
         pipeline_id: string;
@@ -9007,7 +9007,7 @@ export interface operations {
     };
   };
   /** Update Crawler Pipeline */
-  update_crawler_pipeline_crawlers_pipelines__pipeline_id__patch: {
+  update_crawler_pipeline_api_v1_crawlers_pipelines__pipeline_id__patch: {
     parameters: {
       path: {
         pipeline_id: string;
@@ -9034,7 +9034,7 @@ export interface operations {
     };
   };
   /** Trigger Crawler Run */
-  trigger_crawler_run_crawlers_pipelines__pipeline_id__runs_post: {
+  trigger_crawler_run_api_v1_crawlers_pipelines__pipeline_id__runs_post: {
     parameters: {
       path: {
         pipeline_id: string;
@@ -9056,7 +9056,7 @@ export interface operations {
     };
   };
   /** List Crawler Runs */
-  list_crawler_runs_crawlers_runs_get: {
+  list_crawler_runs_api_v1_crawlers_runs_get: {
     parameters: {
       query?: {
         /** @description Filter by pipeline source */
@@ -9094,7 +9094,7 @@ export interface operations {
    * Prune Crawler Runs
    * @description Delete completed or terminal crawler runs older than the specified age.
    */
-  prune_crawler_runs_crawlers_runs_prune_delete: {
+  prune_crawler_runs_api_v1_crawlers_runs_prune_delete: {
     parameters: {
       query?: {
         /** @description Delete runs older than N days */
@@ -9117,7 +9117,7 @@ export interface operations {
     };
   };
   /** Get Crawler Run */
-  get_crawler_run_crawlers_runs__run_id__get: {
+  get_crawler_run_api_v1_crawlers_runs__run_id__get: {
     parameters: {
       path: {
         run_id: string;
@@ -9139,7 +9139,7 @@ export interface operations {
     };
   };
   /** Cancel Crawler Run */
-  cancel_crawler_run_crawlers_runs__run_id__cancel_post: {
+  cancel_crawler_run_api_v1_crawlers_runs__run_id__cancel_post: {
     parameters: {
       path: {
         run_id: string;
@@ -9161,7 +9161,7 @@ export interface operations {
     };
   };
   /** Pause Crawler Run */
-  pause_crawler_run_crawlers_runs__run_id__pause_post: {
+  pause_crawler_run_api_v1_crawlers_runs__run_id__pause_post: {
     parameters: {
       path: {
         run_id: string;
@@ -9183,7 +9183,7 @@ export interface operations {
     };
   };
   /** Resume Crawler Run */
-  resume_crawler_run_crawlers_runs__run_id__resume_post: {
+  resume_crawler_run_api_v1_crawlers_runs__run_id__resume_post: {
     parameters: {
       path: {
         run_id: string;
@@ -9205,7 +9205,7 @@ export interface operations {
     };
   };
   /** Retry Crawler Run */
-  retry_crawler_run_crawlers_runs__run_id__retry_post: {
+  retry_crawler_run_api_v1_crawlers_runs__run_id__retry_post: {
     parameters: {
       path: {
         run_id: string;
@@ -9233,7 +9233,7 @@ export interface operations {
    * Only discoverable, active users are returned. ``superusers_only=true`` narrows
    * results to Baldin superusers.
    */
-  list_directory_directory__get: {
+  list_directory_api_v1_directory__get: {
     parameters: {
       query?: {
         /** @description Search by name or headline */
@@ -9271,7 +9271,7 @@ export interface operations {
    * Read Public Profile
    * @description View another user's public profile.
    */
-  read_public_profile_directory__user_id__get: {
+  read_public_profile_api_v1_directory__user_id__get: {
     parameters: {
       path: {
         user_id: string;
@@ -9296,7 +9296,7 @@ export interface operations {
    * List Connections
    * @description List connections for the current user (both sent and received).
    */
-  list_connections_connections__get: {
+  list_connections_api_v1_connections__get: {
     parameters: {
       query?: {
         /** @description Filter by connection status */
@@ -9331,7 +9331,7 @@ export interface operations {
    * Requests to superusers are available to all authenticated users. Requests to
    * non-superusers still require a Starter subscription or above.
    */
-  send_connection_request_connections__post: {
+  send_connection_request_api_v1_connections__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ConnectionCreate"];
@@ -9356,7 +9356,7 @@ export interface operations {
    * Accept Connection
    * @description Accept a pending connection request. Only the addressee can accept.
    */
-  accept_connection_connections__id__accept_patch: {
+  accept_connection_api_v1_connections__id__accept_patch: {
     parameters: {
       path: {
         id: string;
@@ -9381,7 +9381,7 @@ export interface operations {
    * Decline Connection
    * @description Decline a pending connection request. Only the addressee can decline.
    */
-  decline_connection_connections__id__decline_patch: {
+  decline_connection_api_v1_connections__id__decline_patch: {
     parameters: {
       path: {
         id: string;
@@ -9406,7 +9406,7 @@ export interface operations {
    * Remove Connection
    * @description Remove an accepted connection or cancel a pending request. Either party can do this.
    */
-  remove_connection_connections__id__delete: {
+  remove_connection_api_v1_connections__id__delete: {
     parameters: {
       path: {
         id: string;
@@ -9429,7 +9429,7 @@ export interface operations {
    * Block Connection
    * @description Block a user via an existing connection record. Sets status to blocked.
    */
-  block_connection_connections__id__block_post: {
+  block_connection_api_v1_connections__id__block_post: {
     parameters: {
       path: {
         id: string;
@@ -9454,7 +9454,7 @@ export interface operations {
    * Get Total Unread
    * @description Total unread message count across all conversations (for sidebar badge).
    */
-  get_total_unread_conversations_unread_get: {
+  get_total_unread_api_v1_conversations_unread_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -9468,7 +9468,7 @@ export interface operations {
    * List Conversations
    * @description List the current user's conversations, sorted by most recent message.
    */
-  list_conversations_conversations__get: {
+  list_conversations_api_v1_conversations__get: {
     parameters: {
       query?: {
         page?: number;
@@ -9494,7 +9494,7 @@ export interface operations {
    * Create Conversation
    * @description Create a DM or group conversation.
    */
-  create_conversation_conversations__post: {
+  create_conversation_api_v1_conversations__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ConversationCreate"];
@@ -9519,7 +9519,7 @@ export interface operations {
    * Get Conversation
    * @description Get conversation detail with paginated messages. Auto-marks as read.
    */
-  get_conversation_conversations__conversation_id__get: {
+  get_conversation_api_v1_conversations__conversation_id__get: {
     parameters: {
       query?: {
         page?: number;
@@ -9548,7 +9548,7 @@ export interface operations {
    * Send Message
    * @description Send a message in a conversation.
    */
-  send_message_conversations__conversation_id__messages_post: {
+  send_message_api_v1_conversations__conversation_id__messages_post: {
     parameters: {
       path: {
         conversation_id: string;
@@ -9578,7 +9578,7 @@ export interface operations {
    * Delete Message
    * @description Delete your own message (hard delete).
    */
-  delete_message_conversations__conversation_id__messages__message_id__delete: {
+  delete_message_api_v1_conversations__conversation_id__messages__message_id__delete: {
     parameters: {
       path: {
         conversation_id: string;
@@ -9602,7 +9602,7 @@ export interface operations {
    * Edit Message
    * @description Edit your own message.
    */
-  edit_message_conversations__conversation_id__messages__message_id__patch: {
+  edit_message_api_v1_conversations__conversation_id__messages__message_id__patch: {
     parameters: {
       path: {
         conversation_id: string;
@@ -9633,7 +9633,7 @@ export interface operations {
    * Mark Conversation Read
    * @description Mark a conversation as read (update last_read_at).
    */
-  mark_conversation_read_conversations__conversation_id__read_post: {
+  mark_conversation_read_api_v1_conversations__conversation_id__read_post: {
     parameters: {
       path: {
         conversation_id: string;
@@ -9656,7 +9656,7 @@ export interface operations {
    * Add Participant
    * @description Add a participant to a group conversation. Only admins can add.
    */
-  add_participant_conversations__conversation_id__participants_post: {
+  add_participant_api_v1_conversations__conversation_id__participants_post: {
     parameters: {
       query: {
         /** @description User ID to add */
@@ -9685,7 +9685,7 @@ export interface operations {
    * Remove Participant
    * @description Remove a participant or leave a group. Admins can remove others; anyone can leave.
    */
-  remove_participant_conversations__conversation_id__participants__target_user_id__delete: {
+  remove_participant_api_v1_conversations__conversation_id__participants__target_user_id__delete: {
     parameters: {
       path: {
         conversation_id: string;
@@ -9706,7 +9706,7 @@ export interface operations {
     };
   };
   /** Request Collaboration Bootstrap */
-  request_collaboration_bootstrap_documents__document_id__collaborate_bootstrap_post: {
+  request_collaboration_bootstrap_api_v1_documents__document_id__collaborate_bootstrap_post: {
     parameters: {
       path: {
         document_id: string;
@@ -9728,7 +9728,7 @@ export interface operations {
     };
   };
   /** List Action Items */
-  list_action_items_action_items__get: {
+  list_action_items_api_v1_action_items__get: {
     parameters: {
       query?: {
         status?: components["schemas"]["ActionItemStatus"] | null;
@@ -9757,7 +9757,7 @@ export interface operations {
     };
   };
   /** Create Action Item */
-  create_action_item_action_items__post: {
+  create_action_item_api_v1_action_items__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ActionItemCreate"];
@@ -9782,7 +9782,7 @@ export interface operations {
    * Reorder Action Items
    * @description Set sort_order for action items based on position in item_ids array.
    */
-  reorder_action_items_action_items_reorder_post: {
+  reorder_action_items_api_v1_action_items_reorder_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ActionItemReorder"];
@@ -9802,7 +9802,7 @@ export interface operations {
     };
   };
   /** Get Action Item */
-  get_action_item_action_items__id__get: {
+  get_action_item_api_v1_action_items__id__get: {
     parameters: {
       path: {
         id: string;
@@ -9824,7 +9824,7 @@ export interface operations {
     };
   };
   /** Delete Action Item */
-  delete_action_item_action_items__id__delete: {
+  delete_action_item_api_v1_action_items__id__delete: {
     parameters: {
       path: {
         id: string;
@@ -9844,7 +9844,7 @@ export interface operations {
     };
   };
   /** Update Action Item */
-  update_action_item_action_items__id__patch: {
+  update_action_item_api_v1_action_items__id__patch: {
     parameters: {
       path: {
         id: string;
@@ -9871,7 +9871,7 @@ export interface operations {
     };
   };
   /** Create Action Item From Application */
-  create_action_item_from_application_action_items_from_application__application_id__post: {
+  create_action_item_from_application_api_v1_action_items_from_application__application_id__post: {
     parameters: {
       path: {
         application_id: string;
@@ -9893,7 +9893,7 @@ export interface operations {
     };
   };
   /** Get Activity Feed */
-  get_activity_feed_activity_feed__get: {
+  get_activity_feed_api_v1_activity_feed__get: {
     parameters: {
       query?: {
         page?: number;
@@ -9918,7 +9918,7 @@ export interface operations {
     };
   };
   /** Get Command Center Summary */
-  get_command_center_summary_activity_feed_summary_get: {
+  get_command_center_summary_api_v1_activity_feed_summary_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -9932,7 +9932,7 @@ export interface operations {
    * List Review Items
    * @description List all items pending human review.
    */
-  list_review_items_review_items_get: {
+  list_review_items_api_v1_review_items_get: {
     parameters: {
       query?: {
         /** @description Filter by item type */
@@ -9957,7 +9957,7 @@ export interface operations {
     };
   };
   /** Approve Item */
-  approve_item_review_items__item_type___item_id__approve_post: {
+  approve_item_api_v1_review_items__item_type___item_id__approve_post: {
     parameters: {
       path: {
         item_type: components["schemas"]["ReviewItemType"];
@@ -9980,7 +9980,7 @@ export interface operations {
     };
   };
   /** Reject Item */
-  reject_item_review_items__item_type___item_id__reject_post: {
+  reject_item_api_v1_review_items__item_type___item_id__reject_post: {
     parameters: {
       path: {
         item_type: components["schemas"]["ReviewItemType"];
@@ -10003,7 +10003,7 @@ export interface operations {
     };
   };
   /** Batch Review */
-  batch_review_review_items_batch_post: {
+  batch_review_api_v1_review_items_batch_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ReviewBatchRequest"];

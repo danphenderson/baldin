@@ -60,7 +60,7 @@ async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -147,7 +147,7 @@ async def test_activity_feed_empty() -> None:
         email, uid = await _create_user("feed-empty-pass")
         headers = await _auth_headers(client, email, "feed-empty-pass")
 
-        response = await client.get("/activity-feed/", headers=headers)
+        response = await client.get("/api/v1/activity-feed/", headers=headers)
 
     assert response.status_code == 200
     body = response.json()
@@ -164,7 +164,7 @@ async def test_activity_feed_returns_action_completions() -> None:
 
         # Create and complete an action item
         create_resp = await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(title="Completable task"),
             headers=headers,
         )
@@ -172,12 +172,12 @@ async def test_activity_feed_returns_action_completions() -> None:
         item_id = create_resp.json()["id"]
 
         await client.patch(
-            f"/action-items/{item_id}",
+            f"/api/v1/action-items/{item_id}",
             json={"status": "completed"},
             headers=headers,
         )
 
-        response = await client.get("/activity-feed/", headers=headers)
+        response = await client.get("/api/v1/activity-feed/", headers=headers)
 
     assert response.status_code == 200
     body = response.json()
@@ -198,25 +198,25 @@ async def test_activity_feed_pagination() -> None:
         # Create and complete several action items to generate feed events
         for i in range(7):
             create_resp = await client.post(
-                "/action-items/",
+                "/api/v1/action-items/",
                 json=_action_payload(title=f"Paginated task {i}"),
                 headers=headers,
             )
             assert create_resp.status_code == 201
             item_id = create_resp.json()["id"]
             await client.patch(
-                f"/action-items/{item_id}",
+                f"/api/v1/action-items/{item_id}",
                 json={"status": "completed"},
                 headers=headers,
             )
 
         page1 = await client.get(
-            "/activity-feed/",
+            "/api/v1/activity-feed/",
             params={"page": 1, "page_size": 5},
             headers=headers,
         )
         page2 = await client.get(
-            "/activity-feed/",
+            "/api/v1/activity-feed/",
             params={"page": 2, "page_size": 5},
             headers=headers,
         )
@@ -239,14 +239,14 @@ async def test_activity_feed_since_filter() -> None:
 
         # Create and complete an action item now
         create_resp = await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(title="Recent task"),
             headers=headers,
         )
         assert create_resp.status_code == 201
         item_id = create_resp.json()["id"]
         await client.patch(
-            f"/action-items/{item_id}",
+            f"/api/v1/action-items/{item_id}",
             json={"status": "completed"},
             headers=headers,
         )
@@ -254,7 +254,7 @@ async def test_activity_feed_since_filter() -> None:
         # Query with 'since' set to 1 hour ago — should include the item
         since = (datetime.utcnow() - timedelta(hours=1)).isoformat()
         response = await client.get(
-            "/activity-feed/",
+            "/api/v1/activity-feed/",
             params={"since": since},
             headers=headers,
         )
@@ -269,7 +269,7 @@ async def test_activity_feed_since_filter() -> None:
         headers = await _auth_headers(client, email, "feed-since-pass")
         future_since = (datetime.utcnow() + timedelta(days=30)).isoformat()
         response_empty = await client.get(
-            "/activity-feed/",
+            "/api/v1/activity-feed/",
             params={"since": future_since},
             headers=headers,
         )
@@ -289,20 +289,20 @@ async def test_activity_feed_user_isolation() -> None:
 
         # User A creates and completes an action item
         create_resp = await client.post(
-            "/action-items/",
+            "/api/v1/action-items/",
             json=_action_payload(title="A's task"),
             headers=headers_a,
         )
         assert create_resp.status_code == 201
         item_id = create_resp.json()["id"]
         await client.patch(
-            f"/action-items/{item_id}",
+            f"/api/v1/action-items/{item_id}",
             json={"status": "completed"},
             headers=headers_a,
         )
 
         # User B should see no events
-        response = await client.get("/activity-feed/", headers=headers_b)
+        response = await client.get("/api/v1/activity-feed/", headers=headers_b)
 
     assert response.status_code == 200
     body = response.json()
@@ -328,7 +328,7 @@ async def test_summary_endpoint() -> None:
         # Create some action items to be counted
         for i in range(2):
             await client.post(
-                "/action-items/",
+                "/api/v1/action-items/",
                 json=_action_payload(
                     title=f"Summary task {i}",
                     application_id=str(app_id),
@@ -336,7 +336,7 @@ async def test_summary_endpoint() -> None:
                 headers=headers,
             )
 
-        response = await client.get("/activity-feed/summary", headers=headers)
+        response = await client.get("/api/v1/activity-feed/summary", headers=headers)
 
     assert response.status_code == 200
     body = response.json()
@@ -400,7 +400,7 @@ async def test_summary_endpoint_returns_stage_velocity_and_offer_conversion() ->
             ],
         )
 
-        response = await client.get("/activity-feed/summary", headers=headers)
+        response = await client.get("/api/v1/activity-feed/summary", headers=headers)
 
     assert response.status_code == 200
     body = response.json()
@@ -437,7 +437,7 @@ async def test_summary_empty_user() -> None:
         email, uid = await _create_user("feed-summary-empty-pass")
         headers = await _auth_headers(client, email, "feed-summary-empty-pass")
 
-        response = await client.get("/activity-feed/summary", headers=headers)
+        response = await client.get("/api/v1/activity-feed/summary", headers=headers)
 
     assert response.status_code == 200
     body = response.json()

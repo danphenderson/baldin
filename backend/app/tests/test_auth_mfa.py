@@ -65,7 +65,7 @@ async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -84,7 +84,7 @@ async def test_register_empty_password_rejected() -> None:
     await _ensure_db_ready()
     async with _client() as client:
         resp = await client.post(
-            "/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": utils.random_email(),
                 "password": "",
@@ -99,7 +99,7 @@ async def test_register_short_password_rejected() -> None:
     await _ensure_db_ready()
     async with _client() as client:
         resp = await client.post(
-            "/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": utils.random_email(),
                 "password": "Ab1",
@@ -114,7 +114,7 @@ async def test_register_no_uppercase_rejected() -> None:
     await _ensure_db_ready()
     async with _client() as client:
         resp = await client.post(
-            "/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": utils.random_email(),
                 "password": "abcdefg1",
@@ -129,7 +129,7 @@ async def test_register_no_digit_rejected() -> None:
     await _ensure_db_ready()
     async with _client() as client:
         resp = await client.post(
-            "/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": utils.random_email(),
                 "password": "Abcdefgh",
@@ -144,7 +144,7 @@ async def test_register_valid_password_succeeds() -> None:
     await _ensure_db_ready()
     async with _client() as client:
         resp = await client.post(
-            "/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": utils.random_email(),
                 "password": "Str0ngPwd!",
@@ -164,7 +164,7 @@ async def test_login_non_mfa_returns_token() -> None:
     email, _ = await _create_user("Login1Pass")
     async with _client() as client:
         resp = await client.post(
-            "/auth/jwt/login",
+            "/api/v1/auth/jwt/login",
             data={"username": email, "password": "Login1Pass"},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
@@ -185,7 +185,7 @@ async def test_mfa_status_initially_disabled() -> None:
     email, _ = await _create_user("Mfa1Status")
     async with _client() as client:
         headers = await _auth_headers(client, email, "Mfa1Status")
-        resp = await client.get("/auth/mfa/status", headers=headers)
+        resp = await client.get("/api/v1/auth/mfa/status", headers=headers)
     assert resp.status_code == 200
     assert resp.json()["mfa_enabled"] is False
 
@@ -196,7 +196,7 @@ async def test_mfa_setup_returns_secret_and_uri() -> None:
     email, _ = await _create_user("Mfa1Setup")
     async with _client() as client:
         headers = await _auth_headers(client, email, "Mfa1Setup")
-        resp = await client.post("/auth/mfa/setup", headers=headers)
+        resp = await client.post("/api/v1/auth/mfa/setup", headers=headers)
     assert resp.status_code == 200
     body = resp.json()
     assert "secret" in body
@@ -209,7 +209,7 @@ async def test_mfa_setup_persists_secret_encrypted_at_rest() -> None:
     email, user_id = await _create_user("Mfa1Encrypt")
     async with _client() as client:
         headers = await _auth_headers(client, email, "Mfa1Encrypt")
-        resp = await client.post("/auth/mfa/setup", headers=headers)
+        resp = await client.post("/api/v1/auth/mfa/setup", headers=headers)
 
     secret = resp.json()["secret"]
 
@@ -228,7 +228,7 @@ async def test_mfa_verify_activates_mfa() -> None:
         headers = await _auth_headers(client, email, "Mfa1Verify")
 
         # Setup
-        setup_resp = await client.post("/auth/mfa/setup", headers=headers)
+        setup_resp = await client.post("/api/v1/auth/mfa/setup", headers=headers)
         secret = setup_resp.json()["secret"]
 
         # Generate a valid TOTP code
@@ -237,7 +237,7 @@ async def test_mfa_verify_activates_mfa() -> None:
 
         # Verify
         verify_resp = await client.post(
-            "/auth/mfa/verify", json={"code": code}, headers=headers
+            "/api/v1/auth/mfa/verify", json={"code": code}, headers=headers
         )
     assert verify_resp.status_code == 200
     assert verify_resp.json()["mfa_enabled"] is True
@@ -250,10 +250,10 @@ async def test_mfa_verify_invalid_code_rejected() -> None:
     async with _client() as client:
         headers = await _auth_headers(client, email, "Mfa1BadCode")
 
-        await client.post("/auth/mfa/setup", headers=headers)
+        await client.post("/api/v1/auth/mfa/setup", headers=headers)
 
         resp = await client.post(
-            "/auth/mfa/verify", json={"code": "000000"}, headers=headers
+            "/api/v1/auth/mfa/verify", json={"code": "000000"}, headers=headers
         )
     assert resp.status_code == 400
     assert "invalid" in resp.json()["detail"].lower()
@@ -266,13 +266,15 @@ async def test_mfa_setup_blocked_when_already_enabled() -> None:
     async with _client() as client:
         headers = await _auth_headers(client, email, "Mfa1Block")
 
-        setup_resp = await client.post("/auth/mfa/setup", headers=headers)
+        setup_resp = await client.post("/api/v1/auth/mfa/setup", headers=headers)
         secret = setup_resp.json()["secret"]
         code = pyotp.TOTP(secret).now()
-        await client.post("/auth/mfa/verify", json={"code": code}, headers=headers)
+        await client.post(
+            "/api/v1/auth/mfa/verify", json={"code": code}, headers=headers
+        )
 
         # Second setup should fail
-        resp = await client.post("/auth/mfa/setup", headers=headers)
+        resp = await client.post("/api/v1/auth/mfa/setup", headers=headers)
     assert resp.status_code == 400
     assert "already enabled" in resp.json()["detail"].lower()
 
@@ -284,15 +286,17 @@ async def test_mfa_disable_works() -> None:
     async with _client() as client:
         headers = await _auth_headers(client, email, "Mfa1Disable")
 
-        setup_resp = await client.post("/auth/mfa/setup", headers=headers)
+        setup_resp = await client.post("/api/v1/auth/mfa/setup", headers=headers)
         secret = setup_resp.json()["secret"]
         code = pyotp.TOTP(secret).now()
-        await client.post("/auth/mfa/verify", json={"code": code}, headers=headers)
+        await client.post(
+            "/api/v1/auth/mfa/verify", json={"code": code}, headers=headers
+        )
 
         # Disable with a fresh code
         disable_code = pyotp.TOTP(secret).now()
         resp = await client.post(
-            "/auth/mfa/disable", json={"code": disable_code}, headers=headers
+            "/api/v1/auth/mfa/disable", json={"code": disable_code}, headers=headers
         )
     assert resp.status_code == 200
     assert resp.json()["mfa_enabled"] is False
@@ -305,10 +309,10 @@ async def test_mfa_disable_works() -> None:
 
 async def _enable_mfa(client: AsyncClient, headers: dict[str, str]) -> str:
     """Helper: enable MFA for a user and return the TOTP secret."""
-    setup_resp = await client.post("/auth/mfa/setup", headers=headers)
+    setup_resp = await client.post("/api/v1/auth/mfa/setup", headers=headers)
     secret = setup_resp.json()["secret"]
     code = pyotp.TOTP(secret).now()
-    await client.post("/auth/mfa/verify", json={"code": code}, headers=headers)
+    await client.post("/api/v1/auth/mfa/verify", json={"code": code}, headers=headers)
     return secret
 
 
@@ -321,7 +325,7 @@ async def test_login_mfa_returns_challenge() -> None:
         await _enable_mfa(client, headers)
 
         resp = await client.post(
-            "/auth/jwt/login",
+            "/api/v1/auth/jwt/login",
             data={"username": email, "password": "Mfa1Login"},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
@@ -343,7 +347,7 @@ async def test_mfa_login_verify_issues_token() -> None:
 
         # First step: get MFA challenge
         login_resp = await client.post(
-            "/auth/jwt/login",
+            "/api/v1/auth/jwt/login",
             data={"username": email, "password": "Mfa1Full"},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
@@ -352,7 +356,7 @@ async def test_mfa_login_verify_issues_token() -> None:
         # Second step: verify TOTP
         code = pyotp.TOTP(secret).now()
         verify_resp = await client.post(
-            "/auth/mfa/login-verify",
+            "/api/v1/auth/mfa/login-verify",
             json={"mfa_token": mfa_token, "code": code},
         )
     assert verify_resp.status_code == 200
@@ -368,14 +372,14 @@ async def test_mfa_login_verify_bad_code_rejected() -> None:
         await _enable_mfa(client, headers)
 
         login_resp = await client.post(
-            "/auth/jwt/login",
+            "/api/v1/auth/jwt/login",
             data={"username": email, "password": "Mfa1Bad"},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
         mfa_token = login_resp.json()["mfa_token"]
 
         resp = await client.post(
-            "/auth/mfa/login-verify",
+            "/api/v1/auth/mfa/login-verify",
             json={"mfa_token": mfa_token, "code": "000000"},
         )
     assert resp.status_code == 400
@@ -387,7 +391,7 @@ async def test_mfa_login_verify_bad_token_rejected() -> None:
     await _ensure_db_ready()
     async with _client() as client:
         resp = await client.post(
-            "/auth/mfa/login-verify",
+            "/api/v1/auth/mfa/login-verify",
             json={"mfa_token": "garbage.token.here", "code": "123456"},
         )
     assert resp.status_code == 400
@@ -405,10 +409,10 @@ async def test_mfa_admin_reset_disables_target_user() -> None:
         admin_headers = await _auth_headers(client, admin_email, "Admin1Reset")
 
         reset_resp = await client.post(
-            f"/auth/mfa/admin-reset/{user_id}", headers=admin_headers
+            f"/api/v1/auth/mfa/admin-reset/{user_id}", headers=admin_headers
         )
         login_resp = await client.post(
-            "/auth/jwt/login",
+            "/api/v1/auth/jwt/login",
             data={"username": email, "password": "Mfa1Target"},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )

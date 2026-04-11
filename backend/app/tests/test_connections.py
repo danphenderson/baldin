@@ -60,7 +60,7 @@ async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -92,7 +92,7 @@ async def test_create_connection_request() -> None:
         headers = await _auth_headers(client, email_a, "conn-a-pass")
 
         response = await client.post(
-            "/connections/",
+            "/api/v1/connections/",
             json={"addressee_id": str(uid_b), "message": "Let's connect!"},
             headers=headers,
         )
@@ -116,7 +116,7 @@ async def test_free_tier_cannot_create_connection() -> None:
         headers = await _auth_headers(client, email_f, "conn-free-pass")
 
         response = await client.post(
-            "/connections/",
+            "/api/v1/connections/",
             json={"addressee_id": str(uid_t)},
             headers=headers,
         )
@@ -136,7 +136,7 @@ async def test_free_tier_can_create_connection_to_superuser() -> None:
         headers = await _auth_headers(client, email_f, "conn-free-super-pass")
 
         response = await client.post(
-            "/connections/",
+            "/api/v1/connections/",
             json={"addressee_id": str(uid_s)},
             headers=headers,
         )
@@ -156,7 +156,7 @@ async def test_cannot_connect_to_self() -> None:
         headers = await _auth_headers(client, email_s, "conn-self-pass")
 
         response = await client.post(
-            "/connections/",
+            "/api/v1/connections/",
             json={"addressee_id": str(uid_s)},
             headers=headers,
         )
@@ -173,12 +173,12 @@ async def test_duplicate_connection_returns_409() -> None:
         headers = await _auth_headers(client, email_a, "conn-dup-a-pass")
 
         first = await client.post(
-            "/connections/",
+            "/api/v1/connections/",
             json={"addressee_id": str(uid_b)},
             headers=headers,
         )
         second = await client.post(
-            "/connections/",
+            "/api/v1/connections/",
             json={"addressee_id": str(uid_b)},
             headers=headers,
         )
@@ -196,13 +196,13 @@ async def test_list_connections_with_status_filter() -> None:
         headers_a = await _auth_headers(client, email_a, "conn-list-a-pass")
 
         await client.post(
-            "/connections/",
+            "/api/v1/connections/",
             json={"addressee_id": str(uid_b)},
             headers=headers_a,
         )
 
         response = await client.get(
-            "/connections/", params={"status": "pending"}, headers=headers_a
+            "/api/v1/connections/", params={"status": "pending"}, headers=headers_a
         )
 
     assert response.status_code == 200
@@ -224,14 +224,14 @@ async def test_connection_list_exposes_superuser_metadata() -> None:
         headers_a = await _auth_headers(client, email_a, "conn-meta-a-pass")
 
         create_resp = await client.post(
-            "/connections/",
+            "/api/v1/connections/",
             json={"addressee_id": str(uid_s)},
             headers=headers_a,
         )
         assert create_resp.status_code == 201
 
         response = await client.get(
-            "/connections/",
+            "/api/v1/connections/",
             params={"status": "pending", "page": 1, "page_size": 100},
             headers=headers_a,
         )
@@ -256,7 +256,7 @@ async def test_accept_connection() -> None:
         headers_b = await _auth_headers(client, email_b, "conn-acc-b-pass")
 
         create_resp = await client.post(
-            "/connections/",
+            "/api/v1/connections/",
             json={"addressee_id": str(uid_b)},
             headers=headers_a,
         )
@@ -264,13 +264,13 @@ async def test_accept_connection() -> None:
 
         # Requester cannot accept their own request
         wrong_accept = await client.patch(
-            f"/connections/{conn_id}/accept", headers=headers_a
+            f"/api/v1/connections/{conn_id}/accept", headers=headers_a
         )
         assert wrong_accept.status_code == 403
 
         # Addressee can accept
         accept_resp = await client.patch(
-            f"/connections/{conn_id}/accept", headers=headers_b
+            f"/api/v1/connections/{conn_id}/accept", headers=headers_b
         )
 
     assert accept_resp.status_code == 200
@@ -287,7 +287,7 @@ async def test_decline_connection() -> None:
         headers_b = await _auth_headers(client, email_b, "conn-dec-b-pass")
 
         create_resp = await client.post(
-            "/connections/",
+            "/api/v1/connections/",
             json={"addressee_id": str(uid_b)},
             headers=headers_a,
         )
@@ -295,13 +295,13 @@ async def test_decline_connection() -> None:
 
         # Requester cannot decline their own request
         wrong_decline = await client.patch(
-            f"/connections/{conn_id}/decline", headers=headers_a
+            f"/api/v1/connections/{conn_id}/decline", headers=headers_a
         )
         assert wrong_decline.status_code == 403
 
         # Addressee can decline
         decline_resp = await client.patch(
-            f"/connections/{conn_id}/decline", headers=headers_b
+            f"/api/v1/connections/{conn_id}/decline", headers=headers_b
         )
 
     assert decline_resp.status_code == 200
@@ -318,17 +318,19 @@ async def test_remove_connection() -> None:
         headers_b = await _auth_headers(client, email_b, "conn-rm-b-pass")
 
         create_resp = await client.post(
-            "/connections/",
+            "/api/v1/connections/",
             json={"addressee_id": str(uid_b)},
             headers=headers_a,
         )
         conn_id = create_resp.json()["id"]
 
         # Accept first
-        await client.patch(f"/connections/{conn_id}/accept", headers=headers_b)
+        await client.patch(f"/api/v1/connections/{conn_id}/accept", headers=headers_b)
 
         # Either party can remove
-        delete_resp = await client.delete(f"/connections/{conn_id}", headers=headers_a)
+        delete_resp = await client.delete(
+            f"/api/v1/connections/{conn_id}", headers=headers_a
+        )
 
     assert delete_resp.status_code == 204
 
@@ -343,14 +345,14 @@ async def test_block_connection() -> None:
         headers_b = await _auth_headers(client, email_b, "conn-blk-b-pass")
 
         create_resp = await client.post(
-            "/connections/",
+            "/api/v1/connections/",
             json={"addressee_id": str(uid_b)},
             headers=headers_a,
         )
         conn_id = create_resp.json()["id"]
 
         block_resp = await client.post(
-            f"/connections/{conn_id}/block", headers=headers_b
+            f"/api/v1/connections/{conn_id}/block", headers=headers_b
         )
 
     assert block_resp.status_code == 200

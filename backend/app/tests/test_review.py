@@ -70,7 +70,7 @@ async def _auth_headers(
 ) -> dict[str, str]:
     app.state.limiter.reset()
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -90,7 +90,7 @@ async def test_review_items_empty():
     async with _client() as client:
         email, _ = await _create_user("super-review-empty", is_superuser=True)
         headers = await _auth_headers(client, email, "super-review-empty")
-        resp = await client.get("/review/items", headers=headers)
+        resp = await client.get("/api/v1/review/items", headers=headers)
         assert resp.status_code == 200
         assert resp.json() == []
 
@@ -106,7 +106,7 @@ async def test_review_requires_superuser():
     async with _client() as client:
         email, _ = await _create_user("regular-review")
         headers = await _auth_headers(client, email, "regular-review")
-        resp = await client.get("/review/items", headers=headers)
+        resp = await client.get("/api/v1/review/items", headers=headers)
         assert resp.status_code == 403
 
 
@@ -114,7 +114,7 @@ async def test_review_requires_auth():
     """Unauthenticated gets 401 on review endpoints."""
     await _ensure_db_ready()
     async with _client() as client:
-        resp = await client.get("/review/items")
+        resp = await client.get("/api/v1/review/items")
         assert resp.status_code == 401
 
 
@@ -152,7 +152,7 @@ async def test_approve_crawler_run():
             run_id = run.id
 
         # Verify it appears in the queue
-        resp = await client.get("/review/items", headers=headers)
+        resp = await client.get("/api/v1/review/items", headers=headers)
         assert resp.status_code == 200
         items = resp.json()
         run_items = [i for i in items if i["item_id"] == str(run_id)]
@@ -164,7 +164,7 @@ async def test_approve_crawler_run():
             new_callable=AsyncMock,
         ):
             resp = await client.post(
-                f"/review/items/crawler_run/{run_id}/approve", headers=headers
+                f"/api/v1/review/items/crawler_run/{run_id}/approve", headers=headers
             )
             assert resp.status_code == 200
 
@@ -207,7 +207,7 @@ async def test_reject_crawler_run():
             run_id = run.id
 
         resp = await client.post(
-            f"/review/items/crawler_run/{run_id}/reject", headers=headers
+            f"/api/v1/review/items/crawler_run/{run_id}/reject", headers=headers
         )
         assert resp.status_code == 200
 
@@ -247,7 +247,7 @@ async def test_approve_extraction_event():
             event_id = event.id
 
         resp = await client.post(
-            f"/review/items/extraction_event/{event_id}/approve", headers=headers
+            f"/api/v1/review/items/extraction_event/{event_id}/approve", headers=headers
         )
         assert resp.status_code == 200
 
@@ -283,7 +283,7 @@ async def test_approve_lead():
             lead_id = lead.id
 
         resp = await client.post(
-            f"/review/items/lead/{lead_id}/approve", headers=headers
+            f"/api/v1/review/items/lead/{lead_id}/approve", headers=headers
         )
         assert resp.status_code == 200
 
@@ -331,7 +331,7 @@ async def test_batch_review():
             lead2_id = lead2.id
 
         resp = await client.post(
-            "/review/items/batch",
+            "/api/v1/review/items/batch",
             json={
                 "items": [
                     {

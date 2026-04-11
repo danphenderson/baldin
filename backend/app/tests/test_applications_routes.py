@@ -76,7 +76,7 @@ async def _auth_headers(
 ) -> dict[str, str]:
     app.state.limiter.reset()
     response = await client.post(
-        "/auth/jwt/login",
+        "/api/v1/auth/jwt/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -176,7 +176,7 @@ async def _create_application_via_api(
     stage: str = "applied",
 ) -> dict[str, object]:
     response = await client.post(
-        "/applications/",
+        "/api/v1/applications/",
         json={"lead_id": str(lead_id), "stage": stage},
         headers=headers,
     )
@@ -197,7 +197,7 @@ async def test_create_application_happy_path() -> None:
         lead_id = await _create_lead()
 
         response = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
@@ -231,7 +231,7 @@ async def test_create_application_with_document_ids_returns_document_metadata() 
         ]
 
         response = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={
                 "lead_id": str(lead_id),
                 "stage": "applied",
@@ -259,14 +259,14 @@ async def test_create_application_duplicate_lead_returns_400() -> None:
         lead_id = await _create_lead()
 
         first = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         assert first.status_code == 201
 
         second = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "screening"},
             headers=headers,
         )
@@ -283,7 +283,7 @@ async def test_create_application_validation_error() -> None:
 
         # Missing lead_id and status
         response = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"notes": "just notes"},
             headers=headers,
         )
@@ -302,7 +302,7 @@ async def test_list_applications() -> None:
     async with _client() as client:
         _, headers = await _get_auth(client)
 
-        response = await client.get("/applications/", headers=headers)
+        response = await client.get("/api/v1/applications/", headers=headers)
 
     assert response.status_code == 200
     body = response.json()
@@ -324,7 +324,7 @@ async def test_application_responses_include_accessible_document_metadata() -> N
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=viewer_headers,
         )
@@ -366,18 +366,18 @@ async def test_application_responses_include_accessible_document_metadata() -> N
 
         for document_id in (owned_doc_id, shared_doc_id):
             attach_resp = await client.post(
-                f"/applications/{app_id}/documents",
+                f"/api/v1/applications/{app_id}/documents",
                 json={"document_id": str(document_id)},
                 headers=viewer_headers,
             )
             assert attach_resp.status_code == 201, attach_resp.text
 
-        list_resp = await client.get("/applications/", headers=viewer_headers)
+        list_resp = await client.get("/api/v1/applications/", headers=viewer_headers)
         detail_resp = await client.get(
-            f"/applications/{app_id}", headers=viewer_headers
+            f"/api/v1/applications/{app_id}", headers=viewer_headers
         )
         update_resp = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"notes": "Count should stay in sync"},
             headers=viewer_headers,
         )
@@ -421,7 +421,7 @@ async def test_list_applications_empty_for_new_user() -> None:
         email, _ = await _create_user("app-empty-pass1!")
         headers = await _auth_headers(client, email, "app-empty-pass1!")
 
-        response = await client.get("/applications/", headers=headers)
+        response = await client.get("/api/v1/applications/", headers=headers)
 
     assert response.status_code == 200
     assert response.json() == []
@@ -440,13 +440,13 @@ async def test_get_application_by_id() -> None:
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
 
-        response = await client.get(f"/applications/{app_id}", headers=headers)
+        response = await client.get(f"/api/v1/applications/{app_id}", headers=headers)
 
     assert response.status_code == 200
     body = response.json()
@@ -460,7 +460,7 @@ async def test_get_application_not_found() -> None:
     async with _client() as client:
         _, headers = await _get_auth(client)
 
-        response = await client.get(f"/applications/{uuid4()}", headers=headers)
+        response = await client.get(f"/api/v1/applications/{uuid4()}", headers=headers)
 
     assert response.status_code == 404
 
@@ -478,14 +478,14 @@ async def test_update_application_happy_path() -> None:
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
 
         response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"notes": "Updated notes", "next_step": "Follow up"},
             headers=headers,
         )
@@ -504,14 +504,14 @@ async def test_update_application_stage_appends_history() -> None:
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
 
         response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"stage": "screening"},
             headers=headers,
         )
@@ -547,7 +547,7 @@ async def test_update_application_sets_outcome_reason_for_terminal_outcome(
         app_id = created["id"]
 
         response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"outcome": terminal_outcome, "outcome_reason": outcome_reason},
             headers=headers,
         )
@@ -578,14 +578,14 @@ async def test_update_application_allows_outcome_reason_on_closed_application_wi
         app_id = created["id"]
 
         close_response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"outcome": terminal_outcome},
             headers=headers,
         )
         assert close_response.status_code == 200, close_response.text
 
         response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"outcome_reason": outcome_reason},
             headers=headers,
         )
@@ -608,7 +608,7 @@ async def test_update_application_rejects_outcome_reason_for_active_application(
         app_id = created["id"]
 
         response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"outcome_reason": "No longer interested"},
             headers=headers,
         )
@@ -631,21 +631,23 @@ async def test_update_application_rejects_implicit_reopen_from_terminal_outcome(
         app_id = created["id"]
 
         close_response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"outcome": terminal_outcome},
             headers=headers,
         )
         assert close_response.status_code == 200, close_response.text
 
         response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"stage": "screening"},
             headers=headers,
         )
         assert response.status_code == 400
         assert "reopen=true" in response.json()["detail"]
 
-        get_response = await client.get(f"/applications/{app_id}", headers=headers)
+        get_response = await client.get(
+            f"/api/v1/applications/{app_id}", headers=headers
+        )
 
     assert get_response.status_code == 200
     body = get_response.json()
@@ -669,7 +671,7 @@ async def test_update_application_reopens_terminal_outcome_when_reopen_true(
         app_id = created["id"]
 
         close_response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={
                 "outcome": terminal_outcome,
                 "outcome_reason": "Team paused hiring",
@@ -679,7 +681,7 @@ async def test_update_application_reopens_terminal_outcome_when_reopen_true(
         assert close_response.status_code == 200, close_response.text
 
         response = await client.patch(
-            f"/applications/{app_id}",
+            f"/api/v1/applications/{app_id}",
             json={"stage": "screening", "reopen": True},
             headers=headers,
         )
@@ -703,7 +705,7 @@ async def test_update_application_not_found() -> None:
         _, headers = await _get_auth(client)
 
         response = await client.patch(
-            f"/applications/{uuid4()}",
+            f"/api/v1/applications/{uuid4()}",
             json={"notes": "nope"},
             headers=headers,
         )
@@ -724,17 +726,19 @@ async def test_delete_application_happy_path() -> None:
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
 
-        del_resp = await client.delete(f"/applications/{app_id}", headers=headers)
+        del_resp = await client.delete(
+            f"/api/v1/applications/{app_id}", headers=headers
+        )
         assert del_resp.status_code == 204
 
         # Confirm it is gone
-        get_resp = await client.get(f"/applications/{app_id}", headers=headers)
+        get_resp = await client.get(f"/api/v1/applications/{app_id}", headers=headers)
 
     assert get_resp.status_code == 404
 
@@ -745,7 +749,9 @@ async def test_delete_application_not_found() -> None:
     async with _client() as client:
         _, headers = await _get_auth(client)
 
-        response = await client.delete(f"/applications/{uuid4()}", headers=headers)
+        response = await client.delete(
+            f"/api/v1/applications/{uuid4()}", headers=headers
+        )
 
     assert response.status_code == 404
 
@@ -763,14 +769,14 @@ async def test_get_application_documents_empty() -> None:
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
 
         response = await client.get(
-            f"/applications/{app_id}/documents", headers=headers
+            f"/api/v1/applications/{app_id}/documents", headers=headers
         )
 
     assert response.status_code == 200
@@ -791,7 +797,7 @@ async def test_attach_and_detach_document() -> None:
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
@@ -801,7 +807,7 @@ async def test_attach_and_detach_document() -> None:
 
         # Attach
         attach_resp = await client.post(
-            f"/applications/{app_id}/documents",
+            f"/api/v1/applications/{app_id}/documents",
             json={"document_id": str(doc_id)},
             headers=headers,
         )
@@ -810,20 +816,20 @@ async def test_attach_and_detach_document() -> None:
 
         # List should include the document
         list_resp = await client.get(
-            f"/applications/{app_id}/documents", headers=headers
+            f"/api/v1/applications/{app_id}/documents", headers=headers
         )
         assert list_resp.status_code == 200
         assert any(d["id"] == str(doc_id) for d in list_resp.json())
 
         # Detach
         detach_resp = await client.delete(
-            f"/applications/{app_id}/documents/{doc_id}", headers=headers
+            f"/api/v1/applications/{app_id}/documents/{doc_id}", headers=headers
         )
         assert detach_resp.status_code == 204
 
         # Confirm gone
         list_resp2 = await client.get(
-            f"/applications/{app_id}/documents", headers=headers
+            f"/api/v1/applications/{app_id}/documents", headers=headers
         )
         assert not any(d["id"] == str(doc_id) for d in list_resp2.json())
 
@@ -836,7 +842,7 @@ async def test_attach_duplicate_document_returns_400() -> None:
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
@@ -845,14 +851,14 @@ async def test_attach_duplicate_document_returns_400() -> None:
         doc_id = await _create_document_via_db(uid)
 
         first = await client.post(
-            f"/applications/{app_id}/documents",
+            f"/api/v1/applications/{app_id}/documents",
             json={"document_id": str(doc_id)},
             headers=headers,
         )
         assert first.status_code == 201
 
         second = await client.post(
-            f"/applications/{app_id}/documents",
+            f"/api/v1/applications/{app_id}/documents",
             json={"document_id": str(doc_id)},
             headers=headers,
         )
@@ -870,7 +876,7 @@ async def test_application_documents_include_shared_attachments() -> None:
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=viewer_headers,
         )
@@ -894,14 +900,14 @@ async def test_application_documents_include_shared_attachments() -> None:
             await session.commit()
 
         attach_resp = await client.post(
-            f"/applications/{app_id}/documents",
+            f"/api/v1/applications/{app_id}/documents",
             json={"document_id": str(shared_doc_id)},
             headers=viewer_headers,
         )
         assert attach_resp.status_code == 201
 
         list_resp = await client.get(
-            f"/applications/{app_id}/documents", headers=viewer_headers
+            f"/api/v1/applications/{app_id}/documents", headers=viewer_headers
         )
 
     assert list_resp.status_code == 200
@@ -920,7 +926,7 @@ async def test_application_documents_exclude_inaccessible_other_user_attachments
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
@@ -930,7 +936,7 @@ async def test_application_documents_exclude_inaccessible_other_user_attachments
         other_doc_id = await _create_document_via_db(other_user_id)
 
         attach_resp = await client.post(
-            f"/applications/{app_id}/documents",
+            f"/api/v1/applications/{app_id}/documents",
             json={"document_id": str(owner_doc_id)},
             headers=headers,
         )
@@ -946,7 +952,7 @@ async def test_application_documents_exclude_inaccessible_other_user_attachments
             await session.commit()
 
         list_resp = await client.get(
-            f"/applications/{app_id}/documents", headers=headers
+            f"/api/v1/applications/{app_id}/documents", headers=headers
         )
 
     assert list_resp.status_code == 200
@@ -964,7 +970,7 @@ async def test_application_export_includes_shared_attached_documents() -> None:
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=viewer_headers,
         )
@@ -988,14 +994,14 @@ async def test_application_export_includes_shared_attached_documents() -> None:
             await session.commit()
 
         attach_resp = await client.post(
-            f"/applications/{app_id}/documents",
+            f"/api/v1/applications/{app_id}/documents",
             json={"document_id": str(shared_doc_id)},
             headers=viewer_headers,
         )
         assert attach_resp.status_code == 201
 
         export_resp = await client.get(
-            f"/applications/{app_id}/export",
+            f"/api/v1/applications/{app_id}/export",
             headers=viewer_headers,
         )
 
@@ -1021,14 +1027,14 @@ async def test_detach_document_not_attached_returns_404() -> None:
         lead_id = await _create_lead()
 
         create_resp = await client.post(
-            "/applications/",
+            "/api/v1/applications/",
             json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
 
         response = await client.delete(
-            f"/applications/{app_id}/documents/{uuid4()}",
+            f"/api/v1/applications/{app_id}/documents/{uuid4()}",
             headers=headers,
         )
 

@@ -18,12 +18,12 @@ const unwrap = <T,>(
 
 export const listTables = async (token: string): Promise<string[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/db-management/list-tables'));
+  return unwrap(await client.GET('/api/v1/db-management/list-tables'));
 };
 
 export const tableDetails = async (token: string, tableName: string): Promise<unknown> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/db-management/table-details/{table_name}', {
+  return unwrap(await client.GET('/api/v1/db-management/table-details/{table_name}', {
     params: { path: { table_name: tableName } },
   }));
 };

@@ -53,7 +53,7 @@ export const getDocuments = async (
   filters?: { kind?: DocumentKind; status?: DocumentStatus; is_pinned?: boolean; search?: string },
 ): Promise<DocumentRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/documents/', {
+  return unwrap(await client.GET('/api/v1/documents/', {
     params: {
       query: {
         kind: filters?.kind,
@@ -67,21 +67,21 @@ export const getDocuments = async (
 
 export const getDocument = async (token: string, id: string): Promise<DocumentDetailRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/documents/{document_id}', {
+  return unwrap(await client.GET('/api/v1/documents/{document_id}', {
     params: { path: { document_id: id } },
   }));
 };
 
 export const createDocument = async (token: string, payload: DocumentCreate): Promise<DocumentDetailRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/documents/', {
+  return unwrap(await client.POST('/api/v1/documents/', {
     body: payload,
   }));
 };
 
 export const updateDocument = async (token: string, id: string, payload: DocumentUpdate): Promise<DocumentRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PATCH('/documents/{document_id}', {
+  return unwrap(await client.PATCH('/api/v1/documents/{document_id}', {
     params: { path: { document_id: id } },
     body: payload,
   }));
@@ -89,7 +89,7 @@ export const updateDocument = async (token: string, id: string, payload: Documen
 
 export const deleteDocument = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/documents/{document_id}', {
+  unwrap(await client.DELETE('/api/v1/documents/{document_id}', {
     params: { path: { document_id: id } },
   }));
 };
@@ -100,7 +100,7 @@ export const deleteDocument = async (token: string, id: string): Promise<void> =
 
 export const getVersions = async (token: string, docId: string): Promise<DocumentVersionRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/documents/{document_id}/versions', {
+  return unwrap(await client.GET('/api/v1/documents/{document_id}/versions', {
     params: { path: { document_id: docId } },
   }));
 };
@@ -111,7 +111,7 @@ export const createVersion = async (
   payload: DocumentVersionCreate,
 ): Promise<DocumentVersionRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/documents/{document_id}/versions', {
+  return unwrap(await client.POST('/api/v1/documents/{document_id}/versions', {
     params: { path: { document_id: docId } },
     body: payload,
   }));
@@ -123,7 +123,7 @@ export const getVersion = async (
   versionId: string,
 ): Promise<DocumentVersionRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/documents/{document_id}/versions/{version_id}', {
+  return unwrap(await client.GET('/api/v1/documents/{document_id}/versions/{version_id}', {
     params: { path: { document_id: docId, version_id: versionId } },
   }));
 };
@@ -134,7 +134,7 @@ export const getVersion = async (
 
 export const pinDocument = async (token: string, id: string, pinned = true): Promise<DocumentRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/documents/{document_id}/pin', {
+  return unwrap(await client.POST('/api/v1/documents/{document_id}/pin', {
     params: { path: { document_id: id } },
     body: { pinned },
   }));
@@ -142,7 +142,7 @@ export const pinDocument = async (token: string, id: string, pinned = true): Pro
 
 export const getPinnedDocuments = async (token: string): Promise<DocumentRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/documents/pinned'));
+  return unwrap(await client.GET('/api/v1/documents/pinned'));
 };
 
 /* ------------------------------------------------------------------ */
@@ -154,7 +154,7 @@ export const generateDocument = async (
   payload: DocumentGenerateRequest,
 ): Promise<DocumentDetailRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/documents/generate', {
+  return unwrap(await client.POST('/api/v1/documents/generate', {
     body: payload,
   }));
 };
@@ -165,7 +165,7 @@ export const generateDocument = async (
 
 export const getSharedWithMe = async (token: string): Promise<DocumentRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/documents/shared-with-me'));
+  return unwrap(await client.GET('/api/v1/documents/shared-with-me'));
 };
 
 /* ------------------------------------------------------------------ */
@@ -244,7 +244,7 @@ export async function downloadOriginal(token: string, documentId: string): Promi
 
 export async function getDocumentShares(token: string, documentId: string): Promise<DocumentShareRead[]> {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/documents/{document_id}/shares', {
+  return unwrap(await client.GET('/api/v1/documents/{document_id}/shares', {
     params: { path: { document_id: documentId } },
   }));
 }
@@ -255,7 +255,7 @@ export async function getDocumentShareCandidates(
   params?: { q?: string; limit?: number },
 ): Promise<DocumentShareCandidateRead[]> {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/documents/{document_id}/share-candidates', {
+  return unwrap(await client.GET('/api/v1/documents/{document_id}/share-candidates', {
     params: {
       path: { document_id: documentId },
       query: { q: params?.q, limit: params?.limit },
@@ -270,7 +270,7 @@ export async function createDocumentShare(
   role: DocumentShareRole = 'viewer',
 ): Promise<DocumentShareRead> {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/documents/{document_id}/shares', {
+  return unwrap(await client.POST('/api/v1/documents/{document_id}/shares', {
     params: { path: { document_id: documentId } },
     body: { shared_with_user_id: sharedWithUserId, role },
   }));
@@ -283,7 +283,7 @@ export async function updateDocumentShare(
   role: DocumentShareRole,
 ): Promise<DocumentShareRead> {
   const client = createApiClient(token);
-  return unwrap(await client.PATCH('/documents/{document_id}/shares/{share_id}', {
+  return unwrap(await client.PATCH('/api/v1/documents/{document_id}/shares/{share_id}', {
     params: { path: { document_id: documentId, share_id: shareId } },
     body: { role },
   }));
@@ -291,7 +291,7 @@ export async function updateDocumentShare(
 
 export async function revokeDocumentShare(token: string, documentId: string, shareId: string): Promise<void> {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/documents/{document_id}/shares/{share_id}', {
+  unwrap(await client.DELETE('/api/v1/documents/{document_id}/shares/{share_id}', {
     params: { path: { document_id: documentId, share_id: shareId } },
   }));
 }
@@ -306,7 +306,7 @@ export async function getDocumentActivity(
   params?: { limit?: number },
 ): Promise<DocumentActivityRead[]> {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/documents/{document_id}/activity', {
+  return unwrap(await client.GET('/api/v1/documents/{document_id}/activity', {
     params: {
       path: { document_id: documentId },
       query: { limit: params?.limit },
@@ -323,7 +323,7 @@ export async function requestDocumentCollaborationBootstrap(
   documentId: string,
 ): Promise<DocumentCollaborationBootstrapRead> {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/documents/{document_id}/collaborate/bootstrap', {
+  return unwrap(await client.POST('/api/v1/documents/{document_id}/collaborate/bootstrap', {
     params: { path: { document_id: documentId } },
   }));
 }

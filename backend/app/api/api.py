@@ -29,7 +29,7 @@ from app.api.routes import (
     users,
 )
 
-api_router: APIRouter = APIRouter()
+api_router: APIRouter = APIRouter(prefix="/api/v1")
 
 api_router.include_router(
     auth.router,

@@ -152,6 +152,12 @@ vi.mock('../layout/workflows-group-layout', () => ({
     return <Outlet />;
   },
 }));
+vi.mock('../layout/automation-group-layout', () => ({
+  default: () => {
+    const { Outlet } = require('react-router-dom');
+    return <Outlet />;
+  },
+}));
 vi.mock('../layout/network-group-layout', () => ({
   default: () => {
     const { Outlet } = require('react-router-dom');
@@ -261,8 +267,13 @@ describe('AppRoutes', () => {
     expect(await screen.findByTestId('page-discover')).toBeInTheDocument();
   });
 
-  it('renders agents page for /network/agents when authenticated', async () => {
-    renderRoutes('/network/agents');
+  it('renders agents page for /automation/agents when authenticated', async () => {
+    renderRoutes('/automation/agents');
+    expect(await screen.findByTestId('page-agents')).toBeInTheDocument();
+  });
+
+  it('redirects /automation to agents when authenticated', async () => {
+    renderRoutes('/automation');
     expect(await screen.findByTestId('page-agents')).toBeInTheDocument();
   });
 

@@ -195,7 +195,7 @@ const AgentDetailPage: React.FC = () => {
           icon={<AgentsIcon />}
           title="Agent not found"
           description="This agent may have been deleted."
-          action={{ label: 'Back to Agents', onClick: () => navigate('/network/agents') }}
+          action={{ label: 'Back to Agents', onClick: () => navigate('/automation/agents') }}
         />
       </Box>
     );
@@ -222,7 +222,7 @@ const AgentDetailPage: React.FC = () => {
           <Button
             size="small"
             startIcon={<BackIcon />}
-            onClick={() => navigate('/network/agents')}
+            onClick={() => navigate('/automation/agents')}
             sx={{ mr: 1 }}
           >
             Agents

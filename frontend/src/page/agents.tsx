@@ -194,7 +194,7 @@ const AgentsPage: React.FC = () => {
   };
 
   const handleCardClick = (agent: AgentSummaryRead) => {
-    navigate(`/network/agents/${agent.id}`);
+    navigate(`/automation/agents/${agent.id}`);
   };
 
   /* ---- Render ---- */

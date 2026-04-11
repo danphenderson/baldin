@@ -55,9 +55,9 @@ function renderPage() {
   return render(
     <ToolbarHeaderContext.Provider value={vi.fn()}>
       <UserContext.Provider value={userContextValue}>
-        <MemoryRouter initialEntries={['/network/agents/agent-1']}>
+        <MemoryRouter initialEntries={['/automation/agents/agent-1']}>
           <Routes>
-            <Route path="/network/agents/:agentId" element={<AgentDetailPage />} />
+            <Route path="/automation/agents/:agentId" element={<AgentDetailPage />} />
           </Routes>
         </MemoryRouter>
       </UserContext.Provider>

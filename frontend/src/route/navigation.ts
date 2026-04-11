@@ -163,7 +163,6 @@ export const drawerSections: DrawerSection[] = [
           },
         ],
       },
-      { kind: 'link', id: 'agents', label: 'Agents', path: '/network/agents', icon: 'agents' },
     ],
   },
   {
@@ -171,6 +170,7 @@ export const drawerSections: DrawerSection[] = [
     label: 'Automation',
     items: [
       { kind: 'link', id: 'workflows', label: 'Workflows', path: '/workflows', icon: 'workflows' },
+      { kind: 'link', id: 'agents', label: 'Agents', path: '/automation/agents', icon: 'agents' },
       { kind: 'link', id: 'workspace', label: 'Workspace', path: '/workspace', icon: 'workspace' },
     ],
   },

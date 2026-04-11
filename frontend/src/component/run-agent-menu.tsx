@@ -124,7 +124,7 @@ const RunAgentMenu: React.FC<RunAgentMenuProps> = ({
         <MenuItem
           onClick={() => {
             setMenuOpen(false);
-            navigate('/network/agents');
+            navigate('/automation/agents');
           }}
         >
           <ListItemText

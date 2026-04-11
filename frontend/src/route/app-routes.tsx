@@ -10,6 +10,7 @@ import IdentityGroupLayout from '../layout/identity-group-layout';
 import ApplicationsGroupLayout from '../layout/applications-group-layout';
 import DocumentsGroupLayout from '../layout/documents-group-layout';
 import WorkflowsGroupLayout from '../layout/workflows-group-layout';
+import AutomationGroupLayout from '../layout/automation-group-layout';
 import NetworkGroupLayout from '../layout/network-group-layout';
 import SettingsGroupLayout from '../layout/settings-group-layout';
 import { UserContext } from '../context/user-context';
@@ -119,6 +120,13 @@ const AppRoutes: React.FC = () => {
             <Route path="crawlers" element={<SuperuserRoute><CrawlersPage /></SuperuserRoute>} />
           </Route>
 
+          {/* ── Automation group ── */}
+          <Route path="automation" element={<AutomationGroupLayout />}>
+            <Route index element={<Navigate to="/automation/agents" replace />} />
+            <Route path="agents" element={<AgentsPage />} />
+            <Route path="agents/:agentId" element={<AgentDetailPage />} />
+          </Route>
+
           {/* ── Network group ── */}
           <Route path="network" element={<NetworkGroupLayout />}>
             <Route index element={<Navigate to="/network/discover" replace />} />
@@ -127,8 +135,6 @@ const AppRoutes: React.FC = () => {
             <Route path="connections" element={<ConnectionsPage />} />
             <Route path="messages" element={<ConversationsPage />} />
             <Route path="messages/:conversationId" element={<ConversationDetailPage />} />
-            <Route path="agents" element={<AgentsPage />} />
-            <Route path="agents/:agentId" element={<AgentDetailPage />} />
           </Route>
 
           {/* ── Settings group ── */}

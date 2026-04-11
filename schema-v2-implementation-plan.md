@@ -555,6 +555,7 @@ All Phase 1 changes land as Alembic migrations. No API route changes. No fronten
 
 ---
 
+TODO: Assess after the agents-epic and cell-docs epic lands.
 ### Phase 4 — Deferred Normalization (Not Scheduled)
 
 These items are tracked for future planning. They are explicitly out of scope for Schema v2.

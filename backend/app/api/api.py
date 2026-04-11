@@ -6,6 +6,7 @@ from app.api.deps import fastapi_users, schemas
 from app.api.routes import (
     action_items,
     activity_feed,
+    agents,
     applications,
     auth,
     certificate,
@@ -93,6 +94,11 @@ api_router.include_router(
     skills.router,
     prefix="/skills",
     tags=["skills"],
+)
+api_router.include_router(
+    agents.router,
+    prefix="/agents",
+    tags=["agents"],
 )
 api_router.include_router(
     applications.router,

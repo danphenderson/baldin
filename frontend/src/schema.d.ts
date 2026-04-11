@@ -331,6 +331,28 @@ export interface paths {
     /** Seed Skills */
     post: operations["seed_skills_api_v1_skills_seed_post"];
   };
+  "/api/v1/agents/": {
+    /** List Agents */
+    get: operations["list_agents_api_v1_agents__get"];
+    /** Create Agent */
+    post: operations["create_agent_api_v1_agents__post"];
+  };
+  "/api/v1/agents/{id}/run": {
+    /** Run Agent */
+    post: operations["run_agent_api_v1_agents__id__run_post"];
+  };
+  "/api/v1/agents/{id}/runs": {
+    /** Get Agent Runs */
+    get: operations["get_agent_runs_api_v1_agents__id__runs_get"];
+  };
+  "/api/v1/agents/{id}": {
+    /** Get Agent Detail */
+    get: operations["get_agent_detail_api_v1_agents__id__get"];
+    /** Delete Agent */
+    delete: operations["delete_agent_api_v1_agents__id__delete"];
+    /** Update Agent */
+    patch: operations["update_agent_api_v1_agents__id__patch"];
+  };
   "/api/v1/applications/": {
     /**
      * Get Applications
@@ -1098,6 +1120,401 @@ export interface components {
       page: number;
       /** Page Size */
       page_size: number;
+    };
+    /** AgentCreate */
+    AgentCreate: {
+      /**
+       * Name
+       * @description Agent definition name
+       */
+      name: string;
+      /**
+       * Description
+       * @description Optional agent summary
+       */
+      description?: string | null;
+      /** @description Workflow family */
+      kind: components["schemas"]["AgentKind"];
+      /**
+       * Instructions
+       * @description Optional workflow instructions that guide generated sessions
+       */
+      instructions?: string | null;
+      /**
+       * Configuration
+       * @description Workflow-specific configuration payload
+       */
+      configuration?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Is Enabled
+       * @description Whether the agent can be launched
+       * @default true
+       */
+      is_enabled?: boolean;
+    };
+    /**
+     * AgentKind
+     * @enum {string}
+     */
+    AgentKind: "cover_letter" | "follow_up" | "outreach" | "custom";
+    /** AgentRead */
+    AgentRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * User Id
+       * Format: uuid4
+       * @description Owner identifier
+       */
+      user_id: string;
+      /**
+       * Name
+       * @description Agent definition name
+       */
+      name: string;
+      /**
+       * Description
+       * @description Optional agent summary
+       */
+      description?: string | null;
+      /** @description Workflow family */
+      kind: components["schemas"]["AgentKind"];
+      /**
+       * Is Enabled
+       * @description Whether the agent can be launched
+       */
+      is_enabled: boolean;
+      /**
+       * Instructions
+       * @description Optional workflow instructions that guide generated sessions
+       */
+      instructions?: string | null;
+      /**
+       * Configuration
+       * @description Workflow-specific configuration payload
+       */
+      configuration?: {
+        [key: string]: unknown;
+      };
+    };
+    /** AgentRunExecuteRequest */
+    AgentRunExecuteRequest: {
+      /**
+       * Application Id
+       * Format: uuid4
+       * @description Application context used for the run
+       */
+      application_id: string;
+      /**
+       * Session Document Id
+       * @description Existing cell-doc session to append a new version to
+       */
+      session_document_id?: string | null;
+    };
+    /** AgentRunRead */
+    AgentRunRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Agent Id
+       * Format: uuid4
+       * @description Owning agent definition
+       */
+      agent_id: string;
+      /**
+       * User Id
+       * Format: uuid4
+       * @description Owner identifier
+       */
+      user_id: string;
+      /**
+       * Application Id
+       * @description Optional source application identifier
+       */
+      application_id?: string | null;
+      /**
+       * Parent Run Id
+       * @description Optional prior run in the same session lineage
+       */
+      parent_run_id?: string | null;
+      /** @description How the run was started */
+      trigger_kind: components["schemas"]["AgentRunTriggerKind"];
+      /** @description Current execution status */
+      status: components["schemas"]["AgentRunStatus"];
+      /**
+       * Session Document Id
+       * @description Session document created or updated by the run
+       */
+      session_document_id?: string | null;
+      /**
+       * Session Version Id
+       * @description Exact document version produced by the run
+       */
+      session_version_id?: string | null;
+      /** @description Session document summary when available */
+      session_document?: components["schemas"]["AgentRunSessionDocumentRead"] | null;
+      /** @description Produced version summary when available */
+      session_version?: components["schemas"]["AgentRunSessionVersionRead"] | null;
+      /**
+       * Error Summary
+       * @description Compact error message when a run fails
+       */
+      error_summary?: string | null;
+      /**
+       * Completed At
+       * @description When the run finished successfully or failed
+       */
+      completed_at?: string | null;
+      /**
+       * Input Context
+       * @description Structured context payload captured for the run
+       */
+      input_context?: {
+        [key: string]: unknown;
+      };
+    };
+    /** AgentRunSessionDocumentRead */
+    AgentRunSessionDocumentRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description Session document identifier
+       */
+      id: string;
+      /**
+       * Title
+       * @description Session document title
+       */
+      title: string;
+      /** @description Document kind discriminator */
+      kind: components["schemas"]["DocumentKind"];
+      /** @description Document lifecycle status */
+      status: components["schemas"]["DocumentStatus"];
+    };
+    /** AgentRunSessionVersionRead */
+    AgentRunSessionVersionRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Version Number
+       * @description Produced session version number
+       */
+      version_number: number;
+      /**
+       * Name
+       * @description Snapshot title
+       */
+      name?: string | null;
+      /**
+       * Content Format
+       * @description Content format: plain_text or tiptap_json
+       */
+      content_format?: string | null;
+    };
+    /**
+     * AgentRunStatus
+     * @enum {string}
+     */
+    AgentRunStatus: "pending" | "running" | "completed" | "failed";
+    /** AgentRunSummaryRead */
+    AgentRunSummaryRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Agent Id
+       * Format: uuid4
+       * @description Owning agent definition
+       */
+      agent_id: string;
+      /**
+       * User Id
+       * Format: uuid4
+       * @description Owner identifier
+       */
+      user_id: string;
+      /**
+       * Application Id
+       * @description Optional source application identifier
+       */
+      application_id?: string | null;
+      /**
+       * Parent Run Id
+       * @description Optional prior run in the same session lineage
+       */
+      parent_run_id?: string | null;
+      /** @description How the run was started */
+      trigger_kind: components["schemas"]["AgentRunTriggerKind"];
+      /** @description Current execution status */
+      status: components["schemas"]["AgentRunStatus"];
+      /**
+       * Session Document Id
+       * @description Session document created or updated by the run
+       */
+      session_document_id?: string | null;
+      /**
+       * Session Version Id
+       * @description Exact document version produced by the run
+       */
+      session_version_id?: string | null;
+      /** @description Session document summary when available */
+      session_document?: components["schemas"]["AgentRunSessionDocumentRead"] | null;
+      /** @description Produced version summary when available */
+      session_version?: components["schemas"]["AgentRunSessionVersionRead"] | null;
+      /**
+       * Error Summary
+       * @description Compact error message when a run fails
+       */
+      error_summary?: string | null;
+      /**
+       * Completed At
+       * @description When the run finished successfully or failed
+       */
+      completed_at?: string | null;
+    };
+    /**
+     * AgentRunTriggerKind
+     * @enum {string}
+     */
+    AgentRunTriggerKind: "manual" | "event";
+    /** AgentSummaryRead */
+    AgentSummaryRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * User Id
+       * Format: uuid4
+       * @description Owner identifier
+       */
+      user_id: string;
+      /**
+       * Name
+       * @description Agent definition name
+       */
+      name: string;
+      /**
+       * Description
+       * @description Optional agent summary
+       */
+      description?: string | null;
+      /** @description Workflow family */
+      kind: components["schemas"]["AgentKind"];
+      /**
+       * Is Enabled
+       * @description Whether the agent can be launched
+       */
+      is_enabled: boolean;
+    };
+    /** AgentUpdate */
+    AgentUpdate: {
+      /**
+       * Name
+       * @description Agent definition name
+       */
+      name?: string | null;
+      /**
+       * Description
+       * @description Optional agent summary
+       */
+      description?: string | null;
+      /**
+       * Instructions
+       * @description Optional workflow instructions that guide generated sessions
+       */
+      instructions?: string | null;
+      /**
+       * Configuration
+       * @description Workflow-specific configuration payload
+       */
+      configuration?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Is Enabled
+       * @description Whether the agent can be launched
+       */
+      is_enabled?: boolean | null;
     };
     /** ApplicationCreate */
     ApplicationCreate: {
@@ -5276,6 +5693,58 @@ export interface components {
        */
       page_size?: number;
     };
+    /** PaginatedResponse[AgentRunSummaryRead] */
+    PaginatedResponse_AgentRunSummaryRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["AgentRunSummaryRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[AgentSummaryRead] */
+    PaginatedResponse_AgentSummaryRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["AgentSummaryRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
     /** PaginatedResponse[ApplicationSummaryRead] */
     PaginatedResponse_ApplicationSummaryRead_: {
       /**
@@ -8395,6 +8864,174 @@ export interface operations {
       202: {
         content: {
           "application/json": components["schemas"]["SeedOperationAccepted"];
+        };
+      };
+    };
+  };
+  /** List Agents */
+  list_agents_api_v1_agents__get: {
+    parameters: {
+      query?: {
+        kind?: components["schemas"]["AgentKind"] | null;
+        page?: number;
+        page_size?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedResponse_AgentSummaryRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Agent */
+  create_agent_api_v1_agents__post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AgentCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["AgentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Run Agent */
+  run_agent_api_v1_agents__id__run_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AgentRunExecuteRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["AgentRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Agent Runs */
+  get_agent_runs_api_v1_agents__id__runs_get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedResponse_AgentRunSummaryRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Agent Detail */
+  get_agent_detail_api_v1_agents__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["AgentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Agent */
+  delete_agent_api_v1_agents__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Agent */
+  update_agent_api_v1_agents__id__patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AgentUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["AgentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

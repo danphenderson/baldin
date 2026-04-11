@@ -145,14 +145,24 @@ async def test_drop_and_create_db_and_tables_bootstraps_cell_doc_schema() -> Non
     await async_engine.dispose()
     await drop_and_create_db_and_tables()
 
+    assert await _table_exists("agents")
+    assert await _table_exists("agent_runs")
     assert await _table_exists("document_blocks")
+    assert "configuration" in await _column_names("agents")
+    assert "input_context" in await _column_names("agent_runs")
     assert "block_snapshot" in await _column_names("document_versions")
     assert "block_id" in await _column_names("document_activities")
+    assert await _column_type("agents", "configuration") == ("jsonb", "jsonb")
+    assert await _column_type("agent_runs", "input_context") == ("jsonb", "jsonb")
     assert (
         "document_activities_block_id_fkey"
         not in await _foreign_key_constraint_names("document_activities")
     )
 
+    assert {"ck_agents_kind"}.issubset(await _check_constraint_names("agents"))
+    assert {"ck_agent_runs_trigger_kind", "ck_agent_runs_status"}.issubset(
+        await _check_constraint_names("agent_runs")
+    )
     assert {
         "ck_documents_kind",
         "ck_documents_status",
@@ -203,10 +213,16 @@ async def test_create_db_and_tables_applies_head_without_document_activity_block
     monkeypatch.delenv("LEGACY_BOOTSTRAP", raising=False)
     await create_db_and_tables()
 
+    assert await _table_exists("agents")
+    assert await _table_exists("agent_runs")
     assert await _table_exists("document_activities")
     assert (
         "document_activities_block_id_fkey"
         not in await _foreign_key_constraint_names("document_activities")
+    )
+    assert {"ck_agents_kind"}.issubset(await _check_constraint_names("agents"))
+    assert {"ck_agent_runs_trigger_kind", "ck_agent_runs_status"}.issubset(
+        await _check_constraint_names("agent_runs")
     )
 
 

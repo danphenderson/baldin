@@ -143,6 +143,9 @@ ACTION_ITEM_KIND_VALUES = (
     "custom",
 )
 ACTION_ITEM_PRIORITY_VALUES = ("low", "medium", "high", "urgent")
+AGENT_KIND_VALUES = ("cover_letter", "follow_up", "outreach", "custom")
+AGENT_RUN_TRIGGER_KIND_VALUES = ("manual", "event")
+AGENT_RUN_STATUS_VALUES = ("pending", "running", "completed", "failed")
 
 
 class Base(DeclarativeBase):
@@ -649,6 +652,7 @@ class Application(Base):
         secondary="documents_x_applications",
         back_populates="applications",
     )
+    agent_runs = relationship("AgentRun", back_populates="application")
     status_history = relationship(
         "ApplicationStatusHistory",
         back_populates="application",
@@ -693,6 +697,141 @@ class ApplicationStatusHistory(Base):
     note = Column(Text, nullable=True)
 
     application = relationship("Application", back_populates="status_history")
+
+
+class Agent(Base):
+    """Persistent definition for a reusable AI workflow."""
+
+    __tablename__ = "agents"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "kind",
+            AGENT_KIND_VALUES,
+            name="ck_agents_kind",
+        ),
+        Index("ix_agents_user_kind_enabled", "user_id", "kind", "is_enabled"),
+    )
+
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name = Column(String, nullable=False)
+    description = Column(Text)
+    kind = Column(String, nullable=False)
+    instructions = Column(Text)
+    configuration = Column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+    is_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default=text("true"),
+    )
+
+    user = relationship("User", back_populates="agents")
+    runs = relationship(
+        "AgentRun",
+        back_populates="agent",
+        order_by="AgentRun.created_at.desc()",
+    )
+
+
+class AgentRun(Base):
+    """Audit row for an agent execution and the session revision it produced."""
+
+    __tablename__ = "agent_runs"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "trigger_kind",
+            AGENT_RUN_TRIGGER_KIND_VALUES,
+            name="ck_agent_runs_trigger_kind",
+        ),
+        _string_in_check_constraint(
+            "status",
+            AGENT_RUN_STATUS_VALUES,
+            name="ck_agent_runs_status",
+        ),
+        Index("ix_agent_runs_agent_created", "agent_id", "created_at"),
+        Index("ix_agent_runs_user_created", "user_id", "created_at"),
+    )
+
+    agent_id = Column(
+        UUID,
+        ForeignKey("agents.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    application_id = Column(
+        UUID,
+        ForeignKey("applications.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    parent_run_id = Column(
+        UUID,
+        ForeignKey("agent_runs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    trigger_kind = Column(
+        String,
+        nullable=False,
+        default="manual",
+        server_default=text("'manual'"),
+    )
+    status = Column(
+        String,
+        nullable=False,
+        default="pending",
+        server_default=text("'pending'"),
+    )
+    input_context = Column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+    session_document_id = Column(
+        UUID,
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    session_version_id = Column(
+        UUID,
+        ForeignKey("document_versions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    error_summary = Column(Text)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    agent = relationship("Agent", back_populates="runs")
+    user = relationship("User", back_populates="agent_runs")
+    application = relationship("Application", back_populates="agent_runs")
+    parent_run = relationship(
+        "AgentRun",
+        remote_side="AgentRun.id",
+        back_populates="child_runs",
+    )
+    child_runs = relationship("AgentRun", back_populates="parent_run")
+    session_document = relationship(
+        "Document",
+        back_populates="agent_runs",
+        foreign_keys=[session_document_id],
+    )
+    session_version = relationship(
+        "DocumentVersion",
+        back_populates="agent_runs",
+        foreign_keys=[session_version_id],
+    )
 
 
 class Contact(Base):
@@ -804,6 +943,11 @@ class Document(Base):
         secondary="documents_x_applications",
         back_populates="documents",
     )
+    agent_runs = relationship(
+        "AgentRun",
+        back_populates="session_document",
+        foreign_keys="AgentRun.session_document_id",
+    )
     embeddings = relationship(
         "DocumentEmbedding",
         back_populates="document",
@@ -848,6 +992,11 @@ class DocumentVersion(Base):
         "Document",
         back_populates="versions",
         foreign_keys=[document_id],
+    )
+    agent_runs = relationship(
+        "AgentRun",
+        back_populates="session_version",
+        foreign_keys="AgentRun.session_version_id",
     )
 
 
@@ -1190,6 +1339,8 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
         back_populates="author",
         cascade="all, delete-orphan",
     )
+    agents = relationship("Agent", back_populates="user")
+    agent_runs = relationship("AgentRun", back_populates="user")
     applications = relationship("Application", back_populates="user")
     contacts = relationship("Contact", back_populates="user")
     skills = relationship("Skill", back_populates="user")

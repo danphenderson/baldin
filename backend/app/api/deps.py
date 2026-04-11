@@ -611,6 +611,20 @@ async def get_application(
     return application
 
 
+async def get_agent(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Agent:
+    agent = await db.get(models.Agent, id)
+    if not agent:
+        raise await _404(agent, id)
+    if agent.user_id != user.id:  # type: ignore
+        raise await _403(user.id, agent, id)
+    await log.info(f"get_agent: {agent}")
+    return agent
+
+
 async def get_education(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),

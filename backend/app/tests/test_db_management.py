@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import AsyncGenerator
 from uuid import UUID
 
 import pytest
@@ -20,7 +21,7 @@ _db_ready = False
 
 
 @asynccontextmanager
-async def _client() -> AsyncClient:
+async def _client() -> AsyncGenerator[AsyncClient, None]:
     transport = ASGITransport(app=app)
     async with AsyncClient(
         transport=transport,
@@ -69,6 +70,8 @@ async def _create_user(
 
 def _expected_deleted_records() -> dict[str, int]:
     return {
+        "agent_runs": 1,
+        "agents": 1,
         "orchestration_events": 1,
         "extractor_examples": 1,
         "lead_registrations": 1,
@@ -192,6 +195,16 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
         await session.flush()
         document.head_version_id = document_version.id
 
+        agent = models.Agent(
+            user_id=user_id,
+            name="Cover Letter Workspace",
+            description="Draft a tailored session",
+            kind="cover_letter",
+            instructions="Generate a structured session workspace",
+        )
+        session.add(agent)
+        await session.flush()
+
         extractor_example = models.ExtractorExample(
             content="Input example",
             output={"field": "value"},
@@ -230,6 +243,17 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
             chunk_text="Resume content",
             embedding=[0.0] * 1536,
         )
+        agent_run = models.AgentRun(
+            agent_id=agent.id,
+            user_id=user_id,
+            application_id=application.id,
+            trigger_kind="manual",
+            status="completed",
+            input_context={"application_id": str(application.id)},
+            session_document_id=document.id,
+            session_version_id=document_version.id,
+            completed_at=datetime.now(),
+        )
 
         session.add_all(
             [
@@ -239,6 +263,7 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
                 document_share,
                 document_activity,
                 document_embedding,
+                agent_run,
             ]
         )
         await session.commit()
@@ -253,6 +278,8 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
         "contact_id": contact.id,
         "document_id": document.id,
         "document_version_id": document_version.id,
+        "agent_id": agent.id,
+        "agent_run_id": agent_run.id,
         "application_id": application.id,
         "extractor_id": extractor.id,
         "extractor_example_id": extractor_example.id,

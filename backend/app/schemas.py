@@ -1963,6 +1963,189 @@ class ApplicationUpdate(BaseSchema):
 ActionItemDetailRead.model_rebuild()
 
 
+class AgentKind(str, Enum):
+    COVER_LETTER = "cover_letter"
+    FOLLOW_UP = "follow_up"
+    OUTREACH = "outreach"
+    CUSTOM = "custom"
+
+
+class AgentRunTriggerKind(str, Enum):
+    MANUAL = "manual"
+    EVENT = "event"
+
+
+class AgentRunStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class AgentSummaryRead(BaseRead):
+    user_id: UUID4 = Field(description="Owner identifier")
+    name: str = Field(description="Agent definition name")
+    description: str | None = Field(None, description="Optional agent summary")
+    kind: AgentKind = Field(description="Workflow family")
+    is_enabled: bool = Field(description="Whether the agent can be launched")
+
+
+class AgentRead(AgentSummaryRead):
+    instructions: str | None = Field(
+        None,
+        description="Optional workflow instructions that guide generated sessions",
+    )
+    configuration: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Workflow-specific configuration payload",
+    )
+
+
+class AgentCreate(BaseSchema):
+    name: str = Field(description="Agent definition name")
+    description: str | None = Field(None, description="Optional agent summary")
+    kind: AgentKind = Field(description="Workflow family")
+    instructions: str | None = Field(
+        None,
+        description="Optional workflow instructions that guide generated sessions",
+    )
+    configuration: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Workflow-specific configuration payload",
+    )
+    is_enabled: bool = Field(True, description="Whether the agent can be launched")
+
+
+class AgentUpdate(BaseSchema):
+    name: str | None = Field(None, description="Agent definition name")
+    description: str | None = Field(None, description="Optional agent summary")
+    instructions: str | None = Field(
+        None,
+        description="Optional workflow instructions that guide generated sessions",
+    )
+    configuration: dict[str, Any] | None = Field(
+        None,
+        description="Workflow-specific configuration payload",
+    )
+    is_enabled: bool | None = Field(
+        None,
+        description="Whether the agent can be launched",
+    )
+
+
+class AgentRunSessionDocumentRead(BaseSchema):
+    id: UUID4 = Field(description="Session document identifier")
+    title: str = Field(description="Session document title")
+    kind: DocumentKind = Field(description="Document kind discriminator")
+    status: DocumentStatus = Field(description="Document lifecycle status")
+
+
+class AgentRunSessionVersionRead(BaseRead):
+    version_number: int = Field(description="Produced session version number")
+    name: str | None = Field(None, description="Snapshot title")
+    content_format: str | None = Field(
+        None,
+        description="Content format: plain_text or tiptap_json",
+    )
+
+
+class AgentRunSummaryRead(BaseRead):
+    agent_id: UUID4 = Field(description="Owning agent definition")
+    user_id: UUID4 = Field(description="Owner identifier")
+    application_id: UUID4 | None = Field(
+        None,
+        description="Optional source application identifier",
+    )
+    parent_run_id: UUID4 | None = Field(
+        None,
+        description="Optional prior run in the same session lineage",
+    )
+    trigger_kind: AgentRunTriggerKind = Field(description="How the run was started")
+    status: AgentRunStatus = Field(description="Current execution status")
+    session_document_id: UUID4 | None = Field(
+        None,
+        description="Session document created or updated by the run",
+    )
+    session_version_id: UUID4 | None = Field(
+        None,
+        description="Exact document version produced by the run",
+    )
+    session_document: AgentRunSessionDocumentRead | None = Field(
+        None,
+        description="Session document summary when available",
+    )
+    session_version: AgentRunSessionVersionRead | None = Field(
+        None,
+        description="Produced version summary when available",
+    )
+    error_summary: str | None = Field(
+        None,
+        description="Compact error message when a run fails",
+    )
+    completed_at: datetime | None = Field(
+        None,
+        description="When the run finished successfully or failed",
+    )
+
+
+class AgentRunRead(AgentRunSummaryRead):
+    input_context: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Structured context payload captured for the run",
+    )
+
+
+class AgentRunExecuteRequest(BaseSchema):
+    application_id: UUID4 = Field(description="Application context used for the run")
+    session_document_id: UUID4 | None = Field(
+        None,
+        description="Existing cell-doc session to append a new version to",
+    )
+
+
+class AgentRunCreate(BaseSchema):
+    """Internal schema — not user-facing."""
+
+    agent_id: UUID4 = Field(description="Owning agent definition")
+    user_id: UUID4 = Field(description="Owner identifier")
+    application_id: UUID4 | None = Field(
+        None,
+        description="Optional source application identifier",
+    )
+    parent_run_id: UUID4 | None = Field(
+        None,
+        description="Optional prior run in the same session lineage",
+    )
+    trigger_kind: AgentRunTriggerKind = Field(
+        AgentRunTriggerKind.MANUAL,
+        description="How the run was started",
+    )
+    status: AgentRunStatus = Field(
+        AgentRunStatus.PENDING,
+        description="Current execution status",
+    )
+    input_context: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Structured context payload captured for the run",
+    )
+    session_document_id: UUID4 | None = Field(
+        None,
+        description="Session document created or updated by the run",
+    )
+    session_version_id: UUID4 | None = Field(
+        None,
+        description="Exact document version produced by the run",
+    )
+    error_summary: str | None = Field(
+        None,
+        description="Compact error message when a run fails",
+    )
+    completed_at: datetime | None = Field(
+        None,
+        description="When the run finished successfully or failed",
+    )
+
+
 # Crawler schemas
 
 

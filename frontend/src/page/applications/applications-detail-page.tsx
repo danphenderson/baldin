@@ -31,6 +31,8 @@ import {
 import { useStageColumns, relativeDate, type Column } from './use-applications';
 import { PageTitle } from '../../component/common/text';
 import CreateActionItemDialog from '../../component/create-action-item-dialog';
+import RunAgentMenu from '../../component/run-agent-menu';
+import type { AgentRunRead } from '../../service/agents';
 import type { ActionItemRead, ActionItemCreate } from '../../service/action-items';
 
 /* ------------------------------------------------------------------ */
@@ -391,6 +393,22 @@ const ApplicationDetailPage: React.FC = () => {
       setError(e instanceof Error ? e.message : 'Generation failed');
     }
     setGenerating(false);
+  };
+
+  /* run agent -> navigate to session */
+  const handleAgentSessionCreated = async (run: AgentRunRead) => {
+    if (run.session_document_id && token) {
+      // Backend already attaches the session document to the application
+      // during POST /agents/{id}/run, so just refresh the doc list.
+      try {
+        const docs = await getApplicationDocuments(token, app!.id);
+        setAppDocuments(docs || []);
+      } catch {
+        // non-blocking: the session exists, refresh just failed
+      }
+      showSuccess('Agent session created');
+      navigate(`/workspace/${run.session_document_id}`);
+    }
   };
 
   const appResumes = appDocuments.filter((d) => d.kind === 'resume');
@@ -939,6 +957,11 @@ const ApplicationDetailPage: React.FC = () => {
               >
                 {generating ? 'Generating\u2026' : 'AI Generate'}
               </Button>
+              <RunAgentMenu
+                applicationId={app.id}
+                onSessionCreated={handleAgentSessionCreated}
+                disabled={generating}
+              />
               {availableCoverLetters.length > 0 && (
                 <FormControl size="small" sx={{ minWidth: 220 }}>
                   <InputLabel id="detail-attach-cl">Attach cover letter</InputLabel>

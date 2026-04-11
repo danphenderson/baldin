@@ -337,6 +337,10 @@ export interface paths {
     /** Create Agent */
     post: operations["create_agent_api_v1_agents__post"];
   };
+  "/api/v1/agents/runs": {
+    /** List Runs By Session */
+    get: operations["list_runs_by_session_api_v1_agents_runs_get"];
+  };
   "/api/v1/agents/{id}/run": {
     /** Run Agent */
     post: operations["run_agent_api_v1_agents__id__run_post"];
@@ -8904,6 +8908,31 @@ export interface operations {
       201: {
         content: {
           "application/json": components["schemas"]["AgentRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Runs By Session */
+  list_runs_by_session_api_v1_agents_runs_get: {
+    parameters: {
+      query: {
+        /** @description Filter runs by the session document they produced */
+        session_document_id: string;
+        page?: number;
+        page_size?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedResponse_AgentRunSummaryRead_"];
         };
       };
       /** @description Validation Error */

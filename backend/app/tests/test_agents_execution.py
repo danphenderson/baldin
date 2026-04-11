@@ -383,3 +383,69 @@ async def test_run_agent_persists_failed_run_without_returning_500(
     assert failed_run.completed_at is not None
     assert failed_run.session_document_id is None
     assert failed_run.session_version_id is None
+
+
+async def test_list_runs_by_session_document(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GET /agents/runs?session_document_id= returns runs scoped to a session."""
+    await _ensure_db_ready()
+    monkeypatch.setattr(
+        agents_route,
+        "generate_cover_letter",
+        lambda profile, job, template: "Draft for session lookup test.",
+    )
+
+    async with _client() as client:
+        email, user_id = await _create_user("agent-runs-by-doc-pass")
+        headers = await _auth_headers(client, email, "agent-runs-by-doc-pass")
+        app_ctx = await _create_application_context(user_id)
+        await _create_pinned_resume(user_id, content="Resume for lookup test.")
+        agent_id = await _create_agent(user_id)
+
+        # Create a session via agent run
+        run_resp = await client.post(
+            f"/api/v1/agents/{agent_id}/run",
+            json={"application_id": str(app_ctx["application_id"])},
+            headers=headers,
+        )
+        assert run_resp.status_code == 201
+        run_body = run_resp.json()
+        session_doc_id = run_body["session_document_id"]
+
+        # Query runs by session_document_id
+        lookup_resp = await client.get(
+            "/api/v1/agents/runs",
+            params={"session_document_id": session_doc_id},
+            headers=headers,
+        )
+
+    assert lookup_resp.status_code == 200, lookup_resp.text
+    lookup_body = lookup_resp.json()
+    assert lookup_body["total"] >= 1
+    items = lookup_body["items"]
+    assert len(items) >= 1
+    assert items[0]["session_document_id"] == session_doc_id
+    assert items[0]["agent_id"] == str(agent_id)
+    assert items[0]["status"] == "completed"
+
+
+async def test_list_runs_by_session_document_empty_for_unknown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GET /agents/runs?session_document_id= returns empty for a non-matching document."""
+    await _ensure_db_ready()
+
+    async with _client() as client:
+        email, _user_id = await _create_user("agent-runs-by-doc-empty-pass")
+        headers = await _auth_headers(client, email, "agent-runs-by-doc-empty-pass")
+
+        lookup_resp = await client.get(
+            "/api/v1/agents/runs",
+            params={"session_document_id": "00000000-0000-0000-0000-000000000000"},
+            headers=headers,
+        )
+
+    assert lookup_resp.status_code == 200, lookup_resp.text
+    assert lookup_resp.json()["total"] == 0
+    assert lookup_resp.json()["items"] == []

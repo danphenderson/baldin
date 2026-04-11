@@ -1,8 +1,9 @@
 import React, { useContext, useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Box, Typography, Chip, Stack, Button, Skeleton, Tooltip, Switch, FormControlLabel,
-  useTheme,
+  useTheme, Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
+  Paper, CircularProgress, Pagination, Link,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
@@ -12,12 +13,14 @@ import {
   HistoryOutlined as HistoryIcon,
   ErrorOutline as ErrorIcon,
   Refresh as RefreshIcon,
+  PlayArrow as RerunIcon,
+  OpenInNew as OpenIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import { useNotification } from '../context/notification-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
-import { getAgent, updateAgent } from '../service/agents';
-import type { AgentRead, AgentUpdate } from '../service/agents';
+import { getAgent, updateAgent, getAgentRuns, runAgent } from '../service/agents';
+import type { AgentRead, AgentUpdate, AgentRunSummaryRead, AgentRunsPaginatedRead } from '../service/agents';
 import AgentFormDialog from '../component/agent-form-dialog';
 import EmptyState from '../component/common/empty-state';
 import { Caption } from '../component/common/text';
@@ -41,6 +44,14 @@ const AgentDetailPage: React.FC = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+
+  /* Run history state */
+  const [runs, setRuns] = useState<AgentRunSummaryRead[]>([]);
+  const [runsTotal, setRunsTotal] = useState(0);
+  const [runsPage, setRunsPage] = useState(1);
+  const [runsLoading, setRunsLoading] = useState(false);
+  const [rerunningRunId, setRerunningRunId] = useState<string | null>(null);
+  const RUNS_PAGE_SIZE = 10;
 
   usePageToolbarHeader(
     agent?.name ?? 'Agent',
@@ -100,6 +111,54 @@ const AgentDetailPage: React.FC = () => {
       notify(e instanceof Error ? e.message : 'Failed to update agent', 'error');
     }
   };
+
+  /* ---- Run history ---- */
+
+  const refreshRuns = useCallback(async (page = runsPage) => {
+    if (!token || !agentId) return;
+    setRunsLoading(true);
+    try {
+      const result: AgentRunsPaginatedRead = await getAgentRuns(token, agentId, {
+        page,
+        page_size: RUNS_PAGE_SIZE,
+      });
+      setRuns(result.items);
+      setRunsTotal(result.total);
+      setRunsPage(page);
+    } catch {
+      /* run history errors are non-blocking */
+    } finally {
+      setRunsLoading(false);
+    }
+  }, [token, agentId, runsPage, RUNS_PAGE_SIZE]);
+
+  useEffect(() => {
+    if (agent) refreshRuns(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agent?.id]);
+
+  const handleRerun = async (run: AgentRunSummaryRead) => {
+    if (!token || !agentId || !run.session_document_id || !run.application_id) return;
+    setRerunningRunId(run.id);
+    try {
+      const result = await runAgent(token, agentId, {
+        application_id: run.application_id,
+        session_document_id: run.session_document_id,
+      });
+      notify('Rerun completed');
+      if (result.session_document_id) {
+        navigate(`/workspace/${result.session_document_id}/edit`);
+      } else {
+        await refreshRuns(1);
+      }
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Rerun failed', 'error');
+    } finally {
+      setRerunningRunId(null);
+    }
+  };
+
+  const runsTotalPages = Math.ceil(runsTotal / RUNS_PAGE_SIZE);
 
   /* ---- Loading skeleton ---- */
 
@@ -243,12 +302,137 @@ const AgentDetailPage: React.FC = () => {
         </Tooltip>
       </Stack>
 
-      {/* Run history placeholder — Story 10 */}
-      <EmptyState
-        icon={<HistoryIcon />}
-        title="No runs yet"
-        description="Run this agent from an application to see session history here."
-      />
+      {/* Run History */}
+      <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <HistoryIcon fontSize="small" />
+          <span>Run History</span>
+          {runsTotal > 0 && (
+            <Chip label={runsTotal} size="small" variant="outlined" sx={{ fontWeight: 700, height: 22 }} />
+          )}
+          <Box sx={{ flex: 1 }} />
+          <Tooltip title="Refresh run history">
+            <Button size="small" onClick={() => refreshRuns(1)} disabled={runsLoading}>
+              <RefreshIcon fontSize="small" />
+            </Button>
+          </Tooltip>
+        </Stack>
+      </Typography>
+
+      {runsLoading && runs.length === 0 ? (
+        <Skeleton variant="rounded" height={120} />
+      ) : runs.length === 0 ? (
+        <EmptyState
+          icon={<HistoryIcon />}
+          title="No runs yet"
+          description="Run this agent from an application to see session history here."
+        />
+      ) : (
+        <>
+          <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 700 }}>When</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Session</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Version</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {runs.map((run) => {
+                  const statusColor =
+                    run.status === 'completed' ? 'success' :
+                    run.status === 'failed' ? 'error' :
+                    run.status === 'running' ? 'warning' : 'default';
+                  return (
+                    <TableRow key={run.id} hover>
+                      <TableCell>
+                        <Tooltip title={new Date(run.completed_at ?? run.created_at).toLocaleString()}>
+                          <Typography variant="caption">
+                            {timeAgo(run.completed_at ?? run.created_at)}
+                          </Typography>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={run.status}
+                          size="small"
+                          color={statusColor}
+                          variant="outlined"
+                          sx={{ fontWeight: 600, textTransform: 'capitalize' }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {run.session_document_id ? (
+                          <Link
+                            component={RouterLink}
+                            to={`/workspace/${run.session_document_id}/edit`}
+                            underline="hover"
+                            variant="caption"
+                            sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.3 }}
+                          >
+                            {run.session_document?.title ?? 'Session'}
+                            <OpenIcon sx={{ fontSize: 12 }} />
+                          </Link>
+                        ) : (
+                          <Typography variant="caption" color="text.disabled">—</Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {run.session_version ? (
+                          <Chip
+                            label={`v${run.session_version.version_number}`}
+                            size="small"
+                            sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }}
+                          />
+                        ) : (
+                          <Typography variant="caption" color="text.disabled">—</Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="right">
+                        {run.status === 'completed' && run.session_document_id && run.application_id && (
+                          <Tooltip title="Rerun agent into the same session">
+                            <Button
+                              size="small"
+                              startIcon={
+                                rerunningRunId === run.id
+                                  ? <CircularProgress size={14} color="inherit" />
+                                  : <RerunIcon />
+                              }
+                              disabled={rerunningRunId !== null}
+                              onClick={() => handleRerun(run)}
+                              sx={{ textTransform: 'none' }}
+                            >
+                              Rerun
+                            </Button>
+                          </Tooltip>
+                        )}
+                        {run.status === 'failed' && run.error_summary && (
+                          <Tooltip title={run.error_summary}>
+                            <ErrorIcon fontSize="small" color="error" />
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          {runsTotalPages > 1 && (
+            <Stack alignItems="center" sx={{ mb: 2 }}>
+              <Pagination
+                count={runsTotalPages}
+                page={runsPage}
+                onChange={(_, p) => refreshRuns(p)}
+                size="small"
+              />
+            </Stack>
+          )}
+        </>
+      )}
 
       {/* Edit dialog */}
       <AgentFormDialog

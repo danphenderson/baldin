@@ -24,7 +24,7 @@ const KIND_LABELS: Record<AgentKind, string> = {
   custom: 'Custom',
 };
 
-function kindColor(kind: AgentKind, theme: Theme): string {
+export function kindColor(kind: AgentKind, theme: Theme): string {
   switch (kind) {
     case 'cover_letter': return theme.palette.primary.main;
     case 'follow_up': return theme.palette.secondary.main;

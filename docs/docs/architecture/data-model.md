@@ -9,13 +9,13 @@ description: Map how profile, search, document, automation, and networking entit
 
 # Map The Data Model
 
-Baldin's SQLAlchemy model layer is organized around a single authenticated `User` record and six operational domains built on top of it: profile data, job-search state, versioned documents, automation, networking, and user-facing work tracking.
+Baldin's SQLAlchemy model layer is organized around a single authenticated `User` record and seven operational domains built on top of it: profile data, job-search state, versioned documents, automation, agents, networking, and user-facing work tracking.
 
 Every entity inherits `id`, `created_at`, and `updated_at` from the shared `Base` model in `backend/app/models.py`. `User` also inherits the authentication fields from `SQLAlchemyBaseUserTableUUID`.
 
 ## Current Entity Map
 
-The diagrams below are intentionally structural rather than field-complete. The six domain diagrams that follow correspond directly to the Domain Breakdown section and show only the ownership links that matter when navigating the codebase.
+The diagrams below are intentionally structural rather than field-complete. The seven domain diagrams that follow correspond directly to the Domain Breakdown section and show only the ownership links that matter when navigating the codebase.
 
 ### User Profile Entities
 
@@ -242,6 +242,53 @@ erDiagram
 
 *Figure 4 — Extraction, orchestration, and crawler automation entities. EXTRACTOR and ORCHESTRATION_PIPELINE are user-owned. CRAWLER_PIPELINE is superuser-managed.*
 
+### Agent and Session Entities
+
+```mermaid
+erDiagram
+	accTitle: Agent and Session Entities
+	accDescr: Shows AGENT owned by USER, with AGENT_RUN recording execution history. Each run links to an APPLICATION context and produces a DOCUMENT session with a specific DOCUMENT_VERSION.
+	USER {
+		uuid id PK
+	}
+	APPLICATION {
+		uuid id PK
+	}
+	DOCUMENT {
+		uuid id PK
+		string kind
+	}
+	DOCUMENT_VERSION {
+		uuid id PK
+		uuid document_id FK
+		int version_number
+	}
+	AGENT {
+		uuid id PK
+		uuid user_id FK
+		string name
+		string model
+		string instructions
+	}
+	AGENT_RUN {
+		uuid id PK
+		uuid agent_id FK
+		uuid application_id FK
+		uuid session_document_id FK
+		uuid session_version_id FK
+		string status
+		string error_summary
+	}
+
+	USER ||--o{ AGENT : owns
+	AGENT ||--o{ AGENT_RUN : runs
+	APPLICATION ||--o{ AGENT_RUN : context_for
+	DOCUMENT ||--o{ AGENT_RUN : session_document
+	DOCUMENT_VERSION ||--o{ AGENT_RUN : session_version
+```
+
+*Figure 6 — AGENT is user-owned. Each AGENT_RUN records the execution context (application), the produced session document (a cell_doc DOCUMENT), and the specific version created by the run.*
+
 ### Networking and Messaging Entities
 
 ```mermaid
@@ -340,6 +387,13 @@ The unified `Document` model is the only remaining material model. Frontend docu
 | `crawler_pipelines` | Superuser-managed crawler definitions and policies |
 | `crawler_runs` | Individual crawler execution records |
 
+### Agents
+
+| Tables | Purpose |
+| --- | --- |
+| `agents` | User-owned reusable AI assistant definitions with model, instructions, and generation parameters |
+| `agent_runs` | Execution history recording application context, session document, produced version, status, and error summary |
+
 ### Networking and Messaging
 
 | Tables | Purpose |
@@ -370,6 +424,4 @@ The activity feed shown in the frontend is not backed by a dedicated event-log t
 
 ## Schema Management
 
-The repo does not currently use Alembic migrations. Local startup still relies on SQLAlchemy `create_all`, and `backend/app/core/db.py` also repairs additive schema drift by adding missing columns to existing local tables.
-
-That bootstrap behavior is convenient for a persisted local Postgres volume, but it is also explicitly called out as a release blocker. See [Track Release Readiness](../engineering/release-roadmap.md) for the current migration and runtime-hardening work.
+The repo uses Alembic migrations bootstrapped under `backend/alembic/`. Local startup runs `alembic upgrade head` by default, while `LEGACY_BOOTSTRAP=1` activates the older `create_all` path. Test fixtures still use `metadata.create_all` for speed.

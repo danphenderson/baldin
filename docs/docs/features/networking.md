@@ -70,17 +70,32 @@ The activity feed aggregates events from connections, conversations, application
 
 **API:** `/activity-feed` — Feed list and summary endpoints
 
+## Agents
+
+The Agents surface at `/network/agents` lets users build reusable AI assistants that operate against tracked applications and produce cell-doc session documents.
+
+Each agent is defined by a name, model, instructions, and optional temperature/top-p overrides. Running an agent against an application creates (or appends to) a cell-doc session, producing a new document version tied to the run.
+
+**Frontend:**
+- `/network/agents` — Agent list (`frontend/src/page/agents.tsx`)
+- `/network/agents/:id` — Agent detail with run history and rerun controls (`frontend/src/page/agent-detail.tsx`)
+- Rerun button on cell-doc editor footer (`frontend/src/component/rerun-agent-button.tsx`)
+
+**API:** `/agents` — Agent CRUD, per-agent run history, cross-session run lookup, and execution
+
+See [Map The Data Model](../architecture/data-model.md) for Agent and AgentRun entities.
+
 ## User Story Book
 
 ### Current UI State
 
-- The Network area is organized around `/network/discover`, `/network/connections`, and `/network/messages`, with a placeholder `/network/agents` route reserved for future assistants.
+- The Network area is organized around `/network/discover`, `/network/connections`, `/network/messages`, and `/network/agents`.
 - Connections and conversations already use dedicated list and detail surfaces rather than a single combined hub.
 - Unread message counts surface through badges and dashboard summaries instead of a dedicated notifications page.
+- Agents support full CRUD, run history with pagination, and in-session rerun from both the agent detail page and the cell-doc editor.
 
 ### Planned Improvements
 
-- The `/network/agents` route is intentionally a placeholder empty state today.
 - The app still relies on unread badges and dashboard activity summaries rather than a broader notification center for network events.
 
 ## Related Docs

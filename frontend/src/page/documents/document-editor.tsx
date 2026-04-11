@@ -17,6 +17,7 @@ import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import RichTextEditor, { type ContentFormat } from '../../component/rich-text-editor';
 import CellDocEditor from '../../component/cell-doc/cell-doc-editor';
+import RerunAgentButton from '../../component/rerun-agent-button';
 import { normalizeDocumentContent } from '../../component/document-content';
 import {
   getDocument, createDocument, createVersion, getVersions,
@@ -500,6 +501,13 @@ const DocumentEditorPage: React.FC = () => {
         )}
 
         <Box sx={{ flex: 1 }} />
+
+        {!isCreate && kind === 'cell_doc' && id && (
+          <RerunAgentButton
+            documentId={id}
+            onRerunComplete={() => loadDocument()}
+          />
+        )}
 
         <Button
           variant="outlined" onClick={() => navigate(isCreate ? '/workspace' : `/workspace/${id}`)}

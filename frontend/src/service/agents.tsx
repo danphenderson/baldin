@@ -120,3 +120,24 @@ export const runAgent = async (
     body: payload,
   }));
 };
+
+export const getRunsBySessionDocument = async (
+  token: string,
+  sessionDocumentId: string,
+  pagination?: AgentRunsPagination,
+): Promise<AgentRunsPaginatedRead> => {
+  const page = pagination?.page ?? DEFAULT_RUNS_PAGE;
+  const pageSize = pagination?.page_size ?? DEFAULT_RUNS_PAGE_SIZE;
+  const client = createApiClient(token);
+  const response = unwrap<RawAgentRunsPaginatedRead>(await client.GET('/api/v1/agents/runs', {
+    params: {
+      query: {
+        session_document_id: sessionDocumentId,
+        page,
+        page_size: pageSize,
+      },
+    },
+  }));
+
+  return normalizePaginatedResponse(response, { page, page_size: pageSize });
+};

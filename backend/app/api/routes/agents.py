@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timezone
 from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import desc, func, select
@@ -601,6 +602,51 @@ async def create_agent(
     await db.commit()
     await db.refresh(agent)
     return agent
+
+
+@router.get(
+    "/runs",
+    response_model=schemas.PaginatedResponse[schemas.AgentRunSummaryRead],
+)
+async def list_runs_by_session(
+    session_document_id: UUID = Query(
+        ..., description="Filter runs by the session document they produced"
+    ),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=500),
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    base = (
+        select(models.AgentRun)
+        .where(
+            models.AgentRun.user_id == user.id,
+            models.AgentRun.session_document_id == session_document_id,
+        )
+        .options(
+            selectinload(models.AgentRun.session_document),
+            selectinload(models.AgentRun.session_version),
+        )
+    )
+
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = count_result.scalar_one()
+
+    result = await db.execute(
+        base.order_by(
+            desc(models.AgentRun.created_at),
+            desc(models.AgentRun.id),
+        )
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+
+    return schemas.PaginatedResponse[schemas.AgentRunSummaryRead](
+        items=result.scalars().all(),
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.post("/{id}/run", status_code=201, response_model=schemas.AgentRunRead)

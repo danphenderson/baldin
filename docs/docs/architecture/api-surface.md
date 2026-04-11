@@ -45,6 +45,7 @@ graph TD
 	Network --> N3[/conversations]
 	Network --> N4[/action-items]
 	Network --> N5[/activity-feed]
+	Network --> N6[/agents]
 	Ops --> O1[/db-management]
 ```
 
@@ -88,7 +89,7 @@ The document surface is now the canonical API for resumes, cover letters, and ot
 | `crawlers` | `/crawlers` | Superuser-managed crawler pipelines and runs |
 | `review` | `/review` | Superuser review queue for pending automation output |
 
-### Networking, Activity, and Tasks
+### Networking, Activity, Tasks, and Agents
 
 | Tag | Prefix | Purpose |
 | --- | --- | --- |
@@ -97,6 +98,7 @@ The document surface is now the canonical API for resumes, cover letters, and ot
 | `messaging` | `/conversations` | Direct and group conversations, messages, unread counts |
 | `action-items` | `/action-items` | Cross-entity user task management |
 | `activity-feed` | `/activity-feed` | Aggregated activity stream and dashboard summary |
+| `agents` | `/agents` | Agent CRUD, per-agent run history, cross-session run lookup, and execution |
 
 ### Operational Helpers
 

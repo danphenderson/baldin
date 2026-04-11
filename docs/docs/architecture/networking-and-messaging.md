@@ -35,6 +35,7 @@ graph TD
 | `messaging` | `/conversations` | Direct and group conversations, messages, unread counts |
 | `activity-feed` | `/activity-feed` | Aggregated activity stream and dashboard summary |
 | `action-items` | `/action-items` | User-facing tasks linked to applications, leads, documents, or conversations |
+| `agents` | `/agents` | Agent CRUD, per-agent and cross-session run history, and execution |
 
 ## Data Model
 
@@ -77,6 +78,8 @@ Those rules matter because the UI can render the route, but the backend remains 
 | `/network/connections` | `frontend/src/page/connections.tsx` |
 | `/network/messages` | `frontend/src/page/messages/conversations-page.tsx` |
 | `/network/messages/:conversationId` | `frontend/src/page/messages/conversation-detail-page.tsx` |
+| `/network/agents` | `frontend/src/page/agents.tsx` |
+| `/network/agents/:id` | `frontend/src/page/agent-detail.tsx` |
 
 Supporting UI lives in the component layer:
 
@@ -91,6 +94,7 @@ API client access lives in:
 - `frontend/src/service/activity-feed.tsx`
 - `frontend/src/service/action-items.tsx`
 - `frontend/src/service/directory.tsx`
+- `frontend/src/service/agents.tsx`
 
 ## Dashboard Coupling
 

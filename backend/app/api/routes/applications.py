@@ -22,95 +22,32 @@ from app.api.deps import (
     schemas,
 )
 from app.api.routes.documents import _tiptap_to_flowables
-from app.core.datetime_utils import format_utc_datetime, normalize_utc_datetime, now_utc
 from app.core.document_storage import resolve_document_source_path
 
 router: APIRouter = APIRouter()
 
-_ACTIVE_APPLICATION_STATUSES = {status.value for status in models.ApplicationStage}
-_CLOSED_APPLICATION_STATUSES = {status.value for status in models.ApplicationOutcome}
+
+def _is_terminal(app: models.Application) -> bool:
+    """Return True when the application has a terminal outcome."""
+    return app.outcome is not None
 
 
-def _normalize_status_history(history: list[dict] | None) -> list[dict]:
-    """Normalize status-history timestamps to UTC Z strings when they parse cleanly."""
-    normalized_history: list[dict] = []
-    for entry in history or []:
-        normalized_entry = dict(entry)
-        changed_at = normalized_entry.get("changed_at")
-        if changed_at is not None:
-            normalized_changed_at = normalize_utc_datetime(changed_at)
-            if normalized_changed_at is not None:
-                normalized_entry["changed_at"] = normalized_changed_at
-        normalized_history.append(normalized_entry)
-    return normalized_history
-
-
-def _build_status_history_entry(
-    previous_status: str | None, next_status: str | None
-) -> dict:
-    return {
-        "from": previous_status,
-        "to": next_status,
-        "changed_at": format_utc_datetime(now_utc()),
-    }
-
-
-def _status_to_value(status: str | models.ApplicationStatus | None) -> str | None:
-    if status is None:
-        return None
-    return status.value if isinstance(status, models.ApplicationStatus) else status
-
-
-def _is_closed_to_active_transition(
-    previous_status: str | models.ApplicationStatus | None,
-    next_status: str | models.ApplicationStatus | None,
-) -> bool:
-    previous_value = _status_to_value(previous_status)
-    next_value = _status_to_value(next_status)
-    return (
-        previous_value in _CLOSED_APPLICATION_STATUSES
-        and next_value in _ACTIVE_APPLICATION_STATUSES
-    )
-
-
-def _is_terminal_status(status: str | models.ApplicationStatus | None) -> bool:
-    return _status_to_value(status) in _CLOSED_APPLICATION_STATUSES
-
-
-def _apply_outcome_reason_update(
+def _record_history(
+    db: AsyncSession,
     application: models.Application,
-    payload: schemas.ApplicationUpdate,
     *,
-    previous_status: str | models.ApplicationStatus | None,
-    resulting_status: str | models.ApplicationStatus | None,
-    status_change_requested: bool,
+    user_id,
+    note: str | None = None,
 ) -> None:
-    reason_requested = "outcome_reason" in payload.model_fields_set
-    normalized_reason = payload.outcome_reason
-
-    if not _is_terminal_status(resulting_status):
-        if reason_requested and normalized_reason is not None:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "outcome_reason can only be set for rejected or withdrawn applications"
-                ),
-            )
-        application.outcome_reason = None
-        return
-
-    if reason_requested:
-        application.outcome_reason = normalized_reason
-        return
-
-    previous_value = _status_to_value(previous_status)
-    resulting_value = _status_to_value(resulting_status)
-    if (
-        status_change_requested
-        and previous_value in _CLOSED_APPLICATION_STATUSES
-        and previous_value != resulting_value
-    ):
-        application.outcome_reason = None
+    """Append a new ApplicationStatusHistory row for the current stage/outcome."""
+    entry = models.ApplicationStatusHistory(
+        application_id=application.id,
+        stage=application.stage,
+        outcome=application.outcome,
+        changed_by_user_id=user_id,
+        note=note,
+    )
+    db.add(entry)
 
 
 @router.post("/", status_code=201, response_model=schemas.ApplicationRead)
@@ -129,26 +66,24 @@ async def create_application(
     existing_application = existing_application.scalars().first()  # type: ignore
 
     if existing_application:
-        # Application for this lead already exists for the user, return an error response
         raise HTTPException(
             status_code=400, detail="Application for this lead already exists"
         )
 
     # Create a new application
     application_data = {
-        **payload.model_dump(
-            exclude_unset=True, exclude={"document_ids", "stage", "outcome"}
-        ),
+        **payload.model_dump(exclude_unset=True, exclude={"document_ids"}),
         "user_id": user.id,
     }
-    application_data["status_history"] = [
-        _build_status_history_entry(None, payload.status)
-    ]
-    if not _is_terminal_status(payload.status):
+    if payload.outcome is None:
         application_data["outcome_reason"] = None
 
     application = models.Application(**application_data)
     db.add(application)
+    await db.flush()
+
+    # Record initial status history entry
+    _record_history(db, application, user_id=user.id)
     await db.commit()
     await db.refresh(application)
 
@@ -238,42 +173,71 @@ async def update_application(
         )
 
     # Update the application's attributes
-    previous_status = application.status
-    status_change_requested = bool(
-        {"status", "stage", "outcome"} & payload.model_fields_set
-    )
-    new_status = payload.status if status_change_requested else None
-    if status_change_requested and new_status != application.status:
-        if _is_closed_to_active_transition(application.status, new_status):
+    prev_outcome = application.outcome
+    stage_requested = "stage" in payload.model_fields_set
+    outcome_requested = "outcome" in payload.model_fields_set
+    status_changed = False
+
+    # Handle stage change
+    if (
+        stage_requested
+        and payload.stage is not None
+        and payload.stage != application.stage
+    ):
+        # Reopening from a terminal outcome to an active stage
+        if application.outcome is not None:
             if payload.reopen is not True:
                 raise HTTPException(
                     status_code=400,
-                    detail=(
-                        "Closed applications require reopen=true before moving back to an active stage"
-                    ),
+                    detail="Closed applications require reopen=true before moving back to an active stage",
                 )
+            application.outcome = None
+        application.stage = payload.stage
+        status_changed = True
 
-        if new_status is not None:
-            history = _normalize_status_history(application.status_history)
-            history.append(_build_status_history_entry(application.status, new_status))
-            application.status_history = history
+    # Handle outcome change
+    if outcome_requested:
+        if payload.outcome is not None and payload.outcome != application.outcome:
+            application.outcome = payload.outcome
+            status_changed = True
+        elif payload.outcome is None and application.outcome is not None:
+            # Clearing outcome (reopening)
+            if payload.reopen is not True:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Closed applications require reopen=true before clearing outcome",
+                )
+            application.outcome = None
+            status_changed = True
 
-        application.status = new_status
-
-    _apply_outcome_reason_update(
-        application,
-        payload,
-        previous_status=previous_status,
-        resulting_status=new_status if status_change_requested else application.status,
-        status_change_requested=status_change_requested,
-    )
+    # Handle outcome_reason
+    reason_requested = "outcome_reason" in payload.model_fields_set
+    if application.outcome is None:
+        if reason_requested and payload.outcome_reason is not None:
+            raise HTTPException(
+                status_code=400,
+                detail="outcome_reason can only be set for rejected or withdrawn applications",
+            )
+        application.outcome_reason = None
+    elif reason_requested:
+        application.outcome_reason = payload.outcome_reason
+    elif (
+        status_changed
+        and prev_outcome is not None
+        and prev_outcome != application.outcome
+    ):
+        # Outcome changed between two terminal values — clear stale reason
+        application.outcome_reason = None
 
     update_data = payload.model_dump(
         exclude_unset=True,
-        exclude={"status", "stage", "outcome", "reopen", "outcome_reason"},
+        exclude={"stage", "outcome", "reopen", "outcome_reason"},
     )
     for var, value in update_data.items():
         setattr(application, var, value)
+
+    if status_changed:
+        _record_history(db, application, user_id=user.id)
 
     await db.commit()
     await db.refresh(application)

@@ -15,6 +15,7 @@ from sqlalchemy import (
     Integer,
     LargeBinary,
     String,
+    Table,
     Text,
     UniqueConstraint,
     event,
@@ -22,7 +23,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 # ---------------------------------------------------------------------------
@@ -43,18 +44,6 @@ class ApplicationStage(str, enum.Enum):
 class ApplicationOutcome(str, enum.Enum):
     """Terminal closure states — mutually exclusive with further stage progression."""
 
-    REJECTED = "rejected"
-    WITHDRAWN = "withdrawn"
-
-
-# Kept as the union of stage + outcome values for the native Postgres enum column.
-# The DB column name and enum type name stay the same so existing rows remain valid.
-class ApplicationStatus(str, enum.Enum):
-    REGISTERED = "registered"
-    APPLIED = "applied"
-    SCREENING = "screening"
-    INTERVIEW = "interview"
-    OFFER = "offer"
     REJECTED = "rejected"
     WITHDRAWN = "withdrawn"
 
@@ -89,8 +78,10 @@ class Base(DeclarativeBase):
     __abstract__ = True
 
     id = Column(UUID, primary_key=True, default=uuid4)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 # Data Orchestration models
@@ -104,6 +95,9 @@ class OrchestrationEvent(Base):
     """
 
     __tablename__ = "orchestration_events"
+    __table_args__ = (
+        Index("ix_orchestration_events_pipeline_created", "pipeline_id", "created_at"),
+    )
     status = Column(String, default="pending")  # running, success, failure
     message = Column(Text)
     payload = Column(JSON)
@@ -111,8 +105,14 @@ class OrchestrationEvent(Base):
     source_uri = Column(JSON)
     destination_uri = Column(JSON)
     version_hash = Column(String, nullable=True)
-    retry_of_id = Column(UUID, ForeignKey("orchestration_events.id"), nullable=True)
-    pipeline_id = Column(UUID, ForeignKey("orchestration_pipelines.id"))
+    retry_of_id = Column(
+        UUID, ForeignKey("orchestration_events.id", ondelete="SET NULL"), nullable=True
+    )
+    pipeline_id = Column(
+        UUID,
+        ForeignKey("orchestration_pipelines.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     orchestration_pipeline = relationship(
         "OrchestrationPipeline", back_populates="orchestration_events"
     )
@@ -130,7 +130,7 @@ class OrchestrationPipeline(Base):
     name = Column(String, index=True, nullable=False)
     description = Column(Text)
     definition = Column(JSON)
-    user_id = Column(UUID, ForeignKey("users.id"))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="orchestration_pipelines")
     orchestration_events = relationship(
         "OrchestrationEvent", back_populates="orchestration_pipeline"
@@ -176,7 +176,10 @@ class CrawlerRun(Base):
 
     __tablename__ = "crawler_runs"
     crawler_pipeline_id = Column(
-        UUID, ForeignKey("crawler_pipelines.id"), nullable=False, index=True
+        UUID,
+        ForeignKey("crawler_pipelines.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     trigger_type = Column(String, nullable=False)
     status = Column(
@@ -189,13 +192,15 @@ class CrawlerRun(Base):
         nullable=False,
         default=CrawlerRunStatus.PENDING,
     )
-    scheduled_for = Column(DateTime)
-    started_at = Column(DateTime)
-    finished_at = Column(DateTime)
+    scheduled_for = Column(DateTime(timezone=True))
+    started_at = Column(DateTime(timezone=True))
+    finished_at = Column(DateTime(timezone=True))
     checkpoint = Column(JSON)
     stats = Column(JSON)
     error_summary = Column(Text)
-    retry_of_id = Column(UUID, ForeignKey("crawler_runs.id"), nullable=True)
+    retry_of_id = Column(
+        UUID, ForeignKey("crawler_runs.id", ondelete="SET NULL"), nullable=True
+    )
     crawler_pipeline = relationship("CrawlerPipeline", back_populates="runs")
 
 
@@ -218,7 +223,9 @@ class ExtractorExample(Base):
     __tablename__ = "extractor_examples"
     content = Column(Text, nullable=False, comment="The input portion of the example.")
     output = Column(JSONB, comment="The output associated with the example.")
-    extractor_id = Column(UUID, ForeignKey("extractors.id"))
+    extractor_id = Column(
+        UUID, ForeignKey("extractors.id", ondelete="CASCADE"), nullable=False
+    )
     extractor = relationship("Extractor", back_populates="extractor_examples")
 
     def __repr__(self) -> str:
@@ -243,7 +250,7 @@ class Extractor(Base):
         server_default=text("false"),
         nullable=False,
     )
-    user_id = Column(UUID, ForeignKey("users.id"))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="extractors")
     extractor_examples = relationship("ExtractorExample", back_populates="extractor")
     versions = relationship(
@@ -268,7 +275,12 @@ class ExtractorVersion(Base):
             name="uq_extractor_versions_extractor_id_version_number",
         ),
     )
-    extractor_id = Column(UUID, ForeignKey("extractors.id"), nullable=False, index=True)
+    extractor_id = Column(
+        UUID,
+        ForeignKey("extractors.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     version_number = Column(Integer, nullable=False)
     instruction = Column(Text)
     json_schema = Column(JSONB)
@@ -277,10 +289,32 @@ class ExtractorVersion(Base):
     extractor = relationship("Extractor", back_populates="versions")
 
 
-class LeadXCompany(Base):
+# ---------------------------------------------------------------------------
+#  Junction tables — plain Table constructs, no surrogate columns
+# ---------------------------------------------------------------------------
+
+_leads_x_companies_table = Table(
+    "leads_x_companies",
+    Base.metadata,
+    Column(
+        "lead_id", UUID, ForeignKey("leads.id", ondelete="CASCADE"), primary_key=True
+    ),
+    Column(
+        "company_id",
+        UUID,
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
+
+
+class LeadXCompany:
+    """Mapped junction: leads ↔ companies. No surrogate ID or timestamps."""
+
     __tablename__ = "leads_x_companies"
-    lead_id = Column(UUID, ForeignKey("leads.id"), primary_key=True)
-    company_id = Column(UUID, ForeignKey("companies.id"), primary_key=True)
+
+
+Base.registry.map_imperatively(LeadXCompany, _leads_x_companies_table)
 
 
 class LeadRegistration(Base):
@@ -289,8 +323,12 @@ class LeadRegistration(Base):
     __tablename__ = "lead_registrations"
     __table_args__ = (UniqueConstraint("lead_id", "user_id"),)
 
-    lead_id = Column(UUID, ForeignKey("leads.id"), nullable=False, index=True)
-    user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    lead_id = Column(
+        UUID, ForeignKey("leads.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     internal_notes = Column(Text)
     expose_profile = Column(Boolean, default=False, nullable=False)
 
@@ -306,6 +344,13 @@ class Company(Base):
     """
 
     __tablename__ = "companies"
+    __table_args__ = (
+        Index(
+            "ix_companies_name_lower_trim",
+            text("lower(trim(name))"),
+            unique=True,
+        ),
+    )
     name = Column(String, nullable=False)
     industry = Column(String)
     size = Column(String)
@@ -346,7 +391,7 @@ class Lead(Base):
         nullable=True,
     )
 
-    application = relationship("Application", back_populates="lead")
+    applications = relationship("Application", back_populates="lead")
     companies = relationship(
         "Company",
         secondary="leads_x_companies",
@@ -377,9 +422,19 @@ class LeadComment(Base):
     """Represents a lead comment or a single-level reply."""
 
     __tablename__ = "lead_comments"
-    lead_id = Column(UUID, ForeignKey("leads.id"), nullable=False, index=True)
-    author_user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
-    parent_comment_id = Column(UUID, ForeignKey("lead_comments.id"), index=True)
+    __table_args__ = (Index("ix_lead_comments_lead_created", "lead_id", "created_at"),)
+    lead_id = Column(
+        UUID, ForeignKey("leads.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    author_user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    parent_comment_id = Column(
+        UUID,
+        ForeignKey("lead_comments.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     content = Column(Text, nullable=False)
     anonymous = Column(Boolean, default=True, nullable=False)
 
@@ -411,8 +466,8 @@ class Skill(Base):
     name = Column(String)
     category = Column(String)
     yoe = Column(Integer)
-    subskills = Column(String)
-    user_id = Column(UUID, ForeignKey("users.id"))
+    subskills = Column(ARRAY(Text))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="skills")
 
 
@@ -426,12 +481,12 @@ class Experience(Base):
     title = Column(String)
     company = Column(String)
     location = Column(String)
-    start_date = Column(DateTime)
-    end_date = Column(DateTime)
+    start_date = Column(DateTime(timezone=True))
+    end_date = Column(DateTime(timezone=True))
     description = Column(Text)
-    projects = Column(String)
+    projects = Column(ARRAY(Text))
 
-    user_id = Column(UUID, ForeignKey("users.id"))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="experiences")
 
 
@@ -440,12 +495,12 @@ class Education(Base):
     __tablename__ = "user_education"
     university = Column(String)
     degree = Column(String)
-    gradePoint = Column(String)
-    activities = Column(JSON)  # Assuming activities are stored as JSON
-    achievements = Column(JSON)  # Assuming achievements are stored as JSON
-    start_date = Column(DateTime)
-    end_date = Column(DateTime)
-    user_id = Column(UUID, ForeignKey("users.id"))
+    grade_point = Column(String)
+    activities = Column(ARRAY(Text))
+    achievements = Column(ARRAY(Text))
+    start_date = Column(DateTime(timezone=True))
+    end_date = Column(DateTime(timezone=True))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="education")
 
 
@@ -454,9 +509,9 @@ class Certificate(Base):
     __tablename__ = "user_certificates"
     title = Column(String)
     issuer = Column(String)
-    expiration_date = Column(DateTime)  # Assuming date is stored as a DateTime
-    issued_date = Column(DateTime)  # Assuming date is stored as a DateTime
-    user_id = Column(UUID, ForeignKey("users.id"))
+    expiration_date = Column(DateTime(timezone=True))
+    issued_date = Column(DateTime(timezone=True))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="certificates")
 
 
@@ -468,10 +523,30 @@ class Application(Base):
     """
 
     __tablename__ = "applications"
-    status = Column(
+    __table_args__ = (
+        UniqueConstraint("user_id", "lead_id", name="uq_applications_user_lead"),
+        CheckConstraint(
+            "outcome IS NULL OR stage IS NOT NULL",
+            name="ck_applications_outcome_requires_stage",
+        ),
+        Index("ix_applications_user_stage", "user_id", "stage"),
+        Index("ix_applications_user_outcome", "user_id", "outcome"),
+    )
+
+    stage = Column(
         SAEnum(
-            ApplicationStatus,
-            name="applicationstatus",
+            ApplicationStage,
+            name="applicationstage",
+            native_enum=True,
+            values_callable=_enum_values,
+        ),
+        nullable=False,
+        server_default="registered",
+    )
+    outcome = Column(
+        SAEnum(
+            ApplicationOutcome,
+            name="applicationoutcome",
             native_enum=True,
             values_callable=_enum_values,
         ),
@@ -479,18 +554,63 @@ class Application(Base):
     )
     notes = Column(Text)
     next_step = Column(String)
-    next_step_due = Column(DateTime)
+    next_step_due = Column(DateTime(timezone=True))
     outcome_reason = Column(Text)
-    status_history = Column(JSONB, server_default="[]")
-    lead_id = Column(UUID, ForeignKey("leads.id"), index=True)
-    user_id = Column(UUID, ForeignKey("users.id"))
-    lead = relationship("Lead", back_populates="application", uselist=False)
+    lead_id = Column(
+        UUID, ForeignKey("leads.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    lead = relationship("Lead", back_populates="applications", uselist=False)
     user = relationship("User", back_populates="applications")
     documents = relationship(
         "Document",
         secondary="documents_x_applications",
         back_populates="applications",
     )
+    status_history = relationship(
+        "ApplicationStatusHistory",
+        back_populates="application",
+        cascade="all, delete-orphan",
+        order_by="ApplicationStatusHistory.changed_at",
+        lazy="selectin",
+    )
+
+
+class ApplicationStatusHistory(Base):
+    """Audit row for each application stage/outcome transition."""
+
+    __tablename__ = "application_status_history"
+
+    application_id = Column(
+        UUID, ForeignKey("applications.id", ondelete="CASCADE"), nullable=False
+    )
+    stage = Column(
+        SAEnum(
+            ApplicationStage,
+            name="applicationstage",
+            native_enum=True,
+            values_callable=_enum_values,
+        ),
+        nullable=False,
+    )
+    outcome = Column(
+        SAEnum(
+            ApplicationOutcome,
+            name="applicationoutcome",
+            native_enum=True,
+            values_callable=_enum_values,
+        ),
+        nullable=True,
+    )
+    changed_by_user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    changed_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    note = Column(Text, nullable=True)
+
+    application = relationship("Application", back_populates="status_history")
 
 
 class Contact(Base):
@@ -500,13 +620,16 @@ class Contact(Base):
     """
 
     __tablename__ = "contacts"
+    __table_args__ = (
+        UniqueConstraint("user_id", "email", name="uq_contacts_user_email"),
+    )
     first_name = Column(String)
     last_name = Column(String)
     phone_number = Column(String)
     email = Column(String)
     time_zone = Column(String)
     notes = Column(Text)
-    user_id = Column(UUID, ForeignKey("users.id"))
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="contacts")
 
 
@@ -522,8 +645,13 @@ class Document(Base):
     """
 
     __tablename__ = "documents"
+    __table_args__ = (
+        Index("ix_documents_user_kind_status", "user_id", "kind", "status"),
+    )
 
-    user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     kind = Column(String, nullable=False, index=True)
     title = Column(String, nullable=False)
     status = Column(
@@ -538,7 +666,9 @@ class Document(Base):
         nullable=False,
         server_default=text("false"),
     )
-    head_version_id = Column(UUID, ForeignKey("document_versions.id"))
+    head_version_id = Column(
+        UUID, ForeignKey("document_versions.id", ondelete="SET NULL"), nullable=True
+    )
     yjs_state = Column(LargeBinary, nullable=True)
 
     user = relationship("User", back_populates="documents")
@@ -590,7 +720,9 @@ class DocumentVersion(Base):
     __tablename__ = "document_versions"
     __table_args__ = (UniqueConstraint("document_id", "version_number"),)
 
-    document_id = Column(UUID, ForeignKey("documents.id"), nullable=False, index=True)
+    document_id = Column(
+        UUID, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     version_number = Column(Integer, nullable=False)
     name = Column(String)
     content = Column(Text)
@@ -611,15 +743,37 @@ class DocumentVersion(Base):
     )
 
 
-class DocumentXApplication(Base):
-    """Junction: links a document (optionally at a specific version) to an application."""
+_documents_x_applications_table = Table(
+    "documents_x_applications",
+    Base.metadata,
+    Column(
+        "application_id",
+        UUID,
+        ForeignKey("applications.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "document_id",
+        UUID,
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "version_id",
+        UUID,
+        ForeignKey("document_versions.id", ondelete="SET NULL"),
+        nullable=True,
+    ),
+)
+
+
+class DocumentXApplication:
+    """Mapped junction: documents ↔ applications. No surrogate ID or timestamps."""
 
     __tablename__ = "documents_x_applications"
-    __table_args__ = (UniqueConstraint("application_id", "document_id"),)
 
-    application_id = Column(UUID, ForeignKey("applications.id"), primary_key=True)
-    document_id = Column(UUID, ForeignKey("documents.id"), primary_key=True)
-    version_id = Column(UUID, ForeignKey("document_versions.id"))
+
+Base.registry.map_imperatively(DocumentXApplication, _documents_x_applications_table)
 
 
 class DocumentShare(Base):
@@ -729,23 +883,33 @@ class ActionItem(Base):
             ") <= 1",
             name="ck_action_items_at_most_one_fk",
         ),
+        Index("ix_action_items_user_status", "user_id", "status"),
+        Index("ix_action_items_user_due_at", "user_id", "due_at"),
     )
 
-    user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     kind = Column(String, nullable=False, index=True)
     status = Column(String, nullable=False, default="pending")
     priority = Column(String, nullable=False, default="medium")
-    due_at = Column(DateTime, nullable=True, index=True)
-    completed_at = Column(DateTime, nullable=True)
+    due_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
     sort_order = Column(Integer, nullable=False, default=0, server_default="0")
 
     # Polymorphic nullable FKs
-    application_id = Column(UUID, ForeignKey("applications.id"), nullable=True)
-    lead_id = Column(UUID, ForeignKey("leads.id"), nullable=True)
-    document_id = Column(UUID, ForeignKey("documents.id"), nullable=True)
-    conversation_id = Column(UUID, ForeignKey("conversations.id"), nullable=True)
+    application_id = Column(
+        UUID, ForeignKey("applications.id", ondelete="CASCADE"), nullable=True
+    )
+    lead_id = Column(UUID, ForeignKey("leads.id", ondelete="CASCADE"), nullable=True)
+    document_id = Column(
+        UUID, ForeignKey("documents.id", ondelete="CASCADE"), nullable=True
+    )
+    conversation_id = Column(
+        UUID, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=True
+    )
 
     # Relationships
     user = relationship("User", back_populates="action_items")
@@ -789,14 +953,14 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
         nullable=False,
         server_default=text("'free'"),
     )
-    subscription_expires_at = Column(DateTime)
+    subscription_expires_at = Column(DateTime(timezone=True))
     placement_status = Column(
         String,
         default="active",
         nullable=False,
         server_default=text("'active'"),
     )
-    placement_date = Column(DateTime)
+    placement_date = Column(DateTime(timezone=True))
 
     # MFA / Two-Factor Authentication
     mfa_secret = Column(String, nullable=True)
@@ -861,13 +1025,29 @@ def _apply_user_visibility_defaults(_mapper, _connection, target: User) -> None:
 
 
 class Connection(Base):
-    """Represents a peer connection request between two users."""
+    """Represents a peer connection request between two users.
+
+    Bidirectional dedup decision (S-2.8): Application-layer guard prevents
+    (A→B) + (B→A) duplicates.  A DB-level UNIQUE index on
+    (LEAST(requester_id, addressee_id), GREATEST(requester_id, addressee_id))
+    is the upgrade path if DB enforcement is needed later.  For the developer
+    preview the route-level check is sufficient and avoids changing the
+    semantic meaning of requester/addressee column ordering.
+    """
 
     __tablename__ = "connections"
-    __table_args__ = (UniqueConstraint("requester_id", "addressee_id"),)
+    __table_args__ = (
+        UniqueConstraint("requester_id", "addressee_id"),
+        Index("ix_connections_requester_status", "requester_id", "status"),
+        Index("ix_connections_addressee_status", "addressee_id", "status"),
+    )
 
-    requester_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
-    addressee_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    requester_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    addressee_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     status = Column(String, default="pending", nullable=False)
     message = Column(Text)
 
@@ -891,7 +1071,9 @@ class Conversation(Base):
 
     type = Column(String, nullable=False)  # "direct" or "group"
     title = Column(Text, nullable=True)
-    created_by_user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    created_by_user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
 
     created_by = relationship("User")
     participants = relationship(
@@ -926,8 +1108,8 @@ class ConversationParticipant(Base):
         nullable=False,
         primary_key=True,
     )
-    joined_at = Column(DateTime, server_default=func.now())
-    last_read_at = Column(DateTime, nullable=True)
+    joined_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_read_at = Column(DateTime(timezone=True), nullable=True)
     role = Column(String, default="member")  # "member" or "admin"
 
     conversation = relationship("Conversation", back_populates="participants")
@@ -948,10 +1130,14 @@ class Message(Base):
         nullable=False,
         index=True,
     )
-    author_user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    author_user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
     content = Column(Text, nullable=False)
-    parent_message_id = Column(UUID, ForeignKey("messages.id"), nullable=True)
-    edited_at = Column(DateTime, nullable=True)
+    parent_message_id = Column(
+        UUID, ForeignKey("messages.id", ondelete="CASCADE"), nullable=True
+    )
+    edited_at = Column(DateTime(timezone=True), nullable=True)
 
     conversation = relationship("Conversation", back_populates="messages")
     author = relationship("User")

@@ -173,11 +173,11 @@ async def _create_application_via_api(
     headers: dict[str, str],
     lead_id: UUID,
     *,
-    status: str = "applied",
+    stage: str = "applied",
 ) -> dict[str, object]:
     response = await client.post(
         "/applications/",
-        json={"lead_id": str(lead_id), "status": status},
+        json={"lead_id": str(lead_id), "stage": stage},
         headers=headers,
     )
     assert response.status_code == 201, response.text
@@ -198,7 +198,7 @@ async def test_create_application_happy_path() -> None:
 
         response = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
 
@@ -206,11 +206,11 @@ async def test_create_application_happy_path() -> None:
     body = response.json()
     assert body["lead_id"] == str(lead_id)
     assert body["user_id"] == str(uid)
-    assert body["status"] == "applied"
+    assert body["stage"] == "applied"
     # status_history should contain the initial entry
     assert isinstance(body.get("status_history"), list)
     assert len(body["status_history"]) >= 1
-    assert body["status_history"][0]["to"] == "applied"
+    assert body["status_history"][0]["stage"] == "applied"
     _assert_document_metadata(
         body,
         total_count=0,
@@ -234,7 +234,7 @@ async def test_create_application_with_document_ids_returns_document_metadata() 
             "/applications/",
             json={
                 "lead_id": str(lead_id),
-                "status": "applied",
+                "stage": "applied",
                 "document_ids": [str(document_id) for document_id in document_ids],
             },
             headers=headers,
@@ -260,14 +260,14 @@ async def test_create_application_duplicate_lead_returns_400() -> None:
 
         first = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         assert first.status_code == 201
 
         second = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "screening"},
+            json={"lead_id": str(lead_id), "stage": "screening"},
             headers=headers,
         )
 
@@ -310,7 +310,7 @@ async def test_list_applications() -> None:
     # Previous tests created at least one application
     assert len(body) >= 1
     assert "lead_id" in body[0]
-    assert "status" in body[0]
+    assert "stage" in body[0]
     assert "user_id" in body[0]
     assert "document_metadata" in body[0]
 
@@ -325,7 +325,7 @@ async def test_application_responses_include_accessible_document_metadata() -> N
 
         create_resp = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=viewer_headers,
         )
         assert create_resp.status_code == 201, create_resp.text
@@ -441,7 +441,7 @@ async def test_get_application_by_id() -> None:
 
         create_resp = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
@@ -479,7 +479,7 @@ async def test_update_application_happy_path() -> None:
 
         create_resp = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
@@ -496,8 +496,8 @@ async def test_update_application_happy_path() -> None:
     assert body["next_step"] == "Follow up"
 
 
-async def test_update_application_status_appends_history() -> None:
-    """PATCH that changes status appends to status_history."""
+async def test_update_application_stage_appends_history() -> None:
+    """PATCH that changes stage appends to status_history."""
     await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
@@ -505,37 +505,37 @@ async def test_update_application_status_appends_history() -> None:
 
         create_resp = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
 
         response = await client.patch(
             f"/applications/{app_id}",
-            json={"status": "screening"},
+            json={"stage": "screening"},
             headers=headers,
         )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "screening"
+    assert body["stage"] == "screening"
     history = body.get("status_history", [])
     assert len(history) >= 2
-    # Last entry should reflect the transition
+    # Last entry should reflect the new stage
     last = history[-1]
-    assert last["from"] == "applied"
-    assert last["to"] == "screening"
+    assert last["stage"] == "screening"
+    assert last["outcome"] is None
 
 
 @pytest.mark.parametrize(
-    ("terminal_status", "outcome_reason"),
+    ("terminal_outcome", "outcome_reason"),
     [
         ("rejected", "Role closed internally"),
         ("withdrawn", "Accepted another offer"),
     ],
 )
-async def test_update_application_sets_outcome_reason_for_terminal_status(
-    terminal_status: str,
+async def test_update_application_sets_outcome_reason_for_terminal_outcome(
+    terminal_outcome: str,
     outcome_reason: str,
 ) -> None:
     await _ensure_db_ready()
@@ -548,26 +548,25 @@ async def test_update_application_sets_outcome_reason_for_terminal_status(
 
         response = await client.patch(
             f"/applications/{app_id}",
-            json={"status": terminal_status, "outcome_reason": outcome_reason},
+            json={"outcome": terminal_outcome, "outcome_reason": outcome_reason},
             headers=headers,
         )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == terminal_status
-    assert body["outcome"] == terminal_status
+    assert body["outcome"] == terminal_outcome
     assert body["outcome_reason"] == outcome_reason
 
 
 @pytest.mark.parametrize(
-    ("terminal_status", "outcome_reason"),
+    ("terminal_outcome", "outcome_reason"),
     [
         ("rejected", "Need a hybrid schedule"),
         ("withdrawn", "Accepted another offer"),
     ],
 )
-async def test_update_application_allows_outcome_reason_on_closed_application_without_status_change(
-    terminal_status: str,
+async def test_update_application_allows_outcome_reason_on_closed_application_without_outcome_change(
+    terminal_outcome: str,
     outcome_reason: str,
 ) -> None:
     await _ensure_db_ready()
@@ -580,7 +579,7 @@ async def test_update_application_allows_outcome_reason_on_closed_application_wi
 
         close_response = await client.patch(
             f"/applications/{app_id}",
-            json={"status": terminal_status},
+            json={"outcome": terminal_outcome},
             headers=headers,
         )
         assert close_response.status_code == 200, close_response.text
@@ -593,7 +592,7 @@ async def test_update_application_allows_outcome_reason_on_closed_application_wi
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == terminal_status
+    assert body["outcome"] == terminal_outcome
     assert body["outcome_reason"] == outcome_reason
 
 
@@ -618,9 +617,9 @@ async def test_update_application_rejects_outcome_reason_for_active_application(
     assert "outcome_reason" in response.json()["detail"]
 
 
-@pytest.mark.parametrize("terminal_status", ["rejected", "withdrawn"])
-async def test_update_application_rejects_implicit_reopen_from_terminal_status(
-    terminal_status: str,
+@pytest.mark.parametrize("terminal_outcome", ["rejected", "withdrawn"])
+async def test_update_application_rejects_implicit_reopen_from_terminal_outcome(
+    terminal_outcome: str,
 ) -> None:
     """Closed applications cannot move back to an active stage without reopen=true."""
     await _ensure_db_ready()
@@ -633,7 +632,7 @@ async def test_update_application_rejects_implicit_reopen_from_terminal_status(
 
         close_response = await client.patch(
             f"/applications/{app_id}",
-            json={"status": terminal_status},
+            json={"outcome": terminal_outcome},
             headers=headers,
         )
         assert close_response.status_code == 200, close_response.text
@@ -650,17 +649,15 @@ async def test_update_application_rejects_implicit_reopen_from_terminal_status(
 
     assert get_response.status_code == 200
     body = get_response.json()
-    assert body["status"] == terminal_status
-    assert body["outcome"] == terminal_status
+    assert body["outcome"] == terminal_outcome
     history = body.get("status_history", [])
     assert len(history) == 2
-    assert history[-1]["from"] == "applied"
-    assert history[-1]["to"] == terminal_status
+    assert history[-1]["outcome"] == terminal_outcome
 
 
-@pytest.mark.parametrize("terminal_status", ["rejected", "withdrawn"])
-async def test_update_application_reopens_terminal_status_when_reopen_true(
-    terminal_status: str,
+@pytest.mark.parametrize("terminal_outcome", ["rejected", "withdrawn"])
+async def test_update_application_reopens_terminal_outcome_when_reopen_true(
+    terminal_outcome: str,
 ) -> None:
     """reopen=true allows a terminal application to move back into an active stage."""
     await _ensure_db_ready()
@@ -674,7 +671,7 @@ async def test_update_application_reopens_terminal_status_when_reopen_true(
         close_response = await client.patch(
             f"/applications/{app_id}",
             json={
-                "status": terminal_status,
+                "outcome": terminal_outcome,
                 "outcome_reason": "Team paused hiring",
             },
             headers=headers,
@@ -689,14 +686,14 @@ async def test_update_application_reopens_terminal_status_when_reopen_true(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "screening"
     assert body["stage"] == "screening"
     assert body["outcome"] is None
     assert body["outcome_reason"] is None
     history = body.get("status_history", [])
     assert len(history) == 3
-    assert history[-1]["from"] == terminal_status
-    assert history[-1]["to"] == "screening"
+    # Last entry reflects the reopen to screening
+    assert history[-1]["stage"] == "screening"
+    assert history[-1]["outcome"] is None
 
 
 async def test_update_application_not_found() -> None:
@@ -728,7 +725,7 @@ async def test_delete_application_happy_path() -> None:
 
         create_resp = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
@@ -767,7 +764,7 @@ async def test_get_application_documents_empty() -> None:
 
         create_resp = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
@@ -795,7 +792,7 @@ async def test_attach_and_detach_document() -> None:
 
         create_resp = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
@@ -840,7 +837,7 @@ async def test_attach_duplicate_document_returns_400() -> None:
 
         create_resp = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
@@ -874,7 +871,7 @@ async def test_application_documents_include_shared_attachments() -> None:
 
         create_resp = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=viewer_headers,
         )
         app_id = create_resp.json()["id"]
@@ -924,7 +921,7 @@ async def test_application_documents_exclude_inaccessible_other_user_attachments
 
         create_resp = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]
@@ -968,7 +965,7 @@ async def test_application_export_includes_shared_attached_documents() -> None:
 
         create_resp = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=viewer_headers,
         )
         app_id = create_resp.json()["id"]
@@ -1025,7 +1022,7 @@ async def test_detach_document_not_attached_returns_404() -> None:
 
         create_resp = await client.post(
             "/applications/",
-            json={"lead_id": str(lead_id), "status": "applied"},
+            json={"lead_id": str(lead_id), "stage": "applied"},
             headers=headers,
         )
         app_id = create_resp.json()["id"]

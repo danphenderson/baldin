@@ -142,7 +142,9 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
             status="draft",
             user_id=user_id,
         )
-        application = models.Application(status="applied", lead=lead, user_id=user_id)
+        application = models.Application(
+            stage=models.ApplicationStage.APPLIED, lead=lead, user_id=user_id
+        )
         lead_comment = models.LeadComment(
             lead=lead,
             author=user,

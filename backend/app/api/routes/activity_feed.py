@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import String, and_, cast, func, or_, select
+from sqlalchemy import String, and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app import models, schemas
@@ -12,7 +12,6 @@ from app.core.datetime_utils import (
     ensure_utc,
     now_utc,
     now_utc_naive,
-    parse_utc_datetime,
 )
 
 router: APIRouter = APIRouter()
@@ -30,52 +29,49 @@ _FUNNEL_STAGE_ORDER = [
 _FUNNEL_STAGE_INDEX = {stage: index for index, stage in enumerate(_FUNNEL_STAGE_ORDER)}
 
 
-def _application_status_text_expression():
-    return func.lower(cast(models.Application.__table__.c.status, String))
-
-
-def _application_status_value(
-    status: models.ApplicationStatus | str | None,
-) -> str | None:
-    if status is None:
+def _stage_value(stage) -> str | None:
+    """Normalize an ApplicationStage (or raw string) to its string value."""
+    if stage is None:
         return None
-    if isinstance(status, models.ApplicationStatus):
-        return status.value.lower()
-    return str(status).lower()
+    if isinstance(stage, models.ApplicationStage):
+        return stage.value
+    return str(stage).lower()
 
 
-def _build_application_history_entries(
-    status_history: list[dict] | None,
-    *,
-    current_status: models.ApplicationStatus | str | None,
-    created_at: datetime,
-) -> list[tuple[str, datetime]]:
+def _build_history_entries_from_table(
+    history_rows: list[models.ApplicationStatusHistory],
+) -> list[tuple[str, "datetime"]]:
+    """Build (stage_value, changed_at) pairs from ApplicationStatusHistory rows.
+
+    Entries that record a terminal outcome use the outcome value as the
+    stage label (e.g. ``"rejected"``).  These won't match any stage in
+    ``_APPLICATION_STAGE_ORDER`` so they are ignored for velocity
+    accumulation but still act as endpoints for the preceding stage.
+    """
     entries: list[tuple[str, datetime]] = []
-
-    for entry in status_history or []:
-        stage = _application_status_value(entry.get("to"))
-        changed_at_raw = entry.get("changed_at")
-        if not stage or not changed_at_raw:
+    for row in history_rows:
+        if row.outcome is not None:
+            label = (
+                row.outcome.value
+                if isinstance(row.outcome, models.ApplicationOutcome)
+                else str(row.outcome).lower()
+            )
+        else:
+            label = _stage_value(row.stage)
+        if label is None:
             continue
-
-        changed_at = parse_utc_datetime(changed_at_raw)
-        if changed_at is None:
-            continue
-        entries.append((stage, changed_at))
-
+        entries.append((label, ensure_utc(row.changed_at)))
     entries.sort(key=lambda item: item[1])
-
-    if not entries:
-        fallback_status = _application_status_value(current_status)
-        if fallback_status is not None:
-            entries.append((fallback_status, ensure_utc(created_at)))
-
     return entries
 
 
 def _build_avg_days_per_stage(
     application_rows: list[
-        tuple[list[dict] | None, models.ApplicationStatus | str | None, datetime]
+        tuple[
+            list[models.ApplicationStatusHistory],
+            models.ApplicationStage | None,
+            datetime,
+        ]
     ],
     *,
     current_time: datetime,
@@ -83,12 +79,13 @@ def _build_avg_days_per_stage(
     totals = {stage: 0.0 for stage in _APPLICATION_STAGE_ORDER}
     counts = {stage: 0 for stage in _APPLICATION_STAGE_ORDER}
 
-    for status_history, current_status, created_at in application_rows:
-        history_entries = _build_application_history_entries(
-            status_history,
-            current_status=current_status,
-            created_at=created_at,
-        )
+    for history_rows, current_stage, created_at in application_rows:
+        history_entries = _build_history_entries_from_table(history_rows)
+
+        if not history_entries:
+            fallback = _stage_value(current_stage)
+            if fallback is not None:
+                history_entries.append((fallback, ensure_utc(created_at)))
 
         for index, (stage, started_at) in enumerate(history_entries):
             if stage not in _APPLICATION_STAGE_INDEX:
@@ -118,22 +115,27 @@ def _build_avg_days_per_stage(
 
 def _build_offer_conversion_funnel(
     application_rows: list[
-        tuple[list[dict] | None, models.ApplicationStatus | str | None, datetime]
+        tuple[
+            list[models.ApplicationStatusHistory],
+            models.ApplicationStage | None,
+            datetime,
+        ]
     ],
 ) -> list[schemas.CommandCenterFunnelStage]:
     counts = {stage: 0 for stage in _FUNNEL_STAGE_ORDER}
 
-    for status_history, current_status, created_at in application_rows:
-        history_entries = _build_application_history_entries(
-            status_history,
-            current_status=current_status,
-            created_at=created_at,
-        )
+    for history_rows, current_stage, created_at in application_rows:
+        history_entries = _build_history_entries_from_table(history_rows)
+
+        if not history_entries:
+            fallback = _stage_value(current_stage)
+            if fallback is not None:
+                history_entries.append((fallback, ensure_utc(created_at)))
 
         highest_stage_index = -1
-        current_stage = _application_status_value(current_status)
-        if current_stage in _FUNNEL_STAGE_INDEX:
-            highest_stage_index = _FUNNEL_STAGE_INDEX[current_stage]
+        current = _stage_value(current_stage)
+        if current in _FUNNEL_STAGE_INDEX:
+            highest_stage_index = _FUNNEL_STAGE_INDEX[current]
 
         for stage, _ in history_entries:
             stage_index = _FUNNEL_STAGE_INDEX.get(stage)
@@ -193,38 +195,40 @@ async def get_activity_feed(
 
     items: list[schemas.ActivityFeedItem] = []
 
-    # 1. Application status changes (from status_history JSONB)
+    # 1. Application status changes (from application_status_history table)
     if entity_type is None or entity_type == "application":
         result = await db.execute(
             select(
-                models.Application.id,
-                models.Application.status_history,
+                models.ApplicationStatusHistory.application_id,
+                models.ApplicationStatusHistory.stage,
+                models.ApplicationStatusHistory.outcome,
+                models.ApplicationStatusHistory.changed_at,
                 models.Lead.title,
             )
+            .join(
+                models.Application,
+                models.Application.id == models.ApplicationStatusHistory.application_id,
+            )
             .outerjoin(models.Lead, models.Lead.id == models.Application.lead_id)
-            .where(models.Application.user_id == user.id)
+            .where(
+                models.Application.user_id == user.id,
+                models.ApplicationStatusHistory.changed_at >= since,
+            )
         )
-        for application_id, status_history, lead_title in result.all():
-            history = status_history or []
-            for entry in history:
-                changed_at_raw = entry.get("changed_at")
-                if not changed_at_raw:
-                    continue
-                changed_at = parse_utc_datetime(changed_at_raw)
-                if changed_at is None:
-                    continue
-                if changed_at < since:
-                    continue
-                items.append(
-                    schemas.ActivityFeedItem(
-                        type="status_change",
-                        entity_type="application",
-                        entity_id=application_id,
-                        title=lead_title or "Application",
-                        detail=f"{entry.get('from', 'none')} → {entry.get('to', 'unknown')}",
-                        timestamp=changed_at,
-                    )
+        for application_id, stage, outcome, changed_at, lead_title in result.all():
+            display_value = (
+                outcome.value if outcome else stage.value if stage else "unknown"
+            )
+            items.append(
+                schemas.ActivityFeedItem(
+                    type="status_change",
+                    entity_type="application",
+                    entity_id=application_id,
+                    title=lead_title or "Application",
+                    detail=display_value,
+                    timestamp=ensure_utc(changed_at),
                 )
+            )
 
     # 2. Messages
     if entity_type is None or entity_type == "conversation":
@@ -359,7 +363,6 @@ async def get_command_center_summary(
     analytics_now = now_utc()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
-    application_status_text = _application_status_text_expression()
 
     # Lead counts
     lead_count_q = (
@@ -396,34 +399,52 @@ async def get_command_center_summary(
         .select_from(models.Application)
         .where(
             models.Application.user_id == user.id,
-            ~application_status_text.in_(
-                [
-                    schemas.ApplicationOutcome.REJECTED.value,
-                    schemas.ApplicationOutcome.WITHDRAWN.value,
-                ]
-            ),
+            models.Application.outcome.is_(None),
         )
     )
     active_application_count = (await db.execute(active_app_q)).scalar() or 0
 
-    # Status breakdown
-    breakdown_status = func.coalesce(application_status_text, "unknown")
-    breakdown_q = (
-        select(breakdown_status, func.count())
-        .where(models.Application.user_id == user.id)
-        .group_by(breakdown_status)
-    )
-    breakdown_result = await db.execute(breakdown_q)
-    status_breakdown = {(row[0] or "unknown"): row[1] for row in breakdown_result.all()}
-
-    analytics_rows_result = await db.execute(
+    # Status breakdown by stage + outcome
+    stage_breakdown_q = (
         select(
-            models.Application.status_history,
-            models.Application.status,
-            models.Application.created_at,
-        ).where(models.Application.user_id == user.id)
+            func.lower(func.cast(models.Application.stage, String)),
+            func.count(),
+        )
+        .where(models.Application.user_id == user.id)
+        .group_by(models.Application.stage)
     )
-    analytics_rows = [(row[0], row[1], row[2]) for row in analytics_rows_result.all()]
+    breakdown_result = await db.execute(stage_breakdown_q)
+    status_breakdown: dict[str, int] = {
+        (row[0] or "unknown"): row[1] for row in breakdown_result.all()
+    }
+    # Add outcome counts
+    outcome_breakdown_q = (
+        select(
+            func.lower(func.cast(models.Application.outcome, String)),
+            func.count(),
+        )
+        .where(
+            models.Application.user_id == user.id,
+            models.Application.outcome.is_not(None),
+        )
+        .group_by(models.Application.outcome)
+    )
+    outcome_result = await db.execute(outcome_breakdown_q)
+    for row in outcome_result.all():
+        status_breakdown[row[0] or "unknown"] = (
+            status_breakdown.get(row[0] or "unknown", 0) + row[1]
+        )
+
+    # Analytics: stage velocity and funnel from history table
+    analytics_apps = await db.execute(
+        select(models.Application)
+        .options(selectinload(models.Application.status_history))
+        .where(models.Application.user_id == user.id)
+    )
+    analytics_rows = [
+        (list(app.status_history), app.stage, app.created_at)
+        for app in analytics_apps.scalars().unique().all()
+    ]
     avg_days_per_stage = _build_avg_days_per_stage(
         analytics_rows,
         current_time=analytics_now,

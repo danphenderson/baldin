@@ -22,7 +22,6 @@ from app.core.url_safety import validate_url_safe_for_fetch
 from app.models import (
     ApplicationOutcome,
     ApplicationStage,
-    ApplicationStatus,
     CrawlerRunStatus,
     LeadReviewStatus,
 )
@@ -289,7 +288,7 @@ class BaseSkill(BaseSchema):
     name: str | None = Field(None, description="Name of the skill")
     category: str | None = Field(None, description="Category of the skill")
     yoe: int | None = Field(None, description="Years of Experience")
-    subskills: str | None = Field(None, description="Sub-Skills")
+    subskills: list[str] | None = Field(None, description="Sub-Skills")
 
     @field_validator("yoe", mode="before")
     @classmethod
@@ -322,15 +321,13 @@ class BaseExperience(BaseSchema):
     end_date: datetime | None = Field(None, description="End date of the experience")
     description: str | None = Field(None, description="Description of the experience")
     location: str | None = Field(None, description="Location of the experience")
-    projects: str | None = Field(None, description="Projects involved")
+    projects: list[str] | None = Field(None, description="Projects involved")
 
     @field_validator("start_date", "end_date", mode="before")
     @classmethod
     def parse_date(cls, value: Any) -> Any:
         if isinstance(value, str):
             value = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        if isinstance(value, datetime):
-            return value.replace(tzinfo=None) if value.tzinfo else value
         return value
 
 
@@ -344,9 +341,9 @@ class ExperienceCreate(BaseExperience):
     def parse_projects(cls, value: Any) -> Any:
         if not value:
             return value
-        elif isinstance(value, list):
-            value = ", ".join(value)
-        return utils.wrap_text(value)
+        if isinstance(value, str):
+            return [v.strip() for v in value.split(",") if v.strip()]
+        return value
 
 
 class ExperienceUpdate(BaseExperience):
@@ -356,9 +353,9 @@ class ExperienceUpdate(BaseExperience):
 class BaseEducation(BaseSchema):
     university: str | None = Field(None, description="University name")
     degree: str | None = Field(None, description="Degree name")
-    gradePoint: str | None = Field(None, description="Grade point")
-    activities: str | None = Field(None, description="Activities involved")
-    achievements: str | None = Field(None, description="Achievements")
+    grade_point: str | None = Field(None, description="Grade point")
+    activities: list[str] | None = Field(None, description="Activities involved")
+    achievements: list[str] | None = Field(None, description="Achievements")
     start_date: datetime | None = Field(None, description="Start date of the education")
     end_date: datetime | None = Field(None, description="End date of the education")
 
@@ -367,8 +364,6 @@ class BaseEducation(BaseSchema):
     def parse_date(cls, value: Any) -> Any:
         if isinstance(value, str):
             value = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        if isinstance(value, datetime):
-            return value.replace(tzinfo=None) if value.tzinfo else value
         return value
 
 
@@ -379,12 +374,12 @@ class EducationRead(BaseEducation, BaseRead):
 class EducationCreate(BaseEducation):
     @field_validator("achievements", "activities", mode="before")
     @classmethod
-    def parse_achievements(cls, value: Any) -> Any:
+    def parse_list_fields(cls, value: Any) -> Any:
         if not value:
             return value
-        elif isinstance(value, list):
-            value = ", ".join(value)
-        return utils.wrap_text(value)
+        if isinstance(value, str):
+            return [v.strip() for v in value.split(",") if v.strip()]
+        return value
 
 
 class EducationUpdate(BaseEducation):
@@ -406,8 +401,6 @@ class BaseCertificate(BaseSchema):
     def parse_date(cls, value: Any) -> Any:
         if isinstance(value, str):
             value = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        if isinstance(value, datetime):
-            return value.replace(tzinfo=None) if value.tzinfo else value
         return value
 
 
@@ -1696,9 +1689,6 @@ class ExtractorRun(BaseSchema):
         return value
 
 
-_TERMINAL_APPLICATION_STATUSES = {status.value for status in ApplicationOutcome}
-
-
 def _normalize_optional_text(value: str | None) -> str | None:
     if value is None:
         return None
@@ -1708,19 +1698,19 @@ def _normalize_optional_text(value: str | None) -> str | None:
 
 
 class ApplicationStatusHistoryEntry(BaseSchema):
-    from_: ApplicationStatus | None = Field(
-        None,
-        alias="from",
-        description="Previous application status, null for the initial creation entry",
+    """Read schema for a row in the application_status_history table."""
+
+    id: UUID4 = Field(description="History entry identifier")
+    application_id: UUID4 = Field(description="Application identifier")
+    stage: ApplicationStage = Field(description="Stage at this point in history")
+    outcome: ApplicationOutcome | None = Field(
+        None, description="Outcome at this point, null while active"
     )
-    to: ApplicationStatus = Field(
-        ...,
-        description="Application status after the transition",
+    changed_by_user_id: UUID4 | None = Field(
+        None, description="User who made the change"
     )
-    changed_at: datetime = Field(
-        ...,
-        description="When the status transition was recorded",
-    )
+    changed_at: datetime = Field(description="When the transition was recorded")
+    note: str | None = Field(None, description="Optional note about the transition")
 
 
 class ApplicationDocumentMetadata(BaseSchema):
@@ -1747,9 +1737,7 @@ class ApplicationRead(BaseRead):
     user_id: UUID4
     lead: LeadRead
     user: UserRead
-    status: ApplicationStatus | None = Field(None, description="Application status")
-    stage: ApplicationStage | None = Field(
-        None,
+    stage: ApplicationStage = Field(
         description="Current pipeline stage (registered → applied → screening → interview → offer)",
     )
     outcome: ApplicationOutcome | None = Field(
@@ -1779,26 +1767,18 @@ class ApplicationRead(BaseRead):
         return _normalize_optional_text(value)
 
     @model_validator(mode="after")
-    def _derive_stage_outcome(self) -> "ApplicationRead":
-        """Back-fill stage/outcome from legacy status when not stored explicitly."""
-        raw = self.status.value if self.status else None
-        if raw and self.stage is None and self.outcome is None:
-            if raw in {e.value for e in ApplicationOutcome}:
-                self.outcome = ApplicationOutcome(raw)
-                # Keep last known stage from status_history if available
-            elif raw in {e.value for e in ApplicationStage}:
-                self.stage = ApplicationStage(raw)
-        if raw not in _TERMINAL_APPLICATION_STATUSES:
+    def _clear_outcome_reason_when_active(self) -> "ApplicationRead":
+        """Clear outcome_reason when the application is not in a terminal state."""
+        if self.outcome is None:
             self.outcome_reason = None
         return self
 
 
 class ApplicationCreate(BaseSchema):
     lead_id: UUID4
-    status: ApplicationStatus | None = Field(
-        None, description="Legacy status value (prefer stage/outcome)"
+    stage: ApplicationStage = Field(
+        ApplicationStage.REGISTERED, description="Initial pipeline stage"
     )
-    stage: ApplicationStage | None = Field(None, description="Initial pipeline stage")
     outcome: ApplicationOutcome | None = None
     notes: str | None = None
     next_step: str | None = None
@@ -1815,27 +1795,8 @@ class ApplicationCreate(BaseSchema):
         return _normalize_optional_text(value)
 
     @model_validator(mode="after")
-    def _default_status(self) -> "ApplicationCreate":
-        """Reconcile stage/outcome into the legacy status column."""
-        if self.stage is None and self.outcome is None and self.status is None:
-            self.stage = ApplicationStage.REGISTERED
-            self.status = ApplicationStatus.REGISTERED
-        elif self.stage is not None and self.status is None:
-            self.status = ApplicationStatus(self.stage.value)
-        elif self.outcome is not None and self.status is None:
-            self.status = ApplicationStatus(self.outcome.value)
-        elif self.status is not None:
-            v = self.status.value
-            if v in {e.value for e in ApplicationStage} and self.stage is None:
-                self.stage = ApplicationStage(v)
-            elif v in {e.value for e in ApplicationOutcome} and self.outcome is None:
-                self.outcome = ApplicationOutcome(v)
-
-        if (
-            self.outcome_reason is not None
-            and self.status is not None
-            and self.status.value not in _TERMINAL_APPLICATION_STATUSES
-        ):
+    def _validate(self) -> "ApplicationCreate":
+        if self.outcome_reason is not None and self.outcome is None:
             raise ValueError(
                 "outcome_reason can only be set for rejected or withdrawn applications"
             )
@@ -1843,7 +1804,6 @@ class ApplicationCreate(BaseSchema):
 
 
 class ApplicationUpdate(BaseSchema):
-    status: ApplicationStatus | None = None
     stage: ApplicationStage | None = None
     outcome: ApplicationOutcome | None = None
     notes: str | None = None
@@ -1864,30 +1824,6 @@ class ApplicationUpdate(BaseSchema):
     @classmethod
     def _normalize_outcome_reason(cls, value: str | None) -> str | None:
         return _normalize_optional_text(value)
-
-    @model_validator(mode="after")
-    def _sync_status(self) -> "ApplicationUpdate":
-        """Keep legacy status in sync when callers use stage/outcome."""
-        if self.stage is not None and self.status is None:
-            self.status = ApplicationStatus(self.stage.value)
-        elif self.outcome is not None and self.status is None:
-            self.status = ApplicationStatus(self.outcome.value)
-        elif self.status is not None:
-            v = self.status.value
-            if v in {e.value for e in ApplicationStage} and self.stage is None:
-                self.stage = ApplicationStage(v)
-            elif v in {e.value for e in ApplicationOutcome} and self.outcome is None:
-                self.outcome = ApplicationOutcome(v)
-
-        if (
-            self.outcome_reason is not None
-            and self.status is not None
-            and self.status.value not in _TERMINAL_APPLICATION_STATUSES
-        ):
-            raise ValueError(
-                "outcome_reason can only be set for rejected or withdrawn applications"
-            )
-        return self
 
 
 ActionItemDetailRead.model_rebuild()

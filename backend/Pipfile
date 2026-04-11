@@ -51,6 +51,7 @@ ypy-websocket = "*"
 pyotp = "*"
 redis = {extras = ["hiredis"], version = "*"}
 sentry-sdk = "*"
+alembic = "*"
 
 [dev-packages]
 ipython = "*"

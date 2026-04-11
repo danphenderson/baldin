@@ -6,7 +6,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.admin import ADMIN_SESSION_COOKIE
 from app.core import conf
-from app.core.db import create_db_and_tables, session_context
+from app.core.db import drop_and_create_db_and_tables, session_context
 from app.main import app
 from app.tests import utils
 
@@ -31,7 +31,8 @@ async def _ensure_db_ready() -> None:
     global _db_ready
     if _db_ready:
         return
-    await create_db_and_tables()
+    await drop_and_create_db_and_tables()
+    app.state.bootstrap_completed = True
     _db_ready = True
 
 

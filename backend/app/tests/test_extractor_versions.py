@@ -19,7 +19,6 @@ from sqlalchemy import inspect, text
 from app.core import conf
 from app.core.db import (
     async_engine,
-    create_db_and_tables,
     drop_and_create_db_and_tables,
     session_context,
 )
@@ -289,7 +288,7 @@ async def test_extractor_version_unique_constraint_exists():
     )
 
 
-async def test_create_db_and_tables_restores_extractor_version_constraint():
+async def test_drop_and_create_db_and_tables_restores_extractor_version_constraint():
     await _ensure_db_ready()
 
     async with async_engine.begin() as conn:
@@ -307,7 +306,8 @@ async def test_create_db_and_tables_restores_extractor_version_constraint():
         for constraint in constraints
     )
 
-    await create_db_and_tables()
+    await async_engine.dispose()
+    await drop_and_create_db_and_tables()
 
     constraints = await _extractor_version_unique_constraints()
     assert any(

@@ -1086,10 +1086,11 @@ export interface components {
        * Format: uuid4
        */
       lead_id: string;
-      /** @description Legacy status value (prefer stage/outcome) */
-      status?: components["schemas"]["ApplicationStatus"] | null;
-      /** @description Initial pipeline stage */
-      stage?: components["schemas"]["ApplicationStage"] | null;
+      /**
+       * @description Initial pipeline stage
+       * @default registered
+       */
+      stage?: components["schemas"]["ApplicationStage"];
       outcome?: components["schemas"]["ApplicationOutcome"] | null;
       /** Notes */
       notes?: string | null;
@@ -1183,10 +1184,8 @@ export interface components {
       user_id: string;
       lead: components["schemas"]["LeadRead"];
       user: components["schemas"]["UserRead"];
-      /** @description Application status */
-      status?: components["schemas"]["ApplicationStatus"] | null;
       /** @description Current pipeline stage (registered → applied → screening → interview → offer) */
-      stage?: components["schemas"]["ApplicationStage"] | null;
+      stage: components["schemas"]["ApplicationStage"];
       /** @description Terminal closure (rejected or withdrawn), null while active */
       outcome?: components["schemas"]["ApplicationOutcome"] | null;
       /**
@@ -1224,26 +1223,45 @@ export interface components {
      */
     ApplicationStage: "registered" | "applied" | "screening" | "interview" | "offer";
     /**
-     * ApplicationStatus
-     * @enum {string}
+     * ApplicationStatusHistoryEntry
+     * @description Read schema for a row in the application_status_history table.
      */
-    ApplicationStatus: "registered" | "applied" | "screening" | "interview" | "offer" | "rejected" | "withdrawn";
-    /** ApplicationStatusHistoryEntry */
     ApplicationStatusHistoryEntry: {
-      /** @description Previous application status, null for the initial creation entry */
-      from?: components["schemas"]["ApplicationStatus"] | null;
-      /** @description Application status after the transition */
-      to: components["schemas"]["ApplicationStatus"];
+      /**
+       * Id
+       * Format: uuid4
+       * @description History entry identifier
+       */
+      id: string;
+      /**
+       * Application Id
+       * Format: uuid4
+       * @description Application identifier
+       */
+      application_id: string;
+      /** @description Stage at this point in history */
+      stage: components["schemas"]["ApplicationStage"];
+      /** @description Outcome at this point, null while active */
+      outcome?: components["schemas"]["ApplicationOutcome"] | null;
+      /**
+       * Changed By User Id
+       * @description User who made the change
+       */
+      changed_by_user_id?: string | null;
       /**
        * Changed At
        * Format: date-time
-       * @description When the status transition was recorded
+       * @description When the transition was recorded
        */
       changed_at: string;
+      /**
+       * Note
+       * @description Optional note about the transition
+       */
+      note?: string | null;
     };
     /** ApplicationUpdate */
     ApplicationUpdate: {
-      status?: components["schemas"]["ApplicationStatus"] | null;
       stage?: components["schemas"]["ApplicationStage"] | null;
       outcome?: components["schemas"]["ApplicationOutcome"] | null;
       /** Notes */
@@ -3136,20 +3154,20 @@ export interface components {
        */
       degree?: string | null;
       /**
-       * Gradepoint
+       * Grade Point
        * @description Grade point
        */
-      gradePoint?: string | null;
+      grade_point?: string | null;
       /**
        * Activities
        * @description Activities involved
        */
-      activities?: string | null;
+      activities?: string[] | null;
       /**
        * Achievements
        * @description Achievements
        */
-      achievements?: string | null;
+      achievements?: string[] | null;
       /**
        * Start Date
        * @description Start date of the education
@@ -3192,20 +3210,20 @@ export interface components {
        */
       degree?: string | null;
       /**
-       * Gradepoint
+       * Grade Point
        * @description Grade point
        */
-      gradePoint?: string | null;
+      grade_point?: string | null;
       /**
        * Activities
        * @description Activities involved
        */
-      activities?: string | null;
+      activities?: string[] | null;
       /**
        * Achievements
        * @description Achievements
        */
-      achievements?: string | null;
+      achievements?: string[] | null;
       /**
        * Start Date
        * @description Start date of the education
@@ -3230,20 +3248,20 @@ export interface components {
        */
       degree?: string | null;
       /**
-       * Gradepoint
+       * Grade Point
        * @description Grade point
        */
-      gradePoint?: string | null;
+      grade_point?: string | null;
       /**
        * Activities
        * @description Activities involved
        */
-      activities?: string | null;
+      activities?: string[] | null;
       /**
        * Achievements
        * @description Achievements
        */
-      achievements?: string | null;
+      achievements?: string[] | null;
       /**
        * Start Date
        * @description Start date of the education
@@ -3298,7 +3316,7 @@ export interface components {
        * Projects
        * @description Projects involved
        */
-      projects?: string | null;
+      projects?: string[] | null;
     };
     /** ExperienceRead */
     ExperienceRead: {
@@ -3354,7 +3372,7 @@ export interface components {
        * Projects
        * @description Projects involved
        */
-      projects?: string | null;
+      projects?: string[] | null;
     };
     /** ExperienceUpdate */
     ExperienceUpdate: {
@@ -3392,7 +3410,7 @@ export interface components {
        * Projects
        * @description Projects involved
        */
-      projects?: string | null;
+      projects?: string[] | null;
     };
     /** ExtractorCreate */
     ExtractorCreate: {
@@ -5035,7 +5053,7 @@ export interface components {
        * Subskills
        * @description Sub-Skills
        */
-      subskills?: string | null;
+      subskills?: string[] | null;
     };
     /** SkillRead */
     SkillRead: {
@@ -5058,7 +5076,7 @@ export interface components {
        * Subskills
        * @description Sub-Skills
        */
-      subskills?: string | null;
+      subskills?: string[] | null;
       /**
        * Id
        * Format: uuid4
@@ -5099,7 +5117,7 @@ export interface components {
        * Subskills
        * @description Sub-Skills
        */
-      subskills?: string | null;
+      subskills?: string[] | null;
     };
     /**
      * SubscriptionTier

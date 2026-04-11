@@ -1,7 +1,9 @@
 # Path: app/core/db.py
 
 import asyncio
+import os
 import socket
+import subprocess
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
 from uuid import UUID
@@ -94,12 +96,6 @@ async_engine = create_async_engine(
 async_session_maker = async_sessionmaker(bind=async_engine, expire_on_commit=False)
 
 _ENUM_COLUMN_SPECS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
-    (
-        "applications",
-        "status",
-        "applicationstatus",
-        tuple(status.value for status in models.ApplicationStatus),
-    ),
     (
         "crawler_runs",
         "status",
@@ -346,12 +342,28 @@ def _drop_obsolete_tables(connection: Connection) -> None:
 
 
 def _create_and_sync_schema(connection: Connection) -> None:
+    """Legacy bootstrap — retained behind ``LEGACY_BOOTSTRAP=1`` for transition.
+
+    Production and local-development startup now use Alembic migrations via
+    :func:`run_alembic_migrations`.  This function is only reachable when the
+    ``LEGACY_BOOTSTRAP`` environment variable is explicitly set to ``1``.
+    """
     connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     _drop_obsolete_tables(connection)
     models.Base.metadata.create_all(connection)
     _sync_missing_columns(connection)
     _sync_missing_named_unique_constraints(connection)
     _sync_named_enum_columns(connection)
+
+
+def _create_test_schema(connection: Connection) -> None:
+    """Fast schema bootstrap used only by the pytest test path.
+
+    Uses ``metadata.create_all`` for speed — not the production migration
+    path.  This is acceptable because test databases are disposable.
+    """
+    connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    models.Base.metadata.create_all(connection)
 
 
 async def _terminate_other_test_db_sessions(conn: AsyncSession | Any) -> None:
@@ -367,31 +379,137 @@ async def _terminate_other_test_db_sessions(conn: AsyncSession | Any) -> None:
     )
 
 
+def _alembic_working_directory() -> str:
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def _build_alembic_environment() -> dict[str, str]:
+    env = os.environ.copy()
+    env["ALEMBIC_DATABASE_URL"] = sqlalchemy_database_uri
+    return env
+
+
+def _run_alembic_command(*args: str) -> None:
+    command = ["alembic", *args]
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        cwd=_alembic_working_directory(),
+        env=_build_alembic_environment(),
+    )
+    if result.returncode != 0:
+        output = result.stderr.strip() or result.stdout.strip() or "No output captured."
+        console_log.error(
+            "Alembic command failed (exit %d): %s\n%s",
+            result.returncode,
+            " ".join(command),
+            output,
+        )
+        raise RuntimeError(
+            f"{' '.join(command)} exited with code {result.returncode}: {output}"
+        )
+
+
+async def _public_table_exists(table_name: str) -> bool:
+    async with async_engine.connect() as conn:
+        result = await conn.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public' AND table_name = :table_name
+                )
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return bool(result.scalar_one())
+
+
+async def _schema_has_non_alembic_tables() -> bool:
+    async with async_engine.connect() as conn:
+        result = await conn.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public'
+                      AND table_name <> 'alembic_version'
+                )
+                """
+            )
+        )
+        return bool(result.scalar_one())
+
+
+async def _stamp_existing_schema_if_needed() -> None:
+    if await _public_table_exists("alembic_version"):
+        return
+    if not await _schema_has_non_alembic_tables():
+        return
+
+    console_log.info(
+        "Existing schema detected without alembic_version; stamping baseline revision 0001 before upgrade."
+    )
+    await asyncio.to_thread(_run_alembic_command, "stamp", "0001")
+
+
+def run_alembic_migrations() -> None:
+    """Run ``alembic upgrade head`` as a subprocess.
+
+    This is the production / local-development schema bootstrap path.  It
+    replaces the legacy ``_create_and_sync_schema`` function so that Alembic
+    migrations are the single source of truth for DDL changes.
+
+    Raises ``RuntimeError`` if the subprocess exits non-zero.
+    """
+    _run_alembic_command("upgrade", "head")
+    console_log.info("Alembic migrations applied successfully.")
+
+
 async def create_db_and_tables() -> None:
+    """Bootstrap the database schema at application startup.
+
+    * **Default path** — runs ``alembic upgrade head`` so Alembic migrations
+      are the single source of truth for schema changes.
+    * **Legacy path** — set ``LEGACY_BOOTSTRAP=1`` in the environment to fall
+      back to the old ``metadata.create_all`` + sync behaviour while
+      transitioning to Alembic.  This flag is temporary.
+        * **Test path** — direct callers in ``ENVIRONMENT=PYTEST`` still target the
+            dedicated test database and keep the same timeout semantics.
     """
-    Asynchronously create the database tables and repair additive local schema drift.
+    use_legacy = os.environ.get("LEGACY_BOOTSTRAP", "") == "1"
 
-    This function is typically used during the application startup to ensure
-    that the database schema is set up correctly.
+    if use_legacy:
+        console_log.warning(
+            "LEGACY_BOOTSTRAP=1 detected — using metadata.create_all bootstrap. "
+            "Remove this flag once Alembic migrations are the only schema path."
+        )
 
-    `metadata.create_all()` only creates missing tables; it does not alter
-    existing ones. In local developer-preview environments we keep a persisted
-    Postgres volume, so additive model changes would otherwise break startup
-    until the user manually reset the database. This sync step only adds missing
-    columns and does not attempt destructive migrations.
-    """
+        async def _create_schema() -> None:
+            async with async_engine.begin() as conn:
+                await conn.run_sync(_create_and_sync_schema)
 
-    async def _create_schema() -> None:
-        async with async_engine.begin() as conn:
-            await conn.run_sync(_create_and_sync_schema)
+        try:
+            await _create_schema()
+        except (ConnectionError, OSError, socket.gaierror):
+            raise
+        return
+
+    async def _migrate_schema() -> None:
+        await _stamp_existing_schema_if_needed()
+        await asyncio.to_thread(run_alembic_migrations)
 
     try:
         if conf.settings.ENVIRONMENT == "PYTEST":
             await asyncio.wait_for(
-                _create_schema(), timeout=PYTEST_DB_OPERATION_TIMEOUT_SECONDS
+                _migrate_schema(), timeout=PYTEST_DB_OPERATION_TIMEOUT_SECONDS
             )
         else:
-            await _create_schema()
+            await _migrate_schema()
     except (asyncio.TimeoutError, asyncio.CancelledError) as exc:
         if conf.settings.ENVIRONMENT == "PYTEST":
             await _dispose_engine_and_raise_pytest_database_runtime_error(exc)
@@ -403,13 +521,10 @@ async def create_db_and_tables() -> None:
 
 
 async def drop_and_create_db_and_tables() -> None:
-    """
-    Asynchronously drop the database and all defined tables, then recreate them.
+    """Drop and recreate the public schema — **test-only**.
 
-    This function is typically used during testing to ensure that the database
-    schema is set up correctly.
-
-    # TODO: This function should be removed once we have alembic migrations in place.
+    Uses ``metadata.create_all`` for speed since test databases are disposable
+    and do not need the full Alembic migration history.
     """
 
     async def _reset_schema() -> None:
@@ -420,7 +535,7 @@ async def drop_and_create_db_and_tables() -> None:
             await conn.execute(text("CREATE SCHEMA public"))
             await conn.execute(text("GRANT ALL ON SCHEMA public TO postgres"))
             await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
-            await conn.run_sync(_create_and_sync_schema)
+            await conn.run_sync(_create_test_schema)
 
     try:
         if conf.settings.ENVIRONMENT == "PYTEST":

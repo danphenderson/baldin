@@ -1,7 +1,8 @@
-"""Regression tests for local-first bootstrap schema repair."""
+"""Regression tests for migration bootstrap and the transitional legacy path."""
 
 import asyncio
 from collections.abc import Awaitable, Callable
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -76,162 +77,65 @@ async def _table_exists(table_name: str) -> bool:
         return bool(result.scalar_one())
 
 
-async def test_create_db_and_tables_repairs_existing_local_schema() -> None:
+async def test_create_db_and_tables_stamps_baseline_before_upgrade(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     await async_engine.dispose()
     await drop_and_create_db_and_tables()
 
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            utils.random_email(),
-            password_helper.hash("geralt"),
-            session,
-        )
-        document = models.Document(
-            user_id=user.id, kind="freeform", title="Local draft"
-        )
-        session.add(document)
-        await session.flush()
+    commands: list[tuple[list[str], str | None]] = []
 
-        version = models.DocumentVersion(
-            document_id=document.id,
-            version_number=1,
-            name="v1",
-            content="hello world",
-        )
-        session.add(version)
-        await session.flush()
+    def fake_subprocess_run(command, *, capture_output, text, cwd, env):
+        commands.append((list(command), env.get("ALEMBIC_DATABASE_URL")))
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
 
-        extractor = models.Extractor(
-            name="Bootstrap extractor",
-            instruction="Extract contact data.",
-            json_schema={"type": "object"},
-            user_id=user.id,
-        )
-        session.add(extractor)
-        await session.flush()
-
-        crawler_pipeline = models.CrawlerPipeline(
-            name="Bootstrap crawler",
-            source="linkedin",
-            query_definition={"keywords": ["python"]},
-            created_by_user_id=user.id,
-        )
-        session.add(crawler_pipeline)
-        await session.flush()
-
-        document.head_version_id = version.id
-        await session.commit()
-
-        user_id = user.id
-        document_id = document.id
-        version_id = version.id
-        extractor_id = extractor.id
-        crawler_pipeline_id = crawler_pipeline.id
-
-    async with session_context() as session:
-        await session.execute(text("DROP TABLE IF EXISTS document_shares CASCADE"))
-        await session.execute(text("DROP TABLE IF EXISTS document_activities CASCADE"))
-        await session.execute(
-            text("ALTER TABLE users DROP COLUMN IF EXISTS headline CASCADE")
-        )
-        await session.execute(
-            text("ALTER TABLE users DROP COLUMN IF EXISTS bio CASCADE")
-        )
-        await session.execute(
-            text("ALTER TABLE users DROP COLUMN IF EXISTS is_discoverable CASCADE")
-        )
-        await session.execute(
-            text("ALTER TABLE users DROP COLUMN IF EXISTS subscription_tier CASCADE")
-        )
-        await session.execute(
-            text(
-                "ALTER TABLE users DROP COLUMN IF EXISTS subscription_expires_at CASCADE"
-            )
-        )
-        await session.execute(
-            text("ALTER TABLE users DROP COLUMN IF EXISTS placement_status CASCADE")
-        )
-        await session.execute(
-            text("ALTER TABLE users DROP COLUMN IF EXISTS placement_date CASCADE")
-        )
-        await session.execute(
-            text("ALTER TABLE documents DROP COLUMN IF EXISTS yjs_state CASCADE")
-        )
-        await session.execute(
-            text(
-                "ALTER TABLE document_versions DROP COLUMN IF EXISTS content_format CASCADE"
-            )
-        )
-        await session.execute(
-            text(
-                "ALTER TABLE document_versions DROP COLUMN IF EXISTS source_file CASCADE"
-            )
-        )
-        await session.execute(
-            text(
-                "ALTER TABLE extractors DROP COLUMN IF EXISTS requires_approval CASCADE"
-            )
-        )
-        await session.execute(
-            text(
-                "ALTER TABLE crawler_pipelines DROP COLUMN IF EXISTS requires_approval CASCADE"
-            )
-        )
-        await session.commit()
+    monkeypatch.delenv("LEGACY_BOOTSTRAP", raising=False)
+    monkeypatch.setattr(db_module.subprocess, "run", fake_subprocess_run)
 
     await create_db_and_tables()
 
-    assert await _table_exists("document_shares")
-    assert await _table_exists("document_activities")
-    assert {
-        "headline",
-        "bio",
-        "is_discoverable",
-        "subscription_tier",
-        "subscription_expires_at",
-        "placement_status",
-        "placement_date",
-    }.issubset(await _column_names("users"))
-    assert {"yjs_state"}.issubset(await _column_names("documents"))
-    assert {"content_format", "source_file"}.issubset(
-        await _column_names("document_versions")
+    assert [command for command, _db_url in commands] == [
+        ["alembic", "stamp", "0001"],
+        ["alembic", "upgrade", "head"],
+    ]
+    assert all(
+        db_url == db_module.sqlalchemy_database_uri for _command, db_url in commands
     )
-    assert {"requires_approval"}.issubset(await _column_names("extractors"))
-    assert {"requires_approval"}.issubset(await _column_names("crawler_pipelines"))
-
-    async with session_context() as session:
-        repaired_user = await session.get(models.User, user_id)
-        repaired_document = await session.get(models.Document, document_id)
-        repaired_version = await session.get(models.DocumentVersion, version_id)
-        repaired_extractor = await session.get(models.Extractor, extractor_id)
-        repaired_crawler_pipeline = await session.get(
-            models.CrawlerPipeline, crawler_pipeline_id
-        )
-
-        assert repaired_user is not None
-        assert repaired_user.headline is None
-        assert repaired_user.bio is None
-        assert repaired_user.is_discoverable is False
-        assert repaired_user.subscription_tier == "free"
-        assert repaired_user.subscription_expires_at is None
-        assert repaired_user.placement_status == "active"
-        assert repaired_user.placement_date is None
-
-        assert repaired_document is not None
-        assert repaired_document.yjs_state is None
-
-        assert repaired_version is not None
-        assert repaired_version.content_format == "plain_text"
-        assert repaired_version.source_file is None
-
-        assert repaired_extractor is not None
-        assert repaired_extractor.requires_approval is False
-
-        assert repaired_crawler_pipeline is not None
-        assert repaired_crawler_pipeline.requires_approval is False
 
 
-async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None:
+async def test_create_db_and_tables_uses_legacy_bootstrap_when_flag_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    run_sync_calls: list[Callable[[object], None]] = []
+
+    class FakeConnection:
+        async def run_sync(self, fn: Callable[[object], None]) -> None:
+            run_sync_calls.append(fn)
+
+    @asynccontextmanager
+    async def fake_begin():
+        yield FakeConnection()
+
+    monkeypatch.setenv("LEGACY_BOOTSTRAP", "1")
+    monkeypatch.setattr(
+        db_module,
+        "async_engine",
+        SimpleNamespace(begin=fake_begin),
+    )
+    monkeypatch.setattr(
+        db_module,
+        "run_alembic_migrations",
+        lambda: pytest.fail("Alembic path should not run when LEGACY_BOOTSTRAP=1"),
+    )
+
+    await create_db_and_tables()
+
+    assert run_sync_calls == [db_module._create_and_sync_schema]
+
+
+async def test_create_db_and_tables_repairs_string_backed_enum_columns_with_legacy_bootstrap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     await async_engine.dispose()
     await drop_and_create_db_and_tables()
 
@@ -261,7 +165,7 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
         application = models.Application(
             lead_id=lead.id,
             user_id=user.id,
-            status=models.ApplicationStatus.APPLIED,
+            stage=models.ApplicationStage.APPLIED,
         )
         session.add_all([crawler_run, application])
         await session.commit()
@@ -273,11 +177,6 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
     async with session_context() as session:
         await session.execute(
             text(
-                "ALTER TABLE applications ALTER COLUMN status TYPE varchar USING status::text"
-            )
-        )
-        await session.execute(
-            text(
                 "ALTER TABLE crawler_runs ALTER COLUMN status TYPE varchar USING status::text"
             )
         )
@@ -287,12 +186,6 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
             )
         )
 
-        await session.execute(
-            text(
-                "UPDATE applications SET status = 'applied' WHERE id = :application_id"
-            ),
-            {"application_id": application_id},
-        )
         await session.execute(
             text(
                 "UPDATE crawler_runs SET status = 'RUNNING' WHERE id = :crawler_run_id"
@@ -307,9 +200,6 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
         )
 
         await session.execute(
-            text("ALTER TYPE applicationstatus RENAME VALUE 'applied' TO 'APPLIED'")
-        )
-        await session.execute(
             text("ALTER TYPE crawlerrunstatus RENAME VALUE 'running' TO 'RUNNING'")
         )
         await session.execute(
@@ -319,10 +209,6 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
         )
         await session.commit()
 
-    assert await _column_type("applications", "status") == (
-        "character varying",
-        "varchar",
-    )
     assert await _column_type("crawler_runs", "status") == (
         "character varying",
         "varchar",
@@ -332,12 +218,9 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
         "varchar",
     )
 
+    monkeypatch.setenv("LEGACY_BOOTSTRAP", "1")
     await create_db_and_tables()
 
-    assert await _column_type("applications", "status") == (
-        "USER-DEFINED",
-        "applicationstatus",
-    )
     assert await _column_type("crawler_runs", "status") == (
         "USER-DEFINED",
         "crawlerrunstatus",
@@ -353,7 +236,7 @@ async def test_create_db_and_tables_repairs_string_backed_enum_columns() -> None
         repaired_lead = await session.get(models.Lead, lead_id)
 
         assert repaired_application is not None
-        assert repaired_application.status == models.ApplicationStatus.APPLIED
+        assert repaired_application.stage == models.ApplicationStage.APPLIED
 
         assert repaired_crawler_run is not None
         assert repaired_crawler_run.status == models.CrawlerRunStatus.RUNNING

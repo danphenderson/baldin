@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 
-from app.api.routes.applications import _normalize_status_history
 from app.core.datetime_utils import normalize_utc_datetime, parse_utc_datetime
 
 
@@ -19,27 +18,3 @@ def test_normalize_utc_datetime_emits_z_suffix() -> None:
 def test_parse_utc_datetime_returns_none_for_invalid_values() -> None:
     assert parse_utc_datetime("not-a-timestamp") is None
     assert parse_utc_datetime(123) is None  # type: ignore[arg-type]
-
-
-def test_normalize_status_history_preserves_existing_timestamps() -> None:
-    history = [
-        {"from": None, "to": "applied", "changed_at": "2026-01-02T03:04:05"},
-        {
-            "from": "applied",
-            "to": "interview",
-            "changed_at": "2026-01-03T04:05:06Z",
-        },
-        {"from": "interview", "to": "offer", "changed_at": "not-a-timestamp"},
-        {"from": "offer", "to": "accepted", "changed_at": 123},
-        {"from": "offer", "to": "accepted"},
-    ]
-
-    normalized = _normalize_status_history(history)
-
-    assert normalized == [
-        {"from": None, "to": "applied", "changed_at": "2026-01-02T03:04:05Z"},
-        {"from": "applied", "to": "interview", "changed_at": "2026-01-03T04:05:06Z"},
-        {"from": "interview", "to": "offer", "changed_at": "not-a-timestamp"},
-        {"from": "offer", "to": "accepted", "changed_at": 123},
-        {"from": "offer", "to": "accepted"},
-    ]

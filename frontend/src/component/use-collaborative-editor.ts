@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { Extensions } from '@tiptap/core';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { API_URL } from '../config/env';
@@ -20,6 +21,8 @@ interface UseCollaborativeEditorOptions {
   token: string;
   enabled: boolean;
   userName?: string;
+  /** Extensions to pass to seedCollaborationDocument for schema-aware seeding. */
+  seedExtensions?: Extensions;
 }
 
 export interface ConnectedUser {
@@ -86,7 +89,7 @@ export function buildCollaborationSocketConfig(apiUrl: string, documentId: strin
 export function useCollaborativeEditor(
   options: UseCollaborativeEditorOptions,
 ): CollaborativeEditorState {
-  const { documentId, token, enabled, userName } = options;
+  const { documentId, token, enabled, userName, seedExtensions } = options;
 
   const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
   const [provider, setProvider] = useState<WebsocketProvider | null>(null);
@@ -169,7 +172,7 @@ export function useCollaborativeEditor(
         && bootstrap.content
         && bootstrap.content_format === 'tiptap_json'
       ) {
-        seedCollaborationDocument(ydocInstance, bootstrap.content);
+        seedCollaborationDocument(ydocInstance, bootstrap.content, seedExtensions);
       }
 
       if (isCancelled || ydocInstance === null) {
@@ -255,7 +258,7 @@ export function useCollaborativeEditor(
       setConnectionStatus('disconnected');
       setConnectedUsers([]);
     };
-  }, [documentId, token, enabled, localUser]);
+  }, [documentId, token, enabled, localUser, seedExtensions]);
 
   return {
     ydoc,

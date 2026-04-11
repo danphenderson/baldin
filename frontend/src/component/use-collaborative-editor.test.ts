@@ -232,4 +232,36 @@ describe('useCollaborativeEditor', () => {
     expect(result.current.connectionStatus).toBe('disconnected');
     expect(result.current.connected).toBe(false);
   });
+
+  it('forwards seedExtensions to seedCollaborationDocument when bootstrapping', async () => {
+    const providerDouble = createProviderDouble();
+    websocketProviderMock.mockReturnValue(providerDouble);
+    vi.mocked(requestDocumentCollaborationBootstrap).mockResolvedValue({
+      status: 'seed',
+      collaboration_token: 'collab-token-ext',
+      retry_after_ms: null,
+      content: JSON.stringify({
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'With extensions' }] }],
+      }),
+      content_format: 'tiptap_json',
+    });
+
+    const fakeSeedExtensions = [{ name: 'test-extension' }] as unknown as import('@tiptap/core').Extensions;
+
+    renderHook(() => useCollaborativeEditor({
+      documentId: 'doc-ext',
+      token: 'token-ext',
+      enabled: true,
+      userName: 'Quinn',
+      seedExtensions: fakeSeedExtensions,
+    }));
+
+    await waitFor(() => {
+      expect(seedCollaborationDocument).toHaveBeenCalledTimes(1);
+    });
+
+    const seedCall = vi.mocked(seedCollaborationDocument).mock.calls[0];
+    expect(seedCall?.[2]).toBe(fakeSeedExtensions);
+  });
 });

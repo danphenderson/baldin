@@ -10,11 +10,13 @@ import {
   ArrowBack as BackIcon, Save as SaveIcon,
   Article as ResumeIcon, Mail as LetterIcon, Replay as FollowUpIcon,
   MenuBook as RefSheetIcon, TextSnippet as FreeformIcon,
+  Description as CellDocIcon,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import RichTextEditor, { type ContentFormat } from '../../component/rich-text-editor';
+import CellDocEditor from '../../component/cell-doc/cell-doc-editor';
 import { normalizeDocumentContent } from '../../component/document-content';
 import {
   getDocument, createDocument, createVersion, getVersions,
@@ -32,6 +34,7 @@ const KIND_OPTIONS: { value: DocumentKind; label: string; icon: React.ReactEleme
   { value: 'follow_up',       label: 'Follow-up',       icon: <FollowUpIcon fontSize="small" /> },
   { value: 'reference_sheet', label: 'Reference Sheet', icon: <RefSheetIcon fontSize="small" /> },
   { value: 'freeform',        label: 'Freeform',        icon: <FreeformIcon fontSize="small" /> },
+  { value: 'cell_doc',        label: 'Cell Doc',        icon: <CellDocIcon fontSize="small" /> },
 ];
 
 const CONTENT_TYPE_OPTIONS = [
@@ -46,6 +49,7 @@ const KIND_HINTS: Record<string, { placeholder: string; defaultContentType: stri
   follow_up:       { placeholder: 'Draft your follow-up message…\n\nHi [Name],\n\nI wanted to follow up on…', defaultContentType: 'custom' },
   reference_sheet: { placeholder: 'List your references…\n\nName | Title | Company | Email | Phone | Relationship', defaultContentType: 'custom' },
   freeform:        { placeholder: 'Start writing…', defaultContentType: 'custom' },
+  cell_doc:        { placeholder: "Type '/' for commands", defaultContentType: 'custom' },
 };
 
 /* ------------------------------------------------------------------ */
@@ -310,6 +314,7 @@ const DocumentEditorPage: React.FC = () => {
                         const newKind = e.target.value as DocumentKind;
                         setKind(newKind);
                         setContentType(KIND_HINTS[newKind]?.defaultContentType ?? 'custom');
+                        if (newKind === 'cell_doc') setContentFormat('tiptap_json');
                       }}
                       aria-label="Document kind"
                     >
@@ -343,7 +348,7 @@ const DocumentEditorPage: React.FC = () => {
                     ))}
                   </Select>
                 </FormControl>
-              {isCreate && (
+              {isCreate && kind !== 'cell_doc' && (
                   <ToggleButtonGroup
                     size="small" exclusive
                     value={contentFormat}
@@ -366,27 +371,67 @@ const DocumentEditorPage: React.FC = () => {
           </Paper>
 
           {/* Content editor */}
-          <RichTextEditor
-            content={editorContent}
-            contentFormat={contentFormat}
-            externalContentKey={externalContentKey}
-            readOnly={isReadOnly}
-            onChange={(json, text) => {
-              if (contentFormat === 'tiptap_json') {
-                setContent(json);
-                setPlainText(text);
-              } else {
-                setContent(text);
-                setPlainText(text);
-              }
-            }}
-            placeholder={KIND_HINTS[kind]?.placeholder ?? 'Start writing…'}
-            minHeight="400px"
-            collaborative={collaborative}
-            documentId={id}
-            token={token ?? undefined}
-            collaborationUserName={currentUserName}
-          />
+          {kind === 'cell_doc' ? (
+            <Box>
+              {/* Inline title — Notion-like heading-style title input */}
+              <Box
+                component="input"
+                value={title}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
+                placeholder="Untitled"
+                disabled={isReadOnly || isSharedEditor}
+                aria-label="Document title"
+                sx={{
+                  width: '100%',
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  ...theme.typography.h4,
+                  fontWeight: 700,
+                  mb: 1,
+                  p: 0,
+                  pl: '40px',
+                  color: theme.palette.text.primary,
+                  '&::placeholder': { color: theme.palette.text.disabled },
+                  '&:disabled': { color: theme.palette.text.primary },
+                }}
+              />
+              <CellDocEditor
+                content={editorContent}
+                onChange={(json, text) => { setContent(json); setPlainText(text); }}
+                externalContentKey={externalContentKey}
+                readOnly={isReadOnly}
+                placeholder={KIND_HINTS[kind]?.placeholder}
+                minHeight="400px"
+                collaborative={collaborative}
+                documentId={id}
+                token={token ?? undefined}
+                collaborationUserName={currentUserName}
+              />
+            </Box>
+          ) : (
+            <RichTextEditor
+              content={editorContent}
+              contentFormat={contentFormat}
+              externalContentKey={externalContentKey}
+              readOnly={isReadOnly}
+              onChange={(json, text) => {
+                if (contentFormat === 'tiptap_json') {
+                  setContent(json);
+                  setPlainText(text);
+                } else {
+                  setContent(text);
+                  setPlainText(text);
+                }
+              }}
+              placeholder={KIND_HINTS[kind]?.placeholder ?? 'Start writing…'}
+              minHeight="400px"
+              collaborative={collaborative}
+              documentId={id}
+              token={token ?? undefined}
+              collaborationUserName={currentUserName}
+            />
+          )}
         </Grid>
 
         {/* ── Sidebar: version history (edit mode only) ─────────── */}

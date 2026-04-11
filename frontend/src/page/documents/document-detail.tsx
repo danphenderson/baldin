@@ -17,6 +17,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
+import CellDocEditor from '../../component/cell-doc/cell-doc-editor';
 import RichTextEditor from '../../component/rich-text-editor';
 import {
   getDocument, updateDocument, deleteDocument, downloadDocument, pinDocument, downloadOriginal,
@@ -96,6 +97,43 @@ function getActivityBadgeLabels(activity: DocumentActivityRead): string[] {
   }
   return labels.slice(0, 3);
 }
+
+const ReadOnlyVersionPreview: React.FC<{
+  kind: DocumentKind;
+  version: DocumentVersionRead;
+}> = ({ kind, version }) => {
+  if (version.content_format !== 'tiptap_json') {
+    return (
+      <Typography
+        variant="body2" component="pre"
+        sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem', m: 0 }}
+      >
+        {version.content || '(empty)'}
+      </Typography>
+    );
+  }
+
+  if (kind === 'cell_doc') {
+    return (
+      <CellDocEditor
+        content={version.content || ''}
+        readOnly
+        onChange={() => {}}
+        minHeight="100px"
+      />
+    );
+  }
+
+  return (
+    <RichTextEditor
+      content={version.content || ''}
+      contentFormat="tiptap_json"
+      readOnly
+      onChange={() => {}}
+      minHeight="100px"
+    />
+  );
+};
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -656,22 +694,7 @@ const DocumentDetailPage: React.FC = () => {
                     border: `1px solid ${theme.palette.divider}`,
                     maxHeight: 400, overflow: 'auto',
                   }}>
-                    {v.content_format === 'tiptap_json' ? (
-                      <RichTextEditor
-                        content={v.content || ''}
-                        contentFormat="tiptap_json"
-                        readOnly
-                        onChange={() => {}}
-                        minHeight="100px"
-                      />
-                    ) : (
-                      <Typography
-                        variant="body2" component="pre"
-                        sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem', m: 0 }}
-                      >
-                        {v.content || '(empty)'}
-                      </Typography>
-                    )}
+                    <ReadOnlyVersionPreview kind={doc.kind} version={v} />
                   </Box>
                 </Collapse>
               </Box>

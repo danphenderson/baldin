@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
 import { buildCellDocExtensions } from './cell-doc/extensions';
+import { CELL_DOC_EXPORT_CONTRACT_FIXTURE } from './cell-doc/test/cell-doc-contract-fixtures';
 import {
   resolveCollaborationBootstrapRetryDelay,
   seedCollaborationDocument,
@@ -34,39 +35,7 @@ describe('seedCollaborationDocument', () => {
 
   it('seeds cell-doc content when given the full cell-doc extension graph', () => {
     const ydoc = new Y.Doc();
-    const richContent = JSON.stringify({
-      type: 'doc',
-      content: [
-        {
-          type: 'paragraph',
-          content: [{ type: 'text', text: 'Bootstrap' }],
-        },
-        {
-          type: 'callout',
-          attrs: { callout_type: 'tip' },
-          content: [
-            { type: 'paragraph', content: [{ type: 'text', text: 'Cell-doc bootstrap' }] },
-          ],
-        },
-        {
-          type: 'table',
-          content: [
-            {
-              type: 'tableRow',
-              content: [
-                { type: 'tableHeader', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'H1' }] }] },
-              ],
-            },
-            {
-              type: 'tableRow',
-              content: [
-                { type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'A1' }] }] },
-              ],
-            },
-          ],
-        },
-      ],
-    });
+    const richContent = JSON.stringify(CELL_DOC_EXPORT_CONTRACT_FIXTURE);
 
     expect(seedCollaborationDocument(ydoc, richContent, buildCellDocExtensions())).toBe(true);
 
@@ -82,8 +51,12 @@ describe('seedCollaborationDocument', () => {
 
     try {
       const json = editor.getJSON();
-      expect(json.content?.[1]?.type).toBe('callout');
-      expect(json.content?.[2]?.type).toBe('table');
+      expect(json.content?.[1]?.type).toBe('taskList');
+      expect(json.content?.[2]?.type).toBe('callout');
+      expect(json.content?.[2]?.attrs?.callout_type).toBe('tip');
+      expect(json.content?.[3]?.type).toBe('details');
+      expect(json.content?.[3]?.content?.[0]?.type).toBe('detailsSummary');
+      expect(json.content?.[4]?.type).toBe('table');
     } finally {
       editor.destroy();
     }

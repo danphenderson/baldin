@@ -3,6 +3,7 @@ import type { DocumentContentFormat } from '../service/documents';
 type TiptapNode = {
   type?: string;
   text?: string;
+  attrs?: Record<string, unknown>;
   content?: TiptapNode[];
 };
 
@@ -25,16 +26,39 @@ export function parseTiptapDocument(content: string): TiptapNode | null {
   return null;
 }
 
+function joinNodeText(content: TiptapNode[] | undefined, separator = ''): string {
+  return (content ?? []).map(extractNodeText).join(separator);
+}
+
 function extractNodeText(node: TiptapNode): string {
   if (node.type === 'text' && typeof node.text === 'string') return node.text;
   if (node.type === 'hardBreak') return '\n';
   if (!Array.isArray(node.content)) return '';
 
-  const separator = node.type === 'doc' || node.type === 'bulletList' || node.type === 'orderedList'
-    ? '\n'
-    : '';
-
-  return node.content.map(extractNodeText).join(separator);
+  switch (node.type) {
+    case 'doc':
+    case 'bulletList':
+    case 'orderedList':
+    case 'taskList':
+    case 'details':
+    case 'table':
+      return joinNodeText(node.content, '\n');
+    case 'tableRow':
+      return joinNodeText(node.content, ' | ');
+    case 'taskItem': {
+      const checked = node.attrs?.checked === true;
+      return `${checked ? '[x]' : '[ ]'} ${joinNodeText(node.content)}`.trimEnd();
+    }
+    case 'callout': {
+      const calloutType = typeof node.attrs?.callout_type === 'string'
+        ? node.attrs.callout_type
+        : null;
+      const body = joinNodeText(node.content, '\n');
+      return calloutType ? `[${calloutType}] ${body}` : body;
+    }
+    default:
+      return joinNodeText(node.content);
+  }
 }
 
 export function extractPlainTextFromTiptapJson(content: string): string {

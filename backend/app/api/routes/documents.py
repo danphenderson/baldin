@@ -2,7 +2,10 @@
 import json
 import re
 import uuid
+from functools import lru_cache
 from io import BytesIO
+from pathlib import Path
+from xml.sax.saxutils import escape as html_escape
 
 from fastapi import (
     APIRouter,
@@ -17,9 +20,12 @@ from fastapi import (
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import UUID4
 from PyPDF2 import PdfReader
+from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.platypus import Paragraph, SimpleDocTemplate
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload
@@ -68,16 +74,64 @@ _RESTORE_CHANGE_SUMMARY_PATTERNS = (
     re.compile(r"^\s*reverted\s+to\s+v(?P<version_number>\d+)\s*$", re.IGNORECASE),
 )
 
+_UNICODE_PDF_FONT_CANDIDATES = (
+    Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+    Path("/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf"),
+    Path("/System/Library/Fonts/Supplemental/Arial Unicode.ttf"),
+    Path("/Library/Fonts/Arial Unicode.ttf"),
+)
+
+_CALLOUT_PALETTES = {
+    "info": {
+        "background": colors.HexColor("#dbeafe"),
+        "text": colors.HexColor("#1d4ed8"),
+    },
+    "warning": {
+        "background": colors.HexColor("#fef3c7"),
+        "text": colors.HexColor("#92400e"),
+    },
+    "tip": {
+        "background": colors.HexColor("#dcfce7"),
+        "text": colors.HexColor("#166534"),
+    },
+    "danger": {
+        "background": colors.HexColor("#fee2e2"),
+        "text": colors.HexColor("#b91c1c"),
+    },
+}
+
 
 # ---------------------------------------------------------------------------
 #  Tiptap → PDF helpers
 # ---------------------------------------------------------------------------
 
 
+@lru_cache(maxsize=1)
+def _resolve_unicode_pdf_font_name() -> str:
+    for candidate in _UNICODE_PDF_FONT_CANDIDATES:
+        if not candidate.is_file():
+            continue
+
+        font_name = f"BaldinPdf{candidate.stem}"
+        try:
+            pdfmetrics.getFont(font_name)
+        except KeyError:
+            pdfmetrics.registerFont(TTFont(font_name, str(candidate)))
+        return font_name
+
+    return "Helvetica"
+
+
+def _pdf_font_name_for_tiptap(raw_content: str) -> str:
+    if '"taskItem"' in raw_content or '"taskList"' in raw_content:
+        return _resolve_unicode_pdf_font_name()
+    return "Helvetica"
+
+
 def _tiptap_extract_text(node: dict) -> str:
     """Recursively extract styled HTML text from a Tiptap JSON node."""
     if node.get("type") == "text":
-        text = node.get("text", "")
+        text = html_escape(node.get("text", ""))
         for mark in node.get("marks", []):
             mt = mark.get("type")
             if mt == "bold":
@@ -88,10 +142,452 @@ def _tiptap_extract_text(node: dict) -> str:
                 text = f"<u>{text}</u>"
         return text
 
+    if node.get("type") == "hardBreak":
+        return "<br />"
+
     parts: list[str] = []
-    for child in node.get("content", []):
+    for child in _tiptap_node_children(node):
         parts.append(_tiptap_extract_text(child))
     return "".join(parts)
+
+
+def _tiptap_node_children(node: dict) -> list[dict]:
+    raw_children = node.get("content", [])
+    if not isinstance(raw_children, list):
+        return []
+    return [child for child in raw_children if isinstance(child, dict)]
+
+
+def _style_with_indent(
+    base_style: ParagraphStyle,
+    name: str,
+    *,
+    left_indent: int = 0,
+    **overrides,
+) -> ParagraphStyle:
+    style_kwargs = {"leftIndent": left_indent, **overrides}
+    return ParagraphStyle(name, parent=base_style, **style_kwargs)
+
+
+def _paragraph_with_style(
+    text_html: str,
+    base_style: ParagraphStyle,
+    *,
+    name: str,
+    left_indent: int = 0,
+    **style_overrides,
+) -> Paragraph:
+    return Paragraph(
+        text_html or "&nbsp;",
+        _style_with_indent(
+            base_style,
+            name,
+            left_indent=left_indent,
+            **style_overrides,
+        ),
+    )
+
+
+def _split_wrapped_node_children(node: dict) -> tuple[str, list[dict]]:
+    children = _tiptap_node_children(node)
+    if children and children[0].get("type") == "paragraph":
+        return _tiptap_extract_text(children[0]), children[1:]
+    return "", children
+
+
+def _split_details_children(node: dict) -> tuple[str, list[dict]]:
+    summary_html = ""
+    body_nodes: list[dict] = []
+
+    for child in _tiptap_node_children(node):
+        child_type = child.get("type")
+        if child_type == "detailsSummary" and not summary_html:
+            summary_html = _tiptap_extract_text(child)
+            continue
+        if child_type == "detailsContent":
+            body_nodes.extend(_tiptap_node_children(child))
+            continue
+        body_nodes.append(child)
+
+    return summary_html, body_nodes
+
+
+def _render_list_node(
+    node: dict,
+    base_style: ParagraphStyle,
+    *,
+    left_indent: int = 0,
+    ordered: bool = False,
+) -> list:
+    flowables: list = []
+    for index, item in enumerate(_tiptap_node_children(node)):
+        prefix = f"{index + 1}. " if ordered else "\u2022 "
+        flowables.extend(
+            _render_list_item_node(
+                item,
+                base_style,
+                prefix=prefix,
+                left_indent=left_indent,
+            )
+        )
+    return flowables
+
+
+def _render_list_item_node(
+    node: dict,
+    base_style: ParagraphStyle,
+    *,
+    prefix: str,
+    left_indent: int = 0,
+) -> list:
+    lead_html, nested_nodes = _split_wrapped_node_children(node)
+    flowables: list = []
+
+    if lead_html or not nested_nodes:
+        flowables.append(
+            _paragraph_with_style(
+                f"{prefix}{lead_html or '&nbsp;'}",
+                base_style,
+                name="ListItem",
+                left_indent=left_indent + 24,
+                spaceBefore=1,
+                spaceAfter=1,
+            )
+        )
+
+    if nested_nodes:
+        flowables.extend(
+            _render_tiptap_nodes(
+                nested_nodes,
+                base_style,
+                left_indent=left_indent + 36,
+            )
+        )
+
+    return flowables
+
+
+def _render_task_list_node(
+    node: dict,
+    base_style: ParagraphStyle,
+    *,
+    left_indent: int = 0,
+) -> list:
+    flowables: list = []
+    for item in _tiptap_node_children(node):
+        flowables.extend(
+            _render_task_item_node(
+                item,
+                base_style,
+                left_indent=left_indent,
+            )
+        )
+    return flowables
+
+
+def _render_task_item_node(
+    node: dict,
+    base_style: ParagraphStyle,
+    *,
+    left_indent: int = 0,
+) -> list:
+    lead_html, nested_nodes = _split_wrapped_node_children(node)
+    attrs = node.get("attrs") if isinstance(node.get("attrs"), dict) else {}
+    checkbox = "\u2611 " if attrs.get("checked") else "\u2610 "
+    flowables: list = []
+
+    if lead_html or not nested_nodes:
+        flowables.append(
+            _paragraph_with_style(
+                f"{checkbox}{lead_html or '&nbsp;'}",
+                base_style,
+                name="TaskItem",
+                left_indent=left_indent + 24,
+                spaceBefore=1,
+                spaceAfter=1,
+            )
+        )
+
+    if nested_nodes:
+        flowables.extend(
+            _render_tiptap_nodes(
+                nested_nodes,
+                base_style,
+                left_indent=left_indent + 36,
+            )
+        )
+
+    return flowables
+
+
+def _render_callout_node(
+    node: dict,
+    base_style: ParagraphStyle,
+    *,
+    left_indent: int = 0,
+) -> list:
+    attrs = node.get("attrs") if isinstance(node.get("attrs"), dict) else {}
+    callout_type = attrs.get("callout_type")
+    if not isinstance(callout_type, str) or not callout_type:
+        callout_type = "info"
+    palette = _CALLOUT_PALETTES.get(callout_type, _CALLOUT_PALETTES["info"])
+    flowables = [
+        _paragraph_with_style(
+            f"<b>{html_escape(callout_type.upper())}</b>",
+            base_style,
+            name=f"CalloutLabel{callout_type.title()}",
+            left_indent=left_indent + 12,
+            fontSize=max(10, base_style.fontSize - 1),
+            leading=max(12, base_style.leading),
+            spaceBefore=6,
+            spaceAfter=3,
+            textColor=palette["text"],
+            backColor=palette["background"],
+            borderPadding=4,
+        )
+    ]
+
+    flowables.extend(
+        _render_tiptap_nodes(
+            _tiptap_node_children(node),
+            base_style,
+            left_indent=left_indent + 24,
+        )
+    )
+    flowables.append(Spacer(1, 4))
+    return flowables
+
+
+def _render_details_node(
+    node: dict,
+    base_style: ParagraphStyle,
+    *,
+    left_indent: int = 0,
+) -> list:
+    summary_html, body_nodes = _split_details_children(node)
+    flowables: list = []
+
+    if summary_html:
+        flowables.append(
+            _paragraph_with_style(
+                f"<b>{summary_html}</b>",
+                base_style,
+                name="DetailsSummary",
+                left_indent=left_indent + 12,
+                spaceBefore=4,
+                spaceAfter=2,
+            )
+        )
+
+    flowables.extend(
+        _render_tiptap_nodes(
+            body_nodes,
+            base_style,
+            left_indent=left_indent + 24,
+        )
+    )
+    return flowables
+
+
+def _table_cell_html(node: dict) -> str:
+    parts: list[str] = []
+    for child in _tiptap_node_children(node):
+        child_html = _tiptap_extract_text(child)
+        if child_html:
+            parts.append(child_html)
+
+    if parts:
+        return "<br />".join(parts)
+
+    return _tiptap_extract_text(node) or "&nbsp;"
+
+
+def _render_table_node(
+    node: dict,
+    base_style: ParagraphStyle,
+    *,
+    left_indent: int = 0,
+) -> list:
+    rows: list[list[Paragraph]] = []
+    header_rows: set[int] = set()
+    max_columns = 0
+    default_cell_style = _style_with_indent(
+        base_style,
+        "TableCell",
+        fontSize=max(10, base_style.fontSize - 1),
+        leading=max(12, base_style.leading),
+        spaceBefore=0,
+        spaceAfter=0,
+    )
+
+    for row_index, row_node in enumerate(_tiptap_node_children(node)):
+        if row_node.get("type") != "tableRow":
+            continue
+
+        rendered_row: list[Paragraph] = []
+        row_has_header = False
+        for cell_node in _tiptap_node_children(row_node):
+            cell_type = cell_node.get("type")
+            if cell_type not in {"tableCell", "tableHeader"}:
+                continue
+
+            cell_html = _table_cell_html(cell_node)
+            if cell_type == "tableHeader":
+                row_has_header = True
+                cell_html = f"<b>{cell_html}</b>"
+
+            rendered_row.append(Paragraph(cell_html or "&nbsp;", default_cell_style))
+
+        if not rendered_row:
+            continue
+
+        if row_has_header:
+            header_rows.add(len(rows))
+
+        max_columns = max(max_columns, len(rendered_row))
+        rows.append(rendered_row)
+
+    if not rows or max_columns == 0:
+        return []
+
+    for row in rows:
+        while len(row) < max_columns:
+            row.append(Paragraph("&nbsp;", default_cell_style))
+
+    available_width = max(144, letter[0] - 144 - left_indent)
+    table = Table(
+        rows,
+        colWidths=[available_width / max_columns] * max_columns,
+        repeatRows=1 if 0 in header_rows else 0,
+        hAlign="LEFT",
+    )
+    table.setStyle(
+        TableStyle(
+            [
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]
+            + [
+                (
+                    "BACKGROUND",
+                    (0, row_index),
+                    (-1, row_index),
+                    colors.HexColor("#e2e8f0"),
+                )
+                for row_index in sorted(header_rows)
+            ]
+        )
+    )
+    return [table, Spacer(1, 6)]
+
+
+def _render_tiptap_node(
+    node: dict,
+    base_style: ParagraphStyle,
+    *,
+    left_indent: int = 0,
+) -> list:
+    ntype = node.get("type", "")
+    text_html = _tiptap_extract_text(node)
+
+    if ntype == "heading":
+        level = node.get("attrs", {}).get("level", 1)
+        font_size = max(12, 24 - (level - 1) * 3)
+        return [
+            _paragraph_with_style(
+                text_html,
+                base_style,
+                name=f"Heading{level}",
+                left_indent=left_indent,
+                fontSize=font_size,
+                leading=font_size + 4,
+                spaceBefore=6,
+                spaceAfter=4,
+            )
+        ]
+
+    if ntype == "bulletList":
+        return _render_list_node(
+            node,
+            base_style,
+            left_indent=left_indent,
+            ordered=False,
+        )
+
+    if ntype == "orderedList":
+        return _render_list_node(
+            node,
+            base_style,
+            left_indent=left_indent,
+            ordered=True,
+        )
+
+    if ntype == "taskList":
+        return _render_task_list_node(node, base_style, left_indent=left_indent)
+
+    if ntype == "callout":
+        return _render_callout_node(node, base_style, left_indent=left_indent)
+
+    if ntype == "details":
+        return _render_details_node(node, base_style, left_indent=left_indent)
+
+    if ntype == "table":
+        return _render_table_node(node, base_style, left_indent=left_indent)
+
+    if ntype == "paragraph":
+        return [
+            _paragraph_with_style(
+                text_html,
+                base_style,
+                name="Paragraph",
+                left_indent=left_indent,
+            )
+        ]
+
+    if ntype in {"detailsContent", "tableRow", "tableCell", "tableHeader"}:
+        return _render_tiptap_nodes(
+            _tiptap_node_children(node),
+            base_style,
+            left_indent=left_indent,
+        )
+
+    if text_html:
+        return [
+            _paragraph_with_style(
+                text_html,
+                base_style,
+                name="FallbackParagraph",
+                left_indent=left_indent,
+            )
+        ]
+
+    return _render_tiptap_nodes(
+        _tiptap_node_children(node),
+        base_style,
+        left_indent=left_indent,
+    )
+
+
+def _render_tiptap_nodes(
+    nodes: list[dict],
+    base_style: ParagraphStyle,
+    *,
+    left_indent: int = 0,
+) -> list:
+    flowables: list = []
+    for node in nodes:
+        flowables.extend(
+            _render_tiptap_node(
+                node,
+                base_style,
+                left_indent=left_indent,
+            )
+        )
+    return flowables
 
 
 def _tiptap_to_flowables(raw_content: str, base_style: ParagraphStyle) -> list:
@@ -107,45 +603,8 @@ def _tiptap_to_flowables(raw_content: str, base_style: ParagraphStyle) -> list:
     if not isinstance(data, dict) or "content" not in data:
         return [Paragraph(raw_content.replace("\n", "<br />"), base_style)]
 
-    flowables: list = []
-    for node in data.get("content", []):
-        ntype = node.get("type", "")
-        text_html = _tiptap_extract_text(node)
-
-        if ntype == "heading":
-            level = node.get("attrs", {}).get("level", 1)
-            font_size = max(12, 24 - (level - 1) * 3)
-            h_style = ParagraphStyle(
-                f"Heading{level}",
-                parent=base_style,
-                fontSize=font_size,
-                leading=font_size + 4,
-                spaceBefore=6,
-                spaceAfter=4,
-            )
-            flowables.append(Paragraph(text_html or "&nbsp;", h_style))
-
-        elif ntype in ("bulletList", "orderedList"):
-            items = node.get("content", [])
-            indent_style = ParagraphStyle(
-                "ListItem",
-                parent=base_style,
-                leftIndent=24,
-                spaceBefore=1,
-                spaceAfter=1,
-            )
-            for idx, item in enumerate(items):
-                item_text = _tiptap_extract_text(item)
-                prefix = f"{idx + 1}. " if ntype == "orderedList" else "\u2022 "
-                flowables.append(Paragraph(f"{prefix}{item_text}", indent_style))
-
-        elif ntype == "paragraph":
-            flowables.append(Paragraph(text_html or "&nbsp;", base_style))
-
-        else:
-            # Unknown node type — render as plain paragraph
-            if text_html:
-                flowables.append(Paragraph(text_html, base_style))
+    top_level_nodes = _tiptap_node_children(data)
+    flowables = _render_tiptap_nodes(top_level_nodes, base_style)
 
     if not flowables:
         flowables.append(Paragraph("&nbsp;", base_style))
@@ -1777,17 +2236,21 @@ async def download_document(
         topMargin=72,
         bottomMargin=72,
     )
+    raw_content = doc.head_version.content
+    content_format = getattr(doc.head_version, "content_format", None) or "plain_text"
+
     style = ParagraphStyle(
         name="Custom",
-        fontName="Helvetica",
+        fontName=(
+            _pdf_font_name_for_tiptap(raw_content)
+            if content_format == "tiptap_json"
+            else "Helvetica"
+        ),
         fontSize=12,
         leading=14,
         spaceAfter=0,
         spaceBefore=0,
     )
-
-    raw_content = doc.head_version.content
-    content_format = getattr(doc.head_version, "content_format", None) or "plain_text"
 
     if content_format == "tiptap_json":
         flowables = _tiptap_to_flowables(raw_content, style)

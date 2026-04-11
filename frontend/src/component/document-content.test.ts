@@ -3,6 +3,7 @@ import {
   extractPlainTextFromDocumentContent,
   normalizeDocumentContent,
 } from './document-content';
+import { CELL_DOC_EXPORT_CONTRACT_FIXTURE } from './cell-doc/test/cell-doc-contract-fixtures';
 
 describe('document-content helpers', () => {
   it('extracts readable plain text from tiptap JSON content', () => {
@@ -44,5 +45,23 @@ describe('document-content helpers', () => {
       storedContent: 'Plain text body',
       plainText: 'Plain text body',
     });
+  });
+
+  it('normalizes cell-doc blocks into readable plain text for compare flows', () => {
+    expect(extractPlainTextFromDocumentContent(
+      JSON.stringify(CELL_DOC_EXPORT_CONTRACT_FIXTURE),
+      'tiptap_json',
+    )).toBe([
+      'Cell-doc export contract',
+      '[ ] Follow up with recruiter',
+      '[x] Tailor resume bullet',
+      '[tip] Highlight quantified wins',
+      'Use concrete metrics',
+      'Interview prep notes',
+      'Prepare STAR stories',
+      'Company | Status',
+      'Baldin Labs | Applied',
+      'Closing note',
+    ].join('\n'));
   });
 });

@@ -9,6 +9,7 @@ import {
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
+import { extractPlainTextFromDocumentContent } from '../../component/document-content';
 import {
   getVersion, getDocument, createVersion,
   type DocumentVersionRead, type DocumentDetailRead, type DocumentVersionCreate,
@@ -74,29 +75,11 @@ function formatDate(dateStr: string): string {
   });
 }
 
-/** Recursively extract plain text from a Tiptap JSON node tree. */
-function extractPlainTextFromTiptapJson(content: string): string {
-  try {
-    const doc = JSON.parse(content);
-    if (!doc || typeof doc !== 'object') return content;
-    const walk = (node: Record<string, unknown>): string => {
-      if (node.type === 'text' && typeof node.text === 'string') return node.text;
-      if (!Array.isArray(node.content)) return '';
-      return (node.content as Record<string, unknown>[])
-        .map(child => walk(child))
-        .join(node.type === 'doc' || node.type === 'bulletList' || node.type === 'orderedList' ? '\n' : '');
-    };
-    const lines = ((doc.content ?? []) as Record<string, unknown>[])
-      .map((block: Record<string, unknown>) => walk(block));
-    return lines.join('\n');
-  } catch {
-    return content;
-  }
-}
-
 function getVersionText(v: DocumentVersionRead): string {
-  if (v.content_format === 'tiptap_json' && v.content) return extractPlainTextFromTiptapJson(v.content);
-  return v.content ?? '';
+  return extractPlainTextFromDocumentContent(
+    v.content ?? '',
+    v.content_format === 'tiptap_json' ? 'tiptap_json' : 'plain_text',
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -213,6 +196,7 @@ const DocumentComparePage: React.FC = () => {
   }
 
   const isReadOnly = doc?.viewer_role === 'viewer';
+  const isCellDocComparison = doc?.kind === 'cell_doc';
 
   const bgColor = (type: DiffLine['type']) => {
     switch (type) {
@@ -327,9 +311,11 @@ const DocumentComparePage: React.FC = () => {
       </Grid>
 
       {/* ── Rich-text note ─────────────────────────────────────── */}
-      {hasRichContent && (
+      {(isCellDocComparison || hasRichContent) && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          Rich-text formatting is not shown in diff view. Comparing plain-text content only.
+          {isCellDocComparison
+            ? 'Cell-doc blocks are compared as normalized plain text in this preview scope.'
+            : 'Rich-text formatting is not shown in diff view. Comparing plain-text content only.'}
         </Alert>
       )}
 

@@ -1,12 +1,9 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
-import Link from '@tiptap/extension-link';
-import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
+import { buildBaseDocumentExtensions } from './cell-doc/extensions/base-extensions';
 import {
   Box, Paper, IconButton, Divider, TextField, Tooltip, useTheme, alpha, Typography,
 } from '@mui/material';
@@ -100,20 +97,15 @@ const TiptapEditorInner: React.FC<Omit<RichTextEditorProps, 'contentFormat'>> = 
   });
 
   const extensions = useMemo(() => {
+    const isCollaborative = !!collaborative && !!collab.ydoc;
     const exts = [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        link: false,
-        underline: false,
-        ...(collaborative && collab.ydoc ? { undoRedo: false } : {}),
+      ...buildBaseDocumentExtensions({
+        disableUndoRedo: isCollaborative,
       }),
-      Underline,
-      Link.configure({ openOnClick: false, autolink: true }),
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder: placeholderText ?? 'Start writing…' }),
     ];
 
-    if (collaborative && collab.ydoc) {
+    if (isCollaborative) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       exts.push(Collaboration.configure({ document: collab.ydoc }) as any);
     }

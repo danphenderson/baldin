@@ -1,11 +1,9 @@
 import { Editor } from '@tiptap/core';
+import type { Extensions } from '@tiptap/core';
 import Collaboration from '@tiptap/extension-collaboration';
-import Link from '@tiptap/extension-link';
-import TextAlign from '@tiptap/extension-text-align';
-import Underline from '@tiptap/extension-underline';
-import StarterKit from '@tiptap/starter-kit';
 import type * as Y from 'yjs';
 
+import { buildBaseDocumentExtensions } from './cell-doc/extensions/base-extensions';
 import { parseTiptapDocument } from './document-content';
 
 const DEFAULT_COLLABORATION_BOOTSTRAP_RETRY_DELAY_MS = 500;
@@ -31,7 +29,11 @@ export function resolveCollaborationBootstrapRetryDelay(
   );
 }
 
-export function seedCollaborationDocument(ydoc: Y.Doc, content: string): boolean {
+export function seedCollaborationDocument(
+  ydoc: Y.Doc,
+  content: string,
+  extensions?: Extensions,
+): boolean {
   const tiptapDocument = parseTiptapDocument(content);
   if (!tiptapDocument || typeof document === 'undefined') {
     return false;
@@ -42,14 +44,7 @@ export function seedCollaborationDocument(ydoc: Y.Doc, content: string): boolean
     editable: false,
     content: undefined,
     extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        link: false,
-        underline: false,
-      }),
-      Underline,
-      Link.configure({ openOnClick: false, autolink: true }),
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      ...(extensions ?? buildBaseDocumentExtensions()),
       Collaboration.configure({ document: ydoc }),
     ],
   });

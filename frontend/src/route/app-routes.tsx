@@ -34,6 +34,7 @@ const DiscoverPage = React.lazy(() => import('../page/directory'));
 const UserProfilePage = React.lazy(() => import('../page/user-profile'));
 const ConnectionsPage = React.lazy(() => import('../page/connections'));
 const AgentsPage = React.lazy(() => import('../page/agents'));
+const AgentDetailPage = React.lazy(() => import('../page/agent-detail'));
 const ConversationsPage = React.lazy(() => import('../page/messages/conversations-page'));
 const ConversationDetailPage = React.lazy(() => import('../page/messages/conversation-detail-page'));
 const AccountPage = React.lazy(() => import('../page/settings/account-page'));
@@ -127,6 +128,7 @@ const AppRoutes: React.FC = () => {
             <Route path="messages" element={<ConversationsPage />} />
             <Route path="messages/:conversationId" element={<ConversationDetailPage />} />
             <Route path="agents" element={<AgentsPage />} />
+            <Route path="agents/:agentId" element={<AgentDetailPage />} />
           </Route>
 
           {/* ── Settings group ── */}

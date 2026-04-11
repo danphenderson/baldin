@@ -3,7 +3,7 @@
 import { components } from '../schema';
 import { API_URL } from '../config/env';
 
-const BASE_URL = `${API_URL}/auth`;
+const BASE_URL = `${API_URL}/api/v1/auth`;
 
 const JSON_HEADERS = {"Content-Type": "application/json"};
 

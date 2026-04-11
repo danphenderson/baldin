@@ -219,6 +219,34 @@ def _document_read(
     )
 
 
+def _document_summary_read(
+    doc: models.Document,
+    share: models.DocumentShare | None = None,
+) -> schemas.DocumentSummaryRead:
+    """Project a Document ORM instance into a DocumentSummaryRead schema."""
+    share = share or getattr(doc, "_share_context", None)
+    effective = getattr(doc, "_effective_role", "owner")
+    return schemas.DocumentSummaryRead(
+        id=doc.id,
+        created_at=doc.created_at,
+        updated_at=doc.updated_at,
+        kind=doc.kind,
+        title=doc.title,
+        status=doc.status,
+        is_pinned=doc.is_pinned,
+        head_version=(
+            schemas.DocumentVersionSummaryRead.model_validate(doc.head_version)
+            if doc.head_version
+            else None
+        ),
+        version_count=len(doc.versions) if doc.versions else 0,
+        viewer_role=(
+            None if effective == "owner" else schemas.DocumentShareRole(effective)
+        ),
+        **_document_share_metadata(doc, share),
+    )
+
+
 def _document_detail(
     doc: models.Document,
     share: models.DocumentShare | None = None,
@@ -450,7 +478,7 @@ async def get_pinned_documents(
     return [_document_read(d) for d in docs]
 
 
-@router.get("/", response_model=schemas.PaginatedResponse[schemas.DocumentRead])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.DocumentSummaryRead])
 async def list_documents(
     kind: schemas.DocumentKind | None = Query(None, description="Filter by kind"),
     status: schemas.DocumentStatus | None = Query(None, description="Filter by status"),
@@ -479,8 +507,8 @@ async def list_documents(
     offset = (page - 1) * page_size
     result = await db.execute(q.offset(offset).limit(page_size))
     docs = result.scalars().all()
-    return schemas.PaginatedResponse[schemas.DocumentRead](
-        items=[_document_read(d) for d in docs],
+    return schemas.PaginatedResponse[schemas.DocumentSummaryRead](
+        items=[_document_summary_read(d) for d in docs],
         total=total,
         page=page,
         page_size=page_size,

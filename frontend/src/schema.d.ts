@@ -1183,16 +1183,10 @@ export interface components {
        */
       user_id: string;
       lead: components["schemas"]["LeadRead"];
-      user: components["schemas"]["UserRead"];
       /** @description Current pipeline stage (registered → applied → screening → interview → offer) */
       stage: components["schemas"]["ApplicationStage"];
       /** @description Terminal closure (rejected or withdrawn), null while active */
       outcome?: components["schemas"]["ApplicationOutcome"] | null;
-      /**
-       * Notes
-       * @description Free-form user notes
-       */
-      notes?: string | null;
       /**
        * Next Step
        * @description Next action for this application
@@ -1203,13 +1197,19 @@ export interface components {
        * @description When the next step is due
        */
       next_step_due?: string | null;
+      /** @description Summary of attached documents the caller can access */
+      document_metadata?: components["schemas"]["ApplicationDocumentMetadata"];
+      user: components["schemas"]["UserRead"];
+      /**
+       * Notes
+       * @description Free-form user notes
+       */
+      notes?: string | null;
       /**
        * Outcome Reason
        * @description Why the application was rejected or withdrawn
        */
       outcome_reason?: string | null;
-      /** @description Summary of attached documents the caller can access */
-      document_metadata?: components["schemas"]["ApplicationDocumentMetadata"];
       /**
        * Status History
        * @description Append-only log of status transitions
@@ -1259,6 +1259,54 @@ export interface components {
        * @description Optional note about the transition
        */
       note?: string | null;
+    };
+    /** ApplicationSummaryRead */
+    ApplicationSummaryRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Lead Id
+       * Format: uuid4
+       */
+      lead_id: string;
+      /**
+       * User Id
+       * Format: uuid4
+       */
+      user_id: string;
+      lead: components["schemas"]["LeadSummaryRead"];
+      /** @description Current pipeline stage (registered → applied → screening → interview → offer) */
+      stage: components["schemas"]["ApplicationStage"];
+      /** @description Terminal closure (rejected or withdrawn), null while active */
+      outcome?: components["schemas"]["ApplicationOutcome"] | null;
+      /**
+       * Next Step
+       * @description Next action for this application
+       */
+      next_step?: string | null;
+      /**
+       * Next Step Due
+       * @description When the next step is due
+       */
+      next_step_due?: string | null;
+      /** @description Summary of attached documents the caller can access */
+      document_metadata?: components["schemas"]["ApplicationDocumentMetadata"];
     };
     /** ApplicationUpdate */
     ApplicationUpdate: {
@@ -2969,6 +3017,92 @@ export interface components {
      * @enum {string}
      */
     DocumentStatus: "draft" | "active" | "archived";
+    /** DocumentSummaryRead */
+    DocumentSummaryRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /** @description Document kind discriminator */
+      kind: components["schemas"]["DocumentKind"];
+      /**
+       * Title
+       * @description Document title
+       */
+      title: string;
+      /** @description Document lifecycle status */
+      status: components["schemas"]["DocumentStatus"];
+      /**
+       * Is Pinned
+       * @description Whether this is the active document for its kind
+       * @default false
+       */
+      is_pinned?: boolean;
+      /** @description Current head version inline */
+      head_version?: components["schemas"]["DocumentVersionSummaryRead"] | null;
+      /**
+       * Version Count
+       * @description Total number of versions
+       * @default 0
+       */
+      version_count?: number;
+      /** @description Effective share role for the viewer (null means owner) */
+      viewer_role?: components["schemas"]["DocumentShareRole"] | null;
+      /**
+       * Owner User Id
+       * @description Owner identifier when the document is shared with the viewer
+       */
+      owner_user_id?: string | null;
+      /**
+       * Owner Full Name
+       * @description Owner full name when the document is shared with the viewer
+       */
+      owner_full_name?: string | null;
+      /**
+       * Owner Email
+       * @description Owner email when the document is shared with the viewer
+       */
+      owner_email?: string | null;
+      /**
+       * Shared By User Id
+       * @description User who granted access to the viewer
+       */
+      shared_by_user_id?: string | null;
+      /**
+       * Shared By Full Name
+       * @description Full name of the user who granted access to the viewer
+       */
+      shared_by_full_name?: string | null;
+      /**
+       * Shared By Email
+       * @description Email of the user who granted access to the viewer
+       */
+      shared_by_email?: string | null;
+      /**
+       * Shared At
+       * @description Timestamp when the viewer was granted access
+       */
+      shared_at?: string | null;
+      /**
+       * Share Updated At
+       * @description Timestamp when the share was last updated
+       */
+      share_updated_at?: string | null;
+    };
     /** DocumentUpdate */
     DocumentUpdate: {
       /**
@@ -3062,6 +3196,32 @@ export interface components {
        * @description User or system note for this version
        */
       change_summary?: string | null;
+    };
+    /** DocumentVersionSummaryRead */
+    DocumentVersionSummaryRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description Current head version identifier
+       */
+      id: string;
+      /**
+       * Content
+       * @description Current version content
+       */
+      content?: string | null;
+      /** @description Content origin type */
+      content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * Content Format
+       * @description Content format: plain_text or tiptap_json
+       */
+      content_format?: string | null;
+      /**
+       * Source File
+       * @description Relative path to uploaded source file
+       */
+      source_file?: string | null;
     };
     /** EducationCreate */
     EducationCreate: {
@@ -3815,11 +3975,6 @@ export interface components {
        */
       url: string;
       /**
-       * Canonical Url
-       * @description Canonical lead URL used for deduplication
-       */
-      canonical_url: string;
-      /**
        * Companies
        * @description List of companies associated with the lead
        */
@@ -3844,6 +3999,11 @@ export interface components {
       viewer_is_registered?: boolean;
       /** @description Current-viewer permissions for this lead */
       viewer_permissions?: components["schemas"]["LeadViewerPermissionsRead"];
+      /**
+       * Canonical Url
+       * @description Canonical lead URL used for deduplication
+       */
+      canonical_url: string;
       /** @description The current viewer's lead registration, if present */
       viewer_registration?: components["schemas"]["LeadRegistrationRead"] | null;
       /**
@@ -4047,11 +4207,6 @@ export interface components {
        */
       url: string;
       /**
-       * Canonical Url
-       * @description Canonical lead URL used for deduplication
-       */
-      canonical_url: string;
-      /**
        * Companies
        * @description List of companies associated with the lead
        */
@@ -4076,6 +4231,11 @@ export interface components {
       viewer_is_registered?: boolean;
       /** @description Current-viewer permissions for this lead */
       viewer_permissions?: components["schemas"]["LeadViewerPermissionsRead"];
+      /**
+       * Canonical Url
+       * @description Canonical lead URL used for deduplication
+       */
+      canonical_url: string;
     };
     /** LeadRegistrationRead */
     LeadRegistrationRead: {
@@ -4180,6 +4340,102 @@ export interface components {
        * @description Company IDs
        */
       company_ids?: string[] | null;
+    };
+    /** LeadSummaryRead */
+    LeadSummaryRead: {
+      /**
+       * Title
+       * @description Job title
+       */
+      title?: string | null;
+      /**
+       * Description
+       * @description Job description
+       */
+      description?: string | null;
+      /**
+       * Location
+       * @description Job location
+       */
+      location?: string | null;
+      /**
+       * Salary
+       * @description Salary range
+       */
+      salary?: string | null;
+      /**
+       * Job Function
+       * @description Job function
+       */
+      job_function?: string | null;
+      /**
+       * Employment Type
+       * @description Type of employment
+       */
+      employment_type?: string | null;
+      /**
+       * Seniority Level
+       * @description Seniority level
+       */
+      seniority_level?: string | null;
+      /**
+       * Education Level
+       * @description Required education level
+       */
+      education_level?: string | null;
+      /**
+       * Hiring Manager
+       * @description Hiring manager
+       */
+      hiring_manager?: string | null;
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Url
+       * @description Job posting URL
+       */
+      url: string;
+      /**
+       * Companies
+       * @description List of companies associated with the lead
+       */
+      companies?: components["schemas"]["CompanyRead"][];
+      /**
+       * Interest Count
+       * @description How many viewers are currently registered on the lead
+       * @default 0
+       */
+      interest_count?: number;
+      /**
+       * Comment Count
+       * @description How many comments and replies exist for the lead
+       * @default 0
+       */
+      comment_count?: number;
+      /**
+       * Viewer Is Registered
+       * @description Whether the current viewer is registered on the lead
+       * @default false
+       */
+      viewer_is_registered?: boolean;
+      /** @description Current-viewer permissions for this lead */
+      viewer_permissions?: components["schemas"]["LeadViewerPermissionsRead"];
     };
     /** LeadViewerPermissionsRead */
     LeadViewerPermissionsRead: {
@@ -4745,13 +5001,13 @@ export interface components {
        */
       page_size?: number;
     };
-    /** PaginatedResponse[ApplicationRead] */
-    PaginatedResponse_ApplicationRead_: {
+    /** PaginatedResponse[ApplicationSummaryRead] */
+    PaginatedResponse_ApplicationSummaryRead_: {
       /**
        * Items
        * @description Paginated items
        */
-      items?: components["schemas"]["ApplicationRead"][];
+      items?: components["schemas"]["ApplicationSummaryRead"][];
       /**
        * Total
        * @description Total number of matching records
@@ -4953,13 +5209,13 @@ export interface components {
        */
       page_size?: number;
     };
-    /** PaginatedResponse[DocumentRead] */
-    PaginatedResponse_DocumentRead_: {
+    /** PaginatedResponse[DocumentSummaryRead] */
+    PaginatedResponse_DocumentSummaryRead_: {
       /**
        * Items
        * @description Paginated items
        */
-      items?: components["schemas"]["DocumentRead"][];
+      items?: components["schemas"]["DocumentSummaryRead"][];
       /**
        * Total
        * @description Total number of matching records
@@ -5031,13 +5287,13 @@ export interface components {
        */
       page_size?: number;
     };
-    /** PaginatedResponse[LeadRead] */
-    PaginatedResponse_LeadRead_: {
+    /** PaginatedResponse[LeadSummaryRead] */
+    PaginatedResponse_LeadSummaryRead_: {
       /**
        * Items
        * @description Paginated items
        */
-      items?: components["schemas"]["LeadRead"][];
+      items?: components["schemas"]["LeadSummaryRead"][];
       /**
        * Total
        * @description Total number of matching records
@@ -6707,7 +6963,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedResponse_LeadRead_"];
+          "application/json": components["schemas"]["PaginatedResponse_LeadSummaryRead_"];
         };
       };
       /** @description Validation Error */
@@ -7883,7 +8139,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedResponse_ApplicationRead_"];
+          "application/json": components["schemas"]["PaginatedResponse_ApplicationSummaryRead_"];
         };
       };
       /** @description Validation Error */
@@ -8143,7 +8399,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedResponse_DocumentRead_"];
+          "application/json": components["schemas"]["PaginatedResponse_DocumentSummaryRead_"];
         };
       };
       /** @description Validation Error */

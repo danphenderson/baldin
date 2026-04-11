@@ -19,7 +19,6 @@ const buildLead = (overrides: Partial<LeadRead> = {}): LeadRead => ({
   created_at: '2026-04-05T12:00:00Z',
   updated_at: '2026-04-05T12:00:00Z',
   url: 'https://jobs.example.com/roles/123',
-  canonical_url: 'https://jobs.example.com/roles/123',
   companies: [{ id: 'company-1', name: 'Example Corp', created_at: '2026-04-01T00:00:00Z', updated_at: '2026-04-01T00:00:00Z' }],
   interest_count: 3,
   comment_count: 2,

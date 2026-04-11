@@ -127,7 +127,9 @@ async def create_application(
     return application
 
 
-@router.get("/", response_model=schemas.PaginatedResponse[schemas.ApplicationRead])
+@router.get(
+    "/", response_model=schemas.PaginatedResponse[schemas.ApplicationSummaryRead]
+)
 async def get_applications(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
@@ -159,7 +161,7 @@ async def get_applications(
     result = await db.execute(base.offset(offset).limit(page_size))
     applications = result.scalars().unique().all()
     await _populate_document_metadata(applications, db=db, user_id=user.id)
-    return schemas.PaginatedResponse[schemas.ApplicationRead](
+    return schemas.PaginatedResponse[schemas.ApplicationSummaryRead](
         items=applications,
         total=total,
         page=page,

@@ -52,7 +52,7 @@ function makeApplication(overrides: Partial<Record<string, unknown>> = {}) {
       companies: [{ id: 'company-1', name: 'Acme Corp' }],
     },
     ...overrides,
-  } as unknown as applicationService.ApplicationRead;
+  } as unknown as applicationService.ApplicationDetailRead;
 }
 
 const userContextValue = {

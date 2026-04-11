@@ -9,7 +9,7 @@ import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
 /*  Types (derived from generated schema)                              */
 /* ------------------------------------------------------------------ */
 
-export type DocumentRead = components['schemas']['DocumentRead'];
+export type DocumentRead = components['schemas']['DocumentSummaryRead'];
 export type DocumentDetailRead = components['schemas']['DocumentDetailRead'];
 export type DocumentCreate = components['schemas']['DocumentCreate'];
 export type DocumentUpdate = components['schemas']['DocumentUpdate'];
@@ -26,7 +26,7 @@ export type DocumentShareCandidateRead = components['schemas']['DocumentShareCan
 export type DocumentActivityRead = components['schemas']['DocumentActivityRead'];
 export type DocumentActivityType = components['schemas']['DocumentActivityType'];
 export type DocumentCollaborationBootstrapRead = components['schemas']['DocumentCollaborationBootstrapRead'];
-type DocumentListPage = components['schemas']['PaginatedResponse_DocumentRead_'];
+type DocumentListPage = components['schemas']['PaginatedResponse_DocumentSummaryRead_'];
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */

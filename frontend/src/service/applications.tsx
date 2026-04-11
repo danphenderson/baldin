@@ -4,13 +4,14 @@ import { components } from '../schema';
 import { createApiClient } from './api-client';
 import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
 
-export type ApplicationRead = components['schemas']['ApplicationRead'];
+export type ApplicationRead = components['schemas']['ApplicationSummaryRead'];
+export type ApplicationDetailRead = components['schemas']['ApplicationRead'];
 export type ApplicationCreate = components['schemas']['ApplicationCreate'];
 export type ApplicationUpdate = components['schemas']['ApplicationUpdate'];
 export type ApplicationCreationIntent = 'registered' | 'applied';
 type ApplicationDocumentAttach = components['schemas']['ApplicationDocumentAttach'];
 type DocumentRead = components['schemas']['DocumentRead'];
-type ApplicationListPage = components['schemas']['PaginatedResponse_ApplicationRead_'];
+type ApplicationListPage = components['schemas']['PaginatedResponse_ApplicationSummaryRead_'];
 
 const unwrap = <T,>(
   result: { data?: T; error?: unknown; response: Response },
@@ -45,24 +46,24 @@ export const findExistingApplicationForLead = async (token: string, leadId: stri
 };
 
 export const getApplicationStateLabel = (
-  application: Pick<ApplicationRead, 'outcome' | 'stage'>,
+  application: Pick<ApplicationRead | ApplicationDetailRead, 'outcome' | 'stage'>,
 ): string => (application.outcome ?? application.stage ?? 'tracked').replace(/_/g, ' ');
 
-export const getApplication = async (token: string, id: string): Promise<ApplicationRead> => {
+export const getApplication = async (token: string, id: string): Promise<ApplicationDetailRead> => {
   const client = createApiClient(token);
   return unwrap(await client.GET('/api/v1/applications/{id}', {
     params: { path: { id } },
   }));
 };
 
-export const createApplication = async (token: string, application: ApplicationCreate): Promise<ApplicationRead> => {
+export const createApplication = async (token: string, application: ApplicationCreate): Promise<ApplicationDetailRead> => {
   const client = createApiClient(token);
   return unwrap(await client.POST('/api/v1/applications/', {
     body: application,
   }));
 };
 
-export const updateApplication = async (token: string, id: string, application: ApplicationUpdate): Promise<ApplicationRead> => {
+export const updateApplication = async (token: string, id: string, application: ApplicationUpdate): Promise<ApplicationDetailRead> => {
   const client = createApiClient(token);
   return unwrap(await client.PATCH('/api/v1/applications/{id}', {
     params: { path: { id } },

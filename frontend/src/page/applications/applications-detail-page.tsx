@@ -22,7 +22,7 @@ import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import {
   getApplication, updateApplication, deleteApplication,
   getApplicationDocuments, addApplicationDocument, detachApplicationDocument,
-  type ApplicationRead,
+  type ApplicationDetailRead,
 } from '../../service/applications';
 import {
   getDocuments, downloadDocument, generateDocument,
@@ -47,7 +47,7 @@ interface StatusHistoryEntry {
   note?: string | null;
 }
 
-type ApplicationDetailRecord = ApplicationRead & {
+type ApplicationDetailRecord = ApplicationDetailRead & {
   outcome_reason?: string | null;
   status_history?: StatusHistoryEntry[] | null;
 };
@@ -249,7 +249,7 @@ const ApplicationDetailPage: React.FC = () => {
     setApp((a) => a ? { ...a, stage: isOutcome ? a.stage : newStatus as any, outcome: isOutcome ? newStatus as any : null } : a);
     try {
       const updated = await updateApplication(token, app.id, {
-        ...(isOutcome ? { outcome: newStatus as ApplicationRead['outcome'] } : { stage: newStatus as ApplicationRead['stage'], outcome: null }),
+        ...(isOutcome ? { outcome: newStatus as ApplicationDetailRead['outcome'] } : { stage: newStatus as ApplicationDetailRead['stage'], outcome: null }),
         ...(shouldReopen ? { reopen: true } : {}),
       } as ApplicationUpdatePayload);
       setApp(updated as ApplicationDetailRecord);

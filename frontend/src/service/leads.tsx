@@ -2,7 +2,7 @@ import { components } from '../schema';
 import { createApiClient } from './api-client';
 import { normalizePaginatedResponse, type PaginatedResponse } from './pagination';
 
-export type LeadRead = components['schemas']['LeadRead'];
+export type LeadRead = components['schemas']['LeadSummaryRead'];
 export type LeadDetailRead = components['schemas']['LeadDetailRead'];
 export type LeadCreate = components['schemas']['LeadCreate'];
 export type LeadUpdate = components['schemas']['LeadSharedUpdate'];
@@ -15,7 +15,7 @@ export type LeadViewerPermissionsRead = components['schemas']['LeadViewerPermiss
 export type LeadCommentRead = components['schemas']['LeadCommentRead'];
 export type LeadCommentCreate = components['schemas']['LeadCommentCreate'];
 export type LeadParticipantSummaryRead = components['schemas']['LeadParticipantSummaryRead'];
-type RawLeadsPaginatedRead = components['schemas']['PaginatedResponse_LeadRead_'];
+type RawLeadsPaginatedRead = components['schemas']['PaginatedResponse_LeadSummaryRead_'];
 export type LeadsPaginatedRead = PaginatedResponse<LeadRead>;
 export interface Pagination {
   page: number;

@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useApplications } from './use-applications';
-import type { ApplicationRead } from '../../service/applications';
+import type { ApplicationDetailRead } from '../../service/applications';
 import * as applicationService from '../../service/applications';
 
 vi.mock('../../service/applications', () => ({
@@ -11,7 +11,7 @@ vi.mock('../../service/applications', () => ({
   deleteApplication: vi.fn(),
 }));
 
-function makeApplication(overrides: Partial<Record<string, unknown>> = {}): ApplicationRead {
+function makeApplication(overrides: Partial<Record<string, unknown>> = {}): ApplicationDetailRead {
   return {
     id: 'app-1',
     lead_id: 'lead-1',
@@ -35,6 +35,8 @@ function makeApplication(overrides: Partial<Record<string, unknown>> = {}): Appl
     lead: {
       id: 'lead-1',
       title: 'Senior Frontend Engineer',
+      canonical_url: 'https://jobs.example.com/roles/123',
+      url: 'https://jobs.example.com/roles/123',
       companies: [],
     },
     user: {
@@ -45,7 +47,7 @@ function makeApplication(overrides: Partial<Record<string, unknown>> = {}): Appl
       is_verified: true,
     },
     ...overrides,
-  } as unknown as ApplicationRead;
+  } as unknown as ApplicationDetailRead;
 }
 
 describe('useApplications', () => {

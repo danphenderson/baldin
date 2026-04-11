@@ -564,9 +564,8 @@ class LeadRegistrationUpdate(BaseSchema):
         return self
 
 
-class LeadRead(BaseRead, BaseLeadShared):
+class LeadSummaryRead(BaseRead, BaseLeadShared):
     url: str = Field(description="Job posting URL")
-    canonical_url: str = Field(description="Canonical lead URL used for deduplication")
     companies: list[CompanyRead] = Field(
         default_factory=list,
         description="List of companies associated with the lead",
@@ -586,6 +585,10 @@ class LeadRead(BaseRead, BaseLeadShared):
     )
 
 
+class LeadRead(LeadSummaryRead):
+    canonical_url: str = Field(description="Canonical lead URL used for deduplication")
+
+
 class LeadDetailRead(LeadRead):
     viewer_registration: LeadRegistrationRead | None = Field(
         None, description="The current viewer's lead registration, if present"
@@ -596,7 +599,7 @@ class LeadDetailRead(LeadRead):
     )
 
 
-LeadsPaginatedRead = PaginatedResponse[LeadRead]
+LeadsPaginatedRead = PaginatedResponse[LeadSummaryRead]
 
 
 class LeadCreate(BaseLeadShared):
@@ -759,6 +762,18 @@ class DocumentVersionRead(BaseRead):
     )
 
 
+class DocumentVersionSummaryRead(BaseSchema):
+    id: UUID4 = Field(description="Current head version identifier")
+    content: str | None = Field(None, description="Current version content")
+    content_type: ContentType | None = Field(None, description="Content origin type")
+    content_format: str | None = Field(
+        None, description="Content format: plain_text or tiptap_json"
+    )
+    source_file: str | None = Field(
+        None, description="Relative path to uploaded source file"
+    )
+
+
 class DocumentVersionCreate(BaseSchema):
     name: str | None = Field(None, description="Snapshot title")
     content: str | None = Field(None, description="Version content")
@@ -772,14 +787,14 @@ class DocumentVersionCreate(BaseSchema):
     )
 
 
-class DocumentRead(BaseRead):
+class DocumentSummaryRead(BaseRead):
     kind: DocumentKind = Field(description="Document kind discriminator")
     title: str = Field(description="Document title")
     status: DocumentStatus = Field(description="Document lifecycle status")
     is_pinned: bool = Field(
         False, description="Whether this is the active document for its kind"
     )
-    head_version: DocumentVersionRead | None = Field(
+    head_version: DocumentVersionSummaryRead | None = Field(
         None, description="Current head version inline"
     )
     version_count: int = Field(0, description="Total number of versions")
@@ -818,6 +833,12 @@ class DocumentRead(BaseRead):
     share_updated_at: datetime | None = Field(
         None,
         description="Timestamp when the share was last updated",
+    )
+
+
+class DocumentRead(DocumentSummaryRead):
+    head_version: DocumentVersionRead | None = Field(
+        None, description="Current head version inline"
     )
 
 
@@ -1713,29 +1734,33 @@ class ApplicationDocumentMetadata(BaseSchema):
     )
 
 
-class ApplicationRead(BaseRead):
+class ApplicationSummaryRead(BaseRead):
     lead_id: UUID4
     user_id: UUID4
-    lead: LeadRead
-    user: UserRead
+    lead: LeadSummaryRead
     stage: ApplicationStage = Field(
         description="Current pipeline stage (registered → applied → screening → interview → offer)",
     )
     outcome: ApplicationOutcome | None = Field(
         None, description="Terminal closure (rejected or withdrawn), null while active"
     )
-    notes: str | None = Field(None, description="Free-form user notes")
     next_step: str | None = Field(None, description="Next action for this application")
     next_step_due: datetime | None = Field(
         None, description="When the next step is due"
     )
-    outcome_reason: str | None = Field(
-        None,
-        description="Why the application was rejected or withdrawn",
-    )
     document_metadata: ApplicationDocumentMetadata = Field(
         default_factory=ApplicationDocumentMetadata,
         description="Summary of attached documents the caller can access",
+    )
+
+
+class ApplicationRead(ApplicationSummaryRead):
+    lead: LeadRead
+    user: UserRead
+    notes: str | None = Field(None, description="Free-form user notes")
+    outcome_reason: str | None = Field(
+        None,
+        description="Why the application was rejected or withdrawn",
     )
     status_history: list[ApplicationStatusHistoryEntry] = Field(
         default_factory=list,

@@ -751,6 +751,39 @@ class DocumentActivityType(str, Enum):
     BLOCK_TYPE_CHANGED = "block_type_changed"
 
 
+class DocumentBlockType(str, Enum):
+    PARAGRAPH = "paragraph"
+    HEADING = "heading"
+    BULLET_LIST = "bullet_list"
+    ORDERED_LIST = "ordered_list"
+    LIST_ITEM = "list_item"
+    TASK_LIST = "task_list"
+    TASK_ITEM = "task_item"
+    BLOCKQUOTE = "blockquote"
+    CODE_BLOCK = "code_block"
+    CALLOUT = "callout"
+    TOGGLE = "toggle"
+    TABLE = "table"
+    TABLE_ROW = "table_row"
+    TABLE_CELL = "table_cell"
+    DIVIDER = "divider"
+
+
+class DocumentBlockSnapshotRead(BaseSchema):
+    id: UUID4 = Field(description="Stable block identifier captured in the version")
+    block_type: DocumentBlockType = Field(description="Stable block kind")
+    content: Any | None = Field(None, description="Block content payload")
+    properties: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Extensible block properties payload",
+    )
+    position: int = Field(description="Zero-based sibling position")
+    children: list["DocumentBlockSnapshotRead"] = Field(
+        default_factory=list,
+        description="Nested child blocks ordered by position",
+    )
+
+
 class DocumentVersionRead(BaseRead):
     document_id: UUID4 = Field(description="Parent document identifier")
     version_number: int = Field(description="Monotonically incrementing version number")
@@ -765,6 +798,13 @@ class DocumentVersionRead(BaseRead):
     )
     change_summary: str | None = Field(
         None, description="User or system note for this version"
+    )
+
+
+class DocumentVersionDetailRead(DocumentVersionRead):
+    block_snapshot: list[DocumentBlockSnapshotRead] | None = Field(
+        None,
+        description="Recursive block snapshot for cell-doc versions",
     )
 
 
@@ -790,6 +830,10 @@ class DocumentVersionCreate(BaseSchema):
     )
     change_summary: str | None = Field(
         None, description="User or system note for this version"
+    )
+    restore_version_id: UUID4 | None = Field(
+        None,
+        description="Optional source version to restore block state from for cell-doc saves",
     )
 
 
@@ -849,7 +893,7 @@ class DocumentRead(DocumentSummaryRead):
 
 
 class DocumentDetailRead(DocumentRead):
-    versions: list[DocumentVersionRead] = Field(
+    versions: list[DocumentVersionDetailRead] = Field(
         default_factory=list, description="Full version history, oldest first"
     )
 
@@ -900,6 +944,76 @@ class DocumentUpdate(BaseSchema):
 
 class DocumentPinRequest(BaseSchema):
     pinned: bool = Field(True, description="Whether to pin or unpin the document")
+
+
+class DocumentBlockRead(BaseRead):
+    document_id: UUID4 = Field(description="Parent document identifier")
+    parent_block_id: UUID4 | None = Field(
+        None, description="Parent block identifier for nested blocks"
+    )
+    block_type: DocumentBlockType = Field(description="Stable block kind")
+    content: Any | None = Field(None, description="Block content payload")
+    properties: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Extensible block properties payload",
+    )
+    position: int = Field(description="Zero-based sibling position")
+    children: list["DocumentBlockRead"] = Field(
+        default_factory=list,
+        description="Nested child blocks ordered by position",
+    )
+
+
+class DocumentBlockCreate(BaseSchema):
+    parent_block_id: UUID4 | None = Field(
+        None, description="Optional parent block for nested insertion"
+    )
+    block_type: DocumentBlockType = Field(description="Block kind to create")
+    content: Any | None = Field(None, description="Block content payload")
+    properties: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Extensible block properties payload",
+    )
+    position: int | None = Field(
+        None,
+        ge=0,
+        description="Optional zero-based sibling position; omit to append",
+    )
+
+
+class DocumentBlockUpdate(BaseSchema):
+    block_type: DocumentBlockType | None = Field(None, description="Updated block kind")
+    content: Any = Field(default=None, description="Updated block content payload")
+    properties: dict[str, Any] | None = Field(
+        None,
+        description="Replacement block properties payload; null resets to {}",
+    )
+
+
+class DocumentBlockReorderItem(BaseSchema):
+    block_id: UUID4 = Field(description="Block to reposition")
+    parent_block_id: UUID4 | None = Field(
+        None,
+        description="New parent block identifier; null moves the block to the root",
+    )
+    position: int = Field(description="Zero-based sibling position", ge=0)
+
+
+class DocumentBlockReorderRequest(BaseSchema):
+    items: list[DocumentBlockReorderItem] = Field(
+        min_length=1,
+        description="Batch of block moves to apply atomically",
+    )
+
+
+class DocumentBlockSyncRequest(BaseSchema):
+    tiptap_json: dict[str, Any] = Field(
+        description="TipTap document JSON to sync into document_blocks rows"
+    )
+    preserve_ids: bool = Field(
+        True,
+        description="Reuse existing block UUIDs for matching block paths when possible",
+    )
 
 
 class ApplicationDocumentAttach(BaseSchema):
@@ -973,6 +1087,10 @@ class DocumentShareUpdate(BaseSchema):
 
 class DocumentActivityRead(BaseRead):
     document_id: UUID4 = Field(description="Document identifier")
+    block_id: UUID4 | None = Field(
+        None,
+        description="Associated block identifier when the activity targets a block",
+    )
     activity_type: DocumentActivityType = Field(description="Activity event type")
     message: str = Field(description="Human-readable activity summary")
     details: dict[str, Any] = Field(
@@ -991,6 +1109,10 @@ class DocumentActivityRead(BaseRead):
         None,
         description="Actor email address",
     )
+
+
+DocumentBlockSnapshotRead.model_rebuild()
+DocumentBlockRead.model_rebuild()
 
 
 # ---------------------------------------------------------------------------

@@ -906,8 +906,9 @@ class DocumentBlock(Base):
     )
     activities = relationship(
         "DocumentActivity",
-        back_populates="block",
-        passive_deletes=True,
+        primaryjoin="DocumentBlock.id == foreign(DocumentActivity.block_id)",
+        foreign_keys="DocumentActivity.block_id",
+        viewonly=True,
     )
 
 
@@ -995,12 +996,7 @@ class DocumentActivity(Base):
     document_id = Column(
         UUID, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    block_id = Column(
-        UUID,
-        ForeignKey("document_blocks.id", ondelete="SET NULL"),
-        nullable=True,
-        index=True,
-    )
+    block_id = Column(UUID, nullable=True, index=True)
     actor_user_id = Column(
         UUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
@@ -1014,7 +1010,12 @@ class DocumentActivity(Base):
     )
 
     document = relationship("Document", back_populates="activities")
-    block = relationship("DocumentBlock", back_populates="activities")
+    block = relationship(
+        "DocumentBlock",
+        primaryjoin="foreign(DocumentActivity.block_id) == DocumentBlock.id",
+        foreign_keys=[block_id],
+        viewonly=True,
+    )
     actor = relationship("User", foreign_keys=[actor_user_id])
 
 

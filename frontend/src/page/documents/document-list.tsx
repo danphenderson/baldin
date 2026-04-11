@@ -41,6 +41,7 @@ const KIND_META: Record<DocumentKind, { label: string; icon: React.ReactElement;
   follow_up:       { label: 'Follow-up',       icon: <FollowUpIcon fontSize="small" />, colorKey: 'info' },
   reference_sheet: { label: 'Reference Sheet', icon: <RefSheetIcon fontSize="small" />, colorKey: 'warning' },
   freeform:        { label: 'Freeform',        icon: <FreeformIcon fontSize="small" />, colorKey: 'success' },
+  cell_doc:        { label: 'Cell Doc',        icon: <DocIcon fontSize="small" />,      colorKey: 'info' },
 };
 
 const STATUS_META: Record<DocumentStatus, { label: string; color: 'default' | 'success' | 'warning' }> = {

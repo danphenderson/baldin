@@ -430,6 +430,26 @@ export interface paths {
     /** Update Document */
     patch: operations["update_document_api_v1_documents__document_id__patch"];
   };
+  "/api/v1/documents/{document_id}/blocks": {
+    /** List Document Blocks */
+    get: operations["list_document_blocks_api_v1_documents__document_id__blocks_get"];
+    /** Create Document Block */
+    post: operations["create_document_block_api_v1_documents__document_id__blocks_post"];
+  };
+  "/api/v1/documents/{document_id}/blocks/reorder": {
+    /** Reorder Document Blocks */
+    patch: operations["reorder_document_blocks_api_v1_documents__document_id__blocks_reorder_patch"];
+  };
+  "/api/v1/documents/{document_id}/blocks/sync": {
+    /** Sync Document Blocks */
+    post: operations["sync_document_blocks_api_v1_documents__document_id__blocks_sync_post"];
+  };
+  "/api/v1/documents/{document_id}/blocks/{block_id}": {
+    /** Delete Document Block */
+    delete: operations["delete_document_block_api_v1_documents__document_id__blocks__block_id__delete"];
+    /** Update Document Block */
+    patch: operations["update_document_block_api_v1_documents__document_id__blocks__block_id__patch"];
+  };
   "/api/v1/documents/{document_id}/activity": {
     /**
      * List Document Activity
@@ -2500,6 +2520,11 @@ export interface components {
        * @description Document identifier
        */
       document_id: string;
+      /**
+       * Block Id
+       * @description Associated block identifier when the activity targets a block
+       */
+      block_id?: string | null;
       /** @description Activity event type */
       activity_type: components["schemas"]["DocumentActivityType"];
       /**
@@ -2535,6 +2560,187 @@ export interface components {
      * @enum {string}
      */
     DocumentActivityType: "document_created" | "document_uploaded" | "version_saved" | "share_created" | "share_updated" | "share_revoked" | "document_archived" | "document_unarchived" | "document_pinned" | "document_unpinned" | "block_created" | "block_updated" | "block_deleted" | "block_reordered" | "block_type_changed";
+    /** DocumentBlockCreate */
+    DocumentBlockCreate: {
+      /**
+       * Parent Block Id
+       * @description Optional parent block for nested insertion
+       */
+      parent_block_id?: string | null;
+      /** @description Block kind to create */
+      block_type: components["schemas"]["DocumentBlockType"];
+      /**
+       * Content
+       * @description Block content payload
+       */
+      content?: unknown;
+      /**
+       * Properties
+       * @description Extensible block properties payload
+       */
+      properties?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Position
+       * @description Optional zero-based sibling position; omit to append
+       */
+      position?: number | null;
+    };
+    /** DocumentBlockRead */
+    DocumentBlockRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Parent document identifier
+       */
+      document_id: string;
+      /**
+       * Parent Block Id
+       * @description Parent block identifier for nested blocks
+       */
+      parent_block_id?: string | null;
+      /** @description Stable block kind */
+      block_type: components["schemas"]["DocumentBlockType"];
+      /**
+       * Content
+       * @description Block content payload
+       */
+      content?: unknown;
+      /**
+       * Properties
+       * @description Extensible block properties payload
+       */
+      properties?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Position
+       * @description Zero-based sibling position
+       */
+      position: number;
+      /**
+       * Children
+       * @description Nested child blocks ordered by position
+       */
+      children?: components["schemas"]["DocumentBlockRead"][];
+    };
+    /** DocumentBlockReorderItem */
+    DocumentBlockReorderItem: {
+      /**
+       * Block Id
+       * Format: uuid4
+       * @description Block to reposition
+       */
+      block_id: string;
+      /**
+       * Parent Block Id
+       * @description New parent block identifier; null moves the block to the root
+       */
+      parent_block_id?: string | null;
+      /**
+       * Position
+       * @description Zero-based sibling position
+       */
+      position: number;
+    };
+    /** DocumentBlockReorderRequest */
+    DocumentBlockReorderRequest: {
+      /**
+       * Items
+       * @description Batch of block moves to apply atomically
+       */
+      items: components["schemas"]["DocumentBlockReorderItem"][];
+    };
+    /** DocumentBlockSnapshotRead */
+    DocumentBlockSnapshotRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description Stable block identifier captured in the version
+       */
+      id: string;
+      /** @description Stable block kind */
+      block_type: components["schemas"]["DocumentBlockType"];
+      /**
+       * Content
+       * @description Block content payload
+       */
+      content?: unknown;
+      /**
+       * Properties
+       * @description Extensible block properties payload
+       */
+      properties?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Position
+       * @description Zero-based sibling position
+       */
+      position: number;
+      /**
+       * Children
+       * @description Nested child blocks ordered by position
+       */
+      children?: components["schemas"]["DocumentBlockSnapshotRead"][];
+    };
+    /** DocumentBlockSyncRequest */
+    DocumentBlockSyncRequest: {
+      /**
+       * Tiptap Json
+       * @description TipTap document JSON to sync into document_blocks rows
+       */
+      tiptap_json: {
+        [key: string]: unknown;
+      };
+      /**
+       * Preserve Ids
+       * @description Reuse existing block UUIDs for matching block paths when possible
+       * @default true
+       */
+      preserve_ids?: boolean;
+    };
+    /**
+     * DocumentBlockType
+     * @enum {string}
+     */
+    DocumentBlockType: "paragraph" | "heading" | "bullet_list" | "ordered_list" | "list_item" | "task_list" | "task_item" | "blockquote" | "code_block" | "callout" | "toggle" | "table" | "table_row" | "table_cell" | "divider";
+    /** DocumentBlockUpdate */
+    DocumentBlockUpdate: {
+      /** @description Updated block kind */
+      block_type?: components["schemas"]["DocumentBlockType"] | null;
+      /**
+       * Content
+       * @description Updated block content payload
+       */
+      content?: unknown;
+      /**
+       * Properties
+       * @description Replacement block properties payload; null resets to {}
+       */
+      properties?: {
+        [key: string]: unknown;
+      } | null;
+    };
     /** DocumentCollaborationBootstrapRead */
     DocumentCollaborationBootstrapRead: {
       /** @description How the client should proceed with collaborative bootstrap */
@@ -2678,7 +2884,7 @@ export interface components {
        * Versions
        * @description Full version history, oldest first
        */
-      versions?: components["schemas"]["DocumentVersionRead"][];
+      versions?: components["schemas"]["DocumentVersionDetailRead"][];
     };
     /** DocumentEmbedRequest */
     DocumentEmbedRequest: {
@@ -3137,6 +3343,75 @@ export interface components {
        * @description User or system note for this version
        */
       change_summary?: string | null;
+      /**
+       * Restore Version Id
+       * @description Optional source version to restore block state from for cell-doc saves
+       */
+      restore_version_id?: string | null;
+    };
+    /** DocumentVersionDetailRead */
+    DocumentVersionDetailRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Parent document identifier
+       */
+      document_id: string;
+      /**
+       * Version Number
+       * @description Monotonically incrementing version number
+       */
+      version_number: number;
+      /**
+       * Name
+       * @description Snapshot title
+       */
+      name?: string | null;
+      /**
+       * Content
+       * @description Version content
+       */
+      content?: string | null;
+      /** @description Content origin type */
+      content_type?: components["schemas"]["ContentType"] | null;
+      /**
+       * Content Format
+       * @description Content format: plain_text or tiptap_json
+       */
+      content_format?: string | null;
+      /**
+       * Source File
+       * @description Relative path to uploaded source file
+       */
+      source_file?: string | null;
+      /**
+       * Change Summary
+       * @description User or system note for this version
+       */
+      change_summary?: string | null;
+      /**
+       * Block Snapshot
+       * @description Recursive block snapshot for cell-doc versions
+       */
+      block_snapshot?: components["schemas"]["DocumentBlockSnapshotRead"][] | null;
     };
     /** DocumentVersionRead */
     DocumentVersionRead: {
@@ -8590,6 +8865,158 @@ export interface operations {
       };
     };
   };
+  /** List Document Blocks */
+  list_document_blocks_api_v1_documents__document_id__blocks_get: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentBlockRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Document Block */
+  create_document_block_api_v1_documents__document_id__blocks_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentBlockCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["DocumentBlockRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Reorder Document Blocks */
+  reorder_document_blocks_api_v1_documents__document_id__blocks_reorder_patch: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentBlockReorderRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentBlockRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Sync Document Blocks */
+  sync_document_blocks_api_v1_documents__document_id__blocks_sync_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentBlockSyncRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentBlockRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Document Block */
+  delete_document_block_api_v1_documents__document_id__blocks__block_id__delete: {
+    parameters: {
+      path: {
+        document_id: string;
+        block_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Document Block */
+  update_document_block_api_v1_documents__document_id__blocks__block_id__patch: {
+    parameters: {
+      path: {
+        document_id: string;
+        block_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentBlockUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentBlockRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /**
    * List Document Activity
    * @description Read audit-style activity history for a document.
@@ -8630,7 +9057,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["DocumentVersionRead"][];
+          "application/json": components["schemas"]["DocumentVersionDetailRead"][];
         };
       };
       /** @description Validation Error */
@@ -8657,7 +9084,7 @@ export interface operations {
       /** @description Successful Response */
       201: {
         content: {
-          "application/json": components["schemas"]["DocumentVersionRead"];
+          "application/json": components["schemas"]["DocumentVersionDetailRead"];
         };
       };
       /** @description Validation Error */
@@ -8680,7 +9107,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["DocumentVersionRead"];
+          "application/json": components["schemas"]["DocumentVersionDetailRead"];
         };
       };
       /** @description Validation Error */

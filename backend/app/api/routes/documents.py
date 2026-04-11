@@ -1,5 +1,7 @@
 # app/api/routes/documents.py
 import json
+import re
+import uuid
 from io import BytesIO
 
 from fastapi import (
@@ -18,7 +20,7 @@ from PyPDF2 import PdfReader
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Paragraph, SimpleDocTemplate
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -39,6 +41,13 @@ from app.api.routes.seed_tasks import (
     build_user_seed_creator,
     schedule_seed_operation,
 )
+from app.core.document_blocks import (
+    block_ids_by_tiptap_path,
+    block_snapshot_to_blocks,
+    blocks_to_block_snapshot,
+    tiptap_json_to_blocks,
+    validate_block_tree,
+)
 from app.core.document_storage import (
     MAX_DOCUMENT_UPLOAD_BYTES,
     build_document_source_path,
@@ -53,6 +62,11 @@ _DEFAULT_CELL_DOC_TIPTAP_CONTENT = {
     "type": "doc",
     "content": [{"type": "paragraph"}],
 }
+
+_RESTORE_CHANGE_SUMMARY_PATTERNS = (
+    re.compile(r"^\s*restored\s+from\s+v(?P<version_number>\d+)\s*$", re.IGNORECASE),
+    re.compile(r"^\s*reverted\s+to\s+v(?P<version_number>\d+)\s*$", re.IGNORECASE),
+)
 
 
 # ---------------------------------------------------------------------------
@@ -278,7 +292,8 @@ def _document_detail(
         ),
         **_document_share_metadata(doc, share),
         versions=[
-            schemas.DocumentVersionRead.model_validate(v) for v in (doc.versions or [])
+            schemas.DocumentVersionDetailRead.model_validate(v)
+            for v in (doc.versions or [])
         ],
     )
 
@@ -322,6 +337,7 @@ def _serialize_activity(
         created_at=activity.created_at,
         updated_at=activity.updated_at,
         document_id=activity.document_id,
+        block_id=activity.block_id,
         activity_type=schemas.DocumentActivityType(activity.activity_type),
         message=activity.message,
         details=activity.details or {},
@@ -335,20 +351,270 @@ def _default_cell_doc_content() -> str:
     return json.dumps(_DEFAULT_CELL_DOC_TIPTAP_CONTENT)
 
 
-def _default_cell_doc_block(document_id: UUID4) -> models.DocumentBlock:
-    return models.DocumentBlock(
-        document_id=document_id,
-        block_type="paragraph",
-        content=[],
-        properties={},
-        position=0,
+def _parse_cell_doc_tiptap_content(raw_content: str) -> dict[str, object]:
+    try:
+        tiptap_json = json.loads(raw_content)
+    except (json.JSONDecodeError, TypeError) as exc:
+        raise ValueError("Cell-doc content must be valid TipTap JSON") from exc
+
+    if not isinstance(tiptap_json, dict):
+        raise ValueError("Cell-doc content must be valid TipTap JSON")
+    return tiptap_json
+
+
+def _build_cell_doc_blocks_from_content(
+    document_id: UUID4,
+    *,
+    raw_content: str,
+    preserve_ids: dict[tuple[int, ...], uuid.UUID] | None = None,
+) -> list[models.DocumentBlock]:
+    return tiptap_json_to_blocks(
+        document_id,
+        _parse_cell_doc_tiptap_content(raw_content),
+        preserve_ids=preserve_ids,
     )
+
+
+async def _replace_document_blocks(
+    db: AsyncSession,
+    *,
+    document_id: UUID4,
+    blocks: list[models.DocumentBlock],
+) -> None:
+    await db.execute(
+        delete(models.DocumentBlock).where(
+            models.DocumentBlock.document_id == document_id
+        )
+    )
+    await db.flush()
+    for block in blocks:
+        db.add(block)
+    await db.flush()
+
+
+def _validate_document_blocks(
+    blocks: list[models.DocumentBlock],
+    *,
+    status_code: int = 400,
+    detail_prefix: str | None = None,
+) -> None:
+    try:
+        validate_block_tree(blocks)
+    except ValueError as exc:
+        detail = str(exc)
+        if detail_prefix:
+            detail = f"{detail_prefix}: {detail}"
+        raise HTTPException(status_code=status_code, detail=detail) from exc
+
+
+def _restore_version_number_from_change_summary(
+    change_summary: str | None,
+) -> int | None:
+    if not change_summary:
+        return None
+
+    stripped_summary = change_summary.strip()
+    for pattern in _RESTORE_CHANGE_SUMMARY_PATTERNS:
+        match = pattern.match(stripped_summary)
+        if match is not None:
+            return int(match.group("version_number"))
+    return None
+
+
+def _resolve_cell_doc_restore_source(
+    doc: models.Document,
+    payload: schemas.DocumentVersionCreate,
+    *,
+    version_content: str,
+) -> models.DocumentVersion | None:
+    if payload.restore_version_id is not None:
+        restore_source = next(
+            (
+                version
+                for version in doc.versions
+                if version.id == payload.restore_version_id
+            ),
+            None,
+        )
+        if restore_source is None:
+            raise HTTPException(status_code=404, detail="Restore version not found")
+        if restore_source.block_snapshot is None:
+            raise HTTPException(
+                status_code=409,
+                detail="Restore version has no stored block snapshot",
+            )
+        if restore_source.content != version_content:
+            raise HTTPException(
+                status_code=409,
+                detail="Restore version content does not match the submitted cell-doc content",
+            )
+        return restore_source
+
+    restore_version_number = _restore_version_number_from_change_summary(
+        payload.change_summary
+    )
+    if restore_version_number is None:
+        return None
+
+    restore_source = next(
+        (
+            version
+            for version in doc.versions
+            if version.version_number == restore_version_number
+        ),
+        None,
+    )
+    if restore_source is None or restore_source.block_snapshot is None:
+        return None
+    if restore_source.content != version_content:
+        return None
+    return restore_source
+
+
+def _require_cell_doc(doc: models.Document) -> None:
+    if doc.kind != schemas.DocumentKind.CELL_DOC.value:
+        raise HTTPException(
+            status_code=400,
+            detail="Block operations are only supported for cell_doc documents",
+        )
+
+
+def _block_sort_key(block: models.DocumentBlock) -> tuple[int, object, str]:
+    return (block.position, block.created_at, str(block.id))
+
+
+async def _load_document_blocks(
+    db: AsyncSession,
+    *,
+    document_id: UUID4,
+) -> list[models.DocumentBlock]:
+    result = await db.execute(
+        select(models.DocumentBlock)
+        .where(models.DocumentBlock.document_id == document_id)
+        .order_by(
+            models.DocumentBlock.position.asc(),
+            models.DocumentBlock.created_at.asc(),
+            models.DocumentBlock.id.asc(),
+        )
+    )
+    return result.scalars().all()
+
+
+def _group_document_blocks_by_parent(
+    blocks: list[models.DocumentBlock],
+) -> dict[uuid.UUID | None, list[models.DocumentBlock]]:
+    children_by_parent: dict[uuid.UUID | None, list[models.DocumentBlock]] = {}
+    for block in blocks:
+        children_by_parent.setdefault(block.parent_block_id, []).append(block)
+
+    for siblings in children_by_parent.values():
+        siblings.sort(key=_block_sort_key)
+
+    return children_by_parent
+
+
+def _normalize_reordered_document_blocks(
+    blocks: list[models.DocumentBlock],
+    *,
+    touched_parent_ids: set[uuid.UUID | None],
+    requested_ids: set[uuid.UUID],
+    reorder_specs_by_parent: dict[
+        uuid.UUID | None,
+        list[tuple[int, models.DocumentBlock]],
+    ],
+) -> None:
+    for parent_id in touched_parent_ids:
+        untouched_siblings = [
+            block
+            for block in blocks
+            if block.parent_block_id == parent_id and block.id not in requested_ids
+        ]
+        untouched_siblings.sort(key=_block_sort_key)
+
+        moved_specs = reorder_specs_by_parent.get(parent_id, [])
+        sibling_count = len(untouched_siblings) + len(moved_specs)
+        if sibling_count == 0:
+            continue
+
+        moved_blocks_by_position: dict[int, list[models.DocumentBlock]] = {}
+        max_position = sibling_count - 1
+        for target_position, moved_block in moved_specs:
+            clamped_position = min(target_position, max_position)
+            moved_blocks_by_position.setdefault(clamped_position, []).append(
+                moved_block
+            )
+
+        ordered_siblings: list[models.DocumentBlock] = []
+        untouched_index = 0
+        for position in range(sibling_count):
+            moved_blocks = moved_blocks_by_position.get(position)
+            if moved_blocks:
+                ordered_siblings.extend(moved_blocks)
+                continue
+            if untouched_index < len(untouched_siblings):
+                ordered_siblings.append(untouched_siblings[untouched_index])
+                untouched_index += 1
+
+        for new_position, sibling in enumerate(ordered_siblings):
+            sibling.position = new_position
+
+
+def _serialize_document_block(
+    block: models.DocumentBlock,
+    children_by_parent: dict[uuid.UUID | None, list[models.DocumentBlock]],
+) -> schemas.DocumentBlockRead:
+    return schemas.DocumentBlockRead(
+        id=block.id,
+        created_at=block.created_at,
+        updated_at=block.updated_at,
+        document_id=block.document_id,
+        parent_block_id=block.parent_block_id,
+        block_type=schemas.DocumentBlockType(block.block_type),
+        content=block.content,
+        properties=block.properties or {},
+        position=block.position,
+        children=[
+            _serialize_document_block(child, children_by_parent)
+            for child in children_by_parent.get(block.id, [])
+        ],
+    )
+
+
+def _serialize_document_block_tree(
+    blocks: list[models.DocumentBlock],
+) -> list[schemas.DocumentBlockRead]:
+    children_by_parent = _group_document_blocks_by_parent(blocks)
+    return [
+        _serialize_document_block(block, children_by_parent)
+        for block in children_by_parent.get(None, [])
+    ]
+
+
+def _collect_document_block_descendant_ids(
+    block_id: uuid.UUID,
+    children_by_parent: dict[uuid.UUID | None, list[models.DocumentBlock]],
+) -> set[uuid.UUID]:
+    descendants: set[uuid.UUID] = set()
+    stack = list(children_by_parent.get(block_id, []))
+    while stack:
+        child = stack.pop()
+        descendants.add(child.id)
+        stack.extend(children_by_parent.get(child.id, []))
+    return descendants
+
+
+def _count_document_block_descendants(
+    block_id: uuid.UUID,
+    children_by_parent: dict[uuid.UUID | None, list[models.DocumentBlock]],
+) -> int:
+    return len(_collect_document_block_descendant_ids(block_id, children_by_parent))
 
 
 async def _record_document_activity(
     db: AsyncSession,
     *,
     document_id: UUID4,
+    block_id: UUID4 | None = None,
     activity_type: schemas.DocumentActivityType,
     message: str,
     actor: models.User | schemas.UserRead | None = None,
@@ -357,6 +623,7 @@ async def _record_document_activity(
     db.add(
         models.DocumentActivity(
             document_id=document_id,
+            block_id=block_id,
             actor_user_id=getattr(actor, "id", None),
             activity_type=activity_type.value,
             message=message,
@@ -755,9 +1022,8 @@ async def create_document(
     """Create a document with its initial version (v1)."""
     version_content = payload.content
     version_content_format = payload.content_format.value
-    if payload.kind == schemas.DocumentKind.CELL_DOC and version_content is None:
-        version_content = _default_cell_doc_content()
-        version_content_format = schemas.ContentFormat.TIPTAP_JSON.value
+    initial_blocks: list[models.DocumentBlock] = []
+    version_block_snapshot: list[dict[str, object]] | None = None
 
     doc = models.Document(
         user_id=user.id,
@@ -768,6 +1034,19 @@ async def create_document(
     db.add(doc)
     await db.flush()
 
+    if payload.kind == schemas.DocumentKind.CELL_DOC:
+        version_content = version_content or _default_cell_doc_content()
+        version_content_format = schemas.ContentFormat.TIPTAP_JSON.value
+        try:
+            initial_blocks = _build_cell_doc_blocks_from_content(
+                doc.id,
+                raw_content=version_content,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _validate_document_blocks(initial_blocks)
+        version_block_snapshot = blocks_to_block_snapshot(initial_blocks)
+
     version = models.DocumentVersion(
         document_id=doc.id,
         version_number=1,
@@ -775,11 +1054,12 @@ async def create_document(
         content=version_content,
         content_type=payload.content_type.value if payload.content_type else None,
         content_format=version_content_format,
+        block_snapshot=version_block_snapshot,
         change_summary="Initial version",
     )
     db.add(version)
-    if payload.kind == schemas.DocumentKind.CELL_DOC:
-        db.add(_default_cell_doc_block(doc.id))
+    for block in initial_blocks:
+        db.add(block)
     await db.flush()
 
     doc.head_version_id = version.id
@@ -831,6 +1111,341 @@ async def get_document_detail(
 ):
     doc = await get_document(document_id, db, user)
     return _document_detail(doc)
+
+
+@router.get(
+    "/{document_id}/blocks",
+    response_model=list[schemas.DocumentBlockRead],
+)
+async def list_document_blocks(
+    document_id: UUID4,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    doc = await get_document(document_id, db, user)
+    _require_cell_doc(doc)
+
+    blocks = await _load_document_blocks(db, document_id=doc.id)
+    return _serialize_document_block_tree(blocks)
+
+
+@router.post(
+    "/{document_id}/blocks",
+    response_model=schemas.DocumentBlockRead,
+    status_code=201,
+)
+async def create_document_block(
+    document_id: UUID4,
+    payload: schemas.DocumentBlockCreate,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    doc = await get_document(document_id, db, user)
+    _require_cell_doc(doc)
+    _require_role(doc, {"owner", "editor"})
+
+    blocks = await _load_document_blocks(db, document_id=doc.id)
+    block_by_id = {block.id: block for block in blocks}
+    if (
+        payload.parent_block_id is not None
+        and payload.parent_block_id not in block_by_id
+    ):
+        raise HTTPException(status_code=404, detail="Parent block not found")
+
+    siblings = [
+        block for block in blocks if block.parent_block_id == payload.parent_block_id
+    ]
+    target_position = (
+        payload.position if payload.position is not None else len(siblings)
+    )
+    target_position = min(target_position, len(siblings))
+
+    block = models.DocumentBlock(
+        id=uuid.uuid4(),
+        document_id=doc.id,
+        parent_block_id=payload.parent_block_id,
+        block_type=payload.block_type.value,
+        content=payload.content,
+        properties=payload.properties,
+        position=target_position,
+    )
+    _validate_document_blocks(blocks + [block])
+
+    for sibling in siblings:
+        if sibling.position >= target_position:
+            sibling.position += 1
+
+    db.add(block)
+    await db.flush()
+    await _record_document_activity(
+        db,
+        document_id=doc.id,
+        block_id=block.id,
+        activity_type=schemas.DocumentActivityType.BLOCK_CREATED,
+        message=f"Created {block.block_type} block",
+        actor=user,
+        details={
+            "block_type": block.block_type,
+            "parent_block_id": (
+                str(block.parent_block_id)
+                if block.parent_block_id is not None
+                else None
+            ),
+            "position": block.position,
+        },
+    )
+    await db.commit()
+    await db.refresh(block)
+    return _serialize_document_block(block, {})
+
+
+@router.patch(
+    "/{document_id}/blocks/reorder",
+    response_model=list[schemas.DocumentBlockRead],
+)
+async def reorder_document_blocks(
+    document_id: UUID4,
+    payload: schemas.DocumentBlockReorderRequest,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    doc = await get_document(document_id, db, user)
+    _require_cell_doc(doc)
+    _require_role(doc, {"owner", "editor"})
+
+    blocks = await _load_document_blocks(db, document_id=doc.id)
+    block_by_id = {block.id: block for block in blocks}
+    requested_ids: set[uuid.UUID] = set()
+
+    for item in payload.items:
+        if item.block_id in requested_ids:
+            raise HTTPException(status_code=400, detail="Duplicate block_id in reorder")
+        requested_ids.add(item.block_id)
+
+        block = block_by_id.get(item.block_id)
+        if block is None:
+            raise HTTPException(status_code=404, detail="Block not found")
+        if item.parent_block_id is not None and item.parent_block_id not in block_by_id:
+            raise HTTPException(status_code=404, detail="Parent block not found")
+        if item.parent_block_id == block.id:
+            raise HTTPException(
+                status_code=400,
+                detail="A block cannot be reparented to itself",
+            )
+
+    touched_parent_ids: set[uuid.UUID | None] = set()
+    reorder_specs_by_parent: dict[
+        uuid.UUID | None,
+        list[tuple[int, models.DocumentBlock]],
+    ] = {}
+    reordered_items: list[dict[str, object | None]] = []
+    for item in payload.items:
+        block = block_by_id[item.block_id]
+        touched_parent_ids.add(block.parent_block_id)
+        touched_parent_ids.add(item.parent_block_id)
+        block.parent_block_id = item.parent_block_id
+        block.position = item.position
+        reorder_specs_by_parent.setdefault(item.parent_block_id, []).append(
+            (item.position, block)
+        )
+        reordered_items.append(
+            {
+                "block_id": str(block.id),
+                "parent_block_id": (
+                    str(item.parent_block_id)
+                    if item.parent_block_id is not None
+                    else None
+                ),
+                "position": item.position,
+            }
+        )
+
+    _validate_document_blocks(blocks)
+
+    _normalize_reordered_document_blocks(
+        blocks,
+        touched_parent_ids=touched_parent_ids,
+        requested_ids=requested_ids,
+        reorder_specs_by_parent=reorder_specs_by_parent,
+    )
+
+    await db.flush()
+    await _record_document_activity(
+        db,
+        document_id=doc.id,
+        activity_type=schemas.DocumentActivityType.BLOCK_REORDERED,
+        message=(
+            f"Reordered {len(payload.items)} block"
+            f"{'s' if len(payload.items) != 1 else ''}"
+        ),
+        actor=user,
+        details={
+            "items": reordered_items,
+            "moved_block_count": len(payload.items),
+        },
+    )
+    await db.commit()
+
+    blocks = await _load_document_blocks(db, document_id=doc.id)
+    return _serialize_document_block_tree(blocks)
+
+
+@router.post(
+    "/{document_id}/blocks/sync",
+    response_model=list[schemas.DocumentBlockRead],
+)
+async def sync_document_blocks(
+    document_id: UUID4,
+    payload: schemas.DocumentBlockSyncRequest,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    doc = await get_document(document_id, db, user)
+    _require_cell_doc(doc)
+    _require_role(doc, {"owner", "editor"})
+
+    existing_blocks = await _load_document_blocks(db, document_id=doc.id)
+    preserve_id_map = (
+        block_ids_by_tiptap_path(existing_blocks) if payload.preserve_ids else None
+    )
+
+    try:
+        blocks = tiptap_json_to_blocks(
+            doc.id,
+            payload.tiptap_json,
+            preserve_ids=preserve_id_map,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    _validate_document_blocks(blocks)
+
+    await _replace_document_blocks(db, document_id=doc.id, blocks=blocks)
+    await db.commit()
+
+    blocks = await _load_document_blocks(db, document_id=doc.id)
+    return _serialize_document_block_tree(blocks)
+
+
+@router.patch(
+    "/{document_id}/blocks/{block_id}",
+    response_model=schemas.DocumentBlockRead,
+)
+async def update_document_block(
+    document_id: UUID4,
+    block_id: UUID4,
+    payload: schemas.DocumentBlockUpdate,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    doc = await get_document(document_id, db, user)
+    _require_cell_doc(doc)
+    _require_role(doc, {"owner", "editor"})
+
+    blocks = await _load_document_blocks(db, document_id=doc.id)
+    block = next((candidate for candidate in blocks if candidate.id == block_id), None)
+    if block is None:
+        raise HTTPException(status_code=404, detail="Block not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    updated_fields: list[str] = []
+    previous_block_type = block.block_type
+
+    if "block_type" in data and data["block_type"] is not None:
+        next_block_type = data["block_type"].value
+        if block.block_type != next_block_type:
+            block.block_type = next_block_type
+            updated_fields.append("block_type")
+
+    if "content" in data and block.content != data["content"]:
+        block.content = data["content"]
+        updated_fields.append("content")
+
+    if "properties" in data:
+        next_properties = data["properties"] or {}
+        if block.properties != next_properties:
+            block.properties = next_properties
+            updated_fields.append("properties")
+
+    if updated_fields:
+        _validate_document_blocks(blocks)
+        await db.flush()
+        if previous_block_type != block.block_type:
+            await _record_document_activity(
+                db,
+                document_id=doc.id,
+                block_id=block.id,
+                activity_type=schemas.DocumentActivityType.BLOCK_TYPE_CHANGED,
+                message=(
+                    f"Changed block type from {previous_block_type} to {block.block_type}"
+                ),
+                actor=user,
+                details={
+                    "previous_block_type": previous_block_type,
+                    "block_type": block.block_type,
+                    "position": block.position,
+                },
+            )
+        await _record_document_activity(
+            db,
+            document_id=doc.id,
+            block_id=block.id,
+            activity_type=schemas.DocumentActivityType.BLOCK_UPDATED,
+            message=f"Updated {block.block_type} block",
+            actor=user,
+            details={
+                "block_type": block.block_type,
+                "position": block.position,
+                "updated_fields": updated_fields,
+            },
+        )
+        await db.commit()
+        await db.refresh(block)
+
+    return _serialize_document_block(block, {})
+
+
+@router.delete("/{document_id}/blocks/{block_id}", status_code=204)
+async def delete_document_block(
+    document_id: UUID4,
+    block_id: UUID4,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    doc = await get_document(document_id, db, user)
+    _require_cell_doc(doc)
+    _require_role(doc, {"owner", "editor"})
+
+    blocks = await _load_document_blocks(db, document_id=doc.id)
+    block = next((candidate for candidate in blocks if candidate.id == block_id), None)
+    if block is None:
+        raise HTTPException(status_code=404, detail="Block not found")
+
+    children_by_parent = _group_document_blocks_by_parent(blocks)
+    descendant_count = _count_document_block_descendants(block.id, children_by_parent)
+    for sibling in blocks:
+        if (
+            sibling.parent_block_id == block.parent_block_id
+            and sibling.id != block.id
+            and sibling.position > block.position
+        ):
+            sibling.position -= 1
+
+    await _record_document_activity(
+        db,
+        document_id=doc.id,
+        block_id=block.id,
+        activity_type=schemas.DocumentActivityType.BLOCK_DELETED,
+        message=f"Deleted {block.block_type} block",
+        actor=user,
+        details={
+            "block_type": block.block_type,
+            "children_deleted": descendant_count,
+        },
+    )
+    await db.delete(block)
+    await db.commit()
+    return None
 
 
 @router.get(
@@ -914,20 +1529,23 @@ async def delete_document(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/{document_id}/versions", response_model=list[schemas.DocumentVersionRead])
+@router.get(
+    "/{document_id}/versions",
+    response_model=list[schemas.DocumentVersionDetailRead],
+)
 async def list_versions(
     document_id: UUID4,
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     doc = await get_document(document_id, db, user)
-    return [schemas.DocumentVersionRead.model_validate(v) for v in doc.versions]
+    return [schemas.DocumentVersionDetailRead.model_validate(v) for v in doc.versions]
 
 
 @router.post(
     "/{document_id}/versions",
     status_code=201,
-    response_model=schemas.DocumentVersionRead,
+    response_model=schemas.DocumentVersionDetailRead,
 )
 async def create_version(
     document_id: UUID4,
@@ -941,13 +1559,72 @@ async def create_version(
     # Determine next version_number
     max_vn = max((v.version_number for v in doc.versions), default=0)
 
+    version_content = payload.content
+    version_content_format = payload.content_format.value
+    version_block_snapshot: list[dict[str, object]] | None = None
+    if doc.kind == schemas.DocumentKind.CELL_DOC.value:
+        if payload.restore_version_id is not None and version_content is None:
+            restore_source = next(
+                (
+                    version
+                    for version in doc.versions
+                    if version.id == payload.restore_version_id
+                ),
+                None,
+            )
+            if restore_source is None:
+                raise HTTPException(status_code=404, detail="Restore version not found")
+            version_content = restore_source.content
+
+        version_content = version_content or _default_cell_doc_content()
+        version_content_format = schemas.ContentFormat.TIPTAP_JSON.value
+
+        restore_source = _resolve_cell_doc_restore_source(
+            doc,
+            payload,
+            version_content=version_content,
+        )
+        if restore_source is not None:
+            try:
+                version_blocks = block_snapshot_to_blocks(
+                    doc.id,
+                    restore_source.block_snapshot,
+                )
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Restore version has an invalid block snapshot: {exc}",
+                ) from exc
+            _validate_document_blocks(
+                version_blocks,
+                status_code=409,
+                detail_prefix="Restore version has an invalid block snapshot",
+            )
+            doc.yjs_state = None
+        else:
+            existing_blocks = await _load_document_blocks(db, document_id=doc.id)
+            try:
+                version_blocks = _build_cell_doc_blocks_from_content(
+                    doc.id,
+                    raw_content=version_content,
+                    preserve_ids=block_ids_by_tiptap_path(existing_blocks),
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        _validate_document_blocks(version_blocks)
+
+        version_block_snapshot = blocks_to_block_snapshot(version_blocks)
+        await _replace_document_blocks(db, document_id=doc.id, blocks=version_blocks)
+
     version = models.DocumentVersion(
         document_id=doc.id,
         version_number=max_vn + 1,
         name=payload.name,
-        content=payload.content,
+        content=version_content,
         content_type=payload.content_type.value if payload.content_type else None,
-        content_format=payload.content_format.value,
+        content_format=version_content_format,
+        block_snapshot=version_block_snapshot,
         change_summary=payload.change_summary,
     )
     db.add(version)
@@ -967,12 +1644,12 @@ async def create_version(
     )
     await db.commit()
     await db.refresh(version)
-    return schemas.DocumentVersionRead.model_validate(version)
+    return schemas.DocumentVersionDetailRead.model_validate(version)
 
 
 @router.get(
     "/{document_id}/versions/{version_id}",
-    response_model=schemas.DocumentVersionRead,
+    response_model=schemas.DocumentVersionDetailRead,
 )
 async def get_version(
     document_id: UUID4,
@@ -984,7 +1661,7 @@ async def get_version(
     version = await db.get(models.DocumentVersion, version_id)
     if not version or version.document_id != doc.id:
         raise HTTPException(status_code=404, detail="Version not found")
-    return schemas.DocumentVersionRead.model_validate(version)
+    return schemas.DocumentVersionDetailRead.model_validate(version)
 
 
 # ---------------------------------------------------------------------------

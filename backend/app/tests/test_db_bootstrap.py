@@ -96,6 +96,25 @@ async def _check_constraint_names(table_name: str) -> set[str]:
         return {row[0] for row in result.all()}
 
 
+async def _foreign_key_constraint_names(table_name: str) -> set[str]:
+    async with session_context() as session:
+        result = await session.execute(
+            text(
+                """
+                SELECT con.conname
+                FROM pg_constraint AS con
+                JOIN pg_class AS rel ON rel.oid = con.conrelid
+                JOIN pg_namespace AS ns ON ns.oid = rel.relnamespace
+                WHERE ns.nspname = 'public'
+                  AND rel.relname = :table_name
+                  AND con.contype = 'f'
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return {row[0] for row in result.all()}
+
+
 async def test_create_db_and_tables_stamps_baseline_before_upgrade(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -129,6 +148,10 @@ async def test_drop_and_create_db_and_tables_bootstraps_cell_doc_schema() -> Non
     assert await _table_exists("document_blocks")
     assert "block_snapshot" in await _column_names("document_versions")
     assert "block_id" in await _column_names("document_activities")
+    assert (
+        "document_activities_block_id_fkey"
+        not in await _foreign_key_constraint_names("document_activities")
+    )
 
     assert {
         "ck_documents_kind",
@@ -163,6 +186,28 @@ async def test_drop_and_create_db_and_tables_bootstraps_cell_doc_schema() -> Non
         "ck_action_items_kind",
         "ck_action_items_priority",
     }.issubset(await _check_constraint_names("action_items"))
+
+
+async def test_create_db_and_tables_applies_head_without_document_activity_block_fk(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await async_engine.dispose()
+
+    async with async_engine.begin() as conn:
+        await db_module._terminate_other_test_db_sessions(conn)
+        await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        await conn.execute(text("CREATE SCHEMA public"))
+        await conn.execute(text("GRANT ALL ON SCHEMA public TO postgres"))
+        await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
+
+    monkeypatch.delenv("LEGACY_BOOTSTRAP", raising=False)
+    await create_db_and_tables()
+
+    assert await _table_exists("document_activities")
+    assert (
+        "document_activities_block_id_fkey"
+        not in await _foreign_key_constraint_names("document_activities")
+    )
 
 
 async def test_create_db_and_tables_uses_legacy_bootstrap_when_flag_enabled(

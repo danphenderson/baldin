@@ -11,6 +11,7 @@ import {
   ExpandMore as ExpandIcon, ExpandLess as CollapseIcon,
   Article as ResumeIcon, Mail as LetterIcon, Replay as FollowUpIcon,
   MenuBook as RefSheetIcon, TextSnippet as FreeformIcon,
+  Description as CellDocIcon,
   PictureAsPdf as PdfIcon, Share as ShareIcon,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -35,6 +36,7 @@ const KIND_META: Record<DocumentKind, { label: string; icon: React.ReactElement;
   follow_up:       { label: 'Follow-up',       icon: <FollowUpIcon fontSize="small" />, colorKey: 'info' },
   reference_sheet: { label: 'Reference Sheet', icon: <RefSheetIcon fontSize="small" />, colorKey: 'warning' },
   freeform:        { label: 'Freeform',        icon: <FreeformIcon fontSize="small" />, colorKey: 'success' },
+  cell_doc:        { label: 'Cell Doc',        icon: <CellDocIcon fontSize="small" />,  colorKey: 'info' },
 };
 
 const STATUS_META: Record<DocumentStatus, { label: string; color: 'default' | 'success' | 'warning' }> = {
@@ -259,12 +261,22 @@ const DocumentDetailPage: React.FC = () => {
       case 'share_updated':
       case 'share_revoked':
         return theme.palette.secondary.main;
+      case 'block_created':
+        return theme.palette.success.main;
+      case 'block_updated':
+      case 'block_reordered':
+        return theme.palette.info.main;
+      case 'block_deleted':
+        return theme.palette.error.main;
       case 'document_archived':
       case 'document_unarchived':
+      case 'block_type_changed':
         return theme.palette.warning.main;
       case 'document_pinned':
       case 'document_unpinned':
         return accent;
+      default:
+        return theme.palette.text.secondary;
     }
   };
 
@@ -283,6 +295,10 @@ const DocumentDetailPage: React.FC = () => {
       case 'document_pinned':
       case 'document_unpinned':
         return <PushPinIcon fontSize="small" />;
+      case 'block_deleted':
+        return <DeleteIcon fontSize="small" />;
+      case 'block_reordered':
+        return <CompareIcon fontSize="small" />;
       default:
         return <EditIcon fontSize="small" />;
     }

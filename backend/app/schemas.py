@@ -724,6 +724,7 @@ class DocumentKind(str, Enum):
     FOLLOW_UP = "follow_up"
     REFERENCE_SHEET = "reference_sheet"
     FREEFORM = "freeform"
+    CELL_DOC = "cell_doc"
 
 
 class DocumentStatus(str, Enum):
@@ -743,6 +744,11 @@ class DocumentActivityType(str, Enum):
     DOCUMENT_UNARCHIVED = "document_unarchived"
     DOCUMENT_PINNED = "document_pinned"
     DOCUMENT_UNPINNED = "document_unpinned"
+    BLOCK_CREATED = "block_created"
+    BLOCK_UPDATED = "block_updated"
+    BLOCK_DELETED = "block_deleted"
+    BLOCK_REORDERED = "block_reordered"
+    BLOCK_TYPE_CHANGED = "block_type_changed"
 
 
 class DocumentVersionRead(BaseRead):

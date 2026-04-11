@@ -49,6 +49,11 @@ from app.core.document_storage import (
 
 router: APIRouter = APIRouter()
 
+_DEFAULT_CELL_DOC_TIPTAP_CONTENT = {
+    "type": "doc",
+    "content": [{"type": "paragraph"}],
+}
+
 
 # ---------------------------------------------------------------------------
 #  Tiptap → PDF helpers
@@ -323,6 +328,20 @@ def _serialize_activity(
         actor_user_id=activity.actor_user_id,
         actor_full_name=_user_full_name(actor),
         actor_email=getattr(actor, "email", None),
+    )
+
+
+def _default_cell_doc_content() -> str:
+    return json.dumps(_DEFAULT_CELL_DOC_TIPTAP_CONTENT)
+
+
+def _default_cell_doc_block(document_id: UUID4) -> models.DocumentBlock:
+    return models.DocumentBlock(
+        document_id=document_id,
+        block_type="paragraph",
+        content=[],
+        properties={},
+        position=0,
     )
 
 
@@ -734,6 +753,12 @@ async def create_document(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Create a document with its initial version (v1)."""
+    version_content = payload.content
+    version_content_format = payload.content_format.value
+    if payload.kind == schemas.DocumentKind.CELL_DOC and version_content is None:
+        version_content = _default_cell_doc_content()
+        version_content_format = schemas.ContentFormat.TIPTAP_JSON.value
+
     doc = models.Document(
         user_id=user.id,
         kind=payload.kind.value,
@@ -747,12 +772,14 @@ async def create_document(
         document_id=doc.id,
         version_number=1,
         name=payload.title,
-        content=payload.content,
+        content=version_content,
         content_type=payload.content_type.value if payload.content_type else None,
-        content_format=payload.content_format.value,
+        content_format=version_content_format,
         change_summary="Initial version",
     )
     db.add(version)
+    if payload.kind == schemas.DocumentKind.CELL_DOC:
+        db.add(_default_cell_doc_block(doc.id))
     await db.flush()
 
     doc.head_version_id = version.id

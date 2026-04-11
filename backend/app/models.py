@@ -68,6 +68,83 @@ def _enum_values(enum_class: type[enum.Enum]) -> list[str]:
     return [member.value for member in enum_class]
 
 
+def _string_in_check_constraint(
+    column_name: str,
+    values: tuple[str, ...],
+    *,
+    name: str,
+) -> CheckConstraint:
+    allowed_values = ", ".join(repr(value) for value in values)
+    return CheckConstraint(f"{column_name} IN ({allowed_values})", name=name)
+
+
+DOCUMENT_KIND_VALUES = (
+    "resume",
+    "cover_letter",
+    "follow_up",
+    "reference_sheet",
+    "freeform",
+    "cell_doc",
+)
+DOCUMENT_STATUS_VALUES = ("draft", "active", "archived")
+DOCUMENT_CONTENT_FORMAT_VALUES = ("plain_text", "tiptap_json")
+DOCUMENT_SHARE_ROLE_VALUES = ("viewer", "editor")
+DOCUMENT_ACTIVITY_TYPE_VALUES = (
+    "document_created",
+    "document_uploaded",
+    "version_saved",
+    "share_created",
+    "share_updated",
+    "share_revoked",
+    "document_archived",
+    "document_unarchived",
+    "document_pinned",
+    "document_unpinned",
+    "block_created",
+    "block_updated",
+    "block_deleted",
+    "block_reordered",
+    "block_type_changed",
+)
+DOCUMENT_BLOCK_TYPE_VALUES = (
+    "paragraph",
+    "heading",
+    "bullet_list",
+    "ordered_list",
+    "list_item",
+    "task_list",
+    "task_item",
+    "blockquote",
+    "code_block",
+    "callout",
+    "toggle",
+    "table",
+    "table_row",
+    "table_cell",
+    "divider",
+)
+ORCHESTRATION_EVENT_STATUS_VALUES = (
+    "pending",
+    "running",
+    "success",
+    "failure",
+    "pending_review",
+)
+CONNECTION_STATUS_VALUES = ("pending", "accepted", "declined", "blocked")
+CONVERSATION_TYPE_VALUES = ("direct", "group")
+CONVERSATION_PARTICIPANT_ROLE_VALUES = ("member", "admin")
+ACTION_ITEM_STATUS_VALUES = ("pending", "in_progress", "completed", "dismissed")
+ACTION_ITEM_KIND_VALUES = (
+    "follow_up",
+    "prepare_document",
+    "send_message",
+    "review_lead",
+    "schedule_interview",
+    "custom",
+)
+ACTION_ITEM_PRIORITY_VALUES = ("low", "medium", "high", "urgent")
+
+
 class Base(DeclarativeBase):
     """
     Base model for all database entities.
@@ -96,6 +173,11 @@ class OrchestrationEvent(Base):
 
     __tablename__ = "orchestration_events"
     __table_args__ = (
+        _string_in_check_constraint(
+            "status",
+            ORCHESTRATION_EVENT_STATUS_VALUES,
+            name="ck_orchestration_events_status",
+        ),
         Index("ix_orchestration_events_pipeline_created", "pipeline_id", "created_at"),
     )
     status = Column(String, default="pending")  # running, success, failure
@@ -646,6 +728,16 @@ class Document(Base):
 
     __tablename__ = "documents"
     __table_args__ = (
+        _string_in_check_constraint(
+            "kind",
+            DOCUMENT_KIND_VALUES,
+            name="ck_documents_kind",
+        ),
+        _string_in_check_constraint(
+            "status",
+            DOCUMENT_STATUS_VALUES,
+            name="ck_documents_status",
+        ),
         Index("ix_documents_user_kind_status", "user_id", "kind", "status"),
     )
 
@@ -699,6 +791,14 @@ class Document(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    blocks = relationship(
+        "DocumentBlock",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="DocumentBlock.position",
+        lazy="selectin",
+    )
     applications = relationship(
         "Application",
         secondary="documents_x_applications",
@@ -718,7 +818,14 @@ class DocumentVersion(Base):
     """
 
     __tablename__ = "document_versions"
-    __table_args__ = (UniqueConstraint("document_id", "version_number"),)
+    __table_args__ = (
+        UniqueConstraint("document_id", "version_number"),
+        _string_in_check_constraint(
+            "content_format",
+            DOCUMENT_CONTENT_FORMAT_VALUES,
+            name="ck_document_versions_content_format",
+        ),
+    )
 
     document_id = Column(
         UUID, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
@@ -733,6 +840,7 @@ class DocumentVersion(Base):
         nullable=False,
         server_default=text("'plain_text'"),
     )
+    block_snapshot = Column(JSONB, nullable=True)
     source_file = Column(String, nullable=True)
     change_summary = Column(String)
 
@@ -740,6 +848,66 @@ class DocumentVersion(Base):
         "Document",
         back_populates="versions",
         foreign_keys=[document_id],
+    )
+
+
+class DocumentBlock(Base):
+    """Stable block row backing cell-doc authoring and version restore."""
+
+    __tablename__ = "document_blocks"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "block_type",
+            DOCUMENT_BLOCK_TYPE_VALUES,
+            name="ck_document_blocks_block_type",
+        ),
+        Index("ix_document_blocks_document_id", "document_id"),
+        Index("ix_document_blocks_parent", "parent_block_id"),
+        Index(
+            "ix_document_blocks_doc_parent_pos",
+            "document_id",
+            "parent_block_id",
+            "position",
+        ),
+    )
+
+    document_id = Column(
+        UUID,
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    parent_block_id = Column(
+        UUID,
+        ForeignKey("document_blocks.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    block_type = Column(String, nullable=False)
+    content = Column(JSONB, nullable=True)
+    properties = Column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+    position = Column(Integer, nullable=False, default=0, server_default=text("0"))
+
+    document = relationship("Document", back_populates="blocks")
+    parent_block = relationship(
+        "DocumentBlock",
+        remote_side="DocumentBlock.id",
+        back_populates="children",
+    )
+    children = relationship(
+        "DocumentBlock",
+        back_populates="parent_block",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="DocumentBlock.position",
+    )
+    activities = relationship(
+        "DocumentActivity",
+        back_populates="block",
+        passive_deletes=True,
     )
 
 
@@ -784,6 +952,11 @@ class DocumentShare(Base):
         UniqueConstraint(
             "document_id", "shared_with_user_id", name="uq_document_share_user"
         ),
+        _string_in_check_constraint(
+            "role",
+            DOCUMENT_SHARE_ROLE_VALUES,
+            name="ck_document_shares_role",
+        ),
     )
 
     document_id = Column(
@@ -811,9 +984,22 @@ class DocumentActivity(Base):
     """Audit-style activity event recorded against a document."""
 
     __tablename__ = "document_activities"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "activity_type",
+            DOCUMENT_ACTIVITY_TYPE_VALUES,
+            name="ck_document_activities_activity_type",
+        ),
+    )
 
     document_id = Column(
         UUID, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    block_id = Column(
+        UUID,
+        ForeignKey("document_blocks.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     actor_user_id = Column(
         UUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
@@ -828,6 +1014,7 @@ class DocumentActivity(Base):
     )
 
     document = relationship("Document", back_populates="activities")
+    block = relationship("DocumentBlock", back_populates="activities")
     actor = relationship("User", foreign_keys=[actor_user_id])
 
 
@@ -882,6 +1069,21 @@ class ActionItem(Base):
             "(conversation_id IS NOT NULL)::int"
             ") <= 1",
             name="ck_action_items_at_most_one_fk",
+        ),
+        _string_in_check_constraint(
+            "kind",
+            ACTION_ITEM_KIND_VALUES,
+            name="ck_action_items_kind",
+        ),
+        _string_in_check_constraint(
+            "status",
+            ACTION_ITEM_STATUS_VALUES,
+            name="ck_action_items_status",
+        ),
+        _string_in_check_constraint(
+            "priority",
+            ACTION_ITEM_PRIORITY_VALUES,
+            name="ck_action_items_priority",
         ),
         Index("ix_action_items_user_status", "user_id", "status"),
         Index("ix_action_items_user_due_at", "user_id", "due_at"),
@@ -1038,6 +1240,11 @@ class Connection(Base):
     __tablename__ = "connections"
     __table_args__ = (
         UniqueConstraint("requester_id", "addressee_id"),
+        _string_in_check_constraint(
+            "status",
+            CONNECTION_STATUS_VALUES,
+            name="ck_connections_status",
+        ),
         Index("ix_connections_requester_status", "requester_id", "status"),
         Index("ix_connections_addressee_status", "addressee_id", "status"),
     )
@@ -1068,6 +1275,13 @@ class Conversation(Base):
     """Represents a direct or group messaging conversation."""
 
     __tablename__ = "conversations"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "type",
+            CONVERSATION_TYPE_VALUES,
+            name="ck_conversations_type",
+        ),
+    )
 
     type = Column(String, nullable=False)  # "direct" or "group"
     title = Column(Text, nullable=True)
@@ -1094,7 +1308,14 @@ class ConversationParticipant(Base):
     """Junction table linking users to conversations."""
 
     __tablename__ = "conversation_participants"
-    __table_args__ = (UniqueConstraint("conversation_id", "user_id"),)
+    __table_args__ = (
+        UniqueConstraint("conversation_id", "user_id"),
+        _string_in_check_constraint(
+            "role",
+            CONVERSATION_PARTICIPANT_ROLE_VALUES,
+            name="ck_conversation_participants_role",
+        ),
+    )
 
     conversation_id = Column(
         UUID,

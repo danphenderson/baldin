@@ -2534,7 +2534,7 @@ export interface components {
      * DocumentActivityType
      * @enum {string}
      */
-    DocumentActivityType: "document_created" | "document_uploaded" | "version_saved" | "share_created" | "share_updated" | "share_revoked" | "document_archived" | "document_unarchived" | "document_pinned" | "document_unpinned";
+    DocumentActivityType: "document_created" | "document_uploaded" | "version_saved" | "share_created" | "share_updated" | "share_revoked" | "document_archived" | "document_unarchived" | "document_pinned" | "document_unpinned" | "block_created" | "block_updated" | "block_deleted" | "block_reordered" | "block_type_changed";
     /** DocumentCollaborationBootstrapRead */
     DocumentCollaborationBootstrapRead: {
       /** @description How the client should proceed with collaborative bootstrap */
@@ -2731,7 +2731,7 @@ export interface components {
      * DocumentKind
      * @enum {string}
      */
-    DocumentKind: "resume" | "cover_letter" | "follow_up" | "reference_sheet" | "freeform";
+    DocumentKind: "resume" | "cover_letter" | "follow_up" | "reference_sheet" | "freeform" | "cell_doc";
     /** DocumentPinRequest */
     DocumentPinRequest: {
       /**

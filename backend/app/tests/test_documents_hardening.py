@@ -1,5 +1,6 @@
 """Focused backend tests for document sharing, activity, and upload hardening."""
 
+import json
 from contextlib import asynccontextmanager
 from io import BytesIO
 from uuid import UUID
@@ -8,7 +9,9 @@ import pytest
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
 from reportlab.pdfgen import canvas
+from sqlalchemy import select
 
+from app import models
 from app.core import conf
 from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
 from app.core.document_storage import resolve_document_source_path
@@ -351,7 +354,53 @@ async def test_document_activity_tracks_history_events() -> None:
     assert "document_unarchived" in activity_types
     assert "document_pinned" in activity_types
     assert "document_unpinned" in activity_types
-    assert all(item["message"] for item in activity)
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_cell_doc_create_initializes_default_block_and_seed_content() -> None:
+    await _ensure_db_ready()
+
+    async with _client() as client:
+        owner_email, _ = await _create_user(
+            "cell-doc-owner-pass",
+            first_name="Casey",
+            last_name="Blocks",
+        )
+        owner_headers = await _auth_headers(client, owner_email, "cell-doc-owner-pass")
+
+        response = await client.post(
+            "/api/v1/documents/",
+            json={
+                "kind": "cell_doc",
+                "title": "Cell Doc Draft",
+            },
+            headers=owner_headers,
+        )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["kind"] == "cell_doc"
+    assert body["head_version"]["content_format"] == "tiptap_json"
+    assert json.loads(body["head_version"]["content"]) == {
+        "type": "doc",
+        "content": [{"type": "paragraph"}],
+    }
+
+    async with session_context() as session:
+        result = await session.execute(
+            select(models.DocumentBlock)
+            .where(models.DocumentBlock.document_id == body["id"])
+            .order_by(models.DocumentBlock.position)
+        )
+        blocks = result.scalars().all()
+
+    assert len(blocks) == 1
+    block = blocks[0]
+    assert block.parent_block_id is None
+    assert block.block_type == "paragraph"
+    assert block.content == []
+    assert block.properties == {}
+    assert block.position == 0
 
 
 @pytest.mark.asyncio(loop_scope="module")

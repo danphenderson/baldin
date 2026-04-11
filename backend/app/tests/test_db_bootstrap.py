@@ -77,6 +77,25 @@ async def _table_exists(table_name: str) -> bool:
         return bool(result.scalar_one())
 
 
+async def _check_constraint_names(table_name: str) -> set[str]:
+    async with session_context() as session:
+        result = await session.execute(
+            text(
+                """
+                SELECT con.conname
+                FROM pg_constraint AS con
+                JOIN pg_class AS rel ON rel.oid = con.conrelid
+                JOIN pg_namespace AS ns ON ns.oid = rel.relnamespace
+                WHERE ns.nspname = 'public'
+                  AND rel.relname = :table_name
+                  AND con.contype = 'c'
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return {row[0] for row in result.all()}
+
+
 async def test_create_db_and_tables_stamps_baseline_before_upgrade(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -101,6 +120,49 @@ async def test_create_db_and_tables_stamps_baseline_before_upgrade(
     assert all(
         db_url == db_module.sqlalchemy_database_uri for _command, db_url in commands
     )
+
+
+async def test_drop_and_create_db_and_tables_bootstraps_cell_doc_schema() -> None:
+    await async_engine.dispose()
+    await drop_and_create_db_and_tables()
+
+    assert await _table_exists("document_blocks")
+    assert "block_snapshot" in await _column_names("document_versions")
+    assert "block_id" in await _column_names("document_activities")
+
+    assert {
+        "ck_documents_kind",
+        "ck_documents_status",
+    }.issubset(await _check_constraint_names("documents"))
+    assert {"ck_document_versions_content_format"}.issubset(
+        await _check_constraint_names("document_versions")
+    )
+    assert {"ck_document_blocks_block_type"}.issubset(
+        await _check_constraint_names("document_blocks")
+    )
+    assert {"ck_document_activities_activity_type"}.issubset(
+        await _check_constraint_names("document_activities")
+    )
+    assert {"ck_document_shares_role"}.issubset(
+        await _check_constraint_names("document_shares")
+    )
+    assert {"ck_orchestration_events_status"}.issubset(
+        await _check_constraint_names("orchestration_events")
+    )
+    assert {"ck_connections_status"}.issubset(
+        await _check_constraint_names("connections")
+    )
+    assert {"ck_conversations_type"}.issubset(
+        await _check_constraint_names("conversations")
+    )
+    assert {"ck_conversation_participants_role"}.issubset(
+        await _check_constraint_names("conversation_participants")
+    )
+    assert {
+        "ck_action_items_status",
+        "ck_action_items_kind",
+        "ck_action_items_priority",
+    }.issubset(await _check_constraint_names("action_items"))
 
 
 async def test_create_db_and_tables_uses_legacy_bootstrap_when_flag_enabled(

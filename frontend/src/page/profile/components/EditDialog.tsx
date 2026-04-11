@@ -38,12 +38,15 @@ export const EditDialog: React.FC<EditDialogProps> = ({
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          {SECTION_FIELDS[editSection].map(field => (
+          {SECTION_FIELDS[editSection].map(field => {
+            const rawVal = (editItem as Record<string, unknown>)?.[field.key];
+            const displayVal = field.isArray && Array.isArray(rawVal) ? rawVal.join(', ') : rawVal ?? '';
+            return (
             <TextField
               key={field.key}
               fullWidth
               label={field.label}
-              value={(editItem as Record<string, unknown>)?.[field.key] ?? ''}
+              value={displayVal}
               onChange={e => setEditItem(prev => prev ? { ...prev, [field.key]: e.target.value } : prev)}
               multiline={field.multiline}
               rows={field.rows ?? 1}
@@ -51,7 +54,8 @@ export const EditDialog: React.FC<EditDialogProps> = ({
               InputLabelProps={field.type === 'date' ? { shrink: true } : undefined}
               size="small"
             />
-          ))}
+            );
+          })}
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 3 }}>

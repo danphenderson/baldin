@@ -82,7 +82,8 @@ describe('useApplications', () => {
     });
 
     expect(applicationService.updateApplication).toHaveBeenCalledWith('test-token', 'app-1', {
-      status: 'screening',
+      stage: 'screening',
+      outcome: null,
       reopen: true,
     });
   });

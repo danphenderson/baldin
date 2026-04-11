@@ -262,11 +262,11 @@ const ProfilePage: React.FC = () => {
                       {exp.description}
                     </Typography>
                   )}
-                  {exp.projects && (
+                  {exp.projects?.length ? (
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontStyle: 'italic' }}>
-                      Projects: {exp.projects}
+                      Projects: {exp.projects.join(', ')}
                     </Typography>
-                  )}
+                  ) : null}
                 </ItemCard>
               ))}
             </Stack>
@@ -300,18 +300,18 @@ const ProfilePage: React.FC = () => {
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     <DateSpan value={edu.start_date} /> — <DateSpan value={edu.end_date} />
-                    {edu.gradePoint ? ` · GPA: ${edu.gradePoint}` : ''}
+                    {edu.grade_point ? ` · GPA: ${edu.grade_point}` : ''}
                   </Typography>
-                  {edu.activities && (
+                  {edu.activities?.length ? (
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                      Activities: {edu.activities}
+                      Activities: {edu.activities.join(', ')}
                     </Typography>
-                  )}
-                  {edu.achievements && (
+                  ) : null}
+                  {edu.achievements?.length ? (
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                      Achievements: {edu.achievements}
+                      Achievements: {edu.achievements.join(', ')}
                     </Typography>
-                  )}
+                  ) : null}
                 </ItemCard>
               ))}
             </Stack>

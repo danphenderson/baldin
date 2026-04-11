@@ -16,7 +16,7 @@ const SkillsModal: React.FC<SkillsModalProps> = ({ open, onClose, onSave, initia
   const defaultSkillData: SkillCreate | SkillUpdate = {
     category: '',
     name: '',
-    subskills: '',
+    subskills: [] as string[],
     yoe: null  // Assuming 'yoe' can be null for SkillCreate and SkillUpdate
   };
 
@@ -29,7 +29,7 @@ const SkillsModal: React.FC<SkillsModalProps> = ({ open, onClose, onSave, initia
       const updateData: SkillUpdate = {
         category: initialData.category || '',
         name: initialData.name || '',
-        subskills: initialData.subskills || '',
+        subskills: initialData.subskills || [],
         yoe: initialData.yoe || null
       };
       setSkillData(updateData);

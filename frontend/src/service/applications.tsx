@@ -35,8 +35,8 @@ export const findExistingApplicationForLead = async (token: string, leadId: stri
 };
 
 export const getApplicationStateLabel = (
-  application: Pick<ApplicationRead, 'outcome' | 'stage' | 'status'>,
-): string => (application.outcome ?? application.stage ?? application.status ?? 'tracked').replace(/_/g, ' ');
+  application: Pick<ApplicationRead, 'outcome' | 'stage'>,
+): string => (application.outcome ?? application.stage ?? 'tracked').replace(/_/g, ' ');
 
 export const getApplication = async (token: string, id: string): Promise<ApplicationRead> => {
   const client = createApiClient(token);

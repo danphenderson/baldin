@@ -14,10 +14,10 @@ const EducationModal: React.FC<EducationModalProps> = ({ open, onClose, onSave, 
     // Assuming these are the fields in EducationCreate, adjust as per actual schema
     university: '',
     degree: '',
-    activities: '',
+    activities: [] as string[],
     start_date: '',
     end_date: '',
-    gradePoint: '',
+    grade_point: '',
   };
 
   const [educationData, setEducationData] = useState<EducationCreate | EducationUpdate>(defaultEducationData);
@@ -29,10 +29,10 @@ const EducationModal: React.FC<EducationModalProps> = ({ open, onClose, onSave, 
       const updateData: EducationUpdate = {
         university: initialData.university || '',
         degree: initialData.degree || '',
-        activities: initialData.activities || '',
+        activities: initialData.activities || [],
         start_date: initialData.start_date || '',
         end_date: initialData.end_date || '',
-        gradePoint: initialData.gradePoint || '',
+        grade_point: initialData.grade_point || '',
         //notes: initialData.notes || '',
       };
       setEducationData(updateData);

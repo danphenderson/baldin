@@ -20,8 +20,8 @@ vi.mock('../service/leads', () => ({
 vi.mock('../service/applications', () => ({
   createApplication: vi.fn(),
   findExistingApplicationForLead: vi.fn(),
-  getApplicationStateLabel: vi.fn((application: { outcome?: string | null; stage?: string | null; status?: string | null }) => (
-    application.outcome ?? application.stage ?? application.status ?? 'tracked'
+  getApplicationStateLabel: vi.fn((application: { outcome?: string | null; stage?: string | null }) => (
+    application.outcome ?? application.stage ?? 'tracked'
   )),
 }));
 
@@ -262,7 +262,7 @@ describe('LeadsPage', () => {
       expect(mockedFindExistingApplicationForLead).toHaveBeenCalledWith('test-token', 'lead-1');
       expect(mockedCreateApplication).toHaveBeenCalledWith('test-token', {
         lead_id: 'lead-1',
-        status: 'registered',
+        stage: 'registered',
       });
     });
   });

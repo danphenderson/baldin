@@ -224,7 +224,7 @@ const CompaniesPage: React.FC = () => {
         return;
       }
       setError('');
-      await createApplication(token, { lead_id: lead.id, status: intent });
+      await createApplication(token, { lead_id: lead.id, stage: intent });
       showSuccess(creationSuccessMessage(intent, title));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Application failed');

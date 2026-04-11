@@ -117,9 +117,9 @@ describe('ApplicationDetailPage', () => {
       outcome: 'rejected',
       outcome_reason: 'Role closed internally',
       status_history: [
-        { to: 'applied', changed_at: '2026-04-01T12:00:00Z' },
-        { from: 'applied', to: 'screening', changed_at: '2026-04-04T12:00:00Z' },
-        { from: 'screening', to: 'rejected', changed_at: '2026-04-08T12:00:00Z' },
+        { stage: 'applied', changed_at: '2026-04-01T12:00:00Z' },
+        { stage: 'screening', changed_at: '2026-04-04T12:00:00Z' },
+        { stage: 'rejected', outcome: 'rejected', changed_at: '2026-04-08T12:00:00Z' },
       ],
     }));
     vi.mocked(applicationService.getApplicationDocuments).mockResolvedValue([]);
@@ -144,8 +144,8 @@ describe('ApplicationDetailPage', () => {
       outcome: 'withdrawn',
       outcome_reason: null,
       status_history: [
-        { to: 'applied', changed_at: '2026-04-01T12:00:00Z' },
-        { from: 'applied', to: 'withdrawn', changed_at: '2026-04-03T12:00:00Z' },
+        { stage: 'applied', changed_at: '2026-04-01T12:00:00Z' },
+        { stage: 'withdrawn', outcome: 'withdrawn', changed_at: '2026-04-03T12:00:00Z' },
       ],
     }));
     vi.mocked(applicationService.getApplicationDocuments).mockResolvedValue([]);
@@ -156,8 +156,8 @@ describe('ApplicationDetailPage', () => {
       outcome: 'withdrawn',
       outcome_reason: 'Accepted another offer',
       status_history: [
-        { to: 'applied', changed_at: '2026-04-01T12:00:00Z' },
-        { from: 'applied', to: 'withdrawn', changed_at: '2026-04-03T12:00:00Z' },
+        { stage: 'applied', changed_at: '2026-04-01T12:00:00Z' },
+        { stage: 'withdrawn', outcome: 'withdrawn', changed_at: '2026-04-03T12:00:00Z' },
       ],
     }));
 
@@ -182,8 +182,8 @@ describe('ApplicationDetailPage', () => {
       outcome: 'rejected',
       outcome_reason: 'Role closed internally',
       status_history: [
-        { to: 'applied', changed_at: '2026-04-01T12:00:00Z' },
-        { from: 'applied', to: 'rejected', changed_at: '2026-04-03T12:00:00Z' },
+        { stage: 'applied', changed_at: '2026-04-01T12:00:00Z' },
+        { stage: 'rejected', outcome: 'rejected', changed_at: '2026-04-03T12:00:00Z' },
       ],
     }));
     vi.mocked(applicationService.getApplicationDocuments).mockResolvedValue([]);
@@ -194,9 +194,9 @@ describe('ApplicationDetailPage', () => {
       outcome: null,
       outcome_reason: null,
       status_history: [
-        { to: 'applied', changed_at: '2026-04-01T12:00:00Z' },
-        { from: 'applied', to: 'rejected', changed_at: '2026-04-03T12:00:00Z' },
-        { from: 'rejected', to: 'screening', changed_at: '2026-04-04T12:00:00Z' },
+        { stage: 'applied', changed_at: '2026-04-01T12:00:00Z' },
+        { stage: 'rejected', outcome: 'rejected', changed_at: '2026-04-03T12:00:00Z' },
+        { stage: 'screening', changed_at: '2026-04-04T12:00:00Z' },
       ],
     }));
 
@@ -208,7 +208,8 @@ describe('ApplicationDetailPage', () => {
 
     await waitFor(() => {
       expect(applicationService.updateApplication).toHaveBeenCalledWith('test-token', 'app-123', {
-        status: 'screening',
+        stage: 'screening',
+        outcome: null,
         reopen: true,
       });
     });

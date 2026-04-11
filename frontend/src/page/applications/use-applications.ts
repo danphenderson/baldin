@@ -71,7 +71,7 @@ export function relativeDate(iso: string): string {
 
 /** Resolve the effective stage string for bucketing / display. */
 export function effectiveStage(app: ApplicationRead): string {
-  return (app.stage ?? app.status ?? 'applied').toLowerCase();
+  return (app.stage ?? 'applied').toLowerCase();
 }
 
 /** Return the next stage in the pipeline, or null at the end. */
@@ -80,12 +80,6 @@ export function nextStage(current: string): string | null {
   const idx = STAGE_KEYS.indexOf(current);
   if (idx < 0 || idx >= STAGE_KEYS.length - 1) return null;
   return STAGE_KEYS[idx + 1];
-}
-
-/** @deprecated Use nextStage instead. Kept for backward compat with queue page. */
-export function nextStatus(current: string): ApplicationRead['status'] | null {
-  const result = nextStage(current);
-  return result as ApplicationRead['status'] | null;
 }
 
 /** Is this application terminally closed? */
@@ -126,7 +120,7 @@ export interface UseApplicationsReturn {
   setError: (msg: string) => void;
   setSuccess: (msg: string) => void;
   refresh: () => Promise<void>;
-  handleStatusChange: (appId: string, newStatus: ApplicationRead['status']) => Promise<void>;
+  handleStatusChange: (appId: string, newStatus: string) => Promise<void>;
   handleReminderUpdate: (
     appId: string,
     reminder: Pick<ApplicationUpdate, 'next_step' | 'next_step_due'>,
@@ -205,17 +199,16 @@ export function useApplications(token: string | null): UseApplicationsReturn {
     ).length;
   }, [applications]);
 
-  const handleStatusChange = async (appId: string, newStatus: ApplicationRead['status']) => {
+  const handleStatusChange = async (appId: string, newStatus: string) => {
     if (!token) return;
 
     const previousApplication = applications.find((app) => app.id === appId);
     if (!previousApplication) return;
 
-    const previousStatus = previousApplication.status ?? null;
     const previousStage = previousApplication.stage ?? null;
     const previousOutcome = previousApplication.outcome ?? null;
     const shouldReopen = (
-      (previousOutcome === 'rejected' || previousOutcome === 'withdrawn' || previousStatus === 'rejected' || previousStatus === 'withdrawn')
+      (previousOutcome === 'rejected' || previousOutcome === 'withdrawn')
       && newStatus !== 'rejected'
       && newStatus !== 'withdrawn'
     );
@@ -227,14 +220,15 @@ export function useApplications(token: string | null): UseApplicationsReturn {
 
     setApplications((prev) =>
       prev.map((a) => (a.id === appId
-        ? { ...a, status: newStatus, stage: optimisticStage, outcome: optimisticOutcome }
+        ? { ...a, stage: optimisticStage, outcome: optimisticOutcome }
         : a)),
     );
     try {
-      const updatedApp = await updateApplication(token, appId, {
-        status: newStatus,
-        ...(shouldReopen ? { reopen: true } : {}),
-      } as ApplicationUpdate);
+      const payload: ApplicationUpdate = isOutcome
+        ? { outcome: newStatus as ApplicationRead['outcome'] }
+        : { stage: newStatus as ApplicationRead['stage'], outcome: null };
+      if (shouldReopen) (payload as any).reopen = true;
+      const updatedApp = await updateApplication(token, appId, payload);
       setApplications((prev) =>
         prev.map((a) => (a.id === appId ? updatedApp : a)),
       );
@@ -242,7 +236,7 @@ export function useApplications(token: string | null): UseApplicationsReturn {
       setError(e instanceof Error ? e.message : 'Failed to update status');
       setApplications((prev) =>
         prev.map((a) => (a.id === appId
-          ? { ...a, status: previousStatus, stage: previousStage, outcome: previousOutcome }
+          ? { ...a, stage: previousStage, outcome: previousOutcome }
           : a)),
       );
       refresh();
@@ -252,11 +246,11 @@ export function useApplications(token: string | null): UseApplicationsReturn {
   const handleAdvance = (app: ApplicationRead) => {
     const stage = effectiveStage(app);
     const next = nextStage(stage);
-    if (next) handleStatusChange(app.id, next as ApplicationRead['status']);
+    if (next) handleStatusChange(app.id, next);
   };
 
   const handleClose = (app: ApplicationRead, outcome: Outcome) => {
-    handleStatusChange(app.id, outcome as ApplicationRead['status']);
+    handleStatusChange(app.id, outcome);
   };
 
   const handleReminderUpdate = async (

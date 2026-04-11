@@ -18,7 +18,7 @@ const ExperiencesModal: React.FC<ExperiencesModalProps> = ({ open, onClose, onSa
     start_date: '',
     end_date: '',
     description: '',
-    projects: '',
+    projects: [] as string[],
   };
 
   const [experienceData, setExperienceData] = useState<ExperienceCreate | ExperienceUpdate>(defaultExperienceData);
@@ -34,7 +34,7 @@ const ExperiencesModal: React.FC<ExperiencesModalProps> = ({ open, onClose, onSa
         start_date: initialData.start_date || '',
         end_date: initialData.end_date || '',
         description: initialData.description || '',
-        projects: initialData.projects || '',
+        projects: initialData.projects || [],
       };
       setExperienceData(updateData);
       setIsEdited(true);

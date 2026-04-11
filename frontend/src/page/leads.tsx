@@ -258,7 +258,7 @@ const LeadsPage: React.FC = () => {
         notify(duplicateApplicationMessage(title, getApplicationStateLabel(existingApp)), 'warning');
         return;
       }
-      await createApplication(token, { lead_id: lead.id, status: intent });
+      await createApplication(token, { lead_id: lead.id, stage: intent });
       notify(creationSuccessMessage(intent, title));
     } catch (e: unknown) {
       notify(e instanceof Error ? e.message : 'Failed to create application', 'error');

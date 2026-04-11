@@ -41,7 +41,7 @@ import {
 /*  ApplicationCard                                                    */
 /* ------------------------------------------------------------------ */
 
-type BoardStatus = Exclude<ApplicationRead['status'], null | undefined>;
+type BoardStatus = string;
 
 const BOARD_EMPTY_HINTS: Record<string, string> = {
   registered: 'Registered applications stay here until you are ready to work them in the pipeline.',
@@ -51,7 +51,7 @@ const BOARD_EMPTY_HINTS: Record<string, string> = {
 };
 
 function boardStatusKey(app: ApplicationRead): BoardStatus {
-  return ((app.outcome ?? app.stage ?? app.status ?? 'applied') as string).toLowerCase() as BoardStatus;
+  return ((app.outcome ?? app.stage ?? 'applied') as string).toLowerCase() as BoardStatus;
 }
 
 function laneId(status: BoardStatus): string {

@@ -24,7 +24,7 @@ import {
   useApplications,
   useStageColumns,
   relativeDate,
-  nextStatus,
+  nextStage,
   effectiveStage,
   isClosed,
   applicationDocumentCount,
@@ -410,7 +410,7 @@ const ApplicationsQueuePage: React.FC = () => {
             const stage = stageOf(app);
             const column = columnFor(stage);
             const companyName = lead?.companies?.[0]?.name;
-            const canAdvance = nextStatus(stage) !== null;
+            const canAdvance = nextStage(stage) !== null;
             const documentCount = applicationDocumentCount(app);
 
             return (

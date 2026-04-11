@@ -25,4 +25,6 @@ export interface FieldConfig {
   type?: 'text' | 'number' | 'date';
   multiline?: boolean;
   rows?: number;
+  /** When true, the API value is string[] but the form edits as comma-separated text. */
+  isArray?: boolean;
 }

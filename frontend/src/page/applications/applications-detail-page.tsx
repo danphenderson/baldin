@@ -38,9 +38,13 @@ import type { ActionItemRead, ActionItemCreate } from '../../service/action-item
 /* ------------------------------------------------------------------ */
 
 interface StatusHistoryEntry {
-  from?: ApplicationRead['status'] | null;
-  to: NonNullable<ApplicationRead['status']>;
+  id: string;
+  application_id: string;
+  stage: string;
+  outcome?: string | null;
+  changed_by_user_id?: string | null;
   changed_at: string;
+  note?: string | null;
 }
 
 type ApplicationDetailRecord = ApplicationRead & {
@@ -101,16 +105,19 @@ function formatTimelineDuration(startIso: string, endIso?: string): string {
 
 function buildTimelineEntries(history: StatusHistoryEntry[] | null | undefined) {
   const entries = (history ?? [])
-    .filter((entry): entry is StatusHistoryEntry => Boolean(entry?.to && entry?.changed_at))
+    .filter((entry): entry is StatusHistoryEntry => Boolean(entry?.changed_at))
     .slice()
     .sort((left, right) => new Date(left.changed_at).getTime() - new Date(right.changed_at).getTime());
 
   return entries.map((entry, index) => {
     const nextEntry = entries[index + 1];
+    const prevEntry = index > 0 ? entries[index - 1] : null;
+    const label = entry.outcome ?? entry.stage;
+    const prevLabel = prevEntry ? (prevEntry.outcome ?? prevEntry.stage) : null;
     return {
-      key: `${entry.changed_at}-${entry.to}-${index}`,
-      from: entry.from ?? null,
-      to: entry.to,
+      key: `${entry.changed_at}-${label}-${index}`,
+      from: prevLabel ?? null,
+      to: label,
       changedAt: entry.changed_at,
       durationLabel: formatTimelineDuration(entry.changed_at, nextEntry?.changed_at),
       isCurrent: index === entries.length - 1,
@@ -234,21 +241,22 @@ const ApplicationDetailPage: React.FC = () => {
   }, []);
 
   /* status change */
-  const handleStatusChange = async (newStatus: ApplicationRead['status']) => {
+  const handleStatusChange = async (newStatus: string) => {
     if (!token || !app) return;
-    const prev = app.status;
-    const shouldReopen = isTerminalStatus(app.outcome ?? app.status) && !isTerminalStatus(newStatus);
-    setApp((a) => a ? { ...a, status: newStatus } : a);
+    const prev = { stage: app.stage, outcome: app.outcome };
+    const shouldReopen = isTerminalStatus(app.outcome ?? '') && !isTerminalStatus(newStatus as string);
+    const isOutcome = newStatus === 'rejected' || newStatus === 'withdrawn';
+    setApp((a) => a ? { ...a, stage: isOutcome ? a.stage : newStatus as any, outcome: isOutcome ? newStatus as any : null } : a);
     try {
       const updated = await updateApplication(token, app.id, {
-        status: newStatus,
+        ...(isOutcome ? { outcome: newStatus as ApplicationRead['outcome'] } : { stage: newStatus as ApplicationRead['stage'], outcome: null }),
         ...(shouldReopen ? { reopen: true } : {}),
       } as ApplicationUpdatePayload);
       setApp(updated as ApplicationDetailRecord);
       setLocalOutcomeReason((updated as ApplicationDetailRecord).outcome_reason ?? '');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to update status');
-      setApp((a) => a ? { ...a, status: prev } : a);
+      setApp((a) => a ? { ...a, ...prev } : a);
     }
   };
 
@@ -295,7 +303,7 @@ const ApplicationDetailPage: React.FC = () => {
   };
 
   const handleOutcomeReasonSave = async () => {
-    if (!token || !app || !isTerminalStatus(app.outcome ?? app.status)) return;
+    if (!token || !app || !isTerminalStatus(app.outcome ?? '')) return;
     const nextValue = localOutcomeReason.trim() || null;
     const currentValue = (app.outcome_reason ?? '').trim() || null;
     if (nextValue === currentValue) return;
@@ -464,9 +472,9 @@ const ApplicationDetailPage: React.FC = () => {
   /* ---------------------------------------------------------------- */
 
   const companyName = lead?.companies?.[0]?.name;
-  const column = ALL_STATUS_COLUMNS.find((c) => c.key === (app.status || 'applied').toLowerCase()) ?? ALL_STATUS_COLUMNS[0];
-  const isClosedApplication = isTerminalStatus(app.outcome ?? app.status);
-  const currentOutcomeLabel = statusLabel(app.outcome ?? app.status, ALL_STATUS_COLUMNS);
+  const column = ALL_STATUS_COLUMNS.find((c) => c.key === (app.outcome ?? app.stage ?? 'applied').toLowerCase()) ?? ALL_STATUS_COLUMNS[0];
+  const isClosedApplication = isTerminalStatus(app.outcome ?? '');
+  const currentOutcomeLabel = statusLabel(app.outcome ?? app.stage, ALL_STATUS_COLUMNS);
   const timelineEntries = buildTimelineEntries(app.status_history);
 
   return (
@@ -511,7 +519,7 @@ const ApplicationDetailPage: React.FC = () => {
               <Select
                 labelId="detail-status-label"
                 label="Stage"
-                value={app.status || 'applied'}
+                value={app.outcome ?? app.stage ?? 'applied'}
                 onChange={(e) => handleStatusChange(e.target.value)}
               >
                 {ALL_STATUS_COLUMNS.map((c) => (

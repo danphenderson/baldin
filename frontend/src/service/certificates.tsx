@@ -23,39 +23,39 @@ const unwrap = <T,>(
 
 export const getCertificates = async (token: string): Promise<CertificateRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/certificate/'));
+  return unwrap(await client.GET('/api/v1/certificates/'));
 };
 
 export const getCertificate = async (token: string, id: string): Promise<CertificateRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/certificate/{certificate_id}', {
-    params: { query: { id } },
+  return unwrap(await client.GET('/api/v1/certificates/{id}', {
+    params: { path: { id } },
   }));
 };
 
 export const createCertificate = async (token: string, certificate: CertificateCreate): Promise<CertificateRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/api/v1/certificate/', {
+  return unwrap(await client.POST('/api/v1/certificates/', {
     body: certificate,
   }));
 };
 
 export const updateCertificate = async (token: string, id: string, certificate: CertificateUpdate): Promise<CertificateRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/api/v1/certificate/{certificate_id}', {
-    params: { query: { id } },
+  return unwrap(await client.PATCH('/api/v1/certificates/{id}', {
+    params: { path: { id } },
     body: certificate,
   }));
 };
 
 export const deleteCertificate = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/api/v1/certificate/{certificate_id}', {
-    params: { query: { id } },
+  unwrap(await client.DELETE('/api/v1/certificates/{id}', {
+    params: { path: { id } },
   }));
 };
 
 export const seedCertificates = async (token: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.POST('/api/v1/certificate/seed'));
+  unwrap(await client.POST('/api/v1/certificates/seed'));
 };

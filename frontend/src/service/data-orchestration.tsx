@@ -113,12 +113,12 @@ const normalizePipeline = (
 
 export const createOrchestrationEvent = async (token: string, body: OrchestrationEventCreate): Promise<OrchestrationEventRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/api/v1/data_orchestration/events', { body }));
+  return unwrap(await client.POST('/api/v1/orchestration-pipelines/events', { body }));
 };
 
 export const getOrchestrationEvent = async (token: string, id: string): Promise<OrchestrationEventRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/data_orchestration/events/{id}', {
+  return unwrap(await client.GET('/api/v1/orchestration-pipelines/events/{id}', {
     params: { path: { id } },
   }));
 };
@@ -128,7 +128,7 @@ export const getOrchestrationEvents = async (
   params?: EventQueryParams,
 ): Promise<OrchestrationEventPaginatedRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/data_orchestration/events', {
+  return unwrap(await client.GET('/api/v1/orchestration-pipelines/events', {
     params: {
       query: {
         status: params?.status ?? undefined,
@@ -142,7 +142,7 @@ export const getOrchestrationEvents = async (
 
 export const updateOrchestrationEvent = async (token: string, id: string, body: OrchestrationEventUpdate): Promise<OrchestrationEventRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/api/v1/data_orchestration/events/{id}', {
+  return unwrap(await client.PATCH('/api/v1/orchestration-pipelines/events/{id}', {
     params: { path: { id } },
     body,
   }));
@@ -151,7 +151,7 @@ export const updateOrchestrationEvent = async (token: string, id: string, body: 
 export const deleteOrchestrationEvent = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
   // DELETE not exposed in schema for this path; cast to bypass type check
-  unwrap(await (client.DELETE as Function)('/api/v1/data_orchestration/events/{id}', {
+  unwrap(await (client.DELETE as Function)('/api/v1/orchestration-pipelines/events/{id}', {
     params: { path: { id } },
   }));
 };
@@ -162,13 +162,13 @@ export const deleteOrchestrationEvent = async (token: string, id: string): Promi
 
 export const createOrchestrationPipeline = async (token: string, body: OrchestrationPipelineCreate): Promise<OrchestrationPipelineRead> => {
   const client = createApiClient(token);
-  const pipeline = unwrap(await client.POST('/api/v1/data_orchestration/pipelines', { body }));
+  const pipeline = unwrap(await client.POST('/api/v1/orchestration-pipelines/pipelines', { body }));
   return normalizePipeline(pipeline);
 };
 
 export const getOrchestrationPipeline = async (token: string, id: string): Promise<OrchestrationPipelineRead> => {
   const client = createApiClient(token);
-  const pipeline = unwrap(await client.GET('/api/v1/data_orchestration/pipelines/{id}', {
+  const pipeline = unwrap(await client.GET('/api/v1/orchestration-pipelines/pipelines/{id}', {
     params: { path: { id } },
   }));
   return normalizePipeline(pipeline);
@@ -176,7 +176,7 @@ export const getOrchestrationPipeline = async (token: string, id: string): Promi
 
 export const updateOrchestrationPipeline = async (token: string, id: string, body: OrchestrationPipelineUpdate): Promise<OrchestrationPipelineRead> => {
   const client = createApiClient(token);
-  const pipeline = unwrap(await client.PUT('/api/v1/data_orchestration/pipelines/{id}', {
+  const pipeline = unwrap(await client.PATCH('/api/v1/orchestration-pipelines/pipelines/{id}', {
     params: { path: { id } },
     body,
   }));
@@ -185,20 +185,20 @@ export const updateOrchestrationPipeline = async (token: string, id: string, bod
 
 export const getOrchestrationPipelines = async (token: string): Promise<OrchestrationPipelineRead[]> => {
   const client = createApiClient(token);
-  const pipelines = unwrap(await client.GET('/api/v1/data_orchestration/pipelines'));
+  const pipelines = unwrap(await client.GET('/api/v1/orchestration-pipelines/pipelines'));
   return pipelines.map(normalizePipeline);
 };
 
 export const deleteOrchestrationPipeline = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/api/v1/data_orchestration/pipelines/{id}', {
+  unwrap(await client.DELETE('/api/v1/orchestration-pipelines/pipelines/{id}', {
     params: { path: { id } },
   }));
 };
 
 export const retryOrchestrationEvent = async (token: string, eventId: string): Promise<OrchestrationEventRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/api/v1/data_orchestration/events/{event_id}/retry', {
+  return unwrap(await client.POST('/api/v1/orchestration-pipelines/events/{event_id}/retry', {
     params: { path: { event_id: eventId } },
   }));
 };

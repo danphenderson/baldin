@@ -58,7 +58,7 @@ async def _create_extractor(
     name: str,
 ) -> dict:
     response = await client.post(
-        "/api/v1/extractor/",
+        "/api/v1/extractors/",
         json={
             "name": name,
             "description": "Extractor used by route tests",
@@ -90,7 +90,7 @@ async def _create_example(
     content: str,
 ) -> dict:
     response = await client.post(
-        f"/api/v1/extractor/{extractor_id}/examples",
+        f"/api/v1/extractors/{extractor_id}/examples",
         json={"content": content},
         headers=headers,
     )
@@ -116,11 +116,11 @@ async def test_delete_extractor_example_succeeds_for_matching_extractor() -> Non
         )
 
         delete_response = await client.delete(
-            f"/api/v1/extractor/{extractor['id']}/examples/{example['id']}",
+            f"/api/v1/extractors/{extractor['id']}/examples/{example['id']}",
             headers=headers,
         )
         list_response = await client.get(
-            f"/api/v1/extractor/{extractor['id']}/examples",
+            f"/api/v1/extractors/{extractor['id']}/examples",
             headers=headers,
         )
 
@@ -152,11 +152,11 @@ async def test_delete_extractor_example_rejects_mismatched_parent_extractor() ->
         )
 
         delete_response = await client.delete(
-            f"/api/v1/extractor/{primary_extractor['id']}/examples/{example['id']}",
+            f"/api/v1/extractors/{primary_extractor['id']}/examples/{example['id']}",
             headers=headers,
         )
         list_response = await client.get(
-            f"/api/v1/extractor/{secondary_extractor['id']}/examples",
+            f"/api/v1/extractors/{secondary_extractor['id']}/examples",
             headers=headers,
         )
 
@@ -190,11 +190,11 @@ async def test_delete_extractor_example_cannot_delete_other_users_example() -> N
         )
 
         delete_response = await client.delete(
-            f"/api/v1/extractor/{other_extractor['id']}/examples/{example['id']}",
+            f"/api/v1/extractors/{other_extractor['id']}/examples/{example['id']}",
             headers=other_headers,
         )
         list_response = await client.get(
-            f"/api/v1/extractor/{owner_extractor['id']}/examples",
+            f"/api/v1/extractors/{owner_extractor['id']}/examples",
             headers=owner_headers,
         )
 

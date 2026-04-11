@@ -53,7 +53,7 @@ async def create_company(
     return company
 
 
-@router.put("/{id}", response_model=schemas.CompanyRead)
+@router.patch("/{id}", response_model=schemas.CompanyRead)
 async def update_company(
     payload: schemas.CompanyUpdate,
     company: models.Company = Depends(get_company_by_id),

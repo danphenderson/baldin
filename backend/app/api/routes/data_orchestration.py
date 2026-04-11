@@ -57,7 +57,7 @@ async def create_orch_pipeline(
     return await get_orchestration_pipeline(pipeline_model.id, db, user)
 
 
-@router.put("/pipelines/{id}", response_model=schemas.OrchestrationPipelineRead)
+@router.patch("/pipelines/{id}", response_model=schemas.OrchestrationPipelineRead)
 async def update_orch_pipeline(
     payload: schemas.OrchestrationPipelineUpdate,
     pipeline: models.OrchestrationPipeline = Depends(get_orchestration_pipeline),
@@ -200,7 +200,7 @@ async def create_orch_event(
     return event_model
 
 
-@router.put(
+@router.patch(
     "/events/{id}",
     status_code=202,
     response_model=schemas.OrchestrationEventRead,

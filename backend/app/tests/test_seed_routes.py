@@ -26,7 +26,7 @@ pytestmark = pytest.mark.asyncio(loop_scope="module")
 password_helper = PasswordHelper()
 
 USER_SEED_PATHS = (
-    "/api/v1/certificate/seed",
+    "/api/v1/certificates/seed",
     "/api/v1/contacts/seed",
     "/api/v1/documents/seed",
     "/api/v1/education/seed",
@@ -94,7 +94,9 @@ async def _assert_seed_acceptance(
     assert response.status_code == 202
     body = response.json()
     assert body["status"] == "pending"
-    assert body["poll_url"] == f"/api/v1/data_orchestration/events/{body['event_id']}"
+    assert (
+        body["poll_url"] == f"/api/v1/orchestration-pipelines/events/{body['event_id']}"
+    )
 
     event_response = await client.get(body["poll_url"], headers=headers)
 

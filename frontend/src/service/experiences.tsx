@@ -28,8 +28,8 @@ export const getExperiences = async (token: string): Promise<ExperienceRead[]> =
 
 export const getExperience = async (token: string, id: string): Promise<ExperienceRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/experiences/{experience_id}', {
-    params: { query: { id } },
+  return unwrap(await client.GET('/api/v1/experiences/{id}', {
+    params: { path: { id } },
   }));
 };
 
@@ -42,16 +42,16 @@ export const createExperience = async (token: string, experience: ExperienceCrea
 
 export const updateExperience = async (token: string, id: string, experience: ExperienceUpdate): Promise<ExperienceRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/api/v1/experiences/{experience_id}', {
-    params: { query: { id } },
+  return unwrap(await client.PATCH('/api/v1/experiences/{id}', {
+    params: { path: { id } },
     body: experience,
   }));
 };
 
 export const deleteExperience = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/api/v1/experiences/{experience_id}', {
-    params: { query: { id } },
+  unwrap(await client.DELETE('/api/v1/experiences/{id}', {
+    params: { path: { id } },
   }));
 };
 

@@ -28,8 +28,8 @@ export const getEducations = async (token: string): Promise<EducationRead[]> => 
 
 export const getEducation = async (token: string, id: string): Promise<EducationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/education/{education_id}', {
-    params: { query: { id } },
+  return unwrap(await client.GET('/api/v1/education/{id}', {
+    params: { path: { id } },
   }));
 };
 
@@ -42,16 +42,16 @@ export const createEducation = async (token: string, education: EducationCreate)
 
 export const updateEducation = async (token: string, id: string, education: EducationUpdate): Promise<EducationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/api/v1/education/{education_id}', {
-    params: { query: { id } },
+  return unwrap(await client.PATCH('/api/v1/education/{id}', {
+    params: { path: { id } },
     body: education,
   }));
 };
 
 export const deleteEducation = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/api/v1/education/{education_id}', {
-    params: { query: { id } },
+  unwrap(await client.DELETE('/api/v1/education/{id}', {
+    params: { path: { id } },
   }));
 };
 

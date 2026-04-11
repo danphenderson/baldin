@@ -264,7 +264,7 @@ async def create_extractor(
     return _to_extractor_read(extractor)
 
 
-@router.put("/{id}", response_model=schemas.ExtractorRead)
+@router.patch("/{id}", response_model=schemas.ExtractorRead)
 async def update_extractor(
     payload: schemas.ExtractorUpdate,
     extractor: models.Extractor = Depends(get_extractor),

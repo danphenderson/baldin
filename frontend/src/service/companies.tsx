@@ -42,7 +42,7 @@ export const createCompany = async (token: string, company: CompanyCreate): Prom
 
 export const updateCompany = async (token: string, id: string, company: CompanyUpdate): Promise<CompanyRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/api/v1/companies/{id}', {
+  return unwrap(await client.PATCH('/api/v1/companies/{id}', {
     params: { path: { id } },
     body: company,
   }));

@@ -76,8 +76,8 @@ api_router.include_router(
 )
 api_router.include_router(
     data_orchestration.router,
-    prefix="/data_orchestration",
-    tags=["data_orchestration"],
+    prefix="/orchestration-pipelines",
+    tags=["orchestration-pipelines"],
 )
 api_router.include_router(
     contacts.router,
@@ -111,13 +111,13 @@ api_router.include_router(
 )
 api_router.include_router(
     certificate.router,
-    prefix="/certificate",
-    tags=["certificate"],
+    prefix="/certificates",
+    tags=["certificates"],
 )
 api_router.include_router(
     extractor.router,
-    prefix="/extractor",
-    tags=["extractor"],
+    prefix="/extractors",
+    tags=["extractors"],
 )
 api_router.include_router(
     crawlers.router,

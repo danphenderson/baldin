@@ -57,7 +57,7 @@ async def _create_pipeline(
     name: str,
 ) -> dict:
     response = await client.post(
-        "/api/v1/data_orchestration/pipelines",
+        "/api/v1/orchestration-pipelines/pipelines",
         json={
             "name": name,
             "description": "Test pipeline",
@@ -77,7 +77,7 @@ async def _create_event(
     status: str = "pending",
 ) -> dict:
     response = await client.post(
-        "/api/v1/data_orchestration/events",
+        "/api/v1/orchestration-pipelines/events",
         json={
             "message": message,
             "payload": {"source": "test"},
@@ -107,7 +107,7 @@ async def test_read_orch_pipelines_only_returns_current_users_records() -> None:
         )
 
         response = await client.get(
-            "/api/v1/data_orchestration/pipelines", headers=owner_headers
+            "/api/v1/orchestration-pipelines/pipelines", headers=owner_headers
         )
 
     assert response.status_code == 200
@@ -129,11 +129,11 @@ async def test_created_pipeline_is_owned_by_current_user() -> None:
         )
 
         owner_response = await client.get(
-            f"/api/v1/data_orchestration/pipelines/{pipeline['id']}",
+            f"/api/v1/orchestration-pipelines/pipelines/{pipeline['id']}",
             headers=owner_headers,
         )
         other_response = await client.get(
-            f"/api/v1/data_orchestration/pipelines/{pipeline['id']}",
+            f"/api/v1/orchestration-pipelines/pipelines/{pipeline['id']}",
             headers=other_headers,
         )
 
@@ -149,7 +149,7 @@ async def test_create_pipeline_rejects_duplicate_name_for_same_user() -> None:
         name = f"duplicate-{utils.random_lower_string(8)}"
 
         first_response = await client.post(
-            "/api/v1/data_orchestration/pipelines",
+            "/api/v1/orchestration-pipelines/pipelines",
             json={
                 "name": name,
                 "description": "First pipeline",
@@ -158,7 +158,7 @@ async def test_create_pipeline_rejects_duplicate_name_for_same_user() -> None:
             headers=headers,
         )
         second_response = await client.post(
-            "/api/v1/data_orchestration/pipelines",
+            "/api/v1/orchestration-pipelines/pipelines",
             json={
                 "name": name,
                 "description": "Duplicate pipeline",
@@ -184,8 +184,8 @@ async def test_update_orch_pipeline_requires_ownership() -> None:
             client, owner_headers, f"pipeline-{utils.random_lower_string(8)}"
         )
 
-        response = await client.put(
-            f"/api/v1/data_orchestration/pipelines/{pipeline['id']}",
+        response = await client.patch(
+            f"/api/v1/orchestration-pipelines/pipelines/{pipeline['id']}",
             json={"name": "hijacked", "description": "updated", "definition": {}},
             headers=other_headers,
         )
@@ -221,7 +221,7 @@ async def test_read_orch_events_only_returns_current_users_records() -> None:
         )
 
         response = await client.get(
-            "/api/v1/data_orchestration/events", headers=owner_headers
+            "/api/v1/orchestration-pipelines/events", headers=owner_headers
         )
 
     assert response.status_code == 200
@@ -243,7 +243,7 @@ async def test_create_orch_event_requires_pipeline_ownership() -> None:
         )
 
         response = await client.post(
-            "/api/v1/data_orchestration/events",
+            "/api/v1/orchestration-pipelines/events",
             json={
                 "message": "unauthorized event",
                 "payload": {"source": "test"},
@@ -276,7 +276,8 @@ async def test_read_orch_event_requires_ownership() -> None:
         )
 
         response = await client.get(
-            f"/api/v1/data_orchestration/events/{event['id']}", headers=other_headers
+            f"/api/v1/orchestration-pipelines/events/{event['id']}",
+            headers=other_headers,
         )
 
     assert response.status_code == 403
@@ -302,8 +303,8 @@ async def test_update_event_cannot_reassign_pipeline_id() -> None:
         )
         event = await _create_event(client, headers, pipe_a["id"], "stays on pipe_a")
 
-        response = await client.put(
-            f"/api/v1/data_orchestration/events/{event['id']}",
+        response = await client.patch(
+            f"/api/v1/orchestration-pipelines/events/{event['id']}",
             json={"pipeline_id": pipe_b["id"]},
             headers=headers,
         )
@@ -329,8 +330,8 @@ async def test_update_event_requires_ownership() -> None:
             client, owner_headers, pipeline["id"], "owner event"
         )
 
-        response = await client.put(
-            f"/api/v1/data_orchestration/events/{event['id']}",
+        response = await client.patch(
+            f"/api/v1/orchestration-pipelines/events/{event['id']}",
             json={"status": "success"},
             headers=other_headers,
         )
@@ -356,7 +357,7 @@ async def test_read_events_returns_paginated_response() -> None:
             await _create_event(client, headers, pipeline["id"], f"event-{i}")
 
         response = await client.get(
-            "/api/v1/data_orchestration/events",
+            "/api/v1/orchestration-pipelines/events",
             params={"page": 1, "page_size": 3},
             headers=headers,
         )
@@ -382,7 +383,7 @@ async def test_read_events_sorted_newest_first() -> None:
         second = await _create_event(client, headers, pipeline["id"], "second")
 
         response = await client.get(
-            "/api/v1/data_orchestration/events",
+            "/api/v1/orchestration-pipelines/events",
             params={"page_size": 100},
             headers=headers,
         )
@@ -407,7 +408,7 @@ async def test_read_events_filter_by_status() -> None:
         )
 
         response = await client.get(
-            "/api/v1/data_orchestration/events",
+            "/api/v1/orchestration-pipelines/events",
             params={"status": "failure", "page_size": 100},
             headers=headers,
         )
@@ -434,7 +435,7 @@ async def test_read_events_filter_by_pipeline_id() -> None:
         await _create_event(client, headers, pipe_b["id"], "run-b")
 
         response = await client.get(
-            "/api/v1/data_orchestration/events",
+            "/api/v1/orchestration-pipelines/events",
             params={"pipeline_id": pipe_a["id"], "page_size": 100},
             headers=headers,
         )
@@ -461,7 +462,7 @@ async def test_delete_pipeline_blocked_when_runs_exist() -> None:
         await _create_event(client, headers, pipeline["id"], "blocking run")
 
         response = await client.delete(
-            f"/api/v1/data_orchestration/pipelines/{pipeline['id']}",
+            f"/api/v1/orchestration-pipelines/pipelines/{pipeline['id']}",
             headers=headers,
         )
 
@@ -480,7 +481,7 @@ async def test_delete_pipeline_succeeds_when_no_runs() -> None:
         )
 
         response = await client.delete(
-            f"/api/v1/data_orchestration/pipelines/{pipeline['id']}",
+            f"/api/v1/orchestration-pipelines/pipelines/{pipeline['id']}",
             headers=headers,
         )
 
@@ -505,7 +506,7 @@ async def test_pipeline_read_includes_summary_fields() -> None:
         await _create_event(client, headers, pipeline["id"], "bad", status="failure")
 
         response = await client.get(
-            f"/api/v1/data_orchestration/pipelines/{pipeline['id']}",
+            f"/api/v1/orchestration-pipelines/pipelines/{pipeline['id']}",
             headers=headers,
         )
 
@@ -529,7 +530,7 @@ async def test_pipeline_list_includes_summary_fields() -> None:
         await _create_event(client, headers, pipeline["id"], "run1", status="pending")
 
         response = await client.get(
-            "/api/v1/data_orchestration/pipelines",
+            "/api/v1/orchestration-pipelines/pipelines",
             headers=headers,
         )
 

@@ -34,8 +34,8 @@ export const getSkills = async (token: string): Promise<SkillRead[]> => {
 
 export const getSkill = async (token: string, id: string): Promise<SkillRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/skills/{skill_id}', {
-    params: { query: { id } },
+  return unwrap(await client.GET('/api/v1/skills/{id}', {
+    params: { path: { id } },
   }));
 };
 
@@ -48,16 +48,16 @@ export const createSkill = async (token: string, skill: SkillCreate): Promise<Sk
 
 export const updateSkill = async (token: string, id: string, skill: SkillUpdate): Promise<SkillRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/api/v1/skills/{skill_id}', {
-    params: { query: { id } },
+  return unwrap(await client.PATCH('/api/v1/skills/{id}', {
+    params: { path: { id } },
     body: skill,
   }));
 };
 
 export const deleteSkill = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/api/v1/skills/{skill_id}', {
-    params: { query: { id } },
+  unwrap(await client.DELETE('/api/v1/skills/{id}', {
+    params: { path: { id } },
   }));
 };
 

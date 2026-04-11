@@ -41,7 +41,7 @@ async def read_current_user_certificates(
     return certificates
 
 
-@router.get("/{certificate_id}", response_model=schemas.CertificateRead)
+@router.get("/{id}", response_model=schemas.CertificateRead)
 async def read_user_certificate(
     certificate: schemas.CertificateRead = Depends(get_certificate),
 ):
@@ -61,7 +61,7 @@ async def create_user_certificate(
     return certificate
 
 
-@router.put("/{certificate_id}", response_model=schemas.CertificateRead)
+@router.patch("/{id}", response_model=schemas.CertificateRead)
 async def update_user_certificate(
     payload: schemas.CertificateUpdate,
     certificate: schemas.CertificateRead = Depends(get_certificate),
@@ -74,7 +74,7 @@ async def update_user_certificate(
     return certificate
 
 
-@router.delete("/{certificate_id}", response_model=schemas.CertificateRead)
+@router.delete("/{id}", response_model=schemas.CertificateRead)
 async def delete_user_certificate(
     certificate: schemas.CertificateRead = Depends(get_certificate),
     db: AsyncSession = Depends(get_async_session),

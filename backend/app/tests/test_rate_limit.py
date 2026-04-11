@@ -88,7 +88,7 @@ async def test_suggest_extractor_rate_limit_returns_429():
             statuses = []
             for _ in range(7):
                 resp = await client.post(
-                    "/api/v1/extractor/suggest",
+                    "/api/v1/extractors/suggest",
                     json={"description": "test extractor"},
                     headers=headers,
                 )

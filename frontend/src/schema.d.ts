@@ -206,10 +206,10 @@ export interface paths {
   "/api/v1/companies/{id}": {
     /** Get Company */
     get: operations["get_company_api_v1_companies__id__get"];
-    /** Update Company */
-    put: operations["update_company_api_v1_companies__id__put"];
     /** Delete Company */
     delete: operations["delete_company_api_v1_companies__id__delete"];
+    /** Update Company */
+    patch: operations["update_company_api_v1_companies__id__patch"];
   };
   "/api/v1/companies/": {
     /** Get Companies */
@@ -225,45 +225,45 @@ export interface paths {
     /** Extract Company */
     post: operations["extract_company_api_v1_companies_extract_post"];
   };
-  "/api/v1/data_orchestration/pipelines": {
+  "/api/v1/orchestration-pipelines/pipelines": {
     /** Read Orch Pipelines */
-    get: operations["read_orch_pipelines_api_v1_data_orchestration_pipelines_get"];
+    get: operations["read_orch_pipelines_api_v1_orchestration_pipelines_pipelines_get"];
     /** Create Orch Pipeline */
-    post: operations["create_orch_pipeline_api_v1_data_orchestration_pipelines_post"];
+    post: operations["create_orch_pipeline_api_v1_orchestration_pipelines_pipelines_post"];
   };
-  "/api/v1/data_orchestration/pipelines/{id}": {
+  "/api/v1/orchestration-pipelines/pipelines/{id}": {
     /** Read Orch Pipeline */
-    get: operations["read_orch_pipeline_api_v1_data_orchestration_pipelines__id__get"];
-    /** Update Orch Pipeline */
-    put: operations["update_orch_pipeline_api_v1_data_orchestration_pipelines__id__put"];
+    get: operations["read_orch_pipeline_api_v1_orchestration_pipelines_pipelines__id__get"];
     /** Delete Orch Pipeline */
-    delete: operations["delete_orch_pipeline_api_v1_data_orchestration_pipelines__id__delete"];
+    delete: operations["delete_orch_pipeline_api_v1_orchestration_pipelines_pipelines__id__delete"];
+    /** Update Orch Pipeline */
+    patch: operations["update_orch_pipeline_api_v1_orchestration_pipelines_pipelines__id__patch"];
   };
-  "/api/v1/data_orchestration/events": {
+  "/api/v1/orchestration-pipelines/events": {
     /** Read Orch Events */
-    get: operations["read_orch_events_api_v1_data_orchestration_events_get"];
+    get: operations["read_orch_events_api_v1_orchestration_pipelines_events_get"];
     /** Create Orch Event */
-    post: operations["create_orch_event_api_v1_data_orchestration_events_post"];
+    post: operations["create_orch_event_api_v1_orchestration_pipelines_events_post"];
   };
-  "/api/v1/data_orchestration/events/prune": {
+  "/api/v1/orchestration-pipelines/events/prune": {
     /**
      * Prune Orchestration Events
      * @description Delete completed/failed orchestration events older than the specified age.
      */
-    delete: operations["prune_orchestration_events_api_v1_data_orchestration_events_prune_delete"];
+    delete: operations["prune_orchestration_events_api_v1_orchestration_pipelines_events_prune_delete"];
   };
-  "/api/v1/data_orchestration/events/{id}": {
+  "/api/v1/orchestration-pipelines/events/{id}": {
     /** Read Orch Event */
-    get: operations["read_orch_event_api_v1_data_orchestration_events__id__get"];
+    get: operations["read_orch_event_api_v1_orchestration_pipelines_events__id__get"];
     /** Update Orch Event */
-    put: operations["update_orch_event_api_v1_data_orchestration_events__id__put"];
+    patch: operations["update_orch_event_api_v1_orchestration_pipelines_events__id__patch"];
   };
-  "/api/v1/data_orchestration/events/{event_id}/retry": {
+  "/api/v1/orchestration-pipelines/events/{event_id}/retry": {
     /**
      * Retry Orch Event
      * @description Retry a failed orchestration event by creating a new event linked to the original.
      */
-    post: operations["retry_orch_event_api_v1_data_orchestration_events__event_id__retry_post"];
+    post: operations["retry_orch_event_api_v1_orchestration_pipelines_events__event_id__retry_post"];
   };
   "/api/v1/contacts/": {
     /** Get Current User Contacts */
@@ -271,13 +271,13 @@ export interface paths {
     /** Create User Contact */
     post: operations["create_user_contact_api_v1_contacts__post"];
   };
-  "/api/v1/contacts/{contact_id}": {
+  "/api/v1/contacts/{id}": {
     /** Get User Contact */
-    get: operations["get_user_contact_api_v1_contacts__contact_id__get"];
-    /** Update User Contact */
-    put: operations["update_user_contact_api_v1_contacts__contact_id__put"];
+    get: operations["get_user_contact_api_v1_contacts__id__get"];
     /** Delete User Contact */
-    delete: operations["delete_user_contact_api_v1_contacts__contact_id__delete"];
+    delete: operations["delete_user_contact_api_v1_contacts__id__delete"];
+    /** Update User Contact */
+    patch: operations["update_user_contact_api_v1_contacts__id__patch"];
   };
   "/api/v1/contacts/extract": {
     /** Extract Contacts */
@@ -293,13 +293,13 @@ export interface paths {
     /** Create User Experience */
     post: operations["create_user_experience_api_v1_experiences__post"];
   };
-  "/api/v1/experiences/{experience_id}": {
+  "/api/v1/experiences/{id}": {
     /** Read User Experience */
-    get: operations["read_user_experience_api_v1_experiences__experience_id__get"];
-    /** Update User Experience */
-    put: operations["update_user_experience_api_v1_experiences__experience_id__put"];
+    get: operations["read_user_experience_api_v1_experiences__id__get"];
     /** Delete User Experience */
-    delete: operations["delete_user_experience_api_v1_experiences__experience_id__delete"];
+    delete: operations["delete_user_experience_api_v1_experiences__id__delete"];
+    /** Update User Experience */
+    patch: operations["update_user_experience_api_v1_experiences__id__patch"];
   };
   "/api/v1/experiences/extract": {
     /** Extract User Experiences */
@@ -319,13 +319,13 @@ export interface paths {
     /** Create User Skill */
     post: operations["create_user_skill_api_v1_skills__post"];
   };
-  "/api/v1/skills/{skill_id}": {
+  "/api/v1/skills/{id}": {
     /** Get User Skill */
-    get: operations["get_user_skill_api_v1_skills__skill_id__get"];
-    /** Update User Skill */
-    put: operations["update_user_skill_api_v1_skills__skill_id__put"];
+    get: operations["get_user_skill_api_v1_skills__id__get"];
     /** Delete User Skill */
-    delete: operations["delete_user_skill_api_v1_skills__skill_id__delete"];
+    delete: operations["delete_user_skill_api_v1_skills__id__delete"];
+    /** Update User Skill */
+    patch: operations["update_user_skill_api_v1_skills__id__patch"];
   };
   "/api/v1/skills/seed": {
     /** Seed Skills */
@@ -537,13 +537,13 @@ export interface paths {
     /** Create User Education */
     post: operations["create_user_education_api_v1_education__post"];
   };
-  "/api/v1/education/{education_id}": {
+  "/api/v1/education/{id}": {
     /** Read User Education */
-    get: operations["read_user_education_api_v1_education__education_id__get"];
-    /** Update User Education */
-    put: operations["update_user_education_api_v1_education__education_id__put"];
+    get: operations["read_user_education_api_v1_education__id__get"];
     /** Delete User Education */
-    delete: operations["delete_user_education_api_v1_education__education_id__delete"];
+    delete: operations["delete_user_education_api_v1_education__id__delete"];
+    /** Update User Education */
+    patch: operations["update_user_education_api_v1_education__id__patch"];
   };
   "/api/v1/education/extract": {
     /** Extract Education */
@@ -553,83 +553,83 @@ export interface paths {
     /** Seed Education */
     post: operations["seed_education_api_v1_education_seed_post"];
   };
-  "/api/v1/certificate/": {
+  "/api/v1/certificates/": {
     /** Read Current User Certificates */
-    get: operations["read_current_user_certificates_api_v1_certificate__get"];
+    get: operations["read_current_user_certificates_api_v1_certificates__get"];
     /** Create User Certificate */
-    post: operations["create_user_certificate_api_v1_certificate__post"];
+    post: operations["create_user_certificate_api_v1_certificates__post"];
   };
-  "/api/v1/certificate/{certificate_id}": {
+  "/api/v1/certificates/{id}": {
     /** Read User Certificate */
-    get: operations["read_user_certificate_api_v1_certificate__certificate_id__get"];
-    /** Update User Certificate */
-    put: operations["update_user_certificate_api_v1_certificate__certificate_id__put"];
+    get: operations["read_user_certificate_api_v1_certificates__id__get"];
     /** Delete User Certificate */
-    delete: operations["delete_user_certificate_api_v1_certificate__certificate_id__delete"];
+    delete: operations["delete_user_certificate_api_v1_certificates__id__delete"];
+    /** Update User Certificate */
+    patch: operations["update_user_certificate_api_v1_certificates__id__patch"];
   };
-  "/api/v1/certificate/extract": {
+  "/api/v1/certificates/extract": {
     /** Extract Certificates */
-    post: operations["extract_certificates_api_v1_certificate_extract_post"];
+    post: operations["extract_certificates_api_v1_certificates_extract_post"];
   };
-  "/api/v1/certificate/seed": {
+  "/api/v1/certificates/seed": {
     /** Seed Certificates */
-    post: operations["seed_certificates_api_v1_certificate_seed_post"];
+    post: operations["seed_certificates_api_v1_certificates_seed_post"];
   };
-  "/api/v1/extractor/configurables": {
+  "/api/v1/extractors/configurables": {
     /**
      * Get Configuration
      * @description Endpoint to show server configuration.
      */
-    get: operations["get_configuration_api_v1_extractor_configurables_get"];
+    get: operations["get_configuration_api_v1_extractors_configurables_get"];
   };
-  "/api/v1/extractor/suggest": {
+  "/api/v1/extractors/suggest": {
     /**
      * Suggest Extractor
      * @description Suggest an extractor based on a description.
      */
-    post: operations["suggest_extractor_api_v1_extractor_suggest_post"];
+    post: operations["suggest_extractor_api_v1_extractors_suggest_post"];
   };
-  "/api/v1/extractor/{id}": {
+  "/api/v1/extractors/{id}": {
     /** Read Extractor */
-    get: operations["read_extractor_api_v1_extractor__id__get"];
-    /** Update Extractor */
-    put: operations["update_extractor_api_v1_extractor__id__put"];
+    get: operations["read_extractor_api_v1_extractors__id__get"];
     /** Delete Extractor */
-    delete: operations["delete_extractor_api_v1_extractor__id__delete"];
+    delete: operations["delete_extractor_api_v1_extractors__id__delete"];
+    /** Update Extractor */
+    patch: operations["update_extractor_api_v1_extractors__id__patch"];
   };
-  "/api/v1/extractor/": {
+  "/api/v1/extractors/": {
     /** Read Extractors */
-    get: operations["read_extractors_api_v1_extractor__get"];
+    get: operations["read_extractors_api_v1_extractors__get"];
     /** Create Extractor */
-    post: operations["create_extractor_api_v1_extractor__post"];
+    post: operations["create_extractor_api_v1_extractors__post"];
   };
-  "/api/v1/extractor/{id}/examples": {
+  "/api/v1/extractors/{id}/examples": {
     /** Get Extractor Examples */
-    get: operations["get_extractor_examples_api_v1_extractor__id__examples_get"];
+    get: operations["get_extractor_examples_api_v1_extractors__id__examples_get"];
     /** Create Extractor Example */
-    post: operations["create_extractor_example_api_v1_extractor__id__examples_post"];
+    post: operations["create_extractor_example_api_v1_extractors__id__examples_post"];
   };
-  "/api/v1/extractor/{id}/versions": {
+  "/api/v1/extractors/{id}/versions": {
     /** List Extractor Versions */
-    get: operations["list_extractor_versions_api_v1_extractor__id__versions_get"];
+    get: operations["list_extractor_versions_api_v1_extractors__id__versions_get"];
   };
-  "/api/v1/extractor/{id}/examples/{example_id}": {
+  "/api/v1/extractors/{id}/examples/{example_id}": {
     /** Delete Extractor Example */
-    delete: operations["delete_extractor_example_api_v1_extractor__id__examples__example_id__delete"];
+    delete: operations["delete_extractor_example_api_v1_extractors__id__examples__example_id__delete"];
   };
-  "/api/v1/extractor/{id}/run": {
+  "/api/v1/extractors/{id}/run": {
     /**
      * Extractor Runner
      * @description Run an extractor on a given payload
      */
-    post: operations["extractor_runner_api_v1_extractor__id__run_post"];
+    post: operations["extractor_runner_api_v1_extractors__id__run_post"];
   };
-  "/api/v1/extractor/{id}/run/{event_id}/retry": {
+  "/api/v1/extractors/{id}/run/{event_id}/retry": {
     /**
      * Retry Extractor Run
      * @description Retry a failed extractor run by re-executing against the same source.
      */
-    post: operations["retry_extractor_run_api_v1_extractor__id__run__event_id__retry_post"];
+    post: operations["retry_extractor_run_api_v1_extractors__id__run__event_id__retry_post"];
   };
   "/api/v1/crawlers/pipelines": {
     /** List Crawler Pipelines */
@@ -1335,8 +1335,8 @@ export interface components {
       /** Llm */
       llm?: string | null;
     };
-    /** Body_extractor_runner_api_v1_extractor__id__run_post */
-    Body_extractor_runner_api_v1_extractor__id__run_post: {
+    /** Body_extractor_runner_api_v1_extractors__id__run_post */
+    Body_extractor_runner_api_v1_extractors__id__run_post: {
       /** File */
       file?: string | null;
       /** Mode */
@@ -6718,8 +6718,28 @@ export interface operations {
       };
     };
   };
+  /** Delete Company */
+  delete_company_api_v1_companies__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Update Company */
-  update_company_api_v1_companies__id__put: {
+  update_company_api_v1_companies__id__patch: {
     parameters: {
       path: {
         id: string;
@@ -6736,26 +6756,6 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["CompanyRead"];
         };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Delete Company */
-  delete_company_api_v1_companies__id__delete: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      204: {
-        content: never;
       };
       /** @description Validation Error */
       422: {
@@ -6844,7 +6844,7 @@ export interface operations {
     };
   };
   /** Read Orch Pipelines */
-  read_orch_pipelines_api_v1_data_orchestration_pipelines_get: {
+  read_orch_pipelines_api_v1_orchestration_pipelines_pipelines_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -6855,7 +6855,7 @@ export interface operations {
     };
   };
   /** Create Orch Pipeline */
-  create_orch_pipeline_api_v1_data_orchestration_pipelines_post: {
+  create_orch_pipeline_api_v1_orchestration_pipelines_pipelines_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["OrchestrationPipelineCreate"];
@@ -6877,7 +6877,7 @@ export interface operations {
     };
   };
   /** Read Orch Pipeline */
-  read_orch_pipeline_api_v1_data_orchestration_pipelines__id__get: {
+  read_orch_pipeline_api_v1_orchestration_pipelines_pipelines__id__get: {
     parameters: {
       path: {
         id: string;
@@ -6898,8 +6898,28 @@ export interface operations {
       };
     };
   };
+  /** Delete Orch Pipeline */
+  delete_orch_pipeline_api_v1_orchestration_pipelines_pipelines__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Update Orch Pipeline */
-  update_orch_pipeline_api_v1_data_orchestration_pipelines__id__put: {
+  update_orch_pipeline_api_v1_orchestration_pipelines_pipelines__id__patch: {
     parameters: {
       path: {
         id: string;
@@ -6925,28 +6945,8 @@ export interface operations {
       };
     };
   };
-  /** Delete Orch Pipeline */
-  delete_orch_pipeline_api_v1_data_orchestration_pipelines__id__delete: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      204: {
-        content: never;
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Read Orch Events */
-  read_orch_events_api_v1_data_orchestration_events_get: {
+  read_orch_events_api_v1_orchestration_pipelines_events_get: {
     parameters: {
       query?: {
         /** @description Filter by run status */
@@ -6975,7 +6975,7 @@ export interface operations {
     };
   };
   /** Create Orch Event */
-  create_orch_event_api_v1_data_orchestration_events_post: {
+  create_orch_event_api_v1_orchestration_pipelines_events_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["OrchestrationEventCreate"];
@@ -7000,7 +7000,7 @@ export interface operations {
    * Prune Orchestration Events
    * @description Delete completed/failed orchestration events older than the specified age.
    */
-  prune_orchestration_events_api_v1_data_orchestration_events_prune_delete: {
+  prune_orchestration_events_api_v1_orchestration_pipelines_events_prune_delete: {
     parameters: {
       query?: {
         /** @description Delete events older than N days */
@@ -7023,7 +7023,7 @@ export interface operations {
     };
   };
   /** Read Orch Event */
-  read_orch_event_api_v1_data_orchestration_events__id__get: {
+  read_orch_event_api_v1_orchestration_pipelines_events__id__get: {
     parameters: {
       path: {
         id: string;
@@ -7045,7 +7045,7 @@ export interface operations {
     };
   };
   /** Update Orch Event */
-  update_orch_event_api_v1_data_orchestration_events__id__put: {
+  update_orch_event_api_v1_orchestration_pipelines_events__id__patch: {
     parameters: {
       path: {
         id: string;
@@ -7075,7 +7075,7 @@ export interface operations {
    * Retry Orch Event
    * @description Retry a failed orchestration event by creating a new event linked to the original.
    */
-  retry_orch_event_api_v1_data_orchestration_events__event_id__retry_post: {
+  retry_orch_event_api_v1_orchestration_pipelines_events__event_id__retry_post: {
     parameters: {
       path: {
         event_id: string;
@@ -7130,37 +7130,10 @@ export interface operations {
     };
   };
   /** Get User Contact */
-  get_user_contact_api_v1_contacts__contact_id__get: {
+  get_user_contact_api_v1_contacts__id__get: {
     parameters: {
-      query: {
+      path: {
         id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ContactRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Update User Contact */
-  update_user_contact_api_v1_contacts__contact_id__put: {
-    parameters: {
-      query: {
-        id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ContactUpdate"];
       };
     };
     responses: {
@@ -7179,9 +7152,9 @@ export interface operations {
     };
   };
   /** Delete User Contact */
-  delete_user_contact_api_v1_contacts__contact_id__delete: {
+  delete_user_contact_api_v1_contacts__id__delete: {
     parameters: {
-      query: {
+      path: {
         id: string;
       };
     };
@@ -7189,6 +7162,33 @@ export interface operations {
       /** @description Successful Response */
       204: {
         content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Contact */
+  update_user_contact_api_v1_contacts__id__patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ContactUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ContactRead"];
+        };
       };
       /** @description Validation Error */
       422: {
@@ -7265,37 +7265,10 @@ export interface operations {
     };
   };
   /** Read User Experience */
-  read_user_experience_api_v1_experiences__experience_id__get: {
+  read_user_experience_api_v1_experiences__id__get: {
     parameters: {
-      query: {
+      path: {
         id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ExperienceRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Update User Experience */
-  update_user_experience_api_v1_experiences__experience_id__put: {
-    parameters: {
-      query: {
-        id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ExperienceUpdate"];
       };
     };
     responses: {
@@ -7314,9 +7287,9 @@ export interface operations {
     };
   };
   /** Delete User Experience */
-  delete_user_experience_api_v1_experiences__experience_id__delete: {
+  delete_user_experience_api_v1_experiences__id__delete: {
     parameters: {
-      query: {
+      path: {
         id: string;
       };
     };
@@ -7324,6 +7297,33 @@ export interface operations {
       /** @description Successful Response */
       204: {
         content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Experience */
+  update_user_experience_api_v1_experiences__id__patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExperienceUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExperienceRead"];
+        };
       };
       /** @description Validation Error */
       422: {
@@ -7424,37 +7424,10 @@ export interface operations {
     };
   };
   /** Get User Skill */
-  get_user_skill_api_v1_skills__skill_id__get: {
+  get_user_skill_api_v1_skills__id__get: {
     parameters: {
-      query: {
+      path: {
         id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["SkillRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Update User Skill */
-  update_user_skill_api_v1_skills__skill_id__put: {
-    parameters: {
-      query: {
-        id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SkillUpdate"];
       };
     };
     responses: {
@@ -7473,9 +7446,9 @@ export interface operations {
     };
   };
   /** Delete User Skill */
-  delete_user_skill_api_v1_skills__skill_id__delete: {
+  delete_user_skill_api_v1_skills__id__delete: {
     parameters: {
-      query: {
+      path: {
         id: string;
       };
     };
@@ -7483,6 +7456,33 @@ export interface operations {
       /** @description Successful Response */
       204: {
         content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update User Skill */
+  update_user_skill_api_v1_skills__id__patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SkillUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SkillRead"];
+        };
       };
       /** @description Validation Error */
       422: {
@@ -8414,9 +8414,31 @@ export interface operations {
     };
   };
   /** Read User Education */
-  read_user_education_api_v1_education__education_id__get: {
+  read_user_education_api_v1_education__id__get: {
     parameters: {
-      query: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EducationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User Education */
+  delete_user_education_api_v1_education__id__delete: {
+    parameters: {
+      path: {
         id: string;
       };
     };
@@ -8436,37 +8458,15 @@ export interface operations {
     };
   };
   /** Update User Education */
-  update_user_education_api_v1_education__education_id__put: {
+  update_user_education_api_v1_education__id__patch: {
     parameters: {
-      query: {
+      path: {
         id: string;
       };
     };
     requestBody: {
       content: {
         "application/json": components["schemas"]["EducationUpdate"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["EducationRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Delete User Education */
-  delete_user_education_api_v1_education__education_id__delete: {
-    parameters: {
-      query: {
-        id: string;
       };
     };
     responses: {
@@ -8518,7 +8518,7 @@ export interface operations {
     };
   };
   /** Read Current User Certificates */
-  read_current_user_certificates_api_v1_certificate__get: {
+  read_current_user_certificates_api_v1_certificates__get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -8529,7 +8529,7 @@ export interface operations {
     };
   };
   /** Create User Certificate */
-  create_user_certificate_api_v1_certificate__post: {
+  create_user_certificate_api_v1_certificates__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["CertificateCreate"];
@@ -8551,9 +8551,31 @@ export interface operations {
     };
   };
   /** Read User Certificate */
-  read_user_certificate_api_v1_certificate__certificate_id__get: {
+  read_user_certificate_api_v1_certificates__id__get: {
     parameters: {
-      query: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete User Certificate */
+  delete_user_certificate_api_v1_certificates__id__delete: {
+    parameters: {
+      path: {
         id: string;
       };
     };
@@ -8573,9 +8595,9 @@ export interface operations {
     };
   };
   /** Update User Certificate */
-  update_user_certificate_api_v1_certificate__certificate_id__put: {
+  update_user_certificate_api_v1_certificates__id__patch: {
     parameters: {
-      query: {
+      path: {
         id: string;
       };
     };
@@ -8599,30 +8621,8 @@ export interface operations {
       };
     };
   };
-  /** Delete User Certificate */
-  delete_user_certificate_api_v1_certificate__certificate_id__delete: {
-    parameters: {
-      query: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["CertificateRead"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Extract Certificates */
-  extract_certificates_api_v1_certificate_extract_post: {
+  extract_certificates_api_v1_certificates_extract_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ExtractorRun"];
@@ -8644,7 +8644,7 @@ export interface operations {
     };
   };
   /** Seed Certificates */
-  seed_certificates_api_v1_certificate_seed_post: {
+  seed_certificates_api_v1_certificates_seed_post: {
     responses: {
       /** @description Successful Response */
       202: {
@@ -8658,7 +8658,7 @@ export interface operations {
    * Get Configuration
    * @description Endpoint to show server configuration.
    */
-  get_configuration_api_v1_extractor_configurables_get: {
+  get_configuration_api_v1_extractors_configurables_get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -8672,7 +8672,7 @@ export interface operations {
    * Suggest Extractor
    * @description Suggest an extractor based on a description.
    */
-  suggest_extractor_api_v1_extractor_suggest_post: {
+  suggest_extractor_api_v1_extractors_suggest_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["SuggestExtractor"];
@@ -8694,7 +8694,7 @@ export interface operations {
     };
   };
   /** Read Extractor */
-  read_extractor_api_v1_extractor__id__get: {
+  read_extractor_api_v1_extractors__id__get: {
     parameters: {
       path: {
         id: string;
@@ -8715,8 +8715,28 @@ export interface operations {
       };
     };
   };
+  /** Delete Extractor */
+  delete_extractor_api_v1_extractors__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Update Extractor */
-  update_extractor_api_v1_extractor__id__put: {
+  update_extractor_api_v1_extractors__id__patch: {
     parameters: {
       path: {
         id: string;
@@ -8742,28 +8762,8 @@ export interface operations {
       };
     };
   };
-  /** Delete Extractor */
-  delete_extractor_api_v1_extractor__id__delete: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      204: {
-        content: never;
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Read Extractors */
-  read_extractors_api_v1_extractor__get: {
+  read_extractors_api_v1_extractors__get: {
     responses: {
       /** @description Successful Response */
       200: {
@@ -8774,7 +8774,7 @@ export interface operations {
     };
   };
   /** Create Extractor */
-  create_extractor_api_v1_extractor__post: {
+  create_extractor_api_v1_extractors__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ExtractorCreate"];
@@ -8796,7 +8796,7 @@ export interface operations {
     };
   };
   /** Get Extractor Examples */
-  get_extractor_examples_api_v1_extractor__id__examples_get: {
+  get_extractor_examples_api_v1_extractors__id__examples_get: {
     parameters: {
       query?: {
         limit?: number;
@@ -8822,7 +8822,7 @@ export interface operations {
     };
   };
   /** Create Extractor Example */
-  create_extractor_example_api_v1_extractor__id__examples_post: {
+  create_extractor_example_api_v1_extractors__id__examples_post: {
     parameters: {
       path: {
         id: string;
@@ -8849,7 +8849,7 @@ export interface operations {
     };
   };
   /** List Extractor Versions */
-  list_extractor_versions_api_v1_extractor__id__versions_get: {
+  list_extractor_versions_api_v1_extractors__id__versions_get: {
     parameters: {
       query?: {
         limit?: number;
@@ -8875,7 +8875,7 @@ export interface operations {
     };
   };
   /** Delete Extractor Example */
-  delete_extractor_example_api_v1_extractor__id__examples__example_id__delete: {
+  delete_extractor_example_api_v1_extractors__id__examples__example_id__delete: {
     parameters: {
       path: {
         example_id: string;
@@ -8899,7 +8899,7 @@ export interface operations {
    * Extractor Runner
    * @description Run an extractor on a given payload
    */
-  extractor_runner_api_v1_extractor__id__run_post: {
+  extractor_runner_api_v1_extractors__id__run_post: {
     parameters: {
       path: {
         id: string;
@@ -8907,7 +8907,7 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "multipart/form-data": components["schemas"]["Body_extractor_runner_api_v1_extractor__id__run_post"];
+        "multipart/form-data": components["schemas"]["Body_extractor_runner_api_v1_extractors__id__run_post"];
       };
     };
     responses: {
@@ -8929,7 +8929,7 @@ export interface operations {
    * Retry Extractor Run
    * @description Retry a failed extractor run by re-executing against the same source.
    */
-  retry_extractor_run_api_v1_extractor__id__run__event_id__retry_post: {
+  retry_extractor_run_api_v1_extractors__id__run__event_id__retry_post: {
     parameters: {
       path: {
         event_id: string;

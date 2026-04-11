@@ -43,7 +43,7 @@ class SeedOperation:
 
 
 def build_seed_poll_url(event_id: UUID4) -> str:
-    return f"/api/v1/data_orchestration/events/{event_id}"
+    return f"/api/v1/orchestration-pipelines/events/{event_id}"
 
 
 def build_user_seed_creator(

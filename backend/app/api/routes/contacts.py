@@ -54,14 +54,14 @@ async def create_user_contact(
     return contact
 
 
-@router.get("/{contact_id}", response_model=schemas.ContactRead)
+@router.get("/{id}", response_model=schemas.ContactRead)
 async def get_user_contact(
     contact: schemas.ContactRead = Depends(get_contact),
 ):
     return contact
 
 
-@router.put("/{contact_id}", response_model=schemas.ContactRead)
+@router.patch("/{id}", response_model=schemas.ContactRead)
 async def update_user_contact(
     payload: schemas.ContactUpdate,
     contact: schemas.ContactRead = Depends(get_contact),
@@ -75,7 +75,7 @@ async def update_user_contact(
     return contact
 
 
-@router.delete("/{contact_id}", status_code=204)
+@router.delete("/{id}", status_code=204)
 async def delete_user_contact(
     contact: schemas.ContactRead = Depends(get_contact),
     db: AsyncSession = Depends(get_async_session),

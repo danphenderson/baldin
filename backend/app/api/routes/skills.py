@@ -117,14 +117,14 @@ async def create_user_skill(
     return skill
 
 
-@router.get("/{skill_id}", response_model=schemas.SkillRead)
+@router.get("/{id}", response_model=schemas.SkillRead)
 async def get_user_skill(
     skill: schemas.SkillRead = Depends(get_skill),
 ):
     return skill
 
 
-@router.put("/{skill_id}", response_model=schemas.SkillRead)
+@router.patch("/{id}", response_model=schemas.SkillRead)
 async def update_user_skill(
     payload: schemas.SkillUpdate,
     skill: schemas.SkillRead = Depends(get_skill),
@@ -138,7 +138,7 @@ async def update_user_skill(
     return skill
 
 
-@router.delete("/{skill_id}", status_code=204, response_model=None)
+@router.delete("/{id}", status_code=204, response_model=None)
 async def delete_user_skill(
     skill: schemas.SkillRead = Depends(get_skill),
     db: AsyncSession = Depends(get_async_session),

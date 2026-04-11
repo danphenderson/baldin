@@ -5,7 +5,7 @@ import { createApiClient } from './api-client';
 import { API_URL } from '../config/env';
 
 export type ExtractorResponse = components['schemas']['ExtractorResponse'];
-type ExtractorRunBody = components['schemas']['Body_extractor_runner_api_v1_extractor__id__run_post'];
+type ExtractorRunBody = components['schemas']['Body_extractor_runner_api_v1_extractors__id__run_post'];
 export type ExtractorRun = Omit<ExtractorRunBody, 'file'> & {
   file?: File | null;
 };
@@ -31,26 +31,26 @@ const unwrap = <T,>(
 
 export const getExtractors = async (token: string): Promise<ExtractorRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/extractor/'));
+  return unwrap(await client.GET('/api/v1/extractors/'));
 };
 
 export const getExtractor = async (token: string, id: string): Promise<ExtractorRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/extractor/{id}', {
+  return unwrap(await client.GET('/api/v1/extractors/{id}', {
     params: { path: { id } },
   }));
 };
 
 export const createExtractor = async (token: string, extractor: ExtractorCreate): Promise<ExtractorRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/api/v1/extractor/', {
+  return unwrap(await client.POST('/api/v1/extractors/', {
     body: extractor,
   }));
 };
 
 export const updateExtractor = async (token: string, id: string, extractor: ExtractorUpdate): Promise<ExtractorRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PUT('/api/v1/extractor/{id}', {
+  return unwrap(await client.PATCH('/api/v1/extractors/{id}', {
     params: { path: { id } },
     body: extractor,
   }));
@@ -58,21 +58,21 @@ export const updateExtractor = async (token: string, id: string, extractor: Extr
 
 export const deleteExtractor = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/api/v1/extractor/{id}', {
+  unwrap(await client.DELETE('/api/v1/extractors/{id}', {
     params: { path: { id } },
   }));
 };
 
 export const getExtractorExamples = async (token: string, id: string): Promise<ExtractorExampleRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/extractor/{id}/examples', {
+  return unwrap(await client.GET('/api/v1/extractors/{id}/examples', {
     params: { path: { id } },
   }));
 };
 
 export const createExtractorExample = async (token: string, id: string, example: ExtractorExmpleCreate): Promise<ExtractorExampleRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/api/v1/extractor/{id}/examples', {
+  return unwrap(await client.POST('/api/v1/extractors/{id}/examples', {
     params: { path: { id } },
     body: example,
   }));
@@ -80,7 +80,7 @@ export const createExtractorExample = async (token: string, id: string, example:
 
 export const deleteExtractorExample = async (token: string, id: string, exampleId: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/api/v1/extractor/{id}/examples/{example_id}', {
+  unwrap(await client.DELETE('/api/v1/extractors/{id}/examples/{example_id}', {
     params: { path: { id, example_id: exampleId } },
   }));
 };
@@ -104,14 +104,14 @@ export const runExtractor = async (token: string, id: string, runner: ExtractorR
     body = JSON.stringify(runner);
   }
 
-  const response = await fetch(`${API_URL}/extractor/${id}/run`, {
+  const response = await fetch(`${API_URL}/extractors/${id}/run`, {
     method: 'POST',
     headers,
     body,
   });
   if (!response.ok) {
     const bodySnippet = await response.text().catch(() => '');
-    throw new Error(`API request failed: POST ${API_URL}/extractor/${id}/run ${response.status} ${response.statusText}${bodySnippet ? ` — ${bodySnippet.slice(0, 200)}` : ''}`);
+    throw new Error(`API request failed: POST ${API_URL}/extractors/${id}/run ${response.status} ${response.statusText}${bodySnippet ? ` — ${bodySnippet.slice(0, 200)}` : ''}`);
   }
   return response.json();
 };
@@ -120,7 +120,7 @@ export type ExtractorVersionRead = components['schemas']['ExtractorVersionRead']
 
 export const getExtractorVersions = async (token: string, id: string): Promise<ExtractorVersionRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/extractor/{id}/versions', {
+  return unwrap(await client.GET('/api/v1/extractors/{id}/versions', {
     params: { path: { id } },
   }));
 };

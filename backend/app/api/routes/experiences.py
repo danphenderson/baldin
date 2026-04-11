@@ -56,14 +56,14 @@ async def create_user_experience(
     return experience
 
 
-@router.get("/{experience_id}", response_model=schemas.ExperienceRead)
+@router.get("/{id}", response_model=schemas.ExperienceRead)
 async def read_user_experience(
     experience: schemas.ExperienceRead = Depends(get_experience),
 ):
     return experience
 
 
-@router.put("/{experience_id}", response_model=schemas.ExperienceRead)
+@router.patch("/{id}", response_model=schemas.ExperienceRead)
 async def update_user_experience(
     payload: schemas.ExperienceUpdate,
     experience: schemas.ExperienceRead = Depends(get_experience),
@@ -77,7 +77,7 @@ async def update_user_experience(
     return experience
 
 
-@router.delete("/{experience_id}", status_code=204)
+@router.delete("/{id}", status_code=204)
 async def delete_user_experience(
     experience: schemas.ExperienceRead = Depends(get_experience),
     db: AsyncSession = Depends(get_async_session),

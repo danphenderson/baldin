@@ -42,7 +42,7 @@ async def read_current_user_educations(
     return educations
 
 
-@router.get("/{education_id}", response_model=schemas.EducationRead)
+@router.get("/{id}", response_model=schemas.EducationRead)
 async def read_user_education(
     education: schemas.EducationRead = Depends(get_education),
 ):
@@ -62,7 +62,7 @@ async def create_user_education(
     return education
 
 
-@router.put("/{education_id}", response_model=schemas.EducationRead)
+@router.patch("/{id}", response_model=schemas.EducationRead)
 async def update_user_education(
     payload: schemas.EducationUpdate,
     education: schemas.EducationRead = Depends(get_education),
@@ -75,7 +75,7 @@ async def update_user_education(
     return education
 
 
-@router.delete("/{education_id}", response_model=schemas.EducationRead)
+@router.delete("/{id}", response_model=schemas.EducationRead)
 async def delete_user_education(
     education: schemas.EducationRead = Depends(get_education),
     db: AsyncSession = Depends(get_async_session),

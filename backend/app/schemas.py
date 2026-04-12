@@ -2193,6 +2193,14 @@ class AgentChatMessageRead(BaseSchema):
 class AgentChatMessageCreate(BaseSchema):
     content: str = Field(description="User-authored message content")
 
+    @field_validator("content")
+    @classmethod
+    def clean_content(cls, value: str) -> str:
+        cleaned = _clean_optional_wrapped_text(value)
+        if not cleaned:
+            raise ValueError("Chat message content cannot be empty")
+        return cleaned
+
 
 class AgentChatSessionSummaryRead(BaseRead):
     agent_id: UUID4 = Field(description="Owning agent definition")

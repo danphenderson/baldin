@@ -362,6 +362,8 @@ export interface paths {
   "/api/v1/agents/chat/{session_id}/messages": {
     /** Get Agent Chat Messages */
     get: operations["get_agent_chat_messages_api_v1_agents_chat__session_id__messages_get"];
+    /** Send Agent Chat Message */
+    post: operations["send_agent_chat_message_api_v1_agents_chat__session_id__messages_post"];
   };
   "/api/v1/agents/{id}/run": {
     /** Run Agent */
@@ -1146,6 +1148,14 @@ export interface components {
       page: number;
       /** Page Size */
       page_size: number;
+    };
+    /** AgentChatMessageCreate */
+    AgentChatMessageCreate: {
+      /**
+       * Content
+       * @description User-authored message content
+       */
+      content: string;
     };
     /** AgentChatMessageRead */
     AgentChatMessageRead: {
@@ -9371,6 +9381,34 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["PaginatedResponse_AgentChatMessageRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Send Agent Chat Message */
+  send_agent_chat_message_api_v1_agents_chat__session_id__messages_post: {
+    parameters: {
+      path: {
+        session_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AgentChatMessageCreate"];
+      };
+    };
+    responses: {
+      /** @description Send a chat message. Returns JSON when the client explicitly requests application/json; otherwise streams SSE events named `delta`, `done`, and `error`. */
+      201: {
+        content: {
+          "application/json": components["schemas"]["AgentChatMessageRead"];
+          "text/event-stream": string;
         };
       };
       /** @description Validation Error */

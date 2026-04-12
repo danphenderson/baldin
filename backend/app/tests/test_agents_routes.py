@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import AsyncGenerator
@@ -8,9 +9,11 @@ from uuid import UUID
 import pytest
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
+from langchain_core.messages import AIMessageChunk, HumanMessage, SystemMessage
 from sqlalchemy import select
 
 from app import models
+from app.api.routes import agents as agents_route
 from app.core import conf
 from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
 from app.main import app
@@ -234,6 +237,52 @@ async def _create_chat_session_with_messages(
 
         await session.commit()
         return chat_session.id
+
+
+class _StreamingTestModel:
+    def __init__(
+        self,
+        *chunks: AIMessageChunk,
+        failure: Exception | None = None,
+        fail_after_chunks: int | None = None,
+    ) -> None:
+        self._chunks = list(chunks)
+        self._failure = failure
+        self._fail_after_chunks = fail_after_chunks
+        self.messages = None
+        self.kwargs: dict[str, object] | None = None
+        self.stream_usage = None
+
+    async def astream(self, messages, **kwargs):
+        self.messages = messages
+        self.kwargs = kwargs
+        for index, chunk in enumerate(self._chunks, start=1):
+            yield chunk
+            if (
+                self._failure is not None
+                and self._fail_after_chunks is not None
+                and index >= self._fail_after_chunks
+            ):
+                raise self._failure
+        if self._failure is not None and self._fail_after_chunks is None:
+            raise self._failure
+
+
+def _parse_sse_events(body: str) -> list[tuple[str, dict[str, object]]]:
+    events: list[tuple[str, dict[str, object]]] = []
+    for raw_event in body.strip().split("\n\n"):
+        if not raw_event.strip():
+            continue
+        event_name: str | None = None
+        payload = ""
+        for line in raw_event.splitlines():
+            if line.startswith("event:"):
+                event_name = line.split(":", 1)[1].strip()
+            if line.startswith("data:"):
+                payload = line.split(":", 1)[1].strip()
+        assert event_name is not None, raw_event
+        events.append((event_name, json.loads(payload)))
+    return events
 
 
 async def _seed_agent_run_history(
@@ -686,6 +735,276 @@ async def test_get_agent_chat_messages_returns_paginated_history_in_ascending_or
     assert [item["role"] for item in body["items"]] == ["assistant", "user"]
     assert [item["content"] for item in body["items"]] == ["second", "third"]
     assert [item["metadata"]["index"] for item in body["items"]] == [2, 3]
+
+
+async def test_send_agent_chat_message_json_fallback_persists_messages_and_uses_session_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    captured: dict[str, object] = {}
+    streaming_model = _StreamingTestModel(
+        AIMessageChunk(
+            content="Hello",
+            response_metadata={"token_usage": {"input_tokens": 8, "output_tokens": 1}},
+        ),
+        AIMessageChunk(
+            content=" there",
+            response_metadata={"token_usage": {"input_tokens": 8, "output_tokens": 2}},
+        ),
+    )
+
+    def _get_model(model_name: str | None = None):
+        captured["model_name"] = model_name
+        return streaming_model
+
+    monkeypatch.setattr(agents_route.conf.openai, "get_model", _get_model)
+    monkeypatch.setattr(agents_route.conf.openai, "get_chunk_size", lambda _name: 4096)
+    monkeypatch.setattr(
+        agents_route.conf.openai,
+        "get_tokenizer_encoding",
+        lambda _name=None: "o200k_base",
+    )
+    monkeypatch.setattr(agents_route, "_get_tiktoken_encoding", lambda _name: None)
+
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-send-json-pass")
+        headers = await _auth_headers(client, email, "agent-chat-send-json-pass")
+        agent_id = await _create_agent(
+            user_id,
+            name="Streaming Coach",
+            kind="custom",
+            configuration={"model_name": "gpt-5.4-nano-2026-03-17"},
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            title=None,
+            model_name="gpt-5.4-mini-2026-03-17",
+            message_specs=[("system", "System context")],
+        )
+
+        response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/messages",
+            json={"content": "   Help me tailor this intro to the job.   "},
+            headers={**headers, "Accept": "application/json"},
+        )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["role"] == "assistant"
+    assert body["content"] == "Hello there"
+    assert body["metadata"]["model_name"] == "gpt-5.4-mini-2026-03-17"
+    assert "usage" in body["metadata"]
+    assert captured["model_name"] == "gpt-5.4-mini-2026-03-17"
+    assert streaming_model.kwargs == {"stream_usage": True}
+    assert isinstance(streaming_model.messages[0], SystemMessage)
+    assert isinstance(streaming_model.messages[-1], HumanMessage)
+
+    async with session_context() as session:
+        chat_session = await session.get(models.AgentChatSession, session_id)
+        result = await session.execute(
+            select(models.AgentChatMessage)
+            .where(models.AgentChatMessage.session_id == session_id)
+            .order_by(
+                models.AgentChatMessage.created_at.asc(),
+                models.AgentChatMessage.id.asc(),
+            )
+        )
+        persisted_messages = result.scalars().all()
+
+    assert chat_session is not None
+    assert chat_session.title == "Help me tailor this intro to the job."
+    assert chat_session.message_count == 3
+    assert chat_session.last_message_at is not None
+    assert [message.role for message in persisted_messages] == [
+        "system",
+        "user",
+        "assistant",
+    ]
+    assert persisted_messages[1].content == "Help me tailor this intro to the job."
+    assert persisted_messages[2].content == "Hello there"
+    assert persisted_messages[2].metadata_["model_name"] == "gpt-5.4-mini-2026-03-17"
+
+
+async def test_send_agent_chat_message_streams_sse_and_persists_assistant_message(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    streaming_model = _StreamingTestModel(
+        AIMessageChunk(content="First "),
+        AIMessageChunk(
+            content="draft",
+            response_metadata={"token_usage": {"input_tokens": 6, "output_tokens": 2}},
+        ),
+    )
+
+    monkeypatch.setattr(
+        agents_route.conf.openai,
+        "get_model",
+        lambda _model_name=None: streaming_model,
+    )
+    monkeypatch.setattr(agents_route.conf.openai, "get_chunk_size", lambda _name: 4096)
+    monkeypatch.setattr(
+        agents_route.conf.openai,
+        "get_tokenizer_encoding",
+        lambda _name=None: "o200k_base",
+    )
+    monkeypatch.setattr(agents_route, "_get_tiktoken_encoding", lambda _name: None)
+
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-send-sse-pass")
+        headers = await _auth_headers(client, email, "agent-chat-send-sse-pass")
+        agent_id = await _create_agent(user_id, name="SSE Coach", kind="custom")
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            message_specs=[("system", "System context")],
+        )
+
+        response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/messages",
+            json={"content": "Draft a sharper opener"},
+            headers={**headers, "Accept": "text/event-stream"},
+        )
+
+    assert response.status_code == 201, response.text
+    assert response.headers["content-type"].startswith("text/event-stream")
+    events = _parse_sse_events(response.text)
+    assert [name for name, _payload in events] == ["delta", "delta", "done"]
+    assert events[0][1] == {"content": "First "}
+    assert events[1][1] == {"content": "draft"}
+    assert events[2][1]["message"]["content"] == "First draft"
+    assert (
+        events[2][1]["message"]["metadata"]["model_name"]
+        == conf.openai.COMPLETION_MODEL
+    )
+
+    async with session_context() as session:
+        result = await session.execute(
+            select(models.AgentChatMessage)
+            .where(models.AgentChatMessage.session_id == session_id)
+            .order_by(
+                models.AgentChatMessage.created_at.asc(),
+                models.AgentChatMessage.id.asc(),
+            )
+        )
+        persisted_messages = result.scalars().all()
+
+    assert [message.role for message in persisted_messages] == [
+        "system",
+        "user",
+        "assistant",
+    ]
+    assert persisted_messages[-1].content == "First draft"
+    assert (
+        persisted_messages[-1].metadata_["model_name"] == conf.openai.COMPLETION_MODEL
+    )
+
+
+async def test_send_agent_chat_message_rejects_archived_session_without_writing() -> (
+    None
+):
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-send-archived-pass")
+        headers = await _auth_headers(client, email, "agent-chat-send-archived-pass")
+        agent_id = await _create_agent(user_id, name="Archived Coach", kind="custom")
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            title="Frozen thread",
+            message_specs=[("system", "System context")],
+        )
+
+        async with session_context() as session:
+            chat_session = await session.get(models.AgentChatSession, session_id)
+            assert chat_session is not None
+            chat_session.status = "archived"
+            await session.commit()
+
+        response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/messages",
+            json={"content": "This should be rejected"},
+            headers={**headers, "Accept": "application/json"},
+        )
+
+    assert response.status_code == 409, response.text
+
+    async with session_context() as session:
+        chat_session = await session.get(models.AgentChatSession, session_id)
+        result = await session.execute(
+            select(models.AgentChatMessage.id).where(
+                models.AgentChatMessage.session_id == session_id
+            )
+        )
+        persisted_message_ids = result.scalars().all()
+
+    assert chat_session is not None
+    assert chat_session.message_count == 1
+    assert len(persisted_message_ids) == 1
+
+
+async def test_send_agent_chat_message_stream_emits_error_and_skips_assistant_persist(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    streaming_model = _StreamingTestModel(
+        AIMessageChunk(content="Partial"),
+        failure=RuntimeError("stream exploded"),
+        fail_after_chunks=1,
+    )
+
+    monkeypatch.setattr(
+        agents_route.conf.openai,
+        "get_model",
+        lambda _model_name=None: streaming_model,
+    )
+    monkeypatch.setattr(agents_route.conf.openai, "get_chunk_size", lambda _name: 4096)
+    monkeypatch.setattr(
+        agents_route.conf.openai,
+        "get_tokenizer_encoding",
+        lambda _name=None: "o200k_base",
+    )
+    monkeypatch.setattr(agents_route, "_get_tiktoken_encoding", lambda _name: None)
+
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-send-error-pass")
+        headers = await _auth_headers(client, email, "agent-chat-send-error-pass")
+        agent_id = await _create_agent(user_id, name="Error Coach", kind="custom")
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            message_specs=[("system", "System context")],
+        )
+
+        response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/messages",
+            json={"content": "Trigger a failing stream"},
+            headers={**headers, "Accept": "text/event-stream"},
+        )
+
+    assert response.status_code == 201, response.text
+    events = _parse_sse_events(response.text)
+    assert [name for name, _payload in events] == ["delta", "error"]
+    assert events[0][1] == {"content": "Partial"}
+    assert events[1][1] == {"detail": "stream exploded"}
+
+    async with session_context() as session:
+        chat_session = await session.get(models.AgentChatSession, session_id)
+        result = await session.execute(
+            select(models.AgentChatMessage)
+            .where(models.AgentChatMessage.session_id == session_id)
+            .order_by(
+                models.AgentChatMessage.created_at.asc(),
+                models.AgentChatMessage.id.asc(),
+            )
+        )
+        persisted_messages = result.scalars().all()
+
+    assert chat_session is not None
+    assert chat_session.message_count == 2
+    assert [message.role for message in persisted_messages] == ["system", "user"]
+    assert persisted_messages[-1].content == "Trigger a failing stream"
 
 
 async def test_agent_chat_session_routes_reject_cross_user_access() -> None:

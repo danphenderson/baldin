@@ -1,9 +1,20 @@
 import json
+from collections.abc import AsyncIterator
 from datetime import datetime, timezone
+from functools import lru_cache
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+import tiktoken
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
+from langchain_core.messages import (
+    AIMessage,
+    AIMessageChunk,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+)
 from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
@@ -24,9 +35,16 @@ from app.api.routes.documents import (
     create_version,
 )
 from app.core import conf
+from app.core.db import session_context
 from app.core.langchain import generate_cover_letter
 
 router: APIRouter = APIRouter()
+
+_AGENT_CHAT_TITLE_MAX_LENGTH = 80
+_AGENT_CHAT_RESPONSE_TOKEN_RESERVE_RATIO = 0.25
+_AGENT_CHAT_ESTIMATED_TOKENS_PER_CHAR_NUMERATOR = 1
+_AGENT_CHAT_ESTIMATED_TOKENS_PER_CHAR_DENOMINATOR = 4
+_AGENT_CHAT_MESSAGE_TOKEN_OVERHEAD = 8
 
 
 def _json_dumps(data: Any) -> str:
@@ -647,6 +665,345 @@ def _serialize_agent_chat_session(
     )
 
 
+def _derive_agent_chat_title(content: str, *, max_length: int = 80) -> str:
+    normalized = " ".join(content.split())
+    if len(normalized) <= max_length:
+        return normalized
+    if max_length <= 3:
+        return normalized[:max_length]
+    return f"{normalized[: max_length - 3].rstrip()}..."
+
+
+async def _lock_agent_chat_session_row(
+    db: AsyncSession,
+    *,
+    session_id: UUID,
+) -> models.AgentChatSession:
+    result = await db.execute(
+        select(models.AgentChatSession)
+        .where(models.AgentChatSession.id == session_id)
+        .with_for_update()
+    )
+    chat_session = result.scalars().first()
+    if chat_session is None:
+        raise HTTPException(status_code=404, detail="Chat session not found")
+    return chat_session
+
+
+async def _append_user_chat_message(
+    db: AsyncSession,
+    *,
+    session_id: UUID,
+    content: str,
+) -> models.AgentChatMessage:
+    created_at = datetime.now(timezone.utc)
+    chat_session = await _lock_agent_chat_session_row(db, session_id=session_id)
+    if chat_session.status != schemas.AgentChatSessionStatus.ACTIVE.value:
+        raise HTTPException(status_code=409, detail="Chat session is archived")
+    chat_session.message_count = (chat_session.message_count or 0) + 1
+    chat_session.last_message_at = created_at
+    chat_session.updated_at = created_at
+    if not chat_session.title:
+        chat_session.title = _derive_agent_chat_title(
+            content,
+            max_length=_AGENT_CHAT_TITLE_MAX_LENGTH,
+        )
+
+    message = models.AgentChatMessage(
+        session_id=session_id,
+        role=schemas.AgentChatMessageRole.USER.value,
+        content=content,
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    db.add(message)
+    await db.flush()
+    await db.commit()
+    await db.refresh(message)
+    return message
+
+
+async def _persist_assistant_chat_message(
+    *,
+    session_id: UUID,
+    content: str,
+    metadata: dict[str, Any],
+) -> schemas.AgentChatMessageRead:
+    created_at = datetime.now(timezone.utc)
+    async with session_context() as db:
+        chat_session = await _lock_agent_chat_session_row(db, session_id=session_id)
+        chat_session.message_count = (chat_session.message_count or 0) + 1
+        chat_session.last_message_at = created_at
+        chat_session.updated_at = created_at
+
+        message = models.AgentChatMessage(
+            session_id=session_id,
+            role=schemas.AgentChatMessageRole.ASSISTANT.value,
+            content=content,
+            metadata_=metadata,
+            created_at=created_at,
+            updated_at=created_at,
+        )
+        db.add(message)
+        await db.flush()
+        serialized = _serialize_agent_chat_message(message)
+        await db.commit()
+    return serialized
+
+
+def _resolve_agent_chat_model_name(session: models.AgentChatSession) -> str:
+    if session.model_name and session.model_name.strip():
+        return session.model_name.strip()
+    return _snapshot_agent_model_name(session.agent)
+
+
+def _resolve_agent_chat_model(
+    session: models.AgentChatSession,
+) -> tuple[str, Any]:
+    model_name = _resolve_agent_chat_model_name(session)
+    try:
+        return model_name, conf.openai.get_model(model_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+async def _load_chat_messages_for_llm(
+    db: AsyncSession,
+    *,
+    session_id: UUID,
+    model_name: str,
+) -> list[BaseMessage]:
+    result = await db.execute(
+        select(models.AgentChatMessage)
+        .where(models.AgentChatMessage.session_id == session_id)
+        .order_by(
+            models.AgentChatMessage.created_at.asc(),
+            models.AgentChatMessage.id.asc(),
+        )
+    )
+    messages = [
+        _to_langchain_agent_chat_message(message) for message in result.scalars().all()
+    ]
+    return _trim_agent_chat_history(messages, model_name=model_name)
+
+
+def _to_langchain_agent_chat_message(
+    message: models.AgentChatMessage,
+) -> BaseMessage:
+    if message.role == schemas.AgentChatMessageRole.SYSTEM.value:
+        return SystemMessage(content=message.content)
+    if message.role == schemas.AgentChatMessageRole.USER.value:
+        return HumanMessage(content=message.content)
+    return AIMessage(content=message.content)
+
+
+def _extract_agent_chat_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+                continue
+            if not isinstance(item, dict):
+                continue
+            text = item.get("text")
+            if isinstance(text, str):
+                parts.append(text)
+                continue
+            value = item.get("value")
+            if isinstance(value, str):
+                parts.append(value)
+                continue
+            nested_content = item.get("content")
+            if isinstance(nested_content, str):
+                parts.append(nested_content)
+        return "".join(parts)
+    if content is None:
+        return ""
+    return str(content)
+
+
+@lru_cache(maxsize=8)
+def _get_tiktoken_encoding(encoding_name: str):
+    try:
+        return tiktoken.get_encoding(encoding_name)
+    except Exception:
+        return None
+
+
+def _estimate_agent_chat_text_tokens(text: str, *, encoding_name: str) -> int:
+    if not text:
+        return 0
+    encoding = _get_tiktoken_encoding(encoding_name)
+    if encoding is None:
+        return max(
+            1,
+            (
+                len(text) * _AGENT_CHAT_ESTIMATED_TOKENS_PER_CHAR_NUMERATOR
+                + _AGENT_CHAT_ESTIMATED_TOKENS_PER_CHAR_DENOMINATOR
+                - 1
+            )
+            // _AGENT_CHAT_ESTIMATED_TOKENS_PER_CHAR_DENOMINATOR,
+        )
+    return len(encoding.encode(text))
+
+
+def _count_agent_chat_message_tokens(
+    message: BaseMessage,
+    *,
+    encoding_name: str,
+) -> int:
+    message_type = getattr(message, "type", "message")
+    content = _extract_agent_chat_text(message.content)
+    return (
+        _estimate_agent_chat_text_tokens(
+            f"{message_type}:{content}",
+            encoding_name=encoding_name,
+        )
+        + _AGENT_CHAT_MESSAGE_TOKEN_OVERHEAD
+    )
+
+
+def _trim_agent_chat_history(
+    messages: list[BaseMessage],
+    *,
+    model_name: str,
+) -> list[BaseMessage]:
+    if len(messages) <= 1:
+        return messages
+
+    max_input_tokens = max(
+        1,
+        int(
+            conf.openai.get_chunk_size(model_name)
+            * (1 - _AGENT_CHAT_RESPONSE_TOKEN_RESERVE_RATIO)
+        ),
+    )
+    encoding_name = conf.openai.get_tokenizer_encoding(model_name)
+
+    preserved_system: BaseMessage | None = None
+    remaining_messages = messages
+    if isinstance(messages[0], SystemMessage):
+        preserved_system = messages[0]
+        remaining_messages = messages[1:]
+
+    consumed_tokens = 0
+    selected_messages: list[BaseMessage] = []
+
+    if preserved_system is not None:
+        consumed_tokens += _count_agent_chat_message_tokens(
+            preserved_system,
+            encoding_name=encoding_name,
+        )
+
+    for message in reversed(remaining_messages):
+        message_tokens = _count_agent_chat_message_tokens(
+            message,
+            encoding_name=encoding_name,
+        )
+        if consumed_tokens + message_tokens > max_input_tokens and selected_messages:
+            break
+        selected_messages.append(message)
+        consumed_tokens += message_tokens
+
+    selected_messages.reverse()
+    if preserved_system is not None:
+        return [preserved_system, *selected_messages]
+    return selected_messages
+
+
+def _extract_agent_chat_usage(
+    aggregate_chunk: AIMessageChunk | None,
+) -> dict[str, Any] | None:
+    if aggregate_chunk is None:
+        return None
+
+    usage_metadata = getattr(aggregate_chunk, "usage_metadata", None)
+    if isinstance(usage_metadata, dict) and usage_metadata:
+        return dict(usage_metadata)
+
+    response_metadata = getattr(aggregate_chunk, "response_metadata", None)
+    if not isinstance(response_metadata, dict):
+        return None
+
+    token_usage = response_metadata.get("token_usage")
+    if isinstance(token_usage, dict) and token_usage:
+        return dict(token_usage)
+    return None
+
+
+def _build_agent_chat_message_metadata(
+    *,
+    model_name: str,
+    aggregate_chunk: AIMessageChunk | None,
+) -> dict[str, Any]:
+    metadata: dict[str, Any] = {"model_name": model_name}
+    usage = _extract_agent_chat_usage(aggregate_chunk)
+    if usage is not None:
+        metadata["usage"] = usage
+    return metadata
+
+
+async def _generate_agent_chat_completion_events(
+    *,
+    model: Any,
+    messages: list[BaseMessage],
+    model_name: str,
+    request: Request | None = None,
+) -> AsyncIterator[dict[str, Any]]:
+    aggregate_chunk: AIMessageChunk | None = None
+    content_parts: list[str] = []
+    stream_kwargs: dict[str, Any] = {}
+    if hasattr(model, "stream_usage"):
+        stream_kwargs["stream_usage"] = True
+
+    async for chunk in model.astream(messages, **stream_kwargs):
+        if request is not None and await request.is_disconnected():
+            return
+
+        aggregate_chunk = chunk if aggregate_chunk is None else aggregate_chunk + chunk
+        delta = _extract_agent_chat_text(getattr(chunk, "content", None))
+        if delta:
+            content_parts.append(delta)
+            yield {"type": "delta", "content": delta}
+
+        if request is not None and await request.is_disconnected():
+            return
+
+    content = "".join(content_parts).strip()
+    if not content and aggregate_chunk is not None:
+        content = _extract_agent_chat_text(aggregate_chunk.content).strip()
+    if not content:
+        raise ValueError("Agent generated an empty response")
+
+    yield {
+        "type": "complete",
+        "content": content,
+        "metadata": _build_agent_chat_message_metadata(
+            model_name=model_name,
+            aggregate_chunk=aggregate_chunk,
+        ),
+    }
+
+
+def _serialize_sse_event(event: str, data: dict[str, Any]) -> str:
+    return f"event: {event}\ndata: {_json_dumps(data)}\n\n"
+
+
+def _should_stream_agent_chat_response(accept_header: str | None) -> bool:
+    if accept_header is None or not accept_header.strip():
+        return True
+
+    normalized_accept = accept_header.lower()
+    if "text/event-stream" in normalized_accept or "*/*" in normalized_accept:
+        return True
+    if "application/json" in normalized_accept:
+        return False
+    return True
+
+
 def _build_agent_input_context(
     *,
     agent: models.Agent,
@@ -1020,6 +1377,130 @@ async def get_agent_chat_messages(
         total=total,
         page=page,
         page_size=page_size,
+    )
+
+
+@router.post(
+    "/chat/{session_id}/messages",
+    status_code=201,
+    response_model=schemas.AgentChatMessageRead,
+    responses={
+        201: {
+            "description": (
+                "Send a chat message. Returns JSON when the client explicitly "
+                "requests application/json; otherwise streams SSE events named "
+                "`delta`, `done`, and `error`."
+            ),
+            "content": {
+                "text/event-stream": {
+                    "schema": {
+                        "type": "string",
+                        "example": (
+                            "event: delta\n"
+                            'data: {"content": "Hello"}\n\n'
+                            "event: done\n"
+                            'data: {"message": {"id": "...", "role": "assistant"}}\n\n'
+                        ),
+                    }
+                }
+            },
+        }
+    },
+)
+async def send_agent_chat_message(
+    session_id: UUID,
+    payload: schemas.AgentChatMessageCreate,
+    request: Request,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    chat_session = await _load_agent_chat_session(
+        db,
+        session_id=session_id,
+        user_id=user.id,
+    )
+    if chat_session.status != schemas.AgentChatSessionStatus.ACTIVE.value:
+        raise HTTPException(status_code=409, detail="Chat session is archived")
+
+    conf.openai.require_enabled("Agent chat")
+    resolved_model_name, model = _resolve_agent_chat_model(chat_session)
+
+    await _append_user_chat_message(
+        db,
+        session_id=session_id,
+        content=payload.content,
+    )
+    llm_messages = await _load_chat_messages_for_llm(
+        db,
+        session_id=session_id,
+        model_name=resolved_model_name,
+    )
+
+    if not _should_stream_agent_chat_response(request.headers.get("accept")):
+        try:
+            assistant_content: str | None = None
+            assistant_metadata: dict[str, Any] = {"model_name": resolved_model_name}
+            async for event in _generate_agent_chat_completion_events(
+                model=model,
+                messages=llm_messages,
+                model_name=resolved_model_name,
+            ):
+                if event["type"] != "complete":
+                    continue
+                assistant_content = event["content"]
+                assistant_metadata = event["metadata"]
+
+            if assistant_content is None:
+                raise ValueError("Agent generation was interrupted")
+
+            return await _persist_assistant_chat_message(
+                session_id=session_id,
+                content=assistant_content,
+                metadata=assistant_metadata,
+            )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    async def event_stream() -> AsyncIterator[str]:
+        try:
+            async for event in _generate_agent_chat_completion_events(
+                model=model,
+                messages=llm_messages,
+                model_name=resolved_model_name,
+                request=request,
+            ):
+                if event["type"] == "delta":
+                    yield _serialize_sse_event(
+                        "delta",
+                        {"content": event["content"]},
+                    )
+                    continue
+
+                assistant_message = await _persist_assistant_chat_message(
+                    session_id=session_id,
+                    content=event["content"],
+                    metadata=event["metadata"],
+                )
+                yield _serialize_sse_event(
+                    "done",
+                    {"message": assistant_message.model_dump(mode="json")},
+                )
+        except Exception as exc:
+            if await request.is_disconnected():
+                return
+            yield _serialize_sse_event("error", {"detail": str(exc)})
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        status_code=201,
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

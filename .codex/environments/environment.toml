@@ -3,10 +3,7 @@ version = 1
 name = "baldin"
 
 [setup]
-script = '''
-./scripts/check_codex_worktree_env.sh
-
-'''
+script = "BALDIN_REQUIRE_OPENAI_API_KEY=0 ./scripts/check_codex_worktree_env.sh"
 
 [cleanup]
 script = "true"

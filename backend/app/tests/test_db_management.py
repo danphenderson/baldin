@@ -71,6 +71,8 @@ async def _create_user(
 def _expected_deleted_records() -> dict[str, int]:
     return {
         "agent_runs": 1,
+        "agent_chat_messages": 1,
+        "agent_chat_sessions": 1,
         "agents": 1,
         "orchestration_events": 1,
         "extractor_examples": 1,
@@ -205,6 +207,24 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
         session.add(agent)
         await session.flush()
 
+        chat_session = models.AgentChatSession(
+            agent_id=agent.id,
+            user_id=user_id,
+            application_id=application.id,
+            title="Target session",
+            model_name="gpt-5.4-mini",
+            message_count=1,
+            last_message_at=datetime.now(),
+        )
+        chat_session.messages.append(
+            models.AgentChatMessage(
+                role="user",
+                content="Need a more polished draft.",
+            )
+        )
+        session.add(chat_session)
+        await session.flush()
+
         extractor_example = models.ExtractorExample(
             content="Input example",
             output={"field": "value"},
@@ -281,6 +301,8 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
         "agent_id": agent.id,
         "agent_run_id": agent_run.id,
         "application_id": application.id,
+        "chat_session_id": chat_session.id,
+        "chat_message_id": chat_session.messages[0].id,
         "extractor_id": extractor.id,
         "extractor_example_id": extractor_example.id,
         "pipeline_id": pipeline.id,
@@ -386,6 +408,14 @@ async def test_db_management_purges_user_data_without_deleting_user() -> None:
         assert (
             await session.get(models.Application, target_data["application_id"]) is None
         )
+        assert (
+            await session.get(models.AgentChatSession, target_data["chat_session_id"])
+            is None
+        )
+        assert (
+            await session.get(models.AgentChatMessage, target_data["chat_message_id"])
+            is None
+        )
         assert await session.get(models.Extractor, target_data["extractor_id"]) is None
         assert (
             await session.get(
@@ -462,6 +492,14 @@ async def test_db_management_deletes_user_and_owned_data() -> None:
         )
         assert (
             await session.get(models.Application, target_data["application_id"]) is None
+        )
+        assert (
+            await session.get(models.AgentChatSession, target_data["chat_session_id"])
+            is None
+        )
+        assert (
+            await session.get(models.AgentChatMessage, target_data["chat_message_id"])
+            is None
         )
         assert await session.get(models.Extractor, target_data["extractor_id"]) is None
         assert (

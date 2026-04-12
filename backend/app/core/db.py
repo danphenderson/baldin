@@ -645,6 +645,11 @@ class DataBaseManager:
         agent_ids = await self._list_ids(
             select(models.Agent.id).where(models.Agent.user_id == user_id)
         )
+        chat_session_ids = await self._list_ids(
+            select(models.AgentChatSession.id).where(
+                models.AgentChatSession.user_id == user_id
+            )
+        )
         document_version_ids = (
             await self._list_ids(
                 select(models.DocumentVersion.id).where(
@@ -665,6 +670,8 @@ class DataBaseManager:
 
         deleted_records = {
             models.AgentRun.__tablename__: 0,
+            models.AgentChatMessage.__tablename__: 0,
+            models.AgentChatSession.__tablename__: 0,
             models.Agent.__tablename__: 0,
             models.OrchestrationEvent.__tablename__: 0,
             models.ExtractorExample.__tablename__: 0,
@@ -690,6 +697,19 @@ class DataBaseManager:
             models.AgentRun,
             models.AgentRun.user_id == user_id,
         )
+        if chat_session_ids:
+            deleted_records[
+                models.AgentChatMessage.__tablename__
+            ] = await self._delete_rows(
+                models.AgentChatMessage,
+                models.AgentChatMessage.session_id.in_(chat_session_ids),
+            )
+            deleted_records[
+                models.AgentChatSession.__tablename__
+            ] = await self._delete_rows(
+                models.AgentChatSession,
+                models.AgentChatSession.id.in_(chat_session_ids),
+            )
         deleted_records[models.Agent.__tablename__] = await self._delete_rows(
             models.Agent,
             models.Agent.id.in_(agent_ids) if agent_ids else false(),

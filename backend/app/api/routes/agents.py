@@ -23,6 +23,7 @@ from app.api.routes.documents import (
     create_document,
     create_version,
 )
+from app.core import conf
 from app.core.langchain import generate_cover_letter
 
 router: APIRouter = APIRouter()
@@ -272,6 +273,26 @@ def _build_agent_session_tiptap(
     return _json_dumps(tiptap_json)
 
 
+def _resolve_agent_model(agent: models.Agent):
+    configuration = agent.configuration if isinstance(agent.configuration, dict) else {}
+    model_name = configuration.get("model_name")
+    if model_name is None:
+        return conf.openai.get_model()
+    if not isinstance(model_name, str):
+        raise HTTPException(
+            status_code=400,
+            detail="Agent configuration model_name must be a string",
+        )
+    normalized_model_name = model_name.strip()
+    if not normalized_model_name:
+        return conf.openai.get_model()
+
+    try:
+        return conf.openai.get_model(normalized_model_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 async def _load_application_for_run(
     db: AsyncSession,
     *,
@@ -482,6 +503,7 @@ def _build_agent_input_context(
 def _generate_cover_letter_draft(
     *,
     input_context: dict[str, Any],
+    model: Any | None = None,
 ) -> str:
     draft_text = generate_cover_letter(
         profile=_json_dumps(
@@ -502,6 +524,7 @@ def _generate_cover_letter_draft(
                 "existing_session": input_context.get("session"),
             }
         ),
+        model=model,
     )
     if not draft_text or not draft_text.strip():
         raise ValueError("Agent generated an empty draft")
@@ -586,6 +609,19 @@ async def list_agents(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get("/models", response_model=schemas.AgentModelListRead)
+async def list_agent_models(
+    _user: schemas.UserRead = Depends(get_current_user),
+) -> schemas.AgentModelListRead:
+    supported_models = conf.openai.SUPPORTED_MODELS
+    return {
+        "models": [
+            {"name": name, "label": data["description"]}
+            for name, data in sorted(supported_models.items())
+        ]
+    }
 
 
 @router.post("/", status_code=201, response_model=schemas.AgentRead)
@@ -708,13 +744,17 @@ async def run_agent(
     run_id = run.id
 
     try:
+        model = _resolve_agent_model(agent)
         if agent.kind != schemas.AgentKind.COVER_LETTER.value:
             raise HTTPException(
                 status_code=501,
                 detail=f"Agent kind '{agent.kind}' is not yet supported for execution",
             )
 
-        draft_text = _generate_cover_letter_draft(input_context=input_context)
+        draft_text = _generate_cover_letter_draft(
+            input_context=input_context,
+            model=model,
+        )
         session_content = _build_agent_session_tiptap(
             agent=agent,
             application=application,

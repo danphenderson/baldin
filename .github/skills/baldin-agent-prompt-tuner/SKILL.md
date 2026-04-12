@@ -1,12 +1,12 @@
 ---
 name: baldin-agent-prompt-tuner
-description: "Tune Baldin prompt files against the prompt cookbook, prompt examples, and Copilot asset rules. Use when a .github/prompts/*.prompt.md file is weak, overlaps another prompt, lacks a clear owner or stop conditions, or needs a tighter rewrite before merge."
+description: "Tune Baldin prompt files against the prompt cookbook, prompt examples, and agentic asset rules. Use when a .github/prompts/*.prompt.md file is weak, overlaps another prompt, lacks a clear owner or stop conditions, or needs a tighter rewrite before merge."
 argument-hint: "Optional: prompt file, draft prompt text, or workflow you want tuned"
 ---
 
 # Baldin Agent Prompt Tuner
 
-Use this skill to tighten Baldin prompt files so they match the repo's prompt cookbook, prompt examples, and Copilot asset rules. Default to producing a tuned replacement prompt, not a generic critique.
+Use this skill to tighten Baldin prompt files so they match the repo's prompt cookbook, prompt examples, and agentic asset rules. Default to producing a tuned replacement prompt, not a generic critique.
 
 ## Scope
 
@@ -17,7 +17,7 @@ Use this skill to tighten Baldin prompt files so they match the repo's prompt co
 ## Source-Of-Truth Inputs
 
 - `.github/instructions/baldin-agent-customization.instructions.md`
-- `.github/COPILOT_SURFACE.md`
+- `.github/AGENTIC_SURFACE.md`
 - `docs/docs/engineering/copilot-prompt-cookbook.md`
 - `docs/docs/engineering/copilot-prompt-examples.md`
 - `.github/prompts/*.prompt.md`
@@ -52,7 +52,7 @@ Use this skill to tighten Baldin prompt files so they match the repo's prompt co
    - Prefer links to the cookbook, testing doc, and contract doc instead of copying policy into the prompt body.
    - Default to the Standard Handback reference for non-trivial work.
 5. Register catalog changes when needed.
-   - If this is a new prompt, update the cookbook decision table, prompt catalog references, slash examples, and `.github/COPILOT_SURFACE.md`.
+   - If this is a new prompt, update the cookbook decision table, prompt catalog references, slash examples, and `.github/AGENTIC_SURFACE.md`.
    - If the prompt replaces or merges another prompt, update docs and inventory so stale entries do not remain discoverable.
 6. Produce the required handback.
    - Return the tuned prompt text or file diff.

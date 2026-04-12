@@ -242,6 +242,22 @@ async def test_list_agents_filters_by_kind_and_owner() -> None:
     assert filter_body["items"][0]["kind"] == "cover_letter"
 
 
+async def test_list_agent_models_returns_supported_models() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, _user_id = await _create_user("agent-models-pass")
+        headers = await _auth_headers(client, email, "agent-models-pass")
+
+        response = await client.get("/api/v1/agents/models", headers=headers)
+
+    assert response.status_code == 200
+    expected_models = [
+        {"name": name, "label": data["description"]}
+        for name, data in sorted(conf.openai.SUPPORTED_MODELS.items())
+    ]
+    assert response.json() == {"models": expected_models}
+
+
 async def test_get_agent_returns_detail_for_owner() -> None:
     await _ensure_db_ready()
     async with _client() as client:

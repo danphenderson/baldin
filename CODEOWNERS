@@ -2,6 +2,9 @@
 # Changes to these paths require review from the listed owner(s).
 
 # Copilot customization surface
+AGENTS.md                           @danphenderson
+.codex/**                          @danphenderson
+.github/AGENTIC_SURFACE.md         @danphenderson
 .github/copilot-instructions.md    @danphenderson
 .github/instructions/**            @danphenderson
 .github/agents/**                  @danphenderson

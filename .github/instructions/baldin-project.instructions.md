@@ -5,7 +5,7 @@ applyTo: backend/**, frontend/**, frontend/src/schema.d.ts, scripts/**, .github/
 ---
 # Baldin Project Delivery Rules
 
-- This instruction covers runtime, delivery, docs, and release-path edits. For Copilot prompts, agents, skills, or instructions under `.github/**`, use [Baldin Agentic Configuration Rules](./baldin-agent-customization.instructions.md).
+- This instruction covers runtime, delivery, docs, and release-path edits. For Baldin agentic assets including `AGENTS.md`, `.codex/**`, prompts, agents, skills, or instructions under `.github/**`, use [Baldin Agentic Configuration Rules](./baldin-agent-customization.instructions.md).
 - Keep changes aligned with the current repo boundaries instead of introducing new abstraction layers for problems the repo does not have yet.
 - Default to the local `docker-compose.yml` stack for routine development. Prefer one boot with hot reload plus targeted smoke checks over repeated manual service startup.
 - During active local iteration, prefer inspect -> patch -> smoke-check loops. Treat full-suite, full-build, and CI-style validation as optional until the change is stable unless the task explicitly asks for them or the touched surface depends on them.

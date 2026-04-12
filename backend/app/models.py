@@ -146,6 +146,8 @@ ACTION_ITEM_PRIORITY_VALUES = ("low", "medium", "high", "urgent")
 AGENT_KIND_VALUES = ("cover_letter", "follow_up", "outreach", "custom")
 AGENT_RUN_TRIGGER_KIND_VALUES = ("manual", "event")
 AGENT_RUN_STATUS_VALUES = ("pending", "running", "completed", "failed")
+AGENT_CHAT_SESSION_STATUS_VALUES = ("active", "archived")
+AGENT_CHAT_MESSAGE_ROLE_VALUES = ("system", "user", "assistant")
 
 
 class Base(DeclarativeBase):
@@ -653,6 +655,7 @@ class Application(Base):
         back_populates="applications",
     )
     agent_runs = relationship("AgentRun", back_populates="application")
+    chat_sessions = relationship("AgentChatSession", back_populates="application")
     status_history = relationship(
         "ApplicationStatusHistory",
         back_populates="application",
@@ -738,6 +741,7 @@ class Agent(Base):
         back_populates="agent",
         order_by="AgentRun.created_at.desc()",
     )
+    chat_sessions = relationship("AgentChatSession", back_populates="agent")
 
 
 class AgentRun(Base):
@@ -832,6 +836,93 @@ class AgentRun(Base):
         back_populates="agent_runs",
         foreign_keys=[session_version_id],
     )
+
+
+class AgentChatSession(Base):
+    """Persistent chat session for a single agent and user."""
+
+    __tablename__ = "agent_chat_sessions"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "status",
+            AGENT_CHAT_SESSION_STATUS_VALUES,
+            name="ck_agent_chat_sessions_status",
+        ),
+        Index("ix_agent_chat_sessions_agent", "agent_id"),
+        Index("ix_agent_chat_sessions_user_updated", "user_id", "updated_at"),
+    )
+
+    agent_id = Column(
+        UUID, ForeignKey("agents.id", ondelete="RESTRICT"), nullable=False
+    )
+    user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    application_id = Column(
+        UUID,
+        ForeignKey("applications.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    title = Column(Text, nullable=True)
+    model_name = Column(String, nullable=True)
+    status = Column(
+        String,
+        nullable=False,
+        default="active",
+        server_default=text("'active'"),
+    )
+    message_count = Column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
+    last_message_at = Column(DateTime(timezone=True), nullable=True)
+
+    agent = relationship("Agent", back_populates="chat_sessions")
+    user = relationship("User", back_populates="chat_sessions")
+    application = relationship("Application", back_populates="chat_sessions")
+    messages = relationship(
+        "AgentChatMessage",
+        back_populates="session",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="AgentChatMessage.created_at.asc()",
+    )
+
+
+class AgentChatMessage(Base):
+    """A single chat message stored inside an agent chat session."""
+
+    __tablename__ = "agent_chat_messages"
+    __table_args__ = (
+        _string_in_check_constraint(
+            "role",
+            AGENT_CHAT_MESSAGE_ROLE_VALUES,
+            name="ck_agent_chat_messages_role",
+        ),
+        Index(
+            "ix_agent_chat_messages_session_created",
+            "session_id",
+            "created_at",
+        ),
+    )
+
+    session_id = Column(
+        UUID,
+        ForeignKey("agent_chat_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    role = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    metadata_ = Column(
+        "metadata",
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+
+    session = relationship("AgentChatSession", back_populates="messages")
 
 
 class Contact(Base):
@@ -1349,6 +1440,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     certificates = relationship("Certificate", back_populates="user")
     documents = relationship("Document", back_populates="user")
     extractors = relationship("Extractor", back_populates="user")
+    chat_sessions = relationship("AgentChatSession", back_populates="user")
     orchestration_pipelines = relationship(
         "OrchestrationPipeline", back_populates="user"
     )

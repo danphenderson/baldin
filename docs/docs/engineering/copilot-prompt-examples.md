@@ -1,8 +1,8 @@
 ---
 sidebar_position: 5
-slug: /engineering/copilot-prompt-examples
+slug: /engineering/agentic-prompt-examples
 title: Rewrite Weak Prompts
-description: Turn vague prompts into scoped requests with validation and handback rules.
+description: Turn vague prompts into scoped requests with validation and handback rules across Copilot and Codex.
 ---
 
 <!-- last-verified: 2026-04-09 -->
@@ -10,6 +10,8 @@ description: Turn vague prompts into scoped requests with validation and handbac
 # Rewrite Weak Prompts
 
 Use this page as a companion to [Prompt The Right Agent](./copilot-prompt-cookbook.md). The fastest way to get better results from Baldin's agents is to be explicit about owner, scope, validation, the standard handback, and when to stop and hand off.
+
+If you are using Codex instead of Copilot, translate slash-prompt examples into direct requests to the named custom agents under `.codex/agents/` or start with `/plan` when ownership is unclear.
 
 If the owner is already obvious, skip routing prompts and start with that specialist directly.
 
@@ -53,7 +55,7 @@ The bug might be in frontend state updates, backend aggregation, or both.
 Validation:
 Return owner selection, workstreams, generated-artifact needs, and the exact checks each owner should run.
 
-Require every implementation owner to return the standard handback fields from the Copilot Prompt Cookbook.
+Require every implementation owner to return the standard handback fields from the Agentic Workflow Cookbook.
 
 Do not implement yet unless this is obviously a tiny single-owner fix.
 ```
@@ -99,7 +101,7 @@ Validation:
 - run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` only if routes or schemas changed
 
 Return:
-- use the Standard Handback fields from the Copilot Prompt Cookbook.
+- use the Standard Handback fields from the Agentic Workflow Cookbook.
 
 Stop and hand off if this changes the public API contract and downstream frontend validation is not straightforward.
 ```
@@ -143,7 +145,7 @@ Validation:
 - run ./node_modules/.bin/tsc --noEmit if shared types or typed service usage changed
 
 Return:
-- use the Standard Handback fields from the Copilot Prompt Cookbook.
+- use the Standard Handback fields from the Agentic Workflow Cookbook.
 
 Stop and hand off if the needed state is not available from the current API contract.
 ```
@@ -185,7 +187,7 @@ Validation:
 - run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh`
 
 Return:
-- use the Standard Handback fields from the Copilot Prompt Cookbook.
+- use the Standard Handback fields from the Agentic Workflow Cookbook.
 
 Delegate isolated backend-only and frontend-only slices by default, but keep contract ownership here.
 ```
@@ -269,7 +271,7 @@ Validation:
 - run ./scripts/update_frontend_schemas.sh
 
 Return:
-- use the Standard Handback fields from the Copilot Prompt Cookbook.
+- use the Standard Handback fields from the Agentic Workflow Cookbook.
 
 Do not widen the task beyond this slice without stating why and naming the next owner.
 ```

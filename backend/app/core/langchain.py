@@ -10,6 +10,7 @@ import httpx
 from bs4 import BeautifulSoup
 from langchain_community.document_transformers import BeautifulSoupTransformer
 from langchain_core.documents import Document
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -174,8 +175,14 @@ async def extract_text_from_url_with_method(
         return await _extract_text_with_httpx(safe_url), "httpx"
 
 
-def generate_cover_letter(profile, job, template) -> str:
-    model = conf.openai.get_model()
+def generate_cover_letter(
+    profile,
+    job,
+    template,
+    model: BaseChatModel | None = None,
+) -> str:
+    if model is None:
+        model = conf.openai.get_model()
     parser = StrOutputParser()
     generation_template = ChatPromptTemplate.from_messages(
         [
@@ -221,9 +228,11 @@ async def ainvoke_structured_prompt(
     variables: dict[str, Any],
     schema: type[StructuredOutputModel],
     *,
+    model: BaseChatModel | None = None,
     model_name: str | None = None,
 ) -> StructuredOutputModel:
-    model = conf.openai.get_model(model_name)
+    if model is None:
+        model = conf.openai.get_model(model_name)
     runnable = prompt | model.with_structured_output(
         schema=schema,
         method="function_calling",

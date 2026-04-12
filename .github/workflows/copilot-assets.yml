@@ -1,4 +1,4 @@
-name: Copilot Assets
+name: Agentic Assets
 concurrency:
   group: >-
     ${{ github.workflow }}-
@@ -9,36 +9,54 @@ concurrency:
 on:
   push:
     paths:
+      - "AGENTS.md"
+      - ".codex/**"
+      - ".github/AGENTIC_SURFACE.md"
       - ".github/copilot-instructions.md"
       - ".github/agents/**"
       - ".github/instructions/**"
       - ".github/prompts/**"
       - ".github/skills/**"
       - ".github/COPILOT_SURFACE.md"
+      - "docs/docs/engineering/copilot-prompt-cookbook.md"
+      - "docs/docs/engineering/copilot-prompt-examples.md"
+      - "docs/docs/getting-started/contributing.md"
+      - "docs/docs/index.md"
+      - "docs/docusaurus.config.ts"
       - "scripts/validate_copilot_assets.py"
+      - "scripts/validate_agentic_assets.py"
     branches:
       - main
   pull_request:
     paths:
+      - "AGENTS.md"
+      - ".codex/**"
+      - ".github/AGENTIC_SURFACE.md"
       - ".github/copilot-instructions.md"
       - ".github/agents/**"
       - ".github/instructions/**"
       - ".github/prompts/**"
       - ".github/skills/**"
       - ".github/COPILOT_SURFACE.md"
+      - "docs/docs/engineering/copilot-prompt-cookbook.md"
+      - "docs/docs/engineering/copilot-prompt-examples.md"
+      - "docs/docs/getting-started/contributing.md"
+      - "docs/docs/index.md"
+      - "docs/docusaurus.config.ts"
       - "scripts/validate_copilot_assets.py"
+      - "scripts/validate_agentic_assets.py"
 
 permissions:
   contents: read
 
 jobs:
   validate:
-    name: Validate Copilot assets
+    name: Validate agentic assets
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-      - name: Run Copilot asset validator
-        run: python scripts/validate_copilot_assets.py
+      - name: Run agentic asset validator
+        run: python scripts/validate_agentic_assets.py

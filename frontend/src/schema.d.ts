@@ -337,6 +337,10 @@ export interface paths {
     /** Create Agent */
     post: operations["create_agent_api_v1_agents__post"];
   };
+  "/api/v1/agents/models": {
+    /** List Agent Models */
+    get: operations["list_agent_models_api_v1_agents_models_get"];
+  };
   "/api/v1/agents/runs": {
     /** List Runs By Session */
     get: operations["list_runs_by_session_api_v1_agents_runs_get"];
@@ -1146,7 +1150,7 @@ export interface components {
       instructions?: string | null;
       /**
        * Configuration
-       * @description Workflow-specific configuration payload
+       * @description Workflow-specific configuration payload. Supports optional `model_name` to override the default model for this agent.
        */
       configuration?: {
         [key: string]: unknown;
@@ -1163,6 +1167,27 @@ export interface components {
      * @enum {string}
      */
     AgentKind: "cover_letter" | "follow_up" | "outreach" | "custom";
+    /** AgentModelListRead */
+    AgentModelListRead: {
+      /**
+       * Models
+       * @description Available agent models that can be selected per agent
+       */
+      models?: components["schemas"]["AgentModelOptionRead"][];
+    };
+    /** AgentModelOptionRead */
+    AgentModelOptionRead: {
+      /**
+       * Name
+       * @description Resolved model identifier
+       */
+      name: string;
+      /**
+       * Label
+       * @description Human-readable model label
+       */
+      label: string;
+    };
     /** AgentRead */
     AgentRead: {
       /**
@@ -1213,7 +1238,7 @@ export interface components {
       instructions?: string | null;
       /**
        * Configuration
-       * @description Workflow-specific configuration payload
+       * @description Workflow-specific configuration payload. Supports optional `model_name` to override the default model for this agent.
        */
       configuration?: {
         [key: string]: unknown;
@@ -1509,7 +1534,7 @@ export interface components {
       instructions?: string | null;
       /**
        * Configuration
-       * @description Workflow-specific configuration payload
+       * @description Workflow-specific configuration payload. Supports optional `model_name` to override the default model for this agent.
        */
       configuration?: {
         [key: string]: unknown;
@@ -8914,6 +8939,17 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Agent Models */
+  list_agent_models_api_v1_agents_models_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["AgentModelListRead"];
         };
       };
     };

@@ -26,9 +26,9 @@ Contributions are welcome, especially around frontend polish, workflow reliabili
 - If backend routes or schemas change, regenerate contracts with `./scripts/update_frontend_schemas.sh`.
 - Prefer the Docusaurus site as the canonical documentation surface. Keep the root README and backend README as pointers, not competing references.
 
-## Copilot-Assisted Workflow
+## Agent-Assisted Workflow
 
-If you use Baldin's Copilot setup, prefer this sequence:
+If you use Baldin's Copilot or Codex setup, prefer this sequence:
 
 1. Start with a clear issue or task statement.
 2. Use the smallest correct owner.
@@ -36,9 +36,10 @@ If you use Baldin's Copilot setup, prefer this sequence:
 	- Baldin Frontend Agent for frontend-only work.
 	- Baldin Lead Full-Stack Architect for cross-stack, contract, or release-boundary work; it should still delegate isolated backend-only or frontend-only slices by default.
 	- Baldin Project Manager when ownership is unclear.
+	- In Codex, the matching custom-agent names are `baldin_backend`, `baldin_frontend`, `baldin_full_stack_architect`, and `baldin_project_manager`.
 3. Ask for the standard handback on non-trivial work: status, summary, files touched or reviewed, commands run and result summary, API or schema status, generated-artifact status, risks or assumptions, and recommended next owner.
 4. Review the diff before pushing.
-5. Open the pull request and, if useful, request Copilot review as a secondary reviewer.
+5. Open the pull request and, if useful, request Copilot review or Codex review as a secondary reviewer.
 6. Keep human approval as the final merge gate.
 
 See [Prompt The Right Agent](../engineering/copilot-prompt-cookbook.md) for prompt templates and [Rewrite Weak Prompts](../engineering/copilot-prompt-examples.md) for concrete examples.
@@ -77,7 +78,7 @@ Pull requests must pass the required status checks documented in [See Merge Gate
 - All required status checks to pass.
 - No force pushes or deletions.
 
-Copilot review can help catch routine issues, but it does not replace human review or the required CI checks.
+Automated review can help catch routine issues, but it does not replace human review or the required CI checks.
 
 ## Scope And Ownership Guidelines
 

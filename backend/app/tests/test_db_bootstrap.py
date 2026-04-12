@@ -115,6 +115,21 @@ async def _foreign_key_constraint_names(table_name: str) -> set[str]:
         return {row[0] for row in result.all()}
 
 
+async def _index_names(table_name: str) -> set[str]:
+    async with session_context() as session:
+        result = await session.execute(
+            text(
+                """
+                SELECT indexname
+                FROM pg_indexes
+                WHERE schemaname = 'public' AND tablename = :table_name
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return {row[0] for row in result.all()}
+
+
 async def test_create_db_and_tables_stamps_baseline_before_upgrade(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -147,13 +162,30 @@ async def test_drop_and_create_db_and_tables_bootstraps_cell_doc_schema() -> Non
 
     assert await _table_exists("agents")
     assert await _table_exists("agent_runs")
+    assert await _table_exists("agent_chat_sessions")
+    assert await _table_exists("agent_chat_messages")
     assert await _table_exists("document_blocks")
     assert "configuration" in await _column_names("agents")
     assert "input_context" in await _column_names("agent_runs")
+    assert "application_id" in await _column_names("agent_chat_sessions")
+    assert "message_count" in await _column_names("agent_chat_sessions")
+    assert "status" in await _column_names("agent_chat_sessions")
+    assert "session_id" in await _column_names("agent_chat_messages")
+    assert "role" in await _column_names("agent_chat_messages")
+    assert "metadata" in await _column_names("agent_chat_messages")
     assert "block_snapshot" in await _column_names("document_versions")
     assert "block_id" in await _column_names("document_activities")
     assert await _column_type("agents", "configuration") == ("jsonb", "jsonb")
     assert await _column_type("agent_runs", "input_context") == ("jsonb", "jsonb")
+    assert await _column_type("agent_chat_sessions", "message_count") == (
+        "integer",
+        "int4",
+    )
+    assert await _column_type("agent_chat_sessions", "last_message_at") == (
+        "timestamp with time zone",
+        "timestamptz",
+    )
+    assert await _column_type("agent_chat_messages", "metadata") == ("jsonb", "jsonb")
     assert (
         "document_activities_block_id_fkey"
         not in await _foreign_key_constraint_names("document_activities")
@@ -162,6 +194,20 @@ async def test_drop_and_create_db_and_tables_bootstraps_cell_doc_schema() -> Non
     assert {"ck_agents_kind"}.issubset(await _check_constraint_names("agents"))
     assert {"ck_agent_runs_trigger_kind", "ck_agent_runs_status"}.issubset(
         await _check_constraint_names("agent_runs")
+    )
+    assert {"ck_agent_chat_sessions_status"}.issubset(
+        await _check_constraint_names("agent_chat_sessions")
+    )
+    assert {"ck_agent_chat_messages_role"}.issubset(
+        await _check_constraint_names("agent_chat_messages")
+    )
+    assert {
+        "agent_chat_sessions_agent_id_fkey",
+        "agent_chat_sessions_application_id_fkey",
+        "agent_chat_sessions_user_id_fkey",
+    }.issubset(await _foreign_key_constraint_names("agent_chat_sessions"))
+    assert {"agent_chat_messages_session_id_fkey"}.issubset(
+        await _foreign_key_constraint_names("agent_chat_messages")
     )
     assert {
         "ck_documents_kind",
@@ -192,6 +238,14 @@ async def test_drop_and_create_db_and_tables_bootstraps_cell_doc_schema() -> Non
         await _check_constraint_names("conversation_participants")
     )
     assert {
+        "ix_agent_chat_sessions_agent",
+        "ix_agent_chat_sessions_application_id",
+        "ix_agent_chat_sessions_user_updated",
+    }.issubset(await _index_names("agent_chat_sessions"))
+    assert {
+        "ix_agent_chat_messages_session_created",
+    }.issubset(await _index_names("agent_chat_messages"))
+    assert {
         "ck_action_items_status",
         "ck_action_items_kind",
         "ck_action_items_priority",
@@ -215,6 +269,8 @@ async def test_create_db_and_tables_applies_head_without_document_activity_block
 
     assert await _table_exists("agents")
     assert await _table_exists("agent_runs")
+    assert await _table_exists("agent_chat_sessions")
+    assert await _table_exists("agent_chat_messages")
     assert await _table_exists("document_activities")
     assert (
         "document_activities_block_id_fkey"
@@ -223,6 +279,20 @@ async def test_create_db_and_tables_applies_head_without_document_activity_block
     assert {"ck_agents_kind"}.issubset(await _check_constraint_names("agents"))
     assert {"ck_agent_runs_trigger_kind", "ck_agent_runs_status"}.issubset(
         await _check_constraint_names("agent_runs")
+    )
+    assert {"ck_agent_chat_sessions_status"}.issubset(
+        await _check_constraint_names("agent_chat_sessions")
+    )
+    assert {"ck_agent_chat_messages_role"}.issubset(
+        await _check_constraint_names("agent_chat_messages")
+    )
+    assert {
+        "agent_chat_sessions_agent_id_fkey",
+        "agent_chat_sessions_application_id_fkey",
+        "agent_chat_sessions_user_id_fkey",
+    }.issubset(await _foreign_key_constraint_names("agent_chat_sessions"))
+    assert {"agent_chat_messages_session_id_fkey"}.issubset(
+        await _foreign_key_constraint_names("agent_chat_messages")
     )
 
 

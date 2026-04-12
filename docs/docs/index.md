@@ -65,7 +65,7 @@ Once you are oriented, the next layer usually is:
 - **[Work Locally](engineering/local-development)** — Run the stack locally and move through day-to-day workflow
 - **[See Merge Gates](engineering/ci-pipeline)** — Understand CI jobs, required checks, and candidate artifact builds
 - **[Track Release Readiness](engineering/release-roadmap)** — See current release posture and remaining launch phases
-- **[Prompt The Right Agent](engineering/copilot-prompt-cookbook)** — Choose the right workspace agent and structure prompts cleanly
-- **[Rewrite Weak Prompts](engineering/copilot-prompt-examples)** — Turn vague prompts into scoped implementation requests
+- **[Prompt The Right Agent](engineering/agentic-workflow-cookbook)** — Choose the right agentic entrypoint and structure prompts cleanly
+- **[Rewrite Weak Prompts](engineering/agentic-prompt-examples)** — Turn vague prompts into scoped implementation requests
 - **[Documentation Resources](reference/resources)** — All links to Baldin docs, APIs, admin, and repo files
 - **[Look Up Settings](reference/environment-variables)** — Find backend and frontend configuration details quickly

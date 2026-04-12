@@ -222,3 +222,144 @@ async def test_agent_delete_is_blocked_when_runs_exist(registered_user) -> None:
             await session.commit()
 
         await session.rollback()
+
+
+async def test_agent_chat_session_relationships_and_fk_behaviors(
+    registered_user,
+) -> None:
+    _, user_id, _ = registered_user
+
+    async with session_context() as session:
+        lead, application, _ = _build_session_context(user_id)
+        session.add_all([lead, application])
+        await session.flush()
+
+        agent = models.Agent(
+            user_id=user_id,
+            name="Chat Workspace",
+            kind="custom",
+        )
+        session.add(agent)
+        await session.flush()
+
+        chat_session = models.AgentChatSession(
+            agent_id=agent.id,
+            user_id=user_id,
+            application_id=application.id,
+            title="Workspace draft",
+            model_name="gpt-5.4-mini",
+        )
+        chat_message = models.AgentChatMessage(
+            role="user",
+            content="Need a sharper version of this draft.",
+        )
+        chat_session.messages.append(chat_message)
+        session.add(chat_session)
+        await session.commit()
+
+        db_agent = (
+            (
+                await session.execute(
+                    select(models.Agent)
+                    .options(selectinload(models.Agent.chat_sessions))
+                    .where(models.Agent.id == agent.id)
+                )
+            )
+            .scalars()
+            .one()
+        )
+        db_session = (
+            (
+                await session.execute(
+                    select(models.AgentChatSession)
+                    .options(
+                        selectinload(models.AgentChatSession.agent),
+                        selectinload(models.AgentChatSession.application),
+                        selectinload(models.AgentChatSession.messages),
+                    )
+                    .where(models.AgentChatSession.id == chat_session.id)
+                )
+            )
+            .scalars()
+            .one()
+        )
+        db_message = db_session.messages[0]
+
+        assert len(db_agent.chat_sessions) == 1
+        assert db_agent.chat_sessions[0].id == chat_session.id
+        assert db_session.agent.id == agent.id
+        assert db_session.application_id == application.id
+        assert db_session.status == "active"
+        assert db_session.message_count == 0
+        assert db_session.last_message_at is None
+        assert db_session.model_name == "gpt-5.4-mini"
+        assert db_message.session_id == chat_session.id
+        assert db_message.role == "user"
+        assert db_message.content == "Need a sharper version of this draft."
+        assert db_message.metadata_ == {}
+
+        await session.delete(application)
+        await session.commit()
+
+        reloaded_session = await session.get(models.AgentChatSession, chat_session.id)
+        assert reloaded_session is not None
+        assert reloaded_session.application_id is None
+
+        await session.delete(agent)
+        with pytest.raises(IntegrityError):
+            await session.commit()
+
+        await session.rollback()
+
+        await session.delete(reloaded_session)
+        await session.commit()
+
+        assert await session.get(models.AgentChatMessage, chat_message.id) is None
+
+
+async def test_agent_chat_session_and_message_check_constraints_reject_invalid_values(
+    registered_user,
+) -> None:
+    _, user_id, _ = registered_user
+
+    async with session_context() as session:
+        agent = models.Agent(
+            user_id=user_id,
+            name="Constraint Workspace",
+            kind="custom",
+        )
+        session.add(agent)
+        await session.flush()
+
+        session.add(
+            models.AgentChatSession(
+                agent_id=agent.id,
+                user_id=user_id,
+                status="paused",
+            )
+        )
+
+        with pytest.raises(IntegrityError):
+            await session.commit()
+
+        await session.rollback()
+
+        chat_session = models.AgentChatSession(
+            agent_id=agent.id,
+            user_id=user_id,
+        )
+        session.add(chat_session)
+        await session.flush()
+
+        session.add(
+            models.AgentChatMessage(
+                session_id=chat_session.id,
+                role="narrator",
+                content="Invalid role",
+            )
+        )
+
+        with pytest.raises(IntegrityError):
+            await session.commit()
+
+        await session.rollback()

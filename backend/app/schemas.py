@@ -1982,6 +1982,29 @@ class AgentRunStatus(str, Enum):
     FAILED = "failed"
 
 
+class AgentChatSessionStatus(str, Enum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+class AgentChatMessageRole(str, Enum):
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class AgentModelOptionRead(BaseSchema):
+    name: str = Field(description="Resolved model identifier")
+    label: str = Field(description="Human-readable model label")
+
+
+class AgentModelListRead(BaseSchema):
+    models: list[AgentModelOptionRead] = Field(
+        default_factory=list,
+        description="Available agent models that can be selected per agent",
+    )
+
+
 class AgentSummaryRead(BaseRead):
     user_id: UUID4 = Field(description="Owner identifier")
     name: str = Field(description="Agent definition name")
@@ -1997,7 +2020,10 @@ class AgentRead(AgentSummaryRead):
     )
     configuration: dict[str, Any] = Field(
         default_factory=dict,
-        description="Workflow-specific configuration payload",
+        description=(
+            "Workflow-specific configuration payload. Supports optional "
+            "`model_name` to override the default model for this agent."
+        ),
     )
 
 
@@ -2011,7 +2037,10 @@ class AgentCreate(BaseSchema):
     )
     configuration: dict[str, Any] = Field(
         default_factory=dict,
-        description="Workflow-specific configuration payload",
+        description=(
+            "Workflow-specific configuration payload. Supports optional "
+            "`model_name` to override the default model for this agent."
+        ),
     )
     is_enabled: bool = Field(True, description="Whether the agent can be launched")
 
@@ -2025,7 +2054,10 @@ class AgentUpdate(BaseSchema):
     )
     configuration: dict[str, Any] | None = Field(
         None,
-        description="Workflow-specific configuration payload",
+        description=(
+            "Workflow-specific configuration payload. Supports optional "
+            "`model_name` to override the default model for this agent."
+        ),
     )
     is_enabled: bool | None = Field(
         None,
@@ -2143,6 +2175,63 @@ class AgentRunCreate(BaseSchema):
     completed_at: datetime | None = Field(
         None,
         description="When the run finished successfully or failed",
+    )
+
+
+class AgentChatMessageRead(BaseSchema):
+    id: UUID4 = Field(description="Chat message identifier")
+    role: AgentChatMessageRole = Field(description="LLM chat role for this message")
+    content: str = Field(description="Persisted message content")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        alias="metadata_",
+        description="Structured metadata such as token usage or model version",
+    )
+    created_at: datetime = Field(description="When the message was created")
+
+
+class AgentChatMessageCreate(BaseSchema):
+    content: str = Field(description="User-authored message content")
+
+
+class AgentChatSessionSummaryRead(BaseRead):
+    agent_id: UUID4 = Field(description="Owning agent definition")
+    title: str | None = Field(
+        None,
+        description="Optional session title, typically derived from the first prompt",
+    )
+    model_name: str | None = Field(
+        None,
+        description="Snapshot of the model configured for the session",
+    )
+    status: AgentChatSessionStatus = Field(description="Session lifecycle status")
+    message_count: int = Field(description="Denormalized total number of messages")
+    last_message_at: datetime | None = Field(
+        None,
+        description="Timestamp of the most recent message in the session",
+    )
+    application_id: UUID4 | None = Field(
+        None,
+        description="Optional application context associated with the session",
+    )
+
+
+class AgentChatSessionRead(AgentChatSessionSummaryRead):
+    user_id: UUID4 = Field(description="Owner identifier")
+    messages: list[AgentChatMessageRead] = Field(
+        default_factory=list,
+        description="Recent messages loaded alongside the session",
+    )
+
+
+class AgentChatSessionCreate(BaseSchema):
+    application_id: UUID4 | None = Field(
+        None,
+        description="Optional application context used to seed the chat session",
+    )
+    title: str | None = Field(
+        None,
+        description="Optional session title. When omitted, the server may derive one.",
     )
 
 

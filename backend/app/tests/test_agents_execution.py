@@ -76,6 +76,7 @@ async def _create_agent(
     kind: str = "cover_letter",
     instructions: str | None = "Draft a structured workspace session",
     is_enabled: bool = True,
+    configuration: dict[str, object] | None = None,
 ) -> UUID:
     async with session_context() as session:
         agent = models.Agent(
@@ -84,6 +85,7 @@ async def _create_agent(
             kind=kind,
             instructions=instructions,
             is_enabled=is_enabled,
+            configuration=configuration or {},
         )
         session.add(agent)
         await session.commit()
@@ -157,6 +159,143 @@ async def _get_application_link(application_id: UUID, document_id: UUID):
         return result.scalars().first()
 
 
+async def test_run_agent_uses_agent_configured_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    captured: dict[str, object | None] = {}
+    resolved_model = object()
+
+    def _get_model(model_name: str | None = None):
+        captured["model_name"] = model_name
+        return resolved_model
+
+    def _generate_cover_letter(profile, job, template, model=None):
+        del profile, job, template
+        captured["model"] = model
+        return "Tailored cover letter draft."
+
+    monkeypatch.setattr(agents_route.conf.openai, "get_model", _get_model)
+    monkeypatch.setattr(agents_route, "generate_cover_letter", _generate_cover_letter)
+
+    async with _client() as client:
+        email, user_id = await _create_user("agent-run-explicit-model-pass")
+        headers = await _auth_headers(client, email, "agent-run-explicit-model-pass")
+        application_context = await _create_application_context(user_id)
+        await _create_pinned_resume(
+            user_id,
+            content="Experience for explicit model routing.",
+        )
+        agent_id = await _create_agent(
+            user_id,
+            configuration={"model_name": "gpt-5.4-mini-2026-03-17"},
+        )
+
+        response = await client.post(
+            f"/api/v1/agents/{agent_id}/run",
+            json={"application_id": str(application_context["application_id"])},
+            headers=headers,
+        )
+
+    assert response.status_code == 201, response.text
+    assert captured["model_name"] == "gpt-5.4-mini-2026-03-17"
+    assert captured["model"] is resolved_model
+
+
+async def test_run_agent_defaults_to_completion_model_when_model_name_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    captured: dict[str, object | None] = {}
+    resolved_model = object()
+
+    def _get_model(model_name: str | None = None):
+        captured["model_name"] = model_name
+        return resolved_model
+
+    def _generate_cover_letter(profile, job, template, model=None):
+        del profile, job, template
+        captured["model"] = model
+        return "Tailored cover letter draft."
+
+    monkeypatch.setattr(agents_route.conf.openai, "get_model", _get_model)
+    monkeypatch.setattr(agents_route, "generate_cover_letter", _generate_cover_letter)
+
+    async with _client() as client:
+        email, user_id = await _create_user("agent-run-default-model-pass")
+        headers = await _auth_headers(client, email, "agent-run-default-model-pass")
+        application_context = await _create_application_context(user_id)
+        await _create_pinned_resume(
+            user_id,
+            content="Experience for default model routing.",
+        )
+        agent_id = await _create_agent(user_id)
+
+        response = await client.post(
+            f"/api/v1/agents/{agent_id}/run",
+            json={"application_id": str(application_context["application_id"])},
+            headers=headers,
+        )
+
+    assert response.status_code == 201, response.text
+    assert captured["model_name"] is None
+    assert captured["model"] is resolved_model
+
+
+async def test_run_agent_returns_clear_error_for_invalid_model_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+
+    def _get_model(model_name: str | None = None):
+        raise ValueError(
+            f"Model {model_name} not found. Supported models: ['gpt-5.4-mini-2026-03-17']"
+        )
+
+    def _unexpected_generate_cover_letter(profile, job, template, model=None):
+        del profile, job, template, model
+        raise AssertionError("generate_cover_letter should not be called")
+
+    monkeypatch.setattr(agents_route.conf.openai, "get_model", _get_model)
+    monkeypatch.setattr(
+        agents_route, "generate_cover_letter", _unexpected_generate_cover_letter
+    )
+
+    async with _client() as client:
+        email, user_id = await _create_user("agent-run-invalid-model-pass")
+        headers = await _auth_headers(client, email, "agent-run-invalid-model-pass")
+        application_context = await _create_application_context(user_id)
+        await _create_pinned_resume(
+            user_id,
+            content="Experience for invalid model handling.",
+        )
+        agent_id = await _create_agent(
+            user_id,
+            configuration={"model_name": "does-not-exist"},
+        )
+
+        response = await client.post(
+            f"/api/v1/agents/{agent_id}/run",
+            json={"application_id": str(application_context["application_id"])},
+            headers=headers,
+        )
+
+    assert response.status_code == 400, response.text
+    assert "does-not-exist" in response.json()["detail"]
+
+    async with session_context() as session:
+        result = await session.execute(
+            select(models.AgentRun)
+            .where(models.AgentRun.agent_id == agent_id)
+            .order_by(models.AgentRun.created_at.desc(), models.AgentRun.id.desc())
+        )
+        failed_run = result.scalars().first()
+
+    assert failed_run is not None
+    assert failed_run.status == "failed"
+    assert "does-not-exist" in (failed_run.error_summary or "")
+
+
 async def test_run_agent_creates_new_session_and_pins_application_version(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -164,7 +303,7 @@ async def test_run_agent_creates_new_session_and_pins_application_version(
     monkeypatch.setattr(
         agents_route,
         "generate_cover_letter",
-        lambda profile, job, template: (
+        lambda profile, job, template, model=None: (
             "Tailored cover letter draft.\nReview the highlighted fit."
         ),
     )
@@ -255,7 +394,7 @@ async def test_run_agent_rerun_creates_new_version_and_updates_attachment_pin(
     monkeypatch.setattr(
         agents_route,
         "generate_cover_letter",
-        lambda profile, job, template: next(generated_drafts),
+        lambda profile, job, template, model=None: next(generated_drafts),
     )
 
     async with _client() as client:
@@ -344,7 +483,8 @@ async def test_run_agent_persists_failed_run_without_returning_500(
 ) -> None:
     await _ensure_db_ready()
 
-    def _raise_generation_error(profile, job, template):
+    def _raise_generation_error(profile, job, template, model=None):
+        del profile, job, template, model
         raise RuntimeError("LLM unavailable for Story 4 test")
 
     monkeypatch.setattr(agents_route, "generate_cover_letter", _raise_generation_error)
@@ -393,7 +533,7 @@ async def test_list_runs_by_session_document(
     monkeypatch.setattr(
         agents_route,
         "generate_cover_letter",
-        lambda profile, job, template: "Draft for session lookup test.",
+        lambda profile, job, template, model=None: "Draft for session lookup test.",
     )
 
     async with _client() as client:

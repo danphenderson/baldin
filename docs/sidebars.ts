@@ -42,7 +42,7 @@ const sidebars: SidebarsConfig = {
       label: 'Frontend UI System',
       items: [
         'architecture/frontend-design-system',
-        'engineering/design-system-catalog',
+        'reference/design-system-catalog',
         'engineering/design-system-workflow',
         'engineering/design-system-migration-guide',
         'engineering/phase-2-design-system-closeout',

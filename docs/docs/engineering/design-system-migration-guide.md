@@ -1,7 +1,7 @@
 ---
 slug: /engineering/design-system-migration-guide
 title: Design System Migration Guide
-description: Current adoption status, compatibility strategy, deferred work, and migration order for Baldin's frontend design-system rollout.
+description: Current adoption status, compatibility strategy, migrated surfaces, and next-step migration guidance for Baldin's frontend design-system rollout.
 ---
 
 <!-- last-verified: 2026-04-12 -->
@@ -17,10 +17,28 @@ This guide describes the migration that actually exists now. It is not a future-
 | Token and theme foundation | Complete | `frontend/src/design-system/tokens/*` and `theme/*` are active, and `theme-provider.tsx` consumes them |
 | Shared primitives | Complete for current Phase 2 scope | Feedback, surfaces, and status primitives are shipped |
 | Shared patterns | Complete for current Phase 2 scope | `CollectionToolbar` and `SectionCard` are shipped |
-| Compatibility wrappers | Active transitional layer | `component/common/*` now delegates to design-system primitives where migrated |
+| Compatibility wrappers and shims | Active transitional layer | `component/common/*`, `component/auth/*`, and `theme/*` still preserve older call sites |
 | Pilot adopters | Complete | Leads, applications queue, and profile all consume the shared layer |
 | Proving adopters | Partial | Conversations and agents prove reuse outside the pilot set |
 | Repo-wide adoption | Not complete | Many route families still use local or direct MUI implementations |
+
+## Phase 1 Foundation That Is Active Now
+
+The Phase 1 foundation is still the live base for every Phase 2 primitive and pattern:
+
+- `frontend/src/theme/theme-provider.tsx` now sources theme creation and mode helpers from `frontend/src/design-system/theme/*`.
+- `frontend/src/theme/effects.ts` and `frontend/src/theme/status-colors.ts` are compatibility shims over design-system token helpers.
+- `theme.palette.*` is the canonical access path for standard MUI semantic colors.
+- `theme.baldin.*` is the canonical access path for Baldin-only token groups such as `status`, `alpha`, `radius`, `elevation`, `motion`, and `fontFamily`.
+
+### Spacing Compatibility Caveat
+
+The foundation intentionally kept old MUI spacing behavior in place. `createBaldinTheme()` does not override `spacing`, so:
+
+- `theme.spacing()` still uses MUI's default 8px scale.
+- Shared design-system files use the 4px-based `spacingTokens` and `toSpacingPx(...)` helpers instead.
+
+That split is still real in the repo today. Future migrations should preserve it unless Baldin explicitly chooses a repo-wide spacing reset.
 
 ## What Was Migrated
 
@@ -37,7 +55,7 @@ What stayed feature-owned:
 
 - Lead extraction flow
 - Lead modal flow
-- Lead-specific CTA/status semantics
+- Lead-specific CTA and status semantics
 - Application-creation behavior
 
 ### Applications queue
@@ -86,11 +104,13 @@ These proving adopters matter because they confirm the shared APIs work outside 
 
 ## Compatibility Strategy
 
-The migration did not require a big-bang import rewrite. Baldin currently uses two compatibility paths:
+The migration did not require a big-bang import rewrite. Baldin currently uses four compatibility paths:
 
 | Path | Current rule |
 | --- | --- |
 | `frontend/src/component/common/*` | Allowed only as a thin compatibility facade backed by `frontend/src/design-system/*` |
+| `frontend/src/component/auth/*` | Treated as legacy shared source too; do not add new shared abstractions here |
+| `frontend/src/theme/effects.ts` and `frontend/src/theme/status-colors.ts` | Allowed only as re-export shims over the canonical token and theme layer |
 | Feature-local adapters like profile empty state or leads search bar | Allowed when they preserve feature copy, local prop shapes, or route-specific composition |
 
 Use a compatibility wrapper only when it lowers migration risk or preserves an existing public API. Do not use it as the long-term home for new shared logic.
@@ -119,6 +139,16 @@ Current rule:
 - Shared dialog framing lives in `FormDialogShell`.
 - Feature modules still own form fields, submit behavior, destructive messaging, and route copy.
 
+## Surfaces Using The Foundation Outside The Pilot
+
+The migration is not limited to the direct primitive and pattern adopters. These surfaces already consume the shared foundation without being Phase 2 primitive or pattern migrations:
+
+- `layout/app-layout.tsx` uses design-system motion tokens and theme effect helpers.
+- `page/companies.tsx`, `page/pipelines.tsx`, `page/crawlers.tsx`, and document workspace files use typography tokens or compatibility theme helpers.
+- `component/common/text.tsx`, `content-modal.tsx`, `error-boundary.tsx`, and `rich-text-editor.tsx` already consume design-system typography or effect helpers.
+
+That means the foundation is broader than the Phase 2 primitive and pattern catalog, even though repo-wide component migration is still incomplete.
+
 ## Deferred Work
 
 These items remain intentionally deferred and should stay documented as deferred until code lands:
@@ -137,10 +167,13 @@ These items remain intentionally deferred and should stay documented as deferred
 
 If migration work resumes, keep the order proportional:
 
-1. Finish obvious wrapper cleanups where the shared primitive already exists.
-2. Only extract `MetricStrip` after a second route family proves the same structure.
-3. Widen collection/card/dialog adoption in route families already close to the shipped APIs.
-4. Leave complex editor and admin surfaces for later unless they only need tokens or a simple primitive.
+1. Start with an existing primitive or pattern before proposing a new shared abstraction.
+2. Use thin compatibility wrappers only when they reduce migration risk or preserve a stable import path.
+3. Keep feature semantics, service logic, route copy, and entity rendering local even when the outer shell migrates.
+4. Finish obvious wrapper cleanups where the backing primitive already exists.
+5. Only extract a new shared surface such as `MetricStrip` after a second route family proves the same structure.
+6. Widen collection, card, and dialog adoption in route families already close to the shipped APIs before touching editor or admin-heavy surfaces.
+7. Update the catalog, workflow, and migration docs in the same change when the shared surface or adopter list changes.
 
 ## What Counts As Done
 
@@ -150,5 +183,6 @@ A migration slice is complete when:
 - Remaining wrappers are thin and documented.
 - Feature-owned logic stayed in the feature folder.
 - The catalog and this migration guide reflect the new state.
+- The smallest relevant validation for the touched shared surface was run.
 
 For the original Phase 2 closeout record, see [Close Out Phase 2 Design System](./phase-2-design-system-closeout.md).

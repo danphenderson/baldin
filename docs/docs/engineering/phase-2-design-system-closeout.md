@@ -11,7 +11,7 @@ description: Historical implementation closeout for the Phase 2 frontend design-
 This note is the historical Phase 2 closeout record. The canonical design-system source of truth now lives in:
 
 - [See Frontend Design System](../architecture/frontend-design-system.md)
-- [Design System Catalog](./design-system-catalog.md)
+- [Design System Catalog](../reference/design-system-catalog.md)
 - [Design System Workflow](./design-system-workflow.md)
 - [Design System Migration Guide](./design-system-migration-guide.md)
 

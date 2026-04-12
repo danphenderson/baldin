@@ -1,7 +1,7 @@
 ---
 slug: /engineering/design-system-workflow
 title: Design System Workflow
-description: Contribution rules, compatibility-wrapper policy, validation path, and decision criteria for Baldin's frontend design-system work.
+description: Contribution rules, compatibility policy, validation path, and migration decision criteria for Baldin's frontend design-system work.
 ---
 
 <!-- last-verified: 2026-04-12 -->
@@ -27,22 +27,34 @@ Keep code feature-owned when any of these are true:
 
 ## Shared-Layer Rules
 
-- Put new tokens in `frontend/src/design-system/tokens/*`.
+- Put new raw tokens in `frontend/src/design-system/tokens/*`.
 - Put new MUI mappings or theme extensions in `frontend/src/design-system/theme/*`.
 - Put new neutral leaf UI in `frontend/src/design-system/primitives/*`.
 - Put new structural composition in `frontend/src/design-system/patterns/*`.
 - Re-export shared additions through the nearest `index.ts` and through `frontend/src/design-system/index.ts` when they are public.
 - Document the new shared surface in the same change under `docs/docs/`.
 
-## Compatibility-Wrapper Policy
+## Theme Rules
 
-`frontend/src/component/common/*` is frozen as compatibility-only.
+Current theme usage rules:
+
+- Use `theme.palette.*` for standard MUI semantic roles.
+- Use `theme.baldin.*` for Baldin-only token groups such as `status`, `alpha`, `radius`, `elevation`, `motion`, and `fontFamily`.
+- Use `spacingTokens` and `toSpacingPx(...)` for new shared layout spacing.
+- Do not assume `theme.spacing()` matches Baldin's shared spacing tokens. It still uses MUI's default 8px scale for compatibility.
+
+If a value does not need runtime theme access, prefer the token file directly instead of widening `theme.baldin`.
+
+## Compatibility Policy
+
+`frontend/src/component/common/*`, `frontend/src/component/auth/*`, and the re-export shims under `frontend/src/theme/*` are compatibility-only.
 
 Allowed changes there:
 
 - Repoint a wrapper to a design-system primitive.
 - Translate legacy props into the canonical shared API.
 - Preserve stable imports while a migration remains in flight.
+- Add a pure re-export shim when that is the safest migration bridge.
 
 Disallowed changes there:
 
@@ -50,7 +62,7 @@ Disallowed changes there:
 - Expanding wrapper logic into a second source of truth.
 - Introducing new styling rules that should live in the shared primitive.
 
-If a wrapper must survive, keep it thin and document the backing primitive in [Design System Catalog](./design-system-catalog.md).
+If a wrapper or shim must survive, keep it thin and document the backing source in [Design System Catalog](../reference/design-system-catalog.md).
 
 ## Migration Checklist
 
@@ -76,6 +88,18 @@ Start with the smallest relevant check.
 
 For this repo, docs build is mandatory when these design-system docs or the sidebar change.
 
+## Required Docs And Test Expectations
+
+When adding or widening shared UI:
+
+- Update the canonical docs in the same change.
+- Update [Design System Catalog](../reference/design-system-catalog.md) when a shared surface, wrapper, or adopter inventory changes.
+- Update [Design System Migration Guide](./design-system-migration-guide.md) when rollout status or migrated surfaces change.
+- Update [Frontend Design System](../architecture/frontend-design-system.md) when the layer contract, theme contract, or ownership boundary changes.
+- Run the smallest relevant frontend validation for the touched shared surface, then widen to `tsc`, `build`, or `lint:theme` when the change affects public exports, bundling assumptions, or token and theme rules.
+
+This repo does not require a full frontend suite by default for every shared UI edit, but shared UI should not hand off without at least the smallest relevant proof.
+
 ## Do And Don't
 
 | Do | Don't |
@@ -85,11 +109,12 @@ For this repo, docs build is mandatory when these design-system docs or the side
 | Leave unstable product behavior in feature code | Abstract a component just because two pages both use a `Card` |
 | Preserve legacy call sites with thin wrappers when migration risk is high | Let wrappers become the primary implementation surface |
 | Update docs in the same change | Treat the closeout note as the only current source of truth |
+| Keep new shared-source files out of `component/common/*` and `component/auth/*` | Use those folders as a second design-system home |
 
 ## Current Defaults
 
 - Prefer the exported `frontend/src/design-system` barrel in feature code unless a narrower import is materially clearer.
-- Prefer global toasts for transient success/error feedback and `InlineFeedback` for persistent contextual feedback.
+- Prefer global toasts for transient success and error feedback and `InlineFeedback` for persistent contextual feedback.
 - Prefer `SectionHeader` plus `SectionCard` for reusable section framing instead of feature-local section chrome.
 - Keep `MetricStrip` local until a second route family proves the same structure.
 

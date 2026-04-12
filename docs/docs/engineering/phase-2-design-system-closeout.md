@@ -12,6 +12,7 @@ This note is the historical Phase 2 closeout record. The canonical design-system
 
 - [See Frontend Design System](../architecture/frontend-design-system.md)
 - [Design System Catalog](../reference/design-system-catalog.md)
+- [Design System Governance](./design-system-governance.md)
 - [Design System Workflow](./design-system-workflow.md)
 - [Design System Migration Guide](./design-system-migration-guide.md)
 

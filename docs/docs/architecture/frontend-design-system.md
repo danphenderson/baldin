@@ -11,7 +11,7 @@ description: Shipped frontend design-system architecture, theme contract, owners
 
 Baldin's frontend design system is a thin shared UI layer over MUI, not a separate component framework or redesign. It formalizes the Phase 1 theme and token foundation, adds the small Phase 2 primitive and pattern layer that now exists, and leaves product behavior inside feature code.
 
-Use this page for structure and ownership. Use [Design System Catalog](../reference/design-system-catalog.md) for the current inventory, [Design System Workflow](../engineering/design-system-workflow.md) for contribution rules, and [Design System Migration Guide](../engineering/design-system-migration-guide.md) for rollout status.
+Use this page for structure and ownership. Use [Design System Catalog](../reference/design-system-catalog.md) for the current inventory, [Design System Governance](../engineering/design-system-governance.md) for the operating rules, [Design System Workflow](../engineering/design-system-workflow.md) for contribution flow, and [Design System Migration Guide](../engineering/design-system-migration-guide.md) for rollout status.
 
 ## Current Source Layout
 

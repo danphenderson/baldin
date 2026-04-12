@@ -1,7 +1,7 @@
 ---
 slug: /engineering/design-system-workflow
 title: Design System Workflow
-description: Contribution rules, compatibility policy, validation path, and migration decision criteria for Baldin's frontend design-system work.
+description: Contribution flow, validation path, and practical handoff rules for Baldin's frontend design-system work.
 ---
 
 <!-- last-verified: 2026-04-12 -->
@@ -9,6 +9,8 @@ description: Contribution rules, compatibility policy, validation path, and migr
 # Design System Workflow
 
 Use this workflow when adding, extending, or migrating shared frontend UI. The goal is to keep the shared layer small, documented, and aligned with what is already proven in Baldin.
+
+Use [Design System Governance](./design-system-governance.md) for the durable operating rules, promotion criteria, wrapper lifecycle, reviewer checklist, and anti-drift guidance. Use this page for the day-to-day contribution flow.
 
 ## Start With The Ownership Decision
 
@@ -24,6 +26,8 @@ Keep code feature-owned when any of these are true:
 - The component owns workflow logic, stage semantics, entity-specific labels, or feature-only CTAs.
 - The shape is still unstable or only proven in one surface.
 - The simplest API would expose domain props like `application`, `lead`, `agentKind`, or feature-specific status rules.
+
+For the full promotion and feature-owned boundary rules, see [Design System Governance](./design-system-governance.md).
 
 ## Shared-Layer Rules
 
@@ -49,20 +53,13 @@ If a value does not need runtime theme access, prefer the token file directly in
 
 `frontend/src/component/common/*`, `frontend/src/component/auth/*`, and the re-export shims under `frontend/src/theme/*` are compatibility-only.
 
-Allowed changes there:
+In workflow terms:
 
-- Repoint a wrapper to a design-system primitive.
-- Translate legacy props into the canonical shared API.
-- Preserve stable imports while a migration remains in flight.
-- Add a pure re-export shim when that is the safest migration bridge.
+- Repoint wrappers to the canonical design-system source when that lowers migration risk.
+- Keep surviving wrappers thin.
+- Document the backing source in [Design System Catalog](../reference/design-system-catalog.md).
 
-Disallowed changes there:
-
-- Adding a brand-new shared abstraction.
-- Expanding wrapper logic into a second source of truth.
-- Introducing new styling rules that should live in the shared primitive.
-
-If a wrapper or shim must survive, keep it thin and document the backing source in [Design System Catalog](../reference/design-system-catalog.md).
+For deprecation and removal rules, use [Design System Governance](./design-system-governance.md).
 
 ## Migration Checklist
 
@@ -93,6 +90,7 @@ For this repo, docs build is mandatory when these design-system docs or the side
 When adding or widening shared UI:
 
 - Update the canonical docs in the same change.
+- Update [Design System Governance](./design-system-governance.md) when the operating rules or reviewer expectations change.
 - Update [Design System Catalog](../reference/design-system-catalog.md) when a shared surface, wrapper, or adopter inventory changes.
 - Update [Design System Migration Guide](./design-system-migration-guide.md) when rollout status or migrated surfaces change.
 - Update [Frontend Design System](../architecture/frontend-design-system.md) when the layer contract, theme contract, or ownership boundary changes.
@@ -120,12 +118,6 @@ This repo does not require a full frontend suite by default for every shared UI 
 
 ## When To Stop Sharing
 
-Do not widen the shared layer if the proposed API starts to require:
-
-- Entity-specific terminology
-- Route-specific filtering semantics
-- Local data-fetch timing
-- Service-layer error normalization
-- Feature-owned animation or editor behavior
+Do not widen the shared layer if the proposed API starts to require entity-specific terminology, route-specific filtering semantics, local data-fetch timing, service-layer error normalization, or feature-owned animation and editor behavior.
 
 At that point the design system has reached its current boundary, and the code should stay in the feature folder.

@@ -43,6 +43,7 @@ const sidebars: SidebarsConfig = {
       items: [
         'architecture/frontend-design-system',
         'reference/design-system-catalog',
+        'engineering/design-system-governance',
         'engineering/design-system-workflow',
         'engineering/design-system-migration-guide',
         'engineering/phase-2-design-system-closeout',

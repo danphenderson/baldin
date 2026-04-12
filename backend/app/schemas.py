@@ -2184,7 +2184,7 @@ class AgentChatMessageRead(BaseSchema):
     content: str = Field(description="Persisted message content")
     metadata: dict[str, Any] = Field(
         default_factory=dict,
-        alias="metadata_",
+        validation_alias="metadata_",
         description="Structured metadata such as token usage or model version",
     )
     created_at: datetime = Field(description="When the message was created")
@@ -2232,6 +2232,17 @@ class AgentChatSessionCreate(BaseSchema):
     title: str | None = Field(
         None,
         description="Optional session title. When omitted, the server may derive one.",
+    )
+
+
+class AgentChatSessionUpdate(BaseSchema):
+    title: str | None = Field(
+        None,
+        description="Optional session title override. Set to null to clear it.",
+    )
+    status: AgentChatSessionStatus | None = Field(
+        None,
+        description="Updated session lifecycle status",
     )
 
 

@@ -345,6 +345,24 @@ export interface paths {
     /** List Runs By Session */
     get: operations["list_runs_by_session_api_v1_agents_runs_get"];
   };
+  "/api/v1/agents/{id}/chat": {
+    /** List Agent Chat Sessions */
+    get: operations["list_agent_chat_sessions_api_v1_agents__id__chat_get"];
+    /** Create Agent Chat Session */
+    post: operations["create_agent_chat_session_api_v1_agents__id__chat_post"];
+  };
+  "/api/v1/agents/chat/{session_id}": {
+    /** Get Agent Chat Session */
+    get: operations["get_agent_chat_session_api_v1_agents_chat__session_id__get"];
+    /** Delete Agent Chat Session */
+    delete: operations["delete_agent_chat_session_api_v1_agents_chat__session_id__delete"];
+    /** Update Agent Chat Session */
+    patch: operations["update_agent_chat_session_api_v1_agents_chat__session_id__patch"];
+  };
+  "/api/v1/agents/chat/{session_id}/messages": {
+    /** Get Agent Chat Messages */
+    get: operations["get_agent_chat_messages_api_v1_agents_chat__session_id__messages_get"];
+  };
   "/api/v1/agents/{id}/run": {
     /** Run Agent */
     post: operations["run_agent_api_v1_agents__id__run_post"];
@@ -1128,6 +1146,187 @@ export interface components {
       page: number;
       /** Page Size */
       page_size: number;
+    };
+    /** AgentChatMessageRead */
+    AgentChatMessageRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description Chat message identifier
+       */
+      id: string;
+      /** @description LLM chat role for this message */
+      role: components["schemas"]["AgentChatMessageRole"];
+      /**
+       * Content
+       * @description Persisted message content
+       */
+      content: string;
+      /**
+       * Metadata
+       * @description Structured metadata such as token usage or model version
+       */
+      metadata?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Created At
+       * Format: date-time
+       * @description When the message was created
+       */
+      created_at: string;
+    };
+    /**
+     * AgentChatMessageRole
+     * @enum {string}
+     */
+    AgentChatMessageRole: "system" | "user" | "assistant";
+    /** AgentChatSessionCreate */
+    AgentChatSessionCreate: {
+      /**
+       * Application Id
+       * @description Optional application context used to seed the chat session
+       */
+      application_id?: string | null;
+      /**
+       * Title
+       * @description Optional session title. When omitted, the server may derive one.
+       */
+      title?: string | null;
+    };
+    /** AgentChatSessionRead */
+    AgentChatSessionRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Agent Id
+       * Format: uuid4
+       * @description Owning agent definition
+       */
+      agent_id: string;
+      /**
+       * Title
+       * @description Optional session title, typically derived from the first prompt
+       */
+      title?: string | null;
+      /**
+       * Model Name
+       * @description Snapshot of the model configured for the session
+       */
+      model_name?: string | null;
+      /** @description Session lifecycle status */
+      status: components["schemas"]["AgentChatSessionStatus"];
+      /**
+       * Message Count
+       * @description Denormalized total number of messages
+       */
+      message_count: number;
+      /**
+       * Last Message At
+       * @description Timestamp of the most recent message in the session
+       */
+      last_message_at?: string | null;
+      /**
+       * Application Id
+       * @description Optional application context associated with the session
+       */
+      application_id?: string | null;
+      /**
+       * User Id
+       * Format: uuid4
+       * @description Owner identifier
+       */
+      user_id: string;
+      /**
+       * Messages
+       * @description Recent messages loaded alongside the session
+       */
+      messages?: components["schemas"]["AgentChatMessageRead"][];
+    };
+    /**
+     * AgentChatSessionStatus
+     * @enum {string}
+     */
+    AgentChatSessionStatus: "active" | "archived";
+    /** AgentChatSessionSummaryRead */
+    AgentChatSessionSummaryRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      /**
+       * Agent Id
+       * Format: uuid4
+       * @description Owning agent definition
+       */
+      agent_id: string;
+      /**
+       * Title
+       * @description Optional session title, typically derived from the first prompt
+       */
+      title?: string | null;
+      /**
+       * Model Name
+       * @description Snapshot of the model configured for the session
+       */
+      model_name?: string | null;
+      /** @description Session lifecycle status */
+      status: components["schemas"]["AgentChatSessionStatus"];
+      /**
+       * Message Count
+       * @description Denormalized total number of messages
+       */
+      message_count: number;
+      /**
+       * Last Message At
+       * @description Timestamp of the most recent message in the session
+       */
+      last_message_at?: string | null;
+      /**
+       * Application Id
+       * @description Optional application context associated with the session
+       */
+      application_id?: string | null;
+    };
+    /** AgentChatSessionUpdate */
+    AgentChatSessionUpdate: {
+      /**
+       * Title
+       * @description Optional session title override. Set to null to clear it.
+       */
+      title?: string | null;
+      /** @description Updated session lifecycle status */
+      status?: components["schemas"]["AgentChatSessionStatus"] | null;
     };
     /** AgentCreate */
     AgentCreate: {
@@ -5722,6 +5921,58 @@ export interface components {
        */
       page_size?: number;
     };
+    /** PaginatedResponse[AgentChatMessageRead] */
+    PaginatedResponse_AgentChatMessageRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["AgentChatMessageRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[AgentChatSessionSummaryRead] */
+    PaginatedResponse_AgentChatSessionSummaryRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["AgentChatSessionSummaryRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
     /** PaginatedResponse[AgentRunSummaryRead] */
     PaginatedResponse_AgentRunSummaryRead_: {
       /**
@@ -8969,6 +9220,157 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["PaginatedResponse_AgentRunSummaryRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Agent Chat Sessions */
+  list_agent_chat_sessions_api_v1_agents__id__chat_get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedResponse_AgentChatSessionSummaryRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Agent Chat Session */
+  create_agent_chat_session_api_v1_agents__id__chat_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AgentChatSessionCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["AgentChatSessionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Agent Chat Session */
+  get_agent_chat_session_api_v1_agents_chat__session_id__get: {
+    parameters: {
+      query?: {
+        limit?: number;
+      };
+      path: {
+        session_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["AgentChatSessionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Agent Chat Session */
+  delete_agent_chat_session_api_v1_agents_chat__session_id__delete: {
+    parameters: {
+      path: {
+        session_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Agent Chat Session */
+  update_agent_chat_session_api_v1_agents_chat__session_id__patch: {
+    parameters: {
+      path: {
+        session_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AgentChatSessionUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["AgentChatSessionRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Agent Chat Messages */
+  get_agent_chat_messages_api_v1_agents_chat__session_id__messages_get: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+      path: {
+        session_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedResponse_AgentChatMessageRead_"];
         };
       };
       /** @description Validation Error */

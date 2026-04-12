@@ -274,10 +274,15 @@ def _build_agent_session_tiptap(
 
 
 def _resolve_agent_model(agent: models.Agent):
+    model_name = _snapshot_agent_model_name(agent)
+    return conf.openai.get_model(model_name)
+
+
+def _snapshot_agent_model_name(agent: models.Agent) -> str:
     configuration = agent.configuration if isinstance(agent.configuration, dict) else {}
     model_name = configuration.get("model_name")
     if model_name is None:
-        return conf.openai.get_model()
+        return conf.openai.COMPLETION_MODEL
     if not isinstance(model_name, str):
         raise HTTPException(
             status_code=400,
@@ -285,10 +290,11 @@ def _resolve_agent_model(agent: models.Agent):
         )
     normalized_model_name = model_name.strip()
     if not normalized_model_name:
-        return conf.openai.get_model()
+        return conf.openai.COMPLETION_MODEL
 
     try:
-        return conf.openai.get_model(normalized_model_name)
+        conf.openai.get_model(normalized_model_name)
+        return normalized_model_name
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -474,6 +480,156 @@ def _serialize_session_context(
         },
         "live_block_tree": live_block_tree or [],
     }
+
+
+def _summarize_user_profile(user_profile: models.User) -> str:
+    name = " ".join(
+        part.strip()
+        for part in [user_profile.first_name or "", user_profile.last_name or ""]
+        if part and part.strip()
+    )
+    lines: list[str] = []
+    if name:
+        lines.append(f"Name: {name}")
+    if user_profile.headline:
+        lines.append(f"Headline: {user_profile.headline.strip()}")
+    if user_profile.bio:
+        lines.append(f"Bio: {user_profile.bio.strip()}")
+    skill_names = [
+        skill.name.strip()
+        for skill in user_profile.skills
+        if getattr(skill, "name", None) and skill.name.strip()
+    ]
+    if skill_names:
+        lines.append(f"Skills: {', '.join(skill_names[:10])}")
+    experience_titles = [
+        experience.title.strip()
+        for experience in user_profile.experiences
+        if getattr(experience, "title", None) and experience.title.strip()
+    ]
+    if experience_titles:
+        lines.append(f"Experience: {', '.join(experience_titles[:5])}")
+    return "\n".join(lines) if lines else "No profile summary available."
+
+
+def _summarize_application_context(application: models.Application | None) -> str:
+    if application is None:
+        return "No application context attached."
+    lead = application.lead
+    company_names = ", ".join(
+        company.name.strip()
+        for company in getattr(lead, "companies", [])
+        if getattr(company, "name", None) and company.name.strip()
+    )
+    lines = [
+        f"Role: {lead.title.strip()}" if lead.title else "Role: Unknown",
+        f"Company: {company_names}" if company_names else "Company: Unknown",
+        f"Stage: {getattr(application.stage, 'value', str(application.stage))}",
+    ]
+    if application.next_step:
+        lines.append(f"Next step: {application.next_step.strip()}")
+    return "\n".join(lines)
+
+
+def _summarize_pinned_resume(document: models.Document | None) -> str:
+    if document is None:
+        return "No pinned resume available."
+    head_version = document.head_version
+    content = ""
+    if head_version and head_version.content:
+        content = head_version.content.strip()
+    snippet = content[:500]
+    lines = [f"Title: {document.title}"]
+    if snippet:
+        lines.append(f"Summary: {snippet}")
+    return "\n".join(lines)
+
+
+def _build_agent_chat_system_message(
+    *,
+    agent: models.Agent,
+    application: models.Application | None,
+    user_profile: models.User,
+    pinned_resume: models.Document | None,
+) -> str:
+    sections = [
+        f"Agent: {agent.name}",
+        (
+            f"Instructions:\n{agent.instructions.strip()}"
+            if agent.instructions and agent.instructions.strip()
+            else "Instructions:\nNo additional instructions provided."
+        ),
+        f"Application Context:\n{_summarize_application_context(application)}",
+        f"User Profile:\n{_summarize_user_profile(user_profile)}",
+        f"Pinned Resume:\n{_summarize_pinned_resume(pinned_resume)}",
+    ]
+    return "\n\n".join(sections)
+
+
+async def _load_agent_chat_session(
+    db: AsyncSession,
+    *,
+    session_id: UUID,
+    user_id,
+) -> models.AgentChatSession:
+    result = await db.execute(
+        select(models.AgentChatSession)
+        .options(
+            selectinload(models.AgentChatSession.agent),
+            selectinload(models.AgentChatSession.application).selectinload(
+                models.Application.lead
+            ),
+        )
+        .where(models.AgentChatSession.id == session_id)
+    )
+    session = result.scalars().unique().first()
+    if session is None:
+        raise HTTPException(status_code=404, detail="Chat session not found")
+    if session.user_id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to access this chat session",
+        )
+    return session
+
+
+async def _load_recent_chat_messages(
+    db: AsyncSession,
+    *,
+    session_id: UUID,
+    limit: int,
+) -> list[models.AgentChatMessage]:
+    result = await db.execute(
+        select(models.AgentChatMessage)
+        .where(models.AgentChatMessage.session_id == session_id)
+        .order_by(
+            desc(models.AgentChatMessage.created_at),
+            desc(models.AgentChatMessage.id),
+        )
+        .limit(limit)
+    )
+    messages = result.scalars().all()
+    messages.reverse()
+    return messages
+
+
+def _serialize_agent_chat_message(
+    message: models.AgentChatMessage,
+) -> schemas.AgentChatMessageRead:
+    return schemas.AgentChatMessageRead.model_validate(message)
+
+
+def _serialize_agent_chat_session(
+    session: models.AgentChatSession,
+    *,
+    messages: list[models.AgentChatMessage],
+) -> schemas.AgentChatSessionRead:
+    summary = schemas.AgentChatSessionSummaryRead.model_validate(session)
+    return schemas.AgentChatSessionRead(
+        **summary.model_dump(),
+        user_id=session.user_id,
+        messages=[_serialize_agent_chat_message(message) for message in messages],
+    )
 
 
 def _build_agent_input_context(
@@ -683,6 +839,215 @@ async def list_runs_by_session(
         page=page,
         page_size=page_size,
     )
+
+
+@router.post("/{id}/chat", status_code=201, response_model=schemas.AgentChatSessionRead)
+async def create_agent_chat_session(
+    payload: schemas.AgentChatSessionCreate,
+    agent: models.Agent = Depends(get_agent),
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not agent.is_enabled:
+        raise HTTPException(status_code=409, detail="Agent is disabled")
+
+    application: models.Application | None = None
+    if payload.application_id is not None:
+        application = await _load_application_for_run(
+            db,
+            application_id=payload.application_id,
+            user_id=user.id,
+        )
+
+    user_profile = await _load_user_profile_for_run(db, user_id=user.id)
+    pinned_resume = await _load_pinned_resume_for_run(db, user_id=user.id)
+    created_at = datetime.now(timezone.utc)
+
+    chat_session = models.AgentChatSession(
+        agent_id=agent.id,
+        user_id=user.id,
+        application_id=application.id if application is not None else None,
+        title=payload.title,
+        model_name=_snapshot_agent_model_name(agent),
+        status=schemas.AgentChatSessionStatus.ACTIVE.value,
+        message_count=1,
+        last_message_at=created_at,
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    chat_session.messages.append(
+        models.AgentChatMessage(
+            role=schemas.AgentChatMessageRole.SYSTEM.value,
+            content=_build_agent_chat_system_message(
+                agent=agent,
+                application=application,
+                user_profile=user_profile,
+                pinned_resume=pinned_resume,
+            ),
+            created_at=created_at,
+            updated_at=created_at,
+        )
+    )
+    db.add(chat_session)
+    await db.commit()
+
+    created_session = await _load_agent_chat_session(
+        db,
+        session_id=chat_session.id,
+        user_id=user.id,
+    )
+    messages = await _load_recent_chat_messages(
+        db,
+        session_id=chat_session.id,
+        limit=50,
+    )
+    return _serialize_agent_chat_session(created_session, messages=messages)
+
+
+@router.get(
+    "/{id}/chat",
+    response_model=schemas.PaginatedResponse[schemas.AgentChatSessionSummaryRead],
+)
+async def list_agent_chat_sessions(
+    agent: models.Agent = Depends(get_agent),
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=500),
+):
+    base = select(models.AgentChatSession).where(
+        models.AgentChatSession.agent_id == agent.id,
+        models.AgentChatSession.user_id == user.id,
+    )
+
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = count_result.scalar_one()
+
+    result = await db.execute(
+        base.order_by(
+            desc(models.AgentChatSession.last_message_at).nulls_last(),
+            desc(models.AgentChatSession.updated_at),
+            desc(models.AgentChatSession.id),
+        )
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+
+    return schemas.PaginatedResponse[schemas.AgentChatSessionSummaryRead](
+        items=result.scalars().all(),
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get("/chat/{session_id}", response_model=schemas.AgentChatSessionRead)
+async def get_agent_chat_session(
+    session_id: UUID,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    limit: int = Query(50, ge=1, le=200),
+):
+    chat_session = await _load_agent_chat_session(
+        db,
+        session_id=session_id,
+        user_id=user.id,
+    )
+    messages = await _load_recent_chat_messages(
+        db,
+        session_id=chat_session.id,
+        limit=limit,
+    )
+    return _serialize_agent_chat_session(chat_session, messages=messages)
+
+
+@router.get(
+    "/chat/{session_id}/messages",
+    response_model=schemas.PaginatedResponse[schemas.AgentChatMessageRead],
+)
+async def get_agent_chat_messages(
+    session_id: UUID,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+):
+    chat_session = await _load_agent_chat_session(
+        db,
+        session_id=session_id,
+        user_id=user.id,
+    )
+
+    base = select(models.AgentChatMessage).where(
+        models.AgentChatMessage.session_id == chat_session.id
+    )
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = count_result.scalar_one()
+
+    result = await db.execute(
+        base.order_by(
+            models.AgentChatMessage.created_at.asc(),
+            models.AgentChatMessage.id.asc(),
+        )
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+
+    return schemas.PaginatedResponse[schemas.AgentChatMessageRead](
+        items=[
+            _serialize_agent_chat_message(message) for message in result.scalars().all()
+        ],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.patch("/chat/{session_id}", response_model=schemas.AgentChatSessionRead)
+async def update_agent_chat_session(
+    session_id: UUID,
+    payload: schemas.AgentChatSessionUpdate,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    chat_session = await _load_agent_chat_session(
+        db,
+        session_id=session_id,
+        user_id=user.id,
+    )
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(chat_session, field, value)
+
+    await db.commit()
+
+    updated_session = await _load_agent_chat_session(
+        db,
+        session_id=session_id,
+        user_id=user.id,
+    )
+    messages = await _load_recent_chat_messages(
+        db,
+        session_id=session_id,
+        limit=50,
+    )
+    return _serialize_agent_chat_session(updated_session, messages=messages)
+
+
+@router.delete("/chat/{session_id}", status_code=204, response_model=None)
+async def delete_agent_chat_session(
+    session_id: UUID,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    chat_session = await _load_agent_chat_session(
+        db,
+        session_id=session_id,
+        user_id=user.id,
+    )
+    await db.delete(chat_session)
+    await db.commit()
+    return None
 
 
 @router.post("/{id}/run", status_code=201, response_model=schemas.AgentRunRead)

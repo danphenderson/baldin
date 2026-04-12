@@ -80,6 +80,7 @@ def get_configuration(
     user: schemas.UserRead = Depends(get_current_user),
 ) -> ConfigurationResponse:
     """Endpoint to show server configuration."""
+    conf.openai.require_enabled("Extractor configuration")
     res = {
         "available_models": sorted(conf.openai.SUPPORTED_MODELS),  # Deprecate
         "models": [
@@ -141,10 +142,6 @@ SUGGEST_PROMPT = ChatPromptTemplate.from_messages(
     ]
 )
 
-suggestion_chain = SUGGEST_PROMPT | conf.openai.get_model().with_structured_output(
-    schema=ExtractorDefinition  # type: ignore
-).with_config({"run_name": "suggest"})
-
 UPDATE_PROMPT = ChatPromptTemplate.from_messages(
     [
         (
@@ -165,12 +162,23 @@ UPDATE_PROMPT = ChatPromptTemplate.from_messages(
     ]
 )
 
-UPDATE_CHAIN = (
-    UPDATE_PROMPT
-    | conf.openai.get_model().with_structured_output(  # noqa: W503
-        schema=ExtractorDefinition  # type: ignore
-    )
-).with_config({"run_name": "suggest_update"})
+
+def _build_suggestion_chain():
+    return (
+        SUGGEST_PROMPT
+        | conf.openai.get_model().with_structured_output(
+            schema=ExtractorDefinition  # type: ignore
+        )
+    ).with_config({"run_name": "suggest"})
+
+
+def _build_update_chain():
+    return (
+        UPDATE_PROMPT
+        | conf.openai.get_model().with_structured_output(  # noqa: W503
+            schema=ExtractorDefinition  # type: ignore
+        )
+    ).with_config({"run_name": "suggest_update"})
 
 
 async def _create_extractor_version_snapshot(
@@ -211,15 +219,18 @@ async def suggest_extractor(
 ) -> ExtractorDefinition:
     # TODO: Have this take a bool query parameter signaling to create a new extractor
     """Suggest an extractor based on a description."""
+    conf.openai.require_enabled("Extractor suggestion")
     if suggest_extractor.json_schema:
-        res = await UPDATE_CHAIN.ainvoke(
+        res = await _build_update_chain().ainvoke(
             {
                 "input": suggest_extractor.description,
                 "json_schema": suggest_extractor.json_schema,
             }  # type: ignore
         )
     else:
-        res = await suggestion_chain.ainvoke({"input": suggest_extractor.description})  # type: ignore
+        res = await _build_suggestion_chain().ainvoke(
+            {"input": suggest_extractor.description}
+        )  # type: ignore
 
     console_log.warning(f"Suggested extractor: {res}")
     return res

@@ -75,7 +75,7 @@ def _pytest_database_runtime_error() -> RuntimeError:
         "Unable to connect to the PYTEST database at "
         f"{conf.settings.TEST_DATABASE_HOSTNAME}:{conf.settings.TEST_DATABASE_PORT}. "
         "Start the local test_db service with `docker compose up -d test_db` "
-        "or update backend/.env TEST_DATABASE_* settings."
+        "or update backend/.env, backend/.env.local, or the process env TEST_DATABASE_* settings."
     )
 
 

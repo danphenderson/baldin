@@ -11,6 +11,7 @@ import {
 import type { UserRead, UserUpdate } from '../../../service/users';
 import { avatarUrl } from '../../../service/users';
 import { PageTitle } from '../../../component/common/text';
+import { brandGradient, softBrandGradient } from '../../../theme/effects';
 
 export interface SectionCounts {
   skills: number;
@@ -81,9 +82,10 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
     <Card
       sx={{
         mb: 3,
-        background: theme.palette.mode === 'dark'
-          ? `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.12)}, ${alpha(theme.palette.secondary.dark, 0.06)})`
-          : `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.06)}, ${alpha(theme.palette.secondary.light, 0.04)})`,
+        background: softBrandGradient(theme, {
+          startOpacity: theme.palette.mode === 'dark' ? 0.12 : 0.06,
+          endOpacity: theme.palette.mode === 'dark' ? 0.06 : 0.04,
+        }),
       }}
     >
       <CardContent sx={{ p: { xs: 2.5, sm: 4 } }}>
@@ -163,7 +165,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                   width: 72, height: 72, fontSize: '1.75rem', fontWeight: 800,
                   background: resolvedAvatarSrc
                     ? undefined
-                    : `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                    : brandGradient(theme),
                   flexShrink: 0,
                 }}
               >

@@ -71,7 +71,7 @@ def _password_validation_reason(password: str) -> str | None:
 def _invalid_default_superuser_password_error(reason: str) -> RuntimeError:
     message = (
         "Configured FIRST_SUPERUSER_PASSWORD is invalid for automatic startup bootstrap. "
-        f"{reason} Update backend/.env and restart the docker-compose stack."
+        f"{reason} Update backend/.env, backend/.env.local, or the process environment and restart the docker-compose stack."
     )
     console_log.error(message)
     return RuntimeError(message)

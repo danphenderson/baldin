@@ -22,13 +22,15 @@ Use this skill to triage Baldin's local Docker Compose workflow, identify the sm
 - `docs/docs/getting-started/contributing.md`
 - `README.md`
 - `docker-compose.yml`
-- `backend/.env.example`
+- `backend/.env`
+- `frontend/.env`
 - `scripts/reset_local_db.sh`
 - `scripts/repair_local_db_collation.sh`
 
 ## Default Assumptions
 
 - Baldin is local-first. `docker-compose up --build` is the default supported developer path.
+- Repo-tracked `backend/.env` and `frontend/.env` provide safe local defaults in every worktree. Real secrets should come from process env or ignored `.env.local` overrides.
 - The local stack includes four services: `db`, `test_db`, `web`, and `frontend`.
 - Local Postgres data lives under `backend/public/db` and `backend/public/test_db`.
 - Host-run backend tests use `TEST_DATABASE_HOSTNAME=127.0.0.1` and `TEST_DATABASE_PORT=5431`.
@@ -42,7 +44,8 @@ Use this skill to triage Baldin's local Docker Compose workflow, identify the sm
    - Is the failure in Docker Compose startup, backend startup, frontend startup, backend tests, or database health?
    - Determine whether the user is running inside the Compose stack or outside containers.
 2. Check the minimum environment assumptions.
-   - Confirm `backend/.env` exists or can be derived from `backend/.env.example`.
+   - Confirm repo-tracked `backend/.env` and `frontend/.env` exist in the worktree.
+   - Confirm whether required secrets such as `OPENAI_API_KEY` are present in process env or an ignored `.env.local` override.
    - Confirm the expected local ports: frontend 5173, API 8004, db 5432, test_db 5431.
    - Confirm whether the user needs to preserve local database contents.
 3. Choose the smallest recovery path.

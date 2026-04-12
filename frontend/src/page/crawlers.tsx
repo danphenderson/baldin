@@ -34,7 +34,9 @@ import {
   getCrawlerRuns, triggerCrawlerRun, cancelCrawlerRun, pauseCrawlerRun, resumeCrawlerRun,
   retryCrawlerRun,
 } from '../service/crawlers';
+import { monoFontFamily } from '../design-system/tokens/typography';
 import { getStatusColors } from '../theme/status-colors';
+import { softBrandGradient } from '../theme/effects';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -269,7 +271,12 @@ const CrawlerPipelineCard: React.FC<{
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)}, ${alpha(theme.palette.secondary.main, 0.10)})`,
+                background: softBrandGradient(theme, {
+                  startTone: 'main',
+                  endTone: 'main',
+                  startOpacity: 0.14,
+                  endOpacity: 0.1,
+                }),
               }}
             >
               <CrawlerIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
@@ -361,7 +368,7 @@ const CrawlerPipelineCard: React.FC<{
 
         {/* Query definition summary */}
         {pipe.query_definition && Object.keys(pipe.query_definition).length > 0 && (
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', fontFamily: 'monospace', fontSize: '0.65rem' }} noWrap>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', fontFamily: monoFontFamily, fontSize: '0.65rem' }} noWrap>
             {JSON.stringify(pipe.query_definition).slice(0, 120)}
             {JSON.stringify(pipe.query_definition).length > 120 ? '…' : ''}
           </Typography>
@@ -567,7 +574,7 @@ const PipelineFormDialog: React.FC<{
             size="small"
             error={!isValidJson(form[key] as string)}
             helperText={!isValidJson(form[key] as string) ? 'Invalid JSON' : undefined}
-            slotProps={{ input: { sx: { fontFamily: 'monospace', fontSize: '0.8rem' } } }}
+            slotProps={{ input: { sx: { fontFamily: monoFontFamily, fontSize: '0.8rem' } } }}
           />
         ))}
       </DialogContent>

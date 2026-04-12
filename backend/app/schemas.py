@@ -2245,6 +2245,12 @@ class AgentChatSessionUpdate(BaseSchema):
         description="Updated session lifecycle status",
     )
 
+    @model_validator(mode="after")
+    def reject_null_status(self) -> "AgentChatSessionUpdate":
+        if "status" in self.model_fields_set and self.status is None:
+            raise ValueError("status cannot be null")
+        return self
+
 
 # Crawler schemas
 

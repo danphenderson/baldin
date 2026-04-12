@@ -5,7 +5,7 @@ title: Look Up Settings
 description: Look up runtime configuration, derived startup behavior, and the settings most likely to matter.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-12 -->
 
 # Look Up Settings
 
@@ -15,7 +15,13 @@ Use this page as the reference source for configuration. If you are setting up t
 
 ## Backend (`backend/.env`)
 
-Copy `backend/.env.example` to `backend/.env` for local development.
+`backend/.env` is checked into the repo as a safe local-default baseline. Override it with optional `backend/.env.local` values or process env vars when you need real secrets or user-specific local settings.
+
+Precedence order:
+
+1. `backend/.env`
+2. `backend/.env.local`
+3. process environment variables
 
 ### Required
 
@@ -57,7 +63,7 @@ Copy `backend/.env.example` to `backend/.env` for local development.
 
 | Variable | Purpose |
 |----------|---------|
-| `OPENAI_API_KEY` | Enables AI-assisted extraction and automation features |
+| `OPENAI_API_KEY` | Enables AI-assisted extraction and automation features. Keep real values in process env or `backend/.env.local`. |
 | `OPENAI_COMPLETION_MODEL` | Optional override for the completion model |
 | `OPENAI_DEFAULT_MODEL` | Optional override for the default chat model |
 
@@ -99,6 +105,8 @@ Related runtime toggles exposed through settings:
 | Variable | Purpose |
 |----------|---------|
 | `VITE_API_URL` | Backend API base URL. Required for production builds; must be a non-localhost origin. |
+
+`frontend/.env` is also checked into the repo as a safe local-default baseline. Override it with `frontend/.env.local` or process env at startup when you need different local values.
 
 For local development, `VITE_API_URL` is typically set to `http://localhost:8004` in `frontend/.env`.
 

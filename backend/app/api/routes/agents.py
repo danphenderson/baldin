@@ -33,6 +33,34 @@ def _json_dumps(data: Any) -> str:
     return json.dumps(data, default=str)
 
 
+def _normalize_agent_configuration(configuration: Any) -> dict[str, Any]:
+    if configuration is None or not isinstance(configuration, dict):
+        return {}
+
+    normalized_configuration = dict(configuration)
+    model_name = normalized_configuration.get("model_name")
+    if model_name is None:
+        return normalized_configuration
+    if not isinstance(model_name, str):
+        raise HTTPException(
+            status_code=400,
+            detail="Agent configuration model_name must be a string",
+        )
+
+    normalized_model_name = model_name.strip()
+    if not normalized_model_name:
+        normalized_configuration.pop("model_name", None)
+        return normalized_configuration
+
+    try:
+        conf.openai.get_model(normalized_model_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    normalized_configuration["model_name"] = normalized_model_name
+    return normalized_configuration
+
+
 def _compact_error_summary(detail: Any, *, max_length: int = 500) -> str:
     if isinstance(detail, str):
         message = detail
@@ -279,24 +307,11 @@ def _resolve_agent_model(agent: models.Agent):
 
 
 def _snapshot_agent_model_name(agent: models.Agent) -> str:
-    configuration = agent.configuration if isinstance(agent.configuration, dict) else {}
+    configuration = _normalize_agent_configuration(agent.configuration)
     model_name = configuration.get("model_name")
     if model_name is None:
         return conf.openai.COMPLETION_MODEL
-    if not isinstance(model_name, str):
-        raise HTTPException(
-            status_code=400,
-            detail="Agent configuration model_name must be a string",
-        )
-    normalized_model_name = model_name.strip()
-    if not normalized_model_name:
-        return conf.openai.COMPLETION_MODEL
-
-    try:
-        conf.openai.get_model(normalized_model_name)
-        return normalized_model_name
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return model_name
 
 
 async def _load_application_for_run(
@@ -771,6 +786,7 @@ async def list_agents(
 async def list_agent_models(
     _user: schemas.UserRead = Depends(get_current_user),
 ) -> schemas.AgentModelListRead:
+    conf.openai.require_enabled("Agent model listing")
     supported_models = conf.openai.SUPPORTED_MODELS
     return {
         "models": [
@@ -786,8 +802,12 @@ async def create_agent(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    payload_data = payload.model_dump(exclude_unset=True)
+    payload_data["configuration"] = _normalize_agent_configuration(
+        payload.configuration
+    )
     agent = models.Agent(
-        **payload.model_dump(exclude_unset=True),
+        **payload_data,
         user_id=user.id,
     )
     db.add(agent)
@@ -1109,6 +1129,7 @@ async def run_agent(
     run_id = run.id
 
     try:
+        conf.openai.require_enabled("Agent execution")
         model = _resolve_agent_model(agent)
         if agent.kind != schemas.AgentKind.COVER_LETTER.value:
             raise HTTPException(
@@ -1255,7 +1276,13 @@ async def update_agent(
     agent: models.Agent = Depends(get_agent),
     db: AsyncSession = Depends(get_async_session),
 ):
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    payload_data = payload.model_dump(exclude_unset=True)
+    if "configuration" in payload_data:
+        payload_data["configuration"] = _normalize_agent_configuration(
+            payload_data["configuration"]
+        )
+
+    for field, value in payload_data.items():
         setattr(agent, field, value)
 
     await db.commit()
@@ -1268,23 +1295,27 @@ async def delete_agent(
     agent: models.Agent = Depends(get_agent),
     db: AsyncSession = Depends(get_async_session),
 ):
+    conflict_detail = "Agent cannot be deleted while runs or chat sessions still exist"
+
     existing_run = await db.execute(
         select(models.AgentRun.id).where(models.AgentRun.agent_id == agent.id).limit(1)
     )
     if existing_run.scalar_one_or_none() is not None:
-        raise HTTPException(
-            status_code=409,
-            detail="Agent cannot be deleted after runs have been recorded",
-        )
+        raise HTTPException(status_code=409, detail=conflict_detail)
+
+    existing_chat_session = await db.execute(
+        select(models.AgentChatSession.id)
+        .where(models.AgentChatSession.agent_id == agent.id)
+        .limit(1)
+    )
+    if existing_chat_session.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail=conflict_detail)
 
     await db.delete(agent)
     try:
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail="Agent cannot be deleted after runs have been recorded",
-        ) from exc
+        raise HTTPException(status_code=409, detail=conflict_detail) from exc
 
     return None

@@ -31,6 +31,7 @@ import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import type { ApplicationRead } from '../../service/applications';
 import { getStatusColors } from '../../theme/status-colors';
 import { PageTitle } from '../../component/common/text';
+import { softBrandGradient } from '../../theme/effects';
 import {
   useApplications, useStageColumns, COLUMN_EMPTY_HINTS, relativeDate, nextStage,
   applicationDocumentCount,
@@ -543,7 +544,12 @@ const EmptyState: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'center',
           mb: 3,
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)}, ${alpha(theme.palette.secondary.main, 0.15)})`,
+          background: softBrandGradient(theme, {
+            startTone: 'main',
+            endTone: 'main',
+            startOpacity: 0.15,
+            endOpacity: 0.15,
+          }),
         }}
       >
         <AssignmentIcon sx={{ fontSize: 36, color: theme.palette.primary.main }} />

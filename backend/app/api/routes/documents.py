@@ -47,6 +47,7 @@ from app.api.routes.seed_tasks import (
     build_user_seed_creator,
     schedule_seed_operation,
 )
+from app.core import conf
 from app.core.document_blocks import (
     block_ids_by_tiptap_path,
     block_snapshot_to_blocks,
@@ -1367,6 +1368,7 @@ async def generate_document(
             status_code=501,
             detail=f"Generation for kind '{kind.value}' is not yet supported",
         )
+    conf.openai.require_enabled("Document generation")
 
     # Load lead
     lead = await get_lead(payload.lead_id, db)
@@ -2438,6 +2440,7 @@ async def search_documents(
     Perform a semantic similarity search across the authenticated user's
     embedded documents using pgvector cosine distance.
     """
+    conf.openai.require_enabled("Document semantic search")
     from app.core.vector_store import PGVectorStore
 
     store = PGVectorStore(db)
@@ -2464,6 +2467,7 @@ async def embed_document(
     in pgvector for later semantic search.  Replaces any existing embeddings
     for the same document.
     """
+    conf.openai.require_enabled("Document embeddings")
     from app.core.langchain import chunk_text
     from app.core.vector_store import PGVectorStore
 

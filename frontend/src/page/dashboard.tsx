@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { PageTitle, SectionTitle } from '../component/common/text';
+import { progressGradient } from '../theme/effects';
 import {
   Add as AddIcon,
   Bolt as BoltIcon,
@@ -1061,7 +1062,7 @@ const DashboardPage: React.FC = () => {
                                           width: `${width}%`,
                                           height: '100%',
                                           borderRadius: 999,
-                                          background: `linear-gradient(90deg, ${alpha(color, 0.68)} 0%, ${color} 100%)`,
+                                          background: progressGradient(color),
                                         }}
                                       />
                                     </Box>

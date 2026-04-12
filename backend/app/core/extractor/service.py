@@ -206,6 +206,7 @@ async def run_extractor(
     retry_of_id: UUID4 | None = None,
 ) -> schemas.ExtractorResponse:
     await log.info(f"Running extractor {extractor.name} with payload {payload}")
+    conf.openai.require_enabled("Extractor execution")
 
     pipeline = await _get_or_create_extractor_pipeline(extractor, user, db)
     text, file_source_path = await _resolve_extractor_input_text(
@@ -238,6 +239,14 @@ async def run_extractor(
             extractor=extractor,
             payload=payload,
         )
+    except HTTPException as exc:
+        await _finalize_failure_event(
+            event_id=event.id,
+            extractor=extractor,
+            error=exc,
+            db=db,
+        )
+        raise
     except Exception as exc:
         await _finalize_failure_event(
             event_id=event.id,

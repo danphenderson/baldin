@@ -10,6 +10,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import { extractPlainTextFromDocumentContent } from '../../component/document-content';
+import { monoFontFamily } from '../../design-system/tokens/typography';
 import {
   getVersion, getDocument, createVersion,
   type DocumentVersionRead, type DocumentDetailRead, type DocumentVersionCreate,
@@ -352,7 +353,7 @@ const DocumentComparePage: React.FC = () => {
             </Typography>
           </Box>
         ) : (
-          <Box component="pre" sx={{ m: 0, p: 0, fontFamily: 'monospace', fontSize: '0.8rem' }}>
+          <Box component="pre" sx={{ m: 0, p: 0, fontFamily: monoFontFamily, fontSize: '0.8rem' }}>
             {diffLines.map((line, idx) => (
               <Box
                 key={idx}

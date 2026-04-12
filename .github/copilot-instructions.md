@@ -13,6 +13,7 @@ Use `AGENTS.md` as the shared repo baseline. This file preserves the same expect
 
 - Default to the local `docker-compose.yml` stack from the repo root with `docker-compose up --build` unless the task explicitly needs an outside-container loop.
 - Keep the stack running while you work. `web` uses Uvicorn reload and `frontend` uses Vite HMR, so the normal loop is inspect -> patch -> smoke-check, not restart-everything.
+- Repo-tracked `backend/.env` and `frontend/.env` provide safe local defaults for every worktree. Put real secrets in Copilot or Codex env vars, or ignored `backend/.env.local` / `frontend/.env.local`.
 - Running backend or frontend outside Compose is a secondary debug path. If you run backend tests from the host, use `127.0.0.1:5431` for `test_db`; inside Compose the hostname is `test_db`.
 - If local schema drift blocks work and local data is disposable, use `./scripts/reset_local_db.sh`. Use `./scripts/repair_local_db_collation.sh` only for PostgreSQL collation mismatch recovery when keeping local data matters.
 
@@ -27,7 +28,7 @@ Use `AGENTS.md` as the shared repo baseline. This file preserves the same expect
 - During active editing, run the smallest useful smoke check first. Treat full suites, broad docs builds, and CI-style validation as follow-up unless the changed surface clearly requires them.
 - If backend API routes or schemas change during active development, prefer `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` so contract regeneration works before files are staged.
 - Do not hand-edit `openapi.json`, `frontend/src/schema.d.ts`, or `docs/build/**`.
-- Contract regeneration imports the backend app. Ensure backend env requirements are present, including a non-empty `OPENAI_API_KEY`; a dummy local value is acceptable when real API access is not needed.
+- Contract regeneration imports the backend app. Use the tracked `backend/.env` baseline and supply a non-empty `OPENAI_API_KEY` through process env or `backend/.env.local`; a dummy local value is acceptable when real API access is not needed.
 
 ## Copilot-Specific Surfaces
 

@@ -7,6 +7,7 @@ import {
 import { AutoAwesome as LogoIcon, Visibility, VisibilityOff, Email, Lock } from '@mui/icons-material';
 import { login, mfaLoginVerify } from '../service/auth';
 import { UserContext } from '../context/user-context';
+import { brandGradient, brandHoverGradient } from '../theme/effects';
 
 const LoginPage: React.FC = () => {
   const theme = useTheme();
@@ -21,6 +22,8 @@ const LoginPage: React.FC = () => {
   // MFA challenge state
   const [mfaToken, setMfaToken] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState('');
+  const brandBg = brandGradient(theme);
+  const brandBgHover = brandHoverGradient(theme);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +69,7 @@ const LoginPage: React.FC = () => {
             sx={{
               width: 56, height: 56, borderRadius: '16px', mx: 'auto', mb: 2,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              background: brandBg,
               boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}`,
             }}
           >
@@ -98,9 +101,9 @@ const LoginPage: React.FC = () => {
                 disabled={loading || mfaCode.length !== 6}
                 sx={{
                   py: 1.5, fontSize: '1rem',
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  background: brandBg,
                   '&:hover': {
-                    background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+                    background: brandBgHover,
                     boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
                   },
                 }}
@@ -131,7 +134,7 @@ const LoginPage: React.FC = () => {
           sx={{
             width: 56, height: 56, borderRadius: '16px', mx: 'auto', mb: 2,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            background: brandBg,
             boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}`,
           }}
         >
@@ -173,9 +176,9 @@ const LoginPage: React.FC = () => {
               fullWidth type="submit" variant="contained" size="large" disabled={loading}
               sx={{
                 py: 1.5, fontSize: '1rem',
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                background: brandBg,
                 '&:hover': {
-                  background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+                  background: brandBgHover,
                   boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
                 },
               }}

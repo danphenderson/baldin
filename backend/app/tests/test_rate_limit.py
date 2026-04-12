@@ -22,6 +22,13 @@ password_helper = PasswordHelper()
 _db_ready = False
 
 
+@pytest.fixture(autouse=True)
+def _configure_openai_for_rate_limit_tests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(conf.openai, "API_KEY", "test-openai-key")
+
+
 @asynccontextmanager
 async def _client():
     transport = ASGITransport(app=app)
@@ -82,9 +89,11 @@ async def test_suggest_extractor_rate_limit_returns_429():
     async with _client() as client:
         headers = await _auth_headers(client, email, password)
 
-        mock_result = AsyncMock(return_value={"json_schema": "{}", "instruction": ""})
+        mock_result = AsyncMock(return_value={"json_schema": "{}"})
         mock_chain = SimpleNamespace(ainvoke=mock_result)
-        with patch("app.api.routes.extractor.suggestion_chain", mock_chain):
+        with patch(
+            "app.api.routes.extractor._build_suggestion_chain", return_value=mock_chain
+        ):
             statuses = []
             for _ in range(7):
                 resp = await client.post(

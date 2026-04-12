@@ -34,6 +34,7 @@ import {
 } from '../service/data-orchestration';
 import { getStatusColors } from '../theme/status-colors';
 import { mutedGradient, jsonTreeTheme, ALPHA_CHIP, ALPHA_BORDER } from '../theme/effects';
+import { monoFontFamily } from '../design-system/tokens/typography';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -932,7 +933,7 @@ const PipelinesPage: React.FC = () => {
               }
               slotProps={{
                 input: {
-                  sx: { fontFamily: 'monospace', fontSize: '0.85rem' },
+                  sx: { fontFamily: monoFontFamily, fontSize: '0.85rem' },
                 },
               }}
             />
@@ -994,7 +995,7 @@ const PipelinesPage: React.FC = () => {
               }
               slotProps={{
                 input: {
-                  sx: { fontFamily: 'monospace', fontSize: '0.85rem' },
+                  sx: { fontFamily: monoFontFamily, fontSize: '0.85rem' },
                 },
               }}
             />
@@ -1048,7 +1049,7 @@ const PipelinesPage: React.FC = () => {
               }
               slotProps={{
                 input: {
-                  sx: { fontFamily: 'monospace', fontSize: '0.85rem' },
+                  sx: { fontFamily: monoFontFamily, fontSize: '0.85rem' },
                 },
               }}
             />

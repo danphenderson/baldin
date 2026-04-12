@@ -22,6 +22,13 @@ password_helper = PasswordHelper()
 _db_ready = False
 
 
+@pytest.fixture(autouse=True)
+def _configure_openai_for_agent_execution_tests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(conf.openai, "API_KEY", "test-openai-key")
+
+
 @asynccontextmanager
 async def _client() -> AsyncGenerator[AsyncClient, None]:
     transport = ASGITransport(app=app)
@@ -238,7 +245,7 @@ async def test_run_agent_defaults_to_completion_model_when_model_name_missing(
         )
 
     assert response.status_code == 201, response.text
-    assert captured["model_name"] is None
+    assert captured["model_name"] == conf.openai.COMPLETION_MODEL
     assert captured["model"] is resolved_model
 
 

@@ -22,6 +22,13 @@ password_helper = PasswordHelper()
 _db_ready = False
 
 
+@pytest.fixture(autouse=True)
+def _configure_openai_for_agent_route_tests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(conf.openai, "API_KEY", "test-openai-key")
+
+
 @asynccontextmanager
 async def _client() -> AsyncGenerator[AsyncClient, None]:
     transport = ASGITransport(app=app)
@@ -328,6 +335,36 @@ async def test_create_agent_returns_201() -> None:
     assert body["user_id"] == str(user_id)
     assert body["configuration"] == {}
     assert body["is_enabled"] is True
+
+
+async def test_create_agent_rejects_invalid_configuration_model_name() -> None:
+    await _ensure_db_ready()
+    invalid_name = f"Invalid Model Agent {utils.random_lower_string(6)}"
+
+    async with _client() as client:
+        email, user_id = await _create_user("agent-create-invalid-model-pass")
+        headers = await _auth_headers(client, email, "agent-create-invalid-model-pass")
+
+        response = await client.post(
+            "/api/v1/agents/",
+            json=_agent_payload(
+                name=invalid_name,
+                configuration={"model_name": "does-not-exist"},
+            ),
+            headers=headers,
+        )
+
+    assert response.status_code == 400
+
+    async with session_context() as session:
+        persisted_agent = await session.execute(
+            select(models.Agent.id).where(
+                models.Agent.user_id == user_id,
+                models.Agent.name == invalid_name,
+            )
+        )
+
+    assert persisted_agent.scalar_one_or_none() is None
 
 
 async def test_list_agents_filters_by_kind_and_owner() -> None:
@@ -769,6 +806,37 @@ async def test_update_and_delete_agent_chat_session() -> None:
     assert remaining_message.scalar_one_or_none() is None
 
 
+async def test_update_agent_chat_session_rejects_null_status() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-null-status-pass")
+        headers = await _auth_headers(client, email, "agent-chat-null-status-pass")
+        agent_id = await _create_agent(
+            user_id,
+            name="Null Status Agent",
+            kind="custom",
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            title="Keep active",
+        )
+
+        response = await client.patch(
+            f"/api/v1/agents/chat/{session_id}",
+            json={"status": None},
+            headers=headers,
+        )
+
+    assert response.status_code == 422
+
+    async with session_context() as session:
+        chat_session = await session.get(models.AgentChatSession, session_id)
+
+    assert chat_session is not None
+    assert chat_session.status == "active"
+
+
 async def test_update_agent_only_mutates_supported_fields() -> None:
     await _ensure_db_ready()
     async with _client() as client:
@@ -806,6 +874,33 @@ async def test_update_agent_only_mutates_supported_fields() -> None:
     assert body["kind"] == "outreach"
 
 
+async def test_update_agent_rejects_invalid_configuration_model_name() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-update-invalid-model-pass")
+        headers = await _auth_headers(client, email, "agent-update-invalid-model-pass")
+        agent_id = await _create_agent(
+            user_id,
+            name="Invalid Update Agent",
+            kind="custom",
+            configuration={"tone": "formal"},
+        )
+
+        response = await client.patch(
+            f"/api/v1/agents/{agent_id}",
+            json={"configuration": {"tone": "formal", "model_name": "does-not-exist"}},
+            headers=headers,
+        )
+
+    assert response.status_code == 400
+
+    async with session_context() as session:
+        agent = await session.get(models.Agent, agent_id)
+
+    assert agent is not None
+    assert agent.configuration == {"tone": "formal"}
+
+
 async def test_delete_agent_hard_deletes_when_no_runs_exist() -> None:
     await _ensure_db_ready()
     async with _client() as client:
@@ -835,6 +930,33 @@ async def test_delete_agent_with_runs_returns_409() -> None:
 
     assert response.status_code == 409
     assert "cannot be deleted" in response.json()["detail"].lower()
+
+    async with session_context() as session:
+        agent = await session.get(models.Agent, agent_id)
+
+    assert agent is not None
+
+
+async def test_delete_agent_with_chat_sessions_returns_409() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-delete-chat-pass")
+        headers = await _auth_headers(client, email, "agent-delete-chat-pass")
+        agent_id = await _create_agent(
+            user_id,
+            name="Delete Chat Agent",
+            kind="custom",
+        )
+        await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            title="Retained thread",
+        )
+
+        response = await client.delete(f"/api/v1/agents/{agent_id}", headers=headers)
+
+    assert response.status_code == 409
+    assert "chat sessions" in response.json()["detail"].lower()
 
     async with session_context() as session:
         agent = await session.get(models.Agent, agent_id)

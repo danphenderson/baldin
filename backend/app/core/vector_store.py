@@ -12,7 +12,6 @@ from abc import ABC, abstractmethod
 from typing import Any
 from uuid import UUID
 
-from langchain_openai import OpenAIEmbeddings
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,13 +20,6 @@ from app.logging import get_logger
 from app.models import DocumentEmbedding
 
 logger = get_logger(__name__)
-
-
-def _get_embeddings_client() -> OpenAIEmbeddings:
-    return OpenAIEmbeddings(
-        model=conf.openai.EMBEDDING_MODEL,
-        dimensions=conf.openai.EMBEDDING_DIMENSIONS,
-    )
 
 
 class BaseVectorStore(ABC):
@@ -64,7 +56,7 @@ class PGVectorStore(BaseVectorStore):
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
-        self._embeddings = _get_embeddings_client()
+        self._embeddings = conf.openai.get_embeddings()
 
     async def add_texts(
         self,

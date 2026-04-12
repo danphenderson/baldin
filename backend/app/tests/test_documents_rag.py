@@ -8,6 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app import models, schemas
+from app.core import conf
 from app.core import orchestration as orchestration_core
 from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
 from app.core.rag.state import LeadEnrichmentDraft, active_rag_event_id
@@ -16,6 +17,13 @@ from app.tests import utils
 
 password_helper = PasswordHelper()
 _db_ready = False
+
+
+@pytest.fixture(autouse=True)
+def _configure_openai_for_documents_rag_tests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(conf.openai, "API_KEY", "test-openai-key")
 
 
 @asynccontextmanager

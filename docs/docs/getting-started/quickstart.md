@@ -5,7 +5,7 @@ title: Boot The Stack
 description: Boot the local stack quickly, then jump to workflow, API access, and configuration details.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-12 -->
 
 # Boot The Stack
 
@@ -27,7 +27,19 @@ Optional local toolchain if you want to work outside containers:
 
 1. **Clone** the repository.
 
-2. **Create your environment file.** Copy `backend/.env.example` to `backend/.env` and review the values:
+2. **Review the tracked environment defaults.** The repo already includes safe local-default `backend/.env` and `frontend/.env` files for every worktree.
+
+3. **Provide real secrets outside tracked files.** Use Codex UI env vars, shell exports, or ignored `.env.local` overrides for any real secrets or user-specific credentials:
+
+   ```bash
+   export OPENAI_API_KEY=your-key-here
+
+   # Optional ignored local overrides for non-Codex development
+   cp backend/.env backend/.env.local
+   cp frontend/.env frontend/.env.local
+   ```
+
+   Keep real secrets out of the tracked `.env` files.
 
    | Variable | Purpose |
    |----------|---------|
@@ -37,13 +49,13 @@ Optional local toolchain if you want to work outside containers:
    | `FIRST_SUPERUSER_EMAIL` | Bootstrap admin email for local stack |
    | `FIRST_SUPERUSER_PASSWORD` | Bootstrap admin password for local stack |
 
-3. **Start the local stack** from the repository root:
+4. **Start the local stack** from the repository root:
 
    ```bash
    docker-compose up --build
    ```
 
-4. **Open the local services:**
+5. **Open the local services:**
 
    | Service | URL |
    |---------|-----|

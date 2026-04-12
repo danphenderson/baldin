@@ -17,6 +17,7 @@ import type { LeadRead } from '../service/leads';
 import type { ApplicationCreationIntent } from '../service/applications';
 import ApplicationIntentButton from './application-intent-button';
 import { timeAgo } from '../util/format';
+import { brandGradient } from '../theme/effects';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -76,7 +77,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
 }) => {
   const theme = useTheme();
   const companyName = lead.companies?.[0]?.name;
-  const gradientBg = `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`;
+  const gradientBg = brandGradient(theme);
   const otherInterestCount = getOtherInterestCount(lead);
   const canEdit = Boolean(lead.viewer_permissions?.can_update_shared_fields);
   const canDelete = Boolean(lead.viewer_permissions?.can_delete_shared_lead);

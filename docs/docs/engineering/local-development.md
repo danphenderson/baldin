@@ -5,11 +5,13 @@ title: Work Locally
 description: Work locally with Docker Compose first, then use the shortest smoke-check loop that proves the change.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-12 -->
 
 # Work Locally
 
 Baldin uses Docker Compose as the local-first entry point. All seven app services start with a single command.
+
+Repo-tracked `backend/.env` and `frontend/.env` provide safe local defaults in every worktree. Put real secrets such as `OPENAI_API_KEY` in process env or ignored `backend/.env.local` / `frontend/.env.local` overrides.
 
 If you use Baldin's workspace skills, `/baldin-local-stack-doctor` helps triage local Compose failures, `test_db` connectivity problems, schema-drift resets, and PostgreSQL collation-repair decisions.
 

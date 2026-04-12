@@ -1,6 +1,8 @@
 import React from 'react';
 import { Box, Typography, Button } from '@mui/material';
 import { ErrorOutline as ErrorIcon } from '@mui/icons-material';
+import { monoFontFamily } from '../../design-system/tokens/typography';
+import { brandGradient } from '../../theme/effects';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -61,8 +63,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
           sx={{
             fontWeight: 800,
             mb: 1,
-            background: (theme) =>
-              `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            background: (theme) => brandGradient(theme),
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}
@@ -91,7 +92,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
               borderRadius: 1,
               bgcolor: 'action.hover',
               color: 'error.main',
-              fontFamily: 'monospace',
+              fontFamily: monoFontFamily,
               textAlign: 'left',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',

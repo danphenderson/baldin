@@ -34,12 +34,13 @@ import { UserContext } from '../context/user-context';
 import { logout as logoutApi } from '../service/auth';
 import { getUnreadCount } from '../service/messages';
 import { useThemeMode } from '../theme/theme-provider';
-import { sidebarGradient } from '../theme/effects';
+import { brandGradient, sidebarGradient } from '../theme/effects';
 import { avatarUrl } from '../service/users';
 import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-header-context';
 import SecondaryNavBar from '../component/common/secondary-nav-bar';
 import ErrorBoundary from '../component/common/error-boundary';
 import UserAvatar from '../component/common/user-avatar';
+import { motionTokens } from '../design-system/tokens/motion';
 import {
   getSecondaryNavItems,
   drawerSections,
@@ -90,7 +91,7 @@ function collectDefaultExpanded(items: NavigationItem[], state: Record<string, b
 }
 
 const HEADER_ACTION_DIAL_ID = 'header-account-actions';
-const HEADER_ACTION_STAGGER_MS = 70;
+const HEADER_ACTION_STAGGER_MS = motionTokens.stagger.headerAction;
 
 const AppLayout: React.FC = () => {
   const theme = useTheme();
@@ -137,7 +138,7 @@ const AppLayout: React.FC = () => {
   }, [token, fetchUnread]);
 
   const drawerWidth = collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH;
-  const textTransition = 'opacity 0.2s ease, max-width 0.2s ease';
+  const textTransition = `opacity ${motionTokens.duration.standard}ms ${motionTokens.easing.standard}, max-width ${motionTokens.duration.standard}ms ${motionTokens.easing.standard}`;
   const accountRailWidth = isCompactToolbar ? 184 : 270;
   const secondaryNavItems = getSecondaryNavItems(location.pathname)
     ?.filter((item) => !item.superuserOnly || user?.is_superuser) ?? null;
@@ -504,7 +505,7 @@ const AppLayout: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  background: brandGradient(theme),
                 }}
               >
                 <AutoAwesomeIcon sx={{ color: theme.palette.common.white, fontSize: 20 }} />
@@ -513,7 +514,7 @@ const AppLayout: React.FC = () => {
                 variant="h6"
                 sx={{
                   fontWeight: 800,
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  background: brandGradient(theme),
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   opacity: 1,
@@ -820,7 +821,7 @@ const AppLayout: React.FC = () => {
                           fontWeight: 700,
                           background: userAvatarSrc
                             ? undefined
-                            : `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                            : brandGradient(theme),
                         }}
                       />
                     </Badge>

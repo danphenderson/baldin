@@ -61,6 +61,13 @@ class _FakeDB:
         self.refresh_count += 1
 
 
+@pytest.fixture(autouse=True)
+def _configure_openai_for_runtime_tests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(conf.openai, "API_KEY", "test-openai-key")
+
+
 def _build_upload_file(
     *,
     file_name: str,

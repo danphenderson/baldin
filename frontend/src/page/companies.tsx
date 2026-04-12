@@ -29,6 +29,8 @@ import { components } from '../schema';
 import { timeAgo, monogram, monogramColor } from '../util/format';
 import EmptyState from '../component/common/empty-state';
 import ApplicationIntentButton from '../component/application-intent-button';
+import { displayFontFamily } from '../design-system/tokens/typography';
+import { accentGradient, brandGradient, softBrandGradient } from '../theme/effects';
 
 type LeadRead = components['schemas']['LeadRead'];
 
@@ -267,7 +269,12 @@ const CompaniesPage: React.FC = () => {
       <Card
         sx={{
           mb: 3,
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.07)}, ${alpha(theme.palette.secondary.main, 0.07)})`,
+          background: softBrandGradient(theme, {
+            startTone: 'main',
+            endTone: 'main',
+            startOpacity: 0.07,
+            endOpacity: 0.07,
+          }),
           border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
         }}
       >
@@ -311,7 +318,7 @@ const CompaniesPage: React.FC = () => {
                 px: 3,
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                background: brandGradient(theme),
               }}
             >
               {extracting ? 'Extracting…' : 'Extract'}
@@ -451,10 +458,10 @@ const CompaniesPage: React.FC = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          background: `linear-gradient(135deg, ${alpha(mc, 0.15)}, ${alpha(mc, 0.05)})`,
+                          background: accentGradient(mc, { startOpacity: 0.15, endOpacity: 0.05 }),
                           border: `1px solid ${alpha(mc, 0.2)}`,
                           color: mc,
-                          fontFamily: '"Space Grotesk", sans-serif',
+                          fontFamily: displayFontFamily,
                           fontWeight: 700,
                           fontSize: '0.95rem',
                           letterSpacing: '0.04em',

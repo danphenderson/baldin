@@ -1,5 +1,6 @@
 import React from 'react';
 import Typography, { type TypographyProps } from '@mui/material/Typography';
+import { monoFontFamily, typographyRoles } from '../../design-system/tokens/typography';
 
 /* ------------------------------------------------------------------ */
 /*  Text primitives                                                    */
@@ -13,43 +14,61 @@ type TextProps = Omit<TypographyProps, 'variant'>;
 
 /** Primary page heading (h5, 700). */
 export const PageTitle: React.FC<TextProps> = (props) => (
-  <Typography variant="h5" fontWeight={700} lineHeight={1.2} {...props} />
+  <Typography
+    variant={typographyRoles.pageTitle.variant}
+    fontWeight={typographyRoles.pageTitle.fontWeight}
+    lineHeight={typographyRoles.pageTitle.lineHeight}
+    {...props}
+  />
 );
 
 /** Card / panel section heading (h6, 800, tight tracking). */
 export const SectionTitle: React.FC<TextProps> = (props) => (
   <Typography
-    variant="h6"
-    fontWeight={800}
-    lineHeight={1.1}
-    letterSpacing="-0.02em"
+    variant={typographyRoles.sectionTitle.variant}
+    fontWeight={typographyRoles.sectionTitle.fontWeight}
+    lineHeight={typographyRoles.sectionTitle.lineHeight}
+    letterSpacing={typographyRoles.sectionTitle.letterSpacing}
     {...props}
   />
 );
 
 /** Card title or list-row title (body1, 700). */
 export const CardTitle: React.FC<TextProps> = (props) => (
-  <Typography variant="body1" fontWeight={700} {...props} />
+  <Typography
+    variant={typographyRoles.cardTitle.variant}
+    fontWeight={typographyRoles.cardTitle.fontWeight}
+    {...props}
+  />
 );
 
 /** Secondary emphasis text — bold body (body2, 600). */
 export const Label: React.FC<TextProps> = (props) => (
-  <Typography variant="body2" fontWeight={600} {...props} />
+  <Typography
+    variant={typographyRoles.label.variant}
+    fontWeight={typographyRoles.label.fontWeight}
+    {...props}
+  />
 );
 
 /** Metadata, timestamps, secondary info (caption, text.secondary). */
 export const Caption: React.FC<TextProps> = (props) => (
-  <Typography variant="caption" color="text.secondary" lineHeight={1.2} {...props} />
+  <Typography
+    variant={typographyRoles.caption.variant}
+    color={typographyRoles.caption.color}
+    lineHeight={typographyRoles.caption.lineHeight}
+    {...props}
+  />
 );
 
 /** Section-divider label — uppercased, spaced (overline). */
 export const Overline: React.FC<TextProps> = (props) => (
   <Typography
-    variant="overline"
-    color="text.secondary"
-    fontSize="0.6875rem"
-    letterSpacing="0.08em"
-    lineHeight={1}
+    variant={typographyRoles.eyebrow.variant}
+    color={typographyRoles.eyebrow.color}
+    fontSize={typographyRoles.eyebrow.fontSize}
+    letterSpacing={typographyRoles.eyebrow.letterSpacing}
+    lineHeight={typographyRoles.eyebrow.lineHeight}
     {...props}
   />
 );
@@ -57,9 +76,9 @@ export const Overline: React.FC<TextProps> = (props) => (
 /** Inline monospace for code, IDs, JSON keys. */
 export const Mono: React.FC<TextProps> = (props) => (
   <Typography
-    variant="body2"
-    fontFamily="'JetBrains Mono', monospace"
-    fontSize="0.8125rem"
+    variant={typographyRoles.code.variant}
+    fontFamily={monoFontFamily}
+    fontSize={typographyRoles.code.fontSize}
     {...props}
   />
 );

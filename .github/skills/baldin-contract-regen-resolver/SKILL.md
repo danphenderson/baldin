@@ -22,7 +22,7 @@ Use this skill to decide whether Baldin's generated API contract needs regenerat
 - `docs/docs/engineering/testing.md`
 - `docs/docs/getting-started/contributing.md`
 - `.github/workflows/ci.yml`
-- `backend/.env.example`
+- `backend/.env`
 - `backend/app/core/conf.py`
 - `backend/app/schemas.py`
 - `backend/app/api/**/*.py`
@@ -35,7 +35,7 @@ Use this skill to decide whether Baldin's generated API contract needs regenerat
 - `openapi.json` and `frontend/src/schema.d.ts` are generated artifacts. Never hand-edit them.
 - Regeneration is required whenever the public FastAPI request or response surface changes.
 - The checked-in script only auto-runs when staged changes include `backend/app/schemas.py` or `backend/app/api/**/*.py`, unless `SCHEMA_UPDATE_FORCE=1` is set.
-- The script imports `app.main`, so backend env readiness matters during contract generation. A non-empty `OPENAI_API_KEY` is part of the backend example env and can be required for app import.
+- The script imports `app.main`, so backend env readiness matters during contract generation. Use the tracked `backend/.env` baseline and provide a non-empty `OPENAI_API_KEY` through process env or `backend/.env.local` when app import needs it.
 - CI is the final freshness guard, not the first discovery mechanism. Prefer catching stale contract state locally before merge.
 
 ## Procedure
@@ -47,7 +47,7 @@ Use this skill to decide whether Baldin's generated API contract needs regenerat
 2. Run preflight checks.
    - Confirm a usable Python interpreter exists for backend app import.
    - Confirm frontend dependencies are available so `npm exec openapi-typescript` can run.
-   - Confirm backend env values are sufficient for app import, especially `OPENAI_API_KEY`.
+   - Confirm backend env values are sufficient for app import, especially `OPENAI_API_KEY` from process env or `backend/.env.local`.
    - If the user is working from unstaged changes or broader validation, decide whether `SCHEMA_UPDATE_FORCE=1` is required.
 3. Execute regeneration through the repo script.
    - Prefer `./scripts/update_frontend_schemas.sh`.

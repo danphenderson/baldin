@@ -54,6 +54,13 @@ services:
     env_file:
       - ./backend/.env
     environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LINKEDIN_USERNAME: ${LINKEDIN_USERNAME:-}
+      LINKEDIN_PASSWORD: ${LINKEDIN_PASSWORD:-}
+      GLASSDOOR_USERNAME: ${GLASSDOOR_USERNAME:-}
+      GLASSDOOR_PASSWORD: ${GLASSDOOR_PASSWORD:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-}
       REDIS_URL: redis://redis:6379/0
       CRAWLER_QUEUE_NAME: crawler_jobs
       CRAWLER_EXECUTION_MODE: worker
@@ -77,6 +84,13 @@ services:
     env_file:
       - ./backend/.env
     environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LINKEDIN_USERNAME: ${LINKEDIN_USERNAME:-}
+      LINKEDIN_PASSWORD: ${LINKEDIN_PASSWORD:-}
+      GLASSDOOR_USERNAME: ${GLASSDOOR_USERNAME:-}
+      GLASSDOOR_PASSWORD: ${GLASSDOOR_PASSWORD:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-}
       REDIS_URL: redis://redis:6379/0
       CRAWLER_QUEUE_NAME: crawler_jobs
       CRAWLER_EXECUTION_MODE: worker
@@ -94,6 +108,11 @@ services:
       dockerfile: ./Dockerfile
     env_file:
       - ./frontend/.env
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8004}
+      VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+      VITE_SENTRY_ENVIRONMENT: ${VITE_SENTRY_ENVIRONMENT:-DEV}
+      VITE_SENTRY_TRACES_SAMPLE_RATE: ${VITE_SENTRY_TRACES_SAMPLE_RATE:-0}
     command: npm run dev
     stdin_open: true
     tty: true

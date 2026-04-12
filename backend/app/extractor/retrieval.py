@@ -11,8 +11,8 @@ except ImportError:  # pragma: no cover
 
 from langchain_community.vectorstores import FAISS
 from langchain_core.runnables import RunnableLambda
-from langchain_openai import OpenAIEmbeddings
 
+from app.core import conf
 from app.extractor.extraction_runnable import (
     deduplicate,
     extraction_runnable,
@@ -50,7 +50,7 @@ async def extract_from_content(
 
     console_log.warning(f"Extracting from {len(docs)} chunks")
 
-    vectorstore = FAISS.from_texts(doc_contents, embedding=OpenAIEmbeddings())
+    vectorstore = FAISS.from_texts(doc_contents, embedding=conf.openai.get_embeddings())
     retriever = vectorstore.as_retriever()
 
     runnable = (

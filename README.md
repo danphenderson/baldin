@@ -37,8 +37,20 @@ If you use the published docs site, the same material is available at **[danphen
 ### Setup
 
 1. Clone the repository.
-2. Copy `backend/.env.example` to `backend/.env`.
-3. Review the backend environment variables you need for local development. For local-only contract regeneration, a non-empty `OPENAI_API_KEY` value is enough.
+2. Review the repo-tracked `backend/.env` and `frontend/.env` defaults.
+3. Put real secrets in process env or ignored override files:
+
+```bash
+# Recommended for Codex worktrees and one-off local shells
+export OPENAI_API_KEY=your-key-here
+
+# Optional local override files for non-Codex development
+cp backend/.env backend/.env.local
+cp frontend/.env frontend/.env.local
+```
+
+The tracked `.env` files are safe local defaults for every worktree. Keep real secrets and user-specific credentials out of those tracked files. For local-only contract regeneration, a non-empty `OPENAI_API_KEY` in process env or `backend/.env.local` is enough.
+
 4. Start the local stack from the repository root:
 
 ```bash

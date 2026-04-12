@@ -11,6 +11,7 @@ import {
 } from '@mui/icons-material';
 import { register, login } from '../service/auth';
 import { UserContext } from '../context/user-context';
+import { brandGradient, brandHoverGradient } from '../theme/effects';
 
 // Must stay in sync with backend MIN_PASSWORD_LENGTH / _PASSWORD_RULES
 const PASSWORD_RULES = [
@@ -39,6 +40,8 @@ const RegisterPage: React.FC = () => {
   const passedCount = ruleResults.filter((r) => r.passed).length;
   const allPassed = passedCount === PASSWORD_RULES.length;
   const strengthPercent = (passedCount / PASSWORD_RULES.length) * 100;
+  const brandBg = brandGradient(theme);
+  const brandBgHover = brandHoverGradient(theme);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +87,7 @@ const RegisterPage: React.FC = () => {
           sx={{
             width: 56, height: 56, borderRadius: '16px', mx: 'auto', mb: 2,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            background: brandBg,
             boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}`,
           }}
         >
@@ -155,8 +158,8 @@ const RegisterPage: React.FC = () => {
             <Button fullWidth type="submit" variant="contained" size="large" disabled={loading}
               sx={{
                 py: 1.5, fontSize: '1rem',
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                '&:hover': { background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`, boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.4)}` },
+                background: brandBg,
+                '&:hover': { background: brandBgHover, boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.4)}` },
               }}
             >
               {loading ? <CircularProgress size={24} sx={{ color: 'common.white' }} /> : 'Create Account'}

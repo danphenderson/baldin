@@ -5,7 +5,7 @@ title: Documentation Resources
 description: Links to all Baldin documentation assets — API docs, admin, repo files, and related guides.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-12 -->
 
 # Documentation Resources
 
@@ -53,7 +53,7 @@ See [Regenerate API Contracts](../engineering/contract-management.md) for when a
 | **Frontend Dockerfile** | `frontend/Dockerfile` | Dev server container |
 | **Docs Dockerfile** | `docs/Dockerfile` | Docusaurus dev server container |
 | **CDK Stacks** | `cdk/` | Reference only — not production-approved |
-| **Environment Template** | `backend/.env.example` | Starting point for `backend/.env` |
+| **Tracked Local Env** | `backend/.env`, `frontend/.env` | Safe local-default worktree baseline |
 
 ## Developer Scripts
 

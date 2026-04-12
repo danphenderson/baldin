@@ -5,7 +5,7 @@ title: Regenerate API Contracts
 description: Regenerate OpenAPI and frontend types without drifting from the backend contract or slowing local iteration unnecessarily.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-12 -->
 
 # Regenerate API Contracts
 
@@ -66,7 +66,7 @@ The **schema-freshness** CI job regenerates the contract in a clean environment 
 The script only runs when it detects staged backend schema or API route files. A quiet exit with code 0 is normal in that case. Set `SCHEMA_UPDATE_FORCE=1` when validating unstaged changes or broader backend work.
 
 **OpenAPI generation fails while importing the FastAPI app:**
-The script imports `app.main`, so backend env requirements still apply during regeneration. Load `backend/.env.example` or otherwise provide the required backend env values, including a non-empty `OPENAI_API_KEY`, before rerunning. A dummy local value is fine when real API access is not needed.
+The script imports `app.main`, so backend env requirements still apply during regeneration. Use the tracked `backend/.env` baseline and provide the required backend env values through process env or `backend/.env.local`, including a non-empty `OPENAI_API_KEY`, before rerunning. A dummy local value is fine when real API access is not needed.
 
 **TypeScript generation fails because `openapi-typescript` is unavailable:**
 Install frontend dependencies in `frontend/` so `npm exec openapi-typescript` can resolve the local dev dependency.

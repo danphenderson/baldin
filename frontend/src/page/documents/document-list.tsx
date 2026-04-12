@@ -21,6 +21,7 @@ import {
   type DocumentRead, type DocumentKind, type DocumentStatus,
 } from '../../service/documents';
 import UploadDocumentDialog from '../../component/upload-document-dialog';
+import { softBrandGradient } from '../../theme/effects';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -413,7 +414,12 @@ const DocumentListPage: React.FC = () => {
           <Box sx={{
             width: 72, height: 72, mx: 'auto', mb: 2.5, borderRadius: '20px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)}, ${alpha(theme.palette.secondary.main, 0.15)})`,
+            background: softBrandGradient(theme, {
+              startTone: 'main',
+              endTone: 'main',
+              startOpacity: 0.15,
+              endOpacity: 0.15,
+            }),
           }}>
             <NoteAddIcon sx={{ fontSize: 36, color: 'primary.main' }} />
           </Box>

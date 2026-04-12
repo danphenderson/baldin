@@ -1,5 +1,7 @@
 """Tests for app.core.conf – Settings properties and OpenAI helpers."""
 
+import pytest
+
 from app.core.conf import openai, settings
 
 # ---------------------------------------------------------------------------
@@ -73,3 +75,19 @@ def test_get_chunk_size_known():
 
 def test_get_chunk_size_unknown():
     assert openai.get_chunk_size("unknown-model") == int(4_096 * 0.8)
+
+
+def test_require_enabled_raises_503_when_api_key_missing(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(openai, "API_KEY", "")
+
+    with pytest.raises(Exception) as exc_info:
+        openai.require_enabled("Document generation")
+
+    exc = exc_info.value
+    assert getattr(exc, "status_code", None) == 503
+    assert (
+        getattr(exc, "detail", "")
+        == "Document generation is disabled because OPENAI_API_KEY is not configured."
+    )

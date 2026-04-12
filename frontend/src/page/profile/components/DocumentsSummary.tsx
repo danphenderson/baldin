@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { getDocuments, getPinnedDocuments } from '../../../service/documents';
 import { stagger } from '../constants';
+import { softBrandGradient } from '../../../theme/effects';
 
 const MotionBox = motion.create(Box);
 
@@ -62,7 +63,12 @@ export const DocumentsSummary: React.FC<DocumentsSummaryProps> = ({ token }) => 
       <Card
         sx={{
           borderRadius: 3,
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.04)} 0%, ${alpha(theme.palette.secondary.main, 0.04)} 100%)`,
+          background: softBrandGradient(theme, {
+            startTone: 'main',
+            endTone: 'main',
+            startOpacity: 0.04,
+            endOpacity: 0.04,
+          }),
           border: `1px solid ${theme.palette.divider}`,
         }}
       >

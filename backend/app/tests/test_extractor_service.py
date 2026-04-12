@@ -56,6 +56,11 @@ class _FakeDB:
         self.flush_count += 1
 
 
+@pytest.fixture(autouse=True)
+def _configure_openai_for_service_tests(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(conf.openai, "API_KEY", "test-openai-key")
+
+
 def _build_upload_file(
     *,
     file_name: str,
@@ -534,4 +539,32 @@ async def test_service_run_extractor_preserves_original_failure(
     assert captured_update_payload.status == schemas.OrchestrationEventStatusType.FAILED
     assert captured_update_payload.message == (
         f"Failure running extractor {extractor.name}: RuntimeError: tokenizer boom"
+    )
+
+
+@pytest.mark.asyncio
+async def test_service_run_extractor_returns_503_when_openai_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    extractor = _build_extractor_schema(f"extractor-{utils.random_lower_string(8)}")
+    user = SimpleNamespace(id=uuid4())
+
+    monkeypatch.setattr(extractor_service, "log", _FakeAsyncLogger())
+    monkeypatch.setattr(conf.openai, "API_KEY", "")
+
+    with pytest.raises(HTTPException) as exc_info:
+        await extractor_service.run_extractor(
+            extractor,
+            schemas.ExtractorRun(
+                mode="entire_document",
+                text="Example job description",
+            ),
+            user,
+            _FakeDB(),
+        )
+
+    assert exc_info.value.status_code == 503
+    assert (
+        exc_info.value.detail
+        == "Extractor execution is disabled because OPENAI_API_KEY is not configured."
     )

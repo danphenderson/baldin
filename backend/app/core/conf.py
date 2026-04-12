@@ -3,14 +3,17 @@ from os import environ, getenv
 from pathlib import Path
 from typing import Literal, Union
 
+from fastapi import HTTPException
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
+from langchain_openai.embeddings import OpenAIEmbeddings
 from pydantic import AnyHttpUrl, AnyUrl, EmailStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from toml import load as toml_load
 
 PROJECT_DIR = Path(__file__).parent.parent.parent
 PYPROJECT_CONTENT = toml_load(f"{PROJECT_DIR}/pyproject.toml")["project"]
+LOCAL_ENV_FILES = (PROJECT_DIR / ".env", PROJECT_DIR / ".env.local")
 
 # FIXME: A big hack here to resolve this error when posting to `extractor/run` in retrieval mode:
 # OMP: Error #15: Initializing libomp.dylib, but found libomp.dylib already initialized.
@@ -20,13 +23,27 @@ PYPROJECT_CONTENT = toml_load(f"{PROJECT_DIR}/pyproject.toml")["project"]
 class _BaseSettings(BaseSettings):
     model_config = SettingsConfigDict(
         case_sensitive=False,
-        env_file=PROJECT_DIR / ".env",
+        # Load repo-tracked local defaults first, then optional ignored
+        # overrides. Process env vars still win over both file layers.
+        env_file=LOCAL_ENV_FILES,
         env_file_encoding="utf-8",
         extra="allow",
     )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+
+class OpenAIFeatureDisabled(HTTPException):
+    """Raised when an API surface requires OpenAI but no key is configured."""
+
+    def __init__(self, feature_name: str | None = None) -> None:
+        detail = "This feature is disabled because OPENAI_API_KEY is not configured."
+        if feature_name:
+            detail = (
+                f"{feature_name} is disabled because OPENAI_API_KEY is not configured."
+            )
+        super().__init__(status_code=503, detail=detail)
 
 
 class Settings(_BaseSettings):
@@ -179,10 +196,19 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
     EMBEDDING_DIMENSIONS: int = 1536
 
     @property
+    def is_configured(self) -> bool:
+        return bool(self.API_KEY.strip())
+
+    def require_enabled(self, feature_name: str | None = None) -> None:
+        if self.is_configured:
+            return
+        raise OpenAIFeatureDisabled(feature_name)
+
+    @property
     def SUPPORTED_MODELS(self):
         """Get models according to environment secrets."""
         models = {}
-        if self.API_KEY:
+        if self.is_configured:
             models["gpt-5.4-mini-2026-03-17"] = {
                 "chat_model": ChatOpenAI(
                     model="gpt-5.4-mini-2026-03-17", temperature=0
@@ -201,6 +227,7 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
 
     def get_model(self, name: str | None = None) -> BaseChatModel:
         """Get the model."""
+        self.require_enabled()
         if name is None:
             return self.SUPPORTED_MODELS[self.COMPLETION_MODEL]["chat_model"]
 
@@ -212,6 +239,13 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
                 )
             else:
                 return self.SUPPORTED_MODELS[name]["chat_model"]
+
+    def get_embeddings(self) -> OpenAIEmbeddings:
+        self.require_enabled()
+        return OpenAIEmbeddings(
+            model=self.EMBEDDING_MODEL,
+            dimensions=self.EMBEDDING_DIMENSIONS,
+        )
 
     def get_chunk_size(self, name: str) -> int:
         """Get the chunk size."""

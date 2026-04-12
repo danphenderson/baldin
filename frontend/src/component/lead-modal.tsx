@@ -50,6 +50,7 @@ import {
   WorkspacesOutlined as LeadIcon,
   PlaylistAdd as PlaylistAddIcon,
 } from '@mui/icons-material';
+import { softBrandGradient } from '../theme/effects';
 import ConfirmDialog from './common/confirm-dialog';
 import CreateActionItemDialog from './create-action-item-dialog';
 import type { ActionItemRead, ActionItemCreate } from '../service/action-items';
@@ -709,7 +710,13 @@ const LeadModal: React.FC<LeadModalProps> = ({
             sx={{
               p: { xs: 2, sm: 2.5 },
               borderRadius: 4,
-              background: `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.2)}, ${alpha(theme.palette.primary.main, 0.14)})`,
+              background: softBrandGradient(theme, {
+                startTone: 'main',
+                endTone: 'main',
+                startOpacity: 0.2,
+                endOpacity: 0.14,
+                reverse: true,
+              }),
               borderColor: alpha(theme.palette.primary.main, 0.28),
             }}
           >
@@ -1205,9 +1212,10 @@ const LeadModal: React.FC<LeadModalProps> = ({
             sx={{
               px: { xs: 2, sm: 3 },
               py: { xs: 2, sm: 2.75 },
-              background: theme.palette.mode === 'dark'
-                ? `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.5)}, ${alpha(theme.palette.secondary.dark, 0.34)})`
-                : `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.18)}, ${alpha(theme.palette.secondary.light, 0.14)})`,
+              background: softBrandGradient(theme, {
+                startOpacity: theme.palette.mode === 'dark' ? 0.5 : 0.18,
+                endOpacity: theme.palette.mode === 'dark' ? 0.34 : 0.14,
+              }),
             }}
           >
             <Stack spacing={2}>

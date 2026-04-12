@@ -19,6 +19,12 @@ This document inventories Baldin's shared agentic customization surface across C
 |------|---------|
 | `AGENTS.md` | Provider-neutral repo baseline consumed directly by Codex and mirrored by Copilot assets |
 
+## Worktree Env Contract
+
+- `backend/.env` and `frontend/.env` are repo-tracked safe local defaults so fresh Codex worktrees can boot without copying ignored files.
+- Real secrets belong in Codex UI environment variables or ignored `backend/.env.local` / `frontend/.env.local` overrides.
+- `scripts/check_codex_worktree_env.sh` is the supported Codex setup hook for validating env readiness inside a new worktree.
+
 ### Instructions (2)
 | File | Scope |
 |------|-------|

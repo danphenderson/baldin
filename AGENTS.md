@@ -12,6 +12,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces.
 
 - Default to the local `docker-compose.yml` stack from the repo root with `docker-compose up --build`.
 - Keep the stack warm while you work. The normal loop is inspect -> patch -> smoke-check, not restart-everything.
+- Repo-tracked `backend/.env` and `frontend/.env` provide safe local defaults for every worktree. Put real secrets in Codex UI env vars or ignored `backend/.env.local` / `frontend/.env.local`.
 - Running services outside Compose is a secondary path. If you run backend tests from the host, use `127.0.0.1:5431` for `test_db`; inside Compose the hostname is `test_db`.
 - If local schema drift blocks work and local data is disposable, use `./scripts/reset_local_db.sh`. Use `./scripts/repair_local_db_collation.sh` only for collation mismatch recovery when local data must survive.
 
@@ -27,7 +28,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces.
 
 - Do not hand-edit `openapi.json`, `frontend/src/schema.d.ts`, or `docs/build/**`.
 - When backend routes or schemas change, prefer `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` during active local development and report whether generated artifacts actually changed.
-- Contract regeneration imports the backend app. Ensure backend env requirements are present, including a non-empty `OPENAI_API_KEY`; a dummy local value is acceptable when real API access is not needed.
+- Contract regeneration imports the backend app. Use the tracked `backend/.env` baseline and supply a non-empty `OPENAI_API_KEY` through process env or `backend/.env.local`; a dummy local value is acceptable when real API access is not needed.
 - Edit docs source under `docs/docs/**`. Rebuild generated docs output instead of patching it directly.
 
 ## Validation Expectations

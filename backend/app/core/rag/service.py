@@ -29,6 +29,7 @@ class RagWorkflowService:
         body: schemas.LeadEnrichRequest,
         user: schemas.UserRead,
     ) -> schemas.LeadEnrichResponse:
+        conf.openai.require_enabled("Lead enrichment")
         thread_id = correlation_id.get("")
         event_token = active_rag_event_id.set("")
         initial_state: LeadEnrichmentState = {
@@ -45,6 +46,8 @@ class RagWorkflowService:
             final_state = await lead_enrichment_graph.ainvoke(
                 initial_state, config=config
             )
+        except HTTPException:
+            raise
         except Exception as exc:
             event_id = active_rag_event_id.get("")
             if event_id:
@@ -84,6 +87,7 @@ class RagWorkflowService:
         body: schemas.LeadRankRequest,
         user: schemas.UserRead,
     ) -> schemas.LeadRankResponse:
+        conf.openai.require_enabled("Lead ranking")
         thread_id = correlation_id.get("")
         event_token = active_rag_event_id.set("")
         combined_query = " ".join(
@@ -104,6 +108,8 @@ class RagWorkflowService:
         config = {"configurable": {"thread_id": thread_id}} if thread_id else {}
         try:
             final_state = await lead_ranking_graph.ainvoke(initial_state, config=config)
+        except HTTPException:
+            raise
         except Exception as exc:
             event_id = active_rag_event_id.get("")
             if event_id:
@@ -141,6 +147,7 @@ class RagWorkflowService:
         body: schemas.CompanySummarizeRequest,
         user: schemas.UserRead,
     ) -> schemas.CompanySummarizeResponse:
+        conf.openai.require_enabled("Company summarization")
         thread_id = correlation_id.get("")
         event_token = active_rag_event_id.set("")
         initial_state: CompanySummaryState = {
@@ -155,6 +162,8 @@ class RagWorkflowService:
             final_state = await company_summarization_graph.ainvoke(
                 initial_state, config=config
             )
+        except HTTPException:
+            raise
         except Exception as exc:
             event_id = active_rag_event_id.get("")
             if event_id:

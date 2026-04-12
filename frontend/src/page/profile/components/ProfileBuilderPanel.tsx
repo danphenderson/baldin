@@ -17,6 +17,7 @@ import {
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import type { SectionKey } from '../types';
+import { brandGradient } from '../../../theme/effects';
 
 const MotionBox = motion.create(Box);
 
@@ -94,7 +95,7 @@ export const ProfileBuilderPanel: React.FC<ProfileBuilderPanelProps> = ({
                 borderRadius: 3,
                 background: isComplete
                   ? theme.palette.success.main
-                  : `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  : brandGradient(theme, 90),
               },
             }}
           />

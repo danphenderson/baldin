@@ -18,6 +18,7 @@ import { useCollaborativeEditor } from './use-collaborative-editor';
 import ConnectionStatusBanner from './connection-status-banner';
 import { getTiptapEditorContent } from './document-content';
 import type { DocumentContentFormat } from '../service/documents';
+import { monoFontFamily } from '../design-system/tokens/typography';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -324,7 +325,7 @@ const TiptapEditorInner: React.FC<Omit<RichTextEditorProps, 'contentFormat'>> = 
               borderRadius: '4px',
               padding: '2px 4px',
               fontSize: '0.875em',
-              fontFamily: 'monospace',
+              fontFamily: monoFontFamily,
             },
             '& pre': {
               background: theme.palette.action.hover,
@@ -382,7 +383,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         slotProps={{ input: { 'aria-label': 'Document content' } }}
         sx={{
           '& .MuiOutlinedInput-root': {
-            fontFamily: 'monospace', fontSize: '0.875rem', lineHeight: 1.6,
+            fontFamily: monoFontFamily, fontSize: '0.875rem', lineHeight: 1.6,
           },
         }}
       />

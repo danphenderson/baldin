@@ -26,6 +26,7 @@ import {
 } from '../../service/documents';
 import ShareDocumentDialog from '../../component/share-document-dialog';
 import { PageTitle } from '../../component/common/text';
+import { monoFontFamily } from '../../design-system/tokens/typography';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -106,7 +107,7 @@ const ReadOnlyVersionPreview: React.FC<{
     return (
       <Typography
         variant="body2" component="pre"
-        sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem', m: 0 }}
+        sx={{ whiteSpace: 'pre-wrap', fontFamily: monoFontFamily, fontSize: '0.8rem', m: 0 }}
       >
         {version.content || '(empty)'}
       </Typography>

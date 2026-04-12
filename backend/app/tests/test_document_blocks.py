@@ -9,7 +9,9 @@ from app import models
 from app.core.document_blocks import (
     block_ids_by_tiptap_path,
     blocks_to_tiptap_json,
+    compute_block_sync_delta,
     tiptap_json_to_blocks,
+    validate_block_tree,
 )
 
 
@@ -311,6 +313,23 @@ def _tree_snapshot(
     return serialize(None)
 
 
+def _strip_block_ids(value: object) -> object:
+    if isinstance(value, list):
+        return [_strip_block_ids(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+
+    copied = {key: _strip_block_ids(item) for key, item in value.items()}
+    attrs = copied.get("attrs")
+    if isinstance(attrs, dict):
+        attrs = {key: item for key, item in attrs.items() if key != "blockId"}
+        if attrs:
+            copied["attrs"] = attrs
+        else:
+            copied.pop("attrs", None)
+    return copied
+
+
 def test_blocks_round_trip_all_supported_types_losslessly() -> None:
     document_id = uuid4()
     blocks = _complex_blocks(document_id)
@@ -383,7 +402,7 @@ def test_toggle_details_content_round_trips_losslessly() -> None:
 
     blocks = tiptap_json_to_blocks(document_id, deepcopy(tiptap_json))
 
-    assert blocks_to_tiptap_json(blocks) == tiptap_json
+    assert _strip_block_ids(blocks_to_tiptap_json(blocks)) == tiptap_json
 
 
 def test_tiptap_json_to_blocks_reuses_preserved_ids_for_details_content_toggle_children() -> (
@@ -503,3 +522,186 @@ def test_tiptap_json_to_blocks_without_preserve_ids_assigns_fresh_uuids() -> Non
 def test_tiptap_json_to_blocks_rejects_non_document_roots() -> None:
     with pytest.raises(ValueError, match="document node"):
         tiptap_json_to_blocks(uuid4(), {"type": "paragraph"})
+
+
+def test_tiptap_json_to_blocks_prefers_explicit_block_ids_over_path_preservation() -> (
+    None
+):
+    document_id = uuid4()
+    explicit_block_id = uuid4()
+    preserved_block_id = uuid4()
+
+    blocks = tiptap_json_to_blocks(
+        document_id,
+        {
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "attrs": {"blockId": str(explicit_block_id)},
+                    "content": _inline_text("Stable block"),
+                }
+            ],
+        },
+        preserve_ids={(0,): preserved_block_id},
+    )
+
+    assert blocks[0].id == explicit_block_id
+    assert blocks[0].properties == {}
+
+
+def test_mention_and_embed_blocks_round_trip_with_saved_properties() -> None:
+    document_id = uuid4()
+    mention_block_id = uuid4()
+    embed_block_id = uuid4()
+
+    blocks = [
+        _block(
+            document_id,
+            block_id=mention_block_id,
+            block_type="mention",
+            position=0,
+            properties={
+                "targetKind": "user",
+                "targetId": str(uuid4()),
+                "label": "Casey Blocks",
+            },
+        ),
+        _block(
+            document_id,
+            block_id=embed_block_id,
+            block_type="embed",
+            position=1,
+            properties={
+                "sourceDocumentId": str(uuid4()),
+                "sourceBlockId": str(uuid4()),
+                "sourceVersionIdAtSave": str(uuid4()),
+                "label": "Interview prep notes",
+                "previewText": "Prepare STAR stories",
+            },
+        ),
+    ]
+
+    tiptap_json = blocks_to_tiptap_json(blocks)
+    restored_blocks = tiptap_json_to_blocks(document_id, tiptap_json)
+
+    assert _tree_snapshot(restored_blocks, include_ids=True) == _tree_snapshot(
+        blocks,
+        include_ids=True,
+    )
+
+
+def test_validate_block_tree_rejects_nested_mention_and_embed_blocks() -> None:
+    document_id = uuid4()
+    list_id = uuid4()
+    list_item_id = uuid4()
+
+    blocks = [
+        _block(
+            document_id,
+            block_id=list_id,
+            block_type="bullet_list",
+            position=0,
+        ),
+        _block(
+            document_id,
+            block_id=list_item_id,
+            block_type="list_item",
+            parent_block_id=list_id,
+            position=0,
+            content=_inline_text("List item"),
+        ),
+        _block(
+            document_id,
+            block_id=uuid4(),
+            block_type="mention",
+            parent_block_id=list_item_id,
+            position=0,
+            properties={"targetKind": "user", "targetId": str(uuid4())},
+        ),
+    ]
+
+    with pytest.raises(ValueError, match="cannot be placed beneath list_item"):
+        validate_block_tree(blocks)
+
+
+def test_compute_block_sync_delta_tracks_added_removed_updated_and_moved_blocks() -> (
+    None
+):
+    document_id = uuid4()
+    original_parent_id = uuid4()
+    changed_block_id = uuid4()
+    moved_block_id = uuid4()
+    removed_block_id = uuid4()
+    added_block_id = uuid4()
+
+    existing_blocks = [
+        _block(
+            document_id,
+            block_id=original_parent_id,
+            block_type="toggle",
+            position=0,
+            content=_inline_text("Parent"),
+        ),
+        _block(
+            document_id,
+            block_id=changed_block_id,
+            block_type="paragraph",
+            position=1,
+            content=_inline_text("Original text"),
+        ),
+        _block(
+            document_id,
+            block_id=moved_block_id,
+            block_type="paragraph",
+            parent_block_id=original_parent_id,
+            position=0,
+            content=_inline_text("Nested"),
+        ),
+        _block(
+            document_id,
+            block_id=removed_block_id,
+            block_type="paragraph",
+            position=2,
+            content=_inline_text("Remove me"),
+        ),
+    ]
+    incoming_blocks = [
+        _block(
+            document_id,
+            block_id=original_parent_id,
+            block_type="toggle",
+            position=0,
+            content=_inline_text("Parent"),
+        ),
+        _block(
+            document_id,
+            block_id=changed_block_id,
+            block_type="paragraph",
+            position=1,
+            content=_inline_text("Updated text"),
+        ),
+        _block(
+            document_id,
+            block_id=moved_block_id,
+            block_type="paragraph",
+            position=2,
+            content=_inline_text("Nested"),
+        ),
+        _block(
+            document_id,
+            block_id=added_block_id,
+            block_type="paragraph",
+            parent_block_id=original_parent_id,
+            position=0,
+            content=_inline_text("Added"),
+        ),
+    ]
+
+    delta = compute_block_sync_delta(existing_blocks, incoming_blocks)
+
+    assert delta.added_block_ids == {added_block_id}
+    assert delta.removed_block_ids == {removed_block_id}
+    assert delta.updated_block_ids == {changed_block_id}
+    assert delta.moved_block_ids == {moved_block_id}
+    assert delta.touched_parent_ids == {None, original_parent_id}

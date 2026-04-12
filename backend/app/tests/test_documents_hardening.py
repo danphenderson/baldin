@@ -436,10 +436,6 @@ async def test_cell_doc_create_initializes_default_block_and_seed_content() -> N
     body = response.json()
     assert body["kind"] == "cell_doc"
     assert body["head_version"]["content_format"] == "tiptap_json"
-    assert json.loads(body["head_version"]["content"]) == {
-        "type": "doc",
-        "content": [{"type": "paragraph"}],
-    }
 
     async with session_context() as session:
         result = await session.execute(
@@ -456,6 +452,10 @@ async def test_cell_doc_create_initializes_default_block_and_seed_content() -> N
     assert block.content == []
     assert block.properties == {}
     assert block.position == 0
+    assert json.loads(body["head_version"]["content"]) == {
+        "type": "doc",
+        "content": [{"type": "paragraph", "attrs": {"blockId": str(block.id)}}],
+    }
     assert body["versions"][0]["block_snapshot"] == [
         {
             "id": str(block.id),
@@ -531,6 +531,12 @@ async def test_cell_doc_version_save_persists_block_snapshot_and_live_blocks() -
     assert _block_tree_signature(saved_version["block_snapshot"]) == live_tree
     assert saved_version["block_snapshot"][0]["id"] == initial_block_id
     assert saved_version["block_snapshot"][1]["id"] != initial_block_id
+    saved_tiptap = json.loads(saved_version["content"])
+    assert saved_tiptap["content"][0]["attrs"]["blockId"] == initial_block_id
+    assert (
+        saved_tiptap["content"][1]["attrs"]["blockId"]
+        == saved_version["block_snapshot"][1]["id"]
+    )
     assert (
         version_detail_response.json()["block_snapshot"]
         == saved_version["block_snapshot"]
@@ -1580,6 +1586,271 @@ async def test_block_routes_reject_invalid_structural_placements() -> None:
 
     assert invalid_sync.status_code == 400
     assert "document root" in invalid_sync.json()["detail"]
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_cell_doc_reference_routes_resolve_mentions_and_embeds() -> None:
+    await _ensure_db_ready()
+
+    async with _client() as client:
+        owner_email, owner_id = await _create_user(
+            "reference-owner-pass",
+            first_name="Casey",
+            last_name="Blocks",
+            is_discoverable=True,
+            headline="Reference target",
+        )
+        owner_headers = await _auth_headers(client, owner_email, "reference-owner-pass")
+
+        source_doc = await _create_document(
+            client,
+            owner_headers,
+            title="Source Cell Doc",
+            kind="cell_doc",
+            content=_cell_doc_content(_heading_node("Embed this heading")),
+            content_format="tiptap_json",
+        )
+        target_doc = await _create_document(
+            client,
+            owner_headers,
+            title="Target Cell Doc",
+            kind="cell_doc",
+            content=None,
+        )
+
+        source_document_id = source_doc["id"]
+        target_document_id = target_doc["id"]
+
+        source_blocks_response = await client.get(
+            f"/api/v1/documents/{source_document_id}/blocks",
+            headers=owner_headers,
+        )
+        assert source_blocks_response.status_code == 200, source_blocks_response.text
+        source_heading_id = source_blocks_response.json()[0]["id"]
+
+        mention_candidates_response = await client.get(
+            f"/api/v1/documents/{target_document_id}/mention-candidates",
+            params={"q": "Casey", "limit": 10},
+            headers=owner_headers,
+        )
+        assert mention_candidates_response.status_code == 200, (
+            mention_candidates_response.text
+        )
+
+        embed_document_candidates_response = await client.get(
+            f"/api/v1/documents/{target_document_id}/embed-candidates",
+            params={"q": "Source", "limit": 10},
+            headers=owner_headers,
+        )
+        assert embed_document_candidates_response.status_code == 200, (
+            embed_document_candidates_response.text
+        )
+
+        embed_block_candidates_response = await client.get(
+            f"/api/v1/documents/{target_document_id}/embed-candidates",
+            params={
+                "source_document_id": source_document_id,
+                "q": "Embed this heading",
+                "limit": 10,
+            },
+            headers=owner_headers,
+        )
+        assert embed_block_candidates_response.status_code == 200, (
+            embed_block_candidates_response.text
+        )
+
+        resolve_response = await client.post(
+            f"/api/v1/documents/{target_document_id}/references/resolve",
+            json={
+                "references": [
+                    {
+                        "kind": "mention",
+                        "target_kind": "user",
+                        "target_id": str(owner_id),
+                        "saved_label": "Fallback mention",
+                    },
+                    {
+                        "kind": "embed",
+                        "source_document_id": source_document_id,
+                        "source_block_id": source_heading_id,
+                        "saved_label": "Fallback embed",
+                    },
+                ]
+            },
+            headers=owner_headers,
+        )
+
+    assert resolve_response.status_code == 200, resolve_response.text
+    mention_candidates = mention_candidates_response.json()
+    assert any(
+        candidate["target_kind"] == "user"
+        and candidate["target_id"] == str(owner_id)
+        and candidate["label"] == "Casey Blocks"
+        for candidate in mention_candidates
+    )
+
+    embed_document_candidates = embed_document_candidates_response.json()
+    assert any(
+        candidate["candidate_kind"] == "document"
+        and candidate["document_id"] == source_document_id
+        for candidate in embed_document_candidates
+    )
+
+    embed_block_candidates = embed_block_candidates_response.json()
+    assert len(embed_block_candidates) == 1
+    assert embed_block_candidates[0]["block_id"] == source_heading_id
+    assert embed_block_candidates[0]["label"] == "Embed this heading"
+
+    resolved = resolve_response.json()
+    assert resolved[0]["kind"] == "mention"
+    assert resolved[0]["status"] == "resolved"
+    assert resolved[0]["label"] == "Casey Blocks"
+    assert resolved[0]["href"] == f"/network/discover/{owner_id}"
+    assert resolved[1]["kind"] == "embed"
+    assert resolved[1]["status"] == "resolved"
+    assert resolved[1]["source_document_id"] == source_document_id
+    assert resolved[1]["source_block_id"] == source_heading_id
+    assert resolved[1]["label"] == "Embed this heading"
+    assert resolved[1]["preview_text"] == "Embed this heading"
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_locked_blocks_block_collaborator_mutations_but_allow_owner_saves() -> (
+    None
+):
+    await _ensure_db_ready()
+
+    async with _client() as client:
+        owner_email, owner_id = await _create_user(
+            "locked-owner-pass",
+            first_name="Lena",
+            last_name="Locker",
+        )
+        editor_email, editor_id = await _create_user(
+            "locked-editor-pass",
+            first_name="Eli",
+            last_name="Editor",
+        )
+        owner_headers = await _auth_headers(client, owner_email, "locked-owner-pass")
+        editor_headers = await _auth_headers(client, editor_email, "locked-editor-pass")
+
+        doc = await _create_document(
+            client,
+            owner_headers,
+            title="Locked Block Doc",
+            kind="cell_doc",
+            content=None,
+        )
+        document_id = doc["id"]
+
+        blocks_response = await client.get(
+            f"/api/v1/documents/{document_id}/blocks",
+            headers=owner_headers,
+        )
+        assert blocks_response.status_code == 200, blocks_response.text
+        locked_block_id = blocks_response.json()[0]["id"]
+
+        share_response = await client.post(
+            f"/api/v1/documents/{document_id}/shares",
+            json={"shared_with_user_id": str(editor_id), "role": "editor"},
+            headers=owner_headers,
+        )
+        assert share_response.status_code == 201, share_response.text
+
+        lock_response = await client.patch(
+            f"/api/v1/documents/{document_id}/blocks/{locked_block_id}",
+            json={
+                "properties": {
+                    "locked": True,
+                    "lockedAt": "2026-04-12T10:00:00Z",
+                }
+            },
+            headers=owner_headers,
+        )
+        assert lock_response.status_code == 200, lock_response.text
+        locked_block = lock_response.json()
+        assert locked_block["properties"]["locked"] is True
+        assert locked_block["properties"]["lockedAt"] == "2026-04-12T10:00:00Z"
+        assert locked_block["properties"]["lockedByUserId"] == str(owner_id)
+
+        collaborator_update = await client.patch(
+            f"/api/v1/documents/{document_id}/blocks/{locked_block_id}",
+            json={"content": [{"type": "text", "text": "Edited by collaborator"}]},
+            headers=editor_headers,
+        )
+        collaborator_delete = await client.delete(
+            f"/api/v1/documents/{document_id}/blocks/{locked_block_id}",
+            headers=editor_headers,
+        )
+        collaborator_sync = await client.post(
+            f"/api/v1/documents/{document_id}/blocks/sync",
+            json={
+                "tiptap_json": {
+                    "type": "doc",
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "attrs": {"blockId": locked_block_id},
+                            "content": [{"type": "text", "text": "Sync edit"}],
+                        }
+                    ],
+                }
+            },
+            headers=editor_headers,
+        )
+        collaborator_version_save = await client.post(
+            f"/api/v1/documents/{document_id}/versions",
+            json={
+                "name": "Collaborator edit",
+                "content": json.dumps(
+                    {
+                        "type": "doc",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "attrs": {"blockId": locked_block_id},
+                                "content": [{"type": "text", "text": "Version edit"}],
+                            }
+                        ],
+                    }
+                ),
+                "content_format": "tiptap_json",
+                "change_summary": "Collaborator edit",
+            },
+            headers=editor_headers,
+        )
+        owner_version_save = await client.post(
+            f"/api/v1/documents/{document_id}/versions",
+            json={
+                "name": "Owner edit",
+                "content": json.dumps(
+                    {
+                        "type": "doc",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "attrs": {
+                                    "blockId": locked_block_id,
+                                    "locked": True,
+                                    "lockedAt": "2026-04-12T10:00:00Z",
+                                },
+                                "content": [{"type": "text", "text": "Owner can edit"}],
+                            }
+                        ],
+                    }
+                ),
+                "content_format": "tiptap_json",
+                "change_summary": "Owner edit",
+            },
+            headers=owner_headers,
+        )
+
+    assert collaborator_update.status_code == 403
+    assert collaborator_delete.status_code == 403
+    assert collaborator_sync.status_code == 403
+    assert collaborator_version_save.status_code == 403
+    assert "Locked blocks cannot be" in collaborator_version_save.json()["detail"]
+    assert owner_version_save.status_code == 201, owner_version_save.text
 
 
 @pytest.mark.asyncio(loop_scope="module")

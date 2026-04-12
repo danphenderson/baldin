@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  extractPlainTextFromBlockSnapshot,
   extractPlainTextFromDocumentContent,
+  flattenDocumentBlockSnapshot,
   normalizeDocumentContent,
 } from './document-content';
 import { CELL_DOC_EXPORT_CONTRACT_FIXTURE } from './cell-doc/test/cell-doc-contract-fixtures';
@@ -62,6 +64,65 @@ describe('document-content helpers', () => {
       'Company | Status',
       'Baldin Labs | Applied',
       'Closing note',
+    ].join('\n'));
+  });
+
+  it('extracts saved label and preview text from atomic cell-doc blocks', () => {
+    expect(extractPlainTextFromDocumentContent(JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'mentionBlock',
+          attrs: { label: 'Casey Blocks' },
+        },
+        {
+          type: 'embedBlock',
+          attrs: { label: 'Interview prep notes', previewText: 'Prepare STAR stories' },
+        },
+      ],
+    }), 'tiptap_json')).toBe([
+      'Casey Blocks',
+      'Prepare STAR stories',
+    ].join('\n'));
+  });
+
+  it('flattens block snapshots into block-aware compare rows', () => {
+    const snapshot = [
+      {
+        id: 'block-1',
+        block_type: 'paragraph',
+        content: [{ type: 'text', text: 'Alpha beta' }],
+        properties: {},
+        position: 0,
+        children: [],
+      },
+      {
+        id: 'block-2',
+        block_type: 'mention',
+        content: [],
+        properties: { label: 'Casey Blocks' },
+        position: 1,
+        children: [],
+      },
+      {
+        id: 'block-3',
+        block_type: 'embed',
+        content: [],
+        properties: { label: 'Interview prep', previewText: 'Prepare STAR stories' },
+        position: 2,
+        children: [],
+      },
+    ];
+
+    expect(flattenDocumentBlockSnapshot(snapshot)).toEqual([
+      { blockId: 'block-1', blockType: 'paragraph', path: '0', text: 'Alpha beta' },
+      { blockId: 'block-2', blockType: 'mention', path: '1', text: 'Casey Blocks' },
+      { blockId: 'block-3', blockType: 'embed', path: '2', text: 'Prepare STAR stories' },
+    ]);
+    expect(extractPlainTextFromBlockSnapshot(snapshot)).toBe([
+      'Alpha beta',
+      'Casey Blocks',
+      'Prepare STAR stories',
     ].join('\n'));
   });
 });

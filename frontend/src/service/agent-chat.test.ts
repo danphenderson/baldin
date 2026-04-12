@@ -3,7 +3,7 @@ import {
   createChatSession,
   deleteChatSession,
   getAvailableModels,
-  getChatMessages,
+  getChatHistory,
   getChatSession,
   getChatSessions,
   saveChatToDocument,
@@ -130,6 +130,10 @@ describe('agent chat service', () => {
           created_at: '2026-04-11T12:00:01Z',
         },
       ],
+      message_history: {
+        has_more_before: true,
+        next_before: 'cursor-before-1',
+      },
     }));
 
     vi.stubGlobal('fetch', fetchMock);
@@ -137,69 +141,39 @@ describe('agent chat service', () => {
     const result = await getChatSession('token-123', 'session-1', 10);
 
     expect(result.messages?.map((message) => message.id)).toEqual(['message-1', 'message-2']);
+    expect(result.message_history?.next_before).toBe('cursor-before-1');
     const request = fetchMock.mock.calls[0][0] as Request;
     expect(request.url).toContain('/api/v1/agents/chat/session-1');
     expect(request.url).toContain('limit=10');
   });
 
-  it('lists chat messages with default pagination while preserving backend ordering', async () => {
+  it('loads cursor-based chat history pages for older-message callers', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
       items: [
         {
           id: 'message-1',
           role: 'user',
-          content: 'First',
-          created_at: '2026-04-11T12:00:00Z',
-        },
-        {
-          id: 'message-2',
-          role: 'assistant',
-          content: 'Second',
-          created_at: '2026-04-11T12:00:01Z',
-        },
-      ],
-      total: 2,
-    }));
-
-    vi.stubGlobal('fetch', fetchMock);
-
-    const result = await getChatMessages('token-123', 'session-1');
-
-    expect(result.items.map((message) => message.id)).toEqual(['message-1', 'message-2']);
-    expect(result.page).toBe(1);
-    expect(result.page_size).toBe(50);
-    const request = fetchMock.mock.calls[0][0] as Request;
-    expect(request.url).toContain('/api/v1/agents/chat/session-1/messages');
-    expect(request.url).toContain('page=1');
-    expect(request.url).toContain('page_size=50');
-  });
-
-  it('passes through optional tail-pagination params for chat history callers', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
-      items: [
-        {
-          id: 'message-51',
-          role: 'user',
           content: 'Older page item',
           created_at: '2026-04-11T11:59:00Z',
         },
       ],
-      total: 51,
+      has_more_before: false,
+      next_before: null,
     }));
 
     vi.stubGlobal('fetch', fetchMock);
 
-    await getChatMessages('token-123', 'session-1', {
-      page: 2,
-      page_size: 50,
-      from_tail: true,
+    const result = await getChatHistory('token-123', 'session-1', {
+      before: 'cursor-before-2',
+      limit: 50,
     });
 
+    expect(result.items.map((message) => message.id)).toEqual(['message-1']);
+    expect(result.has_more_before).toBe(false);
     const request = fetchMock.mock.calls[0][0] as Request;
-    expect(request.url).toContain('/api/v1/agents/chat/session-1/messages');
-    expect(request.url).toContain('page=2');
-    expect(request.url).toContain('page_size=50');
-    expect(request.url).toContain('from_tail=true');
+    expect(request.url).toContain('/api/v1/agents/chat/session-1/history');
+    expect(request.url).toContain('before=cursor-before-2');
+    expect(request.url).toContain('limit=50');
   });
 
   it('updates sessions, saves documents, resolves deletes, and lists available models', async () => {

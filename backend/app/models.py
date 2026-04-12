@@ -924,6 +924,7 @@ class AgentChatMessage(Base):
             "ix_agent_chat_messages_session_created",
             "session_id",
             "created_at",
+            "id",
         ),
     )
 

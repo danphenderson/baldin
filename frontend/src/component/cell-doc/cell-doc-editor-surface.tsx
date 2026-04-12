@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Editor } from '@tiptap/core';
 import { EditorContent } from '@tiptap/react';
-import { Box, useTheme } from '@mui/material';
+import { Box, useTheme, alpha } from '@mui/material';
 
 import { TableBubbleMenu } from './menus/table-bubble-menu';
 
@@ -33,6 +33,10 @@ export const CellDocEditorSurface: React.FC<CellDocEditorSurfaceProps> = ({
             outlineOffset: -2,
           },
           '& p': { margin: '0.5em 0' },
+          '& [data-block-locked="true"]': {
+            boxShadow: `inset 3px 0 0 ${theme.palette.warning.main}`,
+            backgroundColor: alpha(theme.palette.warning.main, 0.06),
+          },
           '& ul[data-type="taskList"]': {
             listStyle: 'none',
             paddingLeft: 0,

@@ -13,7 +13,7 @@ export type DocumentRead = components['schemas']['DocumentSummaryRead'];
 export type DocumentDetailRead = components['schemas']['DocumentDetailRead'];
 export type DocumentCreate = components['schemas']['DocumentCreate'];
 export type DocumentUpdate = components['schemas']['DocumentUpdate'];
-export type DocumentVersionRead = components['schemas']['DocumentVersionRead'];
+export type DocumentVersionRead = components['schemas']['DocumentVersionDetailRead'];
 export type DocumentVersionCreate = components['schemas']['DocumentVersionCreate'];
 export type DocumentPinRequest = components['schemas']['DocumentPinRequest'];
 export type DocumentGenerateRequest = components['schemas']['DocumentGenerateRequest'];
@@ -26,6 +26,11 @@ export type DocumentShareCandidateRead = components['schemas']['DocumentShareCan
 export type DocumentActivityRead = components['schemas']['DocumentActivityRead'];
 export type DocumentActivityType = components['schemas']['DocumentActivityType'];
 export type DocumentCollaborationBootstrapRead = components['schemas']['DocumentCollaborationBootstrapRead'];
+export type DocumentMentionCandidateRead = components['schemas']['DocumentMentionCandidateRead'];
+export type DocumentEmbedCandidateRead = components['schemas']['DocumentEmbedCandidateRead'];
+export type DocumentReferenceResolvedRead = components['schemas']['DocumentReferenceResolvedRead'];
+export type DocumentReferenceKind = components['schemas']['DocumentReferenceKind'];
+export type DocumentReferenceTargetKind = components['schemas']['DocumentReferenceTargetKind'];
 type DocumentListPage = components['schemas']['PaginatedResponse_DocumentSummaryRead_'];
 
 /* ------------------------------------------------------------------ */
@@ -316,6 +321,66 @@ export async function getDocumentActivity(
       path: { document_id: documentId },
       query: { limit: params?.limit },
     },
+  }));
+}
+
+/* ------------------------------------------------------------------ */
+/*  References                                                         */
+/* ------------------------------------------------------------------ */
+
+export async function getDocumentMentionCandidates(
+  token: string,
+  documentId: string,
+  params?: {
+    q?: string;
+    kinds?: DocumentReferenceTargetKind[];
+    limit?: number;
+  },
+): Promise<DocumentMentionCandidateRead[]> {
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/api/v1/documents/{document_id}/mention-candidates', {
+    params: {
+      path: { document_id: documentId },
+      query: {
+        q: params?.q,
+        kinds: params?.kinds,
+        limit: params?.limit,
+      },
+    },
+  }));
+}
+
+export async function getDocumentEmbedCandidates(
+  token: string,
+  documentId: string,
+  params?: {
+    source_document_id?: string;
+    q?: string;
+    limit?: number;
+  },
+): Promise<DocumentEmbedCandidateRead[]> {
+  const client = createApiClient(token);
+  return unwrap(await client.GET('/api/v1/documents/{document_id}/embed-candidates', {
+    params: {
+      path: { document_id: documentId },
+      query: {
+        source_document_id: params?.source_document_id,
+        q: params?.q,
+        limit: params?.limit,
+      },
+    },
+  }));
+}
+
+export async function resolveDocumentReferences(
+  token: string,
+  documentId: string,
+  references: components['schemas']['DocumentReferenceResolveItem'][],
+): Promise<DocumentReferenceResolvedRead[]> {
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/api/v1/documents/{document_id}/references/resolve', {
+    params: { path: { document_id: documentId } },
+    body: { references },
   }));
 }
 

@@ -2,6 +2,7 @@
 import json
 import re
 import uuid
+from datetime import datetime, timezone
 from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
@@ -53,6 +54,7 @@ from app.core.document_blocks import (
     block_snapshot_to_blocks,
     block_snapshot_to_tiptap_json,
     blocks_to_block_snapshot,
+    blocks_to_tiptap_json,
     compute_block_sync_delta,
     tiptap_json_to_blocks,
     validate_block_tree,
@@ -933,6 +935,19 @@ def _restore_version_number_from_change_summary(
     return None
 
 
+def _cell_doc_content_matches_restore_source(
+    restore_content: str | None,
+    submitted_content: str,
+) -> bool:
+    if restore_content == submitted_content:
+        return True
+
+    try:
+        return json.loads(restore_content or "") == json.loads(submitted_content)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return False
+
+
 def _resolve_cell_doc_restore_source(
     doc: models.Document,
     payload: schemas.DocumentVersionCreate,
@@ -955,7 +970,10 @@ def _resolve_cell_doc_restore_source(
                 status_code=409,
                 detail="Restore version has no stored block snapshot",
             )
-        if restore_source.content != version_content:
+        if not _cell_doc_content_matches_restore_source(
+            restore_source.content,
+            version_content,
+        ):
             raise HTTPException(
                 status_code=409,
                 detail="Restore version content does not match the submitted cell-doc content",
@@ -978,7 +996,10 @@ def _resolve_cell_doc_restore_source(
     )
     if restore_source is None or restore_source.block_snapshot is None:
         return None
-    if restore_source.content != version_content:
+    if not _cell_doc_content_matches_restore_source(
+        restore_source.content,
+        version_content,
+    ):
         return None
     return restore_source
 
@@ -1130,6 +1151,26 @@ def _block_properties(
 
 def _block_is_locked(block: models.DocumentBlock) -> bool:
     return bool(_block_properties(block).get("locked"))
+
+
+def _normalize_block_lock_metadata(
+    blocks: list[models.DocumentBlock],
+    *,
+    actor: schemas.UserRead,
+) -> None:
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for block in blocks:
+        properties = _block_properties(block)
+        if properties.get("locked"):
+            properties["locked"] = True
+            properties["lockedByUserId"] = str(
+                properties.get("lockedByUserId") or actor.id
+            )
+            properties["lockedAt"] = str(properties.get("lockedAt") or now_iso)
+        else:
+            properties.pop("lockedByUserId", None)
+            properties.pop("lockedAt", None)
+        block.properties = properties
 
 
 def _current_document_role(doc: models.Document) -> str:
@@ -2381,6 +2422,8 @@ async def create_document(
             doc=doc,
             blocks=initial_blocks,
         )
+        _normalize_block_lock_metadata(initial_blocks, actor=user)
+        version_content = json.dumps(blocks_to_tiptap_json(initial_blocks))
         version_block_snapshot = blocks_to_block_snapshot(initial_blocks)
 
     version = models.DocumentVersion(
@@ -2518,6 +2561,7 @@ async def create_document_block(
         doc=doc,
         blocks=[block],
     )
+    _normalize_block_lock_metadata([block], actor=user)
     if _current_document_role(doc) != "owner" and target_position < len(siblings):
         if any(_block_is_locked(sibling) for sibling in siblings[target_position:]):
             _raise_locked_block_conflict("created before locked blocks")
@@ -2683,9 +2727,39 @@ async def sync_document_blocks(
         doc=doc,
         blocks=blocks,
     )
+    _normalize_block_lock_metadata(blocks, actor=user)
     _enforce_sync_respects_locked_blocks(doc, existing_blocks, blocks)
+    sync_delta = compute_block_sync_delta(existing_blocks, blocks)
 
     await _replace_document_blocks(db, document_id=doc.id, blocks=blocks)
+    await _record_document_activity(
+        db,
+        document_id=doc.id,
+        activity_type=schemas.DocumentActivityType.BLOCK_UPDATED,
+        message="Synced document blocks",
+        actor=user,
+        details={
+            "added_block_ids": [
+                str(block_id) for block_id in sorted(sync_delta.added_block_ids)
+            ],
+            "removed_block_ids": [
+                str(block_id) for block_id in sorted(sync_delta.removed_block_ids)
+            ],
+            "updated_block_ids": [
+                str(block_id) for block_id in sorted(sync_delta.updated_block_ids)
+            ],
+            "moved_block_ids": [
+                str(block_id) for block_id in sorted(sync_delta.moved_block_ids)
+            ],
+            "touched_parent_ids": [
+                str(parent_id) if parent_id is not None else None
+                for parent_id in sorted(
+                    sync_delta.touched_parent_ids,
+                    key=lambda value: "" if value is None else str(value),
+                )
+            ],
+        },
+    )
     await db.commit()
 
     blocks = await _load_document_blocks(db, document_id=doc.id)
@@ -2741,6 +2815,7 @@ async def update_document_block(
             doc=doc,
             blocks=[block],
         )
+        _normalize_block_lock_metadata([block], actor=user)
         await db.flush()
         if previous_block_type != block.block_type:
             await _record_document_activity(
@@ -2935,6 +3010,7 @@ async def create_version(
     version_content = payload.content
     version_content_format = payload.content_format.value
     version_block_snapshot: list[dict[str, object]] | None = None
+    version_sync_delta: object | None = None
     if doc.kind == schemas.DocumentKind.CELL_DOC.value:
         existing_blocks = await _load_document_blocks(db, document_id=doc.id)
         if payload.restore_version_id is not None and version_content is None:
@@ -2993,8 +3069,11 @@ async def create_version(
                 doc=doc,
                 blocks=version_blocks,
             )
+            _normalize_block_lock_metadata(version_blocks, actor=user)
         _enforce_sync_respects_locked_blocks(doc, existing_blocks, version_blocks)
+        version_sync_delta = compute_block_sync_delta(existing_blocks, version_blocks)
 
+        version_content = json.dumps(blocks_to_tiptap_json(version_blocks))
         version_block_snapshot = blocks_to_block_snapshot(version_blocks)
         await _replace_document_blocks(db, document_id=doc.id, blocks=version_blocks)
 
@@ -3021,6 +3100,35 @@ async def create_version(
         details={
             "version_number": version.version_number,
             "content_format": version.content_format,
+            "block_sync_delta": (
+                None
+                if version_sync_delta is None
+                else {
+                    "added_block_ids": [
+                        str(block_id)
+                        for block_id in sorted(version_sync_delta.added_block_ids)
+                    ],
+                    "removed_block_ids": [
+                        str(block_id)
+                        for block_id in sorted(version_sync_delta.removed_block_ids)
+                    ],
+                    "updated_block_ids": [
+                        str(block_id)
+                        for block_id in sorted(version_sync_delta.updated_block_ids)
+                    ],
+                    "moved_block_ids": [
+                        str(block_id)
+                        for block_id in sorted(version_sync_delta.moved_block_ids)
+                    ],
+                    "touched_parent_ids": [
+                        str(parent_id) if parent_id is not None else None
+                        for parent_id in sorted(
+                            version_sync_delta.touched_parent_ids,
+                            key=lambda value: "" if value is None else str(value),
+                        )
+                    ],
+                }
+            ),
         },
     )
     await db.commit()

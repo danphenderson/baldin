@@ -16,7 +16,7 @@ vi.mock('../context/notification-context', () => ({
 
 vi.mock('../service/agent-chat', () => ({
   getChatSession: vi.fn(),
-  getChatMessages: vi.fn(),
+  getChatHistory: vi.fn(),
   saveChatToDocument: vi.fn(),
   sendChatMessage: vi.fn(),
   updateChatSession: vi.fn(),
@@ -32,7 +32,7 @@ import AgentChatShellPage from './agent-chat-shell';
 import type { AgentChatMessageRead } from '../service/agent-chat';
 
 const mockedGetChatSession = vi.mocked(agentChatService.getChatSession);
-const mockedGetChatMessages = vi.mocked(agentChatService.getChatMessages);
+const mockedGetChatHistory = vi.mocked(agentChatService.getChatHistory);
 const mockedSaveChatToDocument = vi.mocked(agentChatService.saveChatToDocument);
 const mockedSendChatMessage = vi.mocked(agentChatService.sendChatMessage);
 const mockedUpdateChatSession = vi.mocked(agentChatService.updateChatSession);
@@ -59,6 +59,10 @@ const buildSession = (overrides: Partial<Record<string, unknown>> = {}) => ({
   last_message_at: '2026-04-11T12:09:00Z',
   application_id: 'app-1',
   user_id: 'user-1',
+  message_history: {
+    has_more_before: false,
+    next_before: null,
+  },
   messages: [
     {
       id: 'message-system',
@@ -109,7 +113,7 @@ function renderPage(initialRoute: string) {
 describe('AgentChatShellPage', () => {
   beforeEach(() => {
     mockedGetChatSession.mockReset();
-    mockedGetChatMessages.mockReset();
+    mockedGetChatHistory.mockReset();
     mockedSaveChatToDocument.mockReset();
     mockedSendChatMessage.mockReset();
     mockedUpdateChatSession.mockReset();
@@ -131,11 +135,10 @@ describe('AgentChatShellPage', () => {
       updated_at: '2026-04-11T12:00:00Z',
       user_id: 'user-1',
     } as never);
-    mockedGetChatMessages.mockResolvedValue({
+    mockedGetChatHistory.mockResolvedValue({
       items: [],
-      total: 0,
-      page: 1,
-      page_size: 100,
+      has_more_before: false,
+      next_before: null,
     } as never);
   });
 
@@ -159,10 +162,14 @@ describe('AgentChatShellPage', () => {
     expect(mockedGetAgent).toHaveBeenCalledWith('test-token', 'agent-1');
   });
 
-  it('loads older history one tail page at a time without duplicating the newest slice', async () => {
+  it('loads older history through the cursor endpoint without duplicating the newest slice', async () => {
     const user = userEvent.setup();
     mockedGetChatSession.mockResolvedValue(buildSession({
       message_count: 55,
+      message_history: {
+        has_more_before: true,
+        next_before: 'cursor-before-1',
+      },
       messages: [
         {
           id: 'message-6',
@@ -180,7 +187,7 @@ describe('AgentChatShellPage', () => {
         },
       ],
     }) as never);
-    mockedGetChatMessages.mockResolvedValue({
+    mockedGetChatHistory.mockResolvedValue({
       items: [
         {
           id: 'message-1',
@@ -204,9 +211,8 @@ describe('AgentChatShellPage', () => {
           metadata: {},
         },
       ],
-      total: 55,
-      page: 2,
-      page_size: 50,
+      has_more_before: false,
+      next_before: null,
     } as never);
 
     renderPage('/automation/agents/agent-1/chat/session-1');
@@ -214,14 +220,188 @@ describe('AgentChatShellPage', () => {
     await user.click(await screen.findByRole('button', { name: /load earlier messages/i }));
 
     await waitFor(() => {
-      expect(mockedGetChatMessages).toHaveBeenCalledWith('test-token', 'session-1', {
-        page: 2,
-        page_size: 50,
-        from_tail: true,
+      expect(mockedGetChatHistory).toHaveBeenCalledWith('test-token', 'session-1', {
+        before: 'cursor-before-1',
+        limit: 50,
       });
     });
     expect(screen.getByText('Earlier user message')).toBeInTheDocument();
     expect(screen.getAllByText('Newest retained user message')).toHaveLength(1);
+  });
+
+  it('renders duplicate-timestamp canonical messages in stable id order', async () => {
+    mockedGetChatSession.mockResolvedValue(buildSession({
+      message_count: 3,
+      messages: [
+        {
+          id: 'message-b',
+          role: 'assistant',
+          content: 'Second by id',
+          created_at: '2026-04-11T12:01:00Z',
+          metadata: {},
+        },
+        {
+          id: 'message-a',
+          role: 'assistant',
+          content: 'First by id',
+          created_at: '2026-04-11T12:01:00Z',
+          metadata: {},
+        },
+        {
+          id: 'message-c',
+          role: 'assistant',
+          content: 'Later message',
+          created_at: '2026-04-11T12:02:00Z',
+          metadata: {},
+        },
+      ],
+    }) as never);
+
+    renderPage('/automation/agents/agent-1/chat/session-1');
+
+    await screen.findByText('Cover Letter Agent');
+
+    const first = screen.getByText('First by id');
+    const second = screen.getByText('Second by id');
+
+    expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+  });
+
+  it('preserves older loaded history across session refresh and advances the older cursor', async () => {
+    const user = userEvent.setup();
+    let onDoneHandler: ((message: AgentChatMessageRead) => void) | null = null;
+
+    mockedGetChatSession
+      .mockResolvedValueOnce(buildSession({
+        message_count: 60,
+        message_history: {
+          has_more_before: true,
+          next_before: 'cursor-before-1',
+        },
+        messages: [
+          {
+            id: 'message-6',
+            role: 'user',
+            content: 'Newest retained user message',
+            created_at: '2026-04-11T12:06:00Z',
+            metadata: {},
+          },
+          {
+            id: 'message-7',
+            role: 'assistant',
+            content: 'Newest retained assistant message',
+            created_at: '2026-04-11T12:07:00Z',
+            metadata: {},
+          },
+        ],
+      }) as never)
+      .mockResolvedValueOnce(buildSession({
+        message_count: 62,
+        message_history: {
+          has_more_before: true,
+          next_before: 'cursor-before-0',
+        },
+        messages: [
+          {
+            id: 'message-6',
+            role: 'user',
+            content: 'Newest retained user message',
+            created_at: '2026-04-11T12:06:00Z',
+            metadata: {},
+          },
+          {
+            id: 'message-7',
+            role: 'assistant',
+            content: 'Newest retained assistant message',
+            created_at: '2026-04-11T12:07:00Z',
+            metadata: {},
+          },
+          {
+            id: 'message-user-persisted',
+            role: 'user',
+            content: 'Help me tailor this intro.',
+            created_at: '2026-04-11T12:08:00Z',
+            metadata: {},
+          },
+          {
+            id: 'message-assistant-persisted',
+            role: 'assistant',
+            content: 'Tailored answer complete.',
+            created_at: '2026-04-11T12:08:10Z',
+            metadata: {},
+          },
+        ],
+      }) as never);
+    mockedGetChatHistory
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 'message-1',
+            role: 'system',
+            content: 'Earlier system context',
+            created_at: '2026-04-11T12:00:00Z',
+            metadata: {},
+          },
+          {
+            id: 'message-2',
+            role: 'user',
+            content: 'Earlier user message',
+            created_at: '2026-04-11T12:01:00Z',
+            metadata: {},
+          },
+        ],
+        has_more_before: true,
+        next_before: 'cursor-before-0',
+      } as never)
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 'message-0',
+            role: 'system',
+            content: 'Oldest context',
+            created_at: '2026-04-11T11:59:00Z',
+            metadata: {},
+          },
+        ],
+        has_more_before: false,
+        next_before: null,
+      } as never);
+    mockedSendChatMessage.mockImplementation((_, __, ___, ____, onDone) => {
+      onDoneHandler = onDone;
+      return new AbortController();
+    });
+
+    renderPage('/automation/agents/agent-1/chat/session-1');
+
+    await user.click(await screen.findByRole('button', { name: /load earlier messages/i }));
+    expect(await screen.findByText('Earlier user message')).toBeInTheDocument();
+
+    await user.type(screen.getByRole('textbox', { name: 'Chat message' }), 'Help me tailor this intro.');
+    await user.keyboard('{Enter}');
+
+    await act(async () => {
+      onDoneHandler?.({
+        id: 'message-assistant-persisted',
+        role: 'assistant',
+        content: 'Tailored answer complete.',
+        created_at: '2026-04-11T12:08:10Z',
+        metadata: {},
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockedGetChatSession).toHaveBeenCalledTimes(2);
+    });
+    expect(screen.getByText('Earlier user message')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /load earlier messages/i }));
+
+    await waitFor(() => {
+      expect(mockedGetChatHistory).toHaveBeenNthCalledWith(2, 'test-token', 'session-1', {
+        before: 'cursor-before-0',
+        limit: 50,
+      });
+    });
   });
 
   it('redirects to the canonical agent-scoped route when the session belongs to another agent', async () => {

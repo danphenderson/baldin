@@ -15,22 +15,29 @@ export type AgentModelListRead = components['schemas']['AgentModelListRead'];
 export type AgentModelOptionRead = components['schemas']['AgentModelOptionRead'];
 export type AgentChatSaveToDocumentRequest = components['schemas']['AgentChatSaveToDocumentRequest'];
 export type AgentChatSaveToDocumentRead = components['schemas']['AgentChatSaveToDocumentRead'];
+export interface AgentChatMessageHistoryRead {
+  has_more_before: boolean;
+  next_before: string | null;
+}
+export interface AgentChatHistoryPageRead {
+  items: AgentChatMessageRead[];
+  has_more_before: boolean;
+  next_before: string | null;
+}
 
 type RawAgentChatSessionsPaginatedRead = components['schemas']['PaginatedResponse_AgentChatSessionSummaryRead_'];
-type RawAgentChatMessagesPaginatedRead = components['schemas']['PaginatedResponse_AgentChatMessageRead_'];
+type RawAgentChatHistoryPageRead = components['schemas']['AgentChatHistoryPageRead'];
 
 export type AgentChatSessionsPaginatedRead = PaginatedResponse<AgentChatSessionSummaryRead>;
-export type AgentChatMessagesPaginatedRead = PaginatedResponse<AgentChatMessageRead>;
 
 export interface AgentChatSessionsPagination {
   page?: number;
   page_size?: number;
 }
 
-export interface AgentChatMessagesPagination {
-  page?: number;
-  page_size?: number;
-  from_tail?: boolean;
+export interface AgentChatHistoryPagination {
+  before?: string;
+  limit?: number;
 }
 
 type ChatDeltaHandler = (content: string) => void;
@@ -39,8 +46,6 @@ type ChatErrorHandler = (message: string) => void;
 
 const DEFAULT_SESSIONS_PAGE = 1;
 const DEFAULT_SESSIONS_PAGE_SIZE = 20;
-const DEFAULT_MESSAGES_PAGE = 1;
-const DEFAULT_MESSAGES_PAGE_SIZE = 50;
 const DEFAULT_SESSION_LIMIT = 50;
 
 const unwrap = <T,>(
@@ -238,27 +243,27 @@ export const getChatSession = async (
   }));
 };
 
-export const getChatMessages = async (
+export const getChatHistory = async (
   token: string,
   sessionId: string,
-  pagination?: AgentChatMessagesPagination,
-): Promise<AgentChatMessagesPaginatedRead> => {
-  const page = pagination?.page ?? DEFAULT_MESSAGES_PAGE;
-  const pageSize = pagination?.page_size ?? DEFAULT_MESSAGES_PAGE_SIZE;
-  const fromTail = pagination?.from_tail;
+  pagination?: AgentChatHistoryPagination,
+): Promise<AgentChatHistoryPageRead> => {
   const client = createApiClient(token);
-  const response = unwrap<RawAgentChatMessagesPaginatedRead>(await client.GET('/api/v1/agents/chat/{session_id}/messages', {
+  const response = unwrap<RawAgentChatHistoryPageRead>(await client.GET('/api/v1/agents/chat/{session_id}/history', {
     params: {
       path: { session_id: sessionId },
       query: {
-        page,
-        page_size: pageSize,
-        from_tail: fromTail,
+        before: pagination?.before,
+        limit: pagination?.limit ?? DEFAULT_SESSION_LIMIT,
       },
     },
   }));
 
-  return normalizePaginatedResponse(response, { page, page_size: pageSize });
+  return {
+    items: response.items ?? [],
+    has_more_before: response.has_more_before ?? false,
+    next_before: response.next_before ?? null,
+  };
 };
 
 export const updateChatSession = async (

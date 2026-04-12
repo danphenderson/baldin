@@ -5,7 +5,6 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { UserContext } from '../../context/user-context';
 import { ToolbarHeaderContext } from '../../layout/toolbar-header-context';
-import { CELL_DOC_EXPORT_CONTRACT_FIXTURE } from '../../component/cell-doc/test/cell-doc-contract-fixtures';
 import DocumentComparePage from './document-compare';
 import * as documentService from '../../service/documents';
 
@@ -26,6 +25,7 @@ function createVersion(
   id: string,
   versionNumber: number,
   content: Record<string, unknown>,
+  blockSnapshot: documentService.DocumentVersionRead['block_snapshot'],
   overrides: Partial<documentService.DocumentVersionRead> = {},
 ): documentService.DocumentVersionRead {
   return {
@@ -38,6 +38,7 @@ function createVersion(
     content_type: 'custom',
     change_summary: `Version ${versionNumber}`,
     source_file: null,
+    block_snapshot: blockSnapshot,
     ...overrides,
   } as documentService.DocumentVersionRead;
 }
@@ -76,17 +77,152 @@ describe('DocumentComparePage', () => {
   });
 
   it('compares cell-doc versions using normalized block text from the shared helper', async () => {
-    const rightFixture = JSON.parse(JSON.stringify(CELL_DOC_EXPORT_CONTRACT_FIXTURE)) as {
-      content: Array<Record<string, unknown>>;
+    const leftFixture = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          attrs: { blockId: 'block-1' },
+          content: [{ type: 'text', text: 'Cell-doc export contract' }],
+        },
+        {
+          type: 'taskList',
+          attrs: { blockId: 'list-1' },
+          content: [
+            {
+              type: 'taskItem',
+              attrs: { blockId: 'block-2', checked: false },
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Follow up with recruiter' }] }],
+            },
+          ],
+        },
+        {
+          type: 'embedBlock',
+          attrs: {
+            blockId: 'block-3',
+            label: 'Interview prep notes',
+            previewText: 'Prepare STAR stories',
+          },
+        },
+      ],
     };
-    ((rightFixture.content[4].content as Array<Record<string, unknown>>)[1].content as Array<Record<string, unknown>>)[1]
-      .content = [{
-      type: 'paragraph',
-      content: [{ type: 'text', text: 'Interviewing' }],
-    }];
+    const rightFixture = {
+      type: 'doc',
+      content: [
+        {
+          type: 'taskList',
+          attrs: { blockId: 'list-1' },
+          content: [
+            {
+              type: 'taskItem',
+              attrs: { blockId: 'block-2', checked: false },
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Follow up with recruiter' }] }],
+            },
+          ],
+        },
+        {
+          type: 'paragraph',
+          attrs: { blockId: 'block-1' },
+          content: [{ type: 'text', text: 'Cell-doc export contract updated' }],
+        },
+        {
+          type: 'embedBlock',
+          attrs: {
+            blockId: 'block-3',
+            label: 'Interview prep notes',
+            previewText: 'Prepare STAR stories',
+          },
+        },
+        {
+          type: 'mentionBlock',
+          attrs: {
+            blockId: 'block-4',
+            label: 'Casey Blocks',
+          },
+        },
+      ],
+    };
+    const leftSnapshot = [
+      {
+        id: 'block-1',
+        block_type: 'paragraph',
+        content: [{ type: 'text', text: 'Cell-doc export contract' }],
+        properties: {},
+        position: 0,
+        children: [],
+      },
+      {
+        id: 'list-1',
+        block_type: 'task_list',
+        content: [],
+        properties: {},
+        position: 1,
+        children: [
+          {
+            id: 'block-2',
+            block_type: 'task_item',
+            content: [{ type: 'text', text: 'Follow up with recruiter' }],
+            properties: { checked: false },
+            position: 0,
+            children: [],
+          },
+        ],
+      },
+      {
+        id: 'block-3',
+        block_type: 'embed',
+        content: [],
+        properties: { label: 'Interview prep notes', previewText: 'Prepare STAR stories' },
+        position: 2,
+        children: [],
+      },
+    ] as documentService.DocumentVersionRead['block_snapshot'];
+    const rightSnapshot = [
+      {
+        id: 'list-1',
+        block_type: 'task_list',
+        content: [],
+        properties: {},
+        position: 0,
+        children: [
+          {
+            id: 'block-2',
+            block_type: 'task_item',
+            content: [{ type: 'text', text: 'Follow up with recruiter' }],
+            properties: { checked: false },
+            position: 0,
+            children: [],
+          },
+        ],
+      },
+      {
+        id: 'block-1',
+        block_type: 'paragraph',
+        content: [{ type: 'text', text: 'Cell-doc export contract updated' }],
+        properties: {},
+        position: 1,
+        children: [],
+      },
+      {
+        id: 'block-3',
+        block_type: 'embed',
+        content: [],
+        properties: { label: 'Interview prep notes', previewText: 'Prepare STAR stories' },
+        position: 2,
+        children: [],
+      },
+      {
+        id: 'block-4',
+        block_type: 'mention',
+        content: [],
+        properties: { label: 'Casey Blocks' },
+        position: 3,
+        children: [],
+      },
+    ] as documentService.DocumentVersionRead['block_snapshot'];
 
-    const leftVersion = createVersion('version-left', 1, CELL_DOC_EXPORT_CONTRACT_FIXTURE as Record<string, unknown>);
-    const rightVersion = createVersion('version-right', 2, rightFixture as unknown as Record<string, unknown>);
+    const leftVersion = createVersion('version-left', 1, leftFixture as Record<string, unknown>, leftSnapshot);
+    const rightVersion = createVersion('version-right', 2, rightFixture as unknown as Record<string, unknown>, rightSnapshot);
 
     mockedGetDocument.mockResolvedValue({
       id: 'doc-1',
@@ -100,11 +236,11 @@ describe('DocumentComparePage', () => {
 
     renderCompare();
 
-    expect(await screen.findByText('Cell-doc blocks are compared as normalized plain text in this preview scope.')).toBeInTheDocument();
-    expect(screen.getByText('[ ] Follow up with recruiter')).toBeInTheDocument();
-    expect(screen.getByText('Baldin Labs | Applied')).toBeInTheDocument();
-    expect(screen.getByText('Baldin Labs | Interviewing')).toBeInTheDocument();
+    expect(await screen.findByText('Cell-doc versions are compared block-by-block from saved block snapshots.')).toBeInTheDocument();
+    expect(screen.getAllByText('Cell-doc export contract updated').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Casey Blocks').length).toBeGreaterThan(0);
     expect(screen.getByText('+1 added')).toBeInTheDocument();
-    expect(screen.getByText(/1 removed/)).toBeInTheDocument();
+    expect(screen.getByText('1 changed')).toBeInTheDocument();
+    expect(screen.getByText('1 moved')).toBeInTheDocument();
   });
 });

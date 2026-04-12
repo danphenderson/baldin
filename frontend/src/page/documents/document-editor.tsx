@@ -408,6 +408,7 @@ const DocumentEditorPage: React.FC = () => {
                 documentId={id}
                 token={token ?? undefined}
                 collaborationUserName={currentUserName}
+                viewerRole={viewerRole}
               />
             </Box>
           ) : (

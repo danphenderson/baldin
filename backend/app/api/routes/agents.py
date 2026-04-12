@@ -1,3 +1,5 @@
+import base64
+import binascii
 import json
 from collections.abc import AsyncIterator
 from datetime import datetime, timezone
@@ -16,7 +18,7 @@ from langchain_core.messages import (
     HumanMessage,
     SystemMessage,
 )
-from sqlalchemy import desc, func, select
+from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
@@ -46,6 +48,7 @@ _AGENT_CHAT_RESPONSE_TOKEN_RESERVE_RATIO = 0.25
 _AGENT_CHAT_ESTIMATED_TOKENS_PER_CHAR_NUMERATOR = 1
 _AGENT_CHAT_ESTIMATED_TOKENS_PER_CHAR_DENOMINATOR = 4
 _AGENT_CHAT_MESSAGE_TOKEN_OVERHEAD = 8
+_AGENT_CHAT_HISTORY_CURSOR_VERSION = 1
 
 
 def _json_dumps(data: Any) -> str:
@@ -644,6 +647,110 @@ async def _load_all_agent_chat_messages(
     return result.scalars().all()
 
 
+def _encode_agent_chat_history_cursor(
+    *,
+    created_at: datetime,
+    message_id: UUID,
+) -> str:
+    payload = {
+        "v": _AGENT_CHAT_HISTORY_CURSOR_VERSION,
+        "created_at": created_at.astimezone(timezone.utc).isoformat(),
+        "id": str(message_id),
+    }
+    encoded = base64.urlsafe_b64encode(
+        json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    ).decode("utf-8")
+    return encoded.rstrip("=")
+
+
+def _decode_agent_chat_history_cursor(cursor: str) -> tuple[datetime, UUID]:
+    try:
+        padded = f"{cursor}{'=' * (-len(cursor) % 4)}"
+        decoded = base64.urlsafe_b64decode(padded.encode("utf-8")).decode("utf-8")
+        payload = json.loads(decoded)
+        if not isinstance(payload, dict):
+            raise ValueError("cursor payload must be an object")
+        if payload.get("v") != _AGENT_CHAT_HISTORY_CURSOR_VERSION:
+            raise ValueError("unsupported cursor version")
+
+        created_at_raw = payload.get("created_at")
+        message_id_raw = payload.get("id")
+        if not isinstance(created_at_raw, str) or not isinstance(message_id_raw, str):
+            raise ValueError("cursor payload is missing required fields")
+
+        created_at = datetime.fromisoformat(created_at_raw)
+        if created_at.tzinfo is None:
+            raise ValueError("cursor timestamp must be timezone-aware")
+
+        return created_at.astimezone(timezone.utc), UUID(message_id_raw)
+    except (
+        ValueError,
+        TypeError,
+        json.JSONDecodeError,
+        UnicodeDecodeError,
+        binascii.Error,
+    ) as exc:
+        raise HTTPException(
+            status_code=422, detail="Invalid chat history cursor"
+        ) from exc
+
+
+def _build_agent_chat_history_metadata(
+    messages: list[models.AgentChatMessage],
+    *,
+    has_more_before: bool,
+) -> schemas.AgentChatMessageHistoryRead:
+    next_before: str | None = None
+    if has_more_before and messages:
+        oldest_message = messages[0]
+        next_before = _encode_agent_chat_history_cursor(
+            created_at=oldest_message.created_at,
+            message_id=oldest_message.id,
+        )
+
+    return schemas.AgentChatMessageHistoryRead(
+        has_more_before=has_more_before,
+        next_before=next_before,
+    )
+
+
+async def _load_agent_chat_history_before(
+    db: AsyncSession,
+    *,
+    session_id: UUID,
+    limit: int,
+    before: tuple[datetime, UUID] | None = None,
+) -> tuple[list[models.AgentChatMessage], bool]:
+    query = select(models.AgentChatMessage).where(
+        models.AgentChatMessage.session_id == session_id
+    )
+
+    if before is not None:
+        before_created_at, before_id = before
+        query = query.where(
+            or_(
+                models.AgentChatMessage.created_at < before_created_at,
+                and_(
+                    models.AgentChatMessage.created_at == before_created_at,
+                    models.AgentChatMessage.id < before_id,
+                ),
+            )
+        )
+
+    result = await db.execute(
+        query.order_by(
+            desc(models.AgentChatMessage.created_at),
+            desc(models.AgentChatMessage.id),
+        ).limit(limit + 1)
+    )
+    messages = result.scalars().all()
+    has_more_before = len(messages) > limit
+    if has_more_before:
+        messages = messages[:limit]
+    messages.reverse()
+    return messages, has_more_before
+
+
 def _build_agent_chat_export_input_context(
     *,
     chat_session: models.AgentChatSession,
@@ -1023,17 +1130,11 @@ async def _load_recent_chat_messages(
     session_id: UUID,
     limit: int,
 ) -> list[models.AgentChatMessage]:
-    result = await db.execute(
-        select(models.AgentChatMessage)
-        .where(models.AgentChatMessage.session_id == session_id)
-        .order_by(
-            desc(models.AgentChatMessage.created_at),
-            desc(models.AgentChatMessage.id),
-        )
-        .limit(limit)
+    messages, _has_more_before = await _load_agent_chat_history_before(
+        db,
+        session_id=session_id,
+        limit=limit,
     )
-    messages = result.scalars().all()
-    messages.reverse()
     return messages
 
 
@@ -1047,12 +1148,30 @@ def _serialize_agent_chat_session(
     session: models.AgentChatSession,
     *,
     messages: list[models.AgentChatMessage],
+    message_history: schemas.AgentChatMessageHistoryRead | None = None,
 ) -> schemas.AgentChatSessionRead:
     summary = schemas.AgentChatSessionSummaryRead.model_validate(session)
     return schemas.AgentChatSessionRead(
         **summary.model_dump(),
         user_id=session.user_id,
         messages=[_serialize_agent_chat_message(message) for message in messages],
+        message_history=message_history,
+    )
+
+
+def _serialize_agent_chat_history_page(
+    messages: list[models.AgentChatMessage],
+    *,
+    has_more_before: bool,
+) -> schemas.AgentChatHistoryPageRead:
+    metadata = _build_agent_chat_history_metadata(
+        messages,
+        has_more_before=has_more_before,
+    )
+    return schemas.AgentChatHistoryPageRead(
+        items=[_serialize_agent_chat_message(message) for message in messages],
+        has_more_before=metadata.has_more_before,
+        next_before=metadata.next_before,
     )
 
 
@@ -1725,7 +1844,15 @@ async def create_agent_chat_session(
         session_id=chat_session.id,
         limit=50,
     )
-    return _serialize_agent_chat_session(created_session, messages=messages)
+    message_history = _build_agent_chat_history_metadata(
+        messages,
+        has_more_before=created_session.message_count > len(messages),
+    )
+    return _serialize_agent_chat_session(
+        created_session,
+        messages=messages,
+        message_history=message_history,
+    )
 
 
 @router.get(
@@ -1782,25 +1909,29 @@ async def get_agent_chat_session(
         session_id=chat_session.id,
         limit=limit,
     )
-    return _serialize_agent_chat_session(chat_session, messages=messages)
+    message_history = _build_agent_chat_history_metadata(
+        messages,
+        has_more_before=chat_session.message_count > len(messages),
+    )
+    return _serialize_agent_chat_session(
+        chat_session,
+        messages=messages,
+        message_history=message_history,
+    )
 
 
 @router.get(
-    "/chat/{session_id}/messages",
-    response_model=schemas.PaginatedResponse[schemas.AgentChatMessageRead],
+    "/chat/{session_id}/history",
+    response_model=schemas.AgentChatHistoryPageRead,
 )
-async def get_agent_chat_messages(
+async def get_agent_chat_history(
     session_id: UUID,
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
-    from_tail: bool = Query(
-        False,
-        description=(
-            "When true, page from the newest messages backward while still "
-            "returning each page in ascending chronological order."
-        ),
+    limit: int = Query(50, ge=1, le=200),
+    before: str | None = Query(
+        None,
+        description="Opaque cursor for loading messages older than the current slice",
     ),
 ):
     chat_session = await _load_agent_chat_session(
@@ -1808,37 +1939,18 @@ async def get_agent_chat_messages(
         session_id=session_id,
         user_id=user.id,
     )
-
-    base = select(models.AgentChatMessage).where(
-        models.AgentChatMessage.session_id == chat_session.id
+    before_cursor = (
+        _decode_agent_chat_history_cursor(before) if before is not None else None
     )
-    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
-    total = count_result.scalar_one()
-
-    ordered_query = base
-    if from_tail:
-        ordered_query = ordered_query.order_by(
-            desc(models.AgentChatMessage.created_at),
-            desc(models.AgentChatMessage.id),
-        )
-    else:
-        ordered_query = ordered_query.order_by(
-            models.AgentChatMessage.created_at.asc(),
-            models.AgentChatMessage.id.asc(),
-        )
-
-    result = await db.execute(
-        ordered_query.offset((page - 1) * page_size).limit(page_size)
+    messages, has_more_before = await _load_agent_chat_history_before(
+        db,
+        session_id=chat_session.id,
+        limit=limit,
+        before=before_cursor,
     )
-    items = result.scalars().all()
-    if from_tail:
-        items.reverse()
-
-    return schemas.PaginatedResponse[schemas.AgentChatMessageRead](
-        items=[_serialize_agent_chat_message(message) for message in items],
-        total=total,
-        page=page,
-        page_size=page_size,
+    return _serialize_agent_chat_history_page(
+        messages,
+        has_more_before=has_more_before,
     )
 
 
@@ -2128,7 +2240,15 @@ async def update_agent_chat_session(
         session_id=session_id,
         limit=50,
     )
-    return _serialize_agent_chat_session(updated_session, messages=messages)
+    message_history = _build_agent_chat_history_metadata(
+        messages,
+        has_more_before=updated_session.message_count > len(messages),
+    )
+    return _serialize_agent_chat_session(
+        updated_session,
+        messages=messages,
+        message_history=message_history,
+    )
 
 
 @router.delete("/chat/{session_id}", status_code=204, response_model=None)

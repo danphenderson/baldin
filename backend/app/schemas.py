@@ -2351,6 +2351,32 @@ class AgentChatMessageRead(BaseSchema):
     created_at: datetime = Field(description="When the message was created")
 
 
+class AgentChatMessageHistoryRead(BaseSchema):
+    has_more_before: bool = Field(
+        False,
+        description="Whether older messages exist before the current oldest message",
+    )
+    next_before: str | None = Field(
+        None,
+        description="Opaque cursor for loading older messages before the current slice",
+    )
+
+
+class AgentChatHistoryPageRead(BaseSchema):
+    items: list[AgentChatMessageRead] = Field(
+        default_factory=list,
+        description="Chronologically ascending chat messages for this history slice",
+    )
+    has_more_before: bool = Field(
+        False,
+        description="Whether another older history slice exists before this page",
+    )
+    next_before: str | None = Field(
+        None,
+        description="Opaque cursor for loading the next older history slice",
+    )
+
+
 class AgentChatMessageCreate(BaseSchema):
     content: str = Field(description="User-authored message content")
 
@@ -2390,6 +2416,10 @@ class AgentChatSessionRead(AgentChatSessionSummaryRead):
     messages: list[AgentChatMessageRead] = Field(
         default_factory=list,
         description="Recent messages loaded alongside the session",
+    )
+    message_history: AgentChatMessageHistoryRead | None = Field(
+        None,
+        description="Cursor metadata for paging older chat history",
     )
 
 

@@ -202,9 +202,12 @@ async def _create_chat_session_with_messages(
     title: str | None = None,
     model_name: str | None = None,
     message_specs: list[tuple[str, str]] | None = None,
+    message_timestamps: list[datetime] | None = None,
 ) -> UUID:
     message_specs = message_specs or [("system", "System context")]
     base_time = datetime(2026, 4, 1, tzinfo=timezone.utc)
+    if message_timestamps is not None and len(message_timestamps) != len(message_specs):
+        raise ValueError("message_timestamps must align with message_specs")
 
     async with session_context() as session:
         chat_session = models.AgentChatSession(
@@ -215,15 +218,27 @@ async def _create_chat_session_with_messages(
             model_name=model_name,
             status="active",
             message_count=len(message_specs),
-            last_message_at=base_time + timedelta(minutes=len(message_specs) - 1),
+            last_message_at=(
+                message_timestamps[-1]
+                if message_timestamps is not None
+                else base_time + timedelta(minutes=len(message_specs) - 1)
+            ),
             created_at=base_time,
-            updated_at=base_time + timedelta(minutes=len(message_specs) - 1),
+            updated_at=(
+                message_timestamps[-1]
+                if message_timestamps is not None
+                else base_time + timedelta(minutes=len(message_specs) - 1)
+            ),
         )
         session.add(chat_session)
         await session.flush()
 
         for index, (role, content) in enumerate(message_specs):
-            timestamp = base_time + timedelta(minutes=index)
+            timestamp = (
+                message_timestamps[index]
+                if message_timestamps is not None
+                else base_time + timedelta(minutes=index)
+            )
             session.add(
                 models.AgentChatMessage(
                     session_id=chat_session.id,
@@ -705,62 +720,50 @@ async def test_get_agent_chat_session_returns_recent_messages_with_limit() -> No
         "revision",
         "draft two",
     ]
+    assert body["message_history"]["has_more_before"] is True
+    assert isinstance(body["message_history"]["next_before"], str)
 
 
-async def test_get_agent_chat_messages_returns_paginated_history_in_ascending_order() -> (
-    None
-):
+async def test_get_agent_chat_messages_history_route_is_removed() -> None:
     await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-messages-pass")
-        headers = await _auth_headers(client, email, "agent-chat-messages-pass")
+        email, user_id = await _create_user("agent-chat-messages-removed-pass")
+        headers = await _auth_headers(client, email, "agent-chat-messages-removed-pass")
         agent_id = await _create_agent(
             user_id,
-            name="History Agent",
+            name="Removed History Agent",
             kind="custom",
         )
         session_id = await _create_chat_session_with_messages(
             user_id=user_id,
             agent_id=agent_id,
-            title="Paginated history",
-            message_specs=[
-                ("system", "context"),
-                ("user", "first"),
-                ("assistant", "second"),
-                ("user", "third"),
-            ],
+            title="Removed history route",
         )
 
         response = await client.get(
             f"/api/v1/agents/chat/{session_id}/messages",
-            params={"page": 2, "page_size": 2},
             headers=headers,
         )
 
-    assert response.status_code == 200, response.text
-    body = response.json()
-    assert body["total"] == 4
-    assert body["page"] == 2
-    assert body["page_size"] == 2
-    assert [item["role"] for item in body["items"]] == ["assistant", "user"]
-    assert [item["content"] for item in body["items"]] == ["second", "third"]
-    assert [item["metadata"]["index"] for item in body["items"]] == [2, 3]
+    assert response.status_code == 405, response.text
 
 
-async def test_get_agent_chat_messages_supports_tail_pagination() -> None:
+async def test_get_agent_chat_history_returns_cursor_metadata_for_older_messages() -> (
+    None
+):
     await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-messages-tail-pass")
-        headers = await _auth_headers(client, email, "agent-chat-messages-tail-pass")
+        email, user_id = await _create_user("agent-chat-history-pass")
+        headers = await _auth_headers(client, email, "agent-chat-history-pass")
         agent_id = await _create_agent(
             user_id,
-            name="Tail History Agent",
+            name="Cursor History Agent",
             kind="custom",
         )
         session_id = await _create_chat_session_with_messages(
             user_id=user_id,
             agent_id=agent_id,
-            title="Tail history",
+            title="Cursor history",
             message_specs=[
                 ("system", "context"),
                 ("user", "first"),
@@ -770,31 +773,199 @@ async def test_get_agent_chat_messages_supports_tail_pagination() -> None:
             ],
         )
 
-        newest_page = await client.get(
-            f"/api/v1/agents/chat/{session_id}/messages",
-            params={"page": 1, "page_size": 2, "from_tail": True},
-            headers=headers,
-        )
-        older_page = await client.get(
-            f"/api/v1/agents/chat/{session_id}/messages",
-            params={"page": 2, "page_size": 2, "from_tail": True},
+        response = await client.get(
+            f"/api/v1/agents/chat/{session_id}/history",
+            params={"limit": 2},
             headers=headers,
         )
 
-    assert newest_page.status_code == 200, newest_page.text
-    newest_body = newest_page.json()
-    assert newest_body["total"] == 5
-    assert newest_body["page"] == 1
-    assert newest_body["page_size"] == 2
-    assert [item["role"] for item in newest_body["items"]] == ["user", "assistant"]
-    assert [item["content"] for item in newest_body["items"]] == ["third", "fourth"]
-    assert [item["metadata"]["index"] for item in newest_body["items"]] == [3, 4]
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert [item["content"] for item in body["items"]] == ["third", "fourth"]
+    assert body["has_more_before"] is True
+    cursor_created_at, cursor_message_id = (
+        agents_route._decode_agent_chat_history_cursor(body["next_before"])
+    )
+    assert cursor_created_at == datetime.fromisoformat(
+        body["items"][0]["created_at"].replace("Z", "+00:00")
+    )
+    assert str(cursor_message_id) == body["items"][0]["id"]
 
-    assert older_page.status_code == 200, older_page.text
-    older_body = older_page.json()
-    assert [item["role"] for item in older_body["items"]] == ["user", "assistant"]
-    assert [item["content"] for item in older_body["items"]] == ["first", "second"]
-    assert [item["metadata"]["index"] for item in older_body["items"]] == [1, 2]
+
+async def test_get_agent_chat_history_cursor_paginates_duplicate_timestamps_without_gaps() -> (
+    None
+):
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-history-duplicate-pass")
+        headers = await _auth_headers(
+            client,
+            email,
+            "agent-chat-history-duplicate-pass",
+        )
+        agent_id = await _create_agent(
+            user_id,
+            name="Duplicate Timestamp Agent",
+            kind="custom",
+        )
+        base_time = datetime(2026, 4, 1, tzinfo=timezone.utc)
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            title="Duplicate timestamp history",
+            message_specs=[
+                ("system", "context"),
+                ("user", "first"),
+                ("assistant", "second"),
+                ("user", "third"),
+                ("assistant", "fourth"),
+            ],
+            message_timestamps=[
+                base_time,
+                base_time + timedelta(minutes=1),
+                base_time + timedelta(minutes=1),
+                base_time + timedelta(minutes=2),
+                base_time + timedelta(minutes=3),
+            ],
+        )
+
+        async with session_context() as session:
+            result = await session.execute(
+                select(models.AgentChatMessage)
+                .where(models.AgentChatMessage.session_id == session_id)
+                .order_by(
+                    models.AgentChatMessage.created_at.asc(),
+                    models.AgentChatMessage.id.asc(),
+                )
+            )
+            canonical_messages = result.scalars().all()
+
+        first_page = await client.get(
+            f"/api/v1/agents/chat/{session_id}/history",
+            params={"limit": 2},
+            headers=headers,
+        )
+        second_page = await client.get(
+            f"/api/v1/agents/chat/{session_id}/history",
+            params={"limit": 2, "before": first_page.json()["next_before"]},
+            headers=headers,
+        )
+        third_page = await client.get(
+            f"/api/v1/agents/chat/{session_id}/history",
+            params={"limit": 2, "before": second_page.json()["next_before"]},
+            headers=headers,
+        )
+
+    assert first_page.status_code == 200, first_page.text
+    assert second_page.status_code == 200, second_page.text
+    assert third_page.status_code == 200, third_page.text
+
+    combined_indexes = [
+        *[item["metadata"]["index"] for item in third_page.json()["items"]],
+        *[item["metadata"]["index"] for item in second_page.json()["items"]],
+        *[item["metadata"]["index"] for item in first_page.json()["items"]],
+    ]
+    assert combined_indexes == [
+        message.metadata_["index"] for message in canonical_messages
+    ]
+    assert first_page.json()["has_more_before"] is True
+    assert second_page.json()["has_more_before"] is True
+    assert third_page.json()["has_more_before"] is False
+    assert third_page.json()["next_before"] is None
+
+
+async def test_get_agent_chat_history_cursor_is_stable_when_newer_messages_arrive() -> (
+    None
+):
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-history-concurrent-pass")
+        headers = await _auth_headers(
+            client,
+            email,
+            "agent-chat-history-concurrent-pass",
+        )
+        agent_id = await _create_agent(
+            user_id,
+            name="Concurrent Cursor Agent",
+            kind="custom",
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            title="Concurrent history",
+            message_specs=[
+                ("system", "context"),
+                ("user", "first"),
+                ("assistant", "second"),
+                ("user", "third"),
+                ("assistant", "fourth"),
+            ],
+        )
+
+        first_page = await client.get(
+            f"/api/v1/agents/chat/{session_id}/history",
+            params={"limit": 2},
+            headers=headers,
+        )
+
+        async with session_context() as session:
+            chat_session = await session.get(models.AgentChatSession, session_id)
+            assert chat_session is not None
+            timestamp = datetime(2026, 4, 1, 0, 10, tzinfo=timezone.utc)
+            session.add(
+                models.AgentChatMessage(
+                    session_id=session_id,
+                    role="assistant",
+                    content="newest after cursor",
+                    metadata_={"index": 5},
+                    created_at=timestamp,
+                    updated_at=timestamp,
+                )
+            )
+            chat_session.message_count += 1
+            chat_session.last_message_at = timestamp
+            chat_session.updated_at = timestamp
+            await session.commit()
+
+        second_page = await client.get(
+            f"/api/v1/agents/chat/{session_id}/history",
+            params={"limit": 2, "before": first_page.json()["next_before"]},
+            headers=headers,
+        )
+
+    assert first_page.status_code == 200, first_page.text
+    assert second_page.status_code == 200, second_page.text
+    assert [item["content"] for item in second_page.json()["items"]] == [
+        "first",
+        "second",
+    ]
+
+
+async def test_get_agent_chat_history_rejects_malformed_cursor() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-history-invalid-pass")
+        headers = await _auth_headers(client, email, "agent-chat-history-invalid-pass")
+        agent_id = await _create_agent(
+            user_id,
+            name="Invalid Cursor Agent",
+            kind="custom",
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            title="Invalid cursor history",
+        )
+
+        response = await client.get(
+            f"/api/v1/agents/chat/{session_id}/history",
+            params={"before": "not-a-valid-cursor"},
+            headers=headers,
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Invalid chat history cursor"
 
 
 async def test_send_agent_chat_message_json_fallback_persists_messages_and_uses_session_model(
@@ -1212,6 +1383,10 @@ async def test_agent_chat_session_routes_reject_cross_user_access() -> None:
             f"/api/v1/agents/chat/{owner_session_id}",
             headers=viewer_headers,
         )
+        history_response = await client.get(
+            f"/api/v1/agents/chat/{owner_session_id}/history",
+            headers=viewer_headers,
+        )
         messages_response = await client.get(
             f"/api/v1/agents/chat/{owner_session_id}/messages",
             headers=viewer_headers,
@@ -1233,7 +1408,8 @@ async def test_agent_chat_session_routes_reject_cross_user_access() -> None:
     assert create_response.status_code == 403
     assert list_response.status_code == 403
     assert detail_response.status_code == 403
-    assert messages_response.status_code == 403
+    assert history_response.status_code == 403
+    assert messages_response.status_code == 405
     assert patch_response.status_code == 403
     assert delete_response.status_code == 403
     assert owner_readback.status_code == 200

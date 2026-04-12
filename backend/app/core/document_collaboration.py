@@ -15,6 +15,7 @@ from ypy_websocket import WebsocketServer, YRoom
 from ypy_websocket.ystore import BaseYStore
 
 from app.core.db import async_session_maker
+from app.core.document_blocks import block_snapshot_to_tiptap_json
 from app.models import Document
 
 log = getLogger(__name__)
@@ -49,6 +50,25 @@ def _is_seedable_tiptap_document(content: str | None) -> bool:
         return False
 
     return isinstance(parsed, dict) and parsed.get("type") == "doc"
+
+
+def _seedable_head_version_content(document: Document) -> str | None:
+    head_version = document.head_version
+    if head_version is None or head_version.content_format != "tiptap_json":
+        return None
+
+    if head_version.block_snapshot is not None:
+        try:
+            return json.dumps(
+                block_snapshot_to_tiptap_json(
+                    document.id,
+                    head_version.block_snapshot,
+                )
+            )
+        except ValueError:
+            return head_version.content
+
+    return head_version.content
 
 
 def _merge_document_state(
@@ -98,12 +118,8 @@ async def claim_document_collaboration_bootstrap(
                     status=DocumentCollaborationBootstrapClaimStatus.CONNECT
                 )
 
-            head_version = document.head_version
-            if (
-                head_version is None
-                or head_version.content_format != "tiptap_json"
-                or not _is_seedable_tiptap_document(head_version.content)
-            ):
+            seed_content = _seedable_head_version_content(document)
+            if not _is_seedable_tiptap_document(seed_content):
                 _clear_document_bootstrap_claim(document_id)
                 return DocumentCollaborationBootstrapClaimResult(
                     status=DocumentCollaborationBootstrapClaimStatus.CONNECT
@@ -125,7 +141,7 @@ async def claim_document_collaboration_bootstrap(
             )
             return DocumentCollaborationBootstrapClaimResult(
                 status=DocumentCollaborationBootstrapClaimStatus.SEED,
-                content=head_version.content,
+                content=seed_content,
             )
 
 

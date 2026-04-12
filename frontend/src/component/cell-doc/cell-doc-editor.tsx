@@ -20,6 +20,7 @@ import { BlockContextMenu } from './menus/block-context-menu';
 import { useCollaborativeEditor, type ConnectionStatus } from '../use-collaborative-editor';
 import ConnectionStatusBanner from '../connection-status-banner';
 import { getTiptapEditorContent } from '../document-content';
+import type { DocumentShareRole } from '../../service/documents';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -36,6 +37,7 @@ interface CellDocEditorProps {
   documentId?: string;
   token?: string;
   collaborationUserName?: string;
+  viewerRole?: DocumentShareRole | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -91,6 +93,7 @@ const CellDocEditor: React.FC<CellDocEditorProps> = ({
   documentId,
   token,
   collaborationUserName,
+  viewerRole = null,
 }) => {
   const theme = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -99,8 +102,13 @@ const CellDocEditor: React.FC<CellDocEditorProps> = ({
 
   /* Seed extensions for collaboration — cell-doc needs the full extension set */
   const cellDocSeedExtensions = useMemo(
-    () => buildCellDocExtensions({ disableUndoRedo: true }),
-    [],
+    () => buildCellDocExtensions({
+      disableUndoRedo: true,
+      token,
+      documentId,
+      viewerRole,
+    }),
+    [documentId, token, viewerRole],
   );
 
   const collab = useCollaborativeEditor({
@@ -114,7 +122,12 @@ const CellDocEditor: React.FC<CellDocEditorProps> = ({
   const extensions = useMemo(() => {
     const isCollaborative = !!collaborative && !!collab.ydoc;
     const exts = [
-      ...buildCellDocExtensions({ disableUndoRedo: isCollaborative }),
+      ...buildCellDocExtensions({
+        disableUndoRedo: isCollaborative,
+        token,
+        documentId,
+        viewerRole,
+      }),
       Placeholder.configure({ placeholder: placeholderText }),
     ];
 
@@ -133,7 +146,7 @@ const CellDocEditor: React.FC<CellDocEditorProps> = ({
     }
 
     return exts;
-  }, [collaborative, collab.localUser, collab.provider, collab.ydoc, placeholderText]);
+  }, [collaborative, collab.localUser, collab.provider, collab.ydoc, documentId, placeholderText, token, viewerRole]);
 
   const editor = useEditor({
     extensions,
@@ -190,7 +203,13 @@ const CellDocEditor: React.FC<CellDocEditorProps> = ({
           readOnly={readOnly}
         />
         {!readOnly && <InlineFormatMenu editor={editor} />}
-        {!readOnly && <BlockContextMenu editor={editor} editorContainerRef={containerRef} />}
+        {!readOnly && (
+          <BlockContextMenu
+            editor={editor}
+            editorContainerRef={containerRef}
+            viewerRole={viewerRole}
+          />
+        )}
       </Box>
     </Box>
   );

@@ -359,9 +359,11 @@ export interface paths {
     /** Update Agent Chat Session */
     patch: operations["update_agent_chat_session_api_v1_agents_chat__session_id__patch"];
   };
+  "/api/v1/agents/chat/{session_id}/history": {
+    /** Get Agent Chat History */
+    get: operations["get_agent_chat_history_api_v1_agents_chat__session_id__history_get"];
+  };
   "/api/v1/agents/chat/{session_id}/messages": {
-    /** Get Agent Chat Messages */
-    get: operations["get_agent_chat_messages_api_v1_agents_chat__session_id__messages_get"];
     /** Send Agent Chat Message */
     post: operations["send_agent_chat_message_api_v1_agents_chat__session_id__messages_post"];
   };
@@ -1165,6 +1167,25 @@ export interface components {
       /** Page Size */
       page_size: number;
     };
+    /** AgentChatHistoryPageRead */
+    AgentChatHistoryPageRead: {
+      /**
+       * Items
+       * @description Chronologically ascending chat messages for this history slice
+       */
+      items?: components["schemas"]["AgentChatMessageRead"][];
+      /**
+       * Has More Before
+       * @description Whether another older history slice exists before this page
+       * @default false
+       */
+      has_more_before?: boolean;
+      /**
+       * Next Before
+       * @description Opaque cursor for loading the next older history slice
+       */
+      next_before?: string | null;
+    };
     /** AgentChatMessageCreate */
     AgentChatMessageCreate: {
       /**
@@ -1172,6 +1193,20 @@ export interface components {
        * @description User-authored message content
        */
       content: string;
+    };
+    /** AgentChatMessageHistoryRead */
+    AgentChatMessageHistoryRead: {
+      /**
+       * Has More Before
+       * @description Whether older messages exist before the current oldest message
+       * @default false
+       */
+      has_more_before?: boolean;
+      /**
+       * Next Before
+       * @description Opaque cursor for loading older messages before the current slice
+       */
+      next_before?: string | null;
     };
     /** AgentChatMessageRead */
     AgentChatMessageRead: {
@@ -1312,6 +1347,8 @@ export interface components {
        * @description Recent messages loaded alongside the session
        */
       messages?: components["schemas"]["AgentChatMessageRead"][];
+      /** @description Cursor metadata for paging older chat history */
+      message_history?: components["schemas"]["AgentChatMessageHistoryRead"] | null;
     };
     /**
      * AgentChatSessionStatus
@@ -6181,32 +6218,6 @@ export interface components {
        */
       page_size?: number;
     };
-    /** PaginatedResponse[AgentChatMessageRead] */
-    PaginatedResponse_AgentChatMessageRead_: {
-      /**
-       * Items
-       * @description Paginated items
-       */
-      items?: components["schemas"]["AgentChatMessageRead"][];
-      /**
-       * Total
-       * @description Total number of matching records
-       * @default 0
-       */
-      total?: number;
-      /**
-       * Page
-       * @description Current page number
-       * @default 1
-       */
-      page?: number;
-      /**
-       * Page Size
-       * @description Items per page
-       * @default 20
-       */
-      page_size?: number;
-    };
     /** PaginatedResponse[AgentChatSessionSummaryRead] */
     PaginatedResponse_AgentChatSessionSummaryRead_: {
       /**
@@ -9615,14 +9626,13 @@ export interface operations {
       };
     };
   };
-  /** Get Agent Chat Messages */
-  get_agent_chat_messages_api_v1_agents_chat__session_id__messages_get: {
+  /** Get Agent Chat History */
+  get_agent_chat_history_api_v1_agents_chat__session_id__history_get: {
     parameters: {
       query?: {
-        page?: number;
-        page_size?: number;
-        /** @description When true, page from the newest messages backward while still returning each page in ascending chronological order. */
-        from_tail?: boolean;
+        limit?: number;
+        /** @description Opaque cursor for loading messages older than the current slice */
+        before?: string | null;
       };
       path: {
         session_id: string;
@@ -9632,7 +9642,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedResponse_AgentChatMessageRead_"];
+          "application/json": components["schemas"]["AgentChatHistoryPageRead"];
         };
       };
       /** @description Validation Error */

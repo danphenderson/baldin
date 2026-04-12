@@ -8,6 +8,7 @@ export const ToggleNodeView: React.FC<NodeViewProps> = ({ node, updateAttributes
   const theme = useTheme();
   const isOpen = node.attrs.open !== false;
   const summaryText = node.firstChild?.textContent?.trim() || 'Toggle heading';
+  const isLocked = node.attrs.locked === true;
 
   const toggle = useCallback(() => {
     if (!editor.isEditable) return;
@@ -15,7 +16,10 @@ export const ToggleNodeView: React.FC<NodeViewProps> = ({ node, updateAttributes
   }, [editor.isEditable, isOpen, updateAttributes]);
 
   return (
-    <NodeViewWrapper>
+    <NodeViewWrapper
+      data-block-id={node.attrs.blockId}
+      data-block-locked={isLocked ? 'true' : undefined}
+    >
       <Box
         data-testid="toggle-node-view"
         sx={{
@@ -23,6 +27,7 @@ export const ToggleNodeView: React.FC<NodeViewProps> = ({ node, updateAttributes
           borderRadius: 1,
           my: 1,
           p: 1,
+          opacity: isLocked ? 0.78 : 1,
         }}
       >
         <Box

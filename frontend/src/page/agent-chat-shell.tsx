@@ -13,7 +13,7 @@ import { useNotification } from '../context/notification-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import { getAgent } from '../service/agents';
 import {
-  getChatMessages,
+  getChatHistory,
   getChatSession,
   saveChatToDocument,
   sendChatMessage,
@@ -50,26 +50,49 @@ const NEAR_BOTTOM_THRESHOLD = 72;
 
 const createLocalMessageId = (prefix: string, sequence: number): string => `${prefix}-${sequence}`;
 
-const dedupeMessages = (messages: AgentChatMessageRead[]): AgentChatMessageRead[] => {
-  const seen = new Set<string>();
-  const ordered = [...messages].sort((left, right) => (
-    new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
-  ));
+const isLocalMessageId = (messageId: string): boolean => messageId.startsWith('local-');
 
-  return ordered.filter((message) => {
-    if (seen.has(message.id)) {
-      return false;
-    }
-    seen.add(message.id);
-    return true;
-  });
+const compareChatMessages = (
+  left: Pick<ChatDisplayMessage, 'id' | 'created_at'>,
+  right: Pick<ChatDisplayMessage, 'id' | 'created_at'>,
+): number => {
+  const createdAtDelta = new Date(left.created_at).getTime() - new Date(right.created_at).getTime();
+  if (createdAtDelta !== 0) {
+    return createdAtDelta;
+  }
+
+  if (isLocalMessageId(left.id) || isLocalMessageId(right.id)) {
+    return 0;
+  }
+
+  return left.id.localeCompare(right.id);
 };
+
+const dedupeMessages = (
+  messages: ReadonlyArray<AgentChatMessageRead | ChatDisplayMessage>,
+): ChatDisplayMessage[] => {
+  const seen = new Set<string>();
+  return [...messages]
+    .sort(compareChatMessages)
+    .reduceRight<ChatDisplayMessage[]>((deduped, message) => {
+      if (seen.has(message.id)) {
+        return deduped;
+      }
+      seen.add(message.id);
+      deduped.unshift(message);
+      return deduped;
+    }, []);
+};
+
+const countCanonicalMessages = (messages: ChatDisplayMessage[]): number => (
+  messages.filter((message) => !isLocalMessageId(message.id)).length
+);
 
 const mergeCanonicalMessages = (
   current: ChatDisplayMessage[],
   incoming: AgentChatMessageRead[],
 ): ChatDisplayMessage[] => {
-  const retained = current.filter((message) => !message.id.startsWith('local-'));
+  const retained = current.filter((message) => !isLocalMessageId(message.id));
   return dedupeMessages([...retained, ...incoming]);
 };
 
@@ -86,6 +109,7 @@ const AgentChatShellPage: React.FC = () => {
   const [streamState, setStreamState] = useState<StreamState | null>(null);
   const [composerError, setComposerError] = useState<RetryState | null>(null);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const [olderCursor, setOlderCursor] = useState<string | null>(null);
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
   const [stickToBottom, setStickToBottom] = useState(true);
   const [savingTitle, setSavingTitle] = useState(false);
@@ -98,7 +122,6 @@ const AgentChatShellPage: React.FC = () => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesRef = useRef<ChatDisplayMessage[]>([]);
-  const loadedTailPagesRef = useRef(1);
 
   const title = useMemo(() => session?.title?.trim() || 'Untitled chat', [session?.title]);
   const systemMessages = useMemo(
@@ -113,7 +136,7 @@ const AgentChatShellPage: React.FC = () => {
     () => messages.some((message) => message.role === 'assistant' && Boolean(message.content.trim())),
     [messages],
   );
-  const hasOlderMessages = Boolean(session && session.message_count > messages.length);
+  const hasOlderMessages = olderCursor !== null;
 
   usePageToolbarHeader(title, 'Agent chat');
 
@@ -130,10 +153,11 @@ const AgentChatShellPage: React.FC = () => {
       return null;
     }
 
+    const currentCanonicalCount = countCanonicalMessages(messagesRef.current);
     const result = await getChatSession(
       token,
       sessionId,
-      limit ?? Math.max(DEFAULT_SESSION_LIMIT, messagesRef.current.length + 5),
+      limit ?? Math.max(DEFAULT_SESSION_LIMIT, currentCanonicalCount + 5),
     );
 
     if (agentId && result.agent_id !== agentId) {
@@ -142,12 +166,14 @@ const AgentChatShellPage: React.FC = () => {
     }
 
     setSession(result);
+    setOlderCursor(result.message_history?.next_before ?? null);
     setMessages((current) => mergeCanonicalMessages(current, result.messages ?? []));
     return result;
   }, [agentId, navigate, sessionId, token]);
 
   const refresh = useCallback(async () => {
     if (!token || !sessionId) {
+      setOlderCursor(null);
       setLoading(false);
       return;
     }
@@ -159,7 +185,6 @@ const AgentChatShellPage: React.FC = () => {
       if (!result) {
         return;
       }
-      loadedTailPagesRef.current = 1;
       try {
         const agent = await getAgent(token, result.agent_id);
         setAgentName(agent.name.trim() || 'Agent');
@@ -169,6 +194,7 @@ const AgentChatShellPage: React.FC = () => {
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to load chat session';
       setSession(null);
+      setOlderCursor(null);
       setMessages([]);
       if (/not found/i.test(message)) {
         setNotFound(true);
@@ -199,26 +225,24 @@ const AgentChatShellPage: React.FC = () => {
   };
 
   const handleLoadOlderMessages = useCallback(async () => {
-    if (!token || !sessionId || !session) {
+    if (!token || !sessionId || !session || !olderCursor) {
       return;
     }
 
     setLoadingOlderMessages(true);
     try {
-      const nextPage = loadedTailPagesRef.current + 1;
-      const page = await getChatMessages(token, sessionId, {
-        page: nextPage,
-        page_size: DEFAULT_SESSION_LIMIT,
-        from_tail: true,
+      const page = await getChatHistory(token, sessionId, {
+        before: olderCursor,
+        limit: DEFAULT_SESSION_LIMIT,
       });
-      loadedTailPagesRef.current = nextPage;
       setMessages((current) => dedupeMessages([...page.items, ...current]));
+      setOlderCursor(page.next_before ?? null);
     } catch (error) {
       notify(error instanceof Error ? error.message : 'Failed to load earlier messages', 'error');
     } finally {
       setLoadingOlderMessages(false);
     }
-  }, [notify, session, sessionId, token]);
+  }, [notify, olderCursor, session, sessionId, token]);
 
   const handleSaveTitle = useCallback(async (nextTitle: string) => {
     if (!token || !session) {

@@ -131,11 +131,13 @@ async def _create_versioned_document(
     *,
     content: str | None,
     content_format: str,
+    kind: str = "freeform",
+    block_snapshot: list[dict[str, object]] | None = None,
 ) -> UUID:
     async with session_context() as session:
         document = models.Document(
             user_id=user_id,
-            kind="freeform",
+            kind=kind,
             title="Collaboration Doc",
         )
         session.add(document)
@@ -148,6 +150,7 @@ async def _create_versioned_document(
             content=content,
             content_type="custom",
             content_format=content_format,
+            block_snapshot=block_snapshot,
         )
         session.add(version)
         await session.flush()
@@ -253,6 +256,56 @@ async def test_collaboration_bootstrap_claims_rich_text_seed_then_waits_until_re
     assert third_payload["content"] == rich_content
     assert third_payload["content_format"] == "tiptap_json"
     assert third_payload["collaboration_token"]
+
+
+async def test_collaboration_bootstrap_rebuilds_cell_doc_seed_from_block_snapshot() -> (
+    None
+):
+    await _ensure_db_ready()
+
+    async with _client() as client:
+        owner_email, owner_id = await _create_user(
+            "collab-snapshot-pass",
+            first_name="Bela",
+            last_name="Snapshot",
+        )
+        headers = await _auth_headers(client, owner_email, "collab-snapshot-pass")
+        document_id = await _create_versioned_document(
+            owner_id,
+            kind="cell_doc",
+            content=json.dumps({"type": "doc", "content": [{"type": "paragraph"}]}),
+            content_format="tiptap_json",
+            block_snapshot=[
+                {
+                    "id": "00000000-0000-4000-8000-000000000111",
+                    "block_type": "paragraph",
+                    "content": [{"type": "text", "text": "Snapshot seed"}],
+                    "properties": {},
+                    "position": 0,
+                    "children": [],
+                }
+            ],
+        )
+
+        response = await client.post(
+            f"/api/v1/documents/{document_id}/collaborate/bootstrap",
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "seed"
+    assert payload["content_format"] == "tiptap_json"
+    assert json.loads(payload["content"]) == {
+        "type": "doc",
+        "content": [
+            {
+                "type": "paragraph",
+                "attrs": {"blockId": "00000000-0000-4000-8000-000000000111"},
+                "content": [{"type": "text", "text": "Snapshot seed"}],
+            }
+        ],
+    }
 
 
 async def test_collaboration_bootstrap_skips_invalid_or_plain_text_content() -> None:

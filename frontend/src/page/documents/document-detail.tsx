@@ -121,6 +121,7 @@ const ReadOnlyVersionPreview: React.FC<{
         readOnly
         onChange={() => {}}
         minHeight="100px"
+        viewerRole="viewer"
       />
     );
   }

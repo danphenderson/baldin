@@ -29,21 +29,23 @@ _ROOT_BLOCK_TYPES = frozenset(
     }
 )
 
+_NESTABLE_BLOCK_TYPES = frozenset(_ROOT_BLOCK_TYPES - {"mention", "embed"})
+
 _CHILD_BLOCK_TYPES_BY_PARENT = {
     "paragraph": frozenset(),
     "heading": frozenset(),
     "bullet_list": frozenset({"list_item"}),
     "ordered_list": frozenset({"list_item"}),
-    "list_item": _ROOT_BLOCK_TYPES,
+    "list_item": _NESTABLE_BLOCK_TYPES,
     "task_list": frozenset({"task_item"}),
-    "task_item": _ROOT_BLOCK_TYPES,
-    "blockquote": _ROOT_BLOCK_TYPES,
+    "task_item": _NESTABLE_BLOCK_TYPES,
+    "blockquote": _NESTABLE_BLOCK_TYPES,
     "code_block": frozenset(),
-    "callout": _ROOT_BLOCK_TYPES,
-    "toggle": _ROOT_BLOCK_TYPES,
+    "callout": _NESTABLE_BLOCK_TYPES,
+    "toggle": _NESTABLE_BLOCK_TYPES,
     "table": frozenset({"table_row"}),
     "table_row": frozenset({"table_cell"}),
-    "table_cell": _ROOT_BLOCK_TYPES,
+    "table_cell": _NESTABLE_BLOCK_TYPES,
     "divider": frozenset(),
     "mention": frozenset(),
     "embed": frozenset(),

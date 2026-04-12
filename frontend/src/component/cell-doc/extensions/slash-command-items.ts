@@ -2,9 +2,9 @@
  * Slash-command palette item definitions for cell-doc editors.
  *
  * Each entry maps a trigger keyword + aliases to a TipTap command.
- * The 17 items cover the full cell-doc node contract:
+ * The items cover the full cell-doc node contract:
  *   Text, H1–H3, Bullet, Numbered, Task, Blockquote, Code Block,
- *   Callout Info/Warning/Tip/Danger, Toggle, Divider, Table.
+ *   Callout Info/Warning/Tip/Danger, Toggle, Divider, Table, Mention, Embed.
  */
 import type { Editor } from '@tiptap/core';
 import type { CalloutType } from './callout-types';
@@ -120,6 +120,18 @@ export const SLASH_COMMAND_ITEMS: SlashCommandItem[] = [
     aliases: ['table', 'grid'],
     command: (editor) =>
       editor.chain().focus().insertTable({ rows: 3, cols: 3 }).run(),
+  },
+  {
+    title: 'Mention',
+    description: 'Standalone user, document, or agent reference',
+    aliases: ['mention', '@', 'reference', 'user', 'agent', 'document'],
+    command: (editor) => editor.chain().focus().insertMentionBlock().run(),
+  },
+  {
+    title: 'Embed',
+    description: 'Live-linked block transclusion from another cell-doc',
+    aliases: ['embed', 'transclusion', 'transclude', 'reference-block'],
+    command: (editor) => editor.chain().focus().insertEmbedBlock().run(),
   },
 ];
 

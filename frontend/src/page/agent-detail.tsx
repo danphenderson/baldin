@@ -27,6 +27,7 @@ import { Caption } from '../component/common/text';
 import { getKindLabel } from '../component/agent-card';
 import { ALPHA_CHIP } from '../theme/effects';
 import { timeAgo } from '../util/format';
+import { getAgentConfiguredModelName, getAgentModelDisplayLabel } from '../util/agent-models';
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -291,6 +292,18 @@ const AgentDetailPage: React.FC = () => {
           </Typography>
         </Box>
       )}
+
+      <Box sx={{ mb: 2.5 }}>
+        <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.75 }}>
+          Configuration
+        </Typography>
+        <Stack direction="row" spacing={1.5} alignItems="baseline">
+          <Caption>Model</Caption>
+          <Typography variant="body2" color="text.secondary">
+            {getAgentModelDisplayLabel(getAgentConfiguredModelName(agent.configuration))}
+          </Typography>
+        </Stack>
+      </Box>
 
       {/* Timestamps */}
       <Stack direction="row" spacing={2} sx={{ mb: 4 }}>

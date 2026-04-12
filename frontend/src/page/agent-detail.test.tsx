@@ -94,4 +94,27 @@ describe('AgentDetailPage', () => {
     await waitFor(() => expect(mockedGetAgent).toHaveBeenCalledTimes(2));
     expect(mockedNotify).toHaveBeenCalledWith('Network down', 'error');
   });
+
+  it('shows Default in the configuration section when no model override is configured', async () => {
+    mockedGetAgent.mockResolvedValueOnce(buildAgent() as never);
+
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Cover Letter Agent' })).toBeInTheDocument();
+    expect(screen.getByText('Configuration')).toBeInTheDocument();
+    expect(screen.getByText('Model')).toBeInTheDocument();
+    expect(screen.getByText('Default')).toBeInTheDocument();
+  });
+
+  it('shows the formatted configured model label when a model override exists', async () => {
+    mockedGetAgent.mockResolvedValueOnce({
+      ...buildAgent(),
+      configuration: { model_name: 'gpt-5.4-mini-2026-03-17' },
+    } as never);
+
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Cover Letter Agent' })).toBeInTheDocument();
+    expect(screen.getByText('GPT-5.4 Mini (Balanced)')).toBeInTheDocument();
+  });
 });

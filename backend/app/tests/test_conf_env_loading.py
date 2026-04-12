@@ -42,3 +42,13 @@ def test_process_env_overrides_optional_local_env(
     monkeypatch.setenv("OPENAI_API_KEY", "from-process-env")
     process_settings = conf.OpenAI(_env_file=(base_env, local_env))
     assert process_settings.API_KEY == "from-process-env"
+
+
+def test_settings_treat_blank_sentry_traces_sample_rate_as_disabled(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("SENTRY_TRACES_SAMPLE_RATE", "")
+
+    settings = conf.Settings(_env_file=(conf.PROJECT_DIR / ".env",))
+
+    assert settings.SENTRY_TRACES_SAMPLE_RATE == 0.0

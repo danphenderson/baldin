@@ -102,6 +102,18 @@ describe('ApplicationDetailPage', () => {
     expect(applicationService.getApplicationDocuments).toHaveBeenCalledWith('test-token', 'app-123');
   });
 
+  it('shows the separate Chat with Agent launcher next to Run Agent', async () => {
+    vi.mocked(applicationService.getApplication).mockResolvedValue(makeApplication());
+    vi.mocked(applicationService.getApplicationDocuments).mockResolvedValue([]);
+    vi.mocked(documentService.getDocuments).mockResolvedValue([]);
+
+    renderPage('app-123');
+
+    expect(await screen.findByText('Senior Frontend Engineer')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run Agent' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Chat with Agent' })).toBeInTheDocument();
+  });
+
   it('shows an error state when the direct application fetch fails', async () => {
     vi.mocked(applicationService.getApplication).mockRejectedValue(new Error('Application not found'));
 

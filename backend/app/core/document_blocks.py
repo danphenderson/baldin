@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from copy import deepcopy
+from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 from uuid import UUID, uuid4
 
@@ -23,6 +24,8 @@ _ROOT_BLOCK_TYPES = frozenset(
         "toggle",
         "table",
         "divider",
+        "mention",
+        "embed",
     }
 )
 
@@ -42,6 +45,8 @@ _CHILD_BLOCK_TYPES_BY_PARENT = {
     "table_row": frozenset({"table_cell"}),
     "table_cell": _ROOT_BLOCK_TYPES,
     "divider": frozenset(),
+    "mention": frozenset(),
+    "embed": frozenset(),
 }
 
 _BLOCK_NODE_TYPES = {
@@ -61,7 +66,27 @@ _BLOCK_NODE_TYPES = {
     "tableCell",
     "tableHeader",
     "horizontalRule",
+    "mentionBlock",
+    "embedBlock",
 }
+
+
+@dataclass(frozen=True)
+class BlockSyncDelta:
+    added_block_ids: set[UUID]
+    removed_block_ids: set[UUID]
+    updated_block_ids: set[UUID]
+    moved_block_ids: set[UUID]
+    touched_parent_ids: set[UUID | None]
+
+    @property
+    def changed_block_ids(self) -> set[UUID]:
+        return (
+            set(self.added_block_ids)
+            | set(self.removed_block_ids)
+            | set(self.updated_block_ids)
+            | set(self.moved_block_ids)
+        )
 
 
 def blocks_to_tiptap_json(
@@ -189,6 +214,57 @@ def block_snapshot_to_blocks(
     return blocks
 
 
+def block_snapshot_to_tiptap_json(
+    document_id: UUID,
+    snapshot: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    return blocks_to_tiptap_json(block_snapshot_to_blocks(document_id, snapshot))
+
+
+def compute_block_sync_delta(
+    existing: Sequence[models.DocumentBlock],
+    incoming: Sequence[models.DocumentBlock],
+) -> BlockSyncDelta:
+    existing_by_id = {block.id: block for block in existing if block.id is not None}
+    incoming_by_id = {block.id: block for block in incoming if block.id is not None}
+
+    added_block_ids = set(incoming_by_id) - set(existing_by_id)
+    removed_block_ids = set(existing_by_id) - set(incoming_by_id)
+    updated_block_ids: set[UUID] = set()
+    moved_block_ids: set[UUID] = set()
+    touched_parent_ids: set[UUID | None] = set()
+
+    for block_id in set(existing_by_id) & set(incoming_by_id):
+        previous = existing_by_id[block_id]
+        current = incoming_by_id[block_id]
+        if (
+            previous.block_type != current.block_type
+            or previous.content != current.content
+            or (previous.properties or {}) != (current.properties or {})
+        ):
+            updated_block_ids.add(block_id)
+        if (
+            previous.parent_block_id != current.parent_block_id
+            or previous.position != current.position
+        ):
+            moved_block_ids.add(block_id)
+            touched_parent_ids.add(previous.parent_block_id)
+            touched_parent_ids.add(current.parent_block_id)
+
+    for block_id in added_block_ids:
+        touched_parent_ids.add(incoming_by_id[block_id].parent_block_id)
+    for block_id in removed_block_ids:
+        touched_parent_ids.add(existing_by_id[block_id].parent_block_id)
+
+    return BlockSyncDelta(
+        added_block_ids=added_block_ids,
+        removed_block_ids=removed_block_ids,
+        updated_block_ids=updated_block_ids,
+        moved_block_ids=moved_block_ids,
+        touched_parent_ids=touched_parent_ids,
+    )
+
+
 def validate_block_tree(
     blocks: Sequence[models.DocumentBlock],
 ) -> None:
@@ -262,7 +338,7 @@ def _block_to_tiptap_node(
         _block_to_tiptap_node(child, children_by_parent)
         for child in children_by_parent.get(block.id, [])
     ]
-    attrs = _copy_dict(block.properties)
+    attrs = _attrs_with_block_id(block)
     inline_content = _copy_inline_content(block.content)
 
     if block.block_type == "paragraph":
@@ -300,6 +376,10 @@ def _block_to_tiptap_node(
         return _build_wrapped_node(node_type, inline_content, children, attrs)
     if block.block_type == "divider":
         return _build_structural_node("horizontalRule", [], attrs)
+    if block.block_type == "mention":
+        return _build_atomic_node("mentionBlock", attrs)
+    if block.block_type == "embed":
+        return _build_atomic_node("embedBlock", attrs)
 
     raise ValueError(f"Unsupported block type: {block.block_type}")
 
@@ -439,6 +519,7 @@ def _tiptap_node_to_blocks(
 ) -> list[models.DocumentBlock]:
     node_type = _node_type(node)
     attrs = _copy_dict(node.get("attrs"))
+    explicit_block_id = _pop_explicit_block_id(attrs)
 
     if node_type == "paragraph":
         return [
@@ -450,6 +531,7 @@ def _tiptap_node_to_blocks(
                 properties=attrs,
                 position=position,
                 path=path,
+                explicit_block_id=explicit_block_id,
                 preserve_ids=preserve_ids,
             )
         ]
@@ -464,6 +546,7 @@ def _tiptap_node_to_blocks(
                 properties=attrs,
                 position=position,
                 path=path,
+                explicit_block_id=explicit_block_id,
                 preserve_ids=preserve_ids,
             )
         ]
@@ -477,6 +560,7 @@ def _tiptap_node_to_blocks(
             position=position,
             path=path,
             properties=attrs,
+            explicit_block_id=explicit_block_id,
             preserve_ids=preserve_ids,
         )
 
@@ -489,6 +573,7 @@ def _tiptap_node_to_blocks(
             position=position,
             path=path,
             properties=attrs,
+            explicit_block_id=explicit_block_id,
             preserve_ids=preserve_ids,
         )
 
@@ -503,6 +588,7 @@ def _tiptap_node_to_blocks(
             position=position,
             path=path,
             child_refs=child_refs,
+            explicit_block_id=explicit_block_id,
             preserve_ids=preserve_ids,
         )
 
@@ -515,6 +601,7 @@ def _tiptap_node_to_blocks(
             position=position,
             path=path,
             properties=attrs,
+            explicit_block_id=explicit_block_id,
             preserve_ids=preserve_ids,
         )
 
@@ -529,6 +616,7 @@ def _tiptap_node_to_blocks(
             position=position,
             path=path,
             child_refs=child_refs,
+            explicit_block_id=explicit_block_id,
             preserve_ids=preserve_ids,
         )
 
@@ -543,6 +631,7 @@ def _tiptap_node_to_blocks(
             position=position,
             path=path,
             child_refs=child_refs,
+            explicit_block_id=explicit_block_id,
             preserve_ids=preserve_ids,
         )
 
@@ -556,6 +645,7 @@ def _tiptap_node_to_blocks(
                 properties=attrs,
                 position=position,
                 path=path,
+                explicit_block_id=explicit_block_id,
                 preserve_ids=preserve_ids,
             )
         ]
@@ -571,6 +661,7 @@ def _tiptap_node_to_blocks(
             position=position,
             path=path,
             child_refs=child_refs,
+            explicit_block_id=explicit_block_id,
             preserve_ids=preserve_ids,
         )
 
@@ -585,6 +676,7 @@ def _tiptap_node_to_blocks(
             position=position,
             path=path,
             child_refs=child_refs,
+            explicit_block_id=explicit_block_id,
             preserve_ids=preserve_ids,
         )
 
@@ -597,6 +689,7 @@ def _tiptap_node_to_blocks(
             position=position,
             path=path,
             properties=attrs,
+            explicit_block_id=explicit_block_id,
             preserve_ids=preserve_ids,
         )
 
@@ -609,6 +702,7 @@ def _tiptap_node_to_blocks(
             position=position,
             path=path,
             properties=attrs,
+            explicit_block_id=explicit_block_id,
             preserve_ids=preserve_ids,
         )
 
@@ -625,6 +719,7 @@ def _tiptap_node_to_blocks(
             position=position,
             path=path,
             child_refs=child_refs,
+            explicit_block_id=explicit_block_id,
             preserve_ids=preserve_ids,
         )
 
@@ -638,6 +733,37 @@ def _tiptap_node_to_blocks(
                 properties=attrs,
                 position=position,
                 path=path,
+                explicit_block_id=explicit_block_id,
+                preserve_ids=preserve_ids,
+            )
+        ]
+
+    if node_type == "mentionBlock":
+        return [
+            _build_block(
+                document_id=document_id,
+                parent_block_id=parent_block_id,
+                block_type="mention",
+                content=None,
+                properties=attrs,
+                position=position,
+                path=path,
+                explicit_block_id=explicit_block_id,
+                preserve_ids=preserve_ids,
+            )
+        ]
+
+    if node_type == "embedBlock":
+        return [
+            _build_block(
+                document_id=document_id,
+                parent_block_id=parent_block_id,
+                block_type="embed",
+                content=None,
+                properties=attrs,
+                position=position,
+                path=path,
+                explicit_block_id=explicit_block_id,
                 preserve_ids=preserve_ids,
             )
         ]
@@ -707,6 +833,16 @@ def _build_toggle_node(
     return node
 
 
+def _build_atomic_node(
+    node_type: str,
+    attrs: dict[str, Any],
+) -> dict[str, Any]:
+    node: dict[str, Any] = {"type": node_type}
+    if attrs:
+        node["attrs"] = attrs
+    return node
+
+
 def _paragraph_wrapper(inline_content: list[dict[str, Any]]) -> dict[str, Any]:
     paragraph: dict[str, Any] = {"type": "paragraph"}
     if inline_content:
@@ -723,6 +859,7 @@ def _build_structural_blocks_from_node(
     position: int,
     path: BlockPath,
     properties: dict[str, Any],
+    explicit_block_id: UUID | None,
     preserve_ids: PreserveIdMap | None,
 ) -> list[models.DocumentBlock]:
     child_refs = [
@@ -738,6 +875,7 @@ def _build_structural_blocks_from_node(
         position=position,
         path=path,
         child_refs=child_refs,
+        explicit_block_id=explicit_block_id,
         preserve_ids=preserve_ids,
     )
 
@@ -752,6 +890,7 @@ def _build_container_blocks_from_children(
     position: int,
     path: BlockPath,
     child_refs: list[tuple[BlockPath, dict[str, Any]]],
+    explicit_block_id: UUID | None,
     preserve_ids: PreserveIdMap | None,
 ) -> list[models.DocumentBlock]:
     block = _build_block(
@@ -762,6 +901,7 @@ def _build_container_blocks_from_children(
         properties=properties,
         position=position,
         path=path,
+        explicit_block_id=explicit_block_id,
         preserve_ids=preserve_ids,
     )
     blocks = [block]
@@ -790,9 +930,14 @@ def _build_block(
     properties: dict[str, Any],
     position: int,
     path: BlockPath,
+    explicit_block_id: UUID | None,
     preserve_ids: PreserveIdMap | None,
 ) -> models.DocumentBlock:
-    block_id = _resolve_block_id(path, preserve_ids)
+    block_id = _resolve_block_id(
+        path,
+        preserve_ids,
+        explicit_block_id=explicit_block_id,
+    )
     return models.DocumentBlock(
         id=block_id,
         document_id=document_id,
@@ -822,7 +967,14 @@ def _ensure_acyclic_parent_chain(
         parent_id = parent_block.parent_block_id
 
 
-def _resolve_block_id(path: BlockPath, preserve_ids: PreserveIdMap | None) -> UUID:
+def _resolve_block_id(
+    path: BlockPath,
+    preserve_ids: PreserveIdMap | None,
+    *,
+    explicit_block_id: UUID | None,
+) -> UUID:
+    if explicit_block_id is not None:
+        return explicit_block_id
     if preserve_ids is None:
         return uuid4()
 
@@ -905,6 +1057,28 @@ def _copy_dict(raw_attrs: Any) -> dict[str, Any]:
     if not isinstance(raw_attrs, dict):
         raise ValueError("TipTap node attrs must be an object")
     return deepcopy(raw_attrs)
+
+
+def _attrs_with_block_id(block: models.DocumentBlock) -> dict[str, Any]:
+    if block.id is None:
+        raise ValueError(
+            "Document blocks must have stable UUIDs before TipTap serialization"
+        )
+    attrs = _copy_dict(block.properties)
+    attrs["blockId"] = str(block.id)
+    return attrs
+
+
+def _pop_explicit_block_id(attrs: dict[str, Any]) -> UUID | None:
+    raw_block_id = attrs.pop("blockId", None)
+    if raw_block_id in {None, ""}:
+        return None
+    try:
+        return (
+            raw_block_id if isinstance(raw_block_id, UUID) else UUID(str(raw_block_id))
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError("TipTap blockId attrs must be valid UUIDs") from exc
 
 
 def _node_type(node: dict[str, Any]) -> str:

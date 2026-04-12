@@ -13,6 +13,8 @@ export type AgentChatMessageRole = components['schemas']['AgentChatMessageRole']
 export type AgentChatSessionStatus = components['schemas']['AgentChatSessionStatus'];
 export type AgentModelListRead = components['schemas']['AgentModelListRead'];
 export type AgentModelOptionRead = components['schemas']['AgentModelOptionRead'];
+export type AgentChatSaveToDocumentRequest = components['schemas']['AgentChatSaveToDocumentRequest'];
+export type AgentChatSaveToDocumentRead = components['schemas']['AgentChatSaveToDocumentRead'];
 
 type RawAgentChatSessionsPaginatedRead = components['schemas']['PaginatedResponse_AgentChatSessionSummaryRead_'];
 type RawAgentChatMessagesPaginatedRead = components['schemas']['PaginatedResponse_AgentChatMessageRead_'];
@@ -28,6 +30,7 @@ export interface AgentChatSessionsPagination {
 export interface AgentChatMessagesPagination {
   page?: number;
   page_size?: number;
+  from_tail?: boolean;
 }
 
 type ChatDeltaHandler = (content: string) => void;
@@ -242,6 +245,7 @@ export const getChatMessages = async (
 ): Promise<AgentChatMessagesPaginatedRead> => {
   const page = pagination?.page ?? DEFAULT_MESSAGES_PAGE;
   const pageSize = pagination?.page_size ?? DEFAULT_MESSAGES_PAGE_SIZE;
+  const fromTail = pagination?.from_tail;
   const client = createApiClient(token);
   const response = unwrap<RawAgentChatMessagesPaginatedRead>(await client.GET('/api/v1/agents/chat/{session_id}/messages', {
     params: {
@@ -249,6 +253,7 @@ export const getChatMessages = async (
       query: {
         page,
         page_size: pageSize,
+        from_tail: fromTail,
       },
     },
   }));
@@ -272,6 +277,18 @@ export const deleteChatSession = async (token: string, sessionId: string): Promi
   const client = createApiClient(token);
   unwrap(await client.DELETE('/api/v1/agents/chat/{session_id}', {
     params: { path: { session_id: sessionId } },
+  }));
+};
+
+export const saveChatToDocument = async (
+  token: string,
+  sessionId: string,
+  payload: AgentChatSaveToDocumentRequest,
+): Promise<AgentChatSaveToDocumentRead> => {
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/api/v1/agents/chat/{session_id}/save-to-document', {
+    params: { path: { session_id: sessionId } },
+    body: payload,
   }));
 };
 

@@ -5,6 +5,7 @@ from functools import lru_cache
 from typing import Any
 from uuid import UUID
 
+import mistune
 import tiktoken
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -317,6 +318,396 @@ def _build_agent_session_tiptap(
         ],
     }
     return _json_dumps(tiptap_json)
+
+
+def _simple_paragraph_node_from_inline(
+    inline_content: list[dict[str, Any]],
+) -> dict[str, Any]:
+    node: dict[str, Any] = {"type": "paragraph"}
+    if inline_content:
+        node["content"] = inline_content
+    return node
+
+
+def _simple_heading_node(text: str, *, level: int) -> dict[str, Any]:
+    node: dict[str, Any] = {
+        "type": "heading",
+        "attrs": {"level": level},
+    }
+    inline_content = _inline_content_from_text(text)
+    if inline_content:
+        node["content"] = inline_content
+    return node
+
+
+def _simple_paragraph_node(text: str) -> dict[str, Any]:
+    return _simple_paragraph_node_from_inline(_inline_content_from_text(text))
+
+
+def _simple_callout_node(
+    text: str,
+    *,
+    callout_type: str = "info",
+) -> dict[str, Any]:
+    return {
+        "type": "callout",
+        "attrs": {"callout_type": callout_type},
+        "content": [_simple_paragraph_node(text)],
+    }
+
+
+def _simple_blockquote_node(text: str) -> dict[str, Any]:
+    return {
+        "type": "blockquote",
+        "content": [_simple_paragraph_node(text)],
+    }
+
+
+@lru_cache(maxsize=1)
+def _get_agent_chat_markdown_parser():
+    return mistune.create_markdown(renderer="ast")
+
+
+def _clone_marks(marks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [dict(mark) for mark in marks]
+
+
+def _append_text_with_marks(
+    content: list[dict[str, Any]],
+    text: str,
+    *,
+    marks: list[dict[str, Any]] | None = None,
+) -> None:
+    if not text:
+        return
+
+    node: dict[str, Any] = {"type": "text", "text": text}
+    if marks:
+        node["marks"] = _clone_marks(marks)
+    content.append(node)
+
+
+def _markdown_inline_children(token: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_children = token.get("children")
+    if not isinstance(raw_children, list):
+        return []
+    return [child for child in raw_children if isinstance(child, dict)]
+
+
+def _markdown_text_from_token(token: Any) -> str:
+    if isinstance(token, list):
+        return "".join(_markdown_text_from_token(child) for child in token)
+    if not isinstance(token, dict):
+        return ""
+
+    token_type = token.get("type")
+    if token_type in {"text", "codespan", "inline_html", "block_code", "block_html"}:
+        raw = token.get("raw")
+        return raw if isinstance(raw, str) else ""
+    if token_type in {"softbreak", "linebreak"}:
+        return "\n"
+
+    children = _markdown_inline_children(token)
+    if children:
+        return "".join(_markdown_text_from_token(child) for child in children)
+
+    raw = token.get("raw")
+    return raw if isinstance(raw, str) else ""
+
+
+def _markdown_inline_to_tiptap(
+    tokens: list[dict[str, Any]],
+    *,
+    marks: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    active_marks = marks or []
+    content: list[dict[str, Any]] = []
+
+    for token in tokens:
+        token_type = token.get("type")
+        if token_type == "text":
+            _append_text_with_marks(
+                content,
+                token.get("raw") if isinstance(token.get("raw"), str) else "",
+                marks=active_marks,
+            )
+            continue
+        if token_type in {"softbreak", "linebreak"}:
+            content.append({"type": "hardBreak"})
+            continue
+        if token_type == "codespan":
+            _append_text_with_marks(
+                content,
+                token.get("raw") if isinstance(token.get("raw"), str) else "",
+                marks=[*active_marks, {"type": "code"}],
+            )
+            continue
+        if token_type == "strong":
+            content.extend(
+                _markdown_inline_to_tiptap(
+                    _markdown_inline_children(token),
+                    marks=[*active_marks, {"type": "bold"}],
+                )
+            )
+            continue
+        if token_type == "emphasis":
+            content.extend(
+                _markdown_inline_to_tiptap(
+                    _markdown_inline_children(token),
+                    marks=[*active_marks, {"type": "italic"}],
+                )
+            )
+            continue
+        if token_type == "link":
+            attrs = token.get("attrs") if isinstance(token.get("attrs"), dict) else {}
+            href = attrs.get("url")
+            link_mark = (
+                {"type": "link", "attrs": {"href": href}}
+                if isinstance(href, str) and href
+                else None
+            )
+            nested_marks = [*active_marks]
+            if link_mark is not None:
+                nested_marks.append(link_mark)
+            content.extend(
+                _markdown_inline_to_tiptap(
+                    _markdown_inline_children(token),
+                    marks=nested_marks,
+                )
+            )
+            continue
+
+        fallback_text = _markdown_text_from_token(token)
+        if fallback_text:
+            _append_text_with_marks(content, fallback_text, marks=active_marks)
+
+    return content
+
+
+def _markdown_block_tokens(token: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_children = token.get("children")
+    if not isinstance(raw_children, list):
+        return []
+    return [child for child in raw_children if isinstance(child, dict)]
+
+
+def _markdown_list_item_to_tiptap(token: dict[str, Any]) -> dict[str, Any]:
+    child_nodes: list[dict[str, Any]] = []
+
+    for child in _markdown_block_tokens(token):
+        child_type = child.get("type")
+        if child_type == "block_text":
+            child_nodes.append(
+                _simple_paragraph_node_from_inline(
+                    _markdown_inline_to_tiptap(_markdown_inline_children(child))
+                )
+            )
+            continue
+        child_nodes.extend(_markdown_block_to_tiptap(child))
+
+    if not child_nodes:
+        child_nodes.append(_simple_paragraph_node(_markdown_text_from_token(token)))
+    elif child_nodes[0].get("type") != "paragraph":
+        child_nodes.insert(0, _simple_paragraph_node(""))
+
+    return {"type": "listItem", "content": child_nodes}
+
+
+def _markdown_block_to_tiptap(token: dict[str, Any]) -> list[dict[str, Any]]:
+    token_type = token.get("type")
+
+    if token_type == "blank_line":
+        return []
+    if token_type == "paragraph":
+        return [
+            _simple_paragraph_node_from_inline(
+                _markdown_inline_to_tiptap(_markdown_inline_children(token))
+            )
+        ]
+    if token_type == "block_text":
+        return [
+            _simple_paragraph_node_from_inline(
+                _markdown_inline_to_tiptap(_markdown_inline_children(token))
+            )
+        ]
+    if token_type == "heading":
+        attrs = token.get("attrs") if isinstance(token.get("attrs"), dict) else {}
+        level = attrs.get("level")
+        if not isinstance(level, int):
+            level = 1
+        node: dict[str, Any] = {"type": "heading", "attrs": {"level": level}}
+        inline_content = _markdown_inline_to_tiptap(_markdown_inline_children(token))
+        if inline_content:
+            node["content"] = inline_content
+        return [node]
+    if token_type == "list":
+        attrs = token.get("attrs") if isinstance(token.get("attrs"), dict) else {}
+        node_type = "orderedList" if attrs.get("ordered") else "bulletList"
+        items = [
+            _markdown_list_item_to_tiptap(child)
+            for child in _markdown_block_tokens(token)
+            if child.get("type") == "list_item"
+        ]
+        if not items:
+            fallback_text = _markdown_text_from_token(token)
+            return [_simple_paragraph_node(fallback_text)] if fallback_text else []
+        return [{"type": node_type, "content": items}]
+    if token_type == "block_quote":
+        children = []
+        for child in _markdown_block_tokens(token):
+            children.extend(_markdown_block_to_tiptap(child))
+        if not children:
+            children = [_simple_paragraph_node(_markdown_text_from_token(token))]
+        return [{"type": "blockquote", "content": children}]
+    if token_type == "block_code":
+        raw = token.get("raw")
+        node: dict[str, Any] = {"type": "codeBlock"}
+        if isinstance(raw, str) and raw:
+            node["content"] = [{"type": "text", "text": raw.rstrip("\n")}]
+        return [node]
+    if token_type == "thematic_break":
+        return [{"type": "horizontalRule"}]
+
+    fallback_text = _markdown_text_from_token(token).strip()
+    return [_simple_paragraph_node(fallback_text)] if fallback_text else []
+
+
+def _assistant_markdown_to_tiptap_nodes(markdown: str) -> list[dict[str, Any]]:
+    if not markdown.strip():
+        return []
+
+    tokens = _get_agent_chat_markdown_parser()(markdown)
+    if not isinstance(tokens, list):
+        return [_simple_paragraph_node(markdown)]
+
+    nodes: list[dict[str, Any]] = []
+    for token in tokens:
+        if not isinstance(token, dict):
+            continue
+        nodes.extend(_markdown_block_to_tiptap(token))
+    return nodes or [_simple_paragraph_node(markdown)]
+
+
+def _resolve_agent_chat_export_title(
+    *,
+    chat_session: models.AgentChatSession,
+    title_override: str | None,
+) -> str:
+    if title_override and title_override.strip():
+        return title_override.strip()
+    if chat_session.title and chat_session.title.strip():
+        return chat_session.title.strip()
+    return f"{chat_session.agent.name} Chat Export"
+
+
+async def _resolve_agent_chat_export_application(
+    db: AsyncSession,
+    *,
+    chat_session: models.AgentChatSession,
+    application_id: UUID | None,
+    user_id,
+) -> models.Application | None:
+    if (
+        application_id is not None
+        and chat_session.application_id is not None
+        and application_id != chat_session.application_id
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Chat export application_id must match the chat session application context",
+        )
+
+    resolved_application_id = application_id or chat_session.application_id
+    if resolved_application_id is None:
+        return None
+
+    return await _load_application_for_run(
+        db,
+        application_id=resolved_application_id,
+        user_id=user_id,
+    )
+
+
+async def _load_all_agent_chat_messages(
+    db: AsyncSession,
+    *,
+    session_id: UUID,
+) -> list[models.AgentChatMessage]:
+    result = await db.execute(
+        select(models.AgentChatMessage)
+        .where(models.AgentChatMessage.session_id == session_id)
+        .order_by(
+            models.AgentChatMessage.created_at.asc(),
+            models.AgentChatMessage.id.asc(),
+        )
+    )
+    return result.scalars().all()
+
+
+def _build_agent_chat_export_input_context(
+    *,
+    chat_session: models.AgentChatSession,
+    application: models.Application | None,
+    exported_messages: list[models.AgentChatMessage],
+) -> dict[str, Any]:
+    assistant_message_count = sum(
+        1
+        for message in exported_messages
+        if message.role == schemas.AgentChatMessageRole.ASSISTANT.value
+    )
+    user_message_count = sum(
+        1
+        for message in exported_messages
+        if message.role == schemas.AgentChatMessageRole.USER.value
+    )
+
+    return {
+        "source": {
+            "type": "chat_session_export",
+            "chat_session_id": str(chat_session.id),
+            "chat_session_title": chat_session.title,
+            "agent_id": str(chat_session.agent_id),
+            "application_id": str(application.id) if application is not None else None,
+            "model_name": _resolve_agent_chat_model_name(chat_session),
+            "message_ids": [str(message.id) for message in exported_messages],
+            "message_count": len(exported_messages),
+            "assistant_message_count": assistant_message_count,
+            "user_message_count": user_message_count,
+        }
+    }
+
+
+def _build_agent_chat_export_tiptap(
+    *,
+    chat_session: models.AgentChatSession,
+    application: models.Application | None,
+    title: str,
+    exported_messages: list[models.AgentChatMessage],
+    saved_at: datetime,
+) -> str:
+    metadata_lines = [
+        f"Agent: {chat_session.agent.name}",
+        f"Saved: {saved_at.isoformat()}",
+        f"Model: {_resolve_agent_chat_model_name(chat_session)}",
+    ]
+    if application is not None:
+        metadata_lines.append(
+            f"Application Context:\n{_summarize_application_context(application)}"
+        )
+
+    content: list[dict[str, Any]] = [
+        _simple_heading_node(title, level=1),
+        _simple_callout_node("\n".join(metadata_lines)),
+    ]
+
+    for message in exported_messages:
+        if message.role == schemas.AgentChatMessageRole.USER.value:
+            content.append(_simple_blockquote_node(message.content))
+            continue
+        if message.role == schemas.AgentChatMessageRole.ASSISTANT.value:
+            content.extend(_assistant_markdown_to_tiptap_nodes(message.content))
+
+    return _json_dumps({"type": "doc", "content": content})
 
 
 def _resolve_agent_model(agent: models.Agent):
@@ -700,6 +1091,59 @@ async def _append_user_chat_message(
     chat_session = await _lock_agent_chat_session_row(db, session_id=session_id)
     if chat_session.status != schemas.AgentChatSessionStatus.ACTIVE.value:
         raise HTTPException(status_code=409, detail="Chat session is archived")
+    chat_session.message_count = (chat_session.message_count or 0) + 1
+    chat_session.last_message_at = created_at
+    chat_session.updated_at = created_at
+    if not chat_session.title:
+        chat_session.title = _derive_agent_chat_title(
+            content,
+            max_length=_AGENT_CHAT_TITLE_MAX_LENGTH,
+        )
+
+    message = models.AgentChatMessage(
+        session_id=session_id,
+        role=schemas.AgentChatMessageRole.USER.value,
+        content=content,
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    db.add(message)
+    await db.flush()
+    await db.commit()
+    await db.refresh(message)
+    return message
+
+
+async def _append_or_reuse_trailing_user_chat_message(
+    db: AsyncSession,
+    *,
+    session_id: UUID,
+    content: str,
+) -> models.AgentChatMessage:
+    chat_session = await _lock_agent_chat_session_row(db, session_id=session_id)
+    if chat_session.status != schemas.AgentChatSessionStatus.ACTIVE.value:
+        raise HTTPException(status_code=409, detail="Chat session is archived")
+
+    last_message_result = await db.execute(
+        select(models.AgentChatMessage)
+        .where(models.AgentChatMessage.session_id == session_id)
+        .order_by(
+            desc(models.AgentChatMessage.created_at),
+            desc(models.AgentChatMessage.id),
+        )
+        .limit(1)
+    )
+    last_message = last_message_result.scalars().first()
+
+    if (
+        last_message is not None
+        and last_message.role == schemas.AgentChatMessageRole.USER.value
+        and last_message.content == content
+    ):
+        await db.commit()
+        return last_message
+
+    created_at = datetime.now(timezone.utc)
     chat_session.message_count = (chat_session.message_count or 0) + 1
     chat_session.last_message_at = created_at
     chat_session.updated_at = created_at
@@ -1351,6 +1795,13 @@ async def get_agent_chat_messages(
     db: AsyncSession = Depends(get_async_session),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
+    from_tail: bool = Query(
+        False,
+        description=(
+            "When true, page from the newest messages backward while still "
+            "returning each page in ascending chronological order."
+        ),
+    ),
 ):
     chat_session = await _load_agent_chat_session(
         db,
@@ -1364,19 +1815,27 @@ async def get_agent_chat_messages(
     count_result = await db.execute(select(func.count()).select_from(base.subquery()))
     total = count_result.scalar_one()
 
-    result = await db.execute(
-        base.order_by(
+    ordered_query = base
+    if from_tail:
+        ordered_query = ordered_query.order_by(
+            desc(models.AgentChatMessage.created_at),
+            desc(models.AgentChatMessage.id),
+        )
+    else:
+        ordered_query = ordered_query.order_by(
             models.AgentChatMessage.created_at.asc(),
             models.AgentChatMessage.id.asc(),
         )
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+
+    result = await db.execute(
+        ordered_query.offset((page - 1) * page_size).limit(page_size)
     )
+    items = result.scalars().all()
+    if from_tail:
+        items.reverse()
 
     return schemas.PaginatedResponse[schemas.AgentChatMessageRead](
-        items=[
-            _serialize_agent_chat_message(message) for message in result.scalars().all()
-        ],
+        items=[_serialize_agent_chat_message(message) for message in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -1428,7 +1887,7 @@ async def send_agent_chat_message(
     conf.openai.require_enabled("Agent chat")
     resolved_model_name, model = _resolve_agent_chat_model(chat_session)
 
-    await _append_user_chat_message(
+    await _append_or_reuse_trailing_user_chat_message(
         db,
         session_id=session_id,
         content=payload.content,
@@ -1507,6 +1966,140 @@ async def send_agent_chat_message(
     )
 
 
+@router.post(
+    "/chat/{session_id}/save-to-document",
+    status_code=201,
+    response_model=schemas.AgentChatSaveToDocumentRead,
+)
+async def save_agent_chat_to_document(
+    session_id: UUID,
+    payload: schemas.AgentChatSaveToDocumentRequest,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    chat_session = await _load_agent_chat_session(
+        db,
+        session_id=session_id,
+        user_id=user.id,
+    )
+    application = await _resolve_agent_chat_export_application(
+        db,
+        chat_session=chat_session,
+        application_id=payload.application_id,
+        user_id=user.id,
+    )
+    all_messages = await _load_all_agent_chat_messages(db, session_id=chat_session.id)
+    exported_messages = [
+        message
+        for message in all_messages
+        if message.role != schemas.AgentChatMessageRole.SYSTEM.value
+    ]
+
+    if not any(
+        message.role == schemas.AgentChatMessageRole.ASSISTANT.value
+        and message.content.strip()
+        for message in exported_messages
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Chat session must contain at least one assistant message before it can be saved",
+        )
+
+    export_title = _resolve_agent_chat_export_title(
+        chat_session=chat_session,
+        title_override=payload.title,
+    )
+    input_context = _build_agent_chat_export_input_context(
+        chat_session=chat_session,
+        application=application,
+        exported_messages=exported_messages,
+    )
+
+    run = models.AgentRun(
+        agent_id=chat_session.agent_id,
+        user_id=user.id,
+        application_id=application.id if application is not None else None,
+        chat_session_id=chat_session.id,
+        trigger_kind=schemas.AgentRunTriggerKind.MANUAL.value,
+        status=schemas.AgentRunStatus.RUNNING.value,
+        input_context=input_context,
+    )
+    db.add(run)
+    await db.commit()
+    await db.refresh(run)
+    run_id = run.id
+
+    try:
+        exported_content = _build_agent_chat_export_tiptap(
+            chat_session=chat_session,
+            application=application,
+            title=export_title,
+            exported_messages=exported_messages,
+            saved_at=datetime.now(timezone.utc),
+        )
+        created_document = await create_document(
+            payload=schemas.DocumentCreate(
+                kind=schemas.DocumentKind.CELL_DOC,
+                title=export_title,
+                status=schemas.DocumentStatus.DRAFT,
+                content=exported_content,
+                content_type=schemas.ContentType.GENERATED,
+                content_format=schemas.ContentFormat.TIPTAP_JSON,
+            ),
+            user=user,
+            db=db,
+        )
+        if created_document.head_version is None:
+            raise HTTPException(
+                status_code=409,
+                detail="Saved document is missing a head version",
+            )
+
+        document_id = created_document.id
+        version_id = created_document.head_version.id
+
+        if application is not None:
+            await _upsert_application_session_link(
+                db,
+                application_id=application.id,
+                document_id=document_id,
+                version_id=version_id,
+            )
+
+        persisted_run = await db.get(models.AgentRun, run_id)
+        if persisted_run is None:
+            raise HTTPException(status_code=404, detail="Agent run not found")
+        persisted_run.status = schemas.AgentRunStatus.COMPLETED.value
+        persisted_run.session_document_id = document_id
+        persisted_run.session_version_id = version_id
+        persisted_run.error_summary = None
+        persisted_run.completed_at = datetime.now(timezone.utc)
+        await db.commit()
+    except HTTPException as exc:
+        await db.rollback()
+        failed_run = await db.get(models.AgentRun, run_id)
+        if failed_run is not None:
+            failed_run.status = schemas.AgentRunStatus.FAILED.value
+            failed_run.error_summary = _compact_error_summary(exc.detail)
+            failed_run.completed_at = datetime.now(timezone.utc)
+            await db.commit()
+        raise
+    except Exception as exc:
+        await db.rollback()
+        failed_run = await db.get(models.AgentRun, run_id)
+        if failed_run is not None:
+            failed_run.status = schemas.AgentRunStatus.FAILED.value
+            failed_run.error_summary = _compact_error_summary(str(exc))
+            failed_run.completed_at = datetime.now(timezone.utc)
+            await db.commit()
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return schemas.AgentChatSaveToDocumentRead(
+        document_id=document_id,
+        version_id=version_id,
+    )
+
+
 @router.patch("/chat/{session_id}", response_model=schemas.AgentChatSessionRead)
 async def update_agent_chat_session(
     session_id: UUID,
@@ -1550,7 +2143,14 @@ async def delete_agent_chat_session(
         user_id=user.id,
     )
     await db.delete(chat_session)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Chat session cannot be deleted while exported agent runs still exist",
+        ) from exc
     return None
 
 

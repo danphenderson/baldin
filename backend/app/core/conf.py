@@ -117,6 +117,13 @@ class Settings(_BaseSettings):
             return [item.strip() for item in cors_origins.split(",")]
         return cors_origins
 
+    @field_validator("SENTRY_TRACES_SAMPLE_RATE", mode="before")
+    @classmethod
+    def _default_blank_sentry_traces_sample_rate(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return 0.0
+        return value
+
     @model_validator(mode="after")
     def _assemble_db_connections(self) -> "Settings":
         self.DEFAULT_SQLALCHEMY_DATABASE_URI = str(

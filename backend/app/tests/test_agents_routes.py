@@ -747,6 +747,56 @@ async def test_get_agent_chat_messages_returns_paginated_history_in_ascending_or
     assert [item["metadata"]["index"] for item in body["items"]] == [2, 3]
 
 
+async def test_get_agent_chat_messages_supports_tail_pagination() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-messages-tail-pass")
+        headers = await _auth_headers(client, email, "agent-chat-messages-tail-pass")
+        agent_id = await _create_agent(
+            user_id,
+            name="Tail History Agent",
+            kind="custom",
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            title="Tail history",
+            message_specs=[
+                ("system", "context"),
+                ("user", "first"),
+                ("assistant", "second"),
+                ("user", "third"),
+                ("assistant", "fourth"),
+            ],
+        )
+
+        newest_page = await client.get(
+            f"/api/v1/agents/chat/{session_id}/messages",
+            params={"page": 1, "page_size": 2, "from_tail": True},
+            headers=headers,
+        )
+        older_page = await client.get(
+            f"/api/v1/agents/chat/{session_id}/messages",
+            params={"page": 2, "page_size": 2, "from_tail": True},
+            headers=headers,
+        )
+
+    assert newest_page.status_code == 200, newest_page.text
+    newest_body = newest_page.json()
+    assert newest_body["total"] == 5
+    assert newest_body["page"] == 1
+    assert newest_body["page_size"] == 2
+    assert [item["role"] for item in newest_body["items"]] == ["user", "assistant"]
+    assert [item["content"] for item in newest_body["items"]] == ["third", "fourth"]
+    assert [item["metadata"]["index"] for item in newest_body["items"]] == [3, 4]
+
+    assert older_page.status_code == 200, older_page.text
+    older_body = older_page.json()
+    assert [item["role"] for item in older_body["items"]] == ["user", "assistant"]
+    assert [item["content"] for item in older_body["items"]] == ["first", "second"]
+    assert [item["metadata"]["index"] for item in older_body["items"]] == [1, 2]
+
+
 async def test_send_agent_chat_message_json_fallback_persists_messages_and_uses_session_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1017,6 +1067,110 @@ async def test_send_agent_chat_message_stream_emits_error_and_skips_assistant_pe
     assert persisted_messages[-1].content == "Trigger a failing stream"
 
 
+async def test_send_agent_chat_message_retry_reuses_trailing_user_message(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    first_attempt_model = _StreamingTestModel(
+        AIMessageChunk(content="Partial"),
+        failure=RuntimeError("stream exploded"),
+        fail_after_chunks=1,
+    )
+    retry_model = _StreamingTestModel(
+        AIMessageChunk(content="Recovered"),
+    )
+    models_by_name = {
+        "retry-first": first_attempt_model,
+        "retry-second": retry_model,
+    }
+
+    monkeypatch.setattr(
+        agents_route.conf.openai,
+        "get_model",
+        lambda model_name=None: models_by_name[model_name or "retry-first"],
+    )
+    monkeypatch.setattr(agents_route.conf.openai, "get_chunk_size", lambda _name: 4096)
+    monkeypatch.setattr(
+        agents_route.conf.openai,
+        "get_tokenizer_encoding",
+        lambda _name=None: "o200k_base",
+    )
+    monkeypatch.setattr(agents_route, "_get_tiktoken_encoding", lambda _name: None)
+
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-retry-pass")
+        headers = await _auth_headers(client, email, "agent-chat-retry-pass")
+        agent_id = await _create_agent(
+            user_id,
+            name="Retry Coach",
+            kind="custom",
+            configuration={"model_name": "retry-first"},
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            message_specs=[("system", "System context")],
+        )
+
+        first_response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/messages",
+            json={"content": "Retry this prompt"},
+            headers={**headers, "Accept": "text/event-stream"},
+        )
+
+        async with session_context() as session:
+            chat_session = await session.get(models.AgentChatSession, session_id)
+            assert chat_session is not None
+            chat_session.model_name = "retry-second"
+            await session.commit()
+
+        second_response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/messages",
+            json={"content": "Retry this prompt"},
+            headers={**headers, "Accept": "application/json"},
+        )
+
+    assert first_response.status_code == 201, first_response.text
+    first_events = _parse_sse_events(first_response.text)
+    assert [name for name, _payload in first_events] == ["delta", "error"]
+
+    assert second_response.status_code == 201, second_response.text
+    second_body = second_response.json()
+    assert second_body["role"] == "assistant"
+    assert second_body["content"] == "Recovered"
+
+    assert first_attempt_model.messages is not None
+    assert retry_model.messages is not None
+    assert (
+        sum(isinstance(message, HumanMessage) for message in retry_model.messages) == 1
+    )
+
+    async with session_context() as session:
+        chat_session = await session.get(models.AgentChatSession, session_id)
+        result = await session.execute(
+            select(models.AgentChatMessage)
+            .where(models.AgentChatMessage.session_id == session_id)
+            .order_by(
+                models.AgentChatMessage.created_at.asc(),
+                models.AgentChatMessage.id.asc(),
+            )
+        )
+        persisted_messages = result.scalars().all()
+
+    assert chat_session is not None
+    assert chat_session.message_count == 3
+    assert [message.role for message in persisted_messages] == [
+        "system",
+        "user",
+        "assistant",
+    ]
+    assert [message.content for message in persisted_messages] == [
+        "System context",
+        "Retry this prompt",
+        "Recovered",
+    ]
+
+
 async def test_agent_chat_session_routes_reject_cross_user_access() -> None:
     await _ensure_db_ready()
     async with _client() as client:
@@ -1133,6 +1287,337 @@ async def test_update_and_delete_agent_chat_session() -> None:
 
     assert deleted_session is None
     assert remaining_message.scalar_one_or_none() is None
+
+
+async def test_save_agent_chat_to_document_creates_cell_doc_run_and_link() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-save-pass")
+        headers = await _auth_headers(client, email, "agent-chat-save-pass")
+        application_context = await _create_application_context(user_id)
+        agent_id = await _create_agent(
+            user_id,
+            name="Chat Export Agent",
+            kind="custom",
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            application_id=application_context["application_id"],
+            title="Acme prep thread",
+            model_name="gpt-5.4-mini",
+            message_specs=[
+                ("system", "system-only context should stay out of the document"),
+                ("user", "Please turn this into a tailored intro."),
+                (
+                    "assistant",
+                    "# Tailored Intro\n\nHere is a polished opening.\n\n```python\nprint('hello')\n```",
+                ),
+            ],
+        )
+
+        response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/save-to-document",
+            json={},
+            headers=headers,
+        )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    document_id = UUID(body["document_id"])
+    version_id = UUID(body["version_id"])
+
+    async with session_context() as session:
+        document = await session.get(models.Document, document_id)
+        version = await session.get(models.DocumentVersion, version_id)
+        link_result = await session.execute(
+            select(models.DocumentXApplication).where(
+                models.DocumentXApplication.application_id
+                == application_context["application_id"],
+                models.DocumentXApplication.document_id == document_id,
+            )
+        )
+        block_result = await session.execute(
+            select(models.DocumentBlock).where(
+                models.DocumentBlock.document_id == document_id
+            )
+        )
+        run_result = await session.execute(
+            select(models.AgentRun)
+            .where(models.AgentRun.chat_session_id == session_id)
+            .order_by(models.AgentRun.created_at.desc(), models.AgentRun.id.desc())
+            .limit(1)
+        )
+
+    assert document is not None
+    assert document.kind == "cell_doc"
+    assert document.head_version_id == version_id
+    assert version is not None
+    assert version.content_format == "tiptap_json"
+    assert version.block_snapshot is not None
+    assert "system-only context should stay out of the document" not in (
+        version.content or ""
+    )
+
+    tiptap = json.loads(version.content or "{}")
+    assert tiptap["type"] == "doc"
+    assert tiptap["content"][0]["type"] == "heading"
+    assert tiptap["content"][1]["type"] == "callout"
+
+    block_types = {block.block_type for block in block_result.scalars().all()}
+    assert "blockquote" in block_types
+    assert "code_block" in block_types
+    assert "callout" in block_types
+
+    exported_run = run_result.scalars().first()
+    assert exported_run is not None
+    assert exported_run.status == "completed"
+    assert exported_run.trigger_kind == "manual"
+    assert exported_run.chat_session_id == session_id
+    assert exported_run.session_document_id == document_id
+    assert exported_run.session_version_id == version_id
+    assert exported_run.application_id == application_context["application_id"]
+    assert exported_run.input_context["source"]["type"] == "chat_session_export"
+    assert exported_run.input_context["source"]["message_count"] == 2
+
+    document_link = link_result.scalars().first()
+    assert document_link is not None
+    assert document_link.version_id == version_id
+
+
+async def test_save_agent_chat_to_document_allows_explicit_application_on_unanchored_session() -> (
+    None
+):
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-save-explicit-app-pass")
+        headers = await _auth_headers(
+            client,
+            email,
+            "agent-chat-save-explicit-app-pass",
+        )
+        application_context = await _create_application_context(user_id)
+        agent_id = await _create_agent(
+            user_id,
+            name="Unanchored Export Agent",
+            kind="custom",
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            title="Loose chat",
+            message_specs=[
+                ("system", "context"),
+                ("user", "Draft this"),
+                ("assistant", "Saved from an unanchored session."),
+            ],
+        )
+
+        response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/save-to-document",
+            json={"application_id": str(application_context["application_id"])},
+            headers=headers,
+        )
+
+    assert response.status_code == 201, response.text
+    document_id = UUID(response.json()["document_id"])
+
+    async with session_context() as session:
+        document_link = await session.execute(
+            select(models.DocumentXApplication).where(
+                models.DocumentXApplication.application_id
+                == application_context["application_id"],
+                models.DocumentXApplication.document_id == document_id,
+            )
+        )
+        exported_run = await session.execute(
+            select(models.AgentRun)
+            .where(models.AgentRun.chat_session_id == session_id)
+            .order_by(models.AgentRun.created_at.desc(), models.AgentRun.id.desc())
+            .limit(1)
+        )
+
+    exported_run_row = exported_run.scalars().first()
+    assert document_link.scalars().first() is not None
+    assert exported_run_row is not None
+    assert exported_run_row.application_id == application_context["application_id"]
+
+
+async def test_save_agent_chat_to_document_rejects_mismatched_application_context() -> (
+    None
+):
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-save-mismatch-pass")
+        headers = await _auth_headers(client, email, "agent-chat-save-mismatch-pass")
+        first_application = await _create_application_context(user_id)
+        second_application = await _create_application_context(user_id)
+        agent_id = await _create_agent(
+            user_id,
+            name="Mismatch Export Agent",
+            kind="custom",
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            application_id=first_application["application_id"],
+            message_specs=[
+                ("system", "context"),
+                ("assistant", "Already anchored."),
+            ],
+        )
+
+        response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/save-to-document",
+            json={"application_id": str(second_application["application_id"])},
+            headers=headers,
+        )
+
+    assert response.status_code == 409
+    assert "must match" in response.json()["detail"].lower()
+
+
+async def test_save_agent_chat_to_document_rejects_without_assistant_message() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-save-no-assistant-pass")
+        headers = await _auth_headers(
+            client,
+            email,
+            "agent-chat-save-no-assistant-pass",
+        )
+        agent_id = await _create_agent(
+            user_id,
+            name="No Assistant Export Agent",
+            kind="custom",
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            message_specs=[
+                ("system", "context"),
+                ("user", "Need a reply first"),
+            ],
+        )
+
+        response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/save-to-document",
+            json={},
+            headers=headers,
+        )
+
+    assert response.status_code == 409
+    assert "assistant message" in response.json()["detail"].lower()
+
+
+async def test_save_agent_chat_to_document_rejects_cross_user_access() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        owner_email, owner_id = await _create_user("agent-chat-save-owner-pass")
+        viewer_email, _viewer_id = await _create_user("agent-chat-save-viewer-pass")
+        owner_headers = await _auth_headers(
+            client, owner_email, "agent-chat-save-owner-pass"
+        )
+        viewer_headers = await _auth_headers(
+            client,
+            viewer_email,
+            "agent-chat-save-viewer-pass",
+        )
+        agent_id = await _create_agent(
+            owner_id,
+            name="Private Export Agent",
+            kind="custom",
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=owner_id,
+            agent_id=agent_id,
+            message_specs=[
+                ("system", "context"),
+                ("assistant", "Owner-only export"),
+            ],
+        )
+
+        response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/save-to-document",
+            json={},
+            headers=viewer_headers,
+        )
+        owner_readback = await client.post(
+            f"/api/v1/agents/chat/{session_id}/save-to-document",
+            json={},
+            headers=owner_headers,
+        )
+
+    assert response.status_code == 403
+    assert owner_readback.status_code == 201
+
+
+async def test_save_agent_chat_to_document_allows_archived_session() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-save-archived-pass")
+        headers = await _auth_headers(client, email, "agent-chat-save-archived-pass")
+        agent_id = await _create_agent(
+            user_id,
+            name="Archived Export Agent",
+            kind="custom",
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            message_specs=[
+                ("system", "context"),
+                ("assistant", "Archived chats can still be exported."),
+            ],
+        )
+
+        async with session_context() as session:
+            chat_session = await session.get(models.AgentChatSession, session_id)
+            assert chat_session is not None
+            chat_session.status = "archived"
+            await session.commit()
+
+        response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/save-to-document",
+            json={"title": "Archived export"},
+            headers=headers,
+        )
+
+    assert response.status_code == 201, response.text
+
+
+async def test_delete_agent_chat_session_rejects_exported_sessions() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-export-delete-pass")
+        headers = await _auth_headers(client, email, "agent-chat-export-delete-pass")
+        agent_id = await _create_agent(
+            user_id,
+            name="Delete Protected Export Agent",
+            kind="custom",
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            message_specs=[
+                ("system", "context"),
+                ("assistant", "Protect this session after export."),
+            ],
+        )
+
+        save_response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/save-to-document",
+            json={},
+            headers=headers,
+        )
+        delete_response = await client.delete(
+            f"/api/v1/agents/chat/{session_id}",
+            headers=headers,
+        )
+
+    assert save_response.status_code == 201, save_response.text
+    assert delete_response.status_code == 409
+    assert "exported agent runs" in delete_response.json()["detail"].lower()
 
 
 async def test_update_agent_chat_session_rejects_null_status() -> None:

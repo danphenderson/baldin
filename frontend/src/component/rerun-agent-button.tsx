@@ -60,7 +60,13 @@ const RerunAgentButton: React.FC<RerunAgentButtonProps> = ({
     }
   };
 
-  if (!loaded || !latestRun || latestRun.status !== 'completed' || !latestRun.application_id) {
+  if (
+    !loaded
+    || !latestRun
+    || latestRun.status !== 'completed'
+    || !latestRun.application_id
+    || Boolean(latestRun.chat_session_id)
+  ) {
     return null;
   }
 

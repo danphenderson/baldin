@@ -32,6 +32,7 @@ import { useStageColumns, relativeDate, type Column } from './use-applications';
 import { PageTitle } from '../../component/common/text';
 import CreateActionItemDialog from '../../component/create-action-item-dialog';
 import RunAgentMenu from '../../component/run-agent-menu';
+import ChatAgentMenu from '../../component/chat-agent-menu';
 import type { AgentRunRead } from '../../service/agents';
 import type { ActionItemRead, ActionItemCreate } from '../../service/action-items';
 
@@ -960,6 +961,10 @@ const ApplicationDetailPage: React.FC = () => {
               <RunAgentMenu
                 applicationId={app.id}
                 onSessionCreated={handleAgentSessionCreated}
+                disabled={generating}
+              />
+              <ChatAgentMenu
+                applicationId={app.id}
                 disabled={generating}
               />
               {availableCoverLetters.length > 0 && (

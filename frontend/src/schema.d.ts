@@ -365,6 +365,10 @@ export interface paths {
     /** Send Agent Chat Message */
     post: operations["send_agent_chat_message_api_v1_agents_chat__session_id__messages_post"];
   };
+  "/api/v1/agents/chat/{session_id}/save-to-document": {
+    /** Save Agent Chat To Document */
+    post: operations["save_agent_chat_to_document_api_v1_agents_chat__session_id__save_to_document_post"];
+  };
   "/api/v1/agents/{id}/run": {
     /** Run Agent */
     post: operations["run_agent_api_v1_agents__id__run_post"];
@@ -455,6 +459,18 @@ export interface paths {
      * @description Look up authenticated share candidates for a specific document.
      */
     get: operations["list_share_candidates_api_v1_documents__document_id__share_candidates_get"];
+  };
+  "/api/v1/documents/{document_id}/mention-candidates": {
+    /** List Mention Candidates */
+    get: operations["list_mention_candidates_api_v1_documents__document_id__mention_candidates_get"];
+  };
+  "/api/v1/documents/{document_id}/embed-candidates": {
+    /** List Embed Candidates */
+    get: operations["list_embed_candidates_api_v1_documents__document_id__embed_candidates_get"];
+  };
+  "/api/v1/documents/{document_id}/references/resolve": {
+    /** Resolve Document References */
+    post: operations["resolve_document_references_api_v1_documents__document_id__references_resolve_post"];
   };
   "/api/v1/documents/generate": {
     /**
@@ -1191,6 +1207,34 @@ export interface components {
      * @enum {string}
      */
     AgentChatMessageRole: "system" | "user" | "assistant";
+    /** AgentChatSaveToDocumentRead */
+    AgentChatSaveToDocumentRead: {
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Newly created cell-doc document identifier
+       */
+      document_id: string;
+      /**
+       * Version Id
+       * Format: uuid4
+       * @description Version identifier created for the export
+       */
+      version_id: string;
+    };
+    /** AgentChatSaveToDocumentRequest */
+    AgentChatSaveToDocumentRequest: {
+      /**
+       * Title
+       * @description Optional document title override for the exported chat transcript
+       */
+      title?: string | null;
+      /**
+       * Application Id
+       * @description Optional application context to attach to the saved document
+       */
+      application_id?: string | null;
+    };
     /** AgentChatSessionCreate */
     AgentChatSessionCreate: {
       /**
@@ -1515,6 +1559,11 @@ export interface components {
        */
       application_id?: string | null;
       /**
+       * Chat Session Id
+       * @description Source agent chat session identifier when the run came from a chat export
+       */
+      chat_session_id?: string | null;
+      /**
        * Parent Run Id
        * @description Optional prior run in the same session lineage
        */
@@ -1651,6 +1700,11 @@ export interface components {
        * @description Optional source application identifier
        */
       application_id?: string | null;
+      /**
+       * Chat Session Id
+       * @description Source agent chat session identifier when the run came from a chat export
+       */
+      chat_session_id?: string | null;
       /**
        * Parent Run Id
        * @description Optional prior run in the same session lineage
@@ -3388,7 +3442,7 @@ export interface components {
      * DocumentBlockType
      * @enum {string}
      */
-    DocumentBlockType: "paragraph" | "heading" | "bullet_list" | "ordered_list" | "list_item" | "task_list" | "task_item" | "blockquote" | "code_block" | "callout" | "toggle" | "table" | "table_row" | "table_cell" | "divider";
+    DocumentBlockType: "paragraph" | "heading" | "bullet_list" | "ordered_list" | "list_item" | "task_list" | "task_item" | "blockquote" | "code_block" | "callout" | "toggle" | "table" | "table_row" | "table_cell" | "divider" | "mention" | "embed";
     /** DocumentBlockUpdate */
     DocumentBlockUpdate: {
       /** @description Updated block kind */
@@ -3551,6 +3605,47 @@ export interface components {
        */
       versions?: components["schemas"]["DocumentVersionDetailRead"][];
     };
+    /**
+     * DocumentEmbedCandidateKind
+     * @enum {string}
+     */
+    DocumentEmbedCandidateKind: "document" | "block";
+    /** DocumentEmbedCandidateRead */
+    DocumentEmbedCandidateRead: {
+      /** @description Whether this candidate represents a source document or source block */
+      candidate_kind: components["schemas"]["DocumentEmbedCandidateKind"];
+      /**
+       * Document Id
+       * Format: uuid4
+       * @description Source cell-doc identifier
+       */
+      document_id: string;
+      /**
+       * Document Title
+       * @description Source document title
+       */
+      document_title: string;
+      /**
+       * Block Id
+       * @description Source block identifier when the candidate is a block
+       */
+      block_id?: string | null;
+      /**
+       * Source Version Id
+       * @description Current saved head version for the source document
+       */
+      source_version_id?: string | null;
+      /**
+       * Label
+       * @description Human-friendly label for the candidate
+       */
+      label: string;
+      /**
+       * Preview Text
+       * @description Saved or computed preview text for the candidate
+       */
+      preview_text?: string | null;
+    };
     /** DocumentEmbedRequest */
     DocumentEmbedRequest: {
       /**
@@ -3603,6 +3698,32 @@ export interface components {
      * @enum {string}
      */
     DocumentKind: "resume" | "cover_letter" | "follow_up" | "reference_sheet" | "freeform" | "cell_doc";
+    /** DocumentMentionCandidateRead */
+    DocumentMentionCandidateRead: {
+      /** @description Reference target type */
+      target_kind: components["schemas"]["DocumentReferenceTargetKind"];
+      /**
+       * Target Id
+       * Format: uuid4
+       * @description Referenced entity identifier
+       */
+      target_id: string;
+      /**
+       * Label
+       * @description Human-friendly target label
+       */
+      label: string;
+      /**
+       * Subtitle
+       * @description Optional secondary line shown in mention pickers
+       */
+      subtitle?: string | null;
+      /**
+       * Href
+       * @description Canonical frontend route for the resolved target
+       */
+      href?: string | null;
+    };
     /** DocumentPinRequest */
     DocumentPinRequest: {
       /**
@@ -3698,6 +3819,125 @@ export interface components {
        */
       share_updated_at?: string | null;
     };
+    /**
+     * DocumentReferenceKind
+     * @enum {string}
+     */
+    DocumentReferenceKind: "mention" | "embed";
+    /** DocumentReferenceResolveItem */
+    DocumentReferenceResolveItem: {
+      /** @description Reference type to resolve */
+      kind: components["schemas"]["DocumentReferenceKind"];
+      /**
+       * Block Id
+       * @description Owning block identifier when the caller is resolving a live editor node
+       */
+      block_id?: string | null;
+      /** @description Mention target type when resolving a mention block */
+      target_kind?: components["schemas"]["DocumentReferenceTargetKind"] | null;
+      /**
+       * Target Id
+       * @description Mention target identifier when resolving a mention block
+       */
+      target_id?: string | null;
+      /**
+       * Source Document Id
+       * @description Source document identifier when resolving an embed block
+       */
+      source_document_id?: string | null;
+      /**
+       * Source Block Id
+       * @description Source block identifier when resolving an embed block
+       */
+      source_block_id?: string | null;
+      /**
+       * Saved Label
+       * @description Saved label snapshot stored on the referencing block
+       */
+      saved_label?: string | null;
+      /**
+       * Saved Preview Text
+       * @description Saved preview-text snapshot stored on the referencing block
+       */
+      saved_preview_text?: string | null;
+    };
+    /** DocumentReferenceResolveRequest */
+    DocumentReferenceResolveRequest: {
+      /**
+       * References
+       * @description Reference blocks to resolve in a single request
+       */
+      references: components["schemas"]["DocumentReferenceResolveItem"][];
+    };
+    /**
+     * DocumentReferenceResolveStatus
+     * @enum {string}
+     */
+    DocumentReferenceResolveStatus: "resolved" | "unavailable" | "invalid";
+    /** DocumentReferenceResolvedRead */
+    DocumentReferenceResolvedRead: {
+      /** @description Resolved reference type */
+      kind: components["schemas"]["DocumentReferenceKind"];
+      /** @description Resolution status for the reference */
+      status: components["schemas"]["DocumentReferenceResolveStatus"];
+      /**
+       * Block Id
+       * @description Owning block identifier when provided by the caller
+       */
+      block_id?: string | null;
+      /**
+       * Label
+       * @description Best-available current label for the reference
+       */
+      label?: string | null;
+      /**
+       * Subtitle
+       * @description Optional secondary descriptive line for the reference
+       */
+      subtitle?: string | null;
+      /**
+       * Href
+       * @description Frontend route for the current reference target when accessible
+       */
+      href?: string | null;
+      /**
+       * Preview Text
+       * @description Current or saved preview text for embed references
+       */
+      preview_text?: string | null;
+      /** @description Mention target type when applicable */
+      target_kind?: components["schemas"]["DocumentReferenceTargetKind"] | null;
+      /**
+       * Target Id
+       * @description Mention target identifier when applicable
+       */
+      target_id?: string | null;
+      /**
+       * Source Document Id
+       * @description Source document identifier for embed references
+       */
+      source_document_id?: string | null;
+      /**
+       * Source Block Id
+       * @description Source block identifier for embed references
+       */
+      source_block_id?: string | null;
+      /**
+       * Source Version Id
+       * @description Current saved head version for the source document when resolved
+       */
+      source_version_id?: string | null;
+      /**
+       * Unavailable Reason
+       * @description Reason the live reference could not be resolved
+       */
+      unavailable_reason?: string | null;
+    };
+    /**
+     * DocumentReferenceTargetKind
+     * @enum {string}
+     */
+    DocumentReferenceTargetKind: "user" | "document" | "agent";
     /** DocumentSearchRequest */
     DocumentSearchRequest: {
       /**
@@ -9381,6 +9621,8 @@ export interface operations {
       query?: {
         page?: number;
         page_size?: number;
+        /** @description When true, page from the newest messages backward while still returning each page in ascending chronological order. */
+        from_tail?: boolean;
       };
       path: {
         session_id: string;
@@ -9419,6 +9661,33 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["AgentChatMessageRead"];
           "text/event-stream": string;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Save Agent Chat To Document */
+  save_agent_chat_to_document_api_v1_agents_chat__session_id__save_to_document_post: {
+    parameters: {
+      path: {
+        session_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AgentChatSaveToDocumentRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["AgentChatSaveToDocumentRead"];
         };
       };
       /** @description Validation Error */
@@ -9897,6 +10166,93 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["DocumentShareCandidateRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Mention Candidates */
+  list_mention_candidates_api_v1_documents__document_id__mention_candidates_get: {
+    parameters: {
+      query?: {
+        /** @description Search text for mention targets */
+        q?: string;
+        /** @description Optional mention target kinds to include */
+        kinds?: components["schemas"]["DocumentReferenceTargetKind"][] | null;
+        /** @description Maximum candidates to return */
+        limit?: number;
+      };
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentMentionCandidateRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Embed Candidates */
+  list_embed_candidates_api_v1_documents__document_id__embed_candidates_get: {
+    parameters: {
+      query?: {
+        /** @description Optional source document filter. When omitted the route returns source cell-doc candidates. */
+        source_document_id?: string | null;
+        /** @description Search text for source documents or blocks */
+        q?: string;
+        /** @description Maximum candidates to return */
+        limit?: number;
+      };
+      path: {
+        document_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentEmbedCandidateRead"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Resolve Document References */
+  resolve_document_references_api_v1_documents__document_id__references_resolve_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentReferenceResolveRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DocumentReferenceResolvedRead"][];
         };
       };
       /** @description Validation Error */

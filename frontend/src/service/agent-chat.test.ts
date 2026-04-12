@@ -6,6 +6,7 @@ import {
   getChatMessages,
   getChatSession,
   getChatSessions,
+  saveChatToDocument,
   sendChatMessage,
   updateChatSession,
 } from './agent-chat';
@@ -173,7 +174,35 @@ describe('agent chat service', () => {
     expect(request.url).toContain('page_size=50');
   });
 
-  it('updates sessions, resolves deletes, and lists available models', async () => {
+  it('passes through optional tail-pagination params for chat history callers', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+      items: [
+        {
+          id: 'message-51',
+          role: 'user',
+          content: 'Older page item',
+          created_at: '2026-04-11T11:59:00Z',
+        },
+      ],
+      total: 51,
+    }));
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    await getChatMessages('token-123', 'session-1', {
+      page: 2,
+      page_size: 50,
+      from_tail: true,
+    });
+
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain('/api/v1/agents/chat/session-1/messages');
+    expect(request.url).toContain('page=2');
+    expect(request.url).toContain('page_size=50');
+    expect(request.url).toContain('from_tail=true');
+  });
+
+  it('updates sessions, saves documents, resolves deletes, and lists available models', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({
         id: 'session-1',
@@ -189,6 +218,10 @@ describe('agent chat service', () => {
         user_id: 'user-1',
         messages: [],
       }))
+      .mockResolvedValueOnce(jsonResponse({
+        document_id: 'doc-1',
+        version_id: 'version-1',
+      }, 201))
       .mockResolvedValueOnce(jsonResponse(null, 204))
       .mockResolvedValueOnce(jsonResponse({
         default_model_name: 'gpt-5.4',
@@ -205,10 +238,15 @@ describe('agent chat service', () => {
       title: 'Retitled session',
       status: 'archived',
     });
+    const saved = await saveChatToDocument('token-123', 'session-1', {
+      title: 'Saved transcript',
+    });
     await expect(deleteChatSession('token-123', 'session-1')).resolves.toBeUndefined();
     const models = await getAvailableModels('token-123');
 
     expect(updated.status).toBe('archived');
+    expect(saved.document_id).toBe('doc-1');
+    expect(saved.version_id).toBe('version-1');
     expect(models.default_model_name).toBe('gpt-5.4');
     expect(models.default_model_label).toBe('GPT-5.4');
     expect(models.models?.map((model) => model.name)).toEqual(['gpt-5.4', 'gpt-5.4-mini']);
@@ -221,10 +259,17 @@ describe('agent chat service', () => {
       status: 'archived',
     });
 
-    const deleteRequest = fetchMock.mock.calls[1][0] as Request;
+    const saveRequest = fetchMock.mock.calls[1][0] as Request;
+    expect(saveRequest.url).toContain('/api/v1/agents/chat/session-1/save-to-document');
+    expect(saveRequest.method).toBe('POST');
+    expect(await saveRequest.json()).toEqual({
+      title: 'Saved transcript',
+    });
+
+    const deleteRequest = fetchMock.mock.calls[2][0] as Request;
     expect(deleteRequest.method).toBe('DELETE');
 
-    const modelsRequest = fetchMock.mock.calls[2][0] as Request;
+    const modelsRequest = fetchMock.mock.calls[3][0] as Request;
     expect(modelsRequest.url).toContain('/api/v1/agents/models');
     expect(modelsRequest.method).toBe('GET');
   });

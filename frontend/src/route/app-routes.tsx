@@ -36,6 +36,7 @@ const UserProfilePage = React.lazy(() => import('../page/user-profile'));
 const ConnectionsPage = React.lazy(() => import('../page/connections'));
 const AgentsPage = React.lazy(() => import('../page/agents'));
 const AgentDetailPage = React.lazy(() => import('../page/agent-detail'));
+const AgentChatShellPage = React.lazy(() => import('../page/agent-chat-shell'));
 const ConversationsPage = React.lazy(() => import('../page/messages/conversations-page'));
 const ConversationDetailPage = React.lazy(() => import('../page/messages/conversation-detail-page'));
 const AccountPage = React.lazy(() => import('../page/settings/account-page'));
@@ -125,6 +126,7 @@ const AppRoutes: React.FC = () => {
             <Route index element={<Navigate to="/automation/agents" replace />} />
             <Route path="agents" element={<AgentsPage />} />
             <Route path="agents/:agentId" element={<AgentDetailPage />} />
+            <Route path="agents/:agentId/chat/:sessionId" element={<AgentChatShellPage />} />
           </Route>
 
           {/* ── Network group ── */}

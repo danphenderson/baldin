@@ -51,7 +51,9 @@ from app.core import conf
 from app.core.document_blocks import (
     block_ids_by_tiptap_path,
     block_snapshot_to_blocks,
+    block_snapshot_to_tiptap_json,
     blocks_to_block_snapshot,
+    compute_block_sync_delta,
     tiptap_json_to_blocks,
     validate_block_tree,
 )
@@ -670,6 +672,63 @@ def _document_share_metadata(
     }
 
 
+def _version_content_with_block_ids(
+    version: models.DocumentVersion,
+) -> str | None:
+    content = version.content
+    if (
+        version.content_format != schemas.ContentFormat.TIPTAP_JSON.value
+        or version.block_snapshot is None
+    ):
+        return content
+
+    try:
+        return json.dumps(
+            block_snapshot_to_tiptap_json(version.document_id, version.block_snapshot)
+        )
+    except ValueError:
+        return content
+
+
+def _document_version_summary_read(
+    version: models.DocumentVersion,
+) -> schemas.DocumentVersionSummaryRead:
+    return schemas.DocumentVersionSummaryRead(
+        id=version.id,
+        content=_version_content_with_block_ids(version),
+        content_type=version.content_type,
+        content_format=version.content_format,
+        source_file=version.source_file,
+    )
+
+
+def _document_version_read(
+    version: models.DocumentVersion,
+) -> schemas.DocumentVersionRead:
+    return schemas.DocumentVersionRead(
+        id=version.id,
+        created_at=version.created_at,
+        updated_at=version.updated_at,
+        document_id=version.document_id,
+        version_number=version.version_number,
+        name=version.name,
+        content=_version_content_with_block_ids(version),
+        content_type=version.content_type,
+        content_format=version.content_format,
+        source_file=version.source_file,
+        change_summary=version.change_summary,
+    )
+
+
+def _document_version_detail_read(
+    version: models.DocumentVersion,
+) -> schemas.DocumentVersionDetailRead:
+    return schemas.DocumentVersionDetailRead(
+        **_document_version_read(version).model_dump(),
+        block_snapshot=version.block_snapshot,
+    )
+
+
 def _document_read(
     doc: models.Document,
     share: models.DocumentShare | None = None,
@@ -686,9 +745,7 @@ def _document_read(
         status=doc.status,
         is_pinned=doc.is_pinned,
         head_version=(
-            schemas.DocumentVersionRead.model_validate(doc.head_version)
-            if doc.head_version
-            else None
+            _document_version_read(doc.head_version) if doc.head_version else None
         ),
         version_count=len(doc.versions) if doc.versions else 0,
         viewer_role=(
@@ -714,7 +771,7 @@ def _document_summary_read(
         status=doc.status,
         is_pinned=doc.is_pinned,
         head_version=(
-            schemas.DocumentVersionSummaryRead.model_validate(doc.head_version)
+            _document_version_summary_read(doc.head_version)
             if doc.head_version
             else None
         ),
@@ -742,19 +799,14 @@ def _document_detail(
         status=doc.status,
         is_pinned=doc.is_pinned,
         head_version=(
-            schemas.DocumentVersionRead.model_validate(doc.head_version)
-            if doc.head_version
-            else None
+            _document_version_read(doc.head_version) if doc.head_version else None
         ),
         version_count=len(doc.versions) if doc.versions else 0,
         viewer_role=(
             None if effective == "owner" else schemas.DocumentShareRole(effective)
         ),
         **_document_share_metadata(doc, share),
-        versions=[
-            schemas.DocumentVersionDetailRead.model_validate(v)
-            for v in (doc.versions or [])
-        ],
+        versions=[_document_version_detail_read(v) for v in (doc.versions or [])],
     )
 
 
@@ -1070,6 +1122,547 @@ def _count_document_block_descendants(
     return len(_collect_document_block_descendant_ids(block_id, children_by_parent))
 
 
+def _block_properties(
+    block: models.DocumentBlock,
+) -> dict[str, object]:
+    return dict(block.properties or {})
+
+
+def _block_is_locked(block: models.DocumentBlock) -> bool:
+    return bool(_block_properties(block).get("locked"))
+
+
+def _current_document_role(doc: models.Document) -> str:
+    return getattr(doc, "_effective_role", "owner")
+
+
+def _raise_locked_block_conflict(action: str) -> None:
+    raise HTTPException(
+        status_code=403,
+        detail=f"Locked blocks cannot be {action} by collaborators",
+    )
+
+
+def _enforce_block_mutation_allowed(
+    doc: models.Document,
+    block: models.DocumentBlock,
+    *,
+    action: str,
+) -> None:
+    if _current_document_role(doc) == "owner":
+        return
+    if _block_is_locked(block):
+        _raise_locked_block_conflict(action)
+
+
+def _enforce_locked_reorder_constraints(
+    doc: models.Document,
+    blocks: list[models.DocumentBlock],
+    *,
+    moved_blocks: list[models.DocumentBlock],
+    target_parent_ids: set[uuid.UUID | None],
+) -> None:
+    if _current_document_role(doc) == "owner":
+        return
+
+    children_by_parent = _group_document_blocks_by_parent(blocks)
+    moved_block_ids = {block.id for block in moved_blocks}
+    touched_parent_ids = {
+        parent_id for block in moved_blocks for parent_id in {block.parent_block_id}
+    } | set(target_parent_ids)
+
+    for block in moved_blocks:
+        if _block_is_locked(block):
+            _raise_locked_block_conflict("reordered")
+
+    for parent_id in touched_parent_ids:
+        if parent_id is None:
+            continue
+        parent_block = next((block for block in blocks if block.id == parent_id), None)
+        if parent_block is not None and _block_is_locked(parent_block):
+            _raise_locked_block_conflict("reordered")
+
+        if any(
+            _block_is_locked(child) and child.id not in moved_block_ids
+            for child in children_by_parent.get(parent_id, [])
+        ):
+            _raise_locked_block_conflict("reordered")
+
+
+def _enforce_sync_respects_locked_blocks(
+    doc: models.Document,
+    existing_blocks: list[models.DocumentBlock],
+    incoming_blocks: list[models.DocumentBlock],
+) -> None:
+    if _current_document_role(doc) == "owner":
+        return
+
+    delta = compute_block_sync_delta(existing_blocks, incoming_blocks)
+    existing_by_id = {
+        block.id: block for block in existing_blocks if block.id is not None
+    }
+    incoming_by_id = {
+        block.id: block for block in incoming_blocks if block.id is not None
+    }
+    incoming_children = _group_document_blocks_by_parent(incoming_blocks)
+    existing_children = _group_document_blocks_by_parent(existing_blocks)
+
+    for block in existing_blocks:
+        if not _block_is_locked(block) or block.id is None:
+            continue
+        if (
+            block.id in delta.removed_block_ids
+            or block.id in delta.updated_block_ids
+            or block.id in delta.moved_block_ids
+        ):
+            _raise_locked_block_conflict("saved")
+
+        previous_child_ids = [child.id for child in existing_children.get(block.id, [])]
+        next_child_ids = [child.id for child in incoming_children.get(block.id, [])]
+        if previous_child_ids != next_child_ids:
+            _raise_locked_block_conflict("saved")
+
+    for added_block_id in delta.added_block_ids:
+        added_block = incoming_by_id[added_block_id]
+        parent_id = added_block.parent_block_id
+        if parent_id is None:
+            continue
+        parent_block = existing_by_id.get(parent_id)
+        if parent_block is not None and _block_is_locked(parent_block):
+            _raise_locked_block_conflict("saved")
+
+
+def _inline_text_from_nodes(nodes: object) -> str:
+    if not isinstance(nodes, list):
+        return ""
+
+    parts: list[str] = []
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_type = node.get("type")
+        if node_type == "text":
+            parts.append(str(node.get("text", "")))
+            continue
+        if node_type == "hardBreak":
+            parts.append("\n")
+            continue
+        child_nodes = node.get("content")
+        if isinstance(child_nodes, list):
+            parts.append(_inline_text_from_nodes(child_nodes))
+    return "".join(parts).replace("\u00a0", " ").strip()
+
+
+def _document_block_preview_lines(
+    block: models.DocumentBlock,
+    children_by_parent: dict[uuid.UUID | None, list[models.DocumentBlock]],
+) -> list[str]:
+    props = _block_properties(block)
+    own_text = _inline_text_from_nodes(block.content)
+    child_lines: list[str] = []
+    for child in children_by_parent.get(block.id, []):
+        child_lines.extend(_document_block_preview_lines(child, children_by_parent))
+
+    if block.block_type == schemas.DocumentBlockType.MENTION.value:
+        label = props.get("label")
+        return [str(label).strip()] if label else []
+    if block.block_type == schemas.DocumentBlockType.EMBED.value:
+        preview = props.get("previewText") or props.get("label")
+        return [str(preview).strip()] if preview else []
+    if block.block_type == schemas.DocumentBlockType.TASK_ITEM.value:
+        prefix = "[x] " if props.get("checked") else "[ ] "
+        lines = [f"{prefix}{own_text}".strip()] if own_text else []
+        return lines + child_lines
+    if own_text:
+        return [own_text] + child_lines
+    return child_lines
+
+
+def _document_block_preview_text(
+    block: models.DocumentBlock,
+    children_by_parent: dict[uuid.UUID | None, list[models.DocumentBlock]],
+) -> str:
+    preview = "\n".join(
+        line
+        for line in _document_block_preview_lines(block, children_by_parent)
+        if line
+    ).strip()
+    return preview[:280]
+
+
+def _coerce_uuid(
+    raw_value: object,
+    *,
+    field_name: str,
+) -> uuid.UUID:
+    try:
+        return (
+            raw_value if isinstance(raw_value, uuid.UUID) else uuid.UUID(str(raw_value))
+        )
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=400, detail=f"{field_name} must be a valid UUID"
+        ) from exc
+
+
+def _build_block_label(
+    block: models.DocumentBlock,
+    *,
+    preview_text: str,
+    fallback: str,
+) -> str:
+    first_line = next(
+        (line.strip() for line in preview_text.splitlines() if line.strip()),
+        "",
+    )
+    return first_line[:120] if first_line else fallback
+
+
+async def _get_accessible_documents(
+    db: AsyncSession,
+    *,
+    user: schemas.UserRead,
+    kind: schemas.DocumentKind | None = None,
+    search: str | None = None,
+    exclude_document_id: uuid.UUID | None = None,
+    limit: int = 25,
+) -> list[models.Document]:
+    shared_document_ids = select(models.DocumentShare.document_id).where(
+        models.DocumentShare.shared_with_user_id == user.id
+    )
+    query = (
+        select(models.Document)
+        .options(
+            selectinload(models.Document.user),
+            selectinload(models.Document.head_version),
+        )
+        .where(
+            or_(
+                models.Document.user_id == user.id,
+                models.Document.id.in_(shared_document_ids),
+            )
+        )
+        .order_by(models.Document.updated_at.desc(), models.Document.id.desc())
+        .limit(limit)
+    )
+    if kind is not None:
+        query = query.where(models.Document.kind == kind.value)
+    if search:
+        query = query.where(models.Document.title.ilike(f"%{search}%"))
+    if exclude_document_id is not None:
+        query = query.where(models.Document.id != exclude_document_id)
+
+    result = await db.execute(query)
+    return result.scalars().unique().all()
+
+
+async def _resolve_user_mention(
+    db: AsyncSession,
+    *,
+    target_id: uuid.UUID,
+    saved_label: str | None,
+) -> schemas.DocumentReferenceResolvedRead:
+    target = await db.get(models.User, target_id)
+    if target is None or not target.is_active or not target.is_discoverable:
+        return schemas.DocumentReferenceResolvedRead(
+            kind=schemas.DocumentReferenceKind.MENTION,
+            status=schemas.DocumentReferenceResolveStatus.UNAVAILABLE,
+            target_kind=schemas.DocumentReferenceTargetKind.USER,
+            target_id=target_id,
+            label=saved_label,
+            unavailable_reason="User is unavailable",
+        )
+
+    label = _user_full_name(target) or target.email
+    return schemas.DocumentReferenceResolvedRead(
+        kind=schemas.DocumentReferenceKind.MENTION,
+        status=schemas.DocumentReferenceResolveStatus.RESOLVED,
+        target_kind=schemas.DocumentReferenceTargetKind.USER,
+        target_id=target_id,
+        label=label,
+        subtitle=target.headline,
+        href=f"/network/discover/{target.id}",
+    )
+
+
+async def _resolve_document_mention(
+    db: AsyncSession,
+    *,
+    user: schemas.UserRead,
+    target_id: uuid.UUID,
+    saved_label: str | None,
+) -> schemas.DocumentReferenceResolvedRead:
+    try:
+        target = await get_document(target_id, db, user)
+    except HTTPException:
+        return schemas.DocumentReferenceResolvedRead(
+            kind=schemas.DocumentReferenceKind.MENTION,
+            status=schemas.DocumentReferenceResolveStatus.UNAVAILABLE,
+            target_kind=schemas.DocumentReferenceTargetKind.DOCUMENT,
+            target_id=target_id,
+            label=saved_label,
+            unavailable_reason="Document is unavailable",
+        )
+
+    return schemas.DocumentReferenceResolvedRead(
+        kind=schemas.DocumentReferenceKind.MENTION,
+        status=schemas.DocumentReferenceResolveStatus.RESOLVED,
+        target_kind=schemas.DocumentReferenceTargetKind.DOCUMENT,
+        target_id=target.id,
+        label=target.title,
+        subtitle=f"{target.kind.replace('_', ' ')} document",
+        href=f"/workspace/{target.id}",
+    )
+
+
+async def _resolve_agent_mention(
+    db: AsyncSession,
+    *,
+    user: schemas.UserRead,
+    target_id: uuid.UUID,
+    saved_label: str | None,
+) -> schemas.DocumentReferenceResolvedRead:
+    target = await db.get(models.Agent, target_id)
+    if target is None or target.user_id != user.id:
+        return schemas.DocumentReferenceResolvedRead(
+            kind=schemas.DocumentReferenceKind.MENTION,
+            status=schemas.DocumentReferenceResolveStatus.UNAVAILABLE,
+            target_kind=schemas.DocumentReferenceTargetKind.AGENT,
+            target_id=target_id,
+            label=saved_label,
+            unavailable_reason="Agent is unavailable",
+        )
+
+    return schemas.DocumentReferenceResolvedRead(
+        kind=schemas.DocumentReferenceKind.MENTION,
+        status=schemas.DocumentReferenceResolveStatus.RESOLVED,
+        target_kind=schemas.DocumentReferenceTargetKind.AGENT,
+        target_id=target.id,
+        label=target.name,
+        subtitle=target.description,
+        href=f"/automation/agents/{target.id}",
+    )
+
+
+async def _resolve_mention_reference(
+    db: AsyncSession,
+    *,
+    user: schemas.UserRead,
+    target_kind: schemas.DocumentReferenceTargetKind,
+    target_id: uuid.UUID,
+    saved_label: str | None = None,
+) -> schemas.DocumentReferenceResolvedRead:
+    if target_kind == schemas.DocumentReferenceTargetKind.USER:
+        return await _resolve_user_mention(
+            db, target_id=target_id, saved_label=saved_label
+        )
+    if target_kind == schemas.DocumentReferenceTargetKind.DOCUMENT:
+        return await _resolve_document_mention(
+            db,
+            user=user,
+            target_id=target_id,
+            saved_label=saved_label,
+        )
+    return await _resolve_agent_mention(
+        db,
+        user=user,
+        target_id=target_id,
+        saved_label=saved_label,
+    )
+
+
+async def _resolve_embed_reference(
+    db: AsyncSession,
+    *,
+    user: schemas.UserRead,
+    current_document_id: uuid.UUID,
+    source_document_id: uuid.UUID,
+    source_block_id: uuid.UUID,
+    saved_label: str | None = None,
+    saved_preview_text: str | None = None,
+) -> schemas.DocumentReferenceResolvedRead:
+    if source_document_id == current_document_id:
+        return schemas.DocumentReferenceResolvedRead(
+            kind=schemas.DocumentReferenceKind.EMBED,
+            status=schemas.DocumentReferenceResolveStatus.INVALID,
+            source_document_id=source_document_id,
+            source_block_id=source_block_id,
+            label=saved_label,
+            preview_text=saved_preview_text,
+            unavailable_reason="Documents cannot embed their own blocks",
+        )
+
+    try:
+        source_doc = await get_document(source_document_id, db, user)
+    except HTTPException:
+        return schemas.DocumentReferenceResolvedRead(
+            kind=schemas.DocumentReferenceKind.EMBED,
+            status=schemas.DocumentReferenceResolveStatus.UNAVAILABLE,
+            source_document_id=source_document_id,
+            source_block_id=source_block_id,
+            label=saved_label,
+            preview_text=saved_preview_text,
+            unavailable_reason="Source document is unavailable",
+        )
+
+    if source_doc.kind != schemas.DocumentKind.CELL_DOC.value:
+        return schemas.DocumentReferenceResolvedRead(
+            kind=schemas.DocumentReferenceKind.EMBED,
+            status=schemas.DocumentReferenceResolveStatus.INVALID,
+            source_document_id=source_document_id,
+            source_block_id=source_block_id,
+            label=saved_label,
+            preview_text=saved_preview_text,
+            unavailable_reason="Only cell-doc blocks can be embedded",
+        )
+
+    source_blocks = await _load_document_blocks(db, document_id=source_doc.id)
+    source_block_by_id = {block.id: block for block in source_blocks}
+    source_block = source_block_by_id.get(source_block_id)
+    if source_block is None:
+        return schemas.DocumentReferenceResolvedRead(
+            kind=schemas.DocumentReferenceKind.EMBED,
+            status=schemas.DocumentReferenceResolveStatus.UNAVAILABLE,
+            source_document_id=source_document_id,
+            source_block_id=source_block_id,
+            label=saved_label,
+            preview_text=saved_preview_text,
+            unavailable_reason="Source block is unavailable",
+        )
+
+    children_by_parent = _group_document_blocks_by_parent(source_blocks)
+    source_subtree_ids = _collect_document_block_descendant_ids(
+        source_block.id,
+        children_by_parent,
+    ) | {source_block.id}
+    if any(
+        block.id in source_subtree_ids
+        and block.block_type == schemas.DocumentBlockType.EMBED.value
+        for block in source_blocks
+    ):
+        return schemas.DocumentReferenceResolvedRead(
+            kind=schemas.DocumentReferenceKind.EMBED,
+            status=schemas.DocumentReferenceResolveStatus.INVALID,
+            source_document_id=source_document_id,
+            source_block_id=source_block_id,
+            label=saved_label,
+            preview_text=saved_preview_text,
+            unavailable_reason="Embed blocks cannot reference a subtree that already contains embeds",
+        )
+
+    preview_text = _document_block_preview_text(source_block, children_by_parent) or (
+        saved_preview_text or ""
+    )
+    label = _build_block_label(
+        source_block,
+        preview_text=preview_text,
+        fallback=saved_label or source_doc.title,
+    )
+    return schemas.DocumentReferenceResolvedRead(
+        kind=schemas.DocumentReferenceKind.EMBED,
+        status=schemas.DocumentReferenceResolveStatus.RESOLVED,
+        label=label,
+        subtitle=source_doc.title,
+        href=f"/workspace/{source_doc.id}",
+        preview_text=preview_text or saved_preview_text,
+        source_document_id=source_doc.id,
+        source_block_id=source_block.id,
+        source_version_id=source_doc.head_version_id,
+    )
+
+
+async def _normalize_reference_blocks(
+    db: AsyncSession,
+    *,
+    user: schemas.UserRead,
+    doc: models.Document,
+    blocks: list[models.DocumentBlock],
+) -> None:
+    for block in blocks:
+        properties = _block_properties(block)
+        if block.block_type == schemas.DocumentBlockType.MENTION.value:
+            target_kind_raw = properties.get("targetKind")
+            target_id_raw = properties.get("targetId")
+            if target_kind_raw is None or target_id_raw is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Mention blocks require targetKind and targetId",
+                )
+            try:
+                target_kind = schemas.DocumentReferenceTargetKind(str(target_kind_raw))
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Mention blocks require a valid targetKind",
+                ) from exc
+            target_id = _coerce_uuid(target_id_raw, field_name="targetId")
+            resolved = await _resolve_mention_reference(
+                db,
+                user=user,
+                target_kind=target_kind,
+                target_id=target_id,
+                saved_label=properties.get("label")
+                if isinstance(properties.get("label"), str)
+                else None,
+            )
+            if resolved.status != schemas.DocumentReferenceResolveStatus.RESOLVED:
+                raise HTTPException(
+                    status_code=403,
+                    detail=resolved.unavailable_reason
+                    or "Mention target is unavailable",
+                )
+            properties["targetKind"] = resolved.target_kind.value
+            properties["targetId"] = str(resolved.target_id)
+            properties["label"] = resolved.label
+            block.properties = properties
+            continue
+
+        if block.block_type != schemas.DocumentBlockType.EMBED.value:
+            continue
+
+        source_document_id_raw = properties.get("sourceDocumentId")
+        source_block_id_raw = properties.get("sourceBlockId")
+        if source_document_id_raw is None or source_block_id_raw is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Embed blocks require sourceDocumentId and sourceBlockId",
+            )
+        source_document_id = _coerce_uuid(
+            source_document_id_raw,
+            field_name="sourceDocumentId",
+        )
+        source_block_id = _coerce_uuid(
+            source_block_id_raw,
+            field_name="sourceBlockId",
+        )
+        resolved = await _resolve_embed_reference(
+            db,
+            user=user,
+            current_document_id=doc.id,
+            source_document_id=source_document_id,
+            source_block_id=source_block_id,
+            saved_label=properties.get("label")
+            if isinstance(properties.get("label"), str)
+            else None,
+            saved_preview_text=(
+                properties.get("previewText")
+                if isinstance(properties.get("previewText"), str)
+                else None
+            ),
+        )
+        if resolved.status != schemas.DocumentReferenceResolveStatus.RESOLVED:
+            raise HTTPException(
+                status_code=400,
+                detail=resolved.unavailable_reason or "Embed source is unavailable",
+            )
+        properties["sourceDocumentId"] = str(resolved.source_document_id)
+        properties["sourceBlockId"] = str(resolved.source_block_id)
+        properties["sourceVersionIdAtSave"] = str(resolved.source_version_id)
+        properties["label"] = resolved.label
+        properties["previewText"] = resolved.preview_text
+        block.properties = properties
+
+
 async def _record_document_activity(
     db: AsyncSession,
     *,
@@ -1343,6 +1936,282 @@ async def list_share_candidates(
     ]
 
 
+@router.get(
+    "/{document_id}/mention-candidates",
+    response_model=list[schemas.DocumentMentionCandidateRead],
+)
+async def list_mention_candidates(
+    document_id: UUID4,
+    q: str = Query("", description="Search text for mention targets"),
+    kinds: list[schemas.DocumentReferenceTargetKind] | None = Query(
+        None,
+        description="Optional mention target kinds to include",
+    ),
+    limit: int = Query(10, ge=1, le=25, description="Maximum candidates to return"),
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    doc = await get_document(document_id, db, user)
+    _require_cell_doc(doc)
+
+    requested_kinds = kinds or list(schemas.DocumentReferenceTargetKind)
+    query_text = q.strip()
+    pattern = f"%{query_text}%"
+    candidates: list[schemas.DocumentMentionCandidateRead] = []
+
+    if (
+        schemas.DocumentReferenceTargetKind.USER in requested_kinds
+        and len(candidates) < limit
+    ):
+        user_query = (
+            select(models.User)
+            .where(
+                models.User.is_active.is_(True), models.User.is_discoverable.is_(True)
+            )
+            .order_by(
+                models.User.first_name.asc().nulls_last(),
+                models.User.last_name.asc().nulls_last(),
+                models.User.email.asc(),
+            )
+            .limit(limit)
+        )
+        if query_text:
+            user_query = user_query.where(
+                or_(
+                    models.User.email.ilike(pattern),
+                    models.User.first_name.ilike(pattern),
+                    models.User.last_name.ilike(pattern),
+                    models.User.headline.ilike(pattern),
+                )
+            )
+        user_result = await db.execute(user_query)
+        for candidate in user_result.scalars().all():
+            if len(candidates) >= limit:
+                break
+            candidates.append(
+                schemas.DocumentMentionCandidateRead(
+                    target_kind=schemas.DocumentReferenceTargetKind.USER,
+                    target_id=candidate.id,
+                    label=_user_full_name(candidate) or candidate.email,
+                    subtitle=candidate.headline,
+                    href=f"/network/discover/{candidate.id}",
+                )
+            )
+
+    if (
+        schemas.DocumentReferenceTargetKind.DOCUMENT in requested_kinds
+        and len(candidates) < limit
+    ):
+        docs = await _get_accessible_documents(
+            db,
+            user=user,
+            search=query_text or None,
+            limit=limit,
+        )
+        for candidate in docs:
+            if len(candidates) >= limit:
+                break
+            candidates.append(
+                schemas.DocumentMentionCandidateRead(
+                    target_kind=schemas.DocumentReferenceTargetKind.DOCUMENT,
+                    target_id=candidate.id,
+                    label=candidate.title,
+                    subtitle=f"{candidate.kind.replace('_', ' ')} document",
+                    href=f"/workspace/{candidate.id}",
+                )
+            )
+
+    if (
+        schemas.DocumentReferenceTargetKind.AGENT in requested_kinds
+        and len(candidates) < limit
+    ):
+        agent_query = (
+            select(models.Agent)
+            .where(models.Agent.user_id == user.id)
+            .order_by(models.Agent.updated_at.desc(), models.Agent.id.desc())
+            .limit(limit)
+        )
+        if query_text:
+            agent_query = agent_query.where(
+                or_(
+                    models.Agent.name.ilike(pattern),
+                    models.Agent.description.ilike(pattern),
+                )
+            )
+        agent_result = await db.execute(agent_query)
+        for candidate in agent_result.scalars().all():
+            if len(candidates) >= limit:
+                break
+            candidates.append(
+                schemas.DocumentMentionCandidateRead(
+                    target_kind=schemas.DocumentReferenceTargetKind.AGENT,
+                    target_id=candidate.id,
+                    label=candidate.name,
+                    subtitle=candidate.description,
+                    href=f"/automation/agents/{candidate.id}",
+                )
+            )
+
+    return candidates[:limit]
+
+
+@router.get(
+    "/{document_id}/embed-candidates",
+    response_model=list[schemas.DocumentEmbedCandidateRead],
+)
+async def list_embed_candidates(
+    document_id: UUID4,
+    source_document_id: UUID4 | None = Query(
+        None,
+        description="Optional source document filter. When omitted the route returns source cell-doc candidates.",
+    ),
+    q: str = Query("", description="Search text for source documents or blocks"),
+    limit: int = Query(10, ge=1, le=25, description="Maximum candidates to return"),
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    doc = await get_document(document_id, db, user)
+    _require_cell_doc(doc)
+
+    query_text = q.strip().lower()
+    if source_document_id is None:
+        source_docs = await _get_accessible_documents(
+            db,
+            user=user,
+            kind=schemas.DocumentKind.CELL_DOC,
+            search=q.strip() or None,
+            exclude_document_id=doc.id,
+            limit=limit,
+        )
+        return [
+            schemas.DocumentEmbedCandidateRead(
+                candidate_kind=schemas.DocumentEmbedCandidateKind.DOCUMENT,
+                document_id=source_doc.id,
+                document_title=source_doc.title,
+                block_id=None,
+                source_version_id=source_doc.head_version_id,
+                label=source_doc.title,
+                preview_text=None,
+            )
+            for source_doc in source_docs
+        ]
+
+    source_doc = await get_document(source_document_id, db, user)
+    if source_doc.kind != schemas.DocumentKind.CELL_DOC.value:
+        raise HTTPException(
+            status_code=400, detail="Only cell-doc blocks can be embedded"
+        )
+    if source_doc.id == doc.id:
+        raise HTTPException(
+            status_code=400, detail="Documents cannot embed their own blocks"
+        )
+
+    source_blocks = await _load_document_blocks(db, document_id=source_doc.id)
+    children_by_parent = _group_document_blocks_by_parent(source_blocks)
+    candidates: list[schemas.DocumentEmbedCandidateRead] = []
+    for block in source_blocks:
+        subtree_ids = _collect_document_block_descendant_ids(
+            block.id, children_by_parent
+        ) | {block.id}
+        if any(
+            candidate.id in subtree_ids
+            and candidate.block_type == schemas.DocumentBlockType.EMBED.value
+            for candidate in source_blocks
+        ):
+            continue
+
+        preview_text = _document_block_preview_text(block, children_by_parent)
+        label = _build_block_label(
+            block,
+            preview_text=preview_text,
+            fallback=source_doc.title,
+        )
+        haystack = f"{label}\n{preview_text}".lower()
+        if query_text and query_text not in haystack:
+            continue
+        if not label and not preview_text:
+            continue
+        candidates.append(
+            schemas.DocumentEmbedCandidateRead(
+                candidate_kind=schemas.DocumentEmbedCandidateKind.BLOCK,
+                document_id=source_doc.id,
+                document_title=source_doc.title,
+                block_id=block.id,
+                source_version_id=source_doc.head_version_id,
+                label=label,
+                preview_text=preview_text or None,
+            )
+        )
+        if len(candidates) >= limit:
+            break
+
+    return candidates
+
+
+@router.post(
+    "/{document_id}/references/resolve",
+    response_model=list[schemas.DocumentReferenceResolvedRead],
+)
+async def resolve_document_references(
+    document_id: UUID4,
+    payload: schemas.DocumentReferenceResolveRequest,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    doc = await get_document(document_id, db, user)
+    _require_cell_doc(doc)
+
+    results: list[schemas.DocumentReferenceResolvedRead] = []
+    for reference in payload.references:
+        if reference.kind == schemas.DocumentReferenceKind.MENTION:
+            if reference.target_kind is None or reference.target_id is None:
+                result = schemas.DocumentReferenceResolvedRead(
+                    kind=schemas.DocumentReferenceKind.MENTION,
+                    status=schemas.DocumentReferenceResolveStatus.INVALID,
+                    block_id=reference.block_id,
+                    label=reference.saved_label,
+                    unavailable_reason="Mention references require target_kind and target_id",
+                )
+            else:
+                result = await _resolve_mention_reference(
+                    db,
+                    user=user,
+                    target_kind=reference.target_kind,
+                    target_id=uuid.UUID(str(reference.target_id)),
+                    saved_label=reference.saved_label,
+                )
+                result.block_id = reference.block_id
+            results.append(result)
+            continue
+
+        if reference.source_document_id is None or reference.source_block_id is None:
+            results.append(
+                schemas.DocumentReferenceResolvedRead(
+                    kind=schemas.DocumentReferenceKind.EMBED,
+                    status=schemas.DocumentReferenceResolveStatus.INVALID,
+                    block_id=reference.block_id,
+                    label=reference.saved_label,
+                    preview_text=reference.saved_preview_text,
+                    unavailable_reason="Embed references require source_document_id and source_block_id",
+                )
+            )
+            continue
+
+        result = await _resolve_embed_reference(
+            db,
+            user=user,
+            current_document_id=doc.id,
+            source_document_id=uuid.UUID(str(reference.source_document_id)),
+            source_block_id=uuid.UUID(str(reference.source_block_id)),
+            saved_label=reference.saved_label,
+            saved_preview_text=reference.saved_preview_text,
+        )
+        result.block_id = reference.block_id
+        results.append(result)
+
+    return results
+
+
 # ---------------------------------------------------------------------------
 #  Generation
 # ---------------------------------------------------------------------------
@@ -1506,6 +2375,12 @@ async def create_document(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         _validate_document_blocks(initial_blocks)
+        await _normalize_reference_blocks(
+            db,
+            user=user,
+            doc=doc,
+            blocks=initial_blocks,
+        )
         version_block_snapshot = blocks_to_block_snapshot(initial_blocks)
 
     version = models.DocumentVersion(
@@ -1612,6 +2487,12 @@ async def create_document_block(
         and payload.parent_block_id not in block_by_id
     ):
         raise HTTPException(status_code=404, detail="Parent block not found")
+    if payload.parent_block_id is not None:
+        _enforce_block_mutation_allowed(
+            doc,
+            block_by_id[payload.parent_block_id],
+            action="modified",
+        )
 
     siblings = [
         block for block in blocks if block.parent_block_id == payload.parent_block_id
@@ -1631,6 +2512,15 @@ async def create_document_block(
         position=target_position,
     )
     _validate_document_blocks(blocks + [block])
+    await _normalize_reference_blocks(
+        db,
+        user=user,
+        doc=doc,
+        blocks=[block],
+    )
+    if _current_document_role(doc) != "owner" and target_position < len(siblings):
+        if any(_block_is_locked(sibling) for sibling in siblings[target_position:]):
+            _raise_locked_block_conflict("created before locked blocks")
 
     for sibling in siblings:
         if sibling.position >= target_position:
@@ -1693,6 +2583,13 @@ async def reorder_document_blocks(
                 status_code=400,
                 detail="A block cannot be reparented to itself",
             )
+
+    _enforce_locked_reorder_constraints(
+        doc,
+        blocks,
+        moved_blocks=[block_by_id[item.block_id] for item in payload.items],
+        target_parent_ids={item.parent_block_id for item in payload.items},
+    )
 
     touched_parent_ids: set[uuid.UUID | None] = set()
     reorder_specs_by_parent: dict[
@@ -1780,6 +2677,13 @@ async def sync_document_blocks(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     _validate_document_blocks(blocks)
+    await _normalize_reference_blocks(
+        db,
+        user=user,
+        doc=doc,
+        blocks=blocks,
+    )
+    _enforce_sync_respects_locked_blocks(doc, existing_blocks, blocks)
 
     await _replace_document_blocks(db, document_id=doc.id, blocks=blocks)
     await db.commit()
@@ -1807,6 +2711,7 @@ async def update_document_block(
     block = next((candidate for candidate in blocks if candidate.id == block_id), None)
     if block is None:
         raise HTTPException(status_code=404, detail="Block not found")
+    _enforce_block_mutation_allowed(doc, block, action="edited")
 
     data = payload.model_dump(exclude_unset=True)
     updated_fields: list[str] = []
@@ -1830,6 +2735,12 @@ async def update_document_block(
 
     if updated_fields:
         _validate_document_blocks(blocks)
+        await _normalize_reference_blocks(
+            db,
+            user=user,
+            doc=doc,
+            blocks=[block],
+        )
         await db.flush()
         if previous_block_type != block.block_type:
             await _record_document_activity(
@@ -1881,6 +2792,7 @@ async def delete_document_block(
     block = next((candidate for candidate in blocks if candidate.id == block_id), None)
     if block is None:
         raise HTTPException(status_code=404, detail="Block not found")
+    _enforce_block_mutation_allowed(doc, block, action="deleted")
 
     children_by_parent = _group_document_blocks_by_parent(blocks)
     descendant_count = _count_document_block_descendants(block.id, children_by_parent)
@@ -2000,7 +2912,7 @@ async def list_versions(
     db: AsyncSession = Depends(get_async_session),
 ):
     doc = await get_document(document_id, db, user)
-    return [schemas.DocumentVersionDetailRead.model_validate(v) for v in doc.versions]
+    return [_document_version_detail_read(v) for v in doc.versions]
 
 
 @router.post(
@@ -2024,6 +2936,7 @@ async def create_version(
     version_content_format = payload.content_format.value
     version_block_snapshot: list[dict[str, object]] | None = None
     if doc.kind == schemas.DocumentKind.CELL_DOC.value:
+        existing_blocks = await _load_document_blocks(db, document_id=doc.id)
         if payload.restore_version_id is not None and version_content is None:
             restore_source = next(
                 (
@@ -2063,7 +2976,6 @@ async def create_version(
             )
             doc.yjs_state = None
         else:
-            existing_blocks = await _load_document_blocks(db, document_id=doc.id)
             try:
                 version_blocks = _build_cell_doc_blocks_from_content(
                     doc.id,
@@ -2074,6 +2986,14 @@ async def create_version(
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         _validate_document_blocks(version_blocks)
+        if restore_source is None:
+            await _normalize_reference_blocks(
+                db,
+                user=user,
+                doc=doc,
+                blocks=version_blocks,
+            )
+        _enforce_sync_respects_locked_blocks(doc, existing_blocks, version_blocks)
 
         version_block_snapshot = blocks_to_block_snapshot(version_blocks)
         await _replace_document_blocks(db, document_id=doc.id, blocks=version_blocks)
@@ -2105,7 +3025,7 @@ async def create_version(
     )
     await db.commit()
     await db.refresh(version)
-    return schemas.DocumentVersionDetailRead.model_validate(version)
+    return _document_version_detail_read(version)
 
 
 @router.get(
@@ -2122,7 +3042,7 @@ async def get_version(
     version = await db.get(models.DocumentVersion, version_id)
     if not version or version.document_id != doc.id:
         raise HTTPException(status_code=404, detail="Version not found")
-    return schemas.DocumentVersionDetailRead.model_validate(version)
+    return _document_version_detail_read(version)
 
 
 # ---------------------------------------------------------------------------

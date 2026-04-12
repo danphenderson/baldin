@@ -3,27 +3,44 @@ import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Box, Typography, Chip, Stack, Button, Skeleton, Tooltip, Switch, FormControlLabel,
   useTheme, Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
-  Paper, CircularProgress, Pagination, Link,
+  Paper, CircularProgress, Pagination, Link, FormControl, InputLabel, Select, MenuItem,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
   Edit as EditIcon,
   SmartToyOutlined as AgentsIcon,
+  ChatBubbleOutline as ChatIcon,
   ArrowBack as BackIcon,
   HistoryOutlined as HistoryIcon,
   ErrorOutline as ErrorIcon,
   Refresh as RefreshIcon,
   PlayArrow as RerunIcon,
   OpenInNew as OpenIcon,
+  Add as AddIcon,
+  ArchiveOutlined as ArchiveIcon,
+  UnarchiveOutlined as UnarchiveIcon,
+  DeleteOutline as DeleteIcon,
 } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import { useNotification } from '../context/notification-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import { getAgent, updateAgent, getAgentRuns, runAgent } from '../service/agents';
 import type { AgentRead, AgentUpdate, AgentRunSummaryRead, AgentRunsPaginatedRead } from '../service/agents';
-import { getAvailableModels } from '../service/agent-chat';
+import {
+  createChatSession,
+  deleteChatSession,
+  getAvailableModels,
+  getChatSessions,
+  updateChatSession,
+} from '../service/agent-chat';
+import type {
+  AgentChatSessionRead,
+  AgentChatSessionStatus,
+  AgentChatSessionSummaryRead,
+} from '../service/agent-chat';
 import AgentFormDialog from '../component/agent-form-dialog';
 import EmptyState from '../component/common/empty-state';
+import ConfirmDialog from '../component/common/confirm-dialog';
 import { Caption } from '../component/common/text';
 import { getKindLabel } from '../component/agent-card';
 import { ALPHA_CHIP } from '../theme/effects';
@@ -60,6 +77,17 @@ const AgentDetailPage: React.FC = () => {
   const [runsLoading, setRunsLoading] = useState(false);
   const [rerunningRunId, setRerunningRunId] = useState<string | null>(null);
   const RUNS_PAGE_SIZE = 10;
+
+  /* Chat sessions state */
+  const [chatSessions, setChatSessions] = useState<AgentChatSessionSummaryRead[]>([]);
+  const [chatSessionsLoading, setChatSessionsLoading] = useState(false);
+  const [chatSessionsLoadError, setChatSessionsLoadError] = useState<string | null>(null);
+  const [chatSessionFilter, setChatSessionFilter] = useState<'active' | 'archived' | 'all'>('active');
+  const [chatSessionsPage, setChatSessionsPage] = useState(1);
+  const [chatSessionActingId, setChatSessionActingId] = useState<string | null>(null);
+  const [creatingChat, setCreatingChat] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AgentChatSessionSummaryRead | null>(null);
+  const CHAT_SESSIONS_PAGE_SIZE = 8;
 
   usePageToolbarHeader(
     agent?.name ?? 'Agent',
@@ -176,6 +204,34 @@ const AgentDetailPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agent?.id]);
 
+  const refreshChatSessions = useCallback(async () => {
+    if (!token || !agentId) return;
+    setChatSessionsLoading(true);
+    setChatSessionsLoadError(null);
+    try {
+      const result = await getChatSessions(token, agentId, {
+        page: 1,
+        page_size: 500,
+      });
+      setChatSessions(result.items);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to load chat sessions';
+      setChatSessionsLoadError(message);
+      notify(message, 'error');
+    } finally {
+      setChatSessionsLoading(false);
+    }
+  }, [token, agentId, notify]);
+
+  useEffect(() => {
+    if (agent) refreshChatSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agent?.id]);
+
+  useEffect(() => {
+    setChatSessionsPage(1);
+  }, [chatSessionFilter]);
+
   const handleRerun = async (run: AgentRunSummaryRead) => {
     if (!token || !agentId || !run.session_document_id || !run.application_id) return;
     setRerunningRunId(run.id);
@@ -198,6 +254,83 @@ const AgentDetailPage: React.FC = () => {
   };
 
   const runsTotalPages = Math.ceil(runsTotal / RUNS_PAGE_SIZE);
+
+  const chatSessionsFiltered = [...chatSessions]
+    .filter((chatSession) => (
+      chatSessionFilter === 'all' ? true : chatSession.status === chatSessionFilter
+    ))
+    .sort((left, right) => {
+      const leftTimestamp = left.last_message_at ?? left.updated_at;
+      const rightTimestamp = right.last_message_at ?? right.updated_at;
+      return new Date(rightTimestamp).getTime() - new Date(leftTimestamp).getTime();
+    });
+
+  const chatSessionsTotalPages = Math.max(
+    1,
+    Math.ceil(chatSessionsFiltered.length / CHAT_SESSIONS_PAGE_SIZE),
+  );
+  const safeChatSessionsPage = Math.min(chatSessionsPage, chatSessionsTotalPages);
+  const chatSessionsPageItems = chatSessionsFiltered.slice(
+    (safeChatSessionsPage - 1) * CHAT_SESSIONS_PAGE_SIZE,
+    safeChatSessionsPage * CHAT_SESSIONS_PAGE_SIZE,
+  );
+
+  const applyChatSessionUpdate = (updated: AgentChatSessionRead) => {
+    setChatSessions((current) => current.map((chatSession) => (
+      chatSession.id === updated.id
+        ? { ...chatSession, ...updated }
+        : chatSession
+    )));
+  };
+
+  const handleCreateChat = async () => {
+    if (!token || !agent) return;
+    setCreatingChat(true);
+    try {
+      const session = await createChatSession(token, agent.id, {});
+      navigate(`/automation/agents/${agent.id}/chat/${session.id}`);
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Failed to create chat session', 'error');
+    } finally {
+      setCreatingChat(false);
+    }
+  };
+
+  const handleUpdateChatStatus = async (
+    chatSession: AgentChatSessionSummaryRead,
+    status: AgentChatSessionStatus,
+  ) => {
+    if (!token) return;
+    setChatSessionActingId(chatSession.id);
+    try {
+      const updated = await updateChatSession(token, chatSession.id, { status });
+      applyChatSessionUpdate(updated);
+      notify(status === 'archived' ? 'Chat archived' : 'Chat restored');
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Failed to update chat session', 'error');
+    } finally {
+      setChatSessionActingId(null);
+    }
+  };
+
+  const handleConfirmDeleteChat = async () => {
+    if (!token || !deleteTarget) return;
+    setChatSessionActingId(deleteTarget.id);
+    try {
+      await deleteChatSession(token, deleteTarget.id);
+      setChatSessions((current) => current.filter((chatSession) => chatSession.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      notify('Chat deleted');
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Failed to delete chat session', 'error');
+    } finally {
+      setChatSessionActingId(null);
+    }
+  };
+
+  const navigateToChatSession = (chatSession: AgentChatSessionSummaryRead) => {
+    navigate(`/automation/agents/${agentId ?? chatSession.agent_id}/chat/${chatSession.id}`);
+  };
 
   /* ---- Loading skeleton ---- */
 
@@ -373,7 +506,12 @@ const AgentDetailPage: React.FC = () => {
           <Box sx={{ flex: 1 }} />
           <Tooltip title="Refresh run history">
             <Box component="span">
-              <Button size="small" onClick={() => refreshRuns(1)} disabled={runsLoading}>
+              <Button
+                size="small"
+                aria-label="Refresh run history"
+                onClick={() => refreshRuns(1)}
+                disabled={runsLoading}
+              >
                 <RefreshIcon fontSize="small" />
               </Button>
             </Box>
@@ -454,7 +592,7 @@ const AgentDetailPage: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell align="right">
-                        {run.status === 'completed' && run.session_document_id && run.application_id && (
+                        {run.status === 'completed' && run.session_document_id && run.application_id && !run.chat_session_id && (
                           <Tooltip title="Rerun agent into the same session">
                             <Box component="span">
                               <Button
@@ -498,12 +636,225 @@ const AgentDetailPage: React.FC = () => {
         </>
       )}
 
+      {/* Chat Sessions */}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1}
+        alignItems={{ md: 'center' }}
+        useFlexGap
+        sx={{ mb: 1.5, mt: 4 }}
+      >
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <ChatIcon fontSize="small" />
+          <Typography component="h2" variant="subtitle1" fontWeight={700}>
+            Chat Sessions
+          </Typography>
+          {chatSessions.length > 0 && (
+            <Chip label={chatSessions.length} size="small" variant="outlined" sx={{ fontWeight: 700, height: 22 }} />
+          )}
+        </Stack>
+        <Box sx={{ flex: 1 }} />
+        <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel id="chat-session-filter-label">Filter</InputLabel>
+            <Select
+              labelId="chat-session-filter-label"
+              label="Filter"
+              value={chatSessionFilter}
+              onChange={(event) => setChatSessionFilter(event.target.value as 'active' | 'archived' | 'all')}
+            >
+              <MenuItem value="active">Active</MenuItem>
+              <MenuItem value="archived">Archived</MenuItem>
+              <MenuItem value="all">All</MenuItem>
+            </Select>
+          </FormControl>
+          <Tooltip title="Refresh chat sessions">
+            <Box component="span">
+              <Button
+                size="small"
+                onClick={() => refreshChatSessions()}
+                disabled={chatSessionsLoading || creatingChat}
+                aria-label="Refresh chat sessions"
+              >
+                <RefreshIcon fontSize="small" />
+              </Button>
+            </Box>
+          </Tooltip>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={creatingChat ? <CircularProgress size={14} color="inherit" /> : <AddIcon />}
+            onClick={handleCreateChat}
+            disabled={creatingChat || chatSessionsLoading}
+          >
+            {creatingChat ? 'Creating…' : 'New Chat'}
+          </Button>
+        </Stack>
+      </Stack>
+
+      {chatSessionsLoading && chatSessions.length === 0 ? (
+        <Skeleton variant="rounded" height={160} />
+      ) : chatSessionsLoadError && chatSessions.length === 0 ? (
+        <EmptyState
+          icon={<ErrorIcon />}
+          title="Unable to load chat sessions"
+          description={chatSessionsLoadError}
+          action={{ label: 'Retry', onClick: refreshChatSessions, icon: <RefreshIcon /> }}
+        />
+      ) : chatSessions.length === 0 ? (
+        <EmptyState
+          icon={<ChatIcon />}
+          title="Start a conversation with this agent"
+          description="Create a new chat session to launch an interactive conversation."
+          action={{ label: 'New Chat', onClick: handleCreateChat, icon: <AddIcon /> }}
+        />
+      ) : chatSessionsFiltered.length === 0 ? (
+        <EmptyState
+          icon={<ChatIcon />}
+          title={`No ${chatSessionFilter === 'all' ? '' : `${chatSessionFilter} `}chat sessions`}
+          description="Try another filter or create a new chat session."
+          action={{ label: 'New Chat', onClick: handleCreateChat, icon: <AddIcon /> }}
+        />
+      ) : (
+        <>
+          <Stack spacing={1.5} sx={{ mb: 2 }}>
+            {chatSessionsPageItems.map((chatSession) => {
+              const acting = chatSessionActingId === chatSession.id;
+              const lastActiveAt = chatSession.last_message_at ?? chatSession.updated_at;
+              return (
+                <Paper key={chatSession.id} variant="outlined">
+                  <Stack direction={{ xs: 'column', sm: 'row' }}>
+                    <Box
+                      role="link"
+                      tabIndex={0}
+                      onClick={() => navigateToChatSession(chatSession)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          navigateToChatSession(chatSession);
+                        }
+                      }}
+                      sx={{
+                        flex: 1,
+                        minWidth: 0,
+                        p: 2,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: alpha(theme.palette.primary.main, 0.03),
+                        },
+                        '&:focus-visible': {
+                          outline: `2px solid ${theme.palette.primary.main}`,
+                          outlineOffset: '-2px',
+                        },
+                      }}
+                    >
+                      <Stack spacing={1.25}>
+                        <Stack
+                          direction={{ xs: 'column', md: 'row' }}
+                          spacing={1}
+                          justifyContent="space-between"
+                          alignItems={{ md: 'center' }}
+                        >
+                          <Typography variant="subtitle2" fontWeight={700} noWrap>
+                            {chatSession.title?.trim() || 'Untitled chat'}
+                          </Typography>
+                          <Chip
+                            label={chatSession.status === 'archived' ? 'Archived' : 'Active'}
+                            size="small"
+                            color={chatSession.status === 'archived' ? 'default' : 'success'}
+                            variant="outlined"
+                            sx={{ width: 'fit-content', fontWeight: 600 }}
+                          />
+                        </Stack>
+                        <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
+                          <Caption>
+                            {chatSession.message_count} message{chatSession.message_count === 1 ? '' : 's'}
+                          </Caption>
+                          <Caption title={new Date(lastActiveAt).toLocaleString()}>
+                            Last active {timeAgo(lastActiveAt)}
+                          </Caption>
+                          {chatSession.application_id && (
+                            <Link
+                              component={RouterLink}
+                              to={`/applications/${chatSession.application_id}`}
+                              underline="hover"
+                              variant="caption"
+                              onClick={(event) => event.stopPropagation()}
+                              sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.35 }}
+                            >
+                              Application
+                              <OpenIcon sx={{ fontSize: 12 }} />
+                            </Link>
+                          )}
+                        </Stack>
+                      </Stack>
+                    </Box>
+                    <Stack
+                      direction={{ xs: 'row', sm: 'column' }}
+                      spacing={1}
+                      justifyContent="center"
+                      sx={{
+                        p: 2,
+                        pt: { xs: 0, sm: 2 },
+                        borderLeft: { sm: `1px solid ${theme.palette.divider}` },
+                        borderTop: { xs: `1px solid ${theme.palette.divider}`, sm: 'none' },
+                      }}
+                    >
+                      <Button
+                        size="small"
+                        startIcon={chatSession.status === 'archived' ? <UnarchiveIcon /> : <ArchiveIcon />}
+                        onClick={() => handleUpdateChatStatus(
+                          chatSession,
+                          chatSession.status === 'archived' ? 'active' : 'archived',
+                        )}
+                        disabled={acting}
+                      >
+                        {chatSession.status === 'archived' ? 'Restore' : 'Archive'}
+                      </Button>
+                      <Button
+                        size="small"
+                        color="error"
+                        startIcon={acting ? <CircularProgress size={14} color="inherit" /> : <DeleteIcon />}
+                        onClick={() => setDeleteTarget(chatSession)}
+                        disabled={acting}
+                      >
+                        Delete
+                      </Button>
+                    </Stack>
+                  </Stack>
+                </Paper>
+              );
+            })}
+          </Stack>
+          {chatSessionsTotalPages > 1 && (
+            <Stack alignItems="center" sx={{ mb: 2 }}>
+              <Pagination
+                count={chatSessionsTotalPages}
+                page={safeChatSessionsPage}
+                onChange={(_, page) => setChatSessionsPage(page)}
+                size="small"
+              />
+            </Stack>
+          )}
+        </>
+      )}
+
       {/* Edit dialog */}
       <AgentFormDialog
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSave={handleSaveForm}
         agent={agent}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete chat session"
+        message={<>Are you sure you want to delete <strong>{deleteTarget?.title?.trim() || 'this chat session'}</strong>? This action cannot be undone.</>}
+        confirmLabel="Delete"
+        loading={Boolean(deleteTarget) && chatSessionActingId === deleteTarget?.id}
+        onConfirm={handleConfirmDeleteChat}
+        onCancel={() => setDeleteTarget(null)}
       />
     </Box>
   );

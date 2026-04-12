@@ -767,6 +767,30 @@ class DocumentBlockType(str, Enum):
     TABLE_ROW = "table_row"
     TABLE_CELL = "table_cell"
     DIVIDER = "divider"
+    MENTION = "mention"
+    EMBED = "embed"
+
+
+class DocumentReferenceKind(str, Enum):
+    MENTION = "mention"
+    EMBED = "embed"
+
+
+class DocumentReferenceTargetKind(str, Enum):
+    USER = "user"
+    DOCUMENT = "document"
+    AGENT = "agent"
+
+
+class DocumentEmbedCandidateKind(str, Enum):
+    DOCUMENT = "document"
+    BLOCK = "block"
+
+
+class DocumentReferenceResolveStatus(str, Enum):
+    RESOLVED = "resolved"
+    UNAVAILABLE = "unavailable"
+    INVALID = "invalid"
 
 
 class DocumentBlockSnapshotRead(BaseSchema):
@@ -1013,6 +1037,133 @@ class DocumentBlockSyncRequest(BaseSchema):
     preserve_ids: bool = Field(
         True,
         description="Reuse existing block UUIDs for matching block paths when possible",
+    )
+
+
+class DocumentMentionCandidateRead(BaseSchema):
+    target_kind: DocumentReferenceTargetKind = Field(
+        description="Reference target type"
+    )
+    target_id: UUID4 = Field(description="Referenced entity identifier")
+    label: str = Field(description="Human-friendly target label")
+    subtitle: str | None = Field(
+        None,
+        description="Optional secondary line shown in mention pickers",
+    )
+    href: str | None = Field(
+        None,
+        description="Canonical frontend route for the resolved target",
+    )
+
+
+class DocumentEmbedCandidateRead(BaseSchema):
+    candidate_kind: DocumentEmbedCandidateKind = Field(
+        description="Whether this candidate represents a source document or source block"
+    )
+    document_id: UUID4 = Field(description="Source cell-doc identifier")
+    document_title: str = Field(description="Source document title")
+    block_id: UUID4 | None = Field(
+        None,
+        description="Source block identifier when the candidate is a block",
+    )
+    source_version_id: UUID4 | None = Field(
+        None,
+        description="Current saved head version for the source document",
+    )
+    label: str = Field(description="Human-friendly label for the candidate")
+    preview_text: str | None = Field(
+        None,
+        description="Saved or computed preview text for the candidate",
+    )
+
+
+class DocumentReferenceResolveItem(BaseSchema):
+    kind: DocumentReferenceKind = Field(description="Reference type to resolve")
+    block_id: UUID4 | None = Field(
+        None,
+        description="Owning block identifier when the caller is resolving a live editor node",
+    )
+    target_kind: DocumentReferenceTargetKind | None = Field(
+        None,
+        description="Mention target type when resolving a mention block",
+    )
+    target_id: UUID4 | None = Field(
+        None,
+        description="Mention target identifier when resolving a mention block",
+    )
+    source_document_id: UUID4 | None = Field(
+        None,
+        description="Source document identifier when resolving an embed block",
+    )
+    source_block_id: UUID4 | None = Field(
+        None,
+        description="Source block identifier when resolving an embed block",
+    )
+    saved_label: str | None = Field(
+        None,
+        description="Saved label snapshot stored on the referencing block",
+    )
+    saved_preview_text: str | None = Field(
+        None,
+        description="Saved preview-text snapshot stored on the referencing block",
+    )
+
+
+class DocumentReferenceResolveRequest(BaseSchema):
+    references: list[DocumentReferenceResolveItem] = Field(
+        min_length=1,
+        description="Reference blocks to resolve in a single request",
+    )
+
+
+class DocumentReferenceResolvedRead(BaseSchema):
+    kind: DocumentReferenceKind = Field(description="Resolved reference type")
+    status: DocumentReferenceResolveStatus = Field(
+        description="Resolution status for the reference"
+    )
+    block_id: UUID4 | None = Field(
+        None,
+        description="Owning block identifier when provided by the caller",
+    )
+    label: str | None = Field(
+        None,
+        description="Best-available current label for the reference",
+    )
+    subtitle: str | None = Field(
+        None,
+        description="Optional secondary descriptive line for the reference",
+    )
+    href: str | None = Field(
+        None,
+        description="Frontend route for the current reference target when accessible",
+    )
+    preview_text: str | None = Field(
+        None,
+        description="Current or saved preview text for embed references",
+    )
+    target_kind: DocumentReferenceTargetKind | None = Field(
+        None,
+        description="Mention target type when applicable",
+    )
+    target_id: UUID4 | None = Field(
+        None,
+        description="Mention target identifier when applicable",
+    )
+    source_document_id: UUID4 | None = Field(
+        None,
+        description="Source document identifier for embed references",
+    )
+    source_block_id: UUID4 | None = Field(
+        None,
+        description="Source block identifier for embed references",
+    )
+    source_version_id: UUID4 | None = Field(
+        None,
+        description="Current saved head version for the source document when resolved",
+    )
+    unavailable_reason: str | None = Field(
+        None,
+        description="Reason the live reference could not be resolved",
     )
 
 
@@ -2094,6 +2245,10 @@ class AgentRunSummaryRead(BaseRead):
         None,
         description="Optional source application identifier",
     )
+    chat_session_id: UUID4 | None = Field(
+        None,
+        description="Source agent chat session identifier when the run came from a chat export",
+    )
     parent_run_id: UUID4 | None = Field(
         None,
         description="Optional prior run in the same session lineage",
@@ -2264,6 +2419,27 @@ class AgentChatSessionUpdate(BaseSchema):
         if "status" in self.model_fields_set and self.status is None:
             raise ValueError("status cannot be null")
         return self
+
+
+class AgentChatSaveToDocumentRequest(BaseSchema):
+    title: str | None = Field(
+        None,
+        description="Optional document title override for the exported chat transcript",
+    )
+    application_id: UUID4 | None = Field(
+        None,
+        description="Optional application context to attach to the saved document",
+    )
+
+    @field_validator("title")
+    @classmethod
+    def clean_title(cls, value: str | None) -> str | None:
+        return _clean_optional_wrapped_text(value)
+
+
+class AgentChatSaveToDocumentRead(BaseSchema):
+    document_id: UUID4 = Field(description="Newly created cell-doc document identifier")
+    version_id: UUID4 = Field(description="Version identifier created for the export")
 
 
 # Crawler schemas

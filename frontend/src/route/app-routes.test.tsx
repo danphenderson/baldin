@@ -59,6 +59,9 @@ vi.mock('../page/connections', () => ({
 vi.mock('../page/agents', () => ({
   default: () => <div data-testid="page-agents">Agents</div>,
 }));
+vi.mock('../page/agent-chat-shell', () => ({
+  default: () => <div data-testid="page-agent-chat-shell">AgentChatShell</div>,
+}));
 vi.mock('../page/messages/conversations-page', () => ({
   default: () => <div data-testid="page-conversations">Conversations</div>,
 }));
@@ -270,6 +273,11 @@ describe('AppRoutes', () => {
   it('renders agents page for /automation/agents when authenticated', async () => {
     renderRoutes('/automation/agents');
     expect(await screen.findByTestId('page-agents')).toBeInTheDocument();
+  });
+
+  it('renders the agent chat shell route when authenticated', async () => {
+    renderRoutes('/automation/agents/agent-1/chat/session-1');
+    expect(await screen.findByTestId('page-agent-chat-shell')).toBeInTheDocument();
   });
 
   it('redirects /automation to agents when authenticated', async () => {

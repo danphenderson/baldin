@@ -122,6 +122,8 @@ DOCUMENT_BLOCK_TYPE_VALUES = (
     "table_row",
     "table_cell",
     "divider",
+    "mention",
+    "embed",
 )
 ORCHESTRATION_EVENT_STATUS_VALUES = (
     "pending",
@@ -778,6 +780,12 @@ class AgentRun(Base):
         nullable=True,
         index=True,
     )
+    chat_session_id = Column(
+        UUID,
+        ForeignKey("agent_chat_sessions.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
     parent_run_id = Column(
         UUID,
         ForeignKey("agent_runs.id", ondelete="SET NULL"),
@@ -820,6 +828,11 @@ class AgentRun(Base):
     agent = relationship("Agent", back_populates="runs")
     user = relationship("User", back_populates="agent_runs")
     application = relationship("Application", back_populates="agent_runs")
+    chat_session = relationship(
+        "AgentChatSession",
+        back_populates="export_runs",
+        foreign_keys=[chat_session_id],
+    )
     parent_run = relationship(
         "AgentRun",
         remote_side="AgentRun.id",
@@ -887,6 +900,13 @@ class AgentChatSession(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
         order_by="AgentChatMessage.created_at.asc()",
+    )
+    export_runs = relationship(
+        "AgentRun",
+        back_populates="chat_session",
+        foreign_keys="AgentRun.chat_session_id",
+        order_by="AgentRun.created_at.desc()",
+        passive_deletes=True,
     )
 
 

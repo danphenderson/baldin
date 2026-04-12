@@ -46,6 +46,8 @@ const buildAgent = (overrides: Partial<AgentRead> = {}): AgentRead => ({
 });
 
 const AVAILABLE_MODELS = {
+  default_model_name: 'gpt-5.4-nano-2026-03-17',
+  default_model_label: 'GPT-5.4 Nano',
   models: [
     { name: 'gpt-5.4-mini-2026-03-17', label: 'GPT-5.4 Mini' },
     { name: 'gpt-5.4-nano-2026-03-17', label: 'GPT-5.4 Nano' },
@@ -90,7 +92,7 @@ describe('AgentFormDialog', () => {
     const { onSave } = renderDialog(null);
 
     expect(await screen.findByRole('combobox', { name: 'Model' })).toHaveTextContent('Default');
-    expect(screen.getByText('Default uses the system default model for this agent.')).toBeInTheDocument();
+    expect(screen.getByText('Default uses GPT-5.4 Nano (Fast).')).toBeInTheDocument();
 
     await user.type(screen.getByRole('textbox', { name: 'Agent name' }), 'New Agent');
     await user.click(screen.getByRole('button', { name: 'Create Agent' }));
@@ -148,6 +150,8 @@ describe('AgentFormDialog', () => {
   it('preserves an unavailable configured model by injecting it into the select options', async () => {
     const user = userEvent.setup();
     mockedGetAvailableModels.mockResolvedValue({
+      default_model_name: 'gpt-5.4-nano-2026-03-17',
+      default_model_label: 'GPT-5.4 Nano',
       models: [{ name: 'gpt-5.4-mini-2026-03-17', label: 'GPT-5.4 Mini' }],
     } as never);
 

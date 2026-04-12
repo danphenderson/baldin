@@ -1145,11 +1145,14 @@ async def list_agent_models(
 ) -> schemas.AgentModelListRead:
     conf.openai.require_enabled("Agent model listing")
     supported_models = conf.openai.SUPPORTED_MODELS
+    default_model_name = conf.openai.COMPLETION_MODEL
     return {
+        "default_model_name": default_model_name,
+        "default_model_label": supported_models[default_model_name]["description"],
         "models": [
             {"name": name, "label": data["description"]}
             for name, data in sorted(supported_models.items())
-        ]
+        ],
     }
 
 

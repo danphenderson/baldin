@@ -1999,6 +1999,12 @@ class AgentModelOptionRead(BaseSchema):
 
 
 class AgentModelListRead(BaseSchema):
+    default_model_name: str = Field(
+        description="Resolved model identifier used when an agent has no model override",
+    )
+    default_model_label: str = Field(
+        description="Human-readable label for the default agent model",
+    )
     models: list[AgentModelOptionRead] = Field(
         default_factory=list,
         description="Available agent models that can be selected per agent",

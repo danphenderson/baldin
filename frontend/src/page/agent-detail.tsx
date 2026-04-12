@@ -21,13 +21,18 @@ import { useNotification } from '../context/notification-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import { getAgent, updateAgent, getAgentRuns, runAgent } from '../service/agents';
 import type { AgentRead, AgentUpdate, AgentRunSummaryRead, AgentRunsPaginatedRead } from '../service/agents';
+import { getAvailableModels } from '../service/agent-chat';
 import AgentFormDialog from '../component/agent-form-dialog';
 import EmptyState from '../component/common/empty-state';
 import { Caption } from '../component/common/text';
 import { getKindLabel } from '../component/agent-card';
 import { ALPHA_CHIP } from '../theme/effects';
 import { timeAgo } from '../util/format';
-import { getAgentConfiguredModelName, getAgentModelDisplayLabel } from '../util/agent-models';
+import {
+  getAgentConfiguredModelName,
+  getAgentDefaultModelHelperText,
+  getAgentModelDisplayLabel,
+} from '../util/agent-models';
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -45,6 +50,8 @@ const AgentDetailPage: React.FC = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [defaultModelName, setDefaultModelName] = useState<string | null>(null);
+  const [defaultModelLabel, setDefaultModelLabel] = useState<string | null>(null);
 
   /* Run history state */
   const [runs, setRuns] = useState<AgentRunSummaryRead[]>([]);
@@ -87,6 +94,37 @@ const AgentDetailPage: React.FC = () => {
   }, [token, agentId, notify]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!token) {
+      setDefaultModelName(null);
+      setDefaultModelLabel(null);
+      return;
+    }
+
+    let isActive = true;
+
+    void (async () => {
+      try {
+        const response = await getAvailableModels(token);
+        if (!isActive) {
+          return;
+        }
+        setDefaultModelName(response.default_model_name);
+        setDefaultModelLabel(response.default_model_label);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+        setDefaultModelName(null);
+        setDefaultModelLabel(null);
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [token]);
 
   const handleSaveForm = async (data: AgentUpdate) => {
     if (!token || !agent) return;
@@ -215,6 +253,10 @@ const AgentDetailPage: React.FC = () => {
 
   /* ---- Render ---- */
 
+  const configuredModelName = getAgentConfiguredModelName(agent.configuration);
+  const configuredModelLabel = getAgentModelDisplayLabel(configuredModelName);
+  const defaultModelHelperText = getAgentDefaultModelHelperText(defaultModelName, defaultModelLabel);
+
   return (
     <Box sx={{ maxWidth: 720, mx: 'auto' }}>
       {/* Header */}
@@ -299,9 +341,14 @@ const AgentDetailPage: React.FC = () => {
         </Typography>
         <Stack direction="row" spacing={1.5} alignItems="baseline">
           <Caption>Model</Caption>
-          <Typography variant="body2" color="text.secondary">
-            {getAgentModelDisplayLabel(getAgentConfiguredModelName(agent.configuration))}
-          </Typography>
+          <Box>
+            <Typography variant="body2" color="text.secondary">
+              {configuredModelLabel}
+            </Typography>
+            {!configuredModelName && (
+              <Caption>{defaultModelHelperText}</Caption>
+            )}
+          </Box>
         </Stack>
       </Box>
 

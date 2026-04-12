@@ -464,7 +464,17 @@ async def test_list_agent_models_returns_supported_models() -> None:
         {"name": name, "label": data["description"]}
         for name, data in sorted(conf.openai.SUPPORTED_MODELS.items())
     ]
-    assert response.json() == {"models": expected_models}
+    expected_default_model_name = conf.openai.COMPLETION_MODEL
+    assert response.json() == {
+        "default_model_name": expected_default_model_name,
+        "default_model_label": conf.openai.SUPPORTED_MODELS[
+            expected_default_model_name
+        ]["description"],
+        "models": expected_models,
+    }
+    assert expected_default_model_name in {
+        model["name"] for model in response.json()["models"]
+    }
 
 
 async def test_get_agent_returns_detail_for_owner() -> None:

@@ -47,6 +47,15 @@ export const getAgentModelDisplayLabel = (
   modelName ? formatAgentModelLabel(modelName, label) : DEFAULT_AGENT_MODEL_LABEL
 );
 
+export const getAgentDefaultModelHelperText = (
+  defaultModelName?: string | null,
+  defaultModelLabel?: string | null,
+): string => (
+  defaultModelName
+    ? `Default uses ${formatAgentModelLabel(defaultModelName, defaultModelLabel)}.`
+    : 'Default uses the system default model for this agent.'
+);
+
 export const buildAgentModelOptions = (
   options: AgentModelOptionRead[],
   configuredModelName: string | null,

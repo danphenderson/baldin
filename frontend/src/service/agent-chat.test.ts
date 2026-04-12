@@ -191,6 +191,8 @@ describe('agent chat service', () => {
       }))
       .mockResolvedValueOnce(jsonResponse(null, 204))
       .mockResolvedValueOnce(jsonResponse({
+        default_model_name: 'gpt-5.4',
+        default_model_label: 'GPT-5.4',
         models: [
           { name: 'gpt-5.4', label: 'GPT-5.4' },
           { name: 'gpt-5.4-mini', label: 'GPT-5.4 Mini' },
@@ -207,6 +209,8 @@ describe('agent chat service', () => {
     const models = await getAvailableModels('token-123');
 
     expect(updated.status).toBe('archived');
+    expect(models.default_model_name).toBe('gpt-5.4');
+    expect(models.default_model_label).toBe('GPT-5.4');
     expect(models.models?.map((model) => model.name)).toEqual(['gpt-5.4', 'gpt-5.4-mini']);
 
     const patchRequest = fetchMock.mock.calls[0][0] as Request;

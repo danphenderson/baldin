@@ -1379,6 +1379,16 @@ export interface components {
     /** AgentModelListRead */
     AgentModelListRead: {
       /**
+       * Default Model Name
+       * @description Resolved model identifier used when an agent has no model override
+       */
+      default_model_name: string;
+      /**
+       * Default Model Label
+       * @description Human-readable label for the default agent model
+       */
+      default_model_label: string;
+      /**
        * Models
        * @description Available agent models that can be selected per agent
        */

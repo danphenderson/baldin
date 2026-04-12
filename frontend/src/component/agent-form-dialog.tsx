@@ -19,6 +19,7 @@ import { useNotification } from '../context/notification-context';
 import {
   buildAgentModelOptions,
   copyAgentConfiguration,
+  getAgentDefaultModelHelperText,
   getAgentConfiguredModelName,
   getAgentModelDisplayLabel,
 } from '../util/agent-models';
@@ -66,6 +67,8 @@ const AgentFormDialog: React.FC<AgentFormDialogProps> = ({
   const [isEnabled, setIsEnabled] = useState(true);
   const [modelOptions, setModelOptions] = useState<AgentModelOptionRead[]>([]);
   const [modelOptionsLoading, setModelOptionsLoading] = useState(false);
+  const [defaultModelName, setDefaultModelName] = useState<string | null>(null);
+  const [defaultModelLabel, setDefaultModelLabel] = useState<string | null>(null);
   const [selectedModelName, setSelectedModelName] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -118,11 +121,15 @@ const AgentFormDialog: React.FC<AgentFormDialogProps> = ({
         if (!isActive) {
           return;
         }
+        setDefaultModelName(response.default_model_name);
+        setDefaultModelLabel(response.default_model_label);
         setModelOptions(response.models ?? []);
       } catch (error) {
         if (!isActive) {
           return;
         }
+        setDefaultModelName(null);
+        setDefaultModelLabel(null);
         setModelOptions([]);
         notify(error instanceof Error ? error.message : 'Failed to load available models', 'error');
       } finally {
@@ -248,7 +255,7 @@ const AgentFormDialog: React.FC<AgentFormDialogProps> = ({
                 ))}
               </Select>
               <FormHelperText>
-                Default uses the system default model for this agent.
+                {getAgentDefaultModelHelperText(defaultModelName, defaultModelLabel)}
                 {modelOptionsLoading ? ' Loading models…' : ''}
               </FormHelperText>
             </FormControl>

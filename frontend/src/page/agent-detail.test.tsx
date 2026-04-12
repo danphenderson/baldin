@@ -24,10 +24,16 @@ vi.mock('../service/agents', () => ({
   runAgent: vi.fn(),
 }));
 
+vi.mock('../service/agent-chat', () => ({
+  getAvailableModels: vi.fn(),
+}));
+
 import * as agentsService from '../service/agents';
+import * as agentChatService from '../service/agent-chat';
 import AgentDetailPage from './agent-detail';
 
 const mockedGetAgent = vi.mocked(agentsService.getAgent);
+const mockedGetAvailableModels = vi.mocked(agentChatService.getAvailableModels);
 
 const userContextValue = {
   user: { id: 'u1', first_name: 'Jane', last_name: 'Doe', email: 'jane@test.com' } as never,
@@ -68,7 +74,16 @@ function renderPage() {
 describe('AgentDetailPage', () => {
   beforeEach(() => {
     mockedGetAgent.mockReset();
+    mockedGetAvailableModels.mockReset();
     mockedNotify.mockReset();
+    mockedGetAvailableModels.mockResolvedValue({
+      default_model_name: 'gpt-5.4-nano-2026-03-17',
+      default_model_label: 'GPT-5.4 Nano',
+      models: [
+        { name: 'gpt-5.4-nano-2026-03-17', label: 'GPT-5.4 Nano' },
+        { name: 'gpt-5.4-mini-2026-03-17', label: 'GPT-5.4 Mini' },
+      ],
+    } as never);
   });
 
   afterEach(() => {
@@ -95,7 +110,7 @@ describe('AgentDetailPage', () => {
     expect(mockedNotify).toHaveBeenCalledWith('Network down', 'error');
   });
 
-  it('shows Default in the configuration section when no model override is configured', async () => {
+  it('shows the exact default model wording when no model override is configured', async () => {
     mockedGetAgent.mockResolvedValueOnce(buildAgent() as never);
 
     renderPage();
@@ -104,6 +119,7 @@ describe('AgentDetailPage', () => {
     expect(screen.getByText('Configuration')).toBeInTheDocument();
     expect(screen.getByText('Model')).toBeInTheDocument();
     expect(screen.getByText('Default')).toBeInTheDocument();
+    expect(screen.getByText('Default uses GPT-5.4 Nano (Fast).')).toBeInTheDocument();
   });
 
   it('shows the formatted configured model label when a model override exists', async () => {
@@ -116,5 +132,17 @@ describe('AgentDetailPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Cover Letter Agent' })).toBeInTheDocument();
     expect(screen.getByText('GPT-5.4 Mini (Balanced)')).toBeInTheDocument();
+    expect(screen.queryByText(/Default uses /)).not.toBeInTheDocument();
+  });
+
+  it('falls back to generic Default wording when default model metadata fails to load', async () => {
+    mockedGetAgent.mockResolvedValueOnce(buildAgent() as never);
+    mockedGetAvailableModels.mockRejectedValueOnce(new Error('Model list unavailable'));
+
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Cover Letter Agent' })).toBeInTheDocument();
+    expect(screen.getByText('Default')).toBeInTheDocument();
+    expect(screen.getByText('Default uses the system default model for this agent.')).toBeInTheDocument();
   });
 });

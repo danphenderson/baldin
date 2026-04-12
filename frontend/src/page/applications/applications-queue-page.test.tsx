@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -9,6 +9,15 @@ import { ToolbarHeaderContext } from '../../layout/toolbar-header-context';
 /* ── Mock the useApplications hook ────────────────────────────────── */
 
 const mockUseApplications = vi.fn();
+const mockNavigate = vi.fn();
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 vi.mock('./use-applications', async () => {
   const actual = await vi.importActual<typeof import('./use-applications')>('./use-applications');
@@ -162,6 +171,29 @@ describe('ApplicationsQueuePage', () => {
 
     expect(screen.getByText('Senior Frontend Engineer')).toBeInTheDocument();
     expect(screen.getByText('Backend Engineer')).toBeInTheDocument();
+  });
+
+  it('uses the shared card shell for queue rows and keeps nested keyboard actions isolated', async () => {
+    const user = userEvent.setup();
+    const hooks = makeHookReturn({
+      applications: [makeApplication()],
+    });
+    mockUseApplications.mockReturnValue(hooks);
+
+    renderPage();
+
+    const row = screen.getByRole('button', { name: 'View Senior Frontend Engineer details' });
+    await user.click(row);
+    expect(mockNavigate).toHaveBeenCalledWith('/applications/app-1');
+
+    const advanceButton = screen.getByRole('button', { name: 'Advance application' });
+    await act(async () => {
+      advanceButton.focus();
+    });
+    await user.keyboard('{Enter}');
+
+    expect(hooks.handleAdvance).toHaveBeenCalledWith(expect.objectContaining({ id: 'app-1' }));
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
   });
 
   it('renders document-count badges from application list data', () => {

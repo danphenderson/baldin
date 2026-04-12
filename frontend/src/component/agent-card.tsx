@@ -71,15 +71,6 @@ const AgentCard: React.FC<AgentCardProps> = ({
       onClick={() => onClick(agent)}
       interactive
       accentColor={kColor}
-      onKeyDown={(e) => {
-        if (e.target !== e.currentTarget) {
-          return;
-        }
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick(agent);
-        }
-      }}
     >
         {/* Header: name + enabled switch */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>

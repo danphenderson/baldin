@@ -1,14 +1,21 @@
 ---
 slug: /engineering/phase-2-design-system-closeout
 title: Close Out Phase 2 Design System
-description: Implementation closeout for the Phase 2 frontend design-system primitives, patterns, adopters, compatibility wrappers, and deferred work.
+description: Historical implementation closeout for the Phase 2 frontend design-system rollout.
 ---
 
 <!-- last-verified: 2026-04-12 -->
 
 # Close Out Phase 2 Design System
 
-This note captures the implementation that actually shipped in the Baldin frontend worktree, not the pre-implementation proposal. Phase 2 added a small shared UI layer on top of the Phase 1 theme and token foundation and migrated the approved pilot surfaces onto it.
+This note is the historical Phase 2 closeout record. The canonical design-system source of truth now lives in:
+
+- [See Frontend Design System](../architecture/frontend-design-system.md)
+- [Design System Catalog](./design-system-catalog.md)
+- [Design System Workflow](./design-system-workflow.md)
+- [Design System Migration Guide](./design-system-migration-guide.md)
+
+The rest of this page preserves the original closeout summary for the shipped Phase 2 scope.
 
 ## Final Primitive Inventory
 
@@ -33,33 +40,32 @@ This note captures the implementation that actually shipped in the Baldin fronte
 ## Pilot Adopters
 
 - Leads family:
-  [frontend/src/page/leads.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/page/leads.tsx),
-  [frontend/src/component/lead-card.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/component/lead-card.tsx),
-  [frontend/src/component/lead-form-dialog.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/component/lead-form-dialog.tsx),
-  [frontend/src/component/lead-search-bar.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/component/lead-search-bar.tsx)
-- Applications queue:
-  [frontend/src/page/applications/applications-queue-page.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/page/applications/applications-queue-page.tsx)
+  `frontend/src/page/leads.tsx`,
+  `frontend/src/component/lead-card.tsx`,
+  `frontend/src/component/lead-form-dialog.tsx`,
+  `frontend/src/component/lead-search-bar.tsx`
+- Applications queue: `frontend/src/page/applications/applications-queue-page.tsx`
 - Profile family:
-  [frontend/src/page/profile/ProfilePage.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/page/profile/ProfilePage.tsx),
-  [frontend/src/page/profile/components/ProfileSection.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/page/profile/components/ProfileSection.tsx),
-  [frontend/src/page/profile/components/EditDialog.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/page/profile/components/EditDialog.tsx),
-  [frontend/src/page/profile/components/DeleteDialog.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/page/profile/components/DeleteDialog.tsx),
-  [frontend/src/page/profile/components/EmptyState.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/page/profile/components/EmptyState.tsx)
+  `frontend/src/page/profile/ProfilePage.tsx`,
+  `frontend/src/page/profile/components/ProfileSection.tsx`,
+  `frontend/src/page/profile/components/EditDialog.tsx`,
+  `frontend/src/page/profile/components/DeleteDialog.tsx`,
+  `frontend/src/page/profile/components/EmptyState.tsx`
 
 ## Proving Adopters
 
 - Conversations page:
-  [frontend/src/page/messages/conversations-page.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/page/messages/conversations-page.tsx)
+  `frontend/src/page/messages/conversations-page.tsx`
 - Agent surfaces:
-  [frontend/src/component/agent-card.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/component/agent-card.tsx),
-  [frontend/src/component/agent-form-dialog.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/component/agent-form-dialog.tsx)
+  `frontend/src/component/agent-card.tsx`,
+  `frontend/src/component/agent-form-dialog.tsx`
 
 ## Compatibility Surface Now Backed By Phase 2 Primitives
 
-- [frontend/src/component/common/empty-state.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/component/common/empty-state.tsx) now delegates to design-system `EmptyState`.
-- [frontend/src/component/common/confirm-dialog.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/component/common/confirm-dialog.tsx) now delegates to `FormDialogShell`.
-- [frontend/src/component/common/alert.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/component/common/alert.tsx) now delegates to `InlineFeedback`.
-- [frontend/src/component/common/error-message.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/component/common/error-message.tsx) now delegates to `InlineFeedback`.
+- `frontend/src/component/common/empty-state.tsx` now delegates to design-system `EmptyState`.
+- `frontend/src/component/common/confirm-dialog.tsx` now delegates to `FormDialogShell`.
+- `frontend/src/component/common/alert.tsx` now delegates to `InlineFeedback`.
+- `frontend/src/component/common/error-message.tsx` now delegates to `InlineFeedback`.
 
 These remain compatibility wrappers, not new shared-source homes. New shared UI should not be added under `frontend/src/component/common/*`.
 
@@ -75,7 +81,7 @@ These remain compatibility wrappers, not new shared-source homes. New shared UI 
 ## Notable Deviations From The Approved Plan
 
 - Some pilot pages now consume the Phase 2 layer indirectly through thin compatibility wrappers instead of importing the primitive directly. This is intentional where it reduced migration risk.
-- `CollectionToolbar` landed through [frontend/src/component/lead-search-bar.tsx](/Users/doe/.codex/worktrees/0023/baldin/frontend/src/component/lead-search-bar.tsx) for the leads family instead of being assembled inline in the page.
+- `CollectionToolbar` landed through `frontend/src/component/lead-search-bar.tsx` for the leads family instead of being assembled inline in the page.
 - The compatibility wrappers are thin adapters, not pure re-export files, because they still translate legacy prop shapes like `action` to `primaryAction`.
 - The status/meta shared layer stayed intentionally thin. Phase 2 shipped `StatusChip` plus styling helpers, not a broader meta-row or status-domain abstraction.
 

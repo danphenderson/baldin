@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Box, Button, Typography,
 } from '@mui/material';
-import { Warning as WarningIcon } from '@mui/icons-material';
+import { Warning as WarningIcon, InfoOutlined as InfoIcon } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { FormDialogShell } from '../../design-system';
 
@@ -12,6 +12,7 @@ export interface ConfirmDialogProps {
   message: React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
+  destructive?: boolean;
   loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -19,9 +20,13 @@ export interface ConfirmDialogProps {
 
 const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   open, title, message, confirmLabel = 'Delete', cancelLabel = 'Cancel',
-  loading = false, onConfirm, onCancel,
+  destructive = true, loading = false, onConfirm, onCancel,
 }) => {
   const theme = useTheme();
+  const confirmColor = destructive ? 'error' : 'primary';
+  const titleIcon = destructive
+    ? <WarningIcon sx={{ color: theme.palette.warning.main }} />
+    : <InfoIcon sx={{ color: theme.palette.primary.main }} />;
 
   return (
     <FormDialogShell
@@ -32,7 +37,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       busy={loading}
       title={(
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <WarningIcon sx={{ color: theme.palette.warning.main }} />
+          {titleIcon}
           <Typography variant="h6" component="span" fontWeight={700}>
             {title}
           </Typography>
@@ -43,7 +48,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <Button onClick={onCancel} disabled={loading}>{cancelLabel}</Button>
           <Button
             variant="contained"
-            color="error"
+            color={confirmColor}
             onClick={onConfirm}
             disabled={loading}
           >

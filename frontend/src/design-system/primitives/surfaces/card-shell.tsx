@@ -76,6 +76,26 @@ export const CardShell = React.forwardRef<HTMLDivElement, CardShellProps>(functi
   } as SxProps<Theme>;
   const mergedCardSx = (sx ? [cardSx, sx] : cardSx) as SxProps<Theme>;
   const mergedContentSx = (contentSx ? [contentStyles, contentSx] : contentStyles) as SxProps<Theme>;
+  const handleKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (event) => {
+    onKeyDown?.(event);
+
+    if (event.defaultPrevented) {
+      return;
+    }
+
+    if (!isInteractive || !onClick) {
+      return;
+    }
+
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.currentTarget.click();
+    }
+  };
 
   return (
     <Card
@@ -84,7 +104,7 @@ export const CardShell = React.forwardRef<HTMLDivElement, CardShellProps>(functi
       role={role ?? (isInteractive ? 'button' : undefined)}
       tabIndex={tabIndex ?? (isInteractive ? 0 : undefined)}
       onClick={onClick}
-      onKeyDown={onKeyDown}
+      onKeyDown={handleKeyDown}
       sx={mergedCardSx}
     >
       <Box

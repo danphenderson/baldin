@@ -1,6 +1,6 @@
 import React, { useContext, useState, useMemo, useDeferredValue, useCallback } from 'react';
 import {
-  Box, Typography, TextField, InputAdornment, Stack, Chip, Card, CardContent,
+  Box, Typography, TextField, InputAdornment, Stack, Chip,
   IconButton, Tooltip, Snackbar, FormControl, InputLabel,
   Select, MenuItem, useMediaQuery,
 } from '@mui/material';
@@ -39,6 +39,8 @@ import {
   EmptyState,
   InlineFeedback,
   LoadingState,
+  CardShell,
+  StatusChip,
 } from '../../design-system';
 
 /* ------------------------------------------------------------------ */
@@ -406,151 +408,133 @@ const ApplicationsQueuePage: React.FC = () => {
             const documentCount = applicationDocumentCount(app);
 
             return (
-              <Card
+              <CardShell
                 key={app.id}
                 onClick={() => handleCardClick(app)}
+                interactive
+                accentColor={column.color}
+                padding="dense"
                 sx={{
-                  cursor: 'pointer',
-                  transition: 'box-shadow 0.15s ease, transform 0.15s ease',
                   '&:hover': {
                     boxShadow: `0 4px 16px ${alpha(column.color, 0.15)}`,
-                    transform: 'translateY(-1px)',
                     '& .queue-actions': { opacity: 1 },
                   },
-                  '&:focus-visible': {
-                    outline: `2px solid ${theme.palette.primary.main}`,
-                    outlineOffset: 2,
-                  },
                 }}
-                tabIndex={0}
-                role="button"
+                contentSx={{
+                  p: 2,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 2,
+                }}
                 aria-label={`View ${lead?.title || 'application'} details`}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleCardClick(app);
-                  }
-                }}
               >
-                <CardContent
+                <Box
                   sx={{
-                    p: 2,
-                    '&:last-child': { pb: 2 },
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
+                    width: 4,
+                    alignSelf: 'stretch',
+                    borderRadius: 2,
+                    bgcolor: column.color,
+                    flexShrink: 0,
                   }}
                 >
-                  {/* Stage indicator */}
-                  <Box
-                    sx={{
-                      width: 4,
-                      alignSelf: 'stretch',
-                      borderRadius: 2,
-                      bgcolor: column.color,
-                      flexShrink: 0,
-                    }}
-                  />
+                </Box>
 
-                  {/* Main content */}
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Stack
-                      direction={{ xs: 'column', sm: 'row' }}
-                      spacing={{ xs: 0.25, sm: 1 }}
-                      alignItems={{ sm: 'center' }}
-                      sx={{ mb: 0.5 }}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={{ xs: 0.25, sm: 1 }}
+                    alignItems={{ sm: 'center' }}
+                    sx={{ mb: 0.5 }}
+                  >
+                    <Typography
+                      variant="body1"
+                      fontWeight={700}
+                      noWrap
+                      sx={{ flex: 1, minWidth: 0 }}
                     >
+                      {lead?.title || 'Untitled Position'}
+                    </Typography>
+
+                    {companyName && (
                       <Typography
-                        variant="body1"
-                        fontWeight={700}
+                        variant="body2"
+                        color="text.secondary"
                         noWrap
-                        sx={{ flex: 1, minWidth: 0 }}
                       >
-                        {lead?.title || 'Untitled Position'}
+                        {companyName}
                       </Typography>
+                    )}
+                  </Stack>
 
-                      {companyName && (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          noWrap
-                        >
-                          {companyName}
-                        </Typography>
-                      )}
-                    </Stack>
-
-                    <Stack
-                      direction="row"
-                      spacing={0.75}
-                      sx={{ flexWrap: 'wrap', gap: 0.5 }}
-                    >
+                  <Stack
+                    direction="row"
+                    spacing={0.75}
+                    sx={{ flexWrap: 'wrap', gap: 0.5 }}
+                  >
+                    <StatusChip
+                      label={column.label}
+                      size="small"
+                      color={column.color}
+                      sx={{
+                        fontSize: '0.7rem',
+                        height: 22,
+                      }}
+                    />
+                    {lead?.location && (
                       <Chip
-                        label={column.label}
+                        icon={<LocationIcon sx={{ fontSize: '0.75rem !important' }} />}
+                        label={lead.location}
                         size="small"
-                        sx={{
-                          bgcolor: alpha(column.color, 0.12),
-                          color: column.color,
-                          fontWeight: 600,
-                          fontSize: '0.7rem',
-                          height: 22,
-                        }}
-                      />
-                      {lead?.location && (
-                        <Chip
-                          icon={<LocationIcon sx={{ fontSize: '0.75rem !important' }} />}
-                          label={lead.location}
-                          size="small"
-                          variant="outlined"
-                          sx={{
-                            fontSize: '0.7rem',
-                            height: 22,
-                            '& .MuiChip-icon': { ml: 0.5, mr: -0.25 },
-                          }}
-                        />
-                      )}
-                      {lead?.salary && (
-                        <Chip
-                          icon={<SalaryIcon sx={{ fontSize: '0.75rem !important' }} />}
-                          label={lead.salary}
-                          size="small"
-                          variant="outlined"
-                          color="success"
-                          sx={{
-                            fontSize: '0.7rem',
-                            height: 22,
-                            '& .MuiChip-icon': { ml: 0.5, mr: -0.25 },
-                          }}
-                        />
-                      )}
-                      <Chip
-                        icon={<DocIcon sx={{ fontSize: '0.75rem !important' }} />}
-                        label={`${documentCount} doc${documentCount === 1 ? '' : 's'}`}
-                        size="small"
-                        variant={documentCount > 0 ? 'filled' : 'outlined'}
+                        variant="outlined"
                         sx={{
                           fontSize: '0.7rem',
                           height: 22,
-                          bgcolor: documentCount > 0 ? alpha(theme.palette.primary.main, 0.12) : undefined,
-                          color: documentCount > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
                           '& .MuiChip-icon': { ml: 0.5, mr: -0.25 },
                         }}
                       />
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
+                    )}
+                    {lead?.salary && (
+                      <Chip
+                        icon={<SalaryIcon sx={{ fontSize: '0.75rem !important' }} />}
+                        label={lead.salary}
+                        size="small"
+                        variant="outlined"
+                        color="success"
                         sx={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
                           fontSize: '0.7rem',
-                          opacity: 0.7,
+                          height: 22,
+                          '& .MuiChip-icon': { ml: 0.5, mr: -0.25 },
                         }}
-                      >
-                        {relativeDate(app.updated_at)}
-                      </Typography>
-                    </Stack>
+                      />
+                    )}
+                    <Chip
+                      icon={<DocIcon sx={{ fontSize: '0.75rem !important' }} />}
+                      label={`${documentCount} doc${documentCount === 1 ? '' : 's'}`}
+                      size="small"
+                      variant={documentCount > 0 ? 'filled' : 'outlined'}
+                      sx={{
+                        fontSize: '0.7rem',
+                        height: 22,
+                        bgcolor: documentCount > 0 ? alpha(theme.palette.primary.main, 0.12) : undefined,
+                        color: documentCount > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
+                        '& .MuiChip-icon': { ml: 0.5, mr: -0.25 },
+                      }}
+                    />
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        fontSize: '0.7rem',
+                        opacity: 0.7,
+                      }}
+                    >
+                      {relativeDate(app.updated_at)}
+                    </Typography>
+                  </Stack>
 
-                    {app.next_step && (
+                  {app.next_step && (
                       <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.5 }}>
                         {app.next_step_due && new Date(app.next_step_due) < new Date() && (
                           <WarningIcon sx={{ fontSize: '0.75rem', color: 'warning.main' }} />
@@ -571,56 +555,55 @@ const ApplicationsQueuePage: React.FC = () => {
                           )}
                         </Typography>
                       </Stack>
-                    )}
-                  </Box>
+                  )}
+                </Box>
 
-                  {/* Quick actions */}
-                  <Stack
-                    className="queue-actions"
-                    direction="row"
-                    spacing={0}
-                    sx={{
-                      opacity: isMobile ? 1 : 0,
-                      transition: 'opacity 0.15s ease',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {canAdvance && (
-                      <Tooltip
-                        title={`Move to ${ALL_STATUS_COLUMNS[ALL_STATUS_COLUMNS.findIndex((c) => c.key === stage) + 1]?.label}`}
-                      >
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          aria-label="Advance application"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAdvance(app);
-                          }}
-                        >
-                          <ArrowIcon sx={{ fontSize: '1.1rem' }} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    <Tooltip title="Delete">
+                {/* Quick actions */}
+                <Stack
+                  className="queue-actions"
+                  direction="row"
+                  spacing={0}
+                  sx={{
+                    opacity: isMobile ? 1 : 0,
+                    transition: 'opacity 0.15s ease',
+                    flexShrink: 0,
+                  }}
+                >
+                  {canAdvance && (
+                    <Tooltip
+                      title={`Move to ${ALL_STATUS_COLUMNS[ALL_STATUS_COLUMNS.findIndex((c) => c.key === stage) + 1]?.label}`}
+                    >
                       <IconButton
                         size="small"
-                        aria-label="Delete application"
+                        color="primary"
+                        aria-label="Advance application"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(app);
-                        }}
-                        sx={{
-                          color: theme.palette.text.secondary,
-                          '&:hover': { color: theme.palette.error.main },
+                          handleAdvance(app);
                         }}
                       >
-                        <DeleteIcon sx={{ fontSize: '1.1rem' }} />
+                        <ArrowIcon sx={{ fontSize: '1.1rem' }} />
                       </IconButton>
                     </Tooltip>
-                  </Stack>
-                </CardContent>
-              </Card>
+                  )}
+                  <Tooltip title="Delete">
+                    <IconButton
+                      size="small"
+                      aria-label="Delete application"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(app);
+                      }}
+                      sx={{
+                        color: theme.palette.text.secondary,
+                        '&:hover': { color: theme.palette.error.main },
+                      }}
+                    >
+                      <DeleteIcon sx={{ fontSize: '1.1rem' }} />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+              </CardShell>
             );
           })}
         </Stack>

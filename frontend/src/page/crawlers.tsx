@@ -932,6 +932,7 @@ const CrawlersPage: React.FC = () => {
         title="Trigger Crawler Run"
         message="This will start a new crawl run for this pipeline. Continue?"
         confirmLabel="Trigger"
+        destructive={false}
         onConfirm={handleTrigger}
         onCancel={() => { setTriggerConfirmOpen(false); setTriggerPipelineId(null); }}
       />

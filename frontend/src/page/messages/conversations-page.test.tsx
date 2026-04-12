@@ -71,7 +71,10 @@ describe('ConversationsPage', () => {
     renderPage();
 
     expect(await screen.findByText('No conversations yet')).toBeInTheDocument();
+    expect(screen.getByText('Conversations')).toBeInTheDocument();
+    expect(screen.getByText('Direct and group conversations')).toBeInTheDocument();
     expect(screen.getByText('Start a conversation from a connection\'s profile or Discover.')).toBeInTheDocument();
+    expect(document.querySelectorAll('.MuiCard-root').length).toBeGreaterThan(0);
   });
 
   it('opens the compose dialog from the toolbar action', async () => {

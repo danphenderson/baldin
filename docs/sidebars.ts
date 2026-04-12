@@ -39,6 +39,17 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Frontend UI System',
+      items: [
+        'architecture/frontend-design-system',
+        'engineering/design-system-catalog',
+        'engineering/design-system-workflow',
+        'engineering/design-system-migration-guide',
+        'engineering/phase-2-design-system-closeout',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Build, Validate, Release',
       items: [
         'engineering/local-development',
@@ -47,7 +58,6 @@ const sidebars: SidebarsConfig = {
         'engineering/copilot-prompt-cookbook',
         'engineering/copilot-prompt-examples',
         'engineering/testing',
-        'engineering/phase-2-design-system-closeout',
         'engineering/release-roadmap',
       ],
     },

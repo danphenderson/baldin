@@ -86,12 +86,6 @@ const LeadCard: React.FC<LeadCardProps> = ({
       onClick={() => onOpen(lead)}
       interactive
       accentColor={theme.palette.primary.main}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onOpen(lead);
-        }
-      }}
     >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
           <Box sx={{ minWidth: 0, flexGrow: 1 }}>

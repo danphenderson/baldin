@@ -83,6 +83,34 @@ describe('LeadCard', () => {
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
+  it('does not open the parent card when a nested control is activated from the keyboard', async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    const onEdit = vi.fn();
+
+    render(
+      <LeadCard
+        lead={buildLead()}
+        applying={false}
+        onOpen={onOpen}
+        onEdit={onEdit}
+        onDelete={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+
+    const editButton = screen.getByRole('button', { name: 'Edit Senior Product Designer' });
+    await user.click(editButton);
+    expect(onEdit).toHaveBeenCalledTimes(1);
+    expect(onOpen).toHaveBeenCalledTimes(0);
+
+    editButton.focus();
+    await user.keyboard('{Enter}');
+
+    expect(onEdit).toHaveBeenCalledTimes(2);
+    expect(onOpen).toHaveBeenCalledTimes(0);
+  });
+
   it('hides shared edit actions when the server does not grant them', () => {
     render(
       <LeadCard

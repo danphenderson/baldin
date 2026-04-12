@@ -26,7 +26,7 @@ import {
   type ConversationRead,
 } from '../../service/messages';
 import { avatarUrl } from '../../service/users';
-import { CollectionToolbar, EmptyState, LoadingState } from '../../design-system';
+import { CollectionToolbar, EmptyState, LoadingState, SectionCard, SectionHeader } from '../../design-system';
 import NewConversationDialog from '../../component/new-conversation-dialog';
 import { useNotification } from '../../context/notification-context';
 
@@ -122,104 +122,117 @@ const ConversationsPage: React.FC = () => {
             sx={{ flexGrow: 1, maxWidth: { sm: 360 } }}
           />
         )}
-        actions={(
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setDialogOpen(true)}
-          >
-            New Message
-          </Button>
-        )}
       />
 
-      {loading ? (
-        <LoadingState kind="list" count={4} itemHeight={80} />
-      ) : filtered.length === 0 ? (
-        conversations.length === 0 ? (
-          <EmptyState
+      <SectionCard
+        header={(
+          <SectionHeader
             icon={<ChatIcon />}
-            title="No conversations yet"
-            description="Start a conversation from a connection's profile or Discover."
-            primaryAction={{ label: 'New Message', onClick: () => setDialogOpen(true), icon: <AddIcon /> }}
+            title="Conversations"
+            count={loading ? undefined : filtered.length}
+            supportingText="Direct and group conversations"
+            action={(
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setDialogOpen(true)}
+              >
+                New Message
+              </Button>
+            )}
+            divider
+            size="compact"
           />
+        )}
+      >
+        {loading ? (
+          <LoadingState kind="list" count={4} itemHeight={80} />
+        ) : filtered.length === 0 ? (
+          conversations.length === 0 ? (
+            <EmptyState
+              icon={<ChatIcon />}
+              title="No conversations yet"
+              description="Start a conversation from a connection's profile or Discover."
+              primaryAction={{ label: 'New Message', onClick: () => setDialogOpen(true), icon: <AddIcon /> }}
+            />
+          ) : (
+            <EmptyState
+              icon={<SearchIcon />}
+              title="No results match your filters"
+              description="Try adjusting your search or clearing filters."
+            />
+          )
         ) : (
-          <EmptyState
-            icon={<SearchIcon />}
-            title="No results match your filters"
-            description="Try adjusting your search or clearing filters."
-          />
-        )
-      ) : (
-        <Stack spacing={1}>
-          {filtered.map((conversation) => {
-            const displayName = getConversationDisplayName(conversation);
-            const others = (conversation.participants ?? []).filter((p) => p.user_id !== currentUserId);
-            const lastMsg = conversation.last_message;
-            const unread = conversation.unread_count ?? 0;
+          <Stack spacing={1}>
+            {filtered.map((conversation) => {
+              const displayName = getConversationDisplayName(conversation);
+              const others = (conversation.participants ?? []).filter((p) => p.user_id !== currentUserId);
+              const lastMsg = conversation.last_message;
+              const unread = conversation.unread_count ?? 0;
 
-            return (
-              <Card key={conversation.id} sx={{ position: 'relative' }}>
-                <CardActionArea onClick={() => navigate(`/network/messages/${conversation.id}`)}>
-                  <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-                    <Stack direction="row" spacing={2} alignItems="center">
-                      <Badge
-                        badgeContent={unread}
-                        color="primary"
-                        invisible={unread === 0}
-                        overlap="circular"
-                      >
-                        {others.length === 1 ? (
-                          <Avatar src={avatarUrl(others[0].user_id, others[0].avatar_uri)} sx={{ width: 48, height: 48 }}>
-                            {others[0].display_name.charAt(0)}
-                          </Avatar>
-                        ) : (
-                          <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 36, height: 36, fontSize: 14 } }}>
-                            {others.map((p) => (
-                              <Avatar key={p.user_id} src={avatarUrl(p.user_id, p.avatar_uri)}>
-                                {p.display_name.charAt(0)}
-                              </Avatar>
-                            ))}
-                          </AvatarGroup>
-                        )}
-                      </Badge>
+              return (
+                <Card key={conversation.id} sx={{ position: 'relative' }}>
+                  <CardActionArea onClick={() => navigate(`/network/messages/${conversation.id}`)}>
+                    <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Badge
+                          badgeContent={unread}
+                          color="primary"
+                          invisible={unread === 0}
+                          overlap="circular"
+                        >
+                          {others.length === 1 ? (
+                            <Avatar src={avatarUrl(others[0].user_id, others[0].avatar_uri)} sx={{ width: 48, height: 48 }}>
+                              {others[0].display_name.charAt(0)}
+                            </Avatar>
+                          ) : (
+                            <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 36, height: 36, fontSize: 14 } }}>
+                              {others.map((p) => (
+                                <Avatar key={p.user_id} src={avatarUrl(p.user_id, p.avatar_uri)}>
+                                  {p.display_name.charAt(0)}
+                                </Avatar>
+                              ))}
+                            </AvatarGroup>
+                          )}
+                        </Badge>
 
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="baseline">
-                          <Typography
-                            variant="body1"
-                            fontWeight={unread > 0 ? 700 : 500}
-                            noWrap
-                            sx={{ flex: 1, minWidth: 0 }}
-                          >
-                            {displayName}
-                          </Typography>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="baseline">
+                            <Typography
+                              variant="body1"
+                              fontWeight={unread > 0 ? 700 : 500}
+                              noWrap
+                              sx={{ flex: 1, minWidth: 0 }}
+                            >
+                              {displayName}
+                            </Typography>
+                            {lastMsg && (
+                              <Typography variant="caption" color="text.secondary" sx={{ ml: 1, flexShrink: 0 }}>
+                                {formatTimestamp(lastMsg.created_at)}
+                              </Typography>
+                            )}
+                          </Stack>
                           {lastMsg && (
-                            <Typography variant="caption" color="text.secondary" sx={{ ml: 1, flexShrink: 0 }}>
-                              {formatTimestamp(lastMsg.created_at)}
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              noWrap
+                              fontWeight={unread > 0 ? 600 : 400}
+                            >
+                              {lastMsg.author.user_id === currentUserId ? 'You: ' : `${lastMsg.author.display_name}: `}
+                              {lastMsg.content}
                             </Typography>
                           )}
-                        </Stack>
-                        {lastMsg && (
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            noWrap
-                            fontWeight={unread > 0 ? 600 : 400}
-                          >
-                            {lastMsg.author.user_id === currentUserId ? 'You: ' : `${lastMsg.author.display_name}: `}
-                            {lastMsg.content}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </CardActionArea>
-              </Card>
-            );
-          })}
-        </Stack>
-      )}
+                        </Box>
+                      </Stack>
+                    </CardContent>
+                  </CardActionArea>
+                </Card>
+              );
+            })}
+          </Stack>
+        )}
+      </SectionCard>
 
       {!loading && pageCount > 1 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>

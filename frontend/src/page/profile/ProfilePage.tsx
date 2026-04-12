@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, Chip, Stack, useTheme, Skeleton, Alert,
+  Box, Typography, Chip, Stack, useTheme,
   Snackbar,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
@@ -27,6 +27,7 @@ import { DateSpan } from './components/DateSpan';
 import { EditDialog } from './components/EditDialog';
 import { DeleteDialog } from './components/DeleteDialog';
 import { DocumentsSummary } from './components/DocumentsSummary';
+import { InlineFeedback, LoadingState } from '../../design-system';
 import ProfileImportModal from '../../component/profile-import-modal';
 import MFASetupCard from '../../component/mfa-setup-card';
 
@@ -120,11 +121,11 @@ const ProfilePage: React.FC = () => {
 
   if (data.loading) {
     return (
-      <Box>
-        <Skeleton variant="rounded" height={180} sx={{ borderRadius: 3, mb: 3 }} />
-        <Skeleton variant="rounded" height={56} sx={{ borderRadius: 3, mb: 2 }} />
-        <Skeleton variant="rounded" height={300} sx={{ borderRadius: 3 }} />
-      </Box>
+      <Stack spacing={3}>
+        <LoadingState kind="section" count={1} itemHeight={180} />
+        <LoadingState kind="section" count={1} itemHeight={56} />
+        <LoadingState kind="section" count={1} itemHeight={300} />
+      </Stack>
     );
   }
 
@@ -135,9 +136,9 @@ const ProfilePage: React.FC = () => {
   return (
     <Box>
       {data.error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => data.setError('')}>
+        <InlineFeedback tone="error" sx={{ mb: 2 }} onClose={() => data.setError('')}>
           {data.error}
-        </Alert>
+        </InlineFeedback>
       )}
 
       {/* ── Profile Hero ─────────────────────────────────────────────── */}

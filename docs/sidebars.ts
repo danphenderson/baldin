@@ -47,6 +47,7 @@ const sidebars: SidebarsConfig = {
         'engineering/copilot-prompt-cookbook',
         'engineering/copilot-prompt-examples',
         'engineering/testing',
+        'engineering/phase-2-design-system-closeout',
         'engineering/release-roadmap',
       ],
     },

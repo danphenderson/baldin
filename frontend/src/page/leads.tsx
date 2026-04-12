@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo, useDeferredValue } from 'react';
 import {
-  Box, Typography, Skeleton,
+  Box, Typography,
   Pagination as MuiPagination,
   Stack,
   Chip,
@@ -38,6 +38,7 @@ import LeadExtractionBar from '../component/lead-extraction-bar';
 import LeadSearchBar from '../component/lead-search-bar';
 import ConfirmDialog from '../component/common/confirm-dialog';
 import EmptyState from '../component/common/empty-state';
+import { LoadingState } from '../design-system';
 import { useNotification } from '../context/notification-context';
 
 function isValidUrl(str: string): boolean {
@@ -313,13 +314,12 @@ const LeadsPage: React.FC = () => {
 
       {/* ── Lead Cards ── */}
       {loading ? (
-        <Grid container spacing={2}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Grid size={{ xs: 12, md: 6 }} key={i}>
-              <Skeleton variant="rounded" height={160} sx={{ borderRadius: 3 }} />
-            </Grid>
-          ))}
-        </Grid>
+        <LoadingState
+          kind="grid"
+          count={6}
+          itemHeight={160}
+          columns={{ xs: 1, md: 2 }}
+        />
       ) : paged.length === 0 ? (
         leads.length === 0 ? (
           <EmptyState

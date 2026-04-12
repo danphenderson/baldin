@@ -1,8 +1,9 @@
 import React from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography,
+  Box, Button, Typography,
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
+import { FormDialogShell } from '../../../design-system';
 import type { DeleteTarget } from '../types';
 
 interface DeleteDialogProps {
@@ -17,27 +18,31 @@ export const DeleteDialog: React.FC<DeleteDialogProps> = ({
   onConfirm,
 }) => {
   return (
-    <Dialog
+    <FormDialogShell
       open={!!deleteTarget}
       onClose={onCancel}
       maxWidth="xs"
-      aria-labelledby="delete-dialog-title"
+      title={(
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <DeleteIcon color="error" />
+          <Typography variant="h6" fontWeight={700}>
+            Confirm Delete
+          </Typography>
+        </Box>
+      )}
+      actions={(
+        <>
+          <Button onClick={onCancel}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={onConfirm} startIcon={<DeleteIcon />}>
+            Delete
+          </Button>
+        </>
+      )}
     >
-      <DialogTitle id="delete-dialog-title" sx={{ fontWeight: 700 }}>
-        Confirm Delete
-      </DialogTitle>
-      <DialogContent>
         <Typography variant="body2">
           Are you sure you want to delete <strong>{deleteTarget?.label}</strong>?
           This action cannot be undone.
         </Typography>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 3 }}>
-        <Button onClick={onCancel}>Cancel</Button>
-        <Button variant="contained" color="error" onClick={onConfirm} startIcon={<DeleteIcon />}>
-          Delete
-        </Button>
-      </DialogActions>
-    </Dialog>
+    </FormDialogShell>
   );
 };

@@ -3,6 +3,7 @@ import { Button, Stack, TextField } from '@mui/material';
 import type { OrchestrationPipelineCreate } from '../service/data-orchestration';
 import { FormDialogShell } from '../design-system';
 import { monoFontFamily } from '../design-system/tokens/typography';
+import { AgentEnabledMultilineField } from './agent-surface';
 
 export interface WorkflowFormDialogValues {
   name: string;
@@ -106,22 +107,26 @@ const WorkflowFormDialog: React.FC<WorkflowFormDialogProps> = ({
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
-        <TextField
+        <AgentEnabledMultilineField
           fullWidth
           label="Description"
           placeholder="What does this workflow do?"
           multiline
           minRows={2}
+          surfaceId={initialValues?.name ?? 'workflow-form-dialog'}
+          fieldKey="workflow_description"
           value={description}
-          onChange={(event) => setDescription(event.target.value)}
+          onChange={setDescription}
         />
-        <TextField
+        <AgentEnabledMultilineField
           fullWidth
           label="Definition (JSON)"
           multiline
           rows={5}
+          surfaceId={initialValues?.name ?? 'workflow-form-dialog'}
+          fieldKey="workflow_definition"
           value={definition}
-          onChange={(event) => setDefinition(event.target.value)}
+          onChange={setDefinition}
           error={definition.length > 0 && !isValidJson(definition)}
           helperText={definition.length > 0 && !isValidJson(definition) ? 'Invalid JSON' : ' '}
           slotProps={{

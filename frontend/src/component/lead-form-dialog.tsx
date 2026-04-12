@@ -13,6 +13,7 @@ import Grid from '@mui/material/Grid';
 import { FormDialogShell } from '../design-system';
 import type { LeadRead, LeadCreate, LeadUpdate } from '../service/leads';
 import type { CompanyRead } from '../service/companies';
+import { AgentEnabledMultilineField } from './agent-surface';
 
 interface LeadFormDialogProps {
   open: boolean;
@@ -213,13 +214,16 @@ const LeadFormDialog: React.FC<LeadFormDialogProps> = ({
           )}
 
           <Grid size={12}>
-            <TextField
+            <AgentEnabledMultilineField
               fullWidth
               label="Description"
               multiline
               rows={5}
+              surfaceId={lead?.id ?? 'lead-form-dialog'}
+              fieldKey="lead_description"
+              entityRefs={lead?.id ? [{ kind: 'lead', id: lead.id, label: lead.title ?? 'Lead' }] : []}
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
+              onChange={setDescription}
             />
           </Grid>
         </Grid>

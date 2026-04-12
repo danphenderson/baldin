@@ -200,6 +200,44 @@ describe('slash-command extension', () => {
     });
   });
 
+  it('select-click: clicking "Agent Task" inserts an agent task block', async () => {
+    const ref = mountEditor();
+    const editor = await waitForEditor(ref);
+
+    typeSlash(editor);
+    await screen.findByTestId('slash-command-menu');
+
+    const agentTaskButton = await screen.findByText('Agent Task');
+    await userEvent.click(agentTaskButton);
+
+    await waitFor(() => {
+      const json = ref.current!.getJSON()!;
+      const hasAgentTask = json.content?.some((n) => n.type === 'agentTask');
+      expect(hasAgentTask).toBe(true);
+    });
+  });
+
+  it('select-click: clicking "Mention" still inserts a mention block', async () => {
+    const ref = mountEditor();
+    const editor = await waitForEditor(ref);
+
+    act(() => {
+      editor.commands.focus();
+      editor.commands.insertContent('/mention');
+    });
+
+    await screen.findByTestId('slash-command-menu');
+
+    const mentionButton = await screen.findByText('Mention');
+    await userEvent.click(mentionButton);
+
+    await waitFor(() => {
+      const json = ref.current!.getJSON()!;
+      const hasMentionBlock = json.content?.some((n) => n.type === 'mentionBlock');
+      expect(hasMentionBlock).toBe(true);
+    });
+  });
+
   it('dismiss-escape: pressing Escape closes the palette', async () => {
     const ref = mountEditor();
     const editor = await waitForEditor(ref);

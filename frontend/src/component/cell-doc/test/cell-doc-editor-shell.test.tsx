@@ -174,4 +174,26 @@ describe('CellDocEditor shell', () => {
     expect(screen.getByTestId('connection-status-connecting')).toBeInTheDocument();
     expect(screen.getAllByText('Reconnecting…').length).toBeGreaterThan(0);
   });
+
+  it('notifies the page layer when the editor instance is ready', async () => {
+    const fakeEditor = createFakeEditor({ type: 'doc', content: [] });
+    const onEditorReady = vi.fn();
+
+    useEditorMock.mockReturnValue(fakeEditor);
+
+    render(
+      <CellDocEditor
+        content=""
+        documentId="doc-1"
+        token="token-123"
+        onChange={vi.fn()}
+        onEditorReady={onEditorReady}
+        readOnly
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onEditorReady).toHaveBeenCalledWith(fakeEditor);
+    });
+  });
 });

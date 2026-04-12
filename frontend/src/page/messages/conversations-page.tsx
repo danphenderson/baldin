@@ -26,7 +26,7 @@ import {
   type ConversationRead,
 } from '../../service/messages';
 import { avatarUrl } from '../../service/users';
-import { CollectionToolbar, EmptyState, LoadingState, SectionCard, SectionHeader } from '../../design-system';
+import { CollectionToolbar, EmptyState, LoadingState, SectionHeader } from '../../design-system';
 import NewConversationDialog from '../../component/new-conversation-dialog';
 import { useNotification } from '../../context/notification-context';
 
@@ -124,27 +124,23 @@ const ConversationsPage: React.FC = () => {
         )}
       />
 
-      <SectionCard
-        header={(
-          <SectionHeader
-            icon={<ChatIcon />}
-            title="Conversations"
-            count={loading ? undefined : filtered.length}
-            supportingText="Direct and group conversations"
-            action={(
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setDialogOpen(true)}
-              >
-                New Message
-              </Button>
-            )}
-            divider
-            size="compact"
-          />
-        )}
-      >
+      <SectionHeader
+        icon={<ChatIcon />}
+        title="Conversations"
+        count={loading ? undefined : filtered.length}
+        action={filtered.length > 0 ? (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setDialogOpen(true)}
+          >
+            New Message
+          </Button>
+        ) : undefined}
+        divider
+        size="compact"
+      />
+
         {loading ? (
           <LoadingState kind="list" count={4} itemHeight={80} />
         ) : filtered.length === 0 ? (
@@ -232,7 +228,6 @@ const ConversationsPage: React.FC = () => {
             })}
           </Stack>
         )}
-      </SectionCard>
 
       {!loading && pageCount > 1 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>

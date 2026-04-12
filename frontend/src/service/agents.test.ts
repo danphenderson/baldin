@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  applyAgentSurfaceRun,
+  createAgentSurfaceRun,
   deleteAgent,
+  dismissAgentSurfaceRun,
+  getFilteredAgentRuns,
   getAgentRuns,
   getAgents,
   runAgent,
@@ -218,5 +222,142 @@ describe('agents service', () => {
     ));
 
     await expect(deleteAgent('token-123', 'agent-1')).rejects.toThrow('Agent is still referenced by session history.');
+  });
+
+  it('lists filtered surface runs with source and apply-state query params', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        items: [],
+        total: 0,
+        page: 3,
+        page_size: 10,
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await getFilteredAgentRuns('token-123', {
+      source_document_id: 'doc-1',
+      source_field_key: 'cover_letter_notes',
+      source_route: '/applications/app-1',
+      source_anchor_id: 'block-7',
+      apply_status: 'pending',
+      page: 3,
+      page_size: 10,
+    });
+
+    expect(result.page).toBe(3);
+    expect(result.page_size).toBe(10);
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain('/agents/runs');
+    expect(request.url).toContain('source_document_id=doc-1');
+    expect(request.url).toContain('source_field_key=cover_letter_notes');
+    expect(request.url).toContain('source_route=%2Fapplications%2Fapp-1');
+    expect(request.url).toContain('source_anchor_id=block-7');
+    expect(request.url).toContain('apply_status=pending');
+    expect(request.url).toContain('page=3');
+    expect(request.url).toContain('page_size=10');
+  });
+
+  it('posts the surface-run lifecycle through create, apply, and dismiss routes', async () => {
+    const runResponse = {
+      id: 'run-7',
+      created_at: '2026-04-11T12:05:00Z',
+      updated_at: '2026-04-11T12:05:01Z',
+      agent_id: 'agent-1',
+      user_id: 'user-1',
+      application_id: 'app-9',
+      parent_run_id: null,
+      trigger_kind: 'surface_mention',
+      status: 'completed',
+      source_surface_kind: 'multiline_text_field',
+      source_document_id: null,
+      source_field_key: 'cover_letter_notes',
+      source_route: '/applications/app-9',
+      source_anchor_id: 'anchor-1',
+      apply_status: 'pending',
+      applied_at: null,
+      suggested_edit: {
+        operation: 'append_to_surface',
+        content_format: 'plain_text',
+        content: 'Updated text',
+        summary: 'Adds a stronger closing.',
+      },
+      session_document_id: null,
+      session_version_id: null,
+      session_document: null,
+      session_version: null,
+      error_summary: null,
+      completed_at: '2026-04-11T12:05:01Z',
+    };
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(runResponse), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        ...runResponse,
+        apply_status: 'applied',
+        applied_at: '2026-04-11T12:05:15Z',
+        session_document_id: 'doc-2',
+        session_version_id: 'ver-4',
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        ...runResponse,
+        apply_status: 'dismissed',
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }));
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const createdRun = await createAgentSurfaceRun('token-123', 'agent-1', {
+      surface_kind: 'multiline_text_field',
+      source_route: '/applications/app-9',
+      source_field_key: 'cover_letter_notes',
+      anchor_id: 'anchor-1',
+      content_format: 'plain_text',
+      surface_content: 'Original text',
+      prompt_text: 'Strengthen the closing paragraph.',
+      requested_apply_mode: 'append_to_surface',
+    });
+    expect(createdRun.id).toBe('run-7');
+
+    const createRequest = fetchMock.mock.calls[0][0] as Request;
+    expect(createRequest.url).toContain('/agents/agent-1/surface-runs');
+    expect(createRequest.method).toBe('POST');
+    expect(await createRequest.json()).toEqual(expect.objectContaining({
+      source_field_key: 'cover_letter_notes',
+      prompt_text: 'Strengthen the closing paragraph.',
+    }));
+
+    const appliedRun = await applyAgentSurfaceRun('token-123', 'run-7', {
+      session_document_id: 'doc-2',
+      session_version_id: 'ver-4',
+    });
+    expect(appliedRun.apply_status).toBe('applied');
+
+    const applyRequest = fetchMock.mock.calls[1][0] as Request;
+    expect(applyRequest.url).toContain('/agents/runs/run-7/apply');
+    expect(applyRequest.method).toBe('POST');
+    expect(await applyRequest.json()).toEqual({
+      session_document_id: 'doc-2',
+      session_version_id: 'ver-4',
+    });
+
+    const dismissedRun = await dismissAgentSurfaceRun('token-123', 'run-7');
+    expect(dismissedRun.apply_status).toBe('dismissed');
+
+    const dismissRequest = fetchMock.mock.calls[2][0] as Request;
+    expect(dismissRequest.url).toContain('/agents/runs/run-7/dismiss');
+    expect(dismissRequest.method).toBe('POST');
   });
 });

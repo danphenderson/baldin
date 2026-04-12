@@ -1,6 +1,6 @@
 import React, { useContext, useState, useMemo, useDeferredValue, useCallback } from 'react';
 import {
-  Box, Typography, TextField, InputAdornment, Stack, Chip,
+  Box, Typography, TextField, InputAdornment, Stack, Chip, Divider,
   IconButton, Tooltip, Snackbar, FormControl, InputLabel,
   Select, MenuItem, useMediaQuery,
 } from '@mui/material';
@@ -40,6 +40,7 @@ import {
   InlineFeedback,
   LoadingState,
   CardShell,
+  MetricStrip,
   StatusChip,
 } from '../../design-system';
 
@@ -113,7 +114,7 @@ const ApplicationsQueuePage: React.FC = () => {
 
   usePageToolbarHeader(
     'Applications',
-    `${totalCount} total · ${activeCount} active · ${offerCount} offers`,
+    `${totalCount} applications`,
   );
 
   /* ---- Filtering + sorting ---- */
@@ -217,62 +218,21 @@ const ApplicationsQueuePage: React.FC = () => {
         </InlineFeedback>
       )}
 
-      {/* ── Summary strip ── */}
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}
-      >
-        <Chip
-          label={`${totalCount} total`}
-          size="small"
-          variant="outlined"
-        />
-        <Chip
-          label={`${activeCount} active`}
-          size="small"
-          variant={activeCount ? 'filled' : 'outlined'}
-          sx={activeCount ? {
-            bgcolor: alpha(COLUMNS[0].color, 0.12),
-            color: COLUMNS[0].color,
-            fontWeight: 600,
-          } : undefined}
-        />
-        <Chip
-          label={`${interviewCount} interviewing`}
-          size="small"
-          variant={interviewCount ? 'filled' : 'outlined'}
-          sx={interviewCount ? {
-            bgcolor: alpha(COLUMNS[2].color, 0.12),
-            color: COLUMNS[2].color,
-            fontWeight: 600,
-          } : undefined}
-        />
-        <Chip
-          label={`${offerCount} offers`}
-          size="small"
-          variant={offerCount ? 'filled' : 'outlined'}
-          sx={offerCount ? {
-            bgcolor: alpha(COLUMNS[3].color, 0.12),
-            color: COLUMNS[3].color,
-            fontWeight: 600,
-          } : undefined}
-        />
-        <Chip
-          label={`${rejectedCount} closed`}
-          size="small"
-          variant={rejectedCount ? 'filled' : 'outlined'}
-          sx={rejectedCount ? {
-            bgcolor: alpha(ALL_STATUS_COLUMNS.find((c) => c.key === 'rejected')!.color, 0.12),
-            color: ALL_STATUS_COLUMNS.find((c) => c.key === 'rejected')!.color,
-            fontWeight: 600,
-          } : undefined}
-        />
-      </Stack>
+      {/* ── Metric strip ── */}
+      <MetricStrip
+        variant="inline"
+        items={[
+          { label: 'Total', value: totalCount },
+          { label: 'Active', value: activeCount, color: COLUMNS[0].color },
+          { label: 'Interviewing', value: interviewCount, color: COLUMNS[2].color },
+          { label: 'Offers', value: offerCount, color: COLUMNS[3].color },
+          { label: 'Closed', value: rejectedCount, color: ALL_STATUS_COLUMNS.find((c) => c.key === 'rejected')!.color },
+        ]}
+      />
 
       {/* ── Search + filters + sort ── */}
       <CollectionToolbar
-        sx={{ mb: 3 }}
+        sx={{ mb: 3, mt: 2 }}
         search={(
           <TextField
             size="small"
@@ -309,19 +269,21 @@ const ApplicationsQueuePage: React.FC = () => {
             </Select>
           </FormControl>
         )}
-        secondary={(
-          <Stack spacing={1.5}>
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{ flexWrap: 'wrap', gap: 1 }}
-            >
+        secondary={applications.length > 0 ? (
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1}
+            alignItems={{ md: 'center' }}
+            sx={{ flexWrap: 'wrap', rowGap: 1, columnGap: 1 }}
+          >
+            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
               <Chip
                 label="All Stages"
                 size="small"
                 variant={stageFilter === 'all' ? 'filled' : 'outlined'}
                 color={stageFilter === 'all' ? 'primary' : 'default'}
                 onClick={() => setStageFilter('all')}
+                sx={{ fontWeight: stageFilter === 'all' ? 600 : 400 }}
               />
               {ALL_STATUS_COLUMNS.map((col) => (
                 <Chip
@@ -338,12 +300,13 @@ const ApplicationsQueuePage: React.FC = () => {
                 />
               ))}
             </Stack>
-
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{ flexWrap: 'wrap', gap: 1 }}
-            >
+            <Divider
+              data-testid="applications-filter-divider"
+              orientation={isMobile ? 'horizontal' : 'vertical'}
+              flexItem
+              sx={{ alignSelf: 'stretch' }}
+            />
+            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
               {(['all', 'active', 'closed'] as const).map((key) => (
                 <Chip
                   key={key}
@@ -352,6 +315,7 @@ const ApplicationsQueuePage: React.FC = () => {
                   variant={activeFilter === key ? 'filled' : 'outlined'}
                   color={activeFilter === key ? 'primary' : 'default'}
                   onClick={() => setActiveFilter(key)}
+                  sx={{ fontWeight: activeFilter === key ? 600 : 400 }}
                 />
               ))}
               <Chip
@@ -361,6 +325,7 @@ const ApplicationsQueuePage: React.FC = () => {
                 variant={resumeFilter === 'yes' ? 'filled' : 'outlined'}
                 color={resumeFilter === 'yes' ? 'success' : 'default'}
                 onClick={() => setResumeFilter(resumeFilter === 'yes' ? 'all' : 'yes')}
+                sx={{ fontWeight: resumeFilter === 'yes' ? 600 : 400 }}
               />
               <Chip
                 icon={<DocIcon sx={{ fontSize: '0.85rem !important' }} />}
@@ -369,10 +334,11 @@ const ApplicationsQueuePage: React.FC = () => {
                 variant={coverLetterFilter === 'yes' ? 'filled' : 'outlined'}
                 color={coverLetterFilter === 'yes' ? 'success' : 'default'}
                 onClick={() => setCoverLetterFilter(coverLetterFilter === 'yes' ? 'all' : 'yes')}
+                sx={{ fontWeight: coverLetterFilter === 'yes' ? 600 : 400 }}
               />
             </Stack>
           </Stack>
-        )}
+        ) : undefined}
       />
 
       {/* ── Application list ── */}

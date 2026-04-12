@@ -212,7 +212,7 @@ const AgentsPage: React.FC = () => {
       >
         <TextField
           size="small"
-          placeholder="Search agents\u2026"
+          placeholder="Search agents…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           slotProps={{
@@ -234,14 +234,16 @@ const AgentsPage: React.FC = () => {
             ))}
           </Select>
         </FormControl>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleCreate}
-          sx={{ whiteSpace: 'nowrap' }}
-        >
-          New Agent
-        </Button>
+        {(loading || agents.length > 0) && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleCreate}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            New Agent
+          </Button>
+        )}
       </Stack>
 
       {/* Card grid */}

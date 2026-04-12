@@ -29,6 +29,7 @@ import { components } from '../schema';
 import { timeAgo, monogram, monogramColor } from '../util/format';
 import EmptyState from '../component/common/empty-state';
 import ApplicationIntentButton from '../component/application-intent-button';
+import { AgentEnabledMultilineField } from '../component/agent-surface';
 import { displayFontFamily } from '../design-system/tokens/typography';
 import { accentGradient, brandGradient, softBrandGradient } from '../theme/effects';
 
@@ -252,7 +253,7 @@ const CompaniesPage: React.FC = () => {
     return matchesSearch && matchesIndustry;
   });
 
-  usePageToolbarHeader('Companies', `${companies.length} tracked`);
+  usePageToolbarHeader('Companies', `${companies.length} companies`);
 
   /* ================================================================ */
   /*  Render                                                          */
@@ -345,9 +346,11 @@ const CompaniesPage: React.FC = () => {
               <RefreshIcon />
             </IconButton>
           </Tooltip>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
-            Add Company
-          </Button>
+          {(loading || companies.length > 0) && (
+            <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
+              Add Company
+            </Button>
+          )}
         </Stack>
       </Stack>
 
@@ -360,7 +363,7 @@ const CompaniesPage: React.FC = () => {
             variant={activeIndustry === null ? 'filled' : 'outlined'}
             color={activeIndustry === null ? 'primary' : 'default'}
             onClick={() => setActiveIndustry(null)}
-            sx={{ fontWeight: 600 }}
+            sx={{ fontWeight: activeIndustry === null ? 600 : 400 }}
           />
           {Object.entries(industryStats)
             .sort(([, a], [, b]) => b - a)
@@ -698,11 +701,14 @@ const CompaniesPage: React.FC = () => {
               value={editItem?.location ?? ''}
               onChange={e => setEditItem(prev => prev ? { ...prev, location: e.target.value } : prev)}
             />
-            <TextField
+            <AgentEnabledMultilineField
               fullWidth
               label="Description"
+              surfaceId={editItem?.id ?? 'company-edit-dialog'}
+              fieldKey="company_description"
+              entityRefs={editItem?.id ? [{ kind: 'company', id: editItem.id, label: editItem.name || 'Company' }] : []}
               value={editItem?.description ?? ''}
-              onChange={e => setEditItem(prev => prev ? { ...prev, description: e.target.value } : prev)}
+              onChange={nextValue => setEditItem(prev => prev ? { ...prev, description: nextValue } : prev)}
               multiline
               rows={3}
             />

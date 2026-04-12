@@ -35,6 +35,7 @@ from app.api.deps import (
     schemas,
 )
 from app.api.routes.documents import (
+    _record_document_activity,
     _load_document_blocks,
     _serialize_document_block_tree,
     _tiptap_extract_text,
@@ -104,6 +105,45 @@ def _compact_error_summary(detail: Any, *, max_length: int = 500) -> str:
     else:
         message = _json_dumps(detail)
     return message[:max_length]
+
+
+def _parse_optional_uuid(value: Any) -> UUID | None:
+    if value is None:
+        return None
+    try:
+        return UUID(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _extract_surface_plain_text(
+    *,
+    content: str,
+    content_format: schemas.ContentFormat,
+) -> str:
+    if content_format != schemas.ContentFormat.TIPTAP_JSON:
+        return clean_text(content)
+
+    try:
+        parsed = json.loads(content)
+    except (TypeError, json.JSONDecodeError):
+        return clean_text(content)
+
+    if not isinstance(parsed, dict):
+        return clean_text(content)
+
+    extracted_html = _tiptap_extract_text(parsed)
+    extracted_text = BeautifulSoup(extracted_html, "html.parser").get_text("\n")
+    return clean_text(extracted_text)
+
+
+def _summarize_suggested_edit(content: str, *, max_length: int = 160) -> str:
+    normalized = " ".join(content.split())
+    if len(normalized) <= max_length:
+        return normalized
+    if max_length <= 3:
+        return normalized[:max_length]
+    return f"{normalized[: max_length - 3].rstrip()}..."
 
 
 def _inline_content_from_text(text: str) -> list[dict[str, Any]]:
@@ -891,6 +931,24 @@ async def _load_pinned_resume_for_run(
     return result.scalars().first()
 
 
+async def _load_source_document_for_surface_run(
+    db: AsyncSession,
+    *,
+    source_document_id: UUID | None,
+    user: schemas.UserRead,
+) -> models.Document | None:
+    if source_document_id is None:
+        return None
+
+    document = await get_document(source_document_id, db=db, user=user)
+    if document.head_version_id is not None:
+        document.head_version = await db.get(
+            models.DocumentVersion,
+            document.head_version_id,
+        )
+    return document
+
+
 async def _load_session_document_for_run(
     db: AsyncSession,
     *,
@@ -980,6 +1038,27 @@ def _serialize_pinned_resume(document: models.Document | None) -> dict[str, Any]
         "content": head_version.content
         if head_version and head_version.content
         else "",
+    }
+
+
+def _serialize_source_document(
+    document: models.Document | None,
+) -> dict[str, Any] | None:
+    if document is None:
+        return None
+
+    head_version = document.head_version
+    return {
+        "document_id": str(document.id),
+        "title": document.title,
+        "kind": document.kind,
+        "status": document.status,
+        "head_version": {
+            "id": str(head_version.id) if head_version else None,
+            "version_number": head_version.version_number if head_version else None,
+            "content": head_version.content if head_version and head_version.content else "",
+            "content_format": head_version.content_format if head_version else None,
+        },
     }
 
 
@@ -1903,12 +1982,62 @@ def _build_agent_input_context(
             "name": agent.name,
             "kind": agent.kind,
             "instructions": agent.instructions,
+            "configuration": agent.configuration or {},
         },
         "application": model_to_dict(application) or {},
         "lead": _serialize_lead(application.lead),
         "user_profile": _serialize_user_profile(user_profile),
         "pinned_resume": _serialize_pinned_resume(pinned_resume),
         "session": _serialize_session_context(session_document, live_block_tree),
+    }
+
+
+def _build_surface_run_context(
+    *,
+    agent: models.Agent,
+    application: models.Application | None,
+    user_profile: models.User,
+    pinned_resume: models.Document | None,
+    source_document: models.Document | None,
+    payload: schemas.AgentSurfaceRunRequest,
+) -> dict[str, Any]:
+    return {
+        "agent": {
+            "id": str(agent.id),
+            "name": agent.name,
+            "kind": agent.kind,
+            "instructions": agent.instructions,
+            "configuration": agent.configuration or {},
+        },
+        "source": {
+            "surface_kind": payload.surface_kind.value,
+            "source_route": payload.source_route,
+            "source_document_id": (
+                str(payload.source_document_id) if payload.source_document_id else None
+            ),
+            "source_field_key": payload.source_field_key,
+            "anchor_id": payload.anchor_id,
+            "content_format": payload.content_format.value,
+            "surface_content": payload.surface_content,
+            "surface_plain_text": _extract_surface_plain_text(
+                content=payload.surface_content,
+                content_format=payload.content_format,
+            ),
+            "selection_text": payload.selection_text,
+            "selection_start": payload.selection_start,
+            "selection_end": payload.selection_end,
+            "requested_apply_mode": payload.requested_apply_mode.value,
+            "entity_refs": [
+                entity_ref.model_dump(mode="json")
+                for entity_ref in payload.entity_refs
+            ],
+        },
+        "prompt_text": payload.prompt_text,
+        "source_document": _serialize_source_document(source_document),
+        "application": model_to_dict(application) if application else {},
+        "lead": _serialize_lead(application.lead) if application else {},
+        "user_profile": _serialize_user_profile(user_profile),
+        "pinned_resume": _serialize_pinned_resume(pinned_resume),
     }
 
 
@@ -1941,6 +2070,102 @@ def _generate_cover_letter_draft(
     if not draft_text or not draft_text.strip():
         raise ValueError("Agent generated an empty draft")
     return draft_text.strip()
+
+
+def _build_surface_task_system_message(agent: models.Agent) -> str:
+    base_instruction = (
+        "You generate plain-text suggested edits for the user's current editable "
+        "surface. Return only the text to apply back into the surface. Do not "
+        "wrap it in markdown fences, headings, labels, or commentary."
+    )
+    if agent.kind == schemas.AgentKind.COVER_LETTER.value:
+        return (
+            f"{base_instruction} Produce polished cover-letter or application "
+            f"copy that uses any available job/application context."
+        )
+    if agent.kind == schemas.AgentKind.FOLLOW_UP.value:
+        return (
+            f"{base_instruction} Produce concise follow-up copy that advances "
+            f"the conversation and respects the user's existing tone."
+        )
+    if agent.kind == schemas.AgentKind.OUTREACH.value:
+        return (
+            f"{base_instruction} Produce networking or outreach copy tailored "
+            f"to the referenced lead, company, or conversation context."
+        )
+    if agent.kind == schemas.AgentKind.CUSTOM.value:
+        return (
+            f"{base_instruction} Follow the agent instructions and the user's "
+            f"prompt as closely as possible."
+        )
+    raise HTTPException(
+        status_code=501,
+        detail=f"Agent kind '{agent.kind}' is not yet supported for surface runs",
+    )
+
+
+def _generate_surface_task_suggestion(
+    *,
+    agent: models.Agent,
+    input_context: dict[str, Any],
+    requested_apply_mode: schemas.AgentRunApplyMode,
+    model: Any,
+) -> schemas.AgentSuggestedEditWrite:
+    source = input_context.get("source", {})
+    apply_mode_guidance = {
+        schemas.AgentRunApplyMode.INSERT_AFTER_ANCHOR: (
+            "Return only the new text that should be inserted after the anchor. "
+            "Do not rewrite the entire surface."
+        ),
+        schemas.AgentRunApplyMode.REPLACE_SELECTION: (
+            "Return only the replacement text for the selected text. Do not "
+            "repeat unchanged surrounding text."
+        ),
+        schemas.AgentRunApplyMode.APPEND_TO_SURFACE: (
+            "Return only the text that should be appended to the end of the "
+            "surface. Do not rewrite existing content."
+        ),
+    }[requested_apply_mode]
+    user_message = "\n\n".join(
+        [
+            f"Agent name: {agent.name}",
+            (
+                f"Agent instructions:\n{agent.instructions.strip()}"
+                if agent.instructions and agent.instructions.strip()
+                else "Agent instructions:\nNo additional agent instructions."
+            ),
+            f"Apply mode guidance:\n{apply_mode_guidance}",
+            "Task prompt:",
+            str(input_context.get("prompt_text") or "").strip(),
+            "Structured context JSON:",
+            _json_dumps(
+                {
+                    "source": source,
+                    "source_document": input_context.get("source_document"),
+                    "application": input_context.get("application"),
+                    "lead": input_context.get("lead"),
+                    "user_profile": input_context.get("user_profile"),
+                    "pinned_resume": input_context.get("pinned_resume"),
+                }
+            ),
+        ]
+    )
+    response = model.invoke(
+        [
+            SystemMessage(content=_build_surface_task_system_message(agent)),
+            HumanMessage(content=user_message),
+        ]
+    )
+    content = _extract_agent_chat_text(getattr(response, "content", response)).strip()
+    if not content:
+        raise ValueError("Agent generated an empty suggested edit")
+
+    return schemas.AgentSuggestedEditWrite(
+        operation=requested_apply_mode,
+        content_format=schemas.ContentFormat.PLAIN_TEXT,
+        content=content,
+        summary=_summarize_suggested_edit(content),
+    )
 
 
 async def _upsert_application_session_link(
@@ -1978,6 +2203,7 @@ async def _load_agent_run(
     result = await db.execute(
         select(models.AgentRun)
         .options(
+            selectinload(models.AgentRun.agent),
             selectinload(models.AgentRun.session_document),
             selectinload(models.AgentRun.session_version),
         )
@@ -1987,6 +2213,37 @@ async def _load_agent_run(
     if run is None:
         raise HTTPException(status_code=404, detail="Agent run not found")
     return run
+
+
+async def _record_surface_run_document_activity(
+    db: AsyncSession,
+    *,
+    run: models.AgentRun,
+    activity_type: schemas.DocumentActivityType,
+    message: str,
+    actor: models.User | schemas.UserRead,
+    details: dict[str, Any] | None = None,
+) -> None:
+    if run.source_document_id is None:
+        return
+
+    await _record_document_activity(
+        db,
+        document_id=run.source_document_id,
+        block_id=_parse_optional_uuid(run.source_anchor_id),
+        activity_type=activity_type,
+        message=message,
+        actor=actor,
+        details={
+            "agent_id": str(run.agent_id),
+            "run_id": str(run.id),
+            "source_surface_kind": run.source_surface_kind,
+            "source_field_key": run.source_field_key,
+            "source_route": run.source_route,
+            "source_anchor_id": run.source_anchor_id,
+            **(details or {}),
+        },
+    )
 
 
 @router.get("/", response_model=schemas.PaginatedResponse[schemas.AgentSummaryRead])
@@ -2065,8 +2322,29 @@ async def create_agent(
     response_model=schemas.PaginatedResponse[schemas.AgentRunSummaryRead],
 )
 async def list_runs_by_session(
-    session_document_id: UUID = Query(
-        ..., description="Filter runs by the session document they produced"
+    session_document_id: UUID | None = Query(
+        None,
+        description="Filter runs by the session document they produced",
+    ),
+    source_document_id: UUID | None = Query(
+        None,
+        description="Filter runs by the originating source document",
+    ),
+    source_field_key: str | None = Query(
+        None,
+        description="Filter runs by the originating host field key",
+    ),
+    source_route: str | None = Query(
+        None,
+        description="Filter runs by the originating host route",
+    ),
+    source_anchor_id: str | None = Query(
+        None,
+        description="Filter runs by the originating anchor or block identifier",
+    ),
+    apply_status: schemas.AgentRunApplyStatus | None = Query(
+        None,
+        description="Filter runs by their apply state",
     ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=500),
@@ -2075,15 +2353,25 @@ async def list_runs_by_session(
 ):
     base = (
         select(models.AgentRun)
-        .where(
-            models.AgentRun.user_id == user.id,
-            models.AgentRun.session_document_id == session_document_id,
-        )
+        .where(models.AgentRun.user_id == user.id)
         .options(
             selectinload(models.AgentRun.session_document),
             selectinload(models.AgentRun.session_version),
         )
     )
+
+    if session_document_id is not None:
+        base = base.where(models.AgentRun.session_document_id == session_document_id)
+    if source_document_id is not None:
+        base = base.where(models.AgentRun.source_document_id == source_document_id)
+    if source_field_key is not None:
+        base = base.where(models.AgentRun.source_field_key == source_field_key)
+    if source_route is not None:
+        base = base.where(models.AgentRun.source_route == source_route)
+    if source_anchor_id is not None:
+        base = base.where(models.AgentRun.source_anchor_id == source_anchor_id)
+    if apply_status is not None:
+        base = base.where(models.AgentRun.apply_status == apply_status.value)
 
     count_result = await db.execute(select(func.count()).select_from(base.subquery()))
     total = count_result.scalar_one()
@@ -2604,6 +2892,166 @@ async def delete_agent_chat_session(
     return None
 
 
+@router.post("/{id}/surface-runs", status_code=201, response_model=schemas.AgentRunRead)
+async def create_agent_surface_run(
+    payload: schemas.AgentSurfaceRunRequest,
+    agent: models.Agent = Depends(get_agent),
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not agent.is_enabled:
+        raise HTTPException(status_code=409, detail="Agent is disabled")
+    if (
+        payload.surface_kind
+        in {
+            schemas.AgentRunSourceSurfaceKind.CELL_DOC_EDITOR,
+            schemas.AgentRunSourceSurfaceKind.RICH_TEXT_EDITOR,
+        }
+        and payload.source_document_id is None
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Document surface tasks require a persisted source document",
+        )
+    if payload.selection_end is not None and payload.selection_start is not None:
+        if payload.selection_end < payload.selection_start:
+            raise HTTPException(
+                status_code=400,
+                detail="selection_end must be greater than or equal to selection_start",
+            )
+    if (
+        payload.requested_apply_mode == schemas.AgentRunApplyMode.REPLACE_SELECTION
+        and not (payload.selection_text and payload.selection_text.strip())
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="replace_selection requires selection_text",
+        )
+    if (
+        payload.requested_apply_mode == schemas.AgentRunApplyMode.INSERT_AFTER_ANCHOR
+        and not payload.anchor_id
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="insert_after_anchor requires anchor_id",
+        )
+
+    application = None
+    if payload.application_id is not None:
+        application = await _load_application_for_run(
+            db,
+            application_id=payload.application_id,
+            user_id=user.id,
+        )
+    user_profile = await _load_user_profile_for_run(db, user_id=user.id)
+    pinned_resume = await _load_pinned_resume_for_run(db, user_id=user.id)
+    source_document = await _load_source_document_for_surface_run(
+        db,
+        source_document_id=(
+            UUID(str(payload.source_document_id))
+            if payload.source_document_id is not None
+            else None
+        ),
+        user=user,
+    )
+
+    input_context = _build_surface_run_context(
+        agent=agent,
+        application=application,
+        user_profile=user_profile,
+        pinned_resume=pinned_resume,
+        source_document=source_document,
+        payload=payload,
+    )
+
+    run = models.AgentRun(
+        agent_id=agent.id,
+        user_id=user.id,
+        application_id=application.id if application else None,
+        trigger_kind=schemas.AgentRunTriggerKind.SURFACE_MENTION.value,
+        status=schemas.AgentRunStatus.RUNNING.value,
+        input_context=input_context,
+        source_surface_kind=payload.surface_kind.value,
+        source_document_id=payload.source_document_id,
+        source_field_key=payload.source_field_key,
+        source_route=payload.source_route,
+        source_anchor_id=payload.anchor_id,
+        apply_status=schemas.AgentRunApplyStatus.PENDING.value,
+    )
+    db.add(run)
+    await db.commit()
+    await db.refresh(run)
+    run_id = run.id
+
+    await _record_surface_run_document_activity(
+        db,
+        run=run,
+        activity_type=schemas.DocumentActivityType.AGENT_TASK_REQUESTED,
+        message=f"Requested agent task with {agent.name}",
+        actor=user,
+        details={
+            "prompt_text": payload.prompt_text,
+            "requested_apply_mode": payload.requested_apply_mode.value,
+        },
+    )
+    await db.commit()
+
+    try:
+        conf.openai.require_enabled("Agent surface execution")
+        model = _resolve_agent_model(agent)
+        suggested_edit = _generate_surface_task_suggestion(
+            agent=agent,
+            input_context=input_context,
+            requested_apply_mode=payload.requested_apply_mode,
+            model=model,
+        )
+
+        persisted_run = await db.get(models.AgentRun, run_id)
+        if persisted_run is None:
+            raise HTTPException(status_code=404, detail="Agent run not found")
+        persisted_run.status = schemas.AgentRunStatus.COMPLETED.value
+        persisted_run.suggested_edit = suggested_edit.model_dump(mode="json")
+        persisted_run.error_summary = None
+        persisted_run.completed_at = datetime.now(timezone.utc)
+        await db.commit()
+    except HTTPException as exc:
+        await db.rollback()
+        failed_run = await db.get(models.AgentRun, run_id)
+        if failed_run is not None:
+            failed_run.status = schemas.AgentRunStatus.FAILED.value
+            failed_run.error_summary = _compact_error_summary(exc.detail)
+            failed_run.completed_at = datetime.now(timezone.utc)
+            await _record_surface_run_document_activity(
+                db,
+                run=failed_run,
+                activity_type=schemas.DocumentActivityType.AGENT_TASK_FAILED,
+                message=f"Agent task failed for {agent.name}",
+                actor=user,
+                details={"error_summary": failed_run.error_summary},
+            )
+            await db.commit()
+        raise
+    except Exception as exc:
+        await db.rollback()
+        failed_run = await db.get(models.AgentRun, run_id)
+        if failed_run is not None:
+            failed_run.status = schemas.AgentRunStatus.FAILED.value
+            failed_run.error_summary = _compact_error_summary(str(exc))
+            failed_run.completed_at = datetime.now(timezone.utc)
+            await _record_surface_run_document_activity(
+                db,
+                run=failed_run,
+                activity_type=schemas.DocumentActivityType.AGENT_TASK_FAILED,
+                message=f"Agent task failed for {agent.name}",
+                actor=user,
+                details={"error_summary": failed_run.error_summary},
+            )
+            await db.commit()
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return await _load_agent_run(db, run_id=run_id)
+
+
 @router.post("/{id}/run", status_code=201, response_model=schemas.AgentRunRead)
 async def run_agent(
     payload: schemas.AgentRunExecuteRequest,
@@ -2756,6 +3204,116 @@ async def run_agent(
             await db.commit()
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
+    return await _load_agent_run(db, run_id=run_id)
+
+
+@router.post("/runs/{run_id}/apply", response_model=schemas.AgentRunRead)
+async def apply_agent_surface_run(
+    run_id: UUID,
+    payload: schemas.AgentSurfaceRunApplyRequest,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    run = await _load_agent_run(db, run_id=run_id)
+    if run.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Agent run not found")
+    if run.trigger_kind != schemas.AgentRunTriggerKind.SURFACE_MENTION.value:
+        raise HTTPException(
+            status_code=409,
+            detail="Only surface mention runs can be applied through this endpoint",
+        )
+    if run.status != schemas.AgentRunStatus.COMPLETED.value:
+        raise HTTPException(
+            status_code=409,
+            detail="Only completed surface mention runs can be applied",
+        )
+    if run.suggested_edit is None:
+        raise HTTPException(status_code=409, detail="This run has no suggested edit")
+    if run.apply_status == schemas.AgentRunApplyStatus.APPLIED.value:
+        return run
+    if run.apply_status == schemas.AgentRunApplyStatus.DISMISSED.value:
+        raise HTTPException(
+            status_code=409,
+            detail="Dismissed surface mention runs cannot be applied",
+        )
+
+    if run.source_document_id is not None:
+        if payload.session_document_id is None or payload.session_version_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Document surface applies must provide session_document_id and "
+                    "session_version_id"
+                ),
+            )
+        if payload.session_document_id != run.source_document_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Applied session_document_id must match the source document",
+            )
+        version = await db.get(models.DocumentVersion, payload.session_version_id)
+        if version is None:
+            raise HTTPException(status_code=404, detail="Document version not found")
+        if version.document_id != payload.session_document_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Document version does not belong to the provided document",
+            )
+        run.session_document_id = payload.session_document_id
+        run.session_version_id = payload.session_version_id
+
+    run.apply_status = schemas.AgentRunApplyStatus.APPLIED.value
+    run.applied_at = datetime.now(timezone.utc)
+    await _record_surface_run_document_activity(
+        db,
+        run=run,
+        activity_type=schemas.DocumentActivityType.AGENT_TASK_APPLIED,
+        message=f"Applied agent task from {run.agent.name}",
+        actor=user,
+        details={
+            "session_document_id": (
+                str(run.session_document_id) if run.session_document_id else None
+            ),
+            "session_version_id": (
+                str(run.session_version_id) if run.session_version_id else None
+            ),
+        },
+    )
+    await db.commit()
+    return await _load_agent_run(db, run_id=run_id)
+
+
+@router.post("/runs/{run_id}/dismiss", response_model=schemas.AgentRunRead)
+async def dismiss_agent_surface_run(
+    run_id: UUID,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    run = await _load_agent_run(db, run_id=run_id)
+    if run.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Agent run not found")
+    if run.trigger_kind != schemas.AgentRunTriggerKind.SURFACE_MENTION.value:
+        raise HTTPException(
+            status_code=409,
+            detail="Only surface mention runs can be dismissed through this endpoint",
+        )
+    if run.apply_status == schemas.AgentRunApplyStatus.APPLIED.value:
+        raise HTTPException(
+            status_code=409,
+            detail="Applied surface mention runs cannot be dismissed",
+        )
+    if run.apply_status == schemas.AgentRunApplyStatus.DISMISSED.value:
+        return run
+
+    run.apply_status = schemas.AgentRunApplyStatus.DISMISSED.value
+    await _record_surface_run_document_activity(
+        db,
+        run=run,
+        activity_type=schemas.DocumentActivityType.AGENT_TASK_DISMISSED,
+        message=f"Dismissed agent task from {run.agent.name}",
+        actor=user,
+    )
+    await db.commit()
     return await _load_agent_run(db, run_id=run_id)
 
 

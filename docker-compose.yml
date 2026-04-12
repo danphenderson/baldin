@@ -54,16 +54,18 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      LINKEDIN_USERNAME: ${LINKEDIN_USERNAME:-}
-      LINKEDIN_PASSWORD: ${LINKEDIN_PASSWORD:-}
-      GLASSDOOR_USERNAME: ${GLASSDOOR_USERNAME:-}
-      GLASSDOOR_PASSWORD: ${GLASSDOOR_PASSWORD:-}
-      SENTRY_DSN: ${SENTRY_DSN:-}
-      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.0}
-      REDIS_URL: redis://redis:6379/0
-      CRAWLER_QUEUE_NAME: crawler_jobs
-      CRAWLER_EXECUTION_MODE: worker
+      # Pass through optional secrets only when present so blank compose env
+      # vars do not mask backend/.env.local overrides inside the container.
+      - OPENAI_API_KEY
+      - LINKEDIN_USERNAME
+      - LINKEDIN_PASSWORD
+      - GLASSDOOR_USERNAME
+      - GLASSDOOR_PASSWORD
+      - SENTRY_DSN
+      - SENTRY_TRACES_SAMPLE_RATE
+      - REDIS_URL=redis://redis:6379/0
+      - CRAWLER_QUEUE_NAME=crawler_jobs
+      - CRAWLER_EXECUTION_MODE=worker
     volumes:
       - ./backend:/usr/src/app
     ports:
@@ -84,16 +86,18 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      LINKEDIN_USERNAME: ${LINKEDIN_USERNAME:-}
-      LINKEDIN_PASSWORD: ${LINKEDIN_PASSWORD:-}
-      GLASSDOOR_USERNAME: ${GLASSDOOR_USERNAME:-}
-      GLASSDOOR_PASSWORD: ${GLASSDOOR_PASSWORD:-}
-      SENTRY_DSN: ${SENTRY_DSN:-}
-      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.0}
-      REDIS_URL: redis://redis:6379/0
-      CRAWLER_QUEUE_NAME: crawler_jobs
-      CRAWLER_EXECUTION_MODE: worker
+      # Match the API service: allow backend/.env.local to win when the host
+      # shell does not export these optional values.
+      - OPENAI_API_KEY
+      - LINKEDIN_USERNAME
+      - LINKEDIN_PASSWORD
+      - GLASSDOOR_USERNAME
+      - GLASSDOOR_PASSWORD
+      - SENTRY_DSN
+      - SENTRY_TRACES_SAMPLE_RATE
+      - REDIS_URL=redis://redis:6379/0
+      - CRAWLER_QUEUE_NAME=crawler_jobs
+      - CRAWLER_EXECUTION_MODE=worker
     volumes:
       - ./backend:/usr/src/app
     depends_on:
@@ -109,10 +113,12 @@ services:
     env_file:
       - ./frontend/.env
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:8004}
-      VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
-      VITE_SENTRY_ENVIRONMENT: ${VITE_SENTRY_ENVIRONMENT:-DEV}
-      VITE_SENTRY_TRACES_SAMPLE_RATE: ${VITE_SENTRY_TRACES_SAMPLE_RATE:-0}
+      # Keep fixed defaults while allowing frontend/.env.local to override
+      # optional Vite values when the host shell leaves them unset.
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8004}
+      - VITE_SENTRY_DSN
+      - VITE_SENTRY_ENVIRONMENT
+      - VITE_SENTRY_TRACES_SAMPLE_RATE
     command: npm run dev
     stdin_open: true
     tty: true

@@ -136,12 +136,8 @@ const DocumentListPage: React.FC = () => {
   /* toolbar header ------------------------------------------------- */
   const activeDocs = tab === 'my' ? docs : sharedDocs;
   const summary = useMemo(() => {
-    if (tab === 'shared') {
-      return `${sharedDocs.length} shared document${sharedDocs.length !== 1 ? 's' : ''}`;
-    }
-    const total = docs.length;
-    const pinned = docs.filter(d => d.is_pinned).length;
-    return `${total} document${total !== 1 ? 's' : ''}${pinned ? ` · ${pinned} pinned` : ''}`;
+    const count = tab === 'shared' ? sharedDocs.length : docs.length;
+    return `${count} documents`;
   }, [docs, sharedDocs, tab]);
 
   usePageToolbarHeader('Workspace', summary);
@@ -329,7 +325,7 @@ const DocumentListPage: React.FC = () => {
             variant={kindFilter === 'all' ? 'filled' : 'outlined'}
             color={kindFilter === 'all' ? 'primary' : 'default'}
             onClick={() => setKindFilter('all')}
-            sx={{ fontWeight: 600, cursor: 'pointer' }}
+            sx={{ fontWeight: kindFilter === 'all' ? 600 : 400, cursor: 'pointer' }}
           />
           {availableKinds.map(k => (
             <Chip
@@ -337,7 +333,7 @@ const DocumentListPage: React.FC = () => {
               variant={kindFilter === k ? 'filled' : 'outlined'}
               color={kindFilter === k ? 'primary' : 'default'}
               onClick={() => setKindFilter(k)}
-              sx={{ fontWeight: 600, cursor: 'pointer' }}
+              sx={{ fontWeight: kindFilter === k ? 600 : 400, cursor: 'pointer' }}
             />
           ))}
         </Stack>
@@ -349,7 +345,7 @@ const DocumentListPage: React.FC = () => {
             variant={statusFilter === 'all' ? 'filled' : 'outlined'}
             color={statusFilter === 'all' ? 'primary' : 'default'}
             onClick={() => setStatusFilter('all')}
-            sx={{ fontWeight: 600, cursor: 'pointer' }}
+            sx={{ fontWeight: statusFilter === 'all' ? 600 : 400, cursor: 'pointer' }}
           />
           {(Object.keys(STATUS_META) as DocumentStatus[]).map(s => (
             <Chip
@@ -357,7 +353,7 @@ const DocumentListPage: React.FC = () => {
               variant={statusFilter === s ? 'filled' : 'outlined'}
               color={statusFilter === s ? 'primary' : 'default'}
               onClick={() => setStatusFilter(s)}
-              sx={{ fontWeight: 600, cursor: 'pointer' }}
+              sx={{ fontWeight: statusFilter === s ? 600 : 400, cursor: 'pointer' }}
             />
           ))}
         </Stack>
@@ -469,8 +465,8 @@ const DocumentListPage: React.FC = () => {
                       borderLeftColor: accent,
                       boxShadow: `0 8px 24px ${alpha(accent, 0.12)}`,
                     },
-                    '& .doc-actions': { opacity: { xs: 1, sm: 0 }, transition: 'opacity 0.15s ease' },
-                    '&:hover .doc-actions': { opacity: 1 },
+                    '& .doc-actions': { opacity: { xs: 1, md: 0 }, transition: 'opacity 0.15s ease' },
+                    '@media (hover: hover)': { '&:hover .doc-actions': { opacity: 1 } },
                   }}
                   onClick={() => navigate(`/workspace/${doc.id}`)}
                   role="article"
@@ -631,14 +627,16 @@ const DocumentListPage: React.FC = () => {
       )}
 
       {/* ── FAB ─────────────────────────────────────────────────── */}
-      <Fab
-        color="primary"
-        onClick={() => navigate('/workspace/new')}
-        aria-label="Create new document"
-        sx={{ position: 'fixed', bottom: 32, right: 32 }}
-      >
-        <AddIcon />
-      </Fab>
+      {(loading || docs.length > 0) && (
+        <Fab
+          color="primary"
+          onClick={() => navigate('/workspace/new')}
+          aria-label="Create new document"
+          sx={{ position: 'fixed', bottom: 32, right: 32 }}
+        >
+          <AddIcon />
+        </Fab>
+      )}
 
       {/* ── Upload dialog ──────────────────────────────────────── */}
       <UploadDocumentDialog

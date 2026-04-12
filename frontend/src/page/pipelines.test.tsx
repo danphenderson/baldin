@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import ThemeProvider from '../theme/theme-provider';
 import { UserContext } from '../context/user-context';
 import { ToolbarHeaderContext } from '../layout/toolbar-header-context';
@@ -69,7 +70,9 @@ describe('PipelinesPage', () => {
       <ThemeProvider>
         <ToolbarHeaderContext.Provider value={vi.fn()}>
           <UserContext.Provider value={userContextValue}>
-            <PipelinesPage />
+            <MemoryRouter>
+              <PipelinesPage />
+            </MemoryRouter>
           </UserContext.Provider>
         </ToolbarHeaderContext.Provider>
       </ThemeProvider>,

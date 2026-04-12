@@ -23,6 +23,7 @@ import {
   type ActionItemDetailRead,
   type ActionItemUpdate,
 } from '../service/action-items';
+import { AgentEnabledMultilineField } from './agent-surface';
 
 /* ------------------------------------------------------------------ */
 /*  Kind / priority labels                                             */
@@ -240,13 +241,26 @@ const CreateActionItemDialog: React.FC<CreateActionItemDialogProps> = ({
             slotProps={{ inputLabel: { shrink: true } }}
           />
 
-          <TextField
+          <AgentEnabledMultilineField
             label="Description"
             multiline
             minRows={2}
             fullWidth
+            surfaceId={editItem?.id ?? defaults?.conversation_id ?? defaults?.document_id ?? defaults?.lead_id ?? defaults?.application_id ?? 'action-item-dialog'}
+            fieldKey="action_item_description"
+            entityRefs={[
+              ...(editItem?.application_id ? [{ kind: 'application', id: editItem.application_id, label: editItem.title }] : []),
+              ...(editItem?.lead_id ? [{ kind: 'lead', id: editItem.lead_id, label: editItem.title }] : []),
+              ...(editItem?.document_id ? [{ kind: 'document', id: editItem.document_id, label: editItem.title }] : []),
+              ...(editItem?.conversation_id ? [{ kind: 'conversation', id: editItem.conversation_id, label: editItem.title }] : []),
+              ...(!editItem && defaultApplicationId ? [{ kind: 'application', id: defaultApplicationId, label: title || 'Action item' }] : []),
+              ...(!editItem && defaultLeadId ? [{ kind: 'lead', id: defaultLeadId, label: title || 'Action item' }] : []),
+              ...(!editItem && defaultDocumentId ? [{ kind: 'document', id: defaultDocumentId, label: title || 'Action item' }] : []),
+              ...(!editItem && defaultConversationId ? [{ kind: 'conversation', id: defaultConversationId, label: title || 'Action item' }] : []),
+            ]}
+            applicationId={editItem?.application_id ?? defaultApplicationId ?? null}
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={setDescription}
             placeholder="Optional notes or context"
           />
 

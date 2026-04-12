@@ -12,6 +12,14 @@ export type AgentRunRead = components['schemas']['AgentRunRead'];
 export type AgentRunSummaryRead = components['schemas']['AgentRunSummaryRead'];
 export type AgentRunStatus = components['schemas']['AgentRunStatus'];
 export type AgentRunTriggerKind = components['schemas']['AgentRunTriggerKind'];
+export type AgentRunApplyMode = components['schemas']['AgentRunApplyMode'];
+export type AgentRunApplyStatus = components['schemas']['AgentRunApplyStatus'];
+export type AgentRunSourceSurfaceKind = components['schemas']['AgentRunSourceSurfaceKind'];
+export type AgentSuggestedEditRead = components['schemas']['AgentSuggestedEditRead'];
+export type AgentSurfaceEntityRef = components['schemas']['AgentSurfaceEntityRef'];
+export type AgentSurfaceRunRequest = components['schemas']['AgentSurfaceRunRequest'];
+export type AgentSurfaceRunApplyRequest = components['schemas']['AgentSurfaceRunApplyRequest'];
+export type AgentSurfaceContentFormat = components['schemas']['ContentFormat'];
 
 type AgentListPage = components['schemas']['PaginatedResponse_AgentSummaryRead_'];
 type RawAgentRunsPaginatedRead = components['schemas']['PaginatedResponse_AgentRunSummaryRead_'];
@@ -25,6 +33,15 @@ export interface AgentListFilters {
 export interface AgentRunsPagination {
   page?: number;
   page_size?: number;
+}
+
+export interface AgentRunFilters extends AgentRunsPagination {
+  session_document_id?: string;
+  source_document_id?: string;
+  source_field_key?: string;
+  source_route?: string;
+  source_anchor_id?: string;
+  apply_status?: AgentRunApplyStatus;
 }
 
 const DEFAULT_RUNS_PAGE = 1;
@@ -121,18 +138,22 @@ export const runAgent = async (
   }));
 };
 
-export const getRunsBySessionDocument = async (
+export const getFilteredAgentRuns = async (
   token: string,
-  sessionDocumentId: string,
-  pagination?: AgentRunsPagination,
+  filters?: AgentRunFilters,
 ): Promise<AgentRunsPaginatedRead> => {
-  const page = pagination?.page ?? DEFAULT_RUNS_PAGE;
-  const pageSize = pagination?.page_size ?? DEFAULT_RUNS_PAGE_SIZE;
+  const page = filters?.page ?? DEFAULT_RUNS_PAGE;
+  const pageSize = filters?.page_size ?? DEFAULT_RUNS_PAGE_SIZE;
   const client = createApiClient(token);
   const response = unwrap<RawAgentRunsPaginatedRead>(await client.GET('/api/v1/agents/runs', {
     params: {
       query: {
-        session_document_id: sessionDocumentId,
+        session_document_id: filters?.session_document_id,
+        source_document_id: filters?.source_document_id,
+        source_field_key: filters?.source_field_key,
+        source_route: filters?.source_route,
+        source_anchor_id: filters?.source_anchor_id,
+        apply_status: filters?.apply_status,
         page,
         page_size: pageSize,
       },
@@ -140,4 +161,48 @@ export const getRunsBySessionDocument = async (
   }));
 
   return normalizePaginatedResponse(response, { page, page_size: pageSize });
+};
+
+export const getRunsBySessionDocument = async (
+  token: string,
+  sessionDocumentId: string,
+  pagination?: AgentRunsPagination,
+): Promise<AgentRunsPaginatedRead> => getFilteredAgentRuns(token, {
+  session_document_id: sessionDocumentId,
+  page: pagination?.page,
+  page_size: pagination?.page_size,
+});
+
+export const createAgentSurfaceRun = async (
+  token: string,
+  id: string,
+  payload: AgentSurfaceRunRequest,
+): Promise<AgentRunRead> => {
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/api/v1/agents/{id}/surface-runs', {
+    params: { path: { id } },
+    body: payload,
+  }));
+};
+
+export const applyAgentSurfaceRun = async (
+  token: string,
+  runId: string,
+  payload: AgentSurfaceRunApplyRequest = {},
+): Promise<AgentRunRead> => {
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/api/v1/agents/runs/{run_id}/apply', {
+    params: { path: { run_id: runId } },
+    body: payload,
+  }));
+};
+
+export const dismissAgentSurfaceRun = async (
+  token: string,
+  runId: string,
+): Promise<AgentRunRead> => {
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/api/v1/agents/runs/{run_id}/dismiss', {
+    params: { path: { run_id: runId } },
+  }));
 };

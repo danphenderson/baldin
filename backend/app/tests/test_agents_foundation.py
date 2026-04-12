@@ -143,6 +143,9 @@ async def test_agent_and_agent_run_relationships(registered_user) -> None:
     assert db_child_run.parent_run_id == parent_run.id
     assert db_child_run.trigger_kind == "manual"
     assert db_child_run.status == "pending"
+    assert db_child_run.apply_status == "pending"
+    assert db_child_run.source_surface_kind is None
+    assert db_child_run.suggested_edit is None
     assert db_child_run.input_context == {}
 
 
@@ -343,6 +346,14 @@ async def test_agent_chat_session_and_message_check_constraints_reject_invalid_v
             await session.commit()
 
         await session.rollback()
+
+        agent = models.Agent(
+            user_id=user_id,
+            name="Constraint Workspace",
+            kind="custom",
+        )
+        session.add(agent)
+        await session.flush()
 
         chat_session = models.AgentChatSession(
             agent_id=agent.id,

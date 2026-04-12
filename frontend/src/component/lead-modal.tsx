@@ -78,6 +78,7 @@ import {
 import type { ApplicationCreationIntent } from '../service/applications';
 import { createConnection } from '../service/connections';
 import ApplicationIntentButton from './application-intent-button';
+import { AgentEnabledMultilineField } from './agent-surface';
 
 type LeadTab = 'overview' | 'edit' | 'notes' | 'comments' | 'people';
 export type LeadModalTab = LeadTab;
@@ -275,21 +276,26 @@ const MetricPill: React.FC<{
 
 const CommentComposer: React.FC<{
   label: string;
+  surfaceId: string;
+  entityRefs: Array<{ kind: string; id: string; label?: string }>;
   draft: CommentDraft;
   disabled?: boolean;
   submitting?: boolean;
   submitLabel: string;
   onChange: (next: CommentDraft) => void;
   onSubmit: () => void;
-}> = ({ label, draft, disabled, submitting, submitLabel, onChange, onSubmit }) => (
+}> = ({ label, surfaceId, entityRefs, draft, disabled, submitting, submitLabel, onChange, onSubmit }) => (
   <Stack spacing={1.5}>
-    <TextField
+    <AgentEnabledMultilineField
       label={label}
       multiline
       minRows={3}
+      surfaceId={surfaceId}
+      fieldKey="lead_comment_body"
+      entityRefs={entityRefs}
       value={draft.content}
       disabled={disabled}
-      onChange={(event) => onChange({ ...draft, content: event.target.value })}
+      onChange={(nextValue) => onChange({ ...draft, content: nextValue })}
       placeholder="Share context, interview signals, or useful follow-up questions."
     />
     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ sm: 'center' }}>
@@ -400,6 +406,8 @@ const CommentThread: React.FC<{
         <Box sx={{ pl: { sm: 6 } }}>
           <CommentComposer
             label="Reply"
+            surfaceId={comment.id}
+            entityRefs={[]}
             draft={replyDraft}
             onChange={onReplyChange}
             onSubmit={onReplySubmit}
@@ -924,13 +932,16 @@ const LeadModal: React.FC<LeadModalProps> = ({
             </FormControl>
           </Grid>
           <Grid size={12}>
-            <TextField
+            <AgentEnabledMultilineField
               fullWidth
               label="Description"
               multiline
               minRows={7}
+              surfaceId={lead.id}
+              fieldKey="lead_shared_description"
+              entityRefs={[{ kind: 'lead', id: lead.id, label: lead.title ?? 'Lead' }]}
               value={sharedDraft.description}
-              onChange={(event) => setSharedDraft((current) => ({ ...current, description: event.target.value }))}
+              onChange={(nextValue) => setSharedDraft((current) => ({ ...current, description: nextValue }))}
               disabled={!canEditSharedField(lead.description, permissions)}
             />
           </Grid>
@@ -986,12 +997,15 @@ const LeadModal: React.FC<LeadModalProps> = ({
           </Stack>
         </Paper>
 
-        <TextField
+        <AgentEnabledMultilineField
           label="Internal notes"
           multiline
           minRows={8}
+          surfaceId={lead.id}
+          fieldKey="lead_private_notes"
+          entityRefs={[{ kind: 'lead', id: lead.id, label: lead.title ?? 'Lead' }]}
           value={noteDraft}
-          onChange={(event) => setNoteDraft(event.target.value)}
+          onChange={setNoteDraft}
           disabled={!permissions?.can_update_registration}
           placeholder="Capture interview prep, salary signals, concerns, or outreach notes visible only to you."
         />
@@ -1051,6 +1065,8 @@ const LeadModal: React.FC<LeadModalProps> = ({
         {permissions.can_post_comments ? (
           <CommentComposer
             label="Add a comment"
+            surfaceId={lead.id}
+            entityRefs={[{ kind: 'lead', id: lead.id, label: lead.title ?? 'Lead' }]}
             draft={commentDraft}
             onChange={setCommentDraft}
             onSubmit={handlePostComment}

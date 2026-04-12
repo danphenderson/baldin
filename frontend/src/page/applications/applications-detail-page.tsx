@@ -35,6 +35,7 @@ import RunAgentMenu from '../../component/run-agent-menu';
 import ChatAgentMenu from '../../component/chat-agent-menu';
 import type { AgentRunRead } from '../../service/agents';
 import type { ActionItemRead, ActionItemCreate } from '../../service/action-items';
+import { AgentEnabledMultilineField } from '../../component/agent-surface';
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -164,7 +165,7 @@ const ApplicationDetailPage: React.FC = () => {
 
   const lead = app?.lead;
 
-  usePageToolbarHeader('Application', lead?.title || 'Loading\u2026');
+  usePageToolbarHeader('Application', lead?.title || 'Loading…');
 
   /* ---------------------------------------------------------------- */
   /*  Fetch application                                                */
@@ -266,7 +267,7 @@ const ApplicationDetailPage: React.FC = () => {
   /* save notes on blur */
   const handleNotesSave = async () => {
     if (!token || !app || localNotes === (app.notes ?? '')) return;
-    showSuccess('Saving\u2026');
+    showSuccess('Saving…');
     try {
       const updated = await updateApplication(token, app.id, { notes: localNotes });
       setApp(updated);
@@ -279,7 +280,7 @@ const ApplicationDetailPage: React.FC = () => {
   /* save next step on blur */
   const handleNextStepSave = async () => {
     if (!token || !app || localNextStep === (app.next_step ?? '')) return;
-    showSuccess('Saving\u2026');
+    showSuccess('Saving…');
     try {
       const updated = await updateApplication(token, app.id, { next_step: localNextStep || null });
       setApp(updated);
@@ -295,7 +296,7 @@ const ApplicationDetailPage: React.FC = () => {
     const newVal = localNextStepDue || null;
     const curVal = app.next_step_due ? app.next_step_due.slice(0, 10) : null;
     if (newVal === curVal) return;
-    showSuccess('Saving\u2026');
+    showSuccess('Saving…');
     try {
       const updated = await updateApplication(token, app.id, { next_step_due: newVal ? `${newVal}T00:00:00` : null });
       setApp(updated);
@@ -311,7 +312,7 @@ const ApplicationDetailPage: React.FC = () => {
     const currentValue = (app.outcome_reason ?? '').trim() || null;
     if (nextValue === currentValue) return;
 
-    showSuccess('Saving\u2026');
+    showSuccess('Saving…');
     try {
       const updated = await updateApplication(token, app.id, {
         outcome_reason: nextValue,
@@ -597,13 +598,20 @@ const ApplicationDetailPage: React.FC = () => {
           <Typography variant="subtitle1" fontWeight={700} gutterBottom>
             Notes
           </Typography>
-          <TextField
+          <AgentEnabledMultilineField
             multiline
             minRows={3}
             fullWidth
-            placeholder="Add notes about this application\u2026"
+            placeholder="Add notes about this application…"
+            surfaceId={app.id}
+            fieldKey="application_notes"
+            entityRefs={[
+              { kind: 'application', id: app.id, label: lead?.title ?? 'Application' },
+              ...(lead?.id ? [{ kind: 'lead', id: lead.id, label: lead.title ?? 'Lead' }] : []),
+            ]}
+            applicationId={app.id}
             value={localNotes}
-            onChange={(e) => setLocalNotes(e.target.value)}
+            onChange={setLocalNotes}
             onBlur={handleNotesSave}
             variant="outlined"
             size="small"
@@ -672,17 +680,24 @@ const ApplicationDetailPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, maxWidth: 640 }}>
               Capture why this application ended so the closure is still understandable when you review the history later.
             </Typography>
-            <TextField
+            <AgentEnabledMultilineField
               multiline
               minRows={2}
               fullWidth
               label="Outcome reason"
+              surfaceId={app.id}
+              fieldKey="application_outcome_reason"
+              entityRefs={[
+                { kind: 'application', id: app.id, label: lead?.title ?? 'Application' },
+                ...(lead?.id ? [{ kind: 'lead', id: lead.id, label: lead.title ?? 'Lead' }] : []),
+              ]}
+              applicationId={app.id}
               placeholder={app.outcome === 'withdrawn'
                 ? 'e.g. Accepted another offer before the final round'
                 : 'e.g. Team closed the role after the onsite'
               }
               value={localOutcomeReason}
-              onChange={(e) => setLocalOutcomeReason(e.target.value)}
+              onChange={setLocalOutcomeReason}
               onBlur={handleOutcomeReasonSave}
               variant="outlined"
               size="small"
@@ -956,7 +971,7 @@ const ApplicationDetailPage: React.FC = () => {
                 disabled={generating || templates.length === 0}
                 sx={{ whiteSpace: 'nowrap' }}
               >
-                {generating ? 'Generating\u2026' : 'AI Generate'}
+                {generating ? 'Generating…' : 'AI Generate'}
               </Button>
               <RunAgentMenu
                 applicationId={app.id}

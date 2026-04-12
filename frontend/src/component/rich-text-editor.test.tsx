@@ -135,4 +135,25 @@ describe('RichTextEditor', () => {
     expect(useEditorMock.mock.calls[1]?.[0]?.extensions).toBe(firstExtensions);
     expect(useEditorMock.mock.calls[1]?.[1]?.[0]).toBe(firstDependency);
   });
+
+  it('notifies the page layer when the editor instance is ready', async () => {
+    const fakeEditor = createFakeEditor({ type: 'doc', content: [] });
+    const onEditorReady = vi.fn();
+
+    useEditorMock.mockReturnValue(fakeEditor);
+
+    render(
+      <RichTextEditor
+        content=""
+        contentFormat="tiptap_json"
+        onChange={vi.fn()}
+        onEditorReady={onEditorReady}
+        readOnly
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onEditorReady).toHaveBeenCalledWith(fakeEditor);
+    });
+  });
 });

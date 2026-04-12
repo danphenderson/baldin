@@ -215,8 +215,8 @@ const AccountPage: React.FC = () => {
             <TableRow>
               <TableCell sx={{ fontWeight: 700 }}>Feature</TableCell>
               {TIER_ORDER.map((t) => (
-                <TableCell key={t} align="center" sx={{ fontWeight: 700 }}>
-                  <Stack spacing={0.5} alignItems="center">
+                <TableCell key={t} align="left" sx={{ fontWeight: 700 }}>
+                  <Stack spacing={0.5} alignItems="flex-start">
                     <span>{TIER_META[t].label}</span>
                     {t === effectiveTier && (
                       <Chip label="Current" size="small" color="primary" variant="outlined" sx={{ height: 20, fontSize: '0.65rem' }} />
@@ -239,9 +239,9 @@ const AccountPage: React.FC = () => {
                 }}
               >
                 <TableCell>{row.feature}</TableCell>
-                <TableCell align="center">{renderCell(row.free)}</TableCell>
-                <TableCell align="center">{renderCell(row.starter)}</TableCell>
-                <TableCell align="center">{renderCell(row.pro)}</TableCell>
+                <TableCell align="left">{renderCell(row.free)}</TableCell>
+                <TableCell align="left">{renderCell(row.starter)}</TableCell>
+                <TableCell align="left">{renderCell(row.pro)}</TableCell>
               </TableRow>
             ))}
             <TableRow>
@@ -251,7 +251,7 @@ const AccountPage: React.FC = () => {
                 const currentIdx = TIER_ORDER.indexOf(effectiveTier);
                 const canUpgrade = idx > currentIdx;
                 return (
-                  <TableCell key={t} align="center" sx={{ py: 2 }}>
+                  <TableCell key={t} align="left" sx={{ py: 2 }}>
                     {canUpgrade ? (
                       <Button variant="contained" size="small" onClick={() => setUpgradeDialog(t)}>Upgrade</Button>
                     ) : idx === currentIdx ? (

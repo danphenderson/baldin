@@ -22,6 +22,7 @@ import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import EmptyState from '../component/common/empty-state';
 import ConfirmDialog from '../component/common/confirm-dialog';
+import { AgentEnabledMultilineField } from '../component/agent-surface';
 import {
   type CrawlerPipelineRead,
   type CrawlerPipelineCreate,
@@ -37,6 +38,7 @@ import {
 import { monoFontFamily } from '../design-system/tokens/typography';
 import { getStatusColors } from '../theme/status-colors';
 import { softBrandGradient } from '../theme/effects';
+import { MetricStrip } from '../design-system';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -162,36 +164,18 @@ const OverviewStrip: React.FC<{ pipelines: CrawlerPipelineRead[] }> = ({ pipelin
     return { total: pipelines.length, active: activePipelines, totalRuns, failedRuns };
   }, [pipelines]);
 
-  const items: { label: string; value: string | number; color?: string; icon: React.ReactElement }[] = [
-    { label: 'Pipelines', value: stats.total, icon: <PipelineIcon fontSize="small" /> },
-    { label: 'Active', value: stats.active, icon: <SuccessIcon fontSize="small" /> },
-    { label: 'Total runs', value: stats.totalRuns, icon: <TrendingIcon fontSize="small" /> },
-    { label: 'Failed runs', value: stats.failedRuns, color: stats.failedRuns > 0 ? theme.palette.error.main : undefined, icon: <ErrorIcon fontSize="small" /> },
-  ];
-
   return (
-    <Card sx={{ mb: 3 }}>
-      <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
-        <Stack
-          direction="row"
-          divider={<Divider orientation="vertical" flexItem />}
-          spacing={3}
-          sx={{ justifyContent: 'space-around', flexWrap: 'wrap', rowGap: 1 }}
-        >
-          {items.map((item) => (
-            <Box key={item.label} sx={{ textAlign: 'center', minWidth: 80 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.25, color: item.color ?? theme.palette.text.secondary }}>
-                {item.icon}
-              </Box>
-              <Typography variant="h6" fontWeight={700} sx={{ color: item.color ?? 'text.primary', lineHeight: 1.2 }}>
-                {item.value}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">{item.label}</Typography>
-            </Box>
-          ))}
-        </Stack>
-      </CardContent>
-    </Card>
+    <Box sx={{ mb: 3 }}>
+      <MetricStrip
+        variant="card"
+        items={[
+          { label: 'Pipelines', value: stats.total, icon: <PipelineIcon fontSize="small" /> },
+          { label: 'Active', value: stats.active, icon: <SuccessIcon fontSize="small" /> },
+          { label: 'Total runs', value: stats.totalRuns, icon: <TrendingIcon fontSize="small" /> },
+          { label: 'Failed runs', value: stats.failedRuns, color: stats.failedRuns > 0 ? theme.palette.error.main : undefined, icon: <ErrorIcon fontSize="small" /> },
+        ]}
+      />
+    </Box>
   );
 };
 
@@ -562,16 +546,19 @@ const PipelineFormDialog: React.FC<{
           label="Require human review"
         />
         {jsonFields.map(({ key, label }) => (
-          <TextField
+          <AgentEnabledMultilineField
             key={key}
             label={label}
-            value={form[key]}
-            onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
+            value={String(form[key])}
+            onChange={(nextValue) => setForm((prev) => ({ ...prev, [key]: nextValue }))}
             fullWidth
             multiline
             minRows={3}
             maxRows={8}
             size="small"
+            surfaceId={form.name || 'crawler-pipeline-dialog'}
+            fieldKey={`crawler_${key}`}
+            entityRefs={[]}
             error={!isValidJson(form[key] as string)}
             helperText={!isValidJson(form[key] as string) ? 'Invalid JSON' : undefined}
             slotProps={{ input: { sx: { fontFamily: monoFontFamily, fontSize: '0.8rem' } } }}
@@ -821,7 +808,7 @@ const CrawlersPage: React.FC = () => {
     } catch (e: unknown) { setError(getErrorMessage(e)); }
   };
 
-  usePageToolbarHeader('Crawlers', `${pipelines.length} pipeline${pipelines.length !== 1 ? 's' : ''}`);
+  usePageToolbarHeader('Crawlers', `${pipelines.length} crawlers`);
 
   // -----------------------------------------------------------------------
   // Render

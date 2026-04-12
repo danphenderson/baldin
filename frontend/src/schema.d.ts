@@ -371,9 +371,21 @@ export interface paths {
     /** Save Agent Chat To Document */
     post: operations["save_agent_chat_to_document_api_v1_agents_chat__session_id__save_to_document_post"];
   };
+  "/api/v1/agents/{id}/surface-runs": {
+    /** Create Agent Surface Run */
+    post: operations["create_agent_surface_run_api_v1_agents__id__surface_runs_post"];
+  };
   "/api/v1/agents/{id}/run": {
     /** Run Agent */
     post: operations["run_agent_api_v1_agents__id__run_post"];
+  };
+  "/api/v1/agents/runs/{run_id}/apply": {
+    /** Apply Agent Surface Run */
+    post: operations["apply_agent_surface_run_api_v1_agents_runs__run_id__apply_post"];
+  };
+  "/api/v1/agents/runs/{run_id}/dismiss": {
+    /** Dismiss Agent Surface Run */
+    post: operations["dismiss_agent_surface_run_api_v1_agents_runs__run_id__dismiss_post"];
   };
   "/api/v1/agents/{id}/runs": {
     /** Get Agent Runs */
@@ -1565,6 +1577,16 @@ export interface components {
         [key: string]: unknown;
       };
     };
+    /**
+     * AgentRunApplyMode
+     * @enum {string}
+     */
+    AgentRunApplyMode: "insert_after_anchor" | "replace_selection" | "append_to_surface";
+    /**
+     * AgentRunApplyStatus
+     * @enum {string}
+     */
+    AgentRunApplyStatus: "pending" | "applied" | "dismissed";
     /** AgentRunExecuteRequest */
     AgentRunExecuteRequest: {
       /**
@@ -1630,6 +1652,37 @@ export interface components {
       trigger_kind: components["schemas"]["AgentRunTriggerKind"];
       /** @description Current execution status */
       status: components["schemas"]["AgentRunStatus"];
+      /** @description Surface type that originated the run */
+      source_surface_kind?: components["schemas"]["AgentRunSourceSurfaceKind"] | null;
+      /**
+       * Source Document Id
+       * @description Source document identifier when the run came from a document surface
+       */
+      source_document_id?: string | null;
+      /**
+       * Source Field Key
+       * @description Host-defined surface field key for non-document surfaces
+       */
+      source_field_key?: string | null;
+      /**
+       * Source Route
+       * @description Host route where the run was requested
+       */
+      source_route?: string | null;
+      /**
+       * Source Anchor Id
+       * @description Optional source anchor or block identifier within the surface
+       */
+      source_anchor_id?: string | null;
+      /** @description Whether the suggestion is pending, applied, or dismissed */
+      apply_status: components["schemas"]["AgentRunApplyStatus"];
+      /**
+       * Applied At
+       * @description When the suggestion was marked applied
+       */
+      applied_at?: string | null;
+      /** @description Previewable suggested edit payload returned by the backend */
+      suggested_edit?: components["schemas"]["AgentSuggestedEditRead"] | null;
       /**
        * Session Document Id
        * @description Session document created or updated by the run
@@ -1717,6 +1770,11 @@ export interface components {
       content_format?: string | null;
     };
     /**
+     * AgentRunSourceSurfaceKind
+     * @enum {string}
+     */
+    AgentRunSourceSurfaceKind: "cell_doc_editor" | "rich_text_editor" | "multiline_text_field";
+    /**
      * AgentRunStatus
      * @enum {string}
      */
@@ -1772,6 +1830,37 @@ export interface components {
       trigger_kind: components["schemas"]["AgentRunTriggerKind"];
       /** @description Current execution status */
       status: components["schemas"]["AgentRunStatus"];
+      /** @description Surface type that originated the run */
+      source_surface_kind?: components["schemas"]["AgentRunSourceSurfaceKind"] | null;
+      /**
+       * Source Document Id
+       * @description Source document identifier when the run came from a document surface
+       */
+      source_document_id?: string | null;
+      /**
+       * Source Field Key
+       * @description Host-defined surface field key for non-document surfaces
+       */
+      source_field_key?: string | null;
+      /**
+       * Source Route
+       * @description Host route where the run was requested
+       */
+      source_route?: string | null;
+      /**
+       * Source Anchor Id
+       * @description Optional source anchor or block identifier within the surface
+       */
+      source_anchor_id?: string | null;
+      /** @description Whether the suggestion is pending, applied, or dismissed */
+      apply_status: components["schemas"]["AgentRunApplyStatus"];
+      /**
+       * Applied At
+       * @description When the suggestion was marked applied
+       */
+      applied_at?: string | null;
+      /** @description Previewable suggested edit payload returned by the backend */
+      suggested_edit?: components["schemas"]["AgentSuggestedEditRead"] | null;
       /**
        * Session Document Id
        * @description Session document created or updated by the run
@@ -1801,7 +1890,24 @@ export interface components {
      * AgentRunTriggerKind
      * @enum {string}
      */
-    AgentRunTriggerKind: "manual" | "event";
+    AgentRunTriggerKind: "manual" | "event" | "surface_mention";
+    /** AgentSuggestedEditRead */
+    AgentSuggestedEditRead: {
+      /** @description Requested surface apply operation for the suggestion */
+      operation: components["schemas"]["AgentRunApplyMode"];
+      /** @description Suggested edit content format */
+      content_format: components["schemas"]["ContentFormat"];
+      /**
+       * Content
+       * @description Suggested plain-text edit content
+       */
+      content: string;
+      /**
+       * Summary
+       * @description Compact preview summary for the suggested edit
+       */
+      summary?: string | null;
+    };
     /** AgentSummaryRead */
     AgentSummaryRead: {
       /**
@@ -1845,6 +1951,101 @@ export interface components {
        * @description Whether the agent can be launched
        */
       is_enabled: boolean;
+    };
+    /** AgentSurfaceEntityRef */
+    AgentSurfaceEntityRef: {
+      /**
+       * Kind
+       * @description Explicit host-provided entity kind
+       */
+      kind: string;
+      /**
+       * Id
+       * @description Explicit host-provided entity identifier
+       */
+      id: string;
+      /**
+       * Label
+       * @description Optional display label for the referenced entity
+       */
+      label?: string | null;
+    };
+    /** AgentSurfaceRunApplyRequest */
+    AgentSurfaceRunApplyRequest: {
+      /**
+       * Session Document Id
+       * @description Document identifier to link when a document surface apply creates a new version
+       */
+      session_document_id?: string | null;
+      /**
+       * Session Version Id
+       * @description Version identifier to link when a document surface apply creates a new version
+       */
+      session_version_id?: string | null;
+    };
+    /** AgentSurfaceRunRequest */
+    AgentSurfaceRunRequest: {
+      /** @description Frontend surface type that originated the mention task */
+      surface_kind: components["schemas"]["AgentRunSourceSurfaceKind"];
+      /**
+       * Source Route
+       * @description Frontend route where the run was requested
+       */
+      source_route: string;
+      /**
+       * Source Document Id
+       * @description Source document identifier for persisted document surfaces
+       */
+      source_document_id?: string | null;
+      /**
+       * Source Field Key
+       * @description Host-defined field key for the originating surface
+       */
+      source_field_key?: string | null;
+      /**
+       * Anchor Id
+       * @description Optional block or anchor identifier within the originating surface
+       */
+      anchor_id?: string | null;
+      /** @description Format of the provided surface snapshot */
+      content_format: components["schemas"]["ContentFormat"];
+      /**
+       * Surface Content
+       * @description Full current surface snapshot
+       */
+      surface_content: string;
+      /**
+       * Selection Text
+       * @description Optional selected text inside the surface
+       */
+      selection_text?: string | null;
+      /**
+       * Selection Start
+       * @description Optional selection start offset for plain-text surfaces
+       */
+      selection_start?: number | null;
+      /**
+       * Selection End
+       * @description Optional selection end offset for plain-text surfaces
+       */
+      selection_end?: number | null;
+      /**
+       * Entity Refs
+       * @description Explicit host-provided entity references for the surface context
+       */
+      entity_refs?: components["schemas"]["AgentSurfaceEntityRef"][];
+      /**
+       * Application Id
+       * @description Optional application context when the host already has one
+       */
+      application_id?: string | null;
+      /**
+       * Prompt Text
+       * @description Explicit user instructions for the task
+       */
+      prompt_text: string;
+      /** @description Requested frontend apply behavior for the suggestion */
+      requested_apply_mode: components["schemas"]["AgentRunApplyMode"];
     };
     /** AgentUpdate */
     AgentUpdate: {
@@ -3336,7 +3537,7 @@ export interface components {
      * DocumentActivityType
      * @enum {string}
      */
-    DocumentActivityType: "document_created" | "document_uploaded" | "version_saved" | "share_created" | "share_updated" | "share_revoked" | "document_archived" | "document_unarchived" | "document_pinned" | "document_unpinned" | "block_created" | "block_updated" | "block_deleted" | "block_reordered" | "block_type_changed";
+    DocumentActivityType: "document_created" | "document_uploaded" | "version_saved" | "agent_task_requested" | "agent_task_applied" | "agent_task_failed" | "agent_task_dismissed" | "share_created" | "share_updated" | "share_revoked" | "document_archived" | "document_unarchived" | "document_pinned" | "document_unpinned" | "block_created" | "block_updated" | "block_deleted" | "block_reordered" | "block_type_changed";
     /** DocumentBlockCreate */
     DocumentBlockCreate: {
       /**
@@ -9500,9 +9701,19 @@ export interface operations {
   /** List Runs By Session */
   list_runs_by_session_api_v1_agents_runs_get: {
     parameters: {
-      query: {
+      query?: {
         /** @description Filter runs by the session document they produced */
-        session_document_id: string;
+        session_document_id?: string | null;
+        /** @description Filter runs by the originating source document */
+        source_document_id?: string | null;
+        /** @description Filter runs by the originating host field key */
+        source_field_key?: string | null;
+        /** @description Filter runs by the originating host route */
+        source_route?: string | null;
+        /** @description Filter runs by the originating anchor or block identifier */
+        source_anchor_id?: string | null;
+        /** @description Filter runs by their apply state */
+        apply_status?: components["schemas"]["AgentRunApplyStatus"] | null;
         page?: number;
         page_size?: number;
       };
@@ -9729,6 +9940,33 @@ export interface operations {
       };
     };
   };
+  /** Create Agent Surface Run */
+  create_agent_surface_run_api_v1_agents__id__surface_runs_post: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AgentSurfaceRunRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["AgentRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Run Agent */
   run_agent_api_v1_agents__id__run_post: {
     parameters: {
@@ -9744,6 +9982,55 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       201: {
+        content: {
+          "application/json": components["schemas"]["AgentRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Apply Agent Surface Run */
+  apply_agent_surface_run_api_v1_agents_runs__run_id__apply_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AgentSurfaceRunApplyRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["AgentRunRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Dismiss Agent Surface Run */
+  dismiss_agent_surface_run_api_v1_agents_runs__run_id__dismiss_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
         content: {
           "application/json": components["schemas"]["AgentRunRead"];
         };

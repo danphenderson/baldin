@@ -138,7 +138,8 @@ const AgentCard: React.FC<AgentCardProps> = ({
                 size="small"
                 onClick={() => onDelete(agent)}
                 aria-label={`Delete ${agent.name}`}
-                sx={{ color: alpha(theme.palette.error.main, 0.7), '&:hover': { color: theme.palette.error.main } }}
+                color="inherit"
+                sx={{ color: 'text.secondary' }}
               >
                 <DeleteIcon fontSize="small" />
               </IconButton>

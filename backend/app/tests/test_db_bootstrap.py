@@ -192,7 +192,12 @@ async def test_drop_and_create_db_and_tables_bootstraps_cell_doc_schema() -> Non
     )
 
     assert {"ck_agents_kind"}.issubset(await _check_constraint_names("agents"))
-    assert {"ck_agent_runs_trigger_kind", "ck_agent_runs_status"}.issubset(
+    assert {
+        "ck_agent_runs_trigger_kind",
+        "ck_agent_runs_status",
+        "ck_agent_runs_source_surface_kind",
+        "ck_agent_runs_apply_status",
+    }.issubset(
         await _check_constraint_names("agent_runs")
     )
     assert {"ck_agent_chat_sessions_status"}.issubset(
@@ -246,6 +251,14 @@ async def test_drop_and_create_db_and_tables_bootstraps_cell_doc_schema() -> Non
         "ix_agent_chat_messages_session_created",
     }.issubset(await _index_names("agent_chat_messages"))
     assert {
+        "ix_agent_runs_source_surface_kind",
+        "ix_agent_runs_source_document_id",
+        "ix_agent_runs_source_field_key",
+        "ix_agent_runs_source_route",
+        "ix_agent_runs_source_anchor_id",
+        "ix_agent_runs_apply_status",
+    }.issubset(await _index_names("agent_runs"))
+    assert {
         "ck_action_items_status",
         "ck_action_items_kind",
         "ck_action_items_priority",
@@ -277,7 +290,12 @@ async def test_create_db_and_tables_applies_head_without_document_activity_block
         not in await _foreign_key_constraint_names("document_activities")
     )
     assert {"ck_agents_kind"}.issubset(await _check_constraint_names("agents"))
-    assert {"ck_agent_runs_trigger_kind", "ck_agent_runs_status"}.issubset(
+    assert {
+        "ck_agent_runs_trigger_kind",
+        "ck_agent_runs_status",
+        "ck_agent_runs_source_surface_kind",
+        "ck_agent_runs_apply_status",
+    }.issubset(
         await _check_constraint_names("agent_runs")
     )
     assert {"ck_agent_chat_sessions_status"}.issubset(

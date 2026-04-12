@@ -30,14 +30,14 @@ graph TD
 	Search --> S3[/skills]
 	Search --> S4[/experiences]
 	Search --> S5[/education]
-	Search --> S6[/certificate]
+	Search --> S6[/certificates]
 	Search --> S7[/companies]
 	Search --> S8[/leads]
 	Search --> S9[/applications]
 	Docs --> D1[/documents]
 	Docs --> D2[/documents/{id}/collaborate*]
-	Automation --> AU1[/extractor]
-	Automation --> AU2[/data_orchestration]
+	Automation --> AU1[/extractors]
+	Automation --> AU2[/orchestration-pipelines]
 	Automation --> AU3[/crawlers]
 	Automation --> AU4[/review]
 	Network --> N1[/directory]
@@ -66,7 +66,7 @@ graph TD
 | `skills` | `/skills` | Skill CRUD |
 | `experiences` | `/experiences` | Experience CRUD |
 | `education` | `/education` | Education CRUD |
-| `certificate` | `/certificate` | Certificate CRUD |
+| `certificates` | `/certificates` | Certificate CRUD |
 | `companies` | `/companies` | Company CRUD and lead associations |
 | `leads` | `/leads` | Lead CRUD, registration, comments, extraction, and related views |
 | `applications` | `/applications` | Application queue, board, detail, and status-history updates |
@@ -84,8 +84,8 @@ The document surface is now the canonical API for resumes, cover letters, and ot
 
 | Tag | Prefix | Purpose |
 | --- | --- | --- |
-| `extractor` | `/extractor` | Extractor CRUD, examples, versioning, and extraction operations |
-| `data_orchestration` | `/data_orchestration` | Orchestration pipeline CRUD and event history |
+| `extractors` | `/extractors` | Extractor CRUD, examples, versioning, and extraction operations |
+| `orchestration-pipelines` | `/orchestration-pipelines` | Orchestration pipeline CRUD and event history |
 | `crawlers` | `/crawlers` | Superuser-managed crawler pipelines and runs |
 | `review` | `/review` | Superuser review queue for pending automation output |
 

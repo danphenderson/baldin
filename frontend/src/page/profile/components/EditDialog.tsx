@@ -6,6 +6,7 @@ import { Check as CheckIcon } from '@mui/icons-material';
 import { FormDialogShell } from '../../../design-system';
 import { SECTION_FIELDS, SECTION_LABELS } from '../constants';
 import type { SectionKey } from '../types';
+import { AgentEnabledMultilineField } from '../../../component/agent-surface';
 
 interface EditDialogProps {
   open: boolean;
@@ -56,20 +57,39 @@ export const EditDialog: React.FC<EditDialogProps> = ({
         <Stack spacing={2} sx={{ mt: 1 }}>
           {SECTION_FIELDS[editSection].map(field => {
             const rawVal = (editItem as Record<string, unknown>)?.[field.key];
-            const displayVal = field.isArray && Array.isArray(rawVal) ? rawVal.join(', ') : rawVal ?? '';
+            const displayVal = field.isArray && Array.isArray(rawVal)
+              ? rawVal.join(', ')
+              : typeof rawVal === 'string' || typeof rawVal === 'number'
+                ? String(rawVal)
+                : '';
+            const commonProps = {
+              key: field.key,
+              fullWidth: true,
+              label: field.label,
+              value: displayVal,
+              type: field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text',
+              InputLabelProps: field.type === 'date' ? { shrink: true } : undefined,
+              size: 'small' as const,
+            };
             return (
-            <TextField
-              key={field.key}
-              fullWidth
-              label={field.label}
-              value={displayVal}
-              onChange={e => setEditItem(prev => prev ? { ...prev, [field.key]: e.target.value } : prev)}
-              multiline={field.multiline}
-              rows={field.rows ?? 1}
-              type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-              InputLabelProps={field.type === 'date' ? { shrink: true } : undefined}
-              size="small"
-            />
+              field.multiline ? (
+                <AgentEnabledMultilineField
+                  {...commonProps}
+                  surfaceId={String((editItem as Record<string, unknown>)?.id ?? `${editSection}-${field.key}`)}
+                  fieldKey={`${editSection}_${field.key}`}
+                  entityRefs={typeof (editItem as Record<string, unknown>)?.id === 'string'
+                    ? [{ kind: editSection, id: (editItem as Record<string, unknown>).id as string, label: SECTION_LABELS[editSection] }]
+                    : []}
+                  onChange={nextValue => setEditItem(prev => prev ? { ...prev, [field.key]: nextValue } : prev)}
+                  multiline
+                  rows={field.rows ?? 1}
+                />
+              ) : (
+                <TextField
+                  {...commonProps}
+                  onChange={e => setEditItem(prev => prev ? { ...prev, [field.key]: e.target.value } : prev)}
+                />
+              )
             );
           })}
         </Stack>

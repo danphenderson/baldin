@@ -16,6 +16,8 @@ import {
   Close as CancelIcon,
   Send as SendIcon,
 } from '@mui/icons-material';
+import type { AgentSurfaceEntityRef } from '../../service/agents';
+import { AgentEnabledMultilineField } from '../agent-surface';
 
 export interface ChatComposerError {
   message: string;
@@ -29,6 +31,7 @@ export interface ChatComposerSourceOption {
 }
 
 export interface ChatComposerProps {
+  surfaceId: string;
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
@@ -46,9 +49,12 @@ export interface ChatComposerProps {
   onToggleUseDocuments: (nextValue: boolean) => void;
   onChangeSelectedDocumentIds: (nextIds: string[]) => void;
   onChangeLookupUrl: (value: string) => void;
+  entityRefs?: AgentSurfaceEntityRef[];
+  applicationId?: string | null;
 }
 
 const ChatComposer: React.FC<ChatComposerProps> = ({
+  surfaceId,
   value,
   onChange,
   onSubmit,
@@ -66,6 +72,8 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
   onToggleUseDocuments,
   onChangeSelectedDocumentIds,
   onChangeLookupUrl,
+  entityRefs = [],
+  applicationId = null,
 }) => {
   const selectedOptions = useMemo(
     () => sourceOptions.filter((option) => selectedDocumentIds.includes(option.id)),
@@ -213,18 +221,22 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
           </Stack>
         </Box>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'flex-end' }}>
-          <TextField
+          <AgentEnabledMultilineField
             fullWidth
             autoFocus
             multiline
             minRows={2}
             maxRows={8}
-            inputProps={{ 'aria-label': 'Chat message' }}
+            slotProps={{ htmlInput: { 'aria-label': 'Chat message' } }}
             placeholder={archived ? 'Archived sessions are read-only.' : 'Ask the agent to refine, draft, or explain…'}
             value={value}
-            onChange={(event) => onChange(event.target.value)}
+            onChange={onChange}
             onKeyDown={handleKeyDown}
             disabled={streaming || archived}
+            surfaceId={surfaceId}
+            fieldKey="agent_chat_message"
+            entityRefs={entityRefs}
+            applicationId={applicationId}
           />
           <Stack direction="row" spacing={1} sx={{ flexShrink: 0, alignSelf: { sm: 'flex-end' } }}>
             {streaming && (

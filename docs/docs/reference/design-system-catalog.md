@@ -83,6 +83,7 @@ Current rule:
 | Pattern | Path | Canonical role | Current known consumers |
 | --- | --- | --- | --- |
 | `CollectionToolbar` | `frontend/src/design-system/patterns/collections/collection-toolbar.tsx` | Slot-based collection header with `search`, `controls`, `actions`, and `secondary` regions | Leads via `lead-search-bar.tsx`, applications queue, conversations |
+| `MetricStrip` | `frontend/src/design-system/patterns/metrics/metric-strip.tsx` | Read-only stat row with `inline` (flush) and `card` (CardShell-wrapped) variants | Applications queue, applications board, leads, pipelines, crawlers |
 | `SectionCard` | `frontend/src/design-system/patterns/sections/section-card.tsx` | Thin `CardShell` composition for section layouts with shared header framing | Profile sections, conversations |
 
 ## Compatibility Inventory
@@ -152,7 +153,6 @@ These files are outside the Phase 2 primitive/pattern pilot but already consume 
 
 These are not part of the shipped catalog today:
 
-- Shared `MetricStrip`
 - Shared `ErrorState`
 - Applications board extraction
 - Shared `LeadModal`

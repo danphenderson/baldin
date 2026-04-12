@@ -17,6 +17,7 @@ export const CELL_DOC_BLOCK_NODE_NAMES = [
   'tableCell',
   'tableHeader',
   'horizontalRule',
+  'agentTask',
   'mentionBlock',
   'embedBlock',
 ] as const;

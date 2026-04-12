@@ -43,6 +43,7 @@ import {
   type ConversationDetailRead,
   type MessageRead,
 } from '../../service/messages';
+import { AgentEnabledMultilineField } from '../../component/agent-surface';
 
 const formatTime = (iso: string): string => {
   const date = new Date(iso);
@@ -318,12 +319,15 @@ const ConversationDetailPage: React.FC = () => {
                         <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                           {isEditing ? (
                             <Stack spacing={1}>
-                              <TextField
+                              <AgentEnabledMultilineField
                                 size="small"
                                 multiline
                                 maxRows={4}
+                                surfaceId={msg.id}
+                                fieldKey="conversation_message_edit"
+                                entityRefs={conversationId ? [{ kind: 'conversation', id: conversationId, label: displayName }] : []}
                                 value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
+                                onChange={setEditContent}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();
@@ -386,14 +390,17 @@ const ConversationDetailPage: React.FC = () => {
       {/* Message input */}
       <Card sx={{ p: 2, flexShrink: 0 }}>
         <Stack direction="row" spacing={1} alignItems="flex-end">
-          <TextField
+          <AgentEnabledMultilineField
             fullWidth
             size="small"
             placeholder="Type a message…"
             multiline
             maxRows={4}
+            surfaceId={conversationId ?? 'conversation-compose'}
+            fieldKey="conversation_message_compose"
+            entityRefs={conversationId ? [{ kind: 'conversation', id: conversationId, label: displayName }] : []}
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={setNewMessage}
             onKeyDown={handleKeyDown}
             disabled={sending}
           />

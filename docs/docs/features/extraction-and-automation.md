@@ -21,16 +21,16 @@ Extractors are user-defined LLM-backed definitions that transform unstructured i
 
 The extraction flow:
 
-1. The user triggers an extraction via `POST /extractor/{id}/run` for a saved extractor definition
+1. The user triggers an extraction via `POST /extractors/{id}/run` for a saved extractor definition
 2. The backend calls `run_extractor`, which fetches content from a URL (`extract_text_from_url`) and passes it through `extraction_runnable`
 3. The LLM produces structured output matching the extractor's schema
 4. Results are returned to the caller
 
-A suggestion endpoint at `POST /extractor/suggest` helps users bootstrap new extractor definitions from sample content.
+A suggestion endpoint at `POST /extractors/suggest` helps users bootstrap new extractor definitions from sample content.
 
 **Frontend:** `/workflows/extractors` — Extractor management UI (`frontend/src/page/extractor.tsx`)
 
-**API:** `/extractor` — CRUD, versioning, extraction execution, and suggestion endpoints
+**API:** `/extractors` — CRUD, versioning, extraction execution, and suggestion endpoints
 
 ## Orchestration Pipelines
 
@@ -43,7 +43,7 @@ Pipelines provide a way to compose extraction, enrichment, and data-transformati
 
 **Frontend:** `/workflows` — Pipeline management (`frontend/src/page/pipelines.tsx`)
 
-**API:** `/data_orchestration` — Pipeline CRUD and event history
+**API:** `/orchestration-pipelines` — Pipeline CRUD and event history
 
 ## Crawlers (Superuser)
 

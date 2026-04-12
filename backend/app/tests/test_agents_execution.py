@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from types import SimpleNamespace
 from typing import AsyncGenerator
 from uuid import UUID
 
@@ -164,6 +165,39 @@ async def _get_application_link(application_id: UUID, document_id: UUID):
             )
         )
         return result.scalars().first()
+
+
+async def _create_source_document(
+    user_id: UUID,
+    *,
+    title: str = "Editable Surface Source",
+    kind: str = "freeform",
+    content: str = "Existing surface content.",
+    content_format: str = "plain_text",
+) -> dict[str, UUID]:
+    async with session_context() as session:
+        document = models.Document(
+            title=title,
+            kind=kind,
+            status="draft",
+            user_id=user_id,
+        )
+        session.add(document)
+        await session.flush()
+
+        version = models.DocumentVersion(
+            document_id=document.id,
+            version_number=1,
+            name="Initial source version",
+            content=content,
+            content_format=content_format,
+        )
+        session.add(version)
+        await session.flush()
+
+        document.head_version_id = version.id
+        await session.commit()
+        return {"document_id": document.id, "version_id": version.id}
 
 
 async def test_run_agent_uses_agent_configured_model(
@@ -596,3 +630,264 @@ async def test_list_runs_by_session_document_empty_for_unknown(
     assert lookup_resp.status_code == 200, lookup_resp.text
     assert lookup_resp.json()["total"] == 0
     assert lookup_resp.json()["items"] == []
+
+
+async def test_create_agent_surface_run_without_application_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    monkeypatch.setattr(
+        agents_route.conf.openai,
+        "get_model",
+        lambda model_name=None: SimpleNamespace(
+            invoke=lambda messages: SimpleNamespace(
+                content="A suggested follow-up paragraph."
+            )
+        ),
+    )
+
+    async with _client() as client:
+        email, user_id = await _create_user("surface-run-no-app-pass")
+        headers = await _auth_headers(client, email, "surface-run-no-app-pass")
+        agent_id = await _create_agent(
+            user_id,
+            name="Surface Coach",
+            kind="custom",
+            instructions="Help refine the active surface.",
+        )
+
+        response = await client.post(
+            f"/api/v1/agents/{agent_id}/surface-runs",
+            json={
+                "surface_kind": "multiline_text_field",
+                "source_route": "/messages/123",
+                "source_field_key": "composer",
+                "content_format": "plain_text",
+                "surface_content": "Current composer draft.",
+                "prompt_text": "Make this clearer.",
+                "requested_apply_mode": "append_to_surface",
+                "entity_refs": [
+                    {
+                        "kind": "conversation",
+                        "id": "conversation-123",
+                        "label": "Hiring manager thread",
+                    }
+                ],
+            },
+            headers=headers,
+        )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["trigger_kind"] == "surface_mention"
+    assert body["status"] == "completed"
+    assert body["application_id"] is None
+    assert body["source_surface_kind"] == "multiline_text_field"
+    assert body["source_field_key"] == "composer"
+    assert body["source_route"] == "/messages/123"
+    assert body["apply_status"] == "pending"
+    assert body["suggested_edit"]["operation"] == "append_to_surface"
+    assert body["suggested_edit"]["content_format"] == "plain_text"
+    assert body["suggested_edit"]["content"] == "A suggested follow-up paragraph."
+    assert body["input_context"]["application"] == {}
+    assert body["input_context"]["source"]["surface_content"] == "Current composer draft."
+    assert (
+        body["input_context"]["source"]["entity_refs"][0]["kind"] == "conversation"
+    )
+
+
+async def test_list_runs_by_source_filters(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    monkeypatch.setattr(
+        agents_route.conf.openai,
+        "get_model",
+        lambda model_name=None: SimpleNamespace(
+            invoke=lambda messages: SimpleNamespace(content="Suggested edit.")
+        ),
+    )
+
+    async with _client() as client:
+        email, user_id = await _create_user("surface-run-filter-pass")
+        headers = await _auth_headers(client, email, "surface-run-filter-pass")
+        agent_id = await _create_agent(user_id, name="Filter Coach", kind="custom")
+
+        first = await client.post(
+            f"/api/v1/agents/{agent_id}/surface-runs",
+            json={
+                "surface_kind": "multiline_text_field",
+                "source_route": "/applications/alpha",
+                "source_field_key": "notes",
+                "content_format": "plain_text",
+                "surface_content": "Alpha notes",
+                "prompt_text": "Expand this",
+                "requested_apply_mode": "append_to_surface",
+            },
+            headers=headers,
+        )
+        second = await client.post(
+            f"/api/v1/agents/{agent_id}/surface-runs",
+            json={
+                "surface_kind": "multiline_text_field",
+                "source_route": "/applications/beta",
+                "source_field_key": "outcome_reason",
+                "content_format": "plain_text",
+                "surface_content": "Beta notes",
+                "prompt_text": "Tighten this",
+                "requested_apply_mode": "append_to_surface",
+            },
+            headers=headers,
+        )
+        assert first.status_code == 201, first.text
+        assert second.status_code == 201, second.text
+
+        lookup = await client.get(
+            "/api/v1/agents/runs",
+            params={
+                "source_route": "/applications/alpha",
+                "source_field_key": "notes",
+                "apply_status": "pending",
+            },
+            headers=headers,
+        )
+
+    assert lookup.status_code == 200, lookup.text
+    body = lookup.json()
+    assert body["total"] == 1
+    assert body["items"][0]["source_route"] == "/applications/alpha"
+    assert body["items"][0]["source_field_key"] == "notes"
+    assert body["items"][0]["apply_status"] == "pending"
+
+
+async def test_apply_agent_surface_run_links_document_version_and_records_activity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    monkeypatch.setattr(
+        agents_route.conf.openai,
+        "get_model",
+        lambda model_name=None: SimpleNamespace(
+            invoke=lambda messages: SimpleNamespace(content="Refined paragraph.")
+        ),
+    )
+
+    async with _client() as client:
+        email, user_id = await _create_user("surface-run-apply-pass")
+        headers = await _auth_headers(client, email, "surface-run-apply-pass")
+        agent_id = await _create_agent(user_id, name="Apply Coach", kind="custom")
+        source_document = await _create_source_document(user_id, content="Draft body.")
+
+        create_response = await client.post(
+            f"/api/v1/agents/{agent_id}/surface-runs",
+            json={
+                "surface_kind": "rich_text_editor",
+                "source_route": "/workspace/source-doc",
+                "source_document_id": str(source_document["document_id"]),
+                "content_format": "plain_text",
+                "surface_content": "Draft body.",
+                "prompt_text": "Improve the closing paragraph.",
+                "requested_apply_mode": "append_to_surface",
+                "entity_refs": [{"kind": "document", "id": str(source_document["document_id"])}],
+            },
+            headers=headers,
+        )
+        assert create_response.status_code == 201, create_response.text
+        run_id = create_response.json()["id"]
+
+        async with session_context() as session:
+            version = models.DocumentVersion(
+                document_id=source_document["document_id"],
+                version_number=2,
+                name="Applied version",
+                content="Draft body.\nRefined paragraph.",
+                content_format="plain_text",
+            )
+            session.add(version)
+            await session.flush()
+            document = await session.get(models.Document, source_document["document_id"])
+            assert document is not None
+            document.head_version_id = version.id
+            await session.commit()
+            applied_version_id = version.id
+
+        apply_response = await client.post(
+            f"/api/v1/agents/runs/{run_id}/apply",
+            json={
+                "session_document_id": str(source_document["document_id"]),
+                "session_version_id": str(applied_version_id),
+            },
+            headers=headers,
+        )
+
+    assert apply_response.status_code == 200, apply_response.text
+    body = apply_response.json()
+    assert body["apply_status"] == "applied"
+    assert body["session_document_id"] == str(source_document["document_id"])
+    assert body["session_version_id"] == str(applied_version_id)
+    assert body["applied_at"] is not None
+
+    async with session_context() as session:
+        activity_result = await session.execute(
+            select(models.DocumentActivity)
+            .where(models.DocumentActivity.document_id == source_document["document_id"])
+            .order_by(models.DocumentActivity.created_at.asc())
+        )
+        activities = activity_result.scalars().all()
+
+    activity_types = [activity.activity_type for activity in activities]
+    assert "agent_task_requested" in activity_types
+    assert "agent_task_applied" in activity_types
+
+
+async def test_dismiss_agent_surface_run_records_activity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    monkeypatch.setattr(
+        agents_route.conf.openai,
+        "get_model",
+        lambda model_name=None: SimpleNamespace(
+            invoke=lambda messages: SimpleNamespace(content="Dismiss me.")
+        ),
+    )
+
+    async with _client() as client:
+        email, user_id = await _create_user("surface-run-dismiss-pass")
+        headers = await _auth_headers(client, email, "surface-run-dismiss-pass")
+        agent_id = await _create_agent(user_id, name="Dismiss Coach", kind="custom")
+        source_document = await _create_source_document(user_id, content="Dismiss source.")
+
+        create_response = await client.post(
+            f"/api/v1/agents/{agent_id}/surface-runs",
+            json={
+                "surface_kind": "rich_text_editor",
+                "source_route": "/workspace/dismiss-doc",
+                "source_document_id": str(source_document["document_id"]),
+                "content_format": "plain_text",
+                "surface_content": "Dismiss source.",
+                "prompt_text": "Suggest an alternate closing.",
+                "requested_apply_mode": "append_to_surface",
+            },
+            headers=headers,
+        )
+        assert create_response.status_code == 201, create_response.text
+
+        dismiss_response = await client.post(
+            f"/api/v1/agents/runs/{create_response.json()['id']}/dismiss",
+            headers=headers,
+        )
+
+    assert dismiss_response.status_code == 200, dismiss_response.text
+    assert dismiss_response.json()["apply_status"] == "dismissed"
+
+    async with session_context() as session:
+        activity_result = await session.execute(
+            select(models.DocumentActivity.activity_type).where(
+                models.DocumentActivity.document_id == source_document["document_id"]
+            )
+        )
+        activity_types = list(activity_result.scalars())
+
+    assert "agent_task_requested" in activity_types
+    assert "agent_task_dismissed" in activity_types

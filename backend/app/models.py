@@ -93,6 +93,10 @@ DOCUMENT_ACTIVITY_TYPE_VALUES = (
     "document_created",
     "document_uploaded",
     "version_saved",
+    "agent_task_requested",
+    "agent_task_applied",
+    "agent_task_failed",
+    "agent_task_dismissed",
     "share_created",
     "share_updated",
     "share_revoked",
@@ -146,8 +150,14 @@ ACTION_ITEM_KIND_VALUES = (
 )
 ACTION_ITEM_PRIORITY_VALUES = ("low", "medium", "high", "urgent")
 AGENT_KIND_VALUES = ("cover_letter", "follow_up", "outreach", "custom")
-AGENT_RUN_TRIGGER_KIND_VALUES = ("manual", "event")
+AGENT_RUN_TRIGGER_KIND_VALUES = ("manual", "event", "surface_mention")
 AGENT_RUN_STATUS_VALUES = ("pending", "running", "completed", "failed")
+AGENT_RUN_SOURCE_SURFACE_KIND_VALUES = (
+    "cell_doc_editor",
+    "rich_text_editor",
+    "multiline_text_field",
+)
+AGENT_RUN_APPLY_STATUS_VALUES = ("pending", "applied", "dismissed")
 AGENT_CHAT_SESSION_STATUS_VALUES = ("active", "archived")
 AGENT_CHAT_MESSAGE_ROLE_VALUES = ("system", "user", "assistant")
 
@@ -761,6 +771,16 @@ class AgentRun(Base):
             AGENT_RUN_STATUS_VALUES,
             name="ck_agent_runs_status",
         ),
+        _string_in_check_constraint(
+            "source_surface_kind",
+            AGENT_RUN_SOURCE_SURFACE_KIND_VALUES,
+            name="ck_agent_runs_source_surface_kind",
+        ),
+        _string_in_check_constraint(
+            "apply_status",
+            AGENT_RUN_APPLY_STATUS_VALUES,
+            name="ck_agent_runs_apply_status",
+        ),
         Index("ix_agent_runs_agent_created", "agent_id", "created_at"),
         Index("ix_agent_runs_user_created", "user_id", "created_at"),
     )
@@ -810,6 +830,25 @@ class AgentRun(Base):
         default=dict,
         server_default=text("'{}'::jsonb"),
     )
+    source_surface_kind = Column(String, nullable=True, index=True)
+    source_document_id = Column(
+        UUID,
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    source_field_key = Column(String, nullable=True, index=True)
+    source_route = Column(String, nullable=True, index=True)
+    source_anchor_id = Column(String, nullable=True, index=True)
+    apply_status = Column(
+        String,
+        nullable=False,
+        default="pending",
+        server_default=text("'pending'"),
+        index=True,
+    )
+    applied_at = Column(DateTime(timezone=True), nullable=True)
+    suggested_edit = Column(JSONB, nullable=True)
     session_document_id = Column(
         UUID,
         ForeignKey("documents.id", ondelete="SET NULL"),

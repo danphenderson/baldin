@@ -23,6 +23,7 @@ import {
   getAgentConfiguredModelName,
   getAgentModelDisplayLabel,
 } from '../util/agent-models';
+import { AgentEnabledMultilineField } from './agent-surface';
 
 /* ------------------------------------------------------------------ */
 /*  Kind options                                                       */
@@ -262,11 +263,14 @@ const AgentFormDialog: React.FC<AgentFormDialogProps> = ({
           </Grid>
 
           <Grid size={12}>
-            <TextField
+            <AgentEnabledMultilineField
               fullWidth
               label="Description"
+              surfaceId={agent?.id ?? 'agent-form-dialog'}
+              fieldKey="agent_description"
+              entityRefs={agent?.id ? [{ kind: 'agent', id: agent.id, label: agent.name }] : []}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
               multiline
               rows={2}
               placeholder="A short summary of what this agent does"
@@ -275,11 +279,14 @@ const AgentFormDialog: React.FC<AgentFormDialogProps> = ({
           </Grid>
 
           <Grid size={12}>
-            <TextField
+            <AgentEnabledMultilineField
               fullWidth
               label="Instructions"
+              surfaceId={agent?.id ?? 'agent-form-dialog'}
+              fieldKey="agent_instructions"
+              entityRefs={agent?.id ? [{ kind: 'agent', id: agent.id, label: agent.name }] : []}
               value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
+              onChange={setInstructions}
               multiline
               rows={4}
               placeholder="Focus on quantifiable achievements. Use a professional but approachable tone."

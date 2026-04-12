@@ -179,16 +179,13 @@ describe('DashboardPage', () => {
     mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 5 } as never);
 
     const setToolbarHeader = vi.fn();
-    const expectedSubtitle = new Date('2026-04-09T09:00:00').toLocaleDateString(undefined, {
-      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-    });
 
     renderPage({}, setToolbarHeader);
 
     await waitFor(() => {
       expect(setToolbarHeader).toHaveBeenCalledWith({
         title: 'Good morning, Jane',
-        subtitle: expectedSubtitle,
+        subtitle: undefined,
       });
     });
   });

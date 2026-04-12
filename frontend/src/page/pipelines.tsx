@@ -21,6 +21,7 @@ import { JSONTree } from 'react-json-tree';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import WorkflowFormDialog from '../component/workflow-form-dialog';
+import { AgentEnabledMultilineField } from '../component/agent-surface';
 import {
   type OrchestrationEventRead,
   type OrchestrationEventStatus,
@@ -36,6 +37,7 @@ import {
 import { getStatusColors } from '../theme/status-colors';
 import { mutedGradient, jsonTreeTheme, ALPHA_CHIP, ALPHA_BORDER } from '../theme/effects';
 import { monoFontFamily } from '../design-system/tokens/typography';
+import { MetricStrip } from '../design-system';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -141,37 +143,19 @@ const OverviewStrip: React.FC<{ pipelines: OrchestrationPipelineRead[] }> = ({ p
     return { workflows: pipelines.length, totalRuns, totalFailures, recentRuns, lastSuccess };
   }, [pipelines]);
 
-  const items: { label: string; value: string | number; color?: string; icon: React.ReactElement }[] = [
-    { label: 'Workflows', value: stats.workflows, icon: <PipelineIcon fontSize="small" /> },
-    { label: 'Total runs', value: stats.totalRuns, icon: <TrendingIcon fontSize="small" /> },
-    { label: 'Failures', value: stats.totalFailures, color: stats.totalFailures > 0 ? theme.palette.error.main : undefined, icon: <ErrorIcon fontSize="small" /> },
-    { label: 'Recent (24h)', value: stats.recentRuns, icon: <RunningIcon fontSize="small" /> },
-    { label: 'Last success', value: stats.lastSuccess ? formatRelativeTime(stats.lastSuccess) : '—', icon: <SuccessIcon fontSize="small" /> },
-  ];
-
   return (
-    <Card sx={{ mb: 3 }}>
-      <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
-        <Stack
-          direction="row"
-          divider={<Divider orientation="vertical" flexItem />}
-          spacing={3}
-          sx={{ justifyContent: 'space-around', flexWrap: 'wrap', rowGap: 1 }}
-        >
-          {items.map((item) => (
-            <Box key={item.label} sx={{ textAlign: 'center', minWidth: 80 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.25, color: item.color ?? theme.palette.text.secondary }}>
-                {item.icon}
-              </Box>
-              <Typography variant="h6" fontWeight={700} sx={{ color: item.color ?? 'text.primary', lineHeight: 1.2 }}>
-                {item.value}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">{item.label}</Typography>
-            </Box>
-          ))}
-        </Stack>
-      </CardContent>
-    </Card>
+    <Box sx={{ mb: 3 }}>
+      <MetricStrip
+        variant="card"
+        items={[
+          { label: 'Workflows', value: stats.workflows, icon: <PipelineIcon fontSize="small" /> },
+          { label: 'Total runs', value: stats.totalRuns, icon: <TrendingIcon fontSize="small" /> },
+          { label: 'Failures', value: stats.totalFailures, color: stats.totalFailures > 0 ? theme.palette.error.main : undefined, icon: <ErrorIcon fontSize="small" /> },
+          { label: 'Recent (24h)', value: stats.recentRuns, icon: <RunningIcon fontSize="small" /> },
+          { label: 'Last success', value: stats.lastSuccess ? formatRelativeTime(stats.lastSuccess) : '—', icon: <SuccessIcon fontSize="small" /> },
+        ]}
+      />
+    </Box>
   );
 };
 
@@ -605,7 +589,7 @@ const PipelinesPage: React.FC = () => {
     } catch (e: unknown) { setError(getErrorMessage(e)); }
   };
 
-  usePageToolbarHeader('Workflows', `${pipelines.length} workflow${pipelines.length !== 1 ? 's' : ''}`);
+  usePageToolbarHeader('Workflows', `${pipelines.length} pipelines`);
 
   // ---------------------------------------------------------------------------
   // Render
@@ -925,13 +909,16 @@ const PipelinesPage: React.FC = () => {
               value={triggerForm.message}
               onChange={(e) => setTriggerForm((p) => ({ ...p, message: e.target.value }))}
             />
-            <TextField
+            <AgentEnabledMultilineField
               fullWidth
               label="Payload (JSON)"
               multiline
               rows={4}
+              surfaceId={triggerForm.pipeline_id || 'pipeline-trigger-dialog'}
+              fieldKey="pipeline_trigger_payload"
+              entityRefs={triggerForm.pipeline_id ? [{ kind: 'pipeline', id: triggerForm.pipeline_id, label: 'Pipeline trigger' }] : []}
               value={triggerForm.payload}
-              onChange={(e) => setTriggerForm((p) => ({ ...p, payload: e.target.value }))}
+              onChange={(nextValue) => setTriggerForm((p) => ({ ...p, payload: nextValue }))}
               error={triggerForm.payload.length > 0 && !isValidJson(triggerForm.payload)}
               helperText={
                 triggerForm.payload.length > 0 && !isValidJson(triggerForm.payload)
@@ -971,21 +958,27 @@ const PipelinesPage: React.FC = () => {
               value={editPipeForm?.name || ''}
               onChange={(e) => setEditPipeForm((p) => p ? ({ ...p, name: e.target.value }) : p)}
             />
-            <TextField
+            <AgentEnabledMultilineField
               fullWidth
               label="Description"
               multiline
               minRows={2}
+              surfaceId={editPipeForm?.id ?? 'pipeline-edit-dialog'}
+              fieldKey="pipeline_description"
+              entityRefs={editPipeForm?.id ? [{ kind: 'pipeline', id: editPipeForm.id, label: editPipeForm.name || 'Pipeline' }] : []}
               value={editPipeForm?.description || ''}
-              onChange={(e) => setEditPipeForm((p) => p ? ({ ...p, description: e.target.value }) : p)}
+              onChange={(nextValue) => setEditPipeForm((p) => p ? ({ ...p, description: nextValue }) : p)}
             />
-            <TextField
+            <AgentEnabledMultilineField
               fullWidth
               label="Definition (JSON)"
               multiline
               rows={5}
+              surfaceId={editPipeForm?.id ?? 'pipeline-edit-dialog'}
+              fieldKey="pipeline_definition"
+              entityRefs={editPipeForm?.id ? [{ kind: 'pipeline', id: editPipeForm.id, label: editPipeForm.name || 'Pipeline' }] : []}
               value={editPipeForm?.definition || '{}'}
-              onChange={(e) => setEditPipeForm((p) => p ? ({ ...p, definition: e.target.value }) : p)}
+              onChange={(nextValue) => setEditPipeForm((p) => p ? ({ ...p, definition: nextValue }) : p)}
               error={!!(editPipeForm?.definition && !isValidJson(editPipeForm.definition))}
               helperText={
                 editPipeForm?.definition && !isValidJson(editPipeForm.definition)

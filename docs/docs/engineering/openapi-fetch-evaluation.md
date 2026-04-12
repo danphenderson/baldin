@@ -5,7 +5,7 @@ title: "Evaluation: openapi-fetch as Typed API Client"
 description: Trade-off analysis and migration plan for adopting openapi-fetch across the frontend service layer.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-12 -->
 
 # Evaluation: openapi-fetch as Typed API Client
 
@@ -103,9 +103,9 @@ downloads).  Each migration is a single PR.
 | `review.tsx` | 3 | low |
 | `resumes.tsx` | 3 | low |
 
-### Phase 3 — Upload / download services
+### Phase 3 — Upload / download services (complete)
 
-Migrate services with `FormData` or blob handling, using `openapi-fetch`'s
+Services with `FormData` or blob handling have been migrated using `openapi-fetch`'s
 `parseAs: 'blob'` and raw body overrides.
 
 | Service | Special handling |

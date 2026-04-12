@@ -15,7 +15,9 @@ const AuthLayout: React.FC = () => {
         background: authBackgroundGradient(theme),
       }}
     >
-      <Outlet />
+      <Box sx={{ maxWidth: 480, mx: 'auto', width: '100%' }}>
+        <Outlet />
+      </Box>
     </Box>
   );
 };

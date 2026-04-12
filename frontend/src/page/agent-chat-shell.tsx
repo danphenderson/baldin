@@ -621,6 +621,7 @@ const AgentChatShellPage: React.FC = () => {
             </Stack>
           )}
           <ChatComposer
+            surfaceId={session.id}
             value={draft}
             onChange={setDraft}
             onSubmit={() => handleSubmitMessage()}
@@ -638,6 +639,12 @@ const AgentChatShellPage: React.FC = () => {
             onToggleUseDocuments={setUseDocuments}
             onChangeSelectedDocumentIds={setSelectedDocumentIds}
             onChangeLookupUrl={setLookupUrl}
+            entityRefs={[{
+              kind: 'conversation',
+              id: session.id,
+              label: title,
+            }]}
+            applicationId={session.application_id}
           />
         </Stack>
       </Box>

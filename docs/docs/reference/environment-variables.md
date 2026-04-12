@@ -105,6 +105,9 @@ Related runtime toggles exposed through settings:
 | Variable | Purpose |
 |----------|---------|
 | `VITE_API_URL` | Backend API base URL. Required for production builds; must be a non-localhost origin. |
+| `VITE_SENTRY_DSN` | Sentry DSN for frontend error monitoring. Leave empty to disable. |
+| `VITE_SENTRY_ENVIRONMENT` | Environment tag sent to Sentry (`DEV`, `STAGE`, `PROD`). |
+| `VITE_SENTRY_TRACES_SAMPLE_RATE` | Sentry performance tracing sample rate (`0` to `1`). Set to `0` locally. |
 
 `frontend/.env` is also checked into the repo as a safe local-default baseline. Override it with `frontend/.env.local` or process env at startup when you need different local values.
 

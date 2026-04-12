@@ -11,10 +11,18 @@ import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 
 import type { Extensions } from '@tiptap/core';
+import {
+  AgentTask,
+  AgentTaskTrigger,
+  type AgentTaskEventHandler,
+  type AgentTaskSurfaceKind,
+} from './agent-task-extension';
 
 export interface BaseExtensionOptions {
   /** Disable undo/redo when collaboration owns history. */
   disableUndoRedo?: boolean;
+  surfaceKind?: AgentTaskSurfaceKind;
+  onAgentTaskEvent?: AgentTaskEventHandler;
 }
 
 export function buildBaseDocumentExtensions(
@@ -30,5 +38,10 @@ export function buildBaseDocumentExtensions(
     Underline,
     Link.configure({ openOnClick: false, autolink: true }),
     TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    AgentTask.configure({
+      surfaceKind: options?.surfaceKind ?? 'rich_text_editor',
+      onAgentTaskEvent: options?.onAgentTaskEvent,
+    }),
+    AgentTaskTrigger,
   ];
 }

@@ -14,6 +14,14 @@ import { Details, DetailsSummary } from './toggle-extension';
 import { buildTableExtensions } from './table-extensions';
 import { BlockIdentity } from './block-identity-extension';
 import { BlockLocking } from './block-locking-extension';
+import {
+  AgentTask,
+  AgentTaskTrigger,
+  type AgentTaskEvent,
+  type AgentTaskEventHandler,
+  type AgentTaskSurfaceKind,
+  type AgentTaskStatus,
+} from './agent-task-extension';
 import { MentionBlock } from './mention-block-extension';
 import { EmbedBlock } from './embed-block-extension';
 import { SlashCommand } from './slash-command-extension';
@@ -28,6 +36,14 @@ export { Details, DetailsSummary } from './toggle-extension';
 export { buildTableExtensions } from './table-extensions';
 export { BlockIdentity } from './block-identity-extension';
 export { BlockLocking } from './block-locking-extension';
+export {
+  AgentTask,
+  AgentTaskTrigger,
+  type AgentTaskEvent,
+  type AgentTaskEventHandler,
+  type AgentTaskSurfaceKind,
+  type AgentTaskStatus,
+} from './agent-task-extension';
 export { MentionBlock } from './mention-block-extension';
 export { EmbedBlock } from './embed-block-extension';
 export { SlashCommand } from './slash-command-extension';

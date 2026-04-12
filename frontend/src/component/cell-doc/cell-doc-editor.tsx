@@ -12,8 +12,12 @@ import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
 import { Box, Typography, Tooltip, useTheme } from '@mui/material';
 import { Circle as CircleIcon } from '@mui/icons-material';
+import type { Editor } from '@tiptap/core';
 
-import { buildCellDocExtensions } from './extensions';
+import {
+  buildCellDocExtensions,
+  type AgentTaskEvent,
+} from './extensions';
 import { CellDocEditorSurface } from './cell-doc-editor-surface';
 import { InlineFormatMenu } from './menus/inline-format-menu';
 import { BlockContextMenu } from './menus/block-context-menu';
@@ -38,6 +42,8 @@ interface CellDocEditorProps {
   token?: string;
   collaborationUserName?: string;
   viewerRole?: DocumentShareRole | null;
+  onEditorReady?: (editor: Editor | null) => void;
+  onAgentTaskEvent?: (event: AgentTaskEvent) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -94,6 +100,8 @@ const CellDocEditor: React.FC<CellDocEditorProps> = ({
   token,
   collaborationUserName,
   viewerRole = null,
+  onEditorReady,
+  onAgentTaskEvent,
 }) => {
   const theme = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -107,8 +115,10 @@ const CellDocEditor: React.FC<CellDocEditorProps> = ({
       token,
       documentId,
       viewerRole,
+      surfaceKind: 'cell_doc_editor',
+      onAgentTaskEvent,
     }),
-    [documentId, token, viewerRole],
+    [documentId, onAgentTaskEvent, token, viewerRole],
   );
 
   const collab = useCollaborativeEditor({
@@ -127,6 +137,8 @@ const CellDocEditor: React.FC<CellDocEditorProps> = ({
         token,
         documentId,
         viewerRole,
+        surfaceKind: 'cell_doc_editor',
+        onAgentTaskEvent,
       }),
       Placeholder.configure({ placeholder: placeholderText }),
     ];
@@ -146,7 +158,7 @@ const CellDocEditor: React.FC<CellDocEditorProps> = ({
     }
 
     return exts;
-  }, [collaborative, collab.localUser, collab.provider, collab.ydoc, documentId, placeholderText, token, viewerRole]);
+  }, [collaborative, collab.localUser, collab.provider, collab.ydoc, documentId, onAgentTaskEvent, placeholderText, token, viewerRole]);
 
   const editor = useEditor({
     extensions,
@@ -177,6 +189,13 @@ const CellDocEditor: React.FC<CellDocEditorProps> = ({
   useEffect(() => {
     syncExternalContent();
   }, [syncExternalContent]);
+
+  useEffect(() => {
+    onEditorReady?.(editor ?? null);
+    return () => {
+      onEditorReady?.(null);
+    };
+  }, [editor, onEditorReady]);
 
   if (!editor) return null;
 

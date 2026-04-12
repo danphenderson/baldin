@@ -328,6 +328,16 @@ describe('ApplicationsQueuePage', () => {
     }
   });
 
+  it('renders one separator between the two filter groups', () => {
+    mockUseApplications.mockReturnValue(
+      makeHookReturn({ applications: [makeApplication()] }),
+    );
+
+    renderPage();
+
+    expect(screen.getByTestId('applications-filter-divider')).toBeInTheDocument();
+  });
+
   it('renders sort controls', () => {
     mockUseApplications.mockReturnValue(
       makeHookReturn({ applications: [makeApplication()] }),
@@ -352,11 +362,15 @@ describe('ApplicationsQueuePage', () => {
 
     renderPage();
 
-    expect(screen.getByText('4 total')).toBeInTheDocument();
-    expect(screen.getByText('3 active')).toBeInTheDocument();
-    expect(screen.getByText('1 interviewing')).toBeInTheDocument();
-    expect(screen.getByText('1 offers')).toBeInTheDocument();
-    expect(screen.getByText('1 closed')).toBeInTheDocument();
+    // MetricStrip renders value and label in separate Typography elements.
+    // Some labels (Active, Closed) also appear in filter chips, so use getAllByText.
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByText('Total')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Interviewing')).toBeInTheDocument();
+    expect(screen.getByText('Offers')).toBeInTheDocument();
+    expect(screen.getAllByText('Closed').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders empty state when there are no applications', () => {

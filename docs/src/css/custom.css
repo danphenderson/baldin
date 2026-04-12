@@ -21,6 +21,22 @@
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
 
+/* Keep wide docs tables readable on pages with long code paths. */
+.markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.markdown table th,
+.markdown table td {
+  vertical-align: top;
+}
+
+.markdown table code {
+  white-space: nowrap;
+}
+
 /* ─── Mermaid diagram zoom trigger ──────────────────────────────────────── */
 
 .mermaid-zoom-trigger {

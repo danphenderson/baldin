@@ -3,7 +3,6 @@ import {
   Box, Typography,
   Pagination as MuiPagination,
   Stack,
-  Chip,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
@@ -38,7 +37,7 @@ import LeadExtractionBar from '../component/lead-extraction-bar';
 import LeadSearchBar from '../component/lead-search-bar';
 import ConfirmDialog from '../component/common/confirm-dialog';
 import EmptyState from '../component/common/empty-state';
-import { LoadingState } from '../design-system';
+import { LoadingState, MetricStrip } from '../design-system';
 import { useNotification } from '../context/notification-context';
 
 function isValidUrl(str: string): boolean {
@@ -176,7 +175,7 @@ const LeadsPage: React.FC = () => {
 
   useEffect(() => { setPage(1); }, [deferredSearch, filter]);
 
-  usePageToolbarHeader('Job Leads', `${joinedCount} joined · ${activeCount} active · ${discussionCount} with discussion`);
+  usePageToolbarHeader('Job Leads', `${leads.length} leads`);
 
   /* ---- Actions ---- */
 
@@ -306,11 +305,16 @@ const LeadsPage: React.FC = () => {
         onPageChange={setPage}
       />
 
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ mb: 3 }}>
-        <Chip label={`${joinedCount} joined by you`} color="success" variant={joinedCount ? 'filled' : 'outlined'} />
-        <Chip label={`${activeCount} active shared leads`} color="secondary" variant={activeCount ? 'filled' : 'outlined'} />
-        <Chip label={`${discussionCount} with discussion`} color="primary" variant={discussionCount ? 'filled' : 'outlined'} />
-      </Stack>
+      <Box sx={{ mb: 3 }}>
+        <MetricStrip
+          variant="inline"
+          items={[
+            { label: 'Joined by you', value: joinedCount },
+            { label: 'Active shared', value: activeCount },
+            { label: 'With discussion', value: discussionCount },
+          ]}
+        />
+      </Box>
 
       {/* ── Lead Cards ── */}
       {loading ? (

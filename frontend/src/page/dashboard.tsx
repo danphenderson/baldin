@@ -404,7 +404,7 @@ const DashboardPage: React.FC = () => {
   const [statusMenuItem, setStatusMenuItem] = useState<ActionItemDetailRead | null>(null);
 
   /* ---- page header ---- */
-  usePageToolbarHeader(greeting, formatLongDate());
+  usePageToolbarHeader(greeting);
 
   /* ---- data fetch ---- */
   const refresh = useCallback(async () => {
@@ -887,7 +887,7 @@ const DashboardPage: React.FC = () => {
                       variant={actionFilter === chip.key ? 'filled' : 'outlined'}
                       color={actionFilter === chip.key ? 'primary' : 'default'}
                       onClick={() => setActionFilter(chip.key)}
-                      sx={{ cursor: 'pointer' }}
+                      sx={{ cursor: 'pointer', fontWeight: actionFilter === chip.key ? 600 : 400 }}
                     />
                   ))}
                 </Stack>

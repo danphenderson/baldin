@@ -3,7 +3,9 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import Placeholder from '@tiptap/extension-placeholder';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
+import type { Editor } from '@tiptap/core';
 import { buildBaseDocumentExtensions } from './cell-doc/extensions/base-extensions';
+import type { AgentTaskEvent } from './cell-doc/extensions';
 import {
   Box, Paper, IconButton, Divider, TextField, Tooltip, useTheme, alpha, Typography,
 } from '@mui/material';
@@ -19,12 +21,22 @@ import ConnectionStatusBanner from './connection-status-banner';
 import { getTiptapEditorContent } from './document-content';
 import type { DocumentContentFormat } from '../service/documents';
 import { monoFontFamily } from '../design-system/tokens/typography';
+import { AgentEnabledMultilineField } from './agent-surface';
+import type { AgentSurfaceEntityRef } from '../service/agents';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
 export type ContentFormat = DocumentContentFormat;
+
+export interface RichTextEditorPlainTextSurfaceConfig {
+  surfaceId: string;
+  fieldKey: string;
+  entityRefs?: AgentSurfaceEntityRef[];
+  sourceRoute?: string;
+  applicationId?: string | null;
+}
 
 interface RichTextEditorProps {
   content: string;
@@ -38,6 +50,9 @@ interface RichTextEditorProps {
   documentId?: string;
   token?: string;
   collaborationUserName?: string;
+  onEditorReady?: (editor: Editor | null) => void;
+  onAgentTaskEvent?: (event: AgentTaskEvent) => void;
+  plainTextSurface?: RichTextEditorPlainTextSurfaceConfig | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -85,6 +100,7 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({ icon, label, active, disabled, 
 const TiptapEditorInner: React.FC<Omit<RichTextEditorProps, 'contentFormat'>> = ({
   content, onChange, readOnly, placeholder: placeholderText, minHeight = '400px',
   collaborative, documentId, token, collaborationUserName, externalContentKey,
+  onEditorReady, onAgentTaskEvent,
 }) => {
   const theme = useTheme();
 
@@ -102,6 +118,8 @@ const TiptapEditorInner: React.FC<Omit<RichTextEditorProps, 'contentFormat'>> = 
     const exts = [
       ...buildBaseDocumentExtensions({
         disableUndoRedo: isCollaborative,
+        surfaceKind: 'rich_text_editor',
+        onAgentTaskEvent,
       }),
       Placeholder.configure({ placeholder: placeholderText ?? 'Start writing…' }),
     ];
@@ -121,7 +139,7 @@ const TiptapEditorInner: React.FC<Omit<RichTextEditorProps, 'contentFormat'>> = 
     }
 
     return exts;
-  }, [collaborative, collab.localUser, collab.provider, collab.ydoc, placeholderText]);
+  }, [collaborative, collab.localUser, collab.provider, collab.ydoc, onAgentTaskEvent, placeholderText]);
 
   const editor = useEditor({
     extensions,
@@ -146,6 +164,13 @@ const TiptapEditorInner: React.FC<Omit<RichTextEditorProps, 'contentFormat'>> = 
 
     editor.commands.setContent(editorContent, { emitUpdate: false });
   }, [editor, editorContent, externalContentKey]);
+
+  useEffect(() => {
+    onEditorReady?.(editor ?? null);
+    return () => {
+      onEditorReady?.(null);
+    };
+  }, [editor, onEditorReady]);
 
   /* link prompt --------------------------------------------------- */
   const handleSetLink = useCallback(() => {
@@ -369,9 +394,36 @@ const TiptapEditorInner: React.FC<Omit<RichTextEditorProps, 'contentFormat'>> = 
 
 const RichTextEditor: React.FC<RichTextEditorProps> = ({
   content, contentFormat, onChange, externalContentKey, readOnly, placeholder: placeholderText,
-  minHeight, collaborative, documentId, token, collaborationUserName,
+  minHeight, collaborative, documentId, token, collaborationUserName, onEditorReady, onAgentTaskEvent,
+  plainTextSurface = null,
 }) => {
   if (contentFormat === 'plain_text') {
+    if (plainTextSurface) {
+      return (
+        <AgentEnabledMultilineField
+          fullWidth
+          minRows={20}
+          maxRows={60}
+          value={content}
+          onChange={(nextValue) => onChange(nextValue, nextValue)}
+          placeholder={placeholderText ?? 'Start writing…'}
+          variant="outlined"
+          disabled={readOnly}
+          surfaceId={plainTextSurface.surfaceId}
+          fieldKey={plainTextSurface.fieldKey}
+          entityRefs={plainTextSurface.entityRefs}
+          sourceRoute={plainTextSurface.sourceRoute}
+          applicationId={plainTextSurface.applicationId}
+          slotProps={{ input: { 'aria-label': 'Document content' } }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              fontFamily: monoFontFamily, fontSize: '0.875rem', lineHeight: 1.6,
+            },
+          }}
+        />
+      );
+    }
+
     return (
       <TextField
         fullWidth multiline minRows={20} maxRows={60}
@@ -402,6 +454,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       documentId={documentId}
       token={token}
       collaborationUserName={collaborationUserName}
+      onEditorReady={onEditorReady}
+      onAgentTaskEvent={onAgentTaskEvent}
     />
   );
 };

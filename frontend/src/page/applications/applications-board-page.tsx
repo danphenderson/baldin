@@ -32,6 +32,7 @@ import type { ApplicationRead } from '../../service/applications';
 import { getStatusColors } from '../../theme/status-colors';
 import { PageTitle } from '../../component/common/text';
 import { softBrandGradient } from '../../theme/effects';
+import { MetricStrip } from '../../design-system';
 import {
   useApplications, useStageColumns, COLUMN_EMPTY_HINTS, relativeDate, nextStage,
   applicationDocumentCount,
@@ -787,7 +788,7 @@ const ApplicationsBoardPage: React.FC = () => {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
-  usePageToolbarHeader('Board', `${applications.length} total \u00b7 ${interviewCount} interviewing`);
+  usePageToolbarHeader('Board', `${applications.length} applications`);
 
   const viewApplication = (app: ApplicationRead) => {
     navigate(`/applications/${app.id}`);
@@ -831,39 +832,20 @@ const ApplicationsBoardPage: React.FC = () => {
 
       {/* Summary stats strip */}
       {!loading && applications.length > 0 && (
-        <Stack
-          direction="row"
-          spacing={3}
-          sx={{
-            mb: 3,
-            px: 2,
-            py: 1.5,
-            borderRadius: 2,
-            bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.06 : 0.04),
-            border: `1px solid ${theme.palette.divider}`,
-            overflowX: 'auto',
-            flexWrap: 'nowrap',
-          }}
-        >
-          {[
-            { label: 'Total', value: applications.length, color: theme.palette.text.primary },
-            { label: 'Registered', value: registeredApps.length, color: sc.registered },
-            { label: 'Active', value: activeCount, color: sc.applied },
-            { label: 'Interviewing', value: interviewCount, color: sc.interviewing },
-            { label: 'Offers', value: offerCount, color: sc.offer },
-            { label: 'Closed', value: closedApps.length, color: sc.rejected },
-            { label: 'Overdue', value: overdueCount, color: theme.palette.warning.main },
-          ].map((stat) => (
-            <Box key={stat.label} sx={{ textAlign: 'center', minWidth: 64, flexShrink: 0 }}>
-              <Typography variant="h6" fontWeight={700} sx={{ color: stat.color, lineHeight: 1.2 }}>
-                {stat.value}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {stat.label}
-              </Typography>
-            </Box>
-          ))}
-        </Stack>
+        <Box sx={{ mb: 3 }}>
+          <MetricStrip
+            variant="inline"
+            items={[
+              { label: 'Total', value: applications.length, color: theme.palette.text.primary },
+              { label: 'Registered', value: registeredApps.length, color: sc.registered },
+              { label: 'Active', value: activeCount, color: sc.applied },
+              { label: 'Interviewing', value: interviewCount, color: sc.interviewing },
+              { label: 'Offers', value: offerCount, color: sc.offer },
+              { label: 'Closed', value: closedApps.length, color: sc.rejected },
+              { label: 'Overdue', value: overdueCount, color: theme.palette.warning.main },
+            ]}
+          />
+        </Box>
       )}
 
       {/* Alerts */}

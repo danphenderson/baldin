@@ -737,6 +737,10 @@ class DocumentActivityType(str, Enum):
     DOCUMENT_CREATED = "document_created"
     DOCUMENT_UPLOADED = "document_uploaded"
     VERSION_SAVED = "version_saved"
+    AGENT_TASK_REQUESTED = "agent_task_requested"
+    AGENT_TASK_APPLIED = "agent_task_applied"
+    AGENT_TASK_FAILED = "agent_task_failed"
+    AGENT_TASK_DISMISSED = "agent_task_dismissed"
     SHARE_CREATED = "share_created"
     SHARE_UPDATED = "share_updated"
     SHARE_REVOKED = "share_revoked"
@@ -2124,6 +2128,7 @@ class AgentKind(str, Enum):
 class AgentRunTriggerKind(str, Enum):
     MANUAL = "manual"
     EVENT = "event"
+    SURFACE_MENTION = "surface_mention"
 
 
 class AgentRunStatus(str, Enum):
@@ -2131,6 +2136,24 @@ class AgentRunStatus(str, Enum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+
+
+class AgentRunSourceSurfaceKind(str, Enum):
+    CELL_DOC_EDITOR = "cell_doc_editor"
+    RICH_TEXT_EDITOR = "rich_text_editor"
+    MULTILINE_TEXT_FIELD = "multiline_text_field"
+
+
+class AgentRunApplyStatus(str, Enum):
+    PENDING = "pending"
+    APPLIED = "applied"
+    DISMISSED = "dismissed"
+
+
+class AgentRunApplyMode(str, Enum):
+    INSERT_AFTER_ANCHOR = "insert_after_anchor"
+    REPLACE_SELECTION = "replace_selection"
+    APPEND_TO_SURFACE = "append_to_surface"
 
 
 class AgentChatSessionStatus(str, Enum):
@@ -2238,6 +2261,33 @@ class AgentRunSessionVersionRead(BaseRead):
     )
 
 
+class AgentSurfaceEntityRef(BaseSchema):
+    kind: str = Field(description="Explicit host-provided entity kind")
+    id: str = Field(description="Explicit host-provided entity identifier")
+    label: str | None = Field(
+        None,
+        description="Optional display label for the referenced entity",
+    )
+
+
+class AgentSuggestedEditWrite(BaseSchema):
+    operation: AgentRunApplyMode = Field(
+        description="Requested surface apply operation for the suggestion",
+    )
+    content_format: ContentFormat = Field(
+        description="Suggested edit content format",
+    )
+    content: str = Field(description="Suggested plain-text edit content")
+    summary: str | None = Field(
+        None,
+        description="Compact preview summary for the suggested edit",
+    )
+
+
+class AgentSuggestedEditRead(AgentSuggestedEditWrite):
+    pass
+
+
 class AgentRunSummaryRead(BaseRead):
     agent_id: UUID4 = Field(description="Owning agent definition")
     user_id: UUID4 = Field(description="Owner identifier")
@@ -2255,6 +2305,37 @@ class AgentRunSummaryRead(BaseRead):
     )
     trigger_kind: AgentRunTriggerKind = Field(description="How the run was started")
     status: AgentRunStatus = Field(description="Current execution status")
+    source_surface_kind: AgentRunSourceSurfaceKind | None = Field(
+        None,
+        description="Surface type that originated the run",
+    )
+    source_document_id: UUID4 | None = Field(
+        None,
+        description="Source document identifier when the run came from a document surface",
+    )
+    source_field_key: str | None = Field(
+        None,
+        description="Host-defined surface field key for non-document surfaces",
+    )
+    source_route: str | None = Field(
+        None,
+        description="Host route where the run was requested",
+    )
+    source_anchor_id: str | None = Field(
+        None,
+        description="Optional source anchor or block identifier within the surface",
+    )
+    apply_status: AgentRunApplyStatus = Field(
+        description="Whether the suggestion is pending, applied, or dismissed",
+    )
+    applied_at: datetime | None = Field(
+        None,
+        description="When the suggestion was marked applied",
+    )
+    suggested_edit: AgentSuggestedEditRead | None = Field(
+        None,
+        description="Previewable suggested edit payload returned by the backend",
+    )
     session_document_id: UUID4 | None = Field(
         None,
         description="Session document created or updated by the run",
@@ -2296,6 +2377,66 @@ class AgentRunExecuteRequest(BaseSchema):
     )
 
 
+class AgentSurfaceRunRequest(BaseSchema):
+    surface_kind: AgentRunSourceSurfaceKind = Field(
+        description="Frontend surface type that originated the mention task",
+    )
+    source_route: str = Field(description="Frontend route where the run was requested")
+    source_document_id: UUID4 | None = Field(
+        None,
+        description="Source document identifier for persisted document surfaces",
+    )
+    source_field_key: str | None = Field(
+        None,
+        description="Host-defined field key for the originating surface",
+    )
+    anchor_id: str | None = Field(
+        None,
+        description="Optional block or anchor identifier within the originating surface",
+    )
+    content_format: ContentFormat = Field(
+        description="Format of the provided surface snapshot",
+    )
+    surface_content: str = Field(description="Full current surface snapshot")
+    selection_text: str | None = Field(
+        None,
+        description="Optional selected text inside the surface",
+    )
+    selection_start: int | None = Field(
+        None,
+        ge=0,
+        description="Optional selection start offset for plain-text surfaces",
+    )
+    selection_end: int | None = Field(
+        None,
+        ge=0,
+        description="Optional selection end offset for plain-text surfaces",
+    )
+    entity_refs: list[AgentSurfaceEntityRef] = Field(
+        default_factory=list,
+        description="Explicit host-provided entity references for the surface context",
+    )
+    application_id: UUID4 | None = Field(
+        None,
+        description="Optional application context when the host already has one",
+    )
+    prompt_text: str = Field(description="Explicit user instructions for the task")
+    requested_apply_mode: AgentRunApplyMode = Field(
+        description="Requested frontend apply behavior for the suggestion",
+    )
+
+
+class AgentSurfaceRunApplyRequest(BaseSchema):
+    session_document_id: UUID4 | None = Field(
+        None,
+        description="Document identifier to link when a document surface apply creates a new version",
+    )
+    session_version_id: UUID4 | None = Field(
+        None,
+        description="Version identifier to link when a document surface apply creates a new version",
+    )
+
+
 class AgentRunCreate(BaseSchema):
     """Internal schema — not user-facing."""
 
@@ -2320,6 +2461,38 @@ class AgentRunCreate(BaseSchema):
     input_context: dict[str, Any] = Field(
         default_factory=dict,
         description="Structured context payload captured for the run",
+    )
+    source_surface_kind: AgentRunSourceSurfaceKind | None = Field(
+        None,
+        description="Source surface kind for mention-driven runs",
+    )
+    source_document_id: UUID4 | None = Field(
+        None,
+        description="Source document identifier for mention-driven runs",
+    )
+    source_field_key: str | None = Field(
+        None,
+        description="Host-defined source field key for mention-driven runs",
+    )
+    source_route: str | None = Field(
+        None,
+        description="Source route where the run was requested",
+    )
+    source_anchor_id: str | None = Field(
+        None,
+        description="Source anchor identifier inside the surface",
+    )
+    apply_status: AgentRunApplyStatus = Field(
+        AgentRunApplyStatus.PENDING,
+        description="Whether the suggested edit has been applied or dismissed",
+    )
+    applied_at: datetime | None = Field(
+        None,
+        description="When the suggested edit was applied",
+    )
+    suggested_edit: AgentSuggestedEditWrite | None = Field(
+        None,
+        description="Suggested edit payload produced for the run",
     )
     session_document_id: UUID4 | None = Field(
         None,

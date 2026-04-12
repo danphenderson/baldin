@@ -9,14 +9,14 @@ description: See the service topology, runtime boundaries, and main product doma
 
 # See System Boundaries
 
-Baldin is a full-stack local-first workspace for job-search automation. The system is developed primarily through Docker Compose, with the frontend, backend, main Postgres database, and separate test database forming the core local topology.
+Baldin is a full-stack local-first workspace for job-search automation. The system is developed primarily through Docker Compose, with the frontend, backend, main Postgres database, separate test database, Redis, a background crawler worker, and a Docusaurus docs site forming the local topology.
 
 ## Service Topology
 
 ```mermaid
 graph LR
     accTitle: Baldin Service Topology
-    accDescr: Shows the Docker Compose stack — Frontend (React/Vite on port 5173), Backend API (FastAPI/Uvicorn on port 8000), Main PostgreSQL DB (5432), Test DB (5431), and an external OpenAI LLM — and the connection direction between them.
+    accDescr: Shows the Docker Compose stack — Frontend (React/Vite on port 5173), Backend API (FastAPI/Uvicorn on port 8000), Crawler Worker, Main PostgreSQL DB with pgvector (5432), Test DB (5431), Redis (6379), Docs (3001), and an external OpenAI LLM — and the connection direction between them.
     Browser["Browser"]
     LLM["OpenAI"]
 
@@ -24,14 +24,21 @@ graph LR
         direction TB
         FE["Frontend<br/>React / Vite<br/>:5173"]
         API["Backend API<br/>FastAPI / Uvicorn<br/>:8004 → :8000"]
-        DB["PostgreSQL 15<br/>Main DB<br/>:5432"]
-        TDB["PostgreSQL 15<br/>Test DB<br/>:5431"]
+        CW["Crawler Worker<br/>Python<br/>(no exposed port)"]
+        DB["pgvector/pgvector:pg15<br/>Main DB<br/>:5432"]
+        TDB["pgvector/pgvector:pg15<br/>Test DB<br/>:5431"]
+        RD["Redis 7<br/>:6379"]
+        DOCS["Docusaurus<br/>:3001 → :3000"]
     end
 
     Browser --> FE
+    Browser --> DOCS
     FE -->|VITE_API_URL| API
     API --> DB
     API --> TDB
+    API --> RD
+    CW --> DB
+    CW --> RD
     API -->|OpenAI API| LLM
 ```
 
@@ -39,18 +46,19 @@ graph LR
 
 | Service | Image / Build | Port | Purpose |
 |---------|---------------|------|---------|
-| `db` | `postgres:15` | 5432 | Main application database |
-| `test_db` | `postgres:15` | 5431 | Isolated test database |
-| `web` | `backend/Dockerfile.dev` | 8004→8000 | FastAPI backend with Uvicorn (hot reload) |
+| `db` | `pgvector/pgvector:pg15` | 5432 | Main application database (with pgvector) |
+| `test_db` | `pgvector/pgvector:pg15` | 5431 | Isolated test database |
+| `redis` | `redis:7-alpine` | 6379 | Background job queue and crawler dispatch |
+| `web` | `backend/Dockerfile` (target: dev) | 8004→8000 | FastAPI backend with Uvicorn (hot reload) |
+| `crawler-worker` | `backend/Dockerfile` | — | Background crawler worker consuming Redis jobs |
 | `frontend` | `frontend/Dockerfile` | 5173 | React/Vite dev server |
-
-The docs site is intentionally separate from the runtime stack. It is built from `docs/` and does not participate in normal local application startup.
+| `docs` | `docs/Dockerfile` | 3001→3000 | Docusaurus dev server |
 
 ## Technology Stack
 
 ### Backend
 - **Framework:** FastAPI with Starlette
-- **ORM:** SQLAlchemy 2.x with PostgreSQL 15
+- **ORM:** SQLAlchemy 2.x with PostgreSQL 15 (pgvector extension)
 - **Auth:** fastapi-users with JWT tokens
 - **Admin:** Starlette Admin mounted at `/admin`
 - **Extraction:** LangChain-powered text extraction and structured data extraction
@@ -63,6 +71,7 @@ The docs site is intentionally separate from the runtime stack. It is built from
 - **Routing:** React Router 7
 - **Charts:** Recharts
 - **Animation:** Motion (Framer Motion successor)
+- **Rich text:** TipTap 3 with Yjs collaboration
 
 ### Contracts
 - **API spec:** OpenAPI 3.1 — generated from FastAPI, stored as `openapi.json`
@@ -74,7 +83,7 @@ The docs site is intentionally separate from the runtime stack. It is built from
 - The **frontend** is a pure client that talks to the backend through `VITE_API_URL`. It never accesses the database directly.
 - The **contract** (`openapi.json` → `schema.d.ts`) is the formal interface between backend and frontend. Changes flow backend → contract → frontend, never the reverse.
 - Normal **frontend/backend transport** is JSON over HTTP. Agent chat is the main exception: `POST /agents/chat/{session_id}/messages` accepts JSON input but can stream assistant replies back as `text/event-stream` SSE, with JSON fallback when the client explicitly requests `application/json`.
-- **Document collaboration** remains a separate realtime transport boundary on `/documents/{id}/collaborate/ws`, where the frontend uses Yjs over WebSocket after the bootstrap claim flow completes.
+- **Document collaboration** remains a separate realtime transport boundary on `/documents/{id}/collaborate`, where the frontend uses Yjs over WebSocket after the bootstrap claim flow completes.
 - The **ETL layer** (`backend/etl/`) contains crawler and pipeline code (LinkedIn, Glassdoor). It is not part of the user-triggered extraction runtime path.
 
 ## Main Product Domains

@@ -17,14 +17,17 @@ This page explains what works today, what is planned, and what constraints shape
 
 ### Local Docker Compose
 
-The local stack is the supported development surface. It runs four services:
+The local stack is the supported development surface. It runs seven services:
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
-| **db** | PostgreSQL 15 | 5432 | Main application database |
-| **test_db** | PostgreSQL 15 | 5431 | Isolated test database |
-| **web** | `backend/Dockerfile.dev` | 8004 → 8000 | FastAPI/Uvicorn backend with hot reload |
+| **db** | pgvector/pgvector:pg15 | 5432 | Main application database (with pgvector) |
+| **test_db** | pgvector/pgvector:pg15 | 5431 | Isolated test database |
+| **redis** | redis:7-alpine | 6379 | Background job queue and crawler dispatch |
+| **web** | `backend/Dockerfile` (target: dev) | 8004 → 8000 | FastAPI/Uvicorn backend with hot reload |
+| **crawler-worker** | `backend/Dockerfile` | — | Background crawler worker consuming Redis jobs |
 | **frontend** | `frontend/Dockerfile` | 5173 | React/Vite dev server with HMR |
+| **docs** | `docs/Dockerfile` | 3001 → 3000 | Docusaurus dev server |
 
 Start the stack:
 

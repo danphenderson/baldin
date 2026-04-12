@@ -1,7 +1,7 @@
 import React, { useContext, useState, useMemo, useDeferredValue, useCallback } from 'react';
 import {
   Box, Typography, TextField, InputAdornment, Stack, Chip, Card, CardContent,
-  IconButton, Tooltip, Skeleton, Snackbar, Alert, Fade, FormControl, InputLabel,
+  IconButton, Tooltip, Snackbar, FormControl, InputLabel,
   Select, MenuItem, useMediaQuery,
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
@@ -34,7 +34,12 @@ import {
 } from './use-applications';
 import type { ApplicationRead } from '../../service/applications';
 import ConfirmDialog from '../../component/common/confirm-dialog';
-import EmptyState from '../../component/common/empty-state';
+import {
+  CollectionToolbar,
+  EmptyState,
+  InlineFeedback,
+  LoadingState,
+} from '../../design-system';
 
 /* ------------------------------------------------------------------ */
 /*  Sort options                                                       */
@@ -192,26 +197,22 @@ const ApplicationsQueuePage: React.FC = () => {
     <Box>
       {/* ── Feedback alerts ── */}
       {error && (
-        <Fade in>
-          <Alert
-            severity="error"
-            onClose={() => setError('')}
-            sx={{ mb: 2 }}
-          >
+        <InlineFeedback
+          tone="error"
+          onClose={() => setError('')}
+          sx={{ mb: 2 }}
+        >
             {error}
-          </Alert>
-        </Fade>
+        </InlineFeedback>
       )}
       {success && (
-        <Fade in>
-          <Alert
-            severity="success"
-            onClose={() => setSuccess('')}
-            sx={{ mb: 2 }}
-          >
+        <InlineFeedback
+          tone="success"
+          onClose={() => setSuccess('')}
+          sx={{ mb: 2 }}
+        >
             {success}
-          </Alert>
-        </Fade>
+        </InlineFeedback>
       )}
 
       {/* ── Summary strip ── */}
@@ -268,129 +269,120 @@ const ApplicationsQueuePage: React.FC = () => {
       </Stack>
 
       {/* ── Search + filters + sort ── */}
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={2}
-        sx={{ mb: 2 }}
-        alignItems={{ sm: 'center' }}
-      >
-        <TextField
-          size="small"
-          placeholder="Search by title, company, or location…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          sx={{ flexGrow: 1 }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                </InputAdornment>
-              ),
-              'aria-label': 'Search applications',
-            },
-          }}
-        />
-
-        <FormControl size="small" sx={{ minWidth: 130 }}>
-          <InputLabel id="apps-sort-label">Sort</InputLabel>
-          <Select
-            labelId="apps-sort-label"
-            value={sortKey}
-            label="Sort"
-            onChange={(e) => setSortKey(e.target.value as SortKey)}
-          >
-            {SORT_OPTIONS.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Stack>
-
-      {/* ── Stage filter chips ── */}
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ mb: 1.5, flexWrap: 'wrap', gap: 1 }}
-      >
-        <Chip
-          label="All Stages"
-          size="small"
-          variant={stageFilter === 'all' ? 'filled' : 'outlined'}
-          color={stageFilter === 'all' ? 'primary' : 'default'}
-          onClick={() => setStageFilter('all')}
-        />
-        {ALL_STATUS_COLUMNS.map((col) => (
-          <Chip
-            key={col.key}
-            label={col.label}
+      <CollectionToolbar
+        sx={{ mb: 3 }}
+        search={(
+          <TextField
             size="small"
-            variant={stageFilter === col.key ? 'filled' : 'outlined'}
-            onClick={() => setStageFilter(stageFilter === col.key ? 'all' : col.key)}
-            sx={
-              stageFilter === col.key
-                ? { bgcolor: col.color, color: theme.palette.getContrastText(col.color), fontWeight: 600 }
-                : { borderColor: alpha(col.color, 0.4), color: col.color }
-            }
+            placeholder="Search by title, company, or location…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{ flexGrow: 1 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+                'aria-label': 'Search applications',
+              },
+            }}
           />
-        ))}
-      </Stack>
+        )}
+        controls={(
+          <FormControl size="small" sx={{ minWidth: 130 }}>
+            <InputLabel id="apps-sort-label">Sort</InputLabel>
+            <Select
+              labelId="apps-sort-label"
+              value={sortKey}
+              label="Sort"
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
+        secondary={(
+          <Stack spacing={1.5}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ flexWrap: 'wrap', gap: 1 }}
+            >
+              <Chip
+                label="All Stages"
+                size="small"
+                variant={stageFilter === 'all' ? 'filled' : 'outlined'}
+                color={stageFilter === 'all' ? 'primary' : 'default'}
+                onClick={() => setStageFilter('all')}
+              />
+              {ALL_STATUS_COLUMNS.map((col) => (
+                <Chip
+                  key={col.key}
+                  label={col.label}
+                  size="small"
+                  variant={stageFilter === col.key ? 'filled' : 'outlined'}
+                  onClick={() => setStageFilter(stageFilter === col.key ? 'all' : col.key)}
+                  sx={
+                    stageFilter === col.key
+                      ? { bgcolor: col.color, color: theme.palette.getContrastText(col.color), fontWeight: 600 }
+                      : { borderColor: alpha(col.color, 0.4), color: col.color }
+                  }
+                />
+              ))}
+            </Stack>
 
-      {/* ── Active / Closed filter ── */}
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ mb: 3, flexWrap: 'wrap', gap: 1 }}
-      >
-        {(['all', 'active', 'closed'] as const).map((key) => (
-          <Chip
-            key={key}
-            label={key === 'all' ? 'All' : key === 'active' ? 'Active' : 'Closed'}
-            size="small"
-            variant={activeFilter === key ? 'filled' : 'outlined'}
-            color={activeFilter === key ? 'primary' : 'default'}
-            onClick={() => setActiveFilter(key)}
-          />
-        ))}
-        <Chip
-          icon={<DocIcon sx={{ fontSize: '0.85rem !important' }} />}
-          label="Has Resume"
-          size="small"
-          variant={resumeFilter === 'yes' ? 'filled' : 'outlined'}
-          color={resumeFilter === 'yes' ? 'success' : 'default'}
-          onClick={() => setResumeFilter(resumeFilter === 'yes' ? 'all' : 'yes')}
-        />
-        <Chip
-          icon={<DocIcon sx={{ fontSize: '0.85rem !important' }} />}
-          label="Has Cover Letter"
-          size="small"
-          variant={coverLetterFilter === 'yes' ? 'filled' : 'outlined'}
-          color={coverLetterFilter === 'yes' ? 'success' : 'default'}
-          onClick={() => setCoverLetterFilter(coverLetterFilter === 'yes' ? 'all' : 'yes')}
-        />
-      </Stack>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ flexWrap: 'wrap', gap: 1 }}
+            >
+              {(['all', 'active', 'closed'] as const).map((key) => (
+                <Chip
+                  key={key}
+                  label={key === 'all' ? 'All' : key === 'active' ? 'Active' : 'Closed'}
+                  size="small"
+                  variant={activeFilter === key ? 'filled' : 'outlined'}
+                  color={activeFilter === key ? 'primary' : 'default'}
+                  onClick={() => setActiveFilter(key)}
+                />
+              ))}
+              <Chip
+                icon={<DocIcon sx={{ fontSize: '0.85rem !important' }} />}
+                label="Has Resume"
+                size="small"
+                variant={resumeFilter === 'yes' ? 'filled' : 'outlined'}
+                color={resumeFilter === 'yes' ? 'success' : 'default'}
+                onClick={() => setResumeFilter(resumeFilter === 'yes' ? 'all' : 'yes')}
+              />
+              <Chip
+                icon={<DocIcon sx={{ fontSize: '0.85rem !important' }} />}
+                label="Has Cover Letter"
+                size="small"
+                variant={coverLetterFilter === 'yes' ? 'filled' : 'outlined'}
+                color={coverLetterFilter === 'yes' ? 'success' : 'default'}
+                onClick={() => setCoverLetterFilter(coverLetterFilter === 'yes' ? 'all' : 'yes')}
+              />
+            </Stack>
+          </Stack>
+        )}
+      />
 
       {/* ── Application list ── */}
       {loading ? (
-        <Stack spacing={2}>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton
-              key={i}
-              variant="rounded"
-              height={96}
-              sx={{ borderRadius: 3 }}
-            />
-          ))}
-        </Stack>
+        <LoadingState kind="list" count={5} itemHeight={96} />
       ) : sorted.length === 0 ? (
         applications.length === 0 ? (
           <EmptyState
             icon={<WorkIcon />}
             title="No applications tracked"
             description="Apply to a lead to start tracking your application progress."
-            action={{
+            primaryAction={{
               label: 'Browse Leads',
               onClick: () => navigate('/leads'),
               icon: <ExploreIcon />,
@@ -662,14 +654,13 @@ const ApplicationsQueuePage: React.FC = () => {
         onClose={() => setSuccess('')}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert
+        <InlineFeedback
+          tone="success"
           onClose={() => setSuccess('')}
-          severity="success"
           variant="filled"
-          sx={{ width: '100%' }}
         >
           {success}
-        </Alert>
+        </InlineFeedback>
       </Snackbar>
     </Box>
   );

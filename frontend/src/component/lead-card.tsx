@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Card, CardContent, Typography, Button, Chip, Stack, Box, IconButton,
+  Typography, Button, Stack, Box, IconButton,
   Tooltip, Divider, useTheme,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -15,6 +15,7 @@ import {
 } from '@mui/icons-material';
 import type { LeadRead } from '../service/leads';
 import type { ApplicationCreationIntent } from '../service/applications';
+import { CardShell, StatusChip, getStatusMetaSx } from '../design-system';
 import ApplicationIntentButton from './application-intent-button';
 import { timeAgo } from '../util/format';
 import { brandGradient } from '../theme/effects';
@@ -45,16 +46,12 @@ function MetaChip({
 }) {
   if (!label) return null;
   return (
-    <Chip
+    <StatusChip
       icon={icon}
       label={label}
       size="small"
       variant="outlined"
-      sx={{
-        borderColor: color ? alpha(color, 0.35) : undefined,
-        color: color || 'text.secondary',
-        '& .MuiChip-icon': { color: color || 'text.secondary' },
-      }}
+      color={color}
     />
   );
 }
@@ -84,42 +81,24 @@ const LeadCard: React.FC<LeadCardProps> = ({
   const isActive = (lead.interest_count ?? 0) > 1 || (lead.comment_count ?? 0) > 0;
 
   return (
-    <Card
-      role="button"
-      tabIndex={0}
+    <CardShell
       aria-label={`Open lead ${lead.title || 'Untitled Position'}`}
       onClick={() => onOpen(lead)}
+      interactive
+      accentColor={theme.palette.primary.main}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           onOpen(lead);
         }
       }}
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        cursor: 'pointer',
-        transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s',
-        borderLeft: `3px solid ${alpha(theme.palette.primary.main, 0.5)}`,
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          borderLeftColor: theme.palette.primary.main,
-          boxShadow: `0 10px 24px ${alpha(theme.palette.primary.main, 0.12)}`,
-        },
-        '&:focus-visible': {
-          outline: `2px solid ${alpha(theme.palette.primary.main, 0.6)}`,
-          outlineOffset: 2,
-        },
-      }}
     >
-      <CardContent sx={{ p: { xs: 2, sm: 2.5 }, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
           <Box sx={{ minWidth: 0, flexGrow: 1 }}>
             <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
-              {lead.viewer_is_registered && <Chip size="small" color="success" label="Following" />}
-              {isActive && <Chip size="small" color="secondary" label="Active" />}
-              {!lead.viewer_is_registered && lead.viewer_permissions?.can_register && <Chip size="small" variant="outlined" label="Joinable" />}
+              {lead.viewer_is_registered && <StatusChip size="small" color={theme.palette.success.main} label="Following" />}
+              {isActive && <StatusChip size="small" color={theme.palette.secondary.main} label="Active" />}
+              {!lead.viewer_is_registered && lead.viewer_permissions?.can_register && <StatusChip size="small" variant="outlined" color={theme.palette.primary.main} label="Joinable" />}
             </Stack>
             <Typography
               variant="body1"
@@ -245,7 +224,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} justifyContent="space-between">
             <Stack spacing={0.5}>
               <Stack direction="row" spacing={0.75} alignItems="center">
-                <GroupsIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                <GroupsIcon sx={{ fontSize: 16, ...getStatusMetaSx(theme, theme.palette.primary.main) }} />
                 <Typography variant="body2" fontWeight={700}>{lead.interest_count ?? 0} tracking</Typography>
               </Stack>
               <Typography variant="caption" color="text.secondary">
@@ -260,7 +239,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
             </Stack>
             <Stack spacing={0.5}>
               <Stack direction="row" spacing={0.75} alignItems="center">
-                <CommentIcon sx={{ fontSize: 16, color: 'secondary.main' }} />
+                <CommentIcon sx={{ fontSize: 16, ...getStatusMetaSx(theme, theme.palette.secondary.main) }} />
                 <Typography variant="body2" fontWeight={700}>{lead.comment_count ?? 0} comments</Typography>
               </Stack>
               <Typography variant="caption" color="text.secondary">
@@ -295,15 +274,14 @@ const LeadCard: React.FC<LeadCardProps> = ({
           </Stack>
           <Tooltip title={new Date(lead.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}>
             <Stack direction="row" spacing={0.5} alignItems="center" sx={{ cursor: 'default' }}>
-              <TimeIcon sx={{ fontSize: 13, color: 'text.secondary', opacity: 0.6 }} />
+              <TimeIcon sx={{ fontSize: 13, ...getStatusMetaSx(theme, theme.palette.text.secondary), opacity: 0.6 }} />
               <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.7 }}>
                 {timeAgo(lead.created_at)}
               </Typography>
             </Stack>
           </Tooltip>
         </Stack>
-      </CardContent>
-    </Card>
+    </CardShell>
   );
 };
 

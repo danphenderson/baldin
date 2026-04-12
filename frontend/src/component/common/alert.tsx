@@ -1,5 +1,6 @@
 import React from "react";
-import { Alert } from '@mui/material';
+import { Box } from '@mui/material';
+import { InlineFeedback } from '../../design-system';
 
 
 interface MessageAlertProps {
@@ -14,13 +15,11 @@ const MessageAlert: React.FC<MessageAlertProps> = ({ message, onClose, severity 
   }
 
   return (
-    <Alert
-      severity={severity}
-      onClose={onClose} // Show close button if onClose is provided
-      sx={{ width: '100%', marginTop: 2, marginBottom: 2 }}
-    >
-      {message}
-    </Alert>
+    <Box sx={{ mt: 2, mb: 2 }}>
+      <InlineFeedback tone={severity} onClose={onClose}>
+        {message}
+      </InlineFeedback>
+    </Box>
   );
 };
 

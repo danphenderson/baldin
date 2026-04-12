@@ -1,9 +1,10 @@
 import React from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography,
+  Box, Button, Typography,
 } from '@mui/material';
 import { Warning as WarningIcon } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
+import { FormDialogShell } from '../../design-system';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -23,39 +24,38 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const theme = useTheme();
 
   return (
-    <Dialog
+    <FormDialogShell
       open={open}
-      onClose={loading ? undefined : onCancel}
+      onClose={onCancel}
       maxWidth="xs"
       fullWidth
-      aria-labelledby="confirm-dialog-title"
+      busy={loading}
+      title={(
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon sx={{ color: theme.palette.warning.main }} />
+          <Typography variant="h6" component="span" fontWeight={700}>
+            {title}
+          </Typography>
+        </Box>
+      )}
+      actions={(
+        <>
+          <Button onClick={onCancel} disabled={loading}>{cancelLabel}</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading ? `${confirmLabel}...` : confirmLabel}
+          </Button>
+        </>
+      )}
     >
-      <DialogTitle
-        id="confirm-dialog-title"
-        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-      >
-        <WarningIcon sx={{ color: theme.palette.warning.main }} />
-        <Typography variant="h6" component="span" fontWeight={700}>
-          {title}
-        </Typography>
-      </DialogTitle>
-      <DialogContent>
         <Typography variant="body2" color="text.secondary" component="div">
           {message}
         </Typography>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onCancel} disabled={loading}>{cancelLabel}</Button>
-        <Button
-          variant="contained"
-          color="error"
-          onClick={onConfirm}
-          disabled={loading}
-        >
-          {loading ? `${confirmLabel}...` : confirmLabel}
-        </Button>
-      </DialogActions>
-    </Dialog>
+    </FormDialogShell>
   );
 };
 

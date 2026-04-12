@@ -1,9 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
   TextField,
   FormControl,
@@ -12,11 +8,9 @@ import {
   MenuItem,
   Stack,
   Chip,
-  Typography,
-  IconButton,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { FormDialogShell } from '../design-system';
 import type { LeadRead, LeadCreate, LeadUpdate } from '../service/leads';
 import type { CompanyRead } from '../service/companies';
 
@@ -124,26 +118,22 @@ const LeadFormDialog: React.FC<LeadFormDialogProps> = ({
   };
 
   return (
-    <Dialog
+    <FormDialogShell
       open={open}
-      onClose={saving ? undefined : onClose}
+      onClose={onClose}
       maxWidth="md"
       fullWidth
-      aria-labelledby="lead-form-title"
+      busy={saving}
+      title={isEdit ? 'Add Shared Context' : 'Add Lead'}
+      actions={(
+        <>
+          <Button onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="contained" onClick={handleSave} disabled={saving || (!isEdit && !url.trim())}>
+            {saving ? 'Saving...' : isEdit ? 'Save Shared Fields' : 'Create Lead'}
+          </Button>
+        </>
+      )}
     >
-      <DialogTitle
-        id="lead-form-title"
-        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}
-      >
-        <Typography variant="h6" component="span" fontWeight={700}>
-          {isEdit ? 'Add Shared Context' : 'Add Lead'}
-        </Typography>
-        <IconButton onClick={onClose} size="small" aria-label="Close dialog" disabled={saving}>
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-
-      <DialogContent dividers>
         <Grid container spacing={2} sx={{ mt: 0 }}>
           {!isEdit && (
             <Grid size={12}>
@@ -233,15 +223,7 @@ const LeadFormDialog: React.FC<LeadFormDialogProps> = ({
             />
           </Grid>
         </Grid>
-      </DialogContent>
-
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving}>Cancel</Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving || (!isEdit && !url.trim())}>
-          {saving ? 'Saving...' : isEdit ? 'Save Shared Fields' : 'Create Lead'}
-        </Button>
-      </DialogActions>
-    </Dialog>
+    </FormDialogShell>
   );
 };
 

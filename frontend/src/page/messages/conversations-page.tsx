@@ -9,7 +9,6 @@ import {
   CardActionArea,
   CardContent,
   Pagination as MuiPagination,
-  Skeleton,
   Stack,
   TextField,
   Typography,
@@ -27,7 +26,7 @@ import {
   type ConversationRead,
 } from '../../service/messages';
 import { avatarUrl } from '../../service/users';
-import EmptyState from '../../component/common/empty-state';
+import { CollectionToolbar, EmptyState, LoadingState } from '../../design-system';
 import NewConversationDialog from '../../component/new-conversation-dialog';
 import { useNotification } from '../../context/notification-context';
 
@@ -111,45 +110,38 @@ const ConversationsPage: React.FC = () => {
 
   return (
     <Box>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }} alignItems={{ sm: 'center' }}>
-        <TextField
-          size="small"
-          placeholder="Search conversations…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          slotProps={{ input: { startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} /> } }}
-          sx={{ flexGrow: 1, maxWidth: { sm: 360 } }}
-        />
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setDialogOpen(true)}
-        >
-          New Message
-        </Button>
-      </Stack>
+      <CollectionToolbar
+        sx={{ mb: 3 }}
+        search={(
+          <TextField
+            size="small"
+            placeholder="Search conversations…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            slotProps={{ input: { startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} /> } }}
+            sx={{ flexGrow: 1, maxWidth: { sm: 360 } }}
+          />
+        )}
+        actions={(
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setDialogOpen(true)}
+          >
+            New Message
+          </Button>
+        )}
+      />
 
       {loading ? (
-        <Stack spacing={1.5}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} sx={{ height: 80 }}>
-              <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <Skeleton variant="circular" width={40} height={40} />
-                <Box sx={{ flex: 1 }}>
-                  <Skeleton variant="text" width="40%" height={22} />
-                  <Skeleton variant="text" width="60%" height={16} sx={{ mt: 0.5 }} />
-                </Box>
-              </CardContent>
-            </Card>
-          ))}
-        </Stack>
+        <LoadingState kind="list" count={4} itemHeight={80} />
       ) : filtered.length === 0 ? (
         conversations.length === 0 ? (
           <EmptyState
             icon={<ChatIcon />}
             title="No conversations yet"
             description="Start a conversation from a connection's profile or Discover."
-            action={{ label: 'New Message', onClick: () => setDialogOpen(true), icon: <AddIcon /> }}
+            primaryAction={{ label: 'New Message', onClick: () => setDialogOpen(true), icon: <AddIcon /> }}
           />
         ) : (
           <EmptyState

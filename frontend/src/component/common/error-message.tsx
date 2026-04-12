@@ -1,5 +1,6 @@
 import React from "react";
-import { Alert } from '@mui/material';
+import { Box } from '@mui/material';
+import { InlineFeedback } from '../../design-system';
 
 // Define a type for the component's props
 interface ErrorMessageProps {
@@ -14,13 +15,11 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({ message, onClose }) => {
   }
 
   return (
-    <Alert
-      severity="error"
-      onClose={onClose} // Show close button if onClose is provided
-      sx={{ width: '100%', marginTop: 2, marginBottom: 2 }} // Some spacing and full width
-    >
-      {message}
-    </Alert>
+    <Box sx={{ mt: 2, mb: 2 }}>
+      <InlineFeedback tone="error" onClose={onClose}>
+        {message}
+      </InlineFeedback>
+    </Box>
   );
 };
 

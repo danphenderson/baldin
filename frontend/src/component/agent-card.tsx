@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Card, CardContent, Typography, Chip, Stack, Box, IconButton,
+  Typography, Stack, Box, IconButton,
   Tooltip, Switch, useTheme,
 } from '@mui/material';
 import { alpha, type Theme } from '@mui/material/styles';
@@ -9,8 +9,8 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import type { AgentSummaryRead, AgentKind } from '../service/agents';
+import { CardShell, StatusChip, getStatusMetaSx } from '../design-system';
 import { CardTitle, Caption } from './common/text';
-import { ALPHA_CHIP, ALPHA_HOVER } from '../theme/effects';
 import { timeAgo } from '../util/format';
 
 /* ------------------------------------------------------------------ */
@@ -66,11 +66,11 @@ const AgentCard: React.FC<AgentCardProps> = ({
   const kColor = kindColor(agent.kind, theme);
 
   return (
-    <Card
-      role="button"
-      tabIndex={0}
+    <CardShell
       aria-label={`Open agent ${agent.name}`}
       onClick={() => onClick(agent)}
+      interactive
+      accentColor={kColor}
       onKeyDown={(e) => {
         if (e.target !== e.currentTarget) {
           return;
@@ -80,26 +80,7 @@ const AgentCard: React.FC<AgentCardProps> = ({
           onClick(agent);
         }
       }}
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        cursor: 'pointer',
-        transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s',
-        borderLeft: `3px solid ${alpha(kColor, 0.5)}`,
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          borderLeftColor: kColor,
-          boxShadow: `0 10px 24px ${alpha(kColor, 0.12)}`,
-          bgcolor: alpha(theme.palette.action.hover, ALPHA_HOVER),
-        },
-        '&:focus-visible': {
-          outline: `2px solid ${alpha(theme.palette.primary.main, 0.6)}`,
-          outlineOffset: 2,
-        },
-      }}
     >
-      <CardContent sx={{ p: { xs: 2, sm: 2.5 }, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         {/* Header: name + enabled switch */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
           <CardTitle sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -118,17 +99,11 @@ const AgentCard: React.FC<AgentCardProps> = ({
         </Box>
 
         {/* Kind badge */}
-        <Chip
+        <StatusChip
           label={KIND_LABELS[agent.kind] ?? agent.kind}
           size="small"
-          sx={{
-            mt: 1,
-            alignSelf: 'flex-start',
-            bgcolor: alpha(kColor, ALPHA_CHIP),
-            color: kColor,
-            fontWeight: 600,
-            fontSize: '0.75rem',
-          }}
+          color={kColor}
+          sx={{ mt: 1, alignSelf: 'flex-start', fontSize: '0.75rem' }}
         />
 
         {/* Description */}
@@ -153,7 +128,7 @@ const AgentCard: React.FC<AgentCardProps> = ({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5, pt: 1, borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}` }}>
           <Tooltip title={new Date(agent.updated_at).toLocaleString()}>
             <Box>
-              <Caption>Updated {timeAgo(agent.updated_at)}</Caption>
+              <Caption sx={getStatusMetaSx(theme, kColor)}>Updated {timeAgo(agent.updated_at)}</Caption>
             </Box>
           </Tooltip>
 
@@ -179,8 +154,7 @@ const AgentCard: React.FC<AgentCardProps> = ({
             </Tooltip>
           </Stack>
         </Box>
-      </CardContent>
-    </Card>
+    </CardShell>
   );
 };
 

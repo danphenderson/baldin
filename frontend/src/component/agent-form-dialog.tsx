@@ -1,9 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
   TextField,
   FormControl,
@@ -12,13 +8,10 @@ import {
   Select,
   MenuItem,
   Switch,
-  Typography,
-  IconButton,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { FormDialogShell } from '../design-system';
 import type { AgentRead, AgentCreate, AgentUpdate, AgentKind } from '../service/agents';
-import { getKindLabel } from './agent-card';
 
 /* ------------------------------------------------------------------ */
 /*  Kind options                                                       */
@@ -109,26 +102,29 @@ const AgentFormDialog: React.FC<AgentFormDialogProps> = ({
   const canSave = name.trim().length > 0;
 
   return (
-    <Dialog
+    <FormDialogShell
       open={open}
-      onClose={saving ? undefined : onClose}
+      onClose={onClose}
       maxWidth="sm"
       fullWidth
-      aria-labelledby="agent-form-title"
+      busy={saving}
+      title={isEdit ? 'Edit Agent' : 'Create Agent'}
+      actions={(
+        <>
+          <Button onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={saving || !canSave}
+          >
+            {saving
+              ? (isEdit ? 'Saving…' : 'Creating…')
+              : (isEdit ? 'Save Changes' : 'Create Agent')
+            }
+          </Button>
+        </>
+      )}
     >
-      <DialogTitle
-        id="agent-form-title"
-        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}
-      >
-        <Typography variant="h6" component="span" fontWeight={700}>
-          {isEdit ? 'Edit Agent' : 'Create Agent'}
-        </Typography>
-        <IconButton onClick={onClose} size="small" aria-label="Close dialog" disabled={saving}>
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-
-      <DialogContent dividers>
         <Grid container spacing={2} sx={{ mt: 0 }}>
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
@@ -199,22 +195,7 @@ const AgentFormDialog: React.FC<AgentFormDialogProps> = ({
             />
           </Grid>
         </Grid>
-      </DialogContent>
-
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving}>Cancel</Button>
-        <Button
-          variant="contained"
-          onClick={handleSave}
-          disabled={saving || !canSave}
-        >
-          {saving
-            ? (isEdit ? 'Saving\u2026' : 'Creating\u2026')
-            : (isEdit ? 'Save Changes' : 'Create Agent')
-          }
-        </Button>
-      </DialogActions>
-    </Dialog>
+    </FormDialogShell>
   );
 };
 

@@ -18,6 +18,8 @@ export interface SecondaryNavItem {
   path: string;
   /** When true the item is only visible to superusers. */
   superuserOnly?: boolean;
+  /** Optional aliases used by the global command palette. */
+  paletteKeywords?: string[];
 }
 
 export type NavIconKey =
@@ -47,6 +49,7 @@ export interface NavigationLinkItem extends BaseNavigationItem {
   kind: 'link';
   path: string;
   badge?: 'unreadMessages';
+  paletteKeywords?: string[];
 }
 
 export interface NavigationGroupItem extends BaseNavigationItem {
@@ -64,15 +67,15 @@ export type NavigationItem = NavigationLinkItem | NavigationGroupItem;
 export const secondaryNavByGroup: Record<string, SecondaryNavItem[]> = {
   '/leads': [
     { label: 'All Leads', path: '/leads' },
-    { label: 'Companies', path: '/leads/companies' },
+    { label: 'Companies', path: '/leads/companies', paletteKeywords: ['organizations', 'employers'] },
   ],
   '/applications': [
     { label: 'All Applications', path: '/applications' },
-    { label: 'Board', path: '/applications/board' },
+    { label: 'Board', path: '/applications/board', paletteKeywords: ['kanban', 'pipeline'] },
   ],
   '/workflows': [
-    { label: 'Pipelines', path: '/workflows' },
-    { label: 'Extractors', path: '/workflows/extractors' },
+    { label: 'Pipelines', path: '/workflows', paletteKeywords: ['automation'] },
+    { label: 'Extractors', path: '/workflows/extractors', paletteKeywords: ['parser', 'schema'] },
     { label: 'Review Queue', path: '/workflows/review', superuserOnly: true },
     { label: 'Crawlers', path: '/workflows/crawlers', superuserOnly: true },
   ],
@@ -139,6 +142,7 @@ export const drawerSections: DrawerSection[] = [
         path: '/network/messages',
         icon: 'messages',
         badge: 'unreadMessages',
+        paletteKeywords: ['chat', 'inbox'],
       },
       {
         kind: 'group',
@@ -160,6 +164,7 @@ export const drawerSections: DrawerSection[] = [
             label: 'Discover',
             path: '/network/discover',
             icon: 'discover',
+            paletteKeywords: ['directory', 'people'],
           },
         ],
       },
@@ -169,9 +174,30 @@ export const drawerSections: DrawerSection[] = [
     key: 'automation',
     label: 'Automation',
     items: [
-      { kind: 'link', id: 'workflows', label: 'Workflows', path: '/workflows', icon: 'workflows' },
-      { kind: 'link', id: 'agents', label: 'Agents', path: '/automation/agents', icon: 'agents' },
-      { kind: 'link', id: 'workspace', label: 'Workspace', path: '/workspace', icon: 'workspace' },
+      {
+        kind: 'link',
+        id: 'workflows',
+        label: 'Workflows',
+        path: '/workflows',
+        icon: 'workflows',
+        paletteKeywords: ['pipelines', 'automation'],
+      },
+      {
+        kind: 'link',
+        id: 'agents',
+        label: 'Agents',
+        path: '/automation/agents',
+        icon: 'agents',
+        paletteKeywords: ['ai', 'assistant'],
+      },
+      {
+        kind: 'link',
+        id: 'workspace',
+        label: 'Workspace',
+        path: '/workspace',
+        icon: 'workspace',
+        paletteKeywords: ['documents', 'docs'],
+      },
     ],
   },
 ];

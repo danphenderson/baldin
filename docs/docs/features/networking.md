@@ -5,7 +5,7 @@ title: Networking & Messaging
 description: Discover profiles, peer connections, direct and group conversations, and activity tracking.
 ---
 
-<!-- last-verified: 2026-04-10 -->
+<!-- last-verified: 2026-04-12 -->
 
 # Networking & Messaging
 
@@ -72,27 +72,31 @@ The activity feed aggregates events from connections, conversations, application
 
 ## Agents
 
-The Agents surface at `/network/agents` lets users build reusable AI assistants that operate against tracked applications and produce cell-doc session documents.
+The Agents surface at `/automation/agents` lets users build reusable AI assistants that support both one-shot workspace generation and conversational follow-up against tracked applications.
 
-Each agent is defined by a name, model, instructions, and optional temperature/top-p overrides. Running an agent against an application creates (or appends to) a cell-doc session, producing a new document version tied to the run.
+Each agent is defined by a name, model, instructions, and optional temperature/top-p overrides. The same agent can be used in two modes:
+
+- `Run Agent` creates or appends to a cell-doc workspace session, producing a document version tied to an `AgentRun`.
+- `Chat with Agent` opens a persisted chat session with streamed assistant replies and an optional save-to-document export when the conversation should become a workspace artifact.
 
 **Frontend:**
-- `/network/agents` — Agent list (`frontend/src/page/agents.tsx`)
-- `/network/agents/:id` — Agent detail with run history and rerun controls (`frontend/src/page/agent-detail.tsx`)
+- `/automation/agents` — Agent list (`frontend/src/page/agents.tsx`)
+- `/automation/agents/:agentId` — Agent detail with run history, session list, and launch controls (`frontend/src/page/agent-detail.tsx`)
+- `/automation/agents/:agentId/chat/:sessionId` — Persisted chat session shell with streamed replies and save-to-document export (`frontend/src/page/agent-chat-shell.tsx`)
 - Rerun button on cell-doc editor footer (`frontend/src/component/rerun-agent-button.tsx`)
 
-**API:** `/agents` — Agent CRUD, per-agent run history, cross-session run lookup, and execution
+**API:** `/agents` — Agent CRUD, supported-model discovery, per-agent run history, one-shot execution, chat session CRUD/history, streamed replies, and chat export
 
-See [Map The Data Model](../architecture/data-model.md) for Agent and AgentRun entities.
+See [Map The Data Model](../architecture/data-model.md) for `Agent`, `AgentRun`, `AgentChatSession`, and `AgentChatMessage`.
 
 ## User Story Book
 
 ### Current UI State
 
-- The Network area is organized around `/network/discover`, `/network/connections`, `/network/messages`, and `/network/agents`.
+- The Network area is organized around `/network/discover`, `/network/connections`, and `/network/messages`, while agents live in the Automation area at `/automation/agents`.
 - Connections and conversations already use dedicated list and detail surfaces rather than a single combined hub.
 - Unread message counts surface through badges and dashboard summaries instead of a dedicated notifications page.
-- Agents support full CRUD, run history with pagination, and in-session rerun from both the agent detail page and the cell-doc editor.
+- Agents support full CRUD, configurable models, one-shot workspace generation, persisted chat sessions with streamed replies, and in-session rerun from both the agent detail page and the cell-doc editor.
 
 ### Planned Improvements
 
@@ -102,4 +106,4 @@ See [Map The Data Model](../architecture/data-model.md) for Agent and AgentRun e
 
 - [Networking and Messaging Architecture](../architecture/networking-and-messaging.md) — Data model, access rules, and conversation lifecycle
 - [Dashboard](./dashboard.md) — Activity feed and action items integration
-- [Map The Data Model](../architecture/data-model.md) — Connection, Conversation, Message, and ActionItem entities
+- [Map The Data Model](../architecture/data-model.md) — Connection, Conversation, Message, Agent, AgentRun, AgentChatSession, AgentChatMessage, and ActionItem entities

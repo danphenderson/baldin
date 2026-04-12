@@ -5,11 +5,11 @@ title: Browse API Routes
 description: Browse FastAPI route groups, access rules, and contract boundaries.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-12 -->
 
 # Browse API Routes
 
-Baldin exposes a FastAPI JSON API with OpenAPI 3.1 generated directly from the backend. The full contract is committed at the repo root as `openapi.json` and is also used to generate `frontend/src/schema.d.ts`.
+Baldin exposes a FastAPI API with OpenAPI 3.1 generated directly from the backend. Most routes are standard JSON over HTTP; the agent chat send route can also stream `text/event-stream` SSE responses. The full contract is committed at the repo root as `openapi.json` and is also used to generate `frontend/src/schema.d.ts`.
 
 ## Route Map
 
@@ -98,7 +98,17 @@ The document surface is now the canonical API for resumes, cover letters, and ot
 | `messaging` | `/conversations` | Direct and group conversations, messages, unread counts |
 | `action-items` | `/action-items` | Cross-entity user task management |
 | `activity-feed` | `/activity-feed` | Aggregated activity stream and dashboard summary |
-| `agents` | `/agents` | Agent CRUD, per-agent run history, cross-session run lookup, and execution |
+| `agents` | `/agents` | Agent CRUD, supported-model discovery, one-shot runs, persisted chat sessions, streamed replies, chat export, and run history |
+
+#### Agents Public Surfaces
+
+- `GET /agents/models` returns the supported model list the frontend uses for agent configuration and chat model display.
+- `POST /agents/{id}/run` is the one-shot execution path that creates or appends to a cell-doc workspace artifact.
+- `POST /agents/{id}/chat` and `GET /agents/{id}/chat` create and list persisted chat sessions for a specific agent.
+- `GET /agents/chat/{session_id}` and `GET /agents/chat/{session_id}/history` load session metadata and paginated message history.
+- `POST /agents/chat/{session_id}/messages` accepts JSON input and returns either JSON or streamed `text/event-stream` SSE output, depending on the `Accept` header.
+- `PATCH /agents/chat/{session_id}` and `DELETE /agents/chat/{session_id}` update or remove a saved session.
+- `POST /agents/chat/{session_id}/save-to-document` exports a conversation into a new cell-doc document and creates a linked `AgentRun`.
 
 ### Operational Helpers
 
@@ -129,6 +139,7 @@ Most routes require a JWT bearer token obtained through `POST /auth/jwt/login`. 
 ## Integration Contracts
 
 - The frontend should consume the generated `schema.d.ts` types rather than hand-writing payload contracts.
+- Agent chat clients need to handle both JSON request/response flows and the SSE event stream returned by `POST /agents/chat/{session_id}/messages`.
 - Backend API or schema changes should be followed by `./scripts/update_frontend_schemas.sh`.
 - OpenAPI is the canonical machine-readable contract; Swagger and ReDoc are the canonical interactive views.
 

@@ -207,3 +207,71 @@ async def test_pgvector_store_add_texts_flushes_once():
 
     session.flush.assert_awaited_once()
     assert ids == [row.id for row in added_rows]
+
+
+@pytest.mark.asyncio
+async def test_pgvector_store_similarity_search_applies_document_filter_and_returns_document_metadata():
+    from app.core.vector_store import PGVectorStore
+
+    document_id = uuid4()
+    version_id = uuid4()
+    user_id = uuid4()
+    row_id = uuid4()
+    session = MagicMock()
+    session.execute = AsyncMock(
+        return_value=[
+            SimpleNamespace(
+                id=row_id,
+                document_id=document_id,
+                document_version_id=version_id,
+                chunk_index=0,
+                chunk_text="retrieved chunk",
+                document_title="Pinned Resume",
+                document_kind="resume",
+                distance=0.08,
+            )
+        ]
+    )
+
+    store = PGVectorStore(session)
+    store._embeddings = SimpleNamespace(aembed_query=AsyncMock(return_value=[0.1, 0.2]))
+
+    results = await store.similarity_search(
+        "needle",
+        user_id=user_id,
+        k=3,
+        document_ids=[document_id],
+    )
+
+    stmt = session.execute.await_args.args[0]
+    assert "document_embeddings.document_id IN" in str(stmt)
+    assert results == [
+        {
+            "id": row_id,
+            "document_id": document_id,
+            "document_version_id": version_id,
+            "chunk_index": 0,
+            "chunk_text": "retrieved chunk",
+            "document_title": "Pinned Resume",
+            "document_kind": "resume",
+            "score": 0.92,
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_pgvector_store_delete_by_document_scopes_deletes_to_user_when_provided():
+    from app.core.vector_store import PGVectorStore
+
+    document_id = uuid4()
+    user_id = uuid4()
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=SimpleNamespace(rowcount=2))
+
+    store = PGVectorStore(session)
+
+    deleted = await store.delete_by_document(document_id, user_id=user_id)
+
+    stmt = session.execute.await_args.args[0]
+    assert "document_embeddings.user_id" in str(stmt)
+    assert deleted == 2

@@ -26,8 +26,18 @@ vi.mock('../service/agents', () => ({
   getAgent: vi.fn(),
 }));
 
+vi.mock('../service/applications', () => ({
+  getApplicationDocuments: vi.fn(),
+}));
+
+vi.mock('../service/documents', () => ({
+  getPinnedDocuments: vi.fn(),
+}));
+
 import * as agentChatService from '../service/agent-chat';
 import * as agentsService from '../service/agents';
+import * as applicationService from '../service/applications';
+import * as documentService from '../service/documents';
 import AgentChatShellPage from './agent-chat-shell';
 import type { AgentChatMessageRead } from '../service/agent-chat';
 
@@ -37,6 +47,8 @@ const mockedSaveChatToDocument = vi.mocked(agentChatService.saveChatToDocument);
 const mockedSendChatMessage = vi.mocked(agentChatService.sendChatMessage);
 const mockedUpdateChatSession = vi.mocked(agentChatService.updateChatSession);
 const mockedGetAgent = vi.mocked(agentsService.getAgent);
+const mockedGetApplicationDocuments = vi.mocked(applicationService.getApplicationDocuments);
+const mockedGetPinnedDocuments = vi.mocked(documentService.getPinnedDocuments);
 
 const userContextValue = {
   user: { id: 'u1', first_name: 'Jane', last_name: 'Doe', email: 'jane@test.com' } as never,
@@ -118,6 +130,8 @@ describe('AgentChatShellPage', () => {
     mockedSendChatMessage.mockReset();
     mockedUpdateChatSession.mockReset();
     mockedGetAgent.mockReset();
+    mockedGetApplicationDocuments.mockReset();
+    mockedGetPinnedDocuments.mockReset();
     mockedNotify.mockReset();
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       configurable: true,
@@ -140,6 +154,24 @@ describe('AgentChatShellPage', () => {
       has_more_before: false,
       next_before: null,
     } as never);
+    mockedGetPinnedDocuments.mockResolvedValue([
+      {
+        id: 'resume-1',
+        title: 'Pinned Resume',
+        kind: 'resume',
+        status: 'active',
+        is_pinned: true,
+      },
+    ] as never);
+    mockedGetApplicationDocuments.mockResolvedValue([
+      {
+        id: 'doc-application-1',
+        title: 'Job Description',
+        kind: 'job_description',
+        status: 'active',
+        is_pinned: false,
+      },
+    ] as never);
   });
 
   afterEach(() => {
@@ -483,7 +515,7 @@ describe('AgentChatShellPage', () => {
     expect(mockedSendChatMessage).toHaveBeenCalledWith(
       'test-token',
       'session-1',
-      'Help me tailor this intro.',
+      { content: 'Help me tailor this intro.' },
       expect.any(Function),
       expect.any(Function),
       expect.any(Function),
@@ -654,7 +686,7 @@ describe('AgentChatShellPage', () => {
     await waitFor(() => {
       expect(mockedSendChatMessage).toHaveBeenCalledTimes(2);
     });
-    expect(mockedSendChatMessage.mock.calls[1]?.[2]).toBe('Retry this');
+    expect(mockedSendChatMessage.mock.calls[1]?.[2]).toEqual({ content: 'Retry this' });
   });
 
   it('disables the composer for archived sessions', async () => {
@@ -665,5 +697,102 @@ describe('AgentChatShellPage', () => {
     const textbox = await screen.findByRole('textbox', { name: 'Chat message' });
     expect(textbox).toBeDisabled();
     expect(screen.getByText(/archived\. restore it from the agent detail page/i)).toBeInTheDocument();
+  });
+
+  it('sends document and URL retrieval inputs when sources are enabled for the turn', async () => {
+    const user = userEvent.setup();
+    mockedGetChatSession.mockResolvedValue(buildSession({
+      application_id: null,
+      message_count: 1,
+      messages: [{
+        id: 'message-system',
+        role: 'system',
+        content: 'Use retrieval only when the user asks for it.',
+        created_at: '2026-04-11T12:00:00Z',
+        metadata: {},
+      }],
+    }) as never);
+
+    renderPage('/automation/agents/agent-1/chat/session-1');
+
+    expect(await screen.findByText('Pinned Resume')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('switch', { name: 'Use documents' }));
+    await user.type(screen.getByLabelText('URL source'), 'https://example.com/profile');
+    await user.type(screen.getByRole('textbox', { name: 'Chat message' }), 'Use the attached sources');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => {
+      expect(mockedSendChatMessage).toHaveBeenCalledWith(
+        'test-token',
+        'session-1',
+        {
+          content: 'Use the attached sources',
+          retrieval: {
+            document_ids: ['resume-1'],
+            lookup_url: 'https://example.com/profile',
+            k: 5,
+          },
+        },
+        expect.any(Function),
+        expect.any(Function),
+        expect.any(Function),
+      );
+    });
+  });
+
+  it('renders retrieval citations and warnings under assistant messages', async () => {
+    mockedGetChatSession.mockResolvedValue(buildSession({
+      messages: [
+        {
+          id: 'message-user',
+          role: 'user',
+          content: 'What did you use?',
+          created_at: '2026-04-11T12:01:00Z',
+          metadata: {},
+        },
+        {
+          id: 'message-assistant',
+          role: 'assistant',
+          content: 'I used the supplied sources.',
+          created_at: '2026-04-11T12:01:05Z',
+          metadata: {
+            retrieval: {
+              citations: [
+                {
+                  kind: 'document',
+                  document_id: 'doc-42',
+                  document_kind: 'resume',
+                  title: 'Retrieved Resume',
+                  snippet: 'Built retrieval-backed chat systems.',
+                },
+                {
+                  kind: 'url',
+                  title: 'https://example.com/profile',
+                  url: 'https://example.com/profile',
+                  snippet: 'Public profile summary.',
+                },
+              ],
+              documents: {
+                selected_ids: ['doc-42'],
+                reembedded_ids: [],
+                warnings: ['Job Description: retrieval indexing could not be refreshed.'],
+              },
+              url: {
+                requested: 'https://example.com/profile',
+                fetch_method: 'readability',
+              },
+            },
+          },
+        },
+      ],
+    }) as never);
+
+    renderPage('/automation/agents/agent-1/chat/session-1');
+
+    expect(await screen.findByText('Retrieved Resume')).toBeInTheDocument();
+    expect(screen.getByText('Built retrieval-backed chat systems.')).toBeInTheDocument();
+    expect(screen.getByText('Job Description: retrieval indexing could not be refreshed.')).toBeInTheDocument();
+    expect(screen.getByText('via readability')).toBeInTheDocument();
   });
 });

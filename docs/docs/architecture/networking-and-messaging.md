@@ -5,7 +5,7 @@ title: Follow Network Flows
 description: Follow directory, connections, conversations, activity, and action-item flows.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-12 -->
 
 # Follow Network Flows
 
@@ -35,7 +35,7 @@ graph TD
 | `messaging` | `/conversations` | Direct and group conversations, messages, unread counts |
 | `activity-feed` | `/activity-feed` | Aggregated activity stream and dashboard summary |
 | `action-items` | `/action-items` | User-facing tasks linked to applications, leads, documents, or conversations |
-| `agents` | `/agents` | Agent CRUD, per-agent and cross-session run history, and execution |
+| `agents` | `/agents` | Agent CRUD, supported-model discovery, one-shot runs, persisted chat sessions, streamed replies, and chat export |
 
 ## Data Model
 
@@ -45,6 +45,10 @@ graph TD
 | `conversations` | Direct or group conversation container |
 | `conversation_participants` | Membership, last-read timestamp, and participant role |
 | `messages` | Message body, author, reply threading, edit timestamp |
+| `agents` | User-owned reusable agent definitions with model configuration and instructions |
+| `agent_runs` | One-shot execution history tied to application context and workspace document versions |
+| `agent_chat_sessions` | Persisted per-agent conversations with status, model snapshot, and denormalized message metadata |
+| `agent_chat_messages` | Stored system, user, and assistant chat messages for each session |
 | `action_items` | Per-user tasks with optional links to `applications`, `leads`, `documents`, or `conversations` |
 
 The activity feed is assembled on demand rather than stored in a dedicated table. It pulls from application status history, messages, document versions, connection updates, and completed action items.
@@ -69,17 +73,28 @@ Those rules matter because the UI can render the route, but the backend remains 
 
 `messages.py` also prevents duplicate direct-message conversations by reusing an existing two-person direct thread when one already exists.
 
+## Agent Interaction Modes
+
+Although the agents UI lives under the Automation route group, the `/agents` backend family is part of the same cross-domain boundary because it links applications, documents, and conversational follow-up.
+
+- `Run Agent` is the one-shot path. `POST /agents/{id}/run` executes against the selected application context and creates or appends to a cell-doc workspace document through an `AgentRun`.
+- `Chat with Agent` starts from `POST /agents/{id}/chat` and `GET /agents/{id}/chat`, which create and list persisted sessions for the current agent.
+- Session reads and lifecycle changes happen through `GET /agents/chat/{session_id}`, `GET /agents/chat/{session_id}/history`, `PATCH /agents/chat/{session_id}`, and `DELETE /agents/chat/{session_id}`.
+- `POST /agents/chat/{session_id}/messages` streams assistant replies as SSE when the client requests `text/event-stream`, with JSON fallback for non-streaming clients.
+- `POST /agents/chat/{session_id}/save-to-document` exports the conversation into a workspace document and records a linked `AgentRun`.
+
 ## Frontend Surfaces
 
 | Route | Page |
 | --- | --- |
-| `/network/directory` | `frontend/src/page/directory.tsx` |
-| `/network/directory/:userId` | `frontend/src/page/user-profile.tsx` |
+| `/network/discover` | `frontend/src/page/directory.tsx` |
+| `/network/discover/:userId` | `frontend/src/page/user-profile.tsx` |
 | `/network/connections` | `frontend/src/page/connections.tsx` |
 | `/network/messages` | `frontend/src/page/messages/conversations-page.tsx` |
 | `/network/messages/:conversationId` | `frontend/src/page/messages/conversation-detail-page.tsx` |
-| `/network/agents` | `frontend/src/page/agents.tsx` |
-| `/network/agents/:id` | `frontend/src/page/agent-detail.tsx` |
+| `/automation/agents` | `frontend/src/page/agents.tsx` |
+| `/automation/agents/:agentId` | `frontend/src/page/agent-detail.tsx` |
+| `/automation/agents/:agentId/chat/:sessionId` | `frontend/src/page/agent-chat-shell.tsx` |
 
 Supporting UI lives in the component layer:
 
@@ -95,6 +110,7 @@ API client access lives in:
 - `frontend/src/service/action-items.tsx`
 - `frontend/src/service/directory.tsx`
 - `frontend/src/service/agents.tsx`
+- `frontend/src/service/agent-chat.tsx`
 
 ## Dashboard Coupling
 
@@ -103,5 +119,6 @@ The dashboard summary endpoint reuses networking and activity data to drive home
 ## Maintenance Notes
 
 - Update this doc when a new connection status, conversation type, or activity source is introduced.
+- Keep the agent interaction-mode language aligned with [Networking & Messaging](../features/networking.md) and [Document Workspace](../features/document-workspace.md).
 - Keep the tier-gate rules in sync with the backend dependencies documented in [Browse API Routes](./api-surface.md).
 - If the activity feed ever moves from derived queries to persisted events, this doc and [Map The Data Model](./data-model.md) should be updated together.

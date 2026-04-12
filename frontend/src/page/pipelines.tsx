@@ -20,6 +20,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { JSONTree } from 'react-json-tree';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
+import WorkflowFormDialog from '../component/workflow-form-dialog';
 import {
   type OrchestrationEventRead,
   type OrchestrationEventStatus,
@@ -43,7 +44,6 @@ import { monoFontFamily } from '../design-system/tokens/typography';
 type PipelineFormState = { name: string; description: string; definition: string };
 type TriggerEventFormState = { message: string; payload: string; pipeline_id: string };
 
-const INITIAL_PIPELINE_FORM: PipelineFormState = { name: '', description: '', definition: '{}' };
 const INITIAL_TRIGGER_FORM: TriggerEventFormState = { message: '', payload: '{}', pipeline_id: '' };
 
 const getErrorMessage = (error: unknown): string =>
@@ -471,7 +471,6 @@ const PipelinesPage: React.FC = () => {
   const [selectedPipeline, setSelectedPipeline] = useState<OrchestrationPipelineRead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [newPipeline, setNewPipeline] = useState<PipelineFormState>(INITIAL_PIPELINE_FORM);
   const [triggerOpen, setTriggerOpen] = useState(false);
   const [triggerForm, setTriggerForm] = useState<TriggerEventFormState>(INITIAL_TRIGGER_FORM);
   const [editPipeOpen, setEditPipeOpen] = useState(false);
@@ -538,23 +537,6 @@ const PipelinesPage: React.FC = () => {
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
-
-  const handleCreate = async () => {
-    if (!token) return;
-    if (!isValidJson(newPipeline.definition)) {
-      setError('Workflow definition must be valid JSON');
-      return;
-    }
-    try {
-      await createOrchestrationPipeline(token, {
-        ...newPipeline,
-        definition: JSON.parse(newPipeline.definition),
-      });
-      setCreateOpen(false);
-      setNewPipeline(INITIAL_PIPELINE_FORM);
-      refresh();
-    } catch (e: unknown) { setError(getErrorMessage(e)); }
-  };
 
   const handleConfirmDelete = async () => {
     if (!token || !deleteTarget) return;
@@ -896,60 +878,23 @@ const PipelinesPage: React.FC = () => {
       {/* Dialogs                                                            */}
       {/* ================================================================== */}
 
-      {/* ---- Create Pipeline ---- */}
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth aria-labelledby="create-pipeline-title">
-        <DialogTitle id="create-pipeline-title" fontWeight={700}>Create Workflow</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2.5} sx={{ mt: 1 }}>
-            <TextField
-              fullWidth
-              label="Name"
-              autoFocus
-              placeholder="e.g. LinkedIn Lead Enrichment"
-              value={newPipeline.name}
-              onChange={(e) => setNewPipeline((p) => ({ ...p, name: e.target.value }))}
-            />
-            <TextField
-              fullWidth
-              label="Description"
-              placeholder="What does this workflow do?"
-              multiline
-              minRows={2}
-              value={newPipeline.description}
-              onChange={(e) => setNewPipeline((p) => ({ ...p, description: e.target.value }))}
-            />
-            <TextField
-              fullWidth
-              label="Definition (JSON)"
-              multiline
-              rows={5}
-              value={newPipeline.definition}
-              onChange={(e) => setNewPipeline((p) => ({ ...p, definition: e.target.value }))}
-              error={newPipeline.definition.length > 0 && !isValidJson(newPipeline.definition)}
-              helperText={
-                newPipeline.definition.length > 0 && !isValidJson(newPipeline.definition)
-                  ? 'Invalid JSON'
-                  : ' '
-              }
-              slotProps={{
-                input: {
-                  sx: { fontFamily: monoFontFamily, fontSize: '0.85rem' },
-                },
-              }}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleCreate}
-            disabled={!newPipeline.name.trim() || !isValidJson(newPipeline.definition)}
-          >
-            Create Workflow
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <WorkflowFormDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSave={async (data) => {
+          if (!token) {
+            return;
+          }
+
+          try {
+            await createOrchestrationPipeline(token, data);
+            await refresh();
+          } catch (error) {
+            setError(getErrorMessage(error));
+            throw error;
+          }
+        }}
+      />
 
       {/* ---- Trigger Event ---- */}
       <Dialog open={triggerOpen} onClose={() => setTriggerOpen(false)} maxWidth="sm" fullWidth aria-labelledby="trigger-event-title">

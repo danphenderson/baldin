@@ -2377,8 +2377,63 @@ class AgentChatHistoryPageRead(BaseSchema):
     )
 
 
+class AgentChatRetrievalRequest(BaseSchema):
+    document_ids: list[UUID4] = Field(
+        default_factory=list,
+        max_length=5,
+        description="Optional document identifiers to search for this message",
+    )
+    lookup_url: str | None = Field(
+        None,
+        description="Optional explicit URL to fetch and use as ephemeral context",
+    )
+    k: int = Field(
+        5,
+        ge=1,
+        le=8,
+        description="Maximum number of document chunks to retrieve",
+    )
+
+    @field_validator("document_ids", mode="after")
+    @classmethod
+    def dedupe_document_ids(cls, value: list[UUID4]) -> list[UUID4]:
+        deduped: list[UUID4] = []
+        seen: set[UUID4] = set()
+        for document_id in value:
+            if document_id in seen:
+                continue
+            seen.add(document_id)
+            deduped.append(document_id)
+        return deduped
+
+    @field_validator("lookup_url", mode="before")
+    @classmethod
+    def normalize_lookup_url(cls, value: str | None) -> str | None:
+        if isinstance(value, str):
+            stripped = value.strip()
+            return stripped or None
+        return value
+
+    @field_validator("lookup_url", mode="after")
+    @classmethod
+    def validate_lookup_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return validate_url_safe_for_fetch(value)
+
+    @model_validator(mode="after")
+    def require_at_least_one_source(self) -> "AgentChatRetrievalRequest":
+        if self.document_ids or self.lookup_url:
+            return self
+        raise ValueError("retrieval must include document_ids or lookup_url")
+
+
 class AgentChatMessageCreate(BaseSchema):
     content: str = Field(description="User-authored message content")
+    retrieval: AgentChatRetrievalRequest | None = Field(
+        None,
+        description="Optional retrieval inputs used only for this message",
+    )
 
     @field_validator("content")
     @classmethod

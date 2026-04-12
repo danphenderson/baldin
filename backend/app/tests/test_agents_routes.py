@@ -13,9 +13,11 @@ from langchain_core.messages import AIMessageChunk, HumanMessage, SystemMessage
 from sqlalchemy import select
 
 from app import models
+from app import schemas as app_schemas
 from app.api.routes import agents as agents_route
 from app.core import conf
 from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
+from app.core.url_safety import UnsafeFetchUrlError
 from app.main import app
 from app.tests import utils
 
@@ -194,6 +196,52 @@ async def _create_pinned_resume(user_id: UUID, *, content: str) -> dict[str, UUI
         return {"document_id": document.id, "version_id": version.id}
 
 
+async def _create_retrievable_document(
+    user_id: UUID,
+    *,
+    title: str,
+    content: str,
+    kind: str = "resume",
+    embedded_chunk_text: str | None = None,
+) -> dict[str, UUID]:
+    async with session_context() as session:
+        document = models.Document(
+            title=title,
+            kind=kind,
+            status="active",
+            user_id=user_id,
+        )
+        session.add(document)
+        await session.flush()
+
+        version = models.DocumentVersion(
+            document_id=document.id,
+            version_number=1,
+            name=f"{title} v1",
+            content=content,
+            content_format="plain_text",
+        )
+        session.add(version)
+        await session.flush()
+
+        document.head_version_id = version.id
+
+        if embedded_chunk_text is not None:
+            session.add(
+                models.DocumentEmbedding(
+                    document_id=document.id,
+                    document_version_id=version.id,
+                    user_id=user_id,
+                    chunk_index=0,
+                    chunk_text=embedded_chunk_text,
+                    embedding=[0.0] * 1536,
+                )
+            )
+
+        await session.commit()
+        return {"document_id": document.id, "version_id": version.id}
+
+
 async def _create_chat_session_with_messages(
     *,
     user_id: UUID,
@@ -281,6 +329,24 @@ class _StreamingTestModel:
                 raise self._failure
         if self._failure is not None and self._fail_after_chunks is None:
             raise self._failure
+
+
+class _AgentChatRetrievalVectorStore:
+    results: list[dict[str, object]] = []
+    captured_queries: list[dict[str, object]] = []
+
+    def __init__(self, _session) -> None:
+        pass
+
+    async def similarity_search(self, query: str, **kwargs):
+        self.__class__.captured_queries.append({"query": query, **kwargs})
+        return list(self.__class__.results)
+
+    async def delete_by_document(self, *_args, **_kwargs):
+        return 0
+
+    async def add_texts(self, *_args, **_kwargs):
+        return []
 
 
 def _parse_sse_events(body: str) -> list[tuple[str, dict[str, object]]]:
@@ -1340,6 +1406,296 @@ async def test_send_agent_chat_message_retry_reuses_trailing_user_message(
         "Retry this prompt",
         "Recovered",
     ]
+
+
+async def test_send_agent_chat_message_json_retrieval_adds_turn_context_and_persists_compact_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    _AgentChatRetrievalVectorStore.results = []
+    _AgentChatRetrievalVectorStore.captured_queries = []
+    streaming_model = _StreamingTestModel(
+        AIMessageChunk(
+            content="Retrieved answer",
+            response_metadata={"token_usage": {"input_tokens": 9, "output_tokens": 2}},
+        ),
+    )
+
+    monkeypatch.setattr(
+        agents_route.conf.openai, "get_model", lambda _model_name=None: streaming_model
+    )
+    monkeypatch.setattr(agents_route.conf.openai, "get_chunk_size", lambda _name: 4096)
+    monkeypatch.setattr(
+        agents_route.conf.openai,
+        "get_tokenizer_encoding",
+        lambda _name=None: "o200k_base",
+    )
+    monkeypatch.setattr(agents_route, "_get_tiktoken_encoding", lambda _name: None)
+    monkeypatch.setattr(app_schemas, "validate_url_safe_for_fetch", lambda value: value)
+    monkeypatch.setattr(agents_route, "PGVectorStore", _AgentChatRetrievalVectorStore)
+
+    async def _fake_extract(url: str) -> tuple[str, str]:
+        assert url == "https://example.com/profile"
+        return (
+            "Public profile context about agent systems and search quality.",
+            "readability",
+        )
+
+    monkeypatch.setattr(
+        agents_route, "extract_text_from_url_with_method", _fake_extract
+    )
+
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-rag-json-pass")
+        headers = await _auth_headers(client, email, "agent-chat-rag-json-pass")
+        agent_id = await _create_agent(user_id, name="RAG Coach", kind="custom")
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            message_specs=[("system", "System context")],
+        )
+        document_ids = await _create_retrievable_document(
+            user_id,
+            title="Retrieved Resume",
+            content="Built retrieval-backed chat features.",
+            embedded_chunk_text="Built retrieval-backed chat features.",
+        )
+        _AgentChatRetrievalVectorStore.results = [
+            {
+                "id": UUID("11111111-1111-1111-1111-111111111111"),
+                "document_id": document_ids["document_id"],
+                "document_version_id": document_ids["version_id"],
+                "chunk_index": 0,
+                "chunk_text": "Built retrieval-backed chat features.",
+                "document_title": "Retrieved Resume",
+                "document_kind": "resume",
+                "score": 0.9912,
+            }
+        ]
+
+        response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/messages",
+            json={
+                "content": "Use the selected sources",
+                "retrieval": {
+                    "document_ids": [str(document_ids["document_id"])],
+                    "lookup_url": "https://example.com/profile",
+                    "k": 5,
+                },
+            },
+            headers={**headers, "Accept": "application/json"},
+        )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    retrieval = body["metadata"]["retrieval"]
+    assert [citation["kind"] for citation in retrieval["citations"]] == [
+        "document",
+        "url",
+    ]
+    assert retrieval["documents"]["selected_ids"] == [str(document_ids["document_id"])]
+    assert retrieval["documents"]["reembedded_ids"] == []
+    assert retrieval["url"] == {
+        "requested": "https://example.com/profile",
+        "fetch_method": "readability",
+    }
+    assert _AgentChatRetrievalVectorStore.captured_queries == [
+        {
+            "query": "Use the selected sources",
+            "user_id": user_id,
+            "k": 5,
+            "document_ids": [document_ids["document_id"]],
+        }
+    ]
+
+    assert streaming_model.messages is not None
+    assert isinstance(streaming_model.messages[0], SystemMessage)
+    assert isinstance(streaming_model.messages[1], SystemMessage)
+    assert isinstance(streaming_model.messages[2], HumanMessage)
+    assert "Retrieved Resume" in str(streaming_model.messages[1].content)
+    assert "https://example.com/profile" in str(streaming_model.messages[1].content)
+
+    async with session_context() as session:
+        result = await session.execute(
+            select(models.AgentChatMessage)
+            .where(models.AgentChatMessage.session_id == session_id)
+            .order_by(
+                models.AgentChatMessage.created_at.asc(),
+                models.AgentChatMessage.id.asc(),
+            )
+        )
+        persisted_messages = result.scalars().all()
+
+    assert [message.role for message in persisted_messages] == [
+        "system",
+        "user",
+        "assistant",
+    ]
+    assert "Retrieved context for this turn:" not in json.dumps(
+        persisted_messages[-1].metadata_
+    )
+
+
+async def test_send_agent_chat_message_retrieval_reembeds_stale_documents_and_soft_warns_on_url_fetch_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    streaming_model = _StreamingTestModel(
+        AIMessageChunk(content="Recovered with documents"),
+    )
+
+    monkeypatch.setattr(
+        agents_route.conf.openai, "get_model", lambda _model_name=None: streaming_model
+    )
+    monkeypatch.setattr(agents_route.conf.openai, "get_chunk_size", lambda _name: 4096)
+    monkeypatch.setattr(
+        agents_route.conf.openai,
+        "get_tokenizer_encoding",
+        lambda _name=None: "o200k_base",
+    )
+    monkeypatch.setattr(agents_route, "_get_tiktoken_encoding", lambda _name: None)
+    monkeypatch.setattr(app_schemas, "validate_url_safe_for_fetch", lambda value: value)
+
+    class _RefreshingVectorStore:
+        captured_delete: list[tuple[UUID, UUID | None]] = []
+        captured_adds: list[dict[str, object]] = []
+        captured_queries: list[dict[str, object]] = []
+
+        def __init__(self, _session) -> None:
+            pass
+
+        async def delete_by_document(
+            self, document_id: UUID, *, user_id: UUID | None = None
+        ):
+            self.__class__.captured_delete.append((document_id, user_id))
+            return 0
+
+        async def add_texts(self, texts: list[str], **kwargs):
+            self.__class__.captured_adds.append({"texts": texts, **kwargs})
+            return []
+
+        async def similarity_search(self, query: str, **kwargs):
+            self.__class__.captured_queries.append({"query": query, **kwargs})
+            return [
+                {
+                    "id": UUID("22222222-2222-2222-2222-222222222222"),
+                    "document_id": kwargs["document_ids"][0],
+                    "document_version_id": kwargs["document_ids"][0],
+                    "chunk_index": 0,
+                    "chunk_text": "The document was re-embedded for this turn.",
+                    "document_title": "Needs Refresh",
+                    "document_kind": "resume",
+                    "score": 0.88,
+                }
+            ]
+
+    monkeypatch.setattr(agents_route, "PGVectorStore", _RefreshingVectorStore)
+
+    async def _failing_extract(_url: str) -> tuple[str, str]:
+        raise RuntimeError("fetch unavailable")
+
+    monkeypatch.setattr(
+        agents_route,
+        "extract_text_from_url_with_method",
+        _failing_extract,
+    )
+
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-rag-refresh-pass")
+        headers = await _auth_headers(client, email, "agent-chat-rag-refresh-pass")
+        agent_id = await _create_agent(user_id, name="Refresh Coach", kind="custom")
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            message_specs=[("system", "System context")],
+        )
+        document_ids = await _create_retrievable_document(
+            user_id,
+            title="Needs Refresh",
+            content="This content should be chunked and re-embedded before search.",
+        )
+
+        response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/messages",
+            json={
+                "content": "Use refreshed sources",
+                "retrieval": {
+                    "document_ids": [str(document_ids["document_id"])],
+                    "lookup_url": "https://example.com/failing",
+                },
+            },
+            headers={**headers, "Accept": "application/json"},
+        )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    retrieval = body["metadata"]["retrieval"]
+    assert retrieval["documents"]["reembedded_ids"] == [
+        str(document_ids["document_id"])
+    ]
+    assert retrieval["url"] == {
+        "requested": "https://example.com/failing",
+        "warning": "fetch unavailable",
+    }
+    assert _RefreshingVectorStore.captured_delete == [
+        (document_ids["document_id"], user_id)
+    ]
+    assert _RefreshingVectorStore.captured_adds
+    assert _RefreshingVectorStore.captured_queries == [
+        {
+            "query": "Use refreshed sources",
+            "user_id": user_id,
+            "k": 5,
+            "document_ids": [document_ids["document_id"]],
+        }
+    ]
+
+
+async def test_send_agent_chat_message_rejects_unsafe_lookup_url_request_validation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+
+    def _reject_url(_value: str) -> str:
+        raise UnsafeFetchUrlError("Fetch URLs must use http or https")
+
+    monkeypatch.setattr(app_schemas, "validate_url_safe_for_fetch", _reject_url)
+
+    async with _client() as client:
+        email, user_id = await _create_user("agent-chat-rag-unsafe-pass")
+        headers = await _auth_headers(client, email, "agent-chat-rag-unsafe-pass")
+        agent_id = await _create_agent(
+            user_id,
+            name="Unsafe URL Coach",
+            kind="custom",
+        )
+        session_id = await _create_chat_session_with_messages(
+            user_id=user_id,
+            agent_id=agent_id,
+            message_specs=[("system", "System context")],
+        )
+
+        response = await client.post(
+            f"/api/v1/agents/chat/{session_id}/messages",
+            json={
+                "content": "Try unsafe retrieval",
+                "retrieval": {"lookup_url": "ftp://example.com/private"},
+            },
+            headers={**headers, "Accept": "application/json"},
+        )
+
+    assert response.status_code == 422, response.text
+    assert "http or https" in response.text
+
+    async with session_context() as session:
+        result = await session.execute(
+            select(models.AgentChatMessage.id).where(
+                models.AgentChatMessage.session_id == session_id
+            )
+        )
+        persisted_message_ids = result.scalars().all()
+
+    assert len(persisted_message_ids) == 1
 
 
 async def test_agent_chat_session_routes_reject_cross_user_access() -> None:

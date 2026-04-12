@@ -3519,7 +3519,7 @@ async def embed_document(
         )
 
     store = PGVectorStore(db)
-    await store.delete_by_document(doc.id)
+    await store.delete_by_document(doc.id, user_id=user.id)
 
     chunks = chunk_text(text_content)
     if not chunks:

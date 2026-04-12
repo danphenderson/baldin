@@ -334,10 +334,10 @@ Agent chat has fundamentally different semantics: messages have roles (`system`,
 
 **Acceptance criteria:**
 
-- [ ] Agent/networking docs describe the chat session interaction alongside one-shot execution
-- [ ] System overview or architecture docs note the SSE streaming boundary
-- [ ] Product language for agents describes both interaction modes: one-shot workspace generation and conversational chat
-- [ ] `cd docs && npm run build` passes if docs source is updated
+- [x] Agent/networking docs describe the chat session interaction alongside one-shot execution
+- [x] System overview or architecture docs note the SSE streaming boundary
+- [x] Product language for agents describes both interaction modes: one-shot workspace generation and conversational chat
+- [x] `cd docs && npm run build` passes if docs source is updated
 - [ ] `cd frontend && VITE_API_URL=https://api.example.com npm run build` passes
 - [ ] Full backend test suite passes: `cd backend && python -m pytest`
 

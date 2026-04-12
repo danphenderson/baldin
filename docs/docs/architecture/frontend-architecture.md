@@ -5,11 +5,11 @@ title: See Frontend Boundaries
 description: See route groups, page modules, service boundaries, and contract consumption in the frontend.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-12 -->
 
 # See Frontend Boundaries
 
-The Baldin frontend is a React 19 single-page application built with Vite, TypeScript, and MUI. It organizes the product around route groups that mirror the major backend domains: leads, applications, identity, workflows, network, and settings.
+The Baldin frontend is a React 19 single-page application built with Vite, TypeScript, and MUI. It organizes the product around route groups that mirror the major backend domains: leads, applications, identity, workspace, workflows, automation, network, and settings.
 
 ## Stack
 
@@ -31,7 +31,7 @@ The Baldin frontend is a React 19 single-page application built with Vite, TypeS
 ```mermaid
 graph TD
 	accTitle: Frontend Route Composition
-	accDescr: Shows how app-routes.tsx composes three layout roots — AppLayout (authenticated), AuthLayout (login and register), and HomeLayout (public terms page) — and how AppLayout nests UserRoute which in turn owns the Dashboard, Leads, Applications, Identity, Workflows, Network, and Settings route groups.
+	accDescr: Shows how app-routes.tsx composes three layout roots — AppLayout (authenticated), AuthLayout (login and register), and HomeLayout (public terms page) — and how AppLayout nests UserRoute which in turn owns the Dashboard, Leads, Applications, Identity, Workspace, Workflows, Automation, Network, and Settings route groups.
 	AppRoutes[app-routes.tsx] --> AppLayout[AppLayout]
 	AppRoutes --> AuthLayout[AuthLayout]
 	AppRoutes --> HomeLayout[HomeLayout]
@@ -41,7 +41,9 @@ graph TD
 	UserRoute --> LeadsGroup[/leads]
 	UserRoute --> ApplicationsGroup[/applications]
 	UserRoute --> IdentityGroup[/me]
+	UserRoute --> WorkspaceGroup[/workspace]
 	UserRoute --> WorkflowsGroup[/workflows]
+	UserRoute --> AutomationGroup[/automation]
 	UserRoute --> NetworkGroup[/network]
 	UserRoute --> SettingsGroup[/settings]
 
@@ -59,9 +61,11 @@ The route tree is defined in `frontend/src/route/app-routes.tsx` and uses nested
 | Dashboard | `/` | `dashboard.tsx` |
 | Leads | `/leads`, `/leads/companies` | lead list and company directory |
 | Applications | `/applications`, `/applications/board`, `/applications/:applicationId` | queue, board, and detail views |
-| Identity | `/me`, `/me/documents`, `/me/documents/new`, `/me/documents/:id`, `/me/documents/:id/edit`, `/me/documents/:id/compare` | profile and document library/editor views |
+| Identity | `/me`, `/me/aspirations/roles`, `/me/aspirations/companies` | profile and aspiration views |
+| Workspace | `/workspace`, `/workspace/new`, `/workspace/:id`, `/workspace/:id/edit`, `/workspace/:id/compare` | workspace list, detail, editor, and compare views |
 | Workflows | `/workflows`, `/workflows/extractors`, `/workflows/review`, `/workflows/crawlers` | orchestration, extractors, review queue, crawler admin |
-| Network | `/network/directory`, `/network/directory/:userId`, `/network/connections`, `/network/messages`, `/network/messages/:conversationId` | discovery, profile preview, connections, conversations |
+| Automation | `/automation`, `/automation/agents`, `/automation/agents/:agentId`, `/automation/agents/:agentId/chat/:sessionId` | automation landing redirect plus agents list, detail, and chat session views |
+| Network | `/network/discover`, `/network/discover/:userId`, `/network/connections`, `/network/messages`, `/network/messages/:conversationId` | discovery, profile preview, connections, conversations |
 | Settings | `/settings/subscription`, `/settings/graduation` | subscription and placement lifecycle |
 | Public/auth | `/login`, `/register`, `/user-terms` | auth and legal surfaces |
 
@@ -92,6 +96,8 @@ frontend/src/
 | `component/rich-text-editor.tsx` | TipTap editor shell |
 | `component/use-collaborative-editor.ts` | Yjs bootstrap, websocket connection, presence state |
 | `component/collaboration-bootstrap.ts` | Local seeding and retry timing for collaboration bootstrap |
+| `service/agents.tsx` | Agent CRUD, one-shot runs, and run-history API access |
+| `service/agent-chat.tsx` | Agent chat session CRUD/history, save-to-document export, and SSE message streaming |
 | `service/*.tsx` | Fetch wrappers grouped by backend route family |
 
 The service layer is the only place that should know backend URL details. Page and component code should call service modules rather than issuing ad hoc fetch requests.
@@ -116,5 +122,6 @@ If you change backend routes or schemas, run `./scripts/update_frontend_schemas.
 ## Architecture Notes
 
 - The frontend is already organized around the newer document and networking domains, even where the docs had lagged behind.
+- Agents are split across two service boundaries: `service/agents.tsx` handles one-shot runs and run history, while `service/agent-chat.tsx` handles persisted chat sessions. The chat send path is the main SSE consumer in the frontend; document collaboration remains the separate Yjs/WebSocket path.
 - Collaboration state is deliberately split across TipTap, Yjs, and backend bootstrap endpoints. See [Document Collaboration](./document-collaboration.md) for the protocol details.
 - Navigation, route grouping, and page ownership are stronger architectural boundaries here than component folders alone.

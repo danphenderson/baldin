@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
+  Chip,
+  FormControlLabel,
   Paper,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from '@mui/material';
@@ -17,6 +21,13 @@ export interface ChatComposerError {
   message: string;
 }
 
+export interface ChatComposerSourceOption {
+  id: string;
+  title: string;
+  kind: string;
+  tags: string[];
+}
+
 export interface ChatComposerProps {
   value: string;
   onChange: (value: string) => void;
@@ -26,6 +37,15 @@ export interface ChatComposerProps {
   streaming: boolean;
   archived: boolean;
   error: ChatComposerError | null;
+  sourceOptions: ChatComposerSourceOption[];
+  loadingSourceOptions: boolean;
+  useDocuments: boolean;
+  canUseDocuments: boolean;
+  selectedDocumentIds: string[];
+  lookupUrl: string;
+  onToggleUseDocuments: (nextValue: boolean) => void;
+  onChangeSelectedDocumentIds: (nextIds: string[]) => void;
+  onChangeLookupUrl: (value: string) => void;
 }
 
 const ChatComposer: React.FC<ChatComposerProps> = ({
@@ -37,7 +57,21 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
   streaming,
   archived,
   error,
+  sourceOptions,
+  loadingSourceOptions,
+  useDocuments,
+  canUseDocuments,
+  selectedDocumentIds,
+  lookupUrl,
+  onToggleUseDocuments,
+  onChangeSelectedDocumentIds,
+  onChangeLookupUrl,
 }) => {
+  const selectedOptions = useMemo(
+    () => sourceOptions.filter((option) => selectedDocumentIds.includes(option.id)),
+    [selectedDocumentIds, sourceOptions],
+  );
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
@@ -46,6 +80,9 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
       }
     }
   };
+
+  const sourceControlsDisabled = streaming || archived;
+  const documentToggleDisabled = sourceControlsDisabled || !canUseDocuments;
 
   return (
     <Paper
@@ -76,6 +113,105 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
             This chat session is archived. Restore it from the agent detail page to continue.
           </Alert>
         )}
+        <Box
+          sx={{
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 3,
+            px: 1.5,
+            py: 1.25,
+            bgcolor: 'background.default',
+          }}
+        >
+          <Stack spacing={1.25}>
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={1}
+              alignItems={{ md: 'center' }}
+              justifyContent="space-between"
+            >
+              <Box>
+                <Typography variant="subtitle2">
+                  Sources
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Add selected documents or one URL for this reply.
+                </Typography>
+              </Box>
+              <FormControlLabel
+                control={(
+                  <Switch
+                    size="small"
+                    checked={useDocuments}
+                    onChange={(event) => onToggleUseDocuments(event.target.checked)}
+                    disabled={documentToggleDisabled}
+                  />
+                )}
+                label="Use documents"
+                sx={{ m: 0 }}
+              />
+            </Stack>
+            <Autocomplete<ChatComposerSourceOption, true, false, false>
+              multiple
+              size="small"
+              options={sourceOptions}
+              value={selectedOptions}
+              loading={loadingSourceOptions}
+              disabled={sourceControlsDisabled}
+              getOptionLabel={(option) => option.title}
+              isOptionEqualToValue={(option, current) => option.id === current.id}
+              onChange={(_event, nextOptions) => {
+                onChangeSelectedDocumentIds(nextOptions.map((option) => option.id));
+              }}
+              renderTags={(tagValue, getTagProps) => (
+                tagValue.map((option, index) => (
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={option.id}
+                    label={option.title}
+                    size="small"
+                  />
+                ))
+              )}
+              renderOption={(props, option) => (
+                <Box component="li" {...props}>
+                  <Stack spacing={0.25}>
+                    <Typography variant="body2">{option.title}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {[option.kind.replace(/_/g, ' '), ...option.tags].join(' • ')}
+                    </Typography>
+                  </Stack>
+                </Box>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Selected documents"
+                  placeholder={sourceOptions.length > 0 ? 'Choose documents' : 'No documents available'}
+                  helperText={(
+                    useDocuments
+                      ? 'Selected documents will be searched for relevant context.'
+                      : 'Pick documents here, then enable Use documents when you want retrieval.'
+                  )}
+                />
+              )}
+            />
+            <TextField
+              size="small"
+              label="URL source"
+              placeholder="https://example.com/profile"
+              value={lookupUrl}
+              onChange={(event) => onChangeLookupUrl(event.target.value)}
+              disabled={sourceControlsDisabled}
+              helperText="Optional. A single URL can be fetched and added as extra context for this turn."
+            />
+            {!canUseDocuments && sourceOptions.length > 0 && (
+              <Typography variant="caption" color="text.secondary">
+                Select at least one document before enabling document retrieval.
+              </Typography>
+            )}
+          </Stack>
+        </Box>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'flex-end' }}>
           <TextField
             fullWidth

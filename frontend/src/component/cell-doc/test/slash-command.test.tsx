@@ -8,13 +8,38 @@
 import React, { act, createRef } from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/core';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { buildCellDocExtensions } from '../extensions';
 import { buildBaseDocumentExtensions } from '../extensions/base-extensions';
 import { buildTableExtensions } from '../extensions/table-extensions';
 import { EditorHarness, type EditorHarnessHandle } from './editor-harness';
+import AppLayout from '../../../layout/app-layout';
+import ThemeProvider from '../../../theme/theme-provider';
+import { NotificationProvider } from '../../../context/notification-context';
+import { UserContext } from '../../../context/user-context';
+
+const { mockedGetUnreadCount } = vi.hoisted(() => ({
+  mockedGetUnreadCount: vi.fn().mockResolvedValue({ total_unread: 0 }),
+}));
+
+vi.mock('../../../service/messages', async () => {
+  const actual = await vi.importActual<typeof import('../../../service/messages')>('../../../service/messages');
+  return {
+    ...actual,
+    getUnreadCount: mockedGetUnreadCount,
+  };
+});
+
+vi.mock('../../../service/auth', async () => {
+  const actual = await vi.importActual<typeof import('../../../service/auth')>('../../../service/auth');
+  return {
+    ...actual,
+    logout: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -23,6 +48,41 @@ import { EditorHarness, type EditorHarnessHandle } from './editor-harness';
 function mountEditor(extensions = buildCellDocExtensions()) {
   const ref = createRef<EditorHarnessHandle>();
   render(<EditorHarness ref={ref} extensions={extensions} />);
+  return ref;
+}
+
+const shellUserContextValue = {
+  user: {
+    id: 'user-1',
+    first_name: 'Jane',
+    last_name: 'Doe',
+    email: 'jane@test.com',
+    is_superuser: false,
+  } as never,
+  setUser: vi.fn(),
+  token: 'test-token',
+  setToken: vi.fn(),
+  loading: false,
+  canAccessTier: vi.fn(() => true),
+};
+
+function mountEditorInShell(extensions = buildCellDocExtensions()) {
+  const ref = createRef<EditorHarnessHandle>();
+  render(
+    <ThemeProvider>
+      <NotificationProvider>
+        <UserContext.Provider value={shellUserContextValue}>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route index element={<EditorHarness ref={ref} extensions={extensions} />} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </UserContext.Provider>
+      </NotificationProvider>
+    </ThemeProvider>,
+  );
   return ref;
 }
 
@@ -52,6 +112,31 @@ function editorDom(editor: Editor): HTMLElement {
 // ---------------------------------------------------------------------------
 
 describe('slash-command extension', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: vi.fn(() => 'light'),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+      },
+    });
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
   it('open: typing / in an empty block shows the palette', async () => {
     const ref = mountEditor();
     const editor = await waitForEditor(ref);
@@ -165,5 +250,16 @@ describe('slash-command extension', () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(screen.queryByTestId('slash-command-menu')).not.toBeInTheDocument();
+  });
+
+  it('keeps the global command palette closed when slash is typed inside the editor shell', async () => {
+    const ref = mountEditorInShell();
+    const editor = await waitForEditor(ref);
+
+    fireEvent.keyDown(editorDom(editor), { key: '/', code: 'Slash' });
+    typeSlash(editor);
+
+    await screen.findByTestId('slash-command-menu');
+    expect(screen.queryByTestId('command-palette-input')).not.toBeInTheDocument();
   });
 });

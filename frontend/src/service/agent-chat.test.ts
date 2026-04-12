@@ -275,7 +275,7 @@ describe('agent chat service', () => {
     const onDone = vi.fn();
     const onError = vi.fn();
 
-    sendChatMessage('token-123', 'session-1', 'Hello', onDelta, onDone, onError);
+    sendChatMessage('token-123', 'session-1', { content: 'Hello' }, onDelta, onDone, onError);
 
     await vi.waitFor(() => {
       expect(onDone).toHaveBeenCalledTimes(1);
@@ -308,7 +308,7 @@ describe('agent chat service', () => {
     const onDone = vi.fn();
     const onError = vi.fn();
 
-    sendChatMessage('token-123', 'session-1', 'Hello', onDelta, onDone, onError);
+    sendChatMessage('token-123', 'session-1', { content: 'Hello' }, onDelta, onDone, onError);
 
     await vi.waitFor(() => {
       expect(onError).toHaveBeenCalledWith('Model execution failed');
@@ -326,7 +326,7 @@ describe('agent chat service', () => {
     const onDone = vi.fn();
     const onError = vi.fn();
 
-    sendChatMessage('token-123', 'session-1', 'Hello', vi.fn(), onDone, onError);
+    sendChatMessage('token-123', 'session-1', { content: 'Hello' }, vi.fn(), onDone, onError);
 
     await vi.waitFor(() => {
       expect(onError).toHaveBeenCalledWith('The selected session is archived.');
@@ -348,7 +348,7 @@ describe('agent chat service', () => {
     const onDone = vi.fn();
     const onError = vi.fn();
 
-    const controller = sendChatMessage('token-123', 'session-1', 'Hello', vi.fn(), onDone, onError);
+    const controller = sendChatMessage('token-123', 'session-1', { content: 'Hello' }, vi.fn(), onDone, onError);
     controller.abort();
 
     await vi.waitFor(() => {
@@ -371,7 +371,7 @@ describe('agent chat service', () => {
     const onDone = vi.fn();
     const onError = vi.fn();
 
-    sendChatMessage('token-123', 'session-1', 'Hello', vi.fn(), onDone, onError);
+    sendChatMessage('token-123', 'session-1', { content: 'Hello' }, vi.fn(), onDone, onError);
 
     await vi.waitFor(() => {
       expect(onError).toHaveBeenCalledWith('Chat stream ended before completion');

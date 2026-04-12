@@ -137,5 +137,6 @@ services:
     volumes:
       - ./docs:/usr/src/app
       - /usr/src/app/node_modules
+      - /usr/src/app/.docusaurus
     ports:
       - 3001:3000

@@ -1,5 +1,15 @@
 import React from 'react';
-import { Avatar, Box, Paper, Stack, Typography } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
+import {
+  Alert,
+  Avatar,
+  Box,
+  Chip,
+  Link,
+  Paper,
+  Stack,
+  Typography,
+} from '@mui/material';
 import {
   PersonOutline as UserIcon,
   SmartToyOutlined as AssistantIcon,
@@ -15,6 +25,25 @@ export interface ChatDisplayMessage extends AgentChatMessageRead {
 export interface ChatMessageBubbleProps {
   message: ChatDisplayMessage;
 }
+
+interface RetrievalCitation {
+  kind: 'document' | 'url';
+  title: string;
+  snippet: string;
+  url: string | null;
+  documentId: string | null;
+  documentKind: string | null;
+}
+
+interface ParsedRetrievalMetadata {
+  citations: RetrievalCitation[];
+  warnings: string[];
+  urlFetchMethod: string | null;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null
+);
 
 const formatTimestamp = (iso: string): string => {
   const date = new Date(iso);
@@ -32,12 +61,70 @@ const typingCursorSx = {
   },
 };
 
+const parseRetrievalMetadata = (metadata: unknown): ParsedRetrievalMetadata | null => {
+  if (!isRecord(metadata) || !isRecord(metadata.retrieval)) {
+    return null;
+  }
+
+  const retrieval = metadata.retrieval;
+  const citations = Array.isArray(retrieval.citations)
+    ? retrieval.citations.flatMap<RetrievalCitation>((entry, index) => {
+      if (!isRecord(entry)) {
+        return [];
+      }
+
+      const kind = entry.kind === 'url' ? 'url' : 'document';
+      const title = typeof entry.title === 'string' && entry.title.trim()
+        ? entry.title.trim()
+        : `${kind === 'url' ? 'URL' : 'Document'} ${index + 1}`;
+      const snippet = typeof entry.snippet === 'string' ? entry.snippet.trim() : '';
+      const url = typeof entry.url === 'string' && entry.url.trim() ? entry.url.trim() : null;
+      const documentId = typeof entry.document_id === 'string' ? entry.document_id : null;
+      const documentKind = typeof entry.document_kind === 'string' ? entry.document_kind : null;
+
+      return [{
+        kind,
+        title,
+        snippet,
+        url,
+        documentId,
+        documentKind,
+      }];
+    })
+    : [];
+
+  const documentWarnings = isRecord(retrieval.documents) && Array.isArray(retrieval.documents.warnings)
+    ? retrieval.documents.warnings.filter((warning): warning is string => (
+      typeof warning === 'string' && warning.trim().length > 0
+    ))
+    : [];
+
+  const urlWarning = isRecord(retrieval.url) && typeof retrieval.url.warning === 'string'
+    ? retrieval.url.warning.trim()
+    : '';
+  const urlFetchMethod = isRecord(retrieval.url) && typeof retrieval.url.fetch_method === 'string'
+    ? retrieval.url.fetch_method
+    : null;
+  const warnings = urlWarning ? [...documentWarnings, urlWarning] : documentWarnings;
+
+  if (citations.length === 0 && warnings.length === 0) {
+    return null;
+  }
+
+  return {
+    citations,
+    warnings,
+    urlFetchMethod,
+  };
+};
+
 const ChatMessageBubble: React.FC<ChatMessageBubbleProps> = ({ message }) => {
   const isUser = message.role === 'user';
   const avatar = isUser ? <UserIcon fontSize="small" /> : <AssistantIcon fontSize="small" />;
   const label = isUser ? 'You' : 'Assistant';
   const bubbleColor = isUser ? 'primary.main' : 'background.paper';
   const textColor = isUser ? 'primary.contrastText' : 'text.primary';
+  const retrievalMetadata = !isUser ? parseRetrievalMetadata(message.metadata) : null;
 
   return (
     <Box
@@ -115,6 +202,66 @@ const ChatMessageBubble: React.FC<ChatMessageBubbleProps> = ({ message }) => {
               </Box>
             )}
           </Paper>
+          {!isUser && retrievalMetadata && (
+            <Stack spacing={0.75} sx={{ mt: 1 }}>
+              {retrievalMetadata.citations.length > 0 && (
+                <Paper variant="outlined" sx={{ px: 1.25, py: 1 }}>
+                  <Typography variant="caption" fontWeight={700} color="text.secondary">
+                    Sources
+                  </Typography>
+                  <Stack spacing={1} sx={{ mt: 0.75 }}>
+                    {retrievalMetadata.citations.map((citation, index) => (
+                      <Stack key={`${citation.kind}-${citation.documentId ?? citation.url ?? index}`} spacing={0.5}>
+                        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexWrap: 'wrap' }}>
+                          <Chip
+                            size="small"
+                            label={citation.kind === 'url' ? 'URL' : (citation.documentKind ?? 'Document').replace(/_/g, ' ')}
+                          />
+                          {citation.kind === 'document' && citation.documentId ? (
+                            <Link
+                              component={RouterLink}
+                              to={`/workspace/${citation.documentId}/edit`}
+                              underline="hover"
+                              variant="body2"
+                            >
+                              {citation.title}
+                            </Link>
+                          ) : citation.url ? (
+                            <Link
+                              href={citation.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              underline="hover"
+                              variant="body2"
+                            >
+                              {citation.title}
+                            </Link>
+                          ) : (
+                            <Typography variant="body2">{citation.title}</Typography>
+                          )}
+                          {citation.kind === 'url' && retrievalMetadata.urlFetchMethod && (
+                            <Typography variant="caption" color="text.secondary">
+                              via {retrievalMetadata.urlFetchMethod}
+                            </Typography>
+                          )}
+                        </Stack>
+                        {citation.snippet && (
+                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+                            {citation.snippet}
+                          </Typography>
+                        )}
+                      </Stack>
+                    ))}
+                  </Stack>
+                </Paper>
+              )}
+              {retrievalMetadata.warnings.map((warning) => (
+                <Alert key={warning} severity="warning" variant="outlined" sx={{ py: 0 }}>
+                  {warning}
+                </Alert>
+              ))}
+            </Stack>
+          )}
         </Box>
       </Stack>
     </Box>

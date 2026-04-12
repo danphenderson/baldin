@@ -5,7 +5,7 @@ title: See System Boundaries
 description: See the service topology, runtime boundaries, and main product domains.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-12 -->
 
 # See System Boundaries
 
@@ -73,13 +73,15 @@ The docs site is intentionally separate from the runtime stack. It is built from
 - The **backend** owns all data access, authentication, extraction, and orchestration logic.
 - The **frontend** is a pure client that talks to the backend through `VITE_API_URL`. It never accesses the database directly.
 - The **contract** (`openapi.json` → `schema.d.ts`) is the formal interface between backend and frontend. Changes flow backend → contract → frontend, never the reverse.
+- Normal **frontend/backend transport** is JSON over HTTP. Agent chat is the main exception: `POST /agents/chat/{session_id}/messages` accepts JSON input but can stream assistant replies back as `text/event-stream` SSE, with JSON fallback when the client explicitly requests `application/json`.
+- **Document collaboration** remains a separate realtime transport boundary on `/documents/{id}/collaborate/ws`, where the frontend uses Yjs over WebSocket after the bootstrap claim flow completes.
 - The **ETL layer** (`backend/etl/`) contains crawler and pipeline code (LinkedIn, Glassdoor). It is not part of the user-triggered extraction runtime path.
 
 ## Main Product Domains
 
 - Profile and job-search records
-- Versioned documents and collaboration
-- Extraction, orchestration, and crawler automation
-- Networking, messaging, activity, and action items
+- Versioned documents, collaboration, and agent-authored workspaces
+- Extraction, orchestration, crawler automation, and agent execution
+- Networking, messaging, conversational agent chat, activity, and action items
 
 Those domains are documented in more detail in [Map The Data Model](./data-model.md), [Understand Document Collaboration](./document-collaboration.md), and [Follow Network Flows](./networking-and-messaging.md).

@@ -271,7 +271,7 @@ const AgentsPage: React.FC = () => {
           <EmptyState
             icon={<AgentsIcon />}
             title="Create your first agent"
-            description="Agents open reusable AI workspaces for job-search tasks like cover letters, follow-ups, and outreach."
+            description="Agents support both Run Agent workspaces and Chat with Agent conversations for job-search tasks like cover letters, follow-ups, and outreach."
             action={{ label: 'New Agent', onClick: handleCreate, icon: <AddIcon /> }}
           />
         )

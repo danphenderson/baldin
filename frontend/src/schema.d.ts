@@ -1193,6 +1193,8 @@ export interface components {
        * @description User-authored message content
        */
       content: string;
+      /** @description Optional retrieval inputs used only for this message */
+      retrieval?: components["schemas"]["AgentChatRetrievalRequest"] | null;
     };
     /** AgentChatMessageHistoryRead */
     AgentChatMessageHistoryRead: {
@@ -1242,6 +1244,25 @@ export interface components {
      * @enum {string}
      */
     AgentChatMessageRole: "system" | "user" | "assistant";
+    /** AgentChatRetrievalRequest */
+    AgentChatRetrievalRequest: {
+      /**
+       * Document Ids
+       * @description Optional document identifiers to search for this message
+       */
+      document_ids?: string[];
+      /**
+       * Lookup Url
+       * @description Optional explicit URL to fetch and use as ephemeral context
+       */
+      lookup_url?: string | null;
+      /**
+       * K
+       * @description Maximum number of document chunks to retrieve
+       * @default 5
+       */
+      k?: number;
+    };
     /** AgentChatSaveToDocumentRead */
     AgentChatSaveToDocumentRead: {
       /**

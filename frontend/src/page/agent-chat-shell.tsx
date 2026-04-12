@@ -12,6 +12,7 @@ import { UserContext } from '../context/user-context';
 import { useNotification } from '../context/notification-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import { getAgent } from '../service/agents';
+import { getApplicationDocuments } from '../service/applications';
 import {
   getChatHistory,
   getChatSession,
@@ -20,9 +21,11 @@ import {
   updateChatSession,
 } from '../service/agent-chat';
 import type {
+  AgentChatMessageCreate,
   AgentChatMessageRead,
   AgentChatSessionRead,
 } from '../service/agent-chat';
+import { getPinnedDocuments, type DocumentRead } from '../service/documents';
 import ChatComposer, { type ChatComposerError } from '../component/agent-chat/chat-composer';
 import ChatThread from '../component/agent-chat/chat-thread';
 import ChatSessionHeader from '../component/agent-chat/chat-session-header';
@@ -38,15 +41,23 @@ interface StreamState {
 
 interface RetryState extends ChatComposerError {
   mode: 'resend' | 'reload';
-  content: string | null;
+  payload: AgentChatMessageCreate | null;
 }
 
 interface SavedDocumentState {
   documentId: string;
 }
 
+interface SourceDocumentOption {
+  id: string;
+  title: string;
+  kind: DocumentRead['kind'];
+  tags: string[];
+}
+
 const DEFAULT_SESSION_LIMIT = 50;
 const NEAR_BOTTOM_THRESHOLD = 72;
+const DEFAULT_RETRIEVAL_K = 5;
 
 const createLocalMessageId = (prefix: string, sequence: number): string => `${prefix}-${sequence}`;
 
@@ -96,6 +107,35 @@ const mergeCanonicalMessages = (
   return dedupeMessages([...retained, ...incoming]);
 };
 
+const mergeSourceDocuments = (
+  pinnedDocuments: DocumentRead[],
+  applicationDocuments: DocumentRead[],
+): SourceDocumentOption[] => {
+  const merged = new Map<string, SourceDocumentOption>();
+
+  const addOption = (document: DocumentRead, tag: string) => {
+    const existing = merged.get(document.id);
+    if (existing) {
+      if (!existing.tags.includes(tag)) {
+        existing.tags = [...existing.tags, tag];
+      }
+      return;
+    }
+
+    merged.set(document.id, {
+      id: document.id,
+      title: document.title,
+      kind: document.kind,
+      tags: [tag],
+    });
+  };
+
+  pinnedDocuments.forEach((document) => addOption(document, 'Pinned Resume'));
+  applicationDocuments.forEach((document) => addOption(document, 'Application Doc'));
+
+  return [...merged.values()].sort((left, right) => left.title.localeCompare(right.title));
+};
+
 const AgentChatShellPage: React.FC = () => {
   const { agentId, sessionId } = useParams<{ agentId: string; sessionId: string }>();
   const { token } = useContext(UserContext);
@@ -115,6 +155,11 @@ const AgentChatShellPage: React.FC = () => {
   const [savingTitle, setSavingTitle] = useState(false);
   const [savingDocument, setSavingDocument] = useState(false);
   const [savedDocument, setSavedDocument] = useState<SavedDocumentState | null>(null);
+  const [sourceOptions, setSourceOptions] = useState<SourceDocumentOption[]>([]);
+  const [loadingSourceOptions, setLoadingSourceOptions] = useState(false);
+  const [useDocuments, setUseDocuments] = useState(false);
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+  const [lookupUrl, setLookupUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -137,6 +182,7 @@ const AgentChatShellPage: React.FC = () => {
     [messages],
   );
   const hasOlderMessages = olderCursor !== null;
+  const canUseDocumentSources = selectedDocumentIds.length > 0;
 
   usePageToolbarHeader(title, 'Agent chat');
 
@@ -212,6 +258,77 @@ const AgentChatShellPage: React.FC = () => {
   }, [refresh]);
 
   useEffect(() => {
+    if (!token || !session?.id) {
+      setLoadingSourceOptions(false);
+      setSourceOptions([]);
+      setSelectedDocumentIds([]);
+      setUseDocuments(false);
+      return;
+    }
+
+    let isActive = true;
+    setLoadingSourceOptions(true);
+
+    void (async () => {
+      const [pinnedResult, applicationResult] = await Promise.allSettled([
+        getPinnedDocuments(token),
+        session.application_id ? getApplicationDocuments(token, session.application_id) : Promise.resolve([]),
+      ]);
+
+      if (!isActive) {
+        return;
+      }
+
+      if (pinnedResult.status === 'rejected') {
+        notify(
+          pinnedResult.reason instanceof Error
+            ? pinnedResult.reason.message
+            : 'Failed to load pinned documents',
+          'error',
+        );
+      }
+      if (applicationResult.status === 'rejected') {
+        notify(
+          applicationResult.reason instanceof Error
+            ? applicationResult.reason.message
+            : 'Failed to load application documents',
+          'error',
+        );
+      }
+
+      const pinnedResume = (
+        pinnedResult.status === 'fulfilled'
+          ? pinnedResult.value.filter((document) => document.kind === 'resume')
+          : []
+      );
+      const applicationDocuments = applicationResult.status === 'fulfilled'
+        ? applicationResult.value
+        : [];
+      const nextOptions = mergeSourceDocuments(pinnedResume, applicationDocuments);
+      const defaultSelectedIds = session.application_id
+        ? []
+        : nextOptions.slice(0, 1).map((option) => option.id);
+
+      setSourceOptions(nextOptions);
+      setSelectedDocumentIds((current) => {
+        const validCurrent = current.filter((documentId) => nextOptions.some((option) => option.id === documentId));
+        return validCurrent.length > 0 ? validCurrent : defaultSelectedIds;
+      });
+      setLoadingSourceOptions(false);
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [notify, session?.application_id, session?.id, token]);
+
+  useEffect(() => {
+    if (selectedDocumentIds.length === 0 && useDocuments) {
+      setUseDocuments(false);
+    }
+  }, [selectedDocumentIds, useDocuments]);
+
+  useEffect(() => {
     if (stickToBottom) {
       scrollToBottom(streamState ? 'auto' : 'smooth');
     }
@@ -260,13 +377,35 @@ const AgentChatShellPage: React.FC = () => {
     }
   }, [notify, session, token]);
 
-  const handleSubmitMessage = useCallback((contentOverride?: string) => {
+  const buildMessagePayload = useCallback((contentOverride?: string): AgentChatMessageCreate | null => {
+    const content = (contentOverride ?? draft).trim();
+    if (!content) {
+      return null;
+    }
+
+    const trimmedLookupUrl = lookupUrl.trim();
+    const retrieval = useDocuments || trimmedLookupUrl
+      ? {
+        document_ids: useDocuments ? selectedDocumentIds : [],
+        lookup_url: trimmedLookupUrl || null,
+        k: DEFAULT_RETRIEVAL_K,
+      }
+      : undefined;
+
+    return {
+      content,
+      retrieval,
+    };
+  }, [draft, lookupUrl, selectedDocumentIds, useDocuments]);
+
+  const handleSubmitMessage = useCallback((payloadOverride?: AgentChatMessageCreate | null) => {
     if (!token || !sessionId || !session) {
       return;
     }
 
-    const content = (contentOverride ?? draft).trim();
-    if (!content || streamState || session.status === 'archived') {
+    const payload = payloadOverride ?? buildMessagePayload();
+    const content = payload?.content.trim() ?? '';
+    if (!payload || !content || streamState || session.status === 'archived') {
       return;
     }
 
@@ -301,7 +440,7 @@ const AgentChatShellPage: React.FC = () => {
     const controller = sendChatMessage(
       token,
       sessionId,
-      content,
+      payload,
       (chunk) => {
         sawDelta = true;
         setMessages((current) => current.map((message) => (
@@ -325,14 +464,14 @@ const AgentChatShellPage: React.FC = () => {
         setComposerError({
           message: error,
           mode: sawDelta ? 'reload' : 'resend',
-          content,
+          payload,
         });
         void syncSession().catch(() => {});
       },
     );
 
     setStreamState({ controller, assistantMessageId, content });
-  }, [draft, session, sessionId, streamState, syncSession, token]);
+  }, [buildMessagePayload, session, sessionId, streamState, syncSession, token]);
 
   const handleCancelStreaming = useCallback(() => {
     if (!streamState) {
@@ -356,8 +495,9 @@ const AgentChatShellPage: React.FC = () => {
     if (!composerError) {
       return;
     }
-    if (composerError.mode === 'resend' && composerError.content) {
-      handleSubmitMessage(composerError.content);
+    if (composerError.mode === 'resend' && composerError.payload) {
+      handleSubmitMessage(composerError.payload);
+      setComposerError(null);
       return;
     }
     void syncSession();
@@ -489,6 +629,15 @@ const AgentChatShellPage: React.FC = () => {
             streaming={Boolean(streamState)}
             archived={session.status === 'archived'}
             error={composerError}
+            sourceOptions={sourceOptions}
+            loadingSourceOptions={loadingSourceOptions}
+            useDocuments={useDocuments}
+            canUseDocuments={canUseDocumentSources}
+            selectedDocumentIds={selectedDocumentIds}
+            lookupUrl={lookupUrl}
+            onToggleUseDocuments={setUseDocuments}
+            onChangeSelectedDocumentIds={setSelectedDocumentIds}
+            onChangeLookupUrl={setLookupUrl}
           />
         </Stack>
       </Box>

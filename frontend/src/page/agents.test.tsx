@@ -90,4 +90,17 @@ describe('AgentsPage', () => {
     await waitFor(() => expect(mockedGetAgents).toHaveBeenCalledTimes(2));
     expect(mockedNotify).toHaveBeenCalledWith('Network down', 'error');
   });
+
+  it('describes both Run Agent workspaces and Chat with Agent conversations in the empty state', async () => {
+    mockedGetAgents.mockResolvedValueOnce([] as never);
+
+    renderPage();
+
+    expect(await screen.findByText('Create your first agent')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Agents support both Run Agent workspaces and Chat with Agent conversations for job-search tasks like cover letters, follow-ups, and outreach.',
+      ),
+    ).toBeInTheDocument();
+  });
 });

@@ -5,7 +5,7 @@ title: Map The Data Model
 description: Map how profile, search, document, automation, and networking entities fit together.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-12 -->
 
 # Map The Data Model
 
@@ -247,7 +247,7 @@ erDiagram
 ```mermaid
 erDiagram
 	accTitle: Agent and Session Entities
-	accDescr: Shows AGENT owned by USER, with AGENT_RUN recording execution history. Each run links to an APPLICATION context and produces a DOCUMENT session with a specific DOCUMENT_VERSION.
+	accDescr: Shows AGENT owned by USER, with AGENT_CHAT_SESSION and AGENT_CHAT_MESSAGE storing conversational history, and AGENT_RUN recording either one-shot execution or chat-export history. Runs link to an APPLICATION context and produce a DOCUMENT session with a specific DOCUMENT_VERSION.
 	USER {
 		uuid id PK
 	}
@@ -270,10 +270,26 @@ erDiagram
 		string model
 		string instructions
 	}
+	AGENT_CHAT_SESSION {
+		uuid id PK
+		uuid agent_id FK
+		uuid user_id FK
+		uuid application_id FK
+		string title
+		string model_name
+		string status
+	}
+	AGENT_CHAT_MESSAGE {
+		uuid id PK
+		uuid session_id FK
+		string role
+		json metadata
+	}
 	AGENT_RUN {
 		uuid id PK
 		uuid agent_id FK
 		uuid application_id FK
+		uuid chat_session_id FK
 		uuid session_document_id FK
 		uuid session_version_id FK
 		string status
@@ -281,13 +297,18 @@ erDiagram
 	}
 
 	USER ||--o{ AGENT : owns
+	USER ||--o{ AGENT_CHAT_SESSION : chats
 	AGENT ||--o{ AGENT_RUN : runs
+	AGENT ||--o{ AGENT_CHAT_SESSION : chats
 	APPLICATION ||--o{ AGENT_RUN : context_for
+	APPLICATION ||--o{ AGENT_CHAT_SESSION : chat_context
+	AGENT_CHAT_SESSION ||--o{ AGENT_CHAT_MESSAGE : messages
+	AGENT_CHAT_SESSION ||--o{ AGENT_RUN : export_runs
 	DOCUMENT ||--o{ AGENT_RUN : session_document
 	DOCUMENT_VERSION ||--o{ AGENT_RUN : session_version
 ```
 
-*Figure 6 — AGENT is user-owned. Each AGENT_RUN records the execution context (application), the produced session document (a cell_doc DOCUMENT), and the specific version created by the run.*
+*Figure 5 — AGENT is user-owned. `Run Agent` writes `AgentRun` records that point at cell-doc document versions, while `Chat with Agent` persists `AgentChatSession` and `AgentChatMessage` history. Save-to-document exports create linked `AgentRun` records back to the originating chat session.*
 
 ### Networking and Messaging Entities
 
@@ -337,7 +358,7 @@ erDiagram
 	MESSAGE ||--o{ MESSAGE : replies
 ```
 
-*Figure 5 — Networking and messaging entities. CONNECTION is a peer relationship. CONVERSATION holds both direct and group threads. ACTION_ITEM links tasks back to applications, leads, documents, or conversations.*
+*Figure 6 — Networking and messaging entities. CONNECTION is a peer relationship. CONVERSATION holds both direct and group threads. ACTION_ITEM links tasks back to applications, leads, documents, or conversations.*
 
 ## Domain Breakdown
 
@@ -367,7 +388,7 @@ erDiagram
 
 | Tables | Purpose |
 | --- | --- |
-| `documents` | Versioned multi-kind document record with status, pinning, and persisted Yjs state. Supports `kind` values: resume, cover_letter, follow_up, reference_sheet, freeform. |
+| `documents` | Versioned multi-kind document record with status, pinning, and persisted Yjs state. Supports `kind` values including `resume`, `cover_letter`, `follow_up`, `reference_sheet`, `freeform`, and `cell_doc`. |
 | `document_versions` | Immutable snapshots of document content |
 | `documents_x_applications` | Application attachment bridge for versioned documents |
 | `document_shares` | Per-user viewer/editor access grants |
@@ -392,7 +413,9 @@ The unified `Document` model is the only remaining material model. Frontend docu
 | Tables | Purpose |
 | --- | --- |
 | `agents` | User-owned reusable AI assistant definitions with model, instructions, and generation parameters |
-| `agent_runs` | Execution history recording application context, session document, produced version, status, and error summary |
+| `agent_runs` | One-shot execution or chat-export history recording application context, originating chat session when present, produced document version, status, and error summary |
+| `agent_chat_sessions` | Persisted conversational sessions per user/agent pair with model snapshot, status, message count, and last-message metadata |
+| `agent_chat_messages` | Ordered system, user, and assistant messages stored for each agent chat session |
 
 ### Networking and Messaging
 
@@ -420,6 +443,9 @@ The activity feed shown in the frontend is not backed by a dedicated event-log t
 - `leads.review_status` uses a Postgres-native enum (`LeadReviewStatus`: pending_review, approved, rejected).
 - `crawler_runs.status` uses a Postgres-native enum (`CrawlerRunStatus`: pending, running, success, failed, cancelled, paused, pending_review).
 - `applications.status_history` is JSONB and doubles as an input to the activity feed.
+- `agent_chat_sessions.message_count` and `agent_chat_sessions.last_message_at` are denormalized to keep session lists efficient.
+- `agent_chat_messages.metadata` stores assistant response metadata such as the resolved model name and usage details.
+- `agent_runs.chat_session_id` links save-to-document exports back to the originating chat session when a conversation becomes a workspace artifact.
 - `action_items` uses nullable foreign keys to support multiple parent types without introducing one table per task context. A CHECK constraint (`ck_action_items_exactly_one_fk`) ensures exactly one FK is non-null.
 
 ## Schema Management

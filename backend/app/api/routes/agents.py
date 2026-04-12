@@ -7,8 +7,8 @@ from functools import lru_cache
 from typing import Any
 from uuid import UUID
 
-import mistune
 import tiktoken
+from bs4 import BeautifulSoup
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import (
@@ -18,6 +18,8 @@ from langchain_core.messages import (
     HumanMessage,
     SystemMessage,
 )
+from markdown_it import MarkdownIt
+from markdown_it.tree import SyntaxTreeNode
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
@@ -27,6 +29,7 @@ from app.api.deps import (
     get_agent,
     get_async_session,
     get_current_user,
+    get_document,
     model_to_dict,
     models,
     schemas,
@@ -34,12 +37,20 @@ from app.api.deps import (
 from app.api.routes.documents import (
     _load_document_blocks,
     _serialize_document_block_tree,
+    _tiptap_extract_text,
     create_document,
     create_version,
 )
 from app.core import conf
 from app.core.db import session_context
-from app.core.langchain import generate_cover_letter
+from app.core.langchain import (
+    chunk_text,
+    extract_text_from_url_with_method,
+    generate_cover_letter,
+)
+from app.core.url_safety import UnsafeFetchUrlError
+from app.core.vector_store import PGVectorStore
+from app.utils import clean_text
 
 router: APIRouter = APIRouter()
 
@@ -49,6 +60,10 @@ _AGENT_CHAT_ESTIMATED_TOKENS_PER_CHAR_NUMERATOR = 1
 _AGENT_CHAT_ESTIMATED_TOKENS_PER_CHAR_DENOMINATOR = 4
 _AGENT_CHAT_MESSAGE_TOKEN_OVERHEAD = 8
 _AGENT_CHAT_HISTORY_CURSOR_VERSION = 1
+_AGENT_CHAT_RETRIEVAL_MAX_CITATIONS = 5
+_AGENT_CHAT_RETRIEVAL_SNIPPET_PREVIEW_CHARS = 180
+_AGENT_CHAT_RETRIEVAL_DOC_CONTEXT_MAX_CHARS = 3200
+_AGENT_CHAT_RETRIEVAL_URL_CONTEXT_MAX_CHARS = 2200
 
 
 def _json_dumps(data: Any) -> str:
@@ -368,7 +383,7 @@ def _simple_blockquote_node(text: str) -> dict[str, Any]:
 
 @lru_cache(maxsize=1)
 def _get_agent_chat_markdown_parser():
-    return mistune.create_markdown(renderer="ast")
+    return MarkdownIt("commonmark")
 
 
 def _clone_marks(marks: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -390,80 +405,71 @@ def _append_text_with_marks(
     content.append(node)
 
 
-def _markdown_inline_children(token: dict[str, Any]) -> list[dict[str, Any]]:
-    raw_children = token.get("children")
-    if not isinstance(raw_children, list):
+def _markdown_node_children(node: SyntaxTreeNode) -> list[SyntaxTreeNode]:
+    raw_children = node.children
+    if not raw_children:
         return []
-    return [child for child in raw_children if isinstance(child, dict)]
+    return [child for child in raw_children if isinstance(child, SyntaxTreeNode)]
 
 
-def _markdown_text_from_token(token: Any) -> str:
-    if isinstance(token, list):
-        return "".join(_markdown_text_from_token(child) for child in token)
-    if not isinstance(token, dict):
-        return ""
-
-    token_type = token.get("type")
-    if token_type in {"text", "codespan", "inline_html", "block_code", "block_html"}:
-        raw = token.get("raw")
-        return raw if isinstance(raw, str) else ""
-    if token_type in {"softbreak", "linebreak"}:
+def _markdown_text_from_node(node: SyntaxTreeNode) -> str:
+    if node.type in {"text", "code_inline", "code_block", "fence", "html_block"}:
+        return node.content if isinstance(node.content, str) else ""
+    if node.type in {"softbreak", "hardbreak"}:
         return "\n"
 
-    children = _markdown_inline_children(token)
+    children = _markdown_node_children(node)
     if children:
-        return "".join(_markdown_text_from_token(child) for child in children)
+        return "".join(_markdown_text_from_node(child) for child in children)
 
-    raw = token.get("raw")
-    return raw if isinstance(raw, str) else ""
+    return node.content if isinstance(node.content, str) else ""
 
 
 def _markdown_inline_to_tiptap(
-    tokens: list[dict[str, Any]],
+    node: SyntaxTreeNode,
     *,
     marks: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     active_marks = marks or []
     content: list[dict[str, Any]] = []
 
-    for token in tokens:
-        token_type = token.get("type")
+    for child in _markdown_node_children(node):
+        token_type = child.type
         if token_type == "text":
             _append_text_with_marks(
                 content,
-                token.get("raw") if isinstance(token.get("raw"), str) else "",
+                child.content if isinstance(child.content, str) else "",
                 marks=active_marks,
             )
             continue
-        if token_type in {"softbreak", "linebreak"}:
+        if token_type in {"softbreak", "hardbreak"}:
             content.append({"type": "hardBreak"})
             continue
-        if token_type == "codespan":
+        if token_type == "code_inline":
             _append_text_with_marks(
                 content,
-                token.get("raw") if isinstance(token.get("raw"), str) else "",
+                child.content if isinstance(child.content, str) else "",
                 marks=[*active_marks, {"type": "code"}],
             )
             continue
         if token_type == "strong":
             content.extend(
                 _markdown_inline_to_tiptap(
-                    _markdown_inline_children(token),
+                    child,
                     marks=[*active_marks, {"type": "bold"}],
                 )
             )
             continue
-        if token_type == "emphasis":
+        if token_type == "em":
             content.extend(
                 _markdown_inline_to_tiptap(
-                    _markdown_inline_children(token),
+                    child,
                     marks=[*active_marks, {"type": "italic"}],
                 )
             )
             continue
         if token_type == "link":
-            attrs = token.get("attrs") if isinstance(token.get("attrs"), dict) else {}
-            href = attrs.get("url")
+            href = child.attrs.get("href")
             link_mark = (
                 {"type": "link", "attrs": {"href": href}}
                 if isinstance(href, str) and href
@@ -474,104 +480,95 @@ def _markdown_inline_to_tiptap(
                 nested_marks.append(link_mark)
             content.extend(
                 _markdown_inline_to_tiptap(
-                    _markdown_inline_children(token),
+                    child,
                     marks=nested_marks,
                 )
             )
             continue
 
-        fallback_text = _markdown_text_from_token(token)
+        fallback_text = _markdown_text_from_node(child)
         if fallback_text:
             _append_text_with_marks(content, fallback_text, marks=active_marks)
 
     return content
 
 
-def _markdown_block_tokens(token: dict[str, Any]) -> list[dict[str, Any]]:
-    raw_children = token.get("children")
-    if not isinstance(raw_children, list):
-        return []
-    return [child for child in raw_children if isinstance(child, dict)]
+def _markdown_inline_children_for_block(node: SyntaxTreeNode) -> list[dict[str, Any]]:
+    inline_content: list[dict[str, Any]] = []
+    for child in _markdown_node_children(node):
+        if child.type == "inline":
+            inline_content.extend(_markdown_inline_to_tiptap(child))
+        else:
+            fallback_text = _markdown_text_from_node(child)
+            if fallback_text:
+                _append_text_with_marks(inline_content, fallback_text)
+    return inline_content
 
 
-def _markdown_list_item_to_tiptap(token: dict[str, Any]) -> dict[str, Any]:
+def _markdown_list_item_to_tiptap(node: SyntaxTreeNode) -> dict[str, Any]:
     child_nodes: list[dict[str, Any]] = []
 
-    for child in _markdown_block_tokens(token):
-        child_type = child.get("type")
-        if child_type == "block_text":
-            child_nodes.append(
-                _simple_paragraph_node_from_inline(
-                    _markdown_inline_to_tiptap(_markdown_inline_children(child))
-                )
-            )
-            continue
+    for child in _markdown_node_children(node):
         child_nodes.extend(_markdown_block_to_tiptap(child))
 
     if not child_nodes:
-        child_nodes.append(_simple_paragraph_node(_markdown_text_from_token(token)))
+        child_nodes.append(_simple_paragraph_node(_markdown_text_from_node(node)))
     elif child_nodes[0].get("type") != "paragraph":
         child_nodes.insert(0, _simple_paragraph_node(""))
 
     return {"type": "listItem", "content": child_nodes}
 
 
-def _markdown_block_to_tiptap(token: dict[str, Any]) -> list[dict[str, Any]]:
-    token_type = token.get("type")
+def _markdown_block_to_tiptap(node: SyntaxTreeNode) -> list[dict[str, Any]]:
+    token_type = node.type
 
-    if token_type == "blank_line":
+    if token_type in {"softbreak", "hardbreak"}:
         return []
     if token_type == "paragraph":
         return [
             _simple_paragraph_node_from_inline(
-                _markdown_inline_to_tiptap(_markdown_inline_children(token))
-            )
-        ]
-    if token_type == "block_text":
-        return [
-            _simple_paragraph_node_from_inline(
-                _markdown_inline_to_tiptap(_markdown_inline_children(token))
+                _markdown_inline_children_for_block(node)
             )
         ]
     if token_type == "heading":
-        attrs = token.get("attrs") if isinstance(token.get("attrs"), dict) else {}
-        level = attrs.get("level")
-        if not isinstance(level, int):
+        if len(node.tag) >= 2 and node.tag.startswith("h") and node.tag[1:].isdigit():
+            level = int(node.tag[1:])
+        else:
             level = 1
-        node: dict[str, Any] = {"type": "heading", "attrs": {"level": level}}
-        inline_content = _markdown_inline_to_tiptap(_markdown_inline_children(token))
+        heading_node: dict[str, Any] = {"type": "heading", "attrs": {"level": level}}
+        inline_content = _markdown_inline_children_for_block(node)
         if inline_content:
-            node["content"] = inline_content
-        return [node]
-    if token_type == "list":
-        attrs = token.get("attrs") if isinstance(token.get("attrs"), dict) else {}
-        node_type = "orderedList" if attrs.get("ordered") else "bulletList"
+            heading_node["content"] = inline_content
+        return [heading_node]
+    if token_type in {"bullet_list", "ordered_list"}:
+        node_type = "orderedList" if token_type == "ordered_list" else "bulletList"
         items = [
             _markdown_list_item_to_tiptap(child)
-            for child in _markdown_block_tokens(token)
-            if child.get("type") == "list_item"
+            for child in _markdown_node_children(node)
+            if child.type == "list_item"
         ]
         if not items:
-            fallback_text = _markdown_text_from_token(token)
+            fallback_text = _markdown_text_from_node(node)
             return [_simple_paragraph_node(fallback_text)] if fallback_text else []
         return [{"type": node_type, "content": items}]
-    if token_type == "block_quote":
+    if token_type == "blockquote":
         children = []
-        for child in _markdown_block_tokens(token):
+        for child in _markdown_node_children(node):
             children.extend(_markdown_block_to_tiptap(child))
         if not children:
-            children = [_simple_paragraph_node(_markdown_text_from_token(token))]
+            children = [_simple_paragraph_node(_markdown_text_from_node(node))]
         return [{"type": "blockquote", "content": children}]
-    if token_type == "block_code":
-        raw = token.get("raw")
-        node: dict[str, Any] = {"type": "codeBlock"}
-        if isinstance(raw, str) and raw:
-            node["content"] = [{"type": "text", "text": raw.rstrip("\n")}]
-        return [node]
-    if token_type == "thematic_break":
+    if token_type in {"code_block", "fence"}:
+        code_block_node: dict[str, Any] = {"type": "codeBlock"}
+        if isinstance(node.content, str) and node.content:
+            code_block_node["content"] = [
+                {"type": "text", "text": node.content.rstrip("\n")}
+            ]
+        return [code_block_node]
+    if token_type == "hr":
         return [{"type": "horizontalRule"}]
 
-    fallback_text = _markdown_text_from_token(token).strip()
+    fallback_text = _markdown_text_from_node(node).strip()
     return [_simple_paragraph_node(fallback_text)] if fallback_text else []
 
 
@@ -579,15 +576,11 @@ def _assistant_markdown_to_tiptap_nodes(markdown: str) -> list[dict[str, Any]]:
     if not markdown.strip():
         return []
 
-    tokens = _get_agent_chat_markdown_parser()(markdown)
-    if not isinstance(tokens, list):
-        return [_simple_paragraph_node(markdown)]
+    root = SyntaxTreeNode(_get_agent_chat_markdown_parser().parse(markdown))
 
     nodes: list[dict[str, Any]] = []
-    for token in tokens:
-        if not isinstance(token, dict):
-            continue
-        nodes.extend(_markdown_block_to_tiptap(token))
+    for child in _markdown_node_children(root):
+        nodes.extend(_markdown_block_to_tiptap(child))
     return nodes or [_simple_paragraph_node(markdown)]
 
 
@@ -1097,6 +1090,323 @@ def _build_agent_chat_system_message(
     return "\n\n".join(sections)
 
 
+def _agent_chat_retrieval_preview(text: str, *, max_chars: int) -> str:
+    normalized = clean_text(text)
+    if len(normalized) <= max_chars:
+        return normalized
+    if max_chars <= 3:
+        return normalized[:max_chars]
+    return f"{normalized[: max_chars - 3].rstrip()}..."
+
+
+def _extract_agent_chat_document_text(version: models.DocumentVersion | None) -> str:
+    if version is None or not version.content:
+        return ""
+
+    raw_content = version.content
+    if version.content_format != schemas.ContentFormat.TIPTAP_JSON.value:
+        return clean_text(raw_content)
+
+    try:
+        parsed = json.loads(raw_content)
+    except (TypeError, json.JSONDecodeError):
+        return clean_text(raw_content)
+
+    if not isinstance(parsed, dict):
+        return clean_text(raw_content)
+
+    extracted_html = _tiptap_extract_text(parsed)
+    extracted_text = BeautifulSoup(extracted_html, "html.parser").get_text(" ")
+    return clean_text(extracted_text)
+
+
+async def _load_agent_chat_retrieval_documents(
+    db: AsyncSession,
+    *,
+    user: schemas.UserRead,
+    document_ids: list[UUID],
+) -> list[models.Document]:
+    documents: list[models.Document] = []
+    for document_id in document_ids:
+        document = await get_document(document_id, db=db, user=user)
+        if document.head_version_id is not None:
+            document.head_version = await db.get(
+                models.DocumentVersion, document.head_version_id
+            )
+        documents.append(document)
+    return documents
+
+
+async def _ensure_agent_chat_document_embeddings_current(
+    db: AsyncSession,
+    *,
+    store: PGVectorStore,
+    document: models.Document,
+    user_id: UUID,
+) -> tuple[bool, str | None]:
+    head_version = document.head_version
+    if head_version is None or document.head_version_id is None:
+        return False, "missing_head_version"
+
+    text_content = _extract_agent_chat_document_text(head_version)
+    if not text_content:
+        return False, "empty_document"
+
+    chunks = chunk_text(text_content)
+    if not chunks:
+        return False, "empty_document"
+
+    result = await db.execute(
+        select(models.DocumentEmbedding.document_version_id)
+        .where(
+            models.DocumentEmbedding.document_id == document.id,
+            models.DocumentEmbedding.user_id == user_id,
+        )
+        .limit(1)
+    )
+    embedded_version_id = result.scalar_one_or_none()
+    if embedded_version_id == head_version.id:
+        return False, None
+
+    try:
+        await store.delete_by_document(document.id, user_id=user_id)
+        await store.add_texts(
+            chunks,
+            document_id=document.id,
+            document_version_id=head_version.id,
+            user_id=user_id,
+        )
+    except Exception:
+        return False, "embedding_refresh_failed"
+    return True, None
+
+
+def _build_agent_chat_document_warning(
+    document: models.Document,
+    *,
+    code: str,
+) -> str:
+    title = document.title.strip() if document.title else str(document.id)
+    if code == "missing_head_version":
+        return f"{title}: no current version is available for retrieval."
+    if code == "empty_document":
+        return f"{title}: the current version has no retrievable text."
+    if code == "embedding_refresh_failed":
+        return f"{title}: retrieval indexing could not be refreshed."
+    return f"{title}: retrieval was unavailable."
+
+
+def _append_agent_chat_retrieval_context(
+    sections: list[str],
+    *,
+    header: str,
+    snippet: str,
+    budget: int,
+) -> int:
+    separator = "\n---\n" if sections else ""
+    remaining_budget = budget - len(separator) - len(header) - 1
+    if remaining_budget <= 0:
+        return budget
+
+    excerpt = snippet[:remaining_budget].rstrip()
+    if not excerpt:
+        return budget
+
+    if separator:
+        sections.append(separator)
+        budget -= len(separator)
+    sections.append(f"{header}\n{excerpt}")
+    return budget - len(header) - 1 - len(excerpt)
+
+
+def _insert_agent_chat_turn_system_message(
+    messages: list[BaseMessage],
+    *,
+    content: str,
+) -> list[BaseMessage]:
+    if not content:
+        return messages
+
+    inserted = False
+    updated_messages: list[BaseMessage] = []
+    for index, message in enumerate(messages):
+        if (
+            not inserted
+            and index == len(messages) - 1
+            and isinstance(message, HumanMessage)
+        ):
+            updated_messages.append(SystemMessage(content=content))
+            inserted = True
+        updated_messages.append(message)
+
+    if not inserted:
+        updated_messages.append(SystemMessage(content=content))
+    return updated_messages
+
+
+async def _resolve_agent_chat_retrieval(
+    db: AsyncSession,
+    *,
+    user: schemas.UserRead,
+    retrieval: schemas.AgentChatRetrievalRequest | None,
+    query: str,
+) -> tuple[str | None, dict[str, Any] | None]:
+    if retrieval is None:
+        return None, None
+
+    retrieval_metadata: dict[str, Any] = {
+        "citations": [],
+        "documents": {
+            "selected_ids": [
+                str(document_id) for document_id in retrieval.document_ids
+            ],
+            "reembedded_ids": [],
+            "warnings": [],
+        },
+        "url": None,
+    }
+    context_sections: list[str] = []
+
+    if retrieval.document_ids:
+        documents = await _load_agent_chat_retrieval_documents(
+            db,
+            user=user,
+            document_ids=[
+                UUID(str(document_id)) for document_id in retrieval.document_ids
+            ],
+        )
+        store = PGVectorStore(db)
+        searchable_document_ids: list[UUID] = []
+        for document in documents:
+            (
+                reembedded,
+                warning_code,
+            ) = await _ensure_agent_chat_document_embeddings_current(
+                db,
+                store=store,
+                document=document,
+                user_id=user.id,
+            )
+            if reembedded:
+                retrieval_metadata["documents"]["reembedded_ids"].append(
+                    str(document.id)
+                )
+            if warning_code is not None:
+                retrieval_metadata["documents"]["warnings"].append(
+                    _build_agent_chat_document_warning(document, code=warning_code)
+                )
+                continue
+            searchable_document_ids.append(document.id)
+
+        if searchable_document_ids:
+            results = await store.similarity_search(
+                query,
+                user_id=user.id,
+                k=retrieval.k,
+                document_ids=searchable_document_ids,
+            )
+            remaining_context_budget = _AGENT_CHAT_RETRIEVAL_DOC_CONTEXT_MAX_CHARS
+            for item in results[:_AGENT_CHAT_RETRIEVAL_MAX_CITATIONS]:
+                chunk_text = clean_text(str(item.get("chunk_text", "")))
+                if not chunk_text:
+                    continue
+                title = str(item.get("document_title") or "Document").strip()
+                snippet = _agent_chat_retrieval_preview(
+                    chunk_text,
+                    max_chars=_AGENT_CHAT_RETRIEVAL_SNIPPET_PREVIEW_CHARS,
+                )
+                retrieval_metadata["citations"].append(
+                    {
+                        "kind": "document",
+                        "document_id": str(item["document_id"]),
+                        "document_kind": item.get("document_kind"),
+                        "title": title,
+                        "snippet": snippet,
+                        "score": round(float(item.get("score", 0.0)), 4),
+                    }
+                )
+                remaining_context_budget = _append_agent_chat_retrieval_context(
+                    context_sections,
+                    header=(f"Retrieved document context [{title}]"),
+                    snippet=chunk_text,
+                    budget=remaining_context_budget,
+                )
+                if remaining_context_budget <= 0:
+                    break
+            if not results:
+                retrieval_metadata["documents"]["warnings"].append(
+                    "No matching embedded document context was found."
+                )
+        else:
+            retrieval_metadata["documents"]["warnings"].append(
+                "No selected documents were ready for retrieval."
+            )
+
+    if retrieval.lookup_url is not None:
+        try:
+            url_text, fetch_method = await extract_text_from_url_with_method(
+                retrieval.lookup_url
+            )
+        except UnsafeFetchUrlError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:
+            retrieval_metadata["url"] = {
+                "requested": retrieval.lookup_url,
+                "warning": (
+                    str(exc).strip()
+                    or "The requested URL could not be fetched for retrieval."
+                ),
+            }
+        else:
+            normalized_url_text = clean_text(url_text)
+            retrieval_metadata["url"] = {
+                "requested": retrieval.lookup_url,
+                "fetch_method": fetch_method,
+            }
+            if normalized_url_text:
+                snippet = _agent_chat_retrieval_preview(
+                    normalized_url_text,
+                    max_chars=_AGENT_CHAT_RETRIEVAL_SNIPPET_PREVIEW_CHARS,
+                )
+                retrieval_metadata["citations"].append(
+                    {
+                        "kind": "url",
+                        "title": retrieval.lookup_url,
+                        "url": retrieval.lookup_url,
+                        "snippet": snippet,
+                    }
+                )
+                _append_agent_chat_retrieval_context(
+                    context_sections,
+                    header=f"Retrieved URL context [{retrieval.lookup_url}]",
+                    snippet=normalized_url_text[
+                        :_AGENT_CHAT_RETRIEVAL_URL_CONTEXT_MAX_CHARS
+                    ],
+                    budget=_AGENT_CHAT_RETRIEVAL_URL_CONTEXT_MAX_CHARS,
+                )
+            else:
+                retrieval_metadata["url"]["warning"] = (
+                    "The requested URL did not yield retrievable text."
+                )
+
+    if not retrieval_metadata["citations"] and retrieval_metadata["url"] is None:
+        retrieval_metadata = (
+            retrieval_metadata if retrieval_metadata["documents"]["warnings"] else None
+        )
+
+    if not context_sections:
+        return None, retrieval_metadata
+
+    retrieval_prompt = "\n\n".join(
+        [
+            "Retrieved context for this turn:",
+            "Use the following sources only when they are relevant. Prefer them over guessing, but do not mention internal retrieval metadata unless the user asks for sources.",
+            "".join(context_sections),
+        ]
+    )
+    return retrieval_prompt, retrieval_metadata
+
+
 async def _load_agent_chat_session(
     db: AsyncSession,
     *,
@@ -1335,6 +1645,7 @@ async def _load_chat_messages_for_llm(
     *,
     session_id: UUID,
     model_name: str,
+    turn_system_message: str | None = None,
 ) -> list[BaseMessage]:
     result = await db.execute(
         select(models.AgentChatMessage)
@@ -1347,6 +1658,11 @@ async def _load_chat_messages_for_llm(
     messages = [
         _to_langchain_agent_chat_message(message) for message in result.scalars().all()
     ]
+    if turn_system_message:
+        messages = _insert_agent_chat_turn_system_message(
+            messages,
+            content=turn_system_message,
+        )
     return _trim_agent_chat_history(messages, model_name=model_name)
 
 
@@ -1501,11 +1817,14 @@ def _build_agent_chat_message_metadata(
     *,
     model_name: str,
     aggregate_chunk: AIMessageChunk | None,
+    retrieval_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     metadata: dict[str, Any] = {"model_name": model_name}
     usage = _extract_agent_chat_usage(aggregate_chunk)
     if usage is not None:
         metadata["usage"] = usage
+    if retrieval_metadata is not None:
+        metadata["retrieval"] = retrieval_metadata
     return metadata
 
 
@@ -1514,6 +1833,7 @@ async def _generate_agent_chat_completion_events(
     model: Any,
     messages: list[BaseMessage],
     model_name: str,
+    retrieval_metadata: dict[str, Any] | None = None,
     request: Request | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
     aggregate_chunk: AIMessageChunk | None = None
@@ -1547,6 +1867,7 @@ async def _generate_agent_chat_completion_events(
         "metadata": _build_agent_chat_message_metadata(
             model_name=model_name,
             aggregate_chunk=aggregate_chunk,
+            retrieval_metadata=retrieval_metadata,
         ),
     }
 
@@ -2004,10 +2325,17 @@ async def send_agent_chat_message(
         session_id=session_id,
         content=payload.content,
     )
+    retrieval_system_message, retrieval_metadata = await _resolve_agent_chat_retrieval(
+        db,
+        user=user,
+        retrieval=payload.retrieval,
+        query=payload.content,
+    )
     llm_messages = await _load_chat_messages_for_llm(
         db,
         session_id=session_id,
         model_name=resolved_model_name,
+        turn_system_message=retrieval_system_message,
     )
 
     if not _should_stream_agent_chat_response(request.headers.get("accept")):
@@ -2018,6 +2346,7 @@ async def send_agent_chat_message(
                 model=model,
                 messages=llm_messages,
                 model_name=resolved_model_name,
+                retrieval_metadata=retrieval_metadata,
             ):
                 if event["type"] != "complete":
                     continue
@@ -2043,6 +2372,7 @@ async def send_agent_chat_message(
                 model=model,
                 messages=llm_messages,
                 model_name=resolved_model_name,
+                retrieval_metadata=retrieval_metadata,
                 request=request,
             ):
                 if event["type"] == "delta":

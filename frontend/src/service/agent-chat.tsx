@@ -10,6 +10,7 @@ export type AgentChatSessionUpdate = components['schemas']['AgentChatSessionUpda
 export type AgentChatMessageCreate = components['schemas']['AgentChatMessageCreate'];
 export type AgentChatMessageRead = components['schemas']['AgentChatMessageRead'];
 export type AgentChatMessageRole = components['schemas']['AgentChatMessageRole'];
+export type AgentChatRetrievalRequest = components['schemas']['AgentChatRetrievalRequest'];
 export type AgentChatSessionStatus = components['schemas']['AgentChatSessionStatus'];
 export type AgentModelListRead = components['schemas']['AgentModelListRead'];
 export type AgentModelOptionRead = components['schemas']['AgentModelOptionRead'];
@@ -305,7 +306,7 @@ export const getAvailableModels = async (token: string): Promise<AgentModelListR
 export const sendChatMessage = (
   token: string,
   sessionId: string,
-  content: string,
+  payload: AgentChatMessageCreate,
   onDelta: ChatDeltaHandler,
   onDone: ChatDoneHandler,
   onError: ChatErrorHandler,
@@ -321,7 +322,7 @@ export const sendChatMessage = (
           'Content-Type': 'application/json',
           Accept: 'text/event-stream',
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify(payload),
         signal: controller.signal,
       });
 

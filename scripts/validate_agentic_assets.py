@@ -310,6 +310,24 @@ def check_codex_config() -> None:
     if "max_depth" not in agents_table:
         warn(".codex/config.toml: [agents] missing max_depth (--warn-only)")
 
+    mcp_servers = data.get("mcp_servers")
+    if not isinstance(mcp_servers, dict):
+        error(".codex/config.toml: missing [mcp_servers.webdev] table")
+        return
+
+    webdev = mcp_servers.get("webdev")
+    if not isinstance(webdev, dict):
+        error(".codex/config.toml: missing [mcp_servers.webdev] table")
+        return
+
+    command = webdev.get("command")
+    if command != "npx":
+        error('.codex/config.toml: mcp_servers.webdev.command must be "npx"')
+
+    args = webdev.get("args")
+    if not isinstance(args, list) or not any("@playwright/mcp" in str(arg) for arg in args):
+        error(".codex/config.toml: mcp_servers.webdev.args must include @playwright/mcp")
+
 
 def check_codex_agents() -> None:
     agents_dir = CODEX_DIR / "agents"

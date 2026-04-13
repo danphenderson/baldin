@@ -4,7 +4,7 @@ Use this directory for tracked plan, spike, and epic documents that feed Baldin'
 
 ## Active Files
 
-No active plan files at this time. Previous plan documents have been completed or archived.
+- [flagship-aspirations-to-apply.md](./flagship-aspirations-to-apply.md) — Quarter roadmap: Figma-led aspirations-to-apply flagship workflow (14 stories, 3 phases).
 
 ## Usage Notes
 

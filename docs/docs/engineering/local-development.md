@@ -51,6 +51,28 @@ Redis backs the local background-job queue, and `crawler-worker` consumes crawle
 
 Use [Boot The Stack](../getting-started/quickstart.md) for first boot. This page is the day-two reference once the stack already makes sense to you.
 
+## Figma Browser-Harness Loop
+
+For Figma capture and browser-driven design review, Baldin's repo-standard browser automation surface is `webdev`.
+
+1. Start or keep the local stack running with `docker-compose up --build`.
+2. Use the frontend dev server at `http://127.0.0.1:5173`.
+3. Open the supported Figma harness at `http://127.0.0.1:5173/browser-harness/figma-wave1.html`.
+4. Use `webdev` Playwright MCP tools to drive the harness into the state you want to capture or inspect in Figma.
+
+The canonical harness supports these query parameters:
+
+- `screen=applications|profile|messages`
+- `mode=dark|light`
+
+Example:
+
+```text
+http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=applications&mode=dark
+```
+
+The harness is the supported local capture surface for Figma work. Keep the frontend stack warm and switch harness states instead of wiring a live backend for design review.
+
 ## Resetting Databases
 
 When schema changes cause drift, reset both developer databases:
@@ -134,7 +156,8 @@ npm --prefix docs run start
 
 | URL | What |
 |-----|------|
-| http://localhost:5173 | Frontend |
+| http://127.0.0.1:5173 | Frontend |
+| http://127.0.0.1:5173/browser-harness/figma-wave1.html | Figma browser harness |
 | http://localhost:3001/baldin/docs | Product docs |
 | http://localhost:8004 | API root |
 | http://localhost:8004/docs | Swagger UI |

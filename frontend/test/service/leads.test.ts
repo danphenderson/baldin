@@ -3,6 +3,8 @@ import {
   createLeadComment,
   extractLead,
   LeadServiceError,
+  MAX_ASPIRATION_MATCH_LEADS,
+  rankLeads,
 } from '@/service/leads';
 
 describe('lead service', () => {
@@ -82,5 +84,23 @@ describe('lead service', () => {
       status: 403,
       message: 'Commenting is disabled for this lead.',
     });
+  });
+
+  it('rejects aspiration ranking requests above the 20 lead cap before calling the API', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(rankLeads(
+      'token-123',
+      Array.from({ length: MAX_ASPIRATION_MATCH_LEADS + 1 }, (_, index) => ({
+        id: `lead-${index + 1}`,
+        title: `Lead ${index + 1}`,
+        description: null,
+      })),
+    )).rejects.toThrow(
+      `Aspiration matching is limited to ${MAX_ASPIRATION_MATCH_LEADS} leads at a time. Narrow your filters and try again.`,
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

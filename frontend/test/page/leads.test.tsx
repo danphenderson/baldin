@@ -10,6 +10,7 @@ import { ToolbarHeaderContext } from '@/layout/toolbar-header-context';
 /* ── Mock service modules ─────────────────────────────────────────── */
 
 vi.mock('@/service/leads', () => ({
+  MAX_ASPIRATION_MATCH_LEADS: 20,
   getLeads: vi.fn(),
   createLead: vi.fn(),
   updateLead: vi.fn(),
@@ -101,6 +102,7 @@ vi.mock('@/component/lead-search-bar', () => ({
       <button onClick={onRank} disabled={Boolean(rankingDisabledReason) || rankingPending}>
         Rank with aspirations
       </button>
+      {rankingDisabledReason && <span>{rankingDisabledReason}</span>}
       {rankingActive && (
         <button onClick={onClearRanking}>Clear ranking</button>
       )}
@@ -334,6 +336,29 @@ describe('LeadsPage', () => {
 
     await screen.findByText('Senior Frontend Engineer');
     expect(screen.getByRole('button', { name: 'Rank with aspirations' })).toBeDisabled();
+  });
+
+  it('disables ranking when more than 20 filtered leads are in view', async () => {
+    mockedGetLeads.mockResolvedValue({
+      items: Array.from({ length: 21 }, (_, index) => makeLead({
+        id: `lead-${index + 1}`,
+        title: `Lead ${index + 1}`,
+      })),
+      total: 21,
+      page: 1,
+      page_size: 500,
+    } as never);
+    mockedGetCompanies.mockResolvedValue([] as never);
+    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+
+    renderPage();
+
+    await screen.findByText('Lead 1');
+    expect(screen.getByRole('button', { name: 'Rank with aspirations' })).toBeDisabled();
+    expect(
+      screen.getByText('Aspiration matching is limited to 20 leads at a time. Narrow your search or filters to continue.'),
+    ).toBeInTheDocument();
+    expect(mockedRankLeads).not.toHaveBeenCalled();
   });
 
   it('reorders leads and decorates ranked cards after aspiration-aware ranking', async () => {

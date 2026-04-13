@@ -110,6 +110,7 @@ class BaseRead(BaseSchema):
 
 
 PAGINATION_MAX_PAGE_SIZE = 500
+MATCH_ASPIRATIONS_MAX_LEADS = 20
 
 
 class Pagination(BaseSchema):
@@ -503,6 +504,17 @@ class AspirationSummaryRead(BaseRead):
 
 class AspirationRead(AspirationSummaryRead):
     extracted_attributes: dict[str, Any] | None = None
+
+
+class AspirationSuggestionDraft(BaseAspiration):
+    pass
+
+
+class AspirationSuggestResponse(BaseSchema):
+    suggestions: list[AspirationSuggestionDraft] = Field(
+        default_factory=list,
+        description="Non-persisted aspiration drafts suggested from the user's profile",
+    )
 
 
 class AspirationMatchInput(BaseAspiration):
@@ -1492,7 +1504,10 @@ class AspirationMatchRequest(BaseSchema):
         ..., min_length=1, description="Aspirations to match against the input leads"
     )
     leads: list[LeadRankInput] = Field(
-        ..., min_length=1, description="Typed leads to score for each aspiration"
+        ...,
+        min_length=1,
+        max_length=MATCH_ASPIRATIONS_MAX_LEADS,
+        description="Typed leads to score for each aspiration",
     )
     k: int = Field(5, ge=1, le=20, description="Context chunks to retrieve")
     page: int | None = Field(

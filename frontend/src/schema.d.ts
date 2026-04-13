@@ -447,6 +447,10 @@ export interface paths {
     /** Match Aspirations */
     post: operations["match_aspirations_api_v1_aspirations_match_post"];
   };
+  "/api/v1/aspirations/suggest": {
+    /** Suggest Aspirations */
+    post: operations["suggest_aspirations_api_v1_aspirations_suggest_post"];
+  };
   "/api/v1/aspirations/{id}": {
     /** Get User Aspiration */
     get: operations["get_user_aspiration_api_v1_aspirations__id__get"];
@@ -2517,6 +2521,33 @@ export interface components {
        * @description The time the item was last updated
        */
       updated_at: string;
+      kind: components["schemas"]["AspirationKind"];
+      /** Label */
+      label: string;
+      /** Reason */
+      reason?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /**
+       * Priority
+       * @default 0
+       */
+      priority?: number;
+      /** Extracted Attributes */
+      extracted_attributes?: {
+        [key: string]: unknown;
+      } | null;
+    };
+    /** AspirationSuggestResponse */
+    AspirationSuggestResponse: {
+      /**
+       * Suggestions
+       * @description Non-persisted aspiration drafts suggested from the user's profile
+       */
+      suggestions?: components["schemas"]["AspirationSuggestionDraft"][];
+    };
+    /** AspirationSuggestionDraft */
+    AspirationSuggestionDraft: {
       kind: components["schemas"]["AspirationKind"];
       /** Label */
       label: string;
@@ -10755,6 +10786,17 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Suggest Aspirations */
+  suggest_aspirations_api_v1_aspirations_suggest_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["AspirationSuggestResponse"];
         };
       };
     };

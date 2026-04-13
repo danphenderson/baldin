@@ -17,6 +17,7 @@ import {
   deleteLead,
   extractLead,
   rankLeads,
+  MAX_ASPIRATION_MATCH_LEADS,
 } from '../service/leads';
 import type {
   LeadRead,
@@ -366,6 +367,13 @@ const LeadsPage: React.FC = () => {
     if (!token || filtered.length === 0 || aspirationCount === 0) {
       return;
     }
+    if (filtered.length > MAX_ASPIRATION_MATCH_LEADS) {
+      notify(
+        `Aspiration matching is limited to ${MAX_ASPIRATION_MATCH_LEADS} leads at a time. Narrow your search or filters and try again.`,
+        'warning',
+      );
+      return;
+    }
 
     const requestId = rankingRequestIdRef.current + 1;
     rankingRequestIdRef.current = requestId;
@@ -404,6 +412,8 @@ const LeadsPage: React.FC = () => {
     ? 'Loading leads and aspirations...'
     : filtered.length === 0
       ? 'No leads match the current filters.'
+      : filtered.length > MAX_ASPIRATION_MATCH_LEADS
+        ? `Aspiration matching is limited to ${MAX_ASPIRATION_MATCH_LEADS} leads at a time. Narrow your search or filters to continue.`
       : aspirationCount === 0
         ? 'Add role or company aspirations on the Aspirations pages to rank leads against them.'
         : undefined;

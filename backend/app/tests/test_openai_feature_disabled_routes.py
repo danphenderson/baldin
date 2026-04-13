@@ -320,6 +320,31 @@ async def test_match_aspirations_returns_503_when_openai_disabled(
         assert result.scalars().all() == []
 
 
+async def test_suggest_aspirations_returns_503_when_openai_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    monkeypatch.setattr(conf.openai, "API_KEY", "")
+
+    async with _client() as client:
+        email, _user_id = await _create_user("aspiration-suggest-disabled-pass")
+        headers = await _auth_headers(client, email, "aspiration-suggest-disabled-pass")
+        response = await client.post(
+            "/api/v1/aspirations/suggest",
+            headers=headers,
+        )
+
+    assert response.status_code == 503, response.text
+    assert (
+        response.json()["detail"]
+        == "Aspiration suggestion is disabled because OPENAI_API_KEY is not configured."
+    )
+
+    async with session_context() as session:
+        result = await session.execute(select(models.OrchestrationEvent))
+        assert result.scalars().all() == []
+
+
 async def test_summarize_company_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

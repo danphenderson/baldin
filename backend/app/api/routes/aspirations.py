@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
 
@@ -10,6 +10,8 @@ from app.api.deps import (
     models,
     schemas,
 )
+from app.core import conf
+from app.core.rate_limit import limiter
 
 router: APIRouter = APIRouter()
 
@@ -112,6 +114,21 @@ async def match_aspirations(
 
     service = AspirationMatcherService(db)
     return await service.match(payload, user)
+
+
+@router.post("/suggest", response_model=schemas.AspirationSuggestResponse)
+@limiter.limit("5/minute")
+async def suggest_aspirations(
+    request: Request,
+    user: schemas.UserRead = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    del request
+    from app.core.rag.match_aspirations.suggest import AspirationSuggestionService
+
+    conf.openai.require_enabled("Aspiration suggestion")
+    service = AspirationSuggestionService(db)
+    return await service.suggest(user)
 
 
 @router.get("/{id}", response_model=schemas.AspirationRead)

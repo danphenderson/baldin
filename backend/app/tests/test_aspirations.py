@@ -4,9 +4,12 @@ from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
+from app import models, schemas
 from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables
+from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
+from app.core.rag.match_aspirations import suggest as suggest_service
 from app.main import app
 from app.tests import utils
 
@@ -53,6 +56,57 @@ async def _auth_headers(
     assert response.status_code == 200
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+async def _lookup_user_id(email: str):
+    async with session_context() as session:
+        result = await session.execute(
+            select(models.User).where(models.User.email == email)
+        )
+        return result.scalar_one().id
+
+
+async def _seed_profile(
+    user_id,
+    *,
+    include_skill: bool = True,
+) -> None:
+    async with session_context() as session:
+        if include_skill:
+            session.add(
+                models.Skill(
+                    user_id=user_id,
+                    name="Python",
+                    category="backend",
+                    yoe=5,
+                    subskills=["FastAPI", "Postgres"],
+                )
+            )
+        session.add(
+            models.Experience(
+                user_id=user_id,
+                title="Platform Engineer",
+                company="Baldin",
+                description="Built internal workflow tooling and backend systems.",
+                projects=["Developer platform"],
+            )
+        )
+        session.add(
+            models.Education(
+                user_id=user_id,
+                degree="BS Computer Science",
+                university="Example University",
+                achievements=["Capstone on distributed systems"],
+            )
+        )
+        session.add(
+            models.Certificate(
+                user_id=user_id,
+                title="AWS Solutions Architect",
+                issuer="Amazon",
+            )
+        )
+        await session.commit()
 
 
 async def _create_aspiration(
@@ -388,3 +442,161 @@ async def test_same_label_allowed_for_different_users_and_kinds() -> None:
     assert first_response.status_code == 201
     assert second_user_response.status_code == 201
     assert second_kind_response.status_code == 201
+
+
+@pytest.fixture(autouse=True)
+def _configure_openai(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(conf.openai, "API_KEY", "test-openai-key")
+
+
+async def test_suggest_aspirations_returns_draft_suggestions_for_populated_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _fake_generator(prompt, variables, schema, *, model_name=None):
+        del prompt, variables, schema, model_name
+        return schemas.AspirationSuggestResponse(
+            suggestions=[
+                schemas.AspirationSuggestionDraft(
+                    kind=schemas.AspirationKind.ROLE,
+                    label="Staff Backend Engineer",
+                    reason="Strong backend and platform signal",
+                    notes="Good next step",
+                ),
+                schemas.AspirationSuggestionDraft(
+                    kind=schemas.AspirationKind.COMPANY,
+                    label="Developer tools company",
+                    reason="Profile points to internal tooling work",
+                    notes="Prefer infrastructure-heavy teams",
+                ),
+            ]
+        )
+
+    monkeypatch.setattr(
+        suggest_service,
+        "ainvoke_structured_prompt",
+        _fake_generator,
+    )
+
+    async with _client() as client:
+        email = await _register_user(client, "aspiration-suggest-pass")
+        user_id = await _lookup_user_id(email)
+        await _seed_profile(user_id)
+        headers = await _auth_headers(client, email, "aspiration-suggest-pass")
+
+        response = await client.post("/api/v1/aspirations/suggest", headers=headers)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert [item["kind"] for item in body["suggestions"]] == ["role", "company"]
+    assert all(item["priority"] == 0 for item in body["suggestions"])
+
+
+async def test_suggest_aspirations_excludes_saved_aspirations_by_normalized_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _fake_generator(prompt, variables, schema, *, model_name=None):
+        del prompt, variables, schema, model_name
+        return schemas.AspirationSuggestResponse(
+            suggestions=[
+                schemas.AspirationSuggestionDraft(
+                    kind=schemas.AspirationKind.ROLE,
+                    label="  Staff Engineer  ",
+                    reason="Should be excluded",
+                    notes="Already saved",
+                ),
+                schemas.AspirationSuggestionDraft(
+                    kind=schemas.AspirationKind.COMPANY,
+                    label="Platform infrastructure company",
+                    reason="Still allowed",
+                    notes=None,
+                ),
+            ]
+        )
+
+    monkeypatch.setattr(
+        suggest_service,
+        "ainvoke_structured_prompt",
+        _fake_generator,
+    )
+
+    async with _client() as client:
+        email = await _register_user(client, "aspiration-suggest-existing-pass")
+        user_id = await _lookup_user_id(email)
+        await _seed_profile(user_id)
+        headers = await _auth_headers(client, email, "aspiration-suggest-existing-pass")
+        await _create_aspiration(client, headers, kind="role", label="Staff Engineer")
+
+        response = await client.post("/api/v1/aspirations/suggest", headers=headers)
+
+    assert response.status_code == 200, response.text
+    suggestions = response.json()["suggestions"]
+    assert len(suggestions) == 1
+    assert suggestions[0]["kind"] == "company"
+    assert suggestions[0]["label"] == "Platform infrastructure company"
+
+
+async def test_suggest_aspirations_normalizes_optional_fields_like_crud(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _fake_generator(prompt, variables, schema, *, model_name=None):
+        del prompt, variables, schema, model_name
+        return schemas.AspirationSuggestResponse(
+            suggestions=[
+                schemas.AspirationSuggestionDraft.model_construct(
+                    kind=schemas.AspirationKind.ROLE,
+                    label="  Senior Platform Engineer  ",
+                    reason="  Build on platform background  ",
+                    notes="   ",
+                    priority=9,
+                    extracted_attributes={"focus": "platform"},
+                )
+            ]
+        )
+
+    monkeypatch.setattr(
+        suggest_service,
+        "ainvoke_structured_prompt",
+        _fake_generator,
+    )
+
+    async with _client() as client:
+        email = await _register_user(client, "aspiration-suggest-normalize-pass")
+        user_id = await _lookup_user_id(email)
+        await _seed_profile(user_id)
+        headers = await _auth_headers(
+            client, email, "aspiration-suggest-normalize-pass"
+        )
+
+        response = await client.post("/api/v1/aspirations/suggest", headers=headers)
+
+    assert response.status_code == 200, response.text
+    suggestion = response.json()["suggestions"][0]
+    assert suggestion["label"] == "Senior Platform Engineer"
+    assert suggestion["reason"] == "Build on platform background"
+    assert suggestion["notes"] is None
+    assert suggestion["priority"] == 0
+    assert suggestion["extracted_attributes"] == {"focus": "platform"}
+
+
+async def test_suggest_aspirations_returns_400_when_profile_has_no_usable_signal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _should_not_run(*args, **kwargs):
+        raise AssertionError(
+            "Suggestion generator should not run without profile signal"
+        )
+
+    monkeypatch.setattr(
+        suggest_service,
+        "ainvoke_structured_prompt",
+        _should_not_run,
+    )
+
+    async with _client() as client:
+        email = await _register_user(client, "aspiration-suggest-empty-pass")
+        headers = await _auth_headers(client, email, "aspiration-suggest-empty-pass")
+
+        response = await client.post("/api/v1/aspirations/suggest", headers=headers)
+
+    assert response.status_code == 400, response.text
+    assert "does not contain enough information" in response.json()["detail"]

@@ -155,6 +155,11 @@ class AspirationMatcherState(TypedDict, total=False):
     pagination_requested: bool
     page: int | None
     page_size: int | None
+    lead_requirements_attempted: int
+    lead_requirements_succeeded: int
+    lead_requirements_failed: int
+    lead_requirements_degraded: bool
+    lead_requirements_warning: str | None
     thread_id: str
     pipeline_id: Any
     event_id: Any
@@ -233,6 +238,13 @@ def build_match_orchestration_payload(
         "combined_query_chars": state.get("combined_query_chars", 0),
         "combined_query_preview": safe_preview(state.get("combined_query", "")),
     }
+    extraction_section = {
+        "attempted": state.get("lead_requirements_attempted", 0),
+        "succeeded": state.get("lead_requirements_succeeded", 0),
+        "failed": state.get("lead_requirements_failed", 0),
+        "degraded": state.get("lead_requirements_degraded", False),
+        "warning": state.get("lead_requirements_warning"),
+    }
     retrieval_section = {
         "attempts": state.get("retrieval_attempts", 0),
         "effective_k": state.get("effective_k", state.get("requested_k", 0)),
@@ -252,7 +264,7 @@ def build_match_orchestration_payload(
         "context_fingerprint": state.get("context_fingerprint"),
     }
 
-    return build_rag_orchestration_payload(
+    payload = build_rag_orchestration_payload(
         state,
         kind=PAYLOAD_KIND,
         schema_version=PAYLOAD_SCHEMA_VERSION,
@@ -260,6 +272,8 @@ def build_match_orchestration_payload(
         input_section=input_section,
         retrieval_section=retrieval_section,
     )
+    payload["extraction"] = extraction_section
+    return payload
 
 
 def paginate_matches(

@@ -20,6 +20,7 @@ export type LeadCommentCreate = components['schemas']['LeadCommentCreate'];
 export type LeadParticipantSummaryRead = components['schemas']['LeadParticipantSummaryRead'];
 type RawLeadsPaginatedRead = components['schemas']['PaginatedResponse_LeadSummaryRead_'];
 export type LeadsPaginatedRead = PaginatedResponse<LeadRead>;
+export const MAX_ASPIRATION_MATCH_LEADS = 20;
 export interface Pagination {
   page: number;
   page_size: number;
@@ -162,6 +163,11 @@ export const rankLeads = async (
   leads: LeadRankInput[],
   k = 5,
 ): Promise<LeadRankResponse> => {
+  if (leads.length > MAX_ASPIRATION_MATCH_LEADS) {
+    throw new Error(
+      `Aspiration matching is limited to ${MAX_ASPIRATION_MATCH_LEADS} leads at a time. Narrow your filters and try again.`,
+    );
+  }
   const client = createApiClient(token);
   return unwrap(await client.POST('/api/v1/documents/rag/rank-leads', {
     body: { leads, k },

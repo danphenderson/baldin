@@ -12,6 +12,9 @@ from app.core import conf
 from app.core.document_storage import resolve_extractor_run_source_path
 from app.core.extractor import service as extractor_service
 from app.core.extractor_retry import FILE_SOURCE_PATH_KEY, SOURCE_KIND_KEY
+from app.core.rag.match_aspirations import (
+    lead_requirements as lead_requirements_service,
+)
 from app.core.url_safety import UnsafeFetchUrlError
 from app.tests import utils
 
@@ -568,3 +571,143 @@ async def test_service_run_extractor_returns_503_when_openai_disabled(
         exc_info.value.detail
         == "Extractor execution is disabled because OPENAI_API_KEY is not configured."
     )
+
+
+@pytest.mark.asyncio
+async def test_extract_lead_requirements_builds_expected_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = {}
+
+    class _FakeExtractionRunnable:
+        async def ainvoke(self, request):
+            captured["request"] = request
+            return {"data": [{"required_skills": ["Python"]}]}
+
+    monkeypatch.setattr(
+        lead_requirements_service,
+        "extraction_runnable",
+        _FakeExtractionRunnable(),
+    )
+
+    result = await lead_requirements_service.extract_lead_requirements(
+        schemas.LeadRankInput(
+            id=uuid4(),
+            title="Senior Platform Engineer",
+            description="Own internal developer tooling and platform reliability.",
+        )
+    )
+
+    assert result is not None
+    request = captured["request"]
+    assert request.text == (
+        "Senior Platform Engineer\n\n"
+        "Own internal developer tooling and platform reliability."
+    )
+    assert request.instructions == (
+        lead_requirements_service.LEAD_REQUIREMENTS_EXTRACTION_INSTRUCTIONS
+    )
+    assert request.json_schema == lead_requirements_service.LEAD_REQUIREMENTS_SCHEMA
+
+
+@pytest.mark.asyncio
+async def test_extract_lead_requirements_normalizes_empty_arrays_and_missing_fields(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _FakeExtractionRunnable:
+        async def ainvoke(self, request):
+            del request
+            return {
+                "data": [
+                    {
+                        "required_skills": [" Python ", "", "SQL", "python"],
+                        "seniority_level": "  Senior  ",
+                        "education_level": "   ",
+                    }
+                ]
+            }
+
+    monkeypatch.setattr(
+        lead_requirements_service,
+        "extraction_runnable",
+        _FakeExtractionRunnable(),
+    )
+
+    result = await lead_requirements_service.extract_lead_requirements(
+        schemas.LeadRankInput(
+            id=uuid4(),
+            title="Data Platform Engineer",
+            description="Build backend data systems.",
+        )
+    )
+
+    assert result is not None
+    assert result.required_skills == ["Python", "SQL"]
+    assert result.seniority_level == "Senior"
+    assert result.education_level is None
+    assert result.key_responsibilities == []
+
+
+@pytest.mark.asyncio
+async def test_extract_lead_requirements_normalizes_scalar_strings_for_list_fields(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _FakeExtractionRunnable:
+        async def ainvoke(self, request):
+            del request
+            return {
+                "data": [
+                    {
+                        "required_skills": " Python ",
+                        "key_responsibilities": " Own platform roadmap ",
+                    }
+                ]
+            }
+
+    monkeypatch.setattr(
+        lead_requirements_service,
+        "extraction_runnable",
+        _FakeExtractionRunnable(),
+    )
+
+    result = await lead_requirements_service.extract_lead_requirements(
+        schemas.LeadRankInput(
+            id=uuid4(),
+            title="Platform Engineer",
+            description="Build backend platforms.",
+        )
+    )
+
+    assert result is not None
+    assert result.required_skills == ["Python"]
+    assert result.key_responsibilities == ["Own platform roadmap"]
+
+
+@pytest.mark.asyncio
+async def test_extract_lead_requirements_skips_blank_input_without_invoking_extraction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = {"count": 0}
+
+    class _FakeExtractionRunnable:
+        async def ainvoke(self, request):
+            del request
+            calls["count"] += 1
+            return {"data": []}
+
+    monkeypatch.setattr(
+        lead_requirements_service,
+        "extraction_runnable",
+        _FakeExtractionRunnable(),
+    )
+
+    result = await lead_requirements_service.extract_lead_requirements(
+        schemas.LeadRankInput(
+            id=uuid4(),
+            title="   ",
+            description="   ",
+        )
+    )
+
+    assert result is None
+    assert calls["count"] == 0

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -9,6 +10,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
+from pydantic import ValidationError
 from sqlalchemy import select
 
 from app import models, schemas
@@ -28,6 +30,9 @@ from app.core.rag.match_aspirations import (
     paginate_matches,
     validate_aspiration_match_draft,
 )
+from app.core.rag.match_aspirations import (
+    lead_requirements as lead_requirements_service,
+)
 from app.core.rag.match_aspirations import service as match_service
 from app.core.rag.shared import NO_CONTEXT_DETAIL, active_rag_event_id
 from app.main import app
@@ -37,6 +42,17 @@ from app.tests import utils
 @pytest.fixture(autouse=True)
 def _configure_openai(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(conf.openai, "API_KEY", "test-openai-key")
+
+
+@pytest.fixture(autouse=True)
+def _stub_lead_requirement_extraction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _fake_extract(lead, *, llm_name=None):
+        del lead, llm_name
+        return None
+
+    monkeypatch.setattr(match_service, "extract_lead_requirements", _fake_extract)
 
 
 def _valid_password(seed: str) -> str:
@@ -212,6 +228,17 @@ class _FakeStore:
         return self.responses
 
 
+class _CapturingStore(_FakeStore):
+    def __init__(self, responses: list[dict]) -> None:
+        super().__init__(responses)
+        self.queries: list[str] = []
+
+    async def similarity_search(self, query: str, *, user_id, k: int = 5) -> list[dict]:
+        del user_id, k
+        self.queries.append(query)
+        return self.responses
+
+
 class _CrashingStore:
     async def similarity_search(self, query: str, *, user_id, k: int = 5) -> list[dict]:
         del query, user_id, k
@@ -245,6 +272,19 @@ class _OrchestrationRecorder:
         del db, user
         self.updated_payloads.append((id, payload))
         return SimpleNamespace(id=id)
+
+    @property
+    def final_status(self) -> str | None:
+        if not self.updated_payloads:
+            return None
+        status = self.updated_payloads[-1][1].status
+        return status.value if hasattr(status, "value") else status
+
+    @property
+    def final_payload(self) -> dict | None:
+        if not self.updated_payloads:
+            return None
+        return self.updated_payloads[-1][1].payload
 
 
 def _install_orchestration_recorder(
@@ -383,6 +423,414 @@ def test_build_match_response_maps_lead_ids_and_echoes_aspiration_fields() -> No
     assert result.page_size == 1
     assert result.total == 2
     assert result.lead_matches[0].lead_id == request.leads[0].id
+
+
+def test_combined_query_includes_extracted_aspiration_attributes_and_lead_requirements() -> (
+    None
+):
+    request = _request_model()
+
+    combined_query = match_service._build_combined_query(
+        request,
+        lead_requirements=[
+            match_service.LeadRequirements(
+                required_skills=["Python", "Distributed systems"],
+                seniority_level="Senior",
+                education_level="BS",
+                key_responsibilities=["Own platform reliability"],
+            ),
+            None,
+        ],
+    )
+
+    assert "rank" in combined_query
+    assert "Python" in combined_query
+    assert "Distributed systems" in combined_query
+    assert "Senior" in combined_query
+    assert "Own platform reliability" in combined_query
+
+
+def test_format_leads_text_includes_extracted_requirements() -> None:
+    leads_text = match_service._format_leads_text(
+        _request_model().leads,
+        lead_requirements=[
+            match_service.LeadRequirements(
+                required_skills=["Python"],
+                seniority_level="Senior",
+                key_responsibilities=["Own platform roadmap"],
+            ),
+            None,
+        ],
+    )
+
+    assert "extracted_requirements" in leads_text
+    assert "Python" in leads_text
+    assert "Senior" in leads_text
+    assert "Own platform roadmap" in leads_text
+
+
+@pytest.mark.asyncio
+async def test_match_service_includes_extracted_data_in_query_and_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_orchestration_recorder(monkeypatch)
+    request = _request_model()
+    request.aspirations[0].extracted_attributes = {"focus": "platform reliability"}
+    store = _CapturingStore([_retrieval_result("PROFILE_CONTEXT_ALPHA", 0.88)])
+    captured: dict[str, object] = {}
+
+    async def _fake_extract_requirements(lead, *, llm_name=None):
+        del llm_name
+        if lead.title != "Platform Engineer":
+            return None
+        return match_service.LeadRequirements(
+            required_skills=["Python", "SQL"],
+            seniority_level="Staff",
+            education_level="Bachelor's",
+            key_responsibilities=["Build internal platforms"],
+        )
+
+    async def _fake_generator(prompt, variables, schema, *, model_name=None):
+        del prompt, schema, model_name
+        captured["variables"] = variables
+        return _draft()
+
+    monkeypatch.setattr(match_service, "PGVectorStore", lambda db: store)
+    monkeypatch.setattr(
+        match_service,
+        "extract_lead_requirements",
+        _fake_extract_requirements,
+    )
+    monkeypatch.setattr(match_service, "ainvoke_structured_prompt", _fake_generator)
+
+    service = match_service.AspirationMatcherService(object())
+    response = await service.match(request, SimpleNamespace(id=uuid4()))
+
+    assert response.results[0].client_key == "draft-1"
+    assert "platform reliability" in store.queries[0]
+    assert "required_skills" in store.queries[0]
+    assert "Python" in store.queries[0]
+    assert "platform reliability" in captured["variables"]["aspirations_text"]
+    assert "required_skills" in captured["variables"]["leads_text"]
+    assert "Build internal platforms" in captured["variables"]["leads_text"]
+
+
+@pytest.mark.asyncio
+async def test_match_service_still_works_without_aspiration_extracted_attributes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_orchestration_recorder(monkeypatch)
+    captured: dict[str, object] = {}
+    request = schemas.AspirationMatchRequest(
+        aspirations=[
+            schemas.AspirationMatchInput(
+                kind=schemas.AspirationKind.ROLE,
+                label="Staff Engineer",
+                extracted_attributes=None,
+            )
+        ],
+        leads=_request_model().leads,
+        k=5,
+    )
+
+    class _CapturingStore(_FakeStore):
+        async def similarity_search(
+            self, query: str, *, user_id, k: int = 5
+        ) -> list[dict]:
+            captured["query"] = query
+            return await super().similarity_search(query, user_id=user_id, k=k)
+
+    async def _fake_generator(prompt, variables, schema, *, model_name=None):
+        del prompt, schema, model_name
+        captured["variables"] = variables
+        return _draft()
+
+    async def _fake_extract_requirements(lead, *, llm_name=None):
+        del lead, llm_name
+        return match_service.LeadRequirements(required_skills=["Python"])
+
+    monkeypatch.setattr(
+        match_service,
+        "PGVectorStore",
+        lambda db: _CapturingStore([_retrieval_result("PROFILE_CONTEXT_ALPHA", 0.88)]),
+    )
+    monkeypatch.setattr(match_service, "ainvoke_structured_prompt", _fake_generator)
+    monkeypatch.setattr(
+        match_service,
+        "extract_lead_requirements",
+        _fake_extract_requirements,
+    )
+
+    service = match_service.AspirationMatcherService(object())
+    response = await service.match(request, SimpleNamespace(id=uuid4()))
+
+    assert response.results[0].label == "Staff Engineer"
+    assert "Staff Engineer" in str(captured["query"])
+    assert "Python" in captured["variables"]["leads_text"]
+
+
+@pytest.mark.asyncio
+async def test_match_service_handles_blank_lead_text_cleanly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_orchestration_recorder(monkeypatch)
+    captured: dict[str, object] = {}
+    request = schemas.AspirationMatchRequest(
+        aspirations=[
+            schemas.AspirationMatchInput(
+                kind=schemas.AspirationKind.ROLE,
+                label="Staff Engineer",
+            )
+        ],
+        leads=[
+            schemas.LeadRankInput(
+                id=uuid4(),
+                title="   ",
+                description="   ",
+            )
+        ],
+        k=5,
+    )
+
+    class _CapturingStore(_FakeStore):
+        async def similarity_search(
+            self, query: str, *, user_id, k: int = 5
+        ) -> list[dict]:
+            captured["query"] = query
+            return await super().similarity_search(query, user_id=user_id, k=k)
+
+    async def _fake_generator(prompt, variables, schema, *, model_name=None):
+        del prompt, schema, model_name
+        captured["variables"] = variables
+        return AspirationMatchDraft(
+            results=[
+                AspirationMatchDraftResult(
+                    aspiration_index=1,
+                    lead_matches=[
+                        AspirationLeadMatchDraft(
+                            lead_index=1,
+                            match_score=7,
+                            explanation=(
+                                "The context is still enough to assess this blank lead "
+                                "entry without extracted requirements."
+                            ),
+                        )
+                    ],
+                )
+            ]
+        )
+
+    async def _unexpected_run(request: schemas.ExtractorRequest) -> dict:
+        del request
+        raise AssertionError("blank lead text should not invoke extraction")
+
+    monkeypatch.setattr(
+        lead_requirements_service,
+        "_run_lead_requirements_extraction",
+        _unexpected_run,
+    )
+    monkeypatch.setattr(
+        match_service,
+        "PGVectorStore",
+        lambda db: _CapturingStore([_retrieval_result("PROFILE_CONTEXT_ALPHA", 0.88)]),
+    )
+    monkeypatch.setattr(match_service, "ainvoke_structured_prompt", _fake_generator)
+    monkeypatch.setattr(
+        match_service,
+        "extract_lead_requirements",
+        lead_requirements_service.extract_lead_requirements,
+    )
+
+    service = match_service.AspirationMatcherService(object())
+    response = await service.match(request, SimpleNamespace(id=uuid4()))
+
+    assert response.results[0].lead_matches
+    assert "extracted_requirements" not in captured["variables"]["leads_text"]
+
+
+@pytest.mark.asyncio
+async def test_match_service_degrades_when_lead_requirement_extraction_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recorder = _install_orchestration_recorder(monkeypatch)
+    captured: dict[str, object] = {}
+    request = _request_model()
+
+    async def _failing_extract(lead, *, llm_name=None):
+        del lead, llm_name
+        raise RuntimeError("extractor unavailable")
+
+    async def _fake_generator(prompt, variables, schema, *, model_name=None):
+        del prompt, schema, model_name
+        captured["variables"] = variables
+        return _draft()
+
+    monkeypatch.setattr(
+        match_service,
+        "PGVectorStore",
+        lambda db: _CapturingStore([_retrieval_result("PROFILE_CONTEXT_ALPHA", 0.88)]),
+    )
+    monkeypatch.setattr(
+        match_service,
+        "extract_lead_requirements",
+        _failing_extract,
+    )
+    monkeypatch.setattr(match_service, "ainvoke_structured_prompt", _fake_generator)
+
+    service = match_service.AspirationMatcherService(object())
+    response = await service.match(request, SimpleNamespace(id=uuid4()))
+
+    assert response.results[0].lead_matches
+    assert recorder.created_payloads
+    assert "extracted_requirements" not in captured["variables"]["leads_text"]
+    assert recorder.final_status == "success"
+    payload = recorder.final_payload
+    assert payload is not None
+    assert payload["extraction"]["degraded"] is True
+    assert payload["extraction"]["failed"] == len(request.leads)
+    extraction_trace = next(
+        entry
+        for entry in payload["trace"]
+        if entry["node"] == "extract_lead_requirements"
+    )
+    assert extraction_trace["status"] == "warning"
+    assert "lead_requirements_extraction_degraded" in extraction_trace["warning_codes"]
+
+
+@pytest.mark.asyncio
+async def test_match_service_passes_model_name_to_lead_requirement_extraction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_orchestration_recorder(monkeypatch)
+    seen: list[str | None] = []
+
+    async def _capturing_extract(lead, *, llm_name=None):
+        del lead
+        seen.append(llm_name)
+        return None
+
+    async def _fake_generator(prompt, variables, schema, *, model_name=None):
+        del prompt, variables, schema, model_name
+        return _draft()
+
+    monkeypatch.setattr(
+        match_service,
+        "PGVectorStore",
+        lambda db: _CapturingStore([_retrieval_result("PROFILE_CONTEXT_ALPHA", 0.88)]),
+    )
+    monkeypatch.setattr(
+        match_service,
+        "extract_lead_requirements",
+        _capturing_extract,
+    )
+    monkeypatch.setattr(match_service, "ainvoke_structured_prompt", _fake_generator)
+
+    service = match_service.AspirationMatcherService(object())
+    await service.match(_request_model(), SimpleNamespace(id=uuid4()))
+
+    assert seen
+    assert all(name == conf.openai.COMPLETION_MODEL for name in seen)
+
+
+def test_match_request_rejects_more_than_max_leads() -> None:
+    aspirations = [
+        schemas.AspirationMatchInput(
+            kind=schemas.AspirationKind.ROLE,
+            label="Platform Engineer",
+        )
+    ]
+    leads = [
+        schemas.LeadRankInput(
+            id=uuid4(),
+            title=f"Lead {index}",
+            description="Backend platform role",
+        )
+        for index in range(schemas.MATCH_ASPIRATIONS_MAX_LEADS + 1)
+    ]
+
+    with pytest.raises(ValidationError):
+        schemas.AspirationMatchRequest(
+            aspirations=aspirations,
+            leads=leads,
+            k=5,
+        )
+
+
+@pytest.mark.asyncio
+async def test_match_service_limits_lead_requirement_extraction_concurrency(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_orchestration_recorder(monkeypatch)
+    request = schemas.AspirationMatchRequest(
+        aspirations=[
+            schemas.AspirationMatchInput(
+                kind=schemas.AspirationKind.ROLE,
+                label="Platform Engineer",
+            )
+        ],
+        leads=[
+            schemas.LeadRankInput(
+                id=uuid4(),
+                title=f"Lead {index}",
+                description="Backend platform role",
+            )
+            for index in range(6)
+        ],
+        k=5,
+    )
+    active = 0
+    max_active = 0
+
+    async def _capturing_extract(lead, *, llm_name=None):
+        nonlocal active, max_active
+        del lead, llm_name
+        active += 1
+        max_active = max(max_active, active)
+        try:
+            await asyncio.sleep(0.01)
+        finally:
+            active -= 1
+        return None
+
+    async def _fake_generator(prompt, variables, schema, *, model_name=None):
+        del prompt, variables, schema, model_name
+        return AspirationMatchDraft(
+            results=[
+                AspirationMatchDraftResult(
+                    aspiration_index=1,
+                    lead_matches=[
+                        AspirationLeadMatchDraft(
+                            lead_index=index + 1,
+                            match_score=7,
+                            explanation=(
+                                "This explanation is long enough to satisfy validation "
+                                "for each lead match in the batch."
+                            ),
+                        )
+                        for index in range(len(request.leads))
+                    ],
+                )
+            ]
+        )
+
+    monkeypatch.setattr(conf.settings, "MAX_CONCURRENCY", 2)
+    monkeypatch.setattr(
+        match_service,
+        "PGVectorStore",
+        lambda db: _CapturingStore([_retrieval_result("PROFILE_CONTEXT_ALPHA", 0.88)]),
+    )
+    monkeypatch.setattr(
+        match_service,
+        "extract_lead_requirements",
+        _capturing_extract,
+    )
+    monkeypatch.setattr(match_service, "ainvoke_structured_prompt", _fake_generator)
+
+    service = match_service.AspirationMatcherService(object())
+    response = await service.match(request, SimpleNamespace(id=uuid4()))
+
+    assert response.results[0].lead_matches
+    assert max_active <= 2
 
 
 @pytest.mark.asyncio

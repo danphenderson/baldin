@@ -35,8 +35,8 @@ from app.api.deps import (
     schemas,
 )
 from app.api.routes.documents import (
-    _record_document_activity,
     _load_document_blocks,
+    _record_document_activity,
     _serialize_document_block_tree,
     _tiptap_extract_text,
     create_document,
@@ -50,6 +50,7 @@ from app.core.langchain import (
     generate_cover_letter,
 )
 from app.core.url_safety import UnsafeFetchUrlError
+from app.core.user_profile import load_user_profile, serialize_user_profile
 from app.core.vector_store import PGVectorStore
 from app.utils import clean_text
 
@@ -892,20 +893,7 @@ async def _load_user_profile_for_run(
     *,
     user_id,
 ) -> models.User:
-    result = await db.execute(
-        select(models.User)
-        .options(
-            selectinload(models.User.skills),
-            selectinload(models.User.experiences),
-            selectinload(models.User.education),
-            selectinload(models.User.certificates),
-        )
-        .where(models.User.id == user_id)
-    )
-    user_profile = result.scalars().unique().first()
-    if not user_profile:
-        raise HTTPException(status_code=404, detail="User profile not found")
-    return user_profile
+    return await load_user_profile(db, user_id=user_id)
 
 
 async def _load_pinned_resume_for_run(
@@ -1003,20 +991,6 @@ async def _find_parent_run_id(
     return result.scalar_one_or_none()
 
 
-def _serialize_user_profile(user_profile: models.User) -> dict[str, Any]:
-    return {
-        **(model_to_dict(user_profile) or {}),
-        "skills": [model_to_dict(skill) for skill in user_profile.skills],
-        "experiences": [
-            model_to_dict(experience) for experience in user_profile.experiences
-        ],
-        "education": [model_to_dict(education) for education in user_profile.education],
-        "certificates": [
-            model_to_dict(certificate) for certificate in user_profile.certificates
-        ],
-    }
-
-
 def _serialize_lead(lead: models.Lead) -> dict[str, Any]:
     return {
         **(model_to_dict(lead) or {}),
@@ -1056,7 +1030,9 @@ def _serialize_source_document(
         "head_version": {
             "id": str(head_version.id) if head_version else None,
             "version_number": head_version.version_number if head_version else None,
-            "content": head_version.content if head_version and head_version.content else "",
+            "content": head_version.content
+            if head_version and head_version.content
+            else "",
             "content_format": head_version.content_format if head_version else None,
         },
     }
@@ -1986,7 +1962,7 @@ def _build_agent_input_context(
         },
         "application": model_to_dict(application) or {},
         "lead": _serialize_lead(application.lead),
-        "user_profile": _serialize_user_profile(user_profile),
+        "user_profile": serialize_user_profile(user_profile),
         "pinned_resume": _serialize_pinned_resume(pinned_resume),
         "session": _serialize_session_context(session_document, live_block_tree),
     }
@@ -2028,15 +2004,14 @@ def _build_surface_run_context(
             "selection_end": payload.selection_end,
             "requested_apply_mode": payload.requested_apply_mode.value,
             "entity_refs": [
-                entity_ref.model_dump(mode="json")
-                for entity_ref in payload.entity_refs
+                entity_ref.model_dump(mode="json") for entity_ref in payload.entity_refs
             ],
         },
         "prompt_text": payload.prompt_text,
         "source_document": _serialize_source_document(source_document),
         "application": model_to_dict(application) if application else {},
         "lead": _serialize_lead(application.lead) if application else {},
-        "user_profile": _serialize_user_profile(user_profile),
+        "user_profile": serialize_user_profile(user_profile),
         "pinned_resume": _serialize_pinned_resume(pinned_resume),
     }
 

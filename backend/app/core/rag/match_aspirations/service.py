@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import json
 from time import perf_counter
 
 from fastapi import HTTPException
@@ -9,6 +11,10 @@ from app import schemas
 from app.core import conf
 from app.core import orchestration as orchestration_core
 from app.core.langchain import ainvoke_structured_prompt
+from app.core.rag.match_aspirations.lead_requirements import (
+    LeadRequirements,
+    extract_lead_requirements,
+)
 from app.core.rag.match_aspirations.state import (
     WORKFLOW_NAME,
     AspirationMatchDraft,
@@ -38,6 +44,7 @@ MATCHER_PIPELINE_DEFINITION = {
     "entrypoint": "aspirations.match",
     "schema_version": 1,
 }
+LEAD_REQUIREMENTS_EXTRACTION_WARNING_CODE = "lead_requirements_extraction_degraded"
 
 
 def _build_prompt() -> ChatPromptTemplate:
@@ -64,6 +71,21 @@ def _build_prompt() -> ChatPromptTemplate:
     )
 
 
+def _render_mapping(mapping: dict | None) -> str:
+    if not mapping:
+        return ""
+    return json.dumps(mapping, sort_keys=True)
+
+
+def _render_lead_requirements(requirements: LeadRequirements | None) -> str:
+    if requirements is None:
+        return ""
+    compact = requirements.compact_dict()
+    if not compact:
+        return ""
+    return json.dumps(compact, sort_keys=True)
+
+
 def _format_aspirations_text(
     aspirations: list[schemas.AspirationMatchInput],
 ) -> str:
@@ -77,20 +99,38 @@ def _format_aspirations_text(
         if aspiration.notes:
             line += f" | notes: {aspiration.notes}"
         if aspiration.extracted_attributes:
-            line += f" | extracted_attributes: {aspiration.extracted_attributes}"
+            line += (
+                f" | extracted_attributes: "
+                f"{_render_mapping(aspiration.extracted_attributes)}"
+            )
         parts.append(line)
     return "\n".join(parts)
 
 
-def _format_leads_text(leads: list[schemas.LeadRankInput]) -> str:
+def _format_leads_text(
+    leads: list[schemas.LeadRankInput],
+    *,
+    lead_requirements: list[LeadRequirements | None] | None = None,
+) -> str:
     parts: list[str] = []
     for index, lead in enumerate(leads, 1):
         description = lead.description or ""
-        parts.append(f"{index}. {lead.title}: {description}")
+        line = f"{index}. {lead.title}: {description}"
+        if lead_requirements is not None:
+            rendered_requirements = _render_lead_requirements(
+                lead_requirements[index - 1]
+            )
+            if rendered_requirements:
+                line += f" | extracted_requirements: {rendered_requirements}"
+        parts.append(line)
     return "\n".join(parts)
 
 
-def _build_combined_query(body: schemas.AspirationMatchRequest) -> str:
+def _build_combined_query(
+    body: schemas.AspirationMatchRequest,
+    *,
+    lead_requirements: list[LeadRequirements | None] | None = None,
+) -> str:
     aspiration_parts = [
         " ".join(
             part
@@ -98,15 +138,27 @@ def _build_combined_query(body: schemas.AspirationMatchRequest) -> str:
                 aspiration.label,
                 aspiration.reason or "",
                 aspiration.notes or "",
+                _render_mapping(aspiration.extracted_attributes),
             )
             if part
         ).strip()
         for aspiration in body.aspirations
     ]
-    lead_parts = [
-        " ".join(part for part in (lead.title, lead.description or "") if part).strip()
-        for lead in body.leads
-    ]
+    lead_parts = []
+    for index, lead in enumerate(body.leads):
+        lead_parts.append(
+            " ".join(
+                part
+                for part in (
+                    lead.title,
+                    lead.description or "",
+                    _render_lead_requirements(
+                        lead_requirements[index] if lead_requirements else None
+                    ),
+                )
+                if part
+            ).strip()
+        )
     return " ".join(part for part in [*aspiration_parts, *lead_parts] if part)
 
 
@@ -144,6 +196,65 @@ def _build_context(
         deduped_results.append(item)
 
     return "".join(context_parts), deduped_results, truncated
+
+
+async def _extract_lead_requirements_with_degradation(
+    body: schemas.AspirationMatchRequest,
+    state: AspirationMatcherState,
+) -> tuple[list[LeadRequirements | None], AspirationMatcherState]:
+    started = perf_counter()
+    semaphore = asyncio.Semaphore(max(1, conf.settings.MAX_CONCURRENCY))
+    failures: list[str] = []
+    results: list[LeadRequirements | None] = [None] * len(body.leads)
+
+    async def _extract(index: int, lead: schemas.LeadRankInput) -> None:
+        try:
+            async with semaphore:
+                results[index] = await extract_lead_requirements(
+                    lead,
+                    llm_name=state.get("model_name"),
+                )
+        except Exception as exc:
+            failures.append(f"lead {index + 1}: {sanitize_exception(exc)}")
+
+    await asyncio.gather(
+        *(_extract(index, lead) for index, lead in enumerate(body.leads))
+    )
+
+    failed = len(failures)
+    succeeded = sum(1 for result in results if result is not None)
+    degraded = failed > 0
+    warning = None
+    if failures:
+        warning = "; ".join(failures[:3])
+        if len(failures) > 3:
+            warning = f"{warning}; +{len(failures) - 3} more"
+
+    update: AspirationMatcherState = {
+        "lead_requirements_attempted": len(body.leads),
+        "lead_requirements_succeeded": succeeded,
+        "lead_requirements_failed": failed,
+        "lead_requirements_degraded": degraded,
+        "lead_requirements_warning": warning,
+        "trace": append_trace(
+            {
+                **state,
+                "lead_requirements_attempted": len(body.leads),
+                "lead_requirements_succeeded": succeeded,
+                "lead_requirements_failed": failed,
+                "lead_requirements_degraded": degraded,
+                "lead_requirements_warning": warning,
+            },
+            node="extract_lead_requirements",
+            status="warning" if degraded else "success",
+            attempt=1,
+            started_at=started,
+            warning_codes=(
+                [LEAD_REQUIREMENTS_EXTRACTION_WARNING_CODE] if degraded else []
+            ),
+        ),
+    }
+    return results, update
 
 
 def build_match_response(
@@ -215,8 +326,8 @@ class AspirationMatcherService:
                 detail="Pagination is only supported when matching a single aspiration.",
             )
 
-        combined_query = _build_combined_query(body)
         event_token = active_rag_event_id.set("")
+        combined_query = _build_combined_query(body)
         state: AspirationMatcherState = {
             "db": self.db,
             "store": PGVectorStore(self.db),
@@ -232,6 +343,11 @@ class AspirationMatcherService:
             "pagination_requested": body.page is not None or body.page_size is not None,
             "page": body.page,
             "page_size": body.page_size,
+            "lead_requirements_attempted": 0,
+            "lead_requirements_succeeded": 0,
+            "lead_requirements_failed": 0,
+            "lead_requirements_degraded": False,
+            "lead_requirements_warning": None,
         }
         try:
             state = {
@@ -244,6 +360,20 @@ class AspirationMatcherService:
                     build_payload_fn=build_match_orchestration_payload,
                     pipeline_definition=MATCHER_PIPELINE_DEFINITION,
                 ),
+            }
+            (
+                lead_requirements,
+                extraction_update,
+            ) = await _extract_lead_requirements_with_degradation(body, state)
+            combined_query = _build_combined_query(
+                body,
+                lead_requirements=lead_requirements,
+            )
+            state = {
+                **state,
+                **extraction_update,
+                "combined_query": combined_query,
+                "combined_query_chars": len(combined_query),
             }
 
             retrieval_started = perf_counter()
@@ -324,7 +454,10 @@ class AspirationMatcherService:
                     {
                         "context": state["context"],
                         "aspirations_text": _format_aspirations_text(body.aspirations),
-                        "leads_text": _format_leads_text(body.leads),
+                        "leads_text": _format_leads_text(
+                            body.leads,
+                            lead_requirements=lead_requirements,
+                        ),
                     },
                     AspirationMatchDraft,
                     model_name=state.get("model_name"),

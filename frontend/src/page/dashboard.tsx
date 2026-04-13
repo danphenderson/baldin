@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { timeAgo as relativeDate, timeAgoShort, statusLabel } from '../util/format';
 import {
   Box, Card, CardContent, Typography, Button, Chip, IconButton,
-  useTheme, alpha, Stack, TextField, Dialog, DialogTitle,
-  DialogContent, DialogActions, Skeleton, ButtonBase, Checkbox, Tooltip,
+  useTheme, alpha, Stack, TextField, Skeleton, ButtonBase, Checkbox, Tooltip,
   Alert, Fade, Popover, Menu, MenuItem, Collapse, Link,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
@@ -12,8 +11,6 @@ import { PageTitle, SectionTitle } from '../component/common/text';
 import { progressGradient } from '../theme/effects';
 import {
   Add as AddIcon,
-  Bolt as BoltIcon,
-  AutoAwesome as AIIcon,
   SwapHoriz as StatusChangeIcon,
   MailOutline as MailIcon,
   Description as DescriptionIcon,
@@ -44,7 +41,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { CSS } from '@dnd-kit/utilities';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
-import { extractLead, getLeads, type LeadRead } from '../service/leads';
+import { getLeads, type LeadRead } from '../service/leads';
 import {
   getActionItems,
   updateActionItem,
@@ -385,9 +382,6 @@ const DashboardPage: React.FC = () => {
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<ActionItemDetailRead | null>(null);
-  const [extractDialogOpen, setExtractDialogOpen] = useState(false);
-  const [extractUrl, setExtractUrl] = useState('');
-  const [extracting, setExtracting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [leads, setLeads] = useState<LeadRead[]>([]);
   const [leadsCollapsed, setLeadsCollapsed] = useState(() =>
@@ -583,21 +577,6 @@ const DashboardPage: React.FC = () => {
     setStatusMenuItem(null);
   }, [token, statusMenuItem]);
 
-  /* ---- extract lead ---- */
-  const handleExtract = async () => {
-    if (!token || !extractUrl.trim()) return;
-    setExtracting(true);
-    try {
-      await extractLead(token, extractUrl.trim());
-      setExtractUrl('');
-      setExtractDialogOpen(false);
-      refresh();
-    } catch (e) {
-      console.error(e);
-    }
-    setExtracting(false);
-  };
-
   /* ---- action item created ---- */
   const handleActionCreated = useCallback((item: ActionItemRead) => {
     setActionItems((prev) => [item as ActionItemDetailRead, ...prev]);
@@ -773,13 +752,13 @@ const DashboardPage: React.FC = () => {
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card
                 sx={{ height: '100%', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
-                onClick={() => setExtractDialogOpen(true)}
+                onClick={() => navigate('/leads')}
               >
                 <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
                   <LeadsIcon color="primary" />
                   <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Import a Lead</Typography>
-                    <Typography variant="caption" color="text.secondary">Extract from a job URL</Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Manage Leads</Typography>
+                    <Typography variant="caption" color="text.secondary">Import or review opportunities</Typography>
                   </Box>
                 </CardContent>
               </Card>
@@ -847,14 +826,6 @@ const DashboardPage: React.FC = () => {
           onClick={() => setCreateDialogOpen(true)}
         >
           Add Action
-        </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<BoltIcon />}
-          onClick={() => setExtractDialogOpen(true)}
-        >
-          Extract Lead
         </Button>
       </Stack>
 
@@ -1444,49 +1415,6 @@ const DashboardPage: React.FC = () => {
         ))}
       </Menu>
 
-      {/* ── Extract Lead Dialog ── */}
-      <Dialog
-        open={extractDialogOpen}
-        onClose={() => setExtractDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        aria-labelledby="extract-dialog-title"
-      >
-        <DialogTitle id="extract-dialog-title" sx={{ fontWeight: 700 }}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <AIIcon color="primary" />
-            <span>AI Lead Extraction</span>
-          </Stack>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Paste a job posting URL and our AI will automatically extract all the details.
-          </Typography>
-          <TextField
-            autoFocus
-            fullWidth
-            label="Job Posting URL"
-            placeholder="https://linkedin.com/jobs/..."
-            variant="outlined"
-            value={extractUrl}
-            onChange={(e) => setExtractUrl(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && extractUrl.trim() && !extracting) handleExtract();
-            }}
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setExtractDialogOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleExtract}
-            disabled={!extractUrl.trim() || extracting}
-            startIcon={extracting ? undefined : <BoltIcon />}
-          >
-            {extracting ? 'Extracting…' : 'Extract'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

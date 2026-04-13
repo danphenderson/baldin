@@ -2,16 +2,9 @@ import React, { useContext, useEffect, useState, useCallback, useMemo } from 're
 import { useNavigate } from 'react-router-dom';
 import { timeAgo as relativeDate, timeAgoShort, statusLabel } from '../util/format';
 import {
-<<<<<<< Updated upstream
-  Box, Card, CardContent, Typography, Button, Chip, IconButton,
-  useTheme, alpha, Stack, TextField, Skeleton, ButtonBase, Checkbox, Tooltip,
-  Alert, Fade, Popover, Menu, MenuItem, Collapse, Link,
-=======
   Box, Typography, Button, Chip, IconButton,
-  useTheme, alpha, Stack, TextField, Dialog, DialogTitle,
-  DialogContent, DialogActions, ButtonBase, Checkbox, Tooltip,
+  useTheme, alpha, Stack, TextField, ButtonBase, Checkbox, Tooltip,
   Popover, Menu, MenuItem, Collapse, Link,
->>>>>>> Stashed changes
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { progressGradient } from '../theme/effects';
@@ -697,16 +690,8 @@ const DashboardPage: React.FC = () => {
           </Typography>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-<<<<<<< Updated upstream
-              <Card
-                sx={{ height: '100%', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
-                onClick={() => navigate('/leads')}
-              >
-                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
-=======
-              <CardShell interactive onClick={() => setExtractDialogOpen(true)} padding="dense">
+              <CardShell interactive onClick={() => navigate('/leads')} padding="dense">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
->>>>>>> Stashed changes
                   <LeadsIcon color="primary" />
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Manage Leads</Typography>

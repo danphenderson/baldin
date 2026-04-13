@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react';
+import { fileURLToPath, URL } from 'node:url';
 import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
 
@@ -17,6 +18,11 @@ export default defineConfig(({ mode, command }) => {
 
   return {
     plugins: [react()],
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+      },
+    },
     build: {
       rollupOptions: {
         output: {
@@ -41,7 +47,8 @@ export default defineConfig(({ mode, command }) => {
     test: {
       environment: 'jsdom',
       globals: true,
-      setupFiles: './src/setupTests.ts',
+      include: ['./test/**/*.{test,spec}.{ts,tsx}'],
+      setupFiles: './test/setupTests.ts',
     },
   };
 });

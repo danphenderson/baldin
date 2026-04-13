@@ -62,8 +62,8 @@ export const EditDialog: React.FC<EditDialogProps> = ({
               : typeof rawVal === 'string' || typeof rawVal === 'number'
                 ? String(rawVal)
                 : '';
+            const fieldKey = field.key;
             const commonProps = {
-              key: field.key,
               fullWidth: true,
               label: field.label,
               value: displayVal,
@@ -74,6 +74,7 @@ export const EditDialog: React.FC<EditDialogProps> = ({
             return (
               field.multiline ? (
                 <AgentEnabledMultilineField
+                  key={fieldKey}
                   {...commonProps}
                   surfaceId={String((editItem as Record<string, unknown>)?.id ?? `${editSection}-${field.key}`)}
                   fieldKey={`${editSection}_${field.key}`}
@@ -86,6 +87,7 @@ export const EditDialog: React.FC<EditDialogProps> = ({
                 />
               ) : (
                 <TextField
+                  key={fieldKey}
                   {...commonProps}
                   onChange={e => setEditItem(prev => prev ? { ...prev, [field.key]: e.target.value } : prev)}
                 />

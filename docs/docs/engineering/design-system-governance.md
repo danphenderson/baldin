@@ -60,7 +60,7 @@ Shared UI with behavior needs targeted tests.
 - Add Vitest and React Testing Library coverage when shared UI has interaction, accessibility semantics, branching behavior, or callback wiring.
 - Cover the behavior that makes the surface shared: keyboard and focus handling, variant branching, fallback behavior, wrapper prop translation, or slot orchestration.
 - Pure token mapping, static composition, or styling-only changes can rely on the existing validation path unless new logic is introduced.
-- Any new `lint-theme` rule must include a matching test in `frontend/src/design-system/theme/lint-theme.test.ts`.
+- Any new `lint-theme` rule must include a matching test in `frontend/test/design-system/theme/lint-theme.test.ts`.
 
 ## Documentation Requirements
 

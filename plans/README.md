@@ -4,7 +4,7 @@ Use this directory for tracked plan, spike, and epic documents that feed Baldin'
 
 ## Active Files
 
-- `agents-session-chat-epic.md` — current agent and session chat epic planning document.
+No active plan files at this time. Previous plan documents have been completed or archived.
 
 ## Usage Notes
 

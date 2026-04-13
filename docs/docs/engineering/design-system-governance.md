@@ -75,6 +75,31 @@ Treat these docs as part of the anti-drift surface, not optional follow-up.
 
 ## Compatibility Wrapper Lifecycle
 
+### Lifecycle states
+
+Every compatibility wrapper is in exactly one of these states:
+
+| State | Meaning | Allowed operations | Sunset trigger |
+| --- | --- | --- | --- |
+| `translating` | The wrapper still translates legacy prop shapes (e.g. `action` → `primaryAction`). | Keep thin; may receive bug-fix changes to the translation logic. | All in-repo consumers have been migrated to the canonical design-system import → move to `re-export`. |
+| `re-export` | The wrapper is a pure passthrough re-export with no prop translation. | No logic changes allowed. Only import-path preservation. | Zero remaining in-repo imports from the wrapper file → move to `removable`. |
+| `removable` | Zero in-repo consumers remain. The wrapper exists only because it has not been deleted yet. | Delete the file. | Delete in the next PR that touches the surrounding area, or in a dedicated cleanup pass. |
+
+### Current wrapper ledger
+
+| Wrapper | Backing source | State | Sunset trigger |
+| --- | --- | --- | --- |
+| `component/common/empty-state.tsx` | `EmptyState` | `translating` | Migrate remaining `action` callers to `primaryAction`, then convert to `re-export` |
+| `component/common/confirm-dialog.tsx` | `FormDialogShell` | `translating` | Migrate callers to `FormDialogShell` with `destructive` prop, then convert to `re-export` |
+| `component/common/alert.tsx` | `InlineFeedback` | `re-export` | Zero remaining in-repo imports → `removable` |
+| `component/common/error-message.tsx` | `InlineFeedback` | `re-export` | Zero remaining in-repo imports → `removable` |
+| `theme/effects.ts` | `design-system/tokens/effects.ts` + `theme/adapters/json-tree.ts` | `re-export` | Zero remaining in-repo imports → `removable` |
+| `theme/status-colors.ts` | `design-system/tokens/status.ts` | `re-export` | Zero remaining in-repo imports → `removable` |
+| `page/profile/components/EmptyState.tsx` | `EmptyState` | `translating` | Profile-specific copy stabilises into `EmptyState` props → convert to `re-export` |
+| `component/lead-search-bar.tsx` | `CollectionToolbar` | `translating` | Leads search composition stabilises → convert to `re-export` or inline into page |
+
+### Operating rules
+
 Legacy-folder wrappers may remain only to preserve imports or translate old prop shapes.
 
 Current rules:
@@ -85,6 +110,7 @@ Current rules:
 - Remove a wrapper once no in-repo imports remain and the backing shared surface is documented and stable.
 - Do not invent time-based deprecation windows or release-train policy here. Baldin should use actual in-repo usage, not ceremony.
 - If a wrapper survives, the catalog must document both the backing source and the reason it still exists.
+- When a wrapper transitions between lifecycle states, update both this ledger and the [Design System Catalog](../reference/design-system-catalog.md) in the same PR.
 
 ## Reviewer Checklist
 

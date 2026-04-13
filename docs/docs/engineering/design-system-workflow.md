@@ -114,7 +114,7 @@ This repo does not require a full frontend suite by default for every shared UI 
 - Prefer the exported `frontend/src/design-system` barrel in feature code unless a narrower import is materially clearer.
 - Prefer global toasts for transient success and error feedback and `InlineFeedback` for persistent contextual feedback.
 - Prefer `SectionHeader` plus `SectionCard` for reusable section framing instead of feature-local section chrome.
-- Keep `MetricStrip` local until a second route family proves the same structure.
+- Prefer `MetricStrip` for read-only stat rows across route families. Use the `inline` variant for flush layouts and the `card` variant for sections that need a card frame.
 
 ## When To Stop Sharing
 

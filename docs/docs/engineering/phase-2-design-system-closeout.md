@@ -89,7 +89,6 @@ These remain compatibility wrappers, not new shared-source homes. New shared UI 
 ## Deferred To Later Phases
 
 - No standalone `ErrorState`.
-- No shared `MetricStrip`.
 - No applications board extraction.
 - No `LeadModal` systemization.
 - No auth, dashboard, documents, crawler, or editor-wide migration to the Phase 2 layer.

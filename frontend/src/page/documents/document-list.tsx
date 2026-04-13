@@ -1,8 +1,8 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Box, Card, CardContent, Typography, Chip, Stack, Button, useTheme, alpha,
+  Box, Typography, Chip, Stack, Button, useTheme, alpha,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  Tooltip, Skeleton, Alert, InputAdornment, Menu, MenuItem, Fab, Tabs, Tab,
+  Tooltip, InputAdornment, Menu, MenuItem, Fab, Tabs, Tab,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
@@ -21,7 +21,13 @@ import {
   type DocumentRead, type DocumentKind, type DocumentStatus,
 } from '../../service/documents';
 import UploadDocumentDialog from '../../component/upload-document-dialog';
-import { softBrandGradient } from '../../theme/effects';
+import {
+  CardShell,
+  CollectionToolbar,
+  EmptyState as DSEmptyState,
+  InlineFeedback,
+  LoadingState,
+} from '../../design-system';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -286,7 +292,11 @@ const DocumentListPage: React.FC = () => {
   return (
     <Box>
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')} role="alert">{error}</Alert>
+        <Box sx={{ mb: 2 }}>
+          <InlineFeedback tone="error" onClose={() => setError('')}>
+            {error}
+          </InlineFeedback>
+        </Box>
       )}
 
       {/* ── Tabs ────────────────────────────────────────────────── */}
@@ -301,143 +311,129 @@ const DocumentListPage: React.FC = () => {
       </Tabs>
 
       {/* ── Toolbar ─────────────────────────────────────────────── */}
-      <Stack direction="row" spacing={1.5} sx={{ mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-        <TextField
-          size="small" placeholder="Search documents…" value={search}
-          onChange={e => setSearch(e.target.value)}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-                </InputAdornment>
-              ),
-              'aria-label': 'Search documents',
-            },
-          }}
-          sx={{ minWidth: 220, flex: { xs: '1 1 100%', sm: '0 1 280px' } }}
-        />
-
-        {/* Kind chips */}
-        <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
-          <Chip
-            size="small" label="All"
-            variant={kindFilter === 'all' ? 'filled' : 'outlined'}
-            color={kindFilter === 'all' ? 'primary' : 'default'}
-            onClick={() => setKindFilter('all')}
-            sx={{ fontWeight: kindFilter === 'all' ? 600 : 400, cursor: 'pointer' }}
+      <CollectionToolbar
+        sx={{ mb: 3 }}
+        search={
+          <TextField
+            size="small" placeholder="Search documents…" value={search}
+            onChange={e => setSearch(e.target.value)}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+                'aria-label': 'Search documents',
+              },
+            }}
+            sx={{ minWidth: 220, flex: { xs: '1 1 100%', sm: '0 1 280px' } }}
           />
-          {availableKinds.map(k => (
-            <Chip
-              key={k} size="small" label={KIND_META[k].label}
-              variant={kindFilter === k ? 'filled' : 'outlined'}
-              color={kindFilter === k ? 'primary' : 'default'}
-              onClick={() => setKindFilter(k)}
-              sx={{ fontWeight: kindFilter === k ? 600 : 400, cursor: 'pointer' }}
-            />
-          ))}
-        </Stack>
+        }
+        controls={
+          <>
+            {/* Kind chips */}
+            <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
+              <Chip
+                size="small" label="All"
+                variant={kindFilter === 'all' ? 'filled' : 'outlined'}
+                color={kindFilter === 'all' ? 'primary' : 'default'}
+                onClick={() => setKindFilter('all')}
+                sx={{ fontWeight: kindFilter === 'all' ? 600 : 400, cursor: 'pointer' }}
+              />
+              {availableKinds.map(k => (
+                <Chip
+                  key={k} size="small" label={KIND_META[k].label}
+                  variant={kindFilter === k ? 'filled' : 'outlined'}
+                  color={kindFilter === k ? 'primary' : 'default'}
+                  onClick={() => setKindFilter(k)}
+                  sx={{ fontWeight: kindFilter === k ? 600 : 400, cursor: 'pointer' }}
+                />
+              ))}
+            </Stack>
 
-        {/* Status chips */}
-        <Stack direction="row" spacing={0.5}>
-          <Chip
-            size="small" label="All"
-            variant={statusFilter === 'all' ? 'filled' : 'outlined'}
-            color={statusFilter === 'all' ? 'primary' : 'default'}
-            onClick={() => setStatusFilter('all')}
-            sx={{ fontWeight: statusFilter === 'all' ? 600 : 400, cursor: 'pointer' }}
-          />
-          {(Object.keys(STATUS_META) as DocumentStatus[]).map(s => (
-            <Chip
-              key={s} size="small" label={STATUS_META[s].label}
-              variant={statusFilter === s ? 'filled' : 'outlined'}
-              color={statusFilter === s ? 'primary' : 'default'}
-              onClick={() => setStatusFilter(s)}
-              sx={{ fontWeight: statusFilter === s ? 600 : 400, cursor: 'pointer' }}
-            />
-          ))}
-        </Stack>
+            {/* Status chips */}
+            <Stack direction="row" spacing={0.5}>
+              <Chip
+                size="small" label="All"
+                variant={statusFilter === 'all' ? 'filled' : 'outlined'}
+                color={statusFilter === 'all' ? 'primary' : 'default'}
+                onClick={() => setStatusFilter('all')}
+                sx={{ fontWeight: statusFilter === 'all' ? 600 : 400, cursor: 'pointer' }}
+              />
+              {(Object.keys(STATUS_META) as DocumentStatus[]).map(s => (
+                <Chip
+                  key={s} size="small" label={STATUS_META[s].label}
+                  variant={statusFilter === s ? 'filled' : 'outlined'}
+                  color={statusFilter === s ? 'primary' : 'default'}
+                  onClick={() => setStatusFilter(s)}
+                  sx={{ fontWeight: statusFilter === s ? 600 : 400, cursor: 'pointer' }}
+                />
+              ))}
+            </Stack>
+          </>
+        }
+        actions={
+          <>
+            {/* Upload PDF */}
+            <Button
+              size="small" variant="outlined" startIcon={<CloudUploadIcon />}
+              onClick={() => setUploadOpen(true)}
+              aria-label="Upload PDF"
+            >
+              Upload PDF
+            </Button>
 
-        <Box sx={{ flex: 1 }} />
-
-        {/* Upload PDF */}
-        <Button
-          size="small" variant="outlined" startIcon={<CloudUploadIcon />}
-          onClick={() => setUploadOpen(true)}
-          aria-label="Upload PDF"
-        >
-          Upload PDF
-        </Button>
-
-        {/* Sort */}
-        <Tooltip title="Sort">
-          <Chip
-            icon={<SortIcon sx={{ fontSize: 16 }} />} size="small" variant="outlined"
-            label={SORT_LABELS[sort]}
-            onClick={e => setSortAnchor(e.currentTarget)}
-            sx={{ cursor: 'pointer', fontWeight: 500 }}
-            aria-label="Sort documents"
-          />
-        </Tooltip>
-        <Menu
-          anchorEl={sortAnchor} open={Boolean(sortAnchor)}
-          onClose={() => setSortAnchor(null)}
-          slotProps={{ paper: { sx: { mt: 1 } } }}
-        >
-          {(Object.entries(SORT_LABELS) as [SortOption, string][]).map(([key, label]) => (
-            <MenuItem key={key} selected={sort === key} onClick={() => { setSort(key); setSortAnchor(null); }}>
-              {label}
-            </MenuItem>
-          ))}
-        </Menu>
-      </Stack>
+            {/* Sort */}
+            <Tooltip title="Sort">
+              <Chip
+                icon={<SortIcon sx={{ fontSize: 16 }} />} size="small" variant="outlined"
+                label={SORT_LABELS[sort]}
+                onClick={e => setSortAnchor(e.currentTarget)}
+                sx={{ cursor: 'pointer', fontWeight: 500 }}
+                aria-label="Sort documents"
+              />
+            </Tooltip>
+          </>
+        }
+      />
+      <Menu
+        anchorEl={sortAnchor} open={Boolean(sortAnchor)}
+        onClose={() => setSortAnchor(null)}
+        slotProps={{ paper: { sx: { mt: 1 } } }}
+      >
+        {(Object.entries(SORT_LABELS) as [SortOption, string][]).map(([key, label]) => (
+          <MenuItem key={key} selected={sort === key} onClick={() => { setSort(key); setSortAnchor(null); }}>
+            {label}
+          </MenuItem>
+        ))}
+      </Menu>
 
       {/* ── Grid ────────────────────────────────────────────────── */}
       {(tab === 'my' ? loading : sharedLoading) ? (
-        <Grid container spacing={2.5} aria-busy="true" aria-label="Loading documents">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={i}>
-              <Skeleton variant="rounded" height={200} sx={{ borderRadius: 3 }} />
-            </Grid>
-          ))}
-        </Grid>
+        <LoadingState kind="grid" count={6} itemHeight={200} columns={{ xs: 1, sm: 2, md: 3 }} />
       ) : (tab === 'my' ? filtered : filteredShared).length === 0 ? (
-        <Box sx={{
-          textAlign: 'center', py: 10,
-          border: `1.5px dashed ${alpha(theme.palette.divider, 0.4)}`,
-          borderRadius: 4,
-        }}>
-          <Box sx={{
-            width: 72, height: 72, mx: 'auto', mb: 2.5, borderRadius: '20px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: softBrandGradient(theme, {
-              startTone: 'main',
-              endTone: 'main',
-              startOpacity: 0.15,
-              endOpacity: 0.15,
-            }),
-          }}>
-            <NoteAddIcon sx={{ fontSize: 36, color: 'primary.main' }} />
-          </Box>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>{tab === 'shared' ? 'No shared documents' : emptyLabel}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, maxWidth: 360, mx: 'auto' }}>
-            {tab === 'shared'
+        <DSEmptyState
+          icon={<NoteAddIcon />}
+          title={tab === 'shared' ? 'No shared documents' : emptyLabel}
+          description={
+            tab === 'shared'
               ? 'Documents shared with you will appear here.'
               : search
                 ? 'Try a different search term or create a new document.'
-                : 'Create your first document to start building your professional profile with Baldin.'}
-          </Typography>
-          {tab === 'my' && !search && kindFilter === 'all' && statusFilter === 'all' && (
-            <Button
-              variant="contained" size="small" startIcon={<AddIcon />}
-              onClick={() => navigate('/workspace/new')}
-              sx={{ mt: 3 }}
-              aria-label="Create new document"
-            >
-              New Document
-            </Button>
-          )}
-        </Box>
+                : 'Create your first document to start building your professional profile with Baldin.'
+          }
+          primaryAction={
+            tab === 'my' && !search && kindFilter === 'all' && statusFilter === 'all'
+              ? {
+                  label: 'New Document',
+                  onClick: () => navigate('/workspace/new'),
+                  icon: <AddIcon />,
+                  buttonProps: { variant: 'contained', size: 'small' },
+                }
+              : undefined
+          }
+        />
       ) : (
         <Grid container spacing={2.5}>
           {(tab === 'my' ? filtered : filteredShared).map(doc => {
@@ -454,25 +450,19 @@ const DocumentListPage: React.FC = () => {
 
             return (
               <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={doc.id}>
-                <Card
+                <CardShell
+                  interactive
+                  accentColor={accent}
+                  onClick={() => navigate(`/workspace/${doc.id}`)}
                   sx={{
-                    position: 'relative', height: '100%', display: 'flex', flexDirection: 'column',
-                    borderLeft: `3px solid ${alpha(accent, 0.5)}`,
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      transform: 'translateY(-2px)',
-                      borderLeftColor: accent,
-                      boxShadow: `0 8px 24px ${alpha(accent, 0.12)}`,
-                    },
+                    position: 'relative',
                     '& .doc-actions': { opacity: { xs: 1, md: 0 }, transition: 'opacity 0.15s ease' },
                     '@media (hover: hover)': { '&:hover .doc-actions': { opacity: 1 } },
                   }}
-                  onClick={() => navigate(`/workspace/${doc.id}`)}
                   role="article"
                   aria-label={`Document: ${doc.title}`}
+                  contentSx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column' }}
                 >
-                  <CardContent sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column' }}>
                     {/* header */}
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1.5 }}>
                       <Box sx={{
@@ -618,8 +608,7 @@ const DocumentListPage: React.FC = () => {
                         </Tooltip>
                       </Stack>
                     </Box>
-                  </CardContent>
-                </Card>
+                </CardShell>
               </Grid>
             );
           })}

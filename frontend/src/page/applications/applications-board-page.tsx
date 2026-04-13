@@ -1,8 +1,8 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import {
-  Box, Card, CardContent, Typography, Chip, Stack, Button, TextField, useTheme, alpha,
+  Box, Typography, Chip, Stack, Button, TextField, useTheme, alpha,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  IconButton, Tooltip, Skeleton, Alert, Fade, Menu, MenuItem,
+  IconButton, Tooltip, Alert, Fade, Menu, MenuItem,
   useMediaQuery,
 } from '@mui/material';
 import {
@@ -30,9 +30,13 @@ import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import type { ApplicationRead } from '../../service/applications';
 import { getStatusColors } from '../../theme/status-colors';
-import { PageTitle } from '../../component/common/text';
-import { softBrandGradient } from '../../theme/effects';
-import { MetricStrip } from '../../design-system';
+import {
+  CardShell,
+  EmptyState as DSEmptyState,
+  InlineFeedback,
+  LoadingState,
+  MetricStrip,
+} from '../../design-system';
 import {
   useApplications, useStageColumns, COLUMN_EMPTY_HINTS, relativeDate, nextStage,
   applicationDocumentCount,
@@ -171,27 +175,16 @@ const ApplicationCard: React.FC<AppCardProps> = ({
   };
 
   return (
-    <Card
+    <CardShell
+      interactive
+      accentColor={column.color}
+      padding="dense"
       onClick={() => onView(app)}
       sx={{
-        cursor: 'pointer',
         opacity: isDragging ? 0.6 : 1,
-        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: `0 6px 20px ${alpha(column.color, 0.18)}`,
-        },
-        '&:focus-visible': {
-          outline: `2px solid ${theme.palette.primary.main}`,
-          outlineOffset: 2,
-        },
       }}
-      tabIndex={0}
-      role="button"
       aria-label={`View ${lead?.title || 'application'} details`}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView(app); } }}
     >
-      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Typography variant="body2" fontWeight={700} noWrap sx={{ mb: 0.25 }}>
           {lead?.title || 'Untitled Position'}
         </Typography>
@@ -484,8 +477,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
             </MenuItem>
           ))}
         </Menu>
-      </CardContent>
-    </Card>
+    </CardShell>
   );
 };
 
@@ -522,51 +514,18 @@ const DeleteConfirmDialog: React.FC<DeleteConfirmProps> = ({ open, app, onConfir
 /*  Empty state                                                        */
 /* ------------------------------------------------------------------ */
 
-const EmptyState: React.FC = () => {
-  const theme = useTheme();
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        py: 10,
-        px: 3,
-        textAlign: 'center',
-      }}
-    >
-      <Box
-        sx={{
-          width: 72,
-          height: 72,
-          borderRadius: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          mb: 3,
-          background: softBrandGradient(theme, {
-            startTone: 'main',
-            endTone: 'main',
-            startOpacity: 0.15,
-            endOpacity: 0.15,
-          }),
-        }}
-      >
-        <AssignmentIcon sx={{ fontSize: 36, color: theme.palette.primary.main }} />
-      </Box>
-      <PageTitle gutterBottom>
-        No applications yet
-      </PageTitle>
-      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400, mb: 2 }}>
-        When you apply to leads, they&apos;ll appear here as a pipeline board so you can track every stage of your job search.
-      </Typography>
-      <Button variant="outlined" href="/leads" startIcon={<WorkIcon />}>
-        Browse Leads
-      </Button>
-    </Box>
-  );
-};
+const BoardEmptyState: React.FC = () => (
+  <DSEmptyState
+    icon={<AssignmentIcon />}
+    title="No applications yet"
+    description="When you apply to leads, they'll appear here as a pipeline board so you can track every stage of your job search."
+    primaryAction={{
+      label: 'Browse Leads',
+      onClick: () => { window.location.href = '/leads'; },
+      icon: <WorkIcon />,
+    }}
+  />
+);
 
 interface DraggableApplicationCardProps {
   app: ApplicationRead;
@@ -849,25 +808,26 @@ const ApplicationsBoardPage: React.FC = () => {
       )}
 
       {/* Alerts */}
-      <Fade in={!!error}><Box>{error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}</Box></Fade>
-      <Fade in={!!success}><Box>{success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}</Box></Fade>
+      {error && (
+        <Box sx={{ mb: 2 }}>
+          <InlineFeedback tone="error" onClose={() => setError('')}>
+            {error}
+          </InlineFeedback>
+        </Box>
+      )}
+      {success && (
+        <Box sx={{ mb: 2 }}>
+          <InlineFeedback tone="success" onClose={() => setSuccess('')}>
+            {success}
+          </InlineFeedback>
+        </Box>
+      )}
 
       {/* Content */}
       {loading ? (
-        <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2 }}>
-          {COLUMNS.map((c) => (
-            <Box key={c.key} sx={{ minWidth: 240, flexGrow: 1, flexShrink: 0 }}>
-              <Skeleton variant="rounded" height={32} sx={{ mb: 1.5, borderRadius: 2 }} />
-              <Stack spacing={1.5}>
-                {[0, 1, 2].map((i) => (
-                  <Skeleton key={i} variant="rounded" height={100} sx={{ borderRadius: 2 }} />
-                ))}
-              </Stack>
-            </Box>
-          ))}
-        </Box>
+        <LoadingState kind="grid" count={5} itemHeight={260} columns={{ xs: 1, sm: 2, md: 5 }} />
       ) : applications.length === 0 ? (
-        <EmptyState />
+        <BoardEmptyState />
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <Stack spacing={3}>

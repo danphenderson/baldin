@@ -16,11 +16,9 @@ This guide describes the migration that actually exists now. It is not a future-
 | --- | --- | --- |
 | Token and theme foundation | Complete | `frontend/src/design-system/tokens/*` and `theme/*` are active, and `theme-provider.tsx` consumes them |
 | Shared primitives | Complete for current Phase 2 scope | Feedback, surfaces, and status primitives are shipped |
-| Shared patterns | Complete for current Phase 2 scope | `CollectionToolbar` and `SectionCard` are shipped |
+| Shared patterns | Complete for current Phase 2 scope | `CollectionToolbar`, `MetricStrip`, and `SectionCard` are shipped |
 | Compatibility wrappers and shims | Active transitional layer | `component/common/*`, `component/auth/*`, and `theme/*` still preserve older call sites |
-| Pilot adopters | Complete | Leads, applications queue, and profile all consume the shared layer |
-| Proving adopters | Partial | Conversations and agents prove reuse outside the pilot set |
-| Repo-wide adoption | Not complete | Many route families still use local or direct MUI implementations |
+| Route-family adoption | Mixed | See the [Route-Family Adoption Ledger](../reference/design-system-catalog.md#route-family-adoption-ledger) for per-family states (`adopted`, `adopting`, `not-started`) |
 
 ## Phase 1 Foundation That Is Active Now
 
@@ -76,7 +74,7 @@ What stayed feature-owned:
 - Next-step actions
 - Local summary strip
 
-The local summary strip is why `MetricStrip` is still deferred rather than silently treated as done.
+`MetricStrip` has since been promoted to the shared layer at `frontend/src/design-system/patterns/metrics/metric-strip.tsx` and is consumed by applications queue, applications board, leads, pipelines, and crawlers.
 
 ### Profile
 
@@ -153,7 +151,6 @@ That means the foundation is broader than the Phase 2 primitive and pattern cata
 
 These items remain intentionally deferred and should stay documented as deferred until code lands:
 
-- Shared `MetricStrip`
 - Shared `ErrorState`
 - Applications board extraction
 - Shared `LeadModal`
@@ -171,7 +168,7 @@ If migration work resumes, keep the order proportional:
 2. Use thin compatibility wrappers only when they reduce migration risk or preserve a stable import path.
 3. Keep feature semantics, service logic, route copy, and entity rendering local even when the outer shell migrates.
 4. Finish obvious wrapper cleanups where the backing primitive already exists.
-5. Only extract a new shared surface such as `MetricStrip` after a second route family proves the same structure.
+5. Only extract a new shared surface after a second route family proves the same structure.
 6. Widen collection, card, and dialog adoption in route families already close to the shipped APIs before touching editor or admin-heavy surfaces.
 7. Update the catalog, workflow, and migration docs in the same change when the shared surface or adopter list changes.
 

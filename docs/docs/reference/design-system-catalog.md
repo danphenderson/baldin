@@ -92,26 +92,28 @@ These files are still active, but they are not the canonical place for new share
 
 ### Theme compatibility shims
 
-| Shim | Backing source | Why it still exists |
-| --- | --- | --- |
-| `frontend/src/theme/effects.ts` | `frontend/src/design-system/tokens/effects.ts` plus `theme/adapters/json-tree.ts` | Preserves long-lived imports such as `brandGradient`, `softBrandGradient`, and `jsonTreeTheme` |
-| `frontend/src/theme/status-colors.ts` | `frontend/src/design-system/tokens/status.ts` | Preserves older `getStatusColors()` imports in existing features |
+| Shim | Backing source | Lifecycle state | Why it still exists |
+| --- | --- | --- | --- |
+| `frontend/src/theme/effects.ts` | `frontend/src/design-system/tokens/effects.ts` plus `theme/adapters/json-tree.ts` | `re-export` | Preserves long-lived imports such as `brandGradient`, `softBrandGradient`, and `jsonTreeTheme` |
+| `frontend/src/theme/status-colors.ts` | `frontend/src/design-system/tokens/status.ts` | `re-export` | Preserves older `getStatusColors()` imports in existing features |
 
 ### Legacy shared wrappers
 
-| Wrapper | Backing source | Why it still exists |
-| --- | --- | --- |
-| `frontend/src/component/common/empty-state.tsx` | `EmptyState` | Preserves the legacy `action` prop while mapping to `primaryAction` |
-| `frontend/src/component/common/confirm-dialog.tsx` | `FormDialogShell` | Preserves the confirm-dialog API and compatibility-only title/icon framing |
-| `frontend/src/component/common/alert.tsx` | `InlineFeedback` | Preserves alert-style call sites |
-| `frontend/src/component/common/error-message.tsx` | `InlineFeedback` | Preserves error-only helper call sites |
+| Wrapper | Backing source | Lifecycle state | Why it still exists |
+| --- | --- | --- | --- |
+| `frontend/src/component/common/empty-state.tsx` | `EmptyState` | `translating` | Preserves the legacy `action` prop while mapping to `primaryAction` |
+| `frontend/src/component/common/confirm-dialog.tsx` | `FormDialogShell` | `translating` | Preserves the confirm-dialog API and compatibility-only title/icon framing |
+| `frontend/src/component/common/alert.tsx` | `InlineFeedback` | `re-export` | Preserves alert-style call sites |
+| `frontend/src/component/common/error-message.tsx` | `InlineFeedback` | `re-export` | Preserves error-only helper call sites |
 
 ### Feature-local adapters
 
-| Adapter | Backing source | Why it still exists |
-| --- | --- | --- |
-| `frontend/src/page/profile/components/EmptyState.tsx` | `EmptyState` | Keeps profile-specific copy and CTA wording local |
-| `frontend/src/component/lead-search-bar.tsx` | `CollectionToolbar` | Keeps leads-specific search, filter, and pagination composition local |
+| Adapter | Backing source | Lifecycle state | Why it still exists |
+| --- | --- | --- | --- |
+| `frontend/src/page/profile/components/EmptyState.tsx` | `EmptyState` | `translating` | Keeps profile-specific copy and CTA wording local |
+| `frontend/src/component/lead-search-bar.tsx` | `CollectionToolbar` | `translating` | Keeps leads-specific search, filter, and pagination composition local |
+
+Lifecycle states (`translating` → `re-export` → `removable`) are defined in [Design System Governance](../engineering/design-system-governance.md#compatibility-wrapper-lifecycle).
 
 ## Compatibility-Only Legacy Locations
 
@@ -123,22 +125,31 @@ The repo currently treats these locations as compatibility or legacy source, not
 | `frontend/src/component/auth/*` | Legacy shared folder; `lint:theme` blocks new shared-source growth here too |
 | `frontend/src/theme/effects.ts` and `frontend/src/theme/status-colors.ts` | Compatibility re-export shims over the canonical design-system token layer |
 
-## Adopted Surfaces
+## Migration State Definitions
 
-### Pilot surfaces
+Every route family in the ledger below uses one of these states:
 
-| Surface | Current adoption | Shared pieces in use |
-| --- | --- | --- |
-| Leads family | Partial pilot complete | `LoadingState`, wrapper-backed `EmptyState`, `CollectionToolbar` via `lead-search-bar`, `CardShell`, `StatusChip`, `FormDialogShell` |
-| Applications queue | Pilot complete | `CollectionToolbar`, `EmptyState`, `InlineFeedback`, `LoadingState`, `CardShell`, `StatusChip` |
-| Profile family | Pilot complete | `LoadingState`, `InlineFeedback`, adapter-backed `EmptyState`, `SectionCard`, `SectionHeader`, `FormDialogShell` |
+| State | Meaning | Entry criteria | Exit criteria |
+| --- | --- | --- | --- |
+| `adopted` | All shared-eligible surfaces consume the design-system layer. Remaining wrappers are thin and documented. | PR merged with shared-layer imports, wrapper inventory updated, catalog and migration guide updated in the same change. | N/A — terminal state unless the shared API is retired or replaced. |
+| `adopting` | Active migration in progress. Some surfaces already consume the shared layer; others still use local or legacy implementations. | At least one page or component in the family imports from `frontend/src/design-system`. | All shared-eligible surfaces migrated → `adopted`. |
+| `not-started` | The family has not begun consuming the Phase 2 shared layer beyond the token and theme foundation. | Default state. | First shared-layer import merged → `adopting`. |
 
-### Proving adopters
+### Route-Family Adoption Ledger
 
-| Surface | Current adoption | Shared pieces in use |
-| --- | --- | --- |
-| Conversations | Proving adoption complete | `CollectionToolbar`, `SectionCard`, `SectionHeader`, `LoadingState`, `EmptyState` |
-| Agents | Proving adoption partial | wrapper-backed `EmptyState`, `CardShell`, `StatusChip`, `FormDialogShell` |
+| Route family | State | Shared pieces in use | Notes |
+| --- | --- | --- | --- |
+| Applications queue | `adopted` | `CollectionToolbar`, `EmptyState`, `InlineFeedback`, `LoadingState`, `CardShell`, `StatusChip`, `MetricStrip` | — |
+| Profile family | `adopted` | `LoadingState`, `InlineFeedback`, adapter-backed `EmptyState`, `SectionCard`, `SectionHeader`, `FormDialogShell` | — |
+| Conversations | `adopted` | `CollectionToolbar`, `SectionCard`, `SectionHeader`, `LoadingState`, `EmptyState` | — |
+| Leads family | `adopting` | `LoadingState`, wrapper-backed `EmptyState`, `CollectionToolbar` via `lead-search-bar`, `CardShell`, `StatusChip`, `FormDialogShell`, `MetricStrip` | Lead modal, extraction bar, and lead-specific CTA remain feature-owned |
+| Agents | `adopting` | wrapper-backed `EmptyState`, `CardShell`, `StatusChip`, `FormDialogShell` | `kind` mapping and enable/disable behavior remain feature-owned |
+| Pipelines | `adopting` | `MetricStrip`, typography tokens | Most page UI still outside the shared layer |
+| Crawlers | `adopting` | `MetricStrip`, typography tokens | Most page UI still outside the shared layer |
+| Applications board | `adopting` | `MetricStrip` | Board chrome and stage semantics remain feature-owned |
+| Auth | `not-started` | — | — |
+| Dashboard | `not-started` | — | — |
+| Documents / editor | `not-started` | — | — |
 
 ### Broader token and shim adoption
 

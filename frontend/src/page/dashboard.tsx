@@ -2,12 +2,18 @@ import React, { useContext, useEffect, useState, useCallback, useMemo } from 're
 import { useNavigate } from 'react-router-dom';
 import { timeAgo as relativeDate, timeAgoShort, statusLabel } from '../util/format';
 import {
+<<<<<<< Updated upstream
   Box, Card, CardContent, Typography, Button, Chip, IconButton,
   useTheme, alpha, Stack, TextField, Skeleton, ButtonBase, Checkbox, Tooltip,
   Alert, Fade, Popover, Menu, MenuItem, Collapse, Link,
+=======
+  Box, Typography, Button, Chip, IconButton,
+  useTheme, alpha, Stack, TextField, Dialog, DialogTitle,
+  DialogContent, DialogActions, ButtonBase, Checkbox, Tooltip,
+  Popover, Menu, MenuItem, Collapse, Link,
+>>>>>>> Stashed changes
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
-import { PageTitle, SectionTitle } from '../component/common/text';
 import { progressGradient } from '../theme/effects';
 import {
   Add as AddIcon,
@@ -58,6 +64,15 @@ import {
 } from '../service/activity-feed';
 import CreateActionItemDialog from '../component/create-action-item-dialog';
 import { getStatusColors } from '../theme/status-colors';
+import {
+  SectionCard,
+  SectionHeader,
+  MetricStrip,
+  InlineFeedback,
+  EmptyState as DSEmptyState,
+  LoadingState,
+  CardShell,
+} from '../design-system';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -168,71 +183,6 @@ function formatPercent(value: number | null | undefined): string {
 function formatDays(value: number): string {
   return `${formatMetricNumber(value)} day${value === 1 ? '' : 's'}`;
 }
-
-/* ------------------------------------------------------------------ */
-/*  Compact stat tile                                                  */
-/* ------------------------------------------------------------------ */
-
-interface StatTileProps {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  accent: string;
-  highlight?: boolean;
-  onClick?: () => void;
-}
-
-const StatTile: React.FC<StatTileProps> = ({ label, value, icon, accent, highlight, onClick }) => {
-  const theme = useTheme();
-  return (
-    <ButtonBase
-      component="div"
-      onClick={onClick}
-      disabled={!onClick}
-      focusRipple
-      aria-label={`${label}: ${value}`}
-      sx={{ display: 'block', textAlign: 'left', width: '100%', borderRadius: 2 }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-          px: 2,
-          py: 1.5,
-          borderRadius: 2,
-          bgcolor: highlight
-            ? alpha(accent, theme.palette.mode === 'dark' ? 0.18 : 0.08)
-            : 'transparent',
-          transition: 'background 0.15s ease',
-          ...(onClick && {
-            cursor: 'pointer',
-            '&:hover': { bgcolor: alpha(accent, 0.1) },
-          }),
-        }}
-      >
-        <Box
-          sx={{
-            width: 32, height: 32, borderRadius: '8px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            bgcolor: alpha(accent, theme.palette.mode === 'dark' ? 0.14 : 0.1),
-            color: accent, flexShrink: 0,
-          }}
-        >
-          {icon}
-        </Box>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <SectionTitle sx={{ fontSize: '1.1rem' }}>
-            {value}
-          </SectionTitle>
-          <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
-            {label}
-          </Typography>
-        </Box>
-      </Box>
-    </ButtonBase>
-  );
-};
 
 /* ------------------------------------------------------------------ */
 /*  Sortable action-item row (DnD)                                     */
@@ -701,20 +651,7 @@ const DashboardPage: React.FC = () => {
   if (loading) {
     return (
       <Box sx={{ maxWidth: 1200, mx: 'auto' }} aria-busy="true" aria-label="Loading dashboard">
-        <Stack direction="row" spacing={1} sx={{ mb: 3, justifyContent: 'flex-end' }}>
-          <Skeleton variant="rounded" width={120} height={36} sx={{ borderRadius: 2 }} />
-          <Skeleton variant="rounded" width={120} height={36} sx={{ borderRadius: 2 }} />
-        </Stack>
-        <Grid container spacing={2.5}>
-          <Grid size={{ xs: 12, md: 8 }}>
-            <Skeleton variant="rounded" height={400} sx={{ borderRadius: 3, mb: 2.5 }} />
-            <Skeleton variant="rounded" height={60} sx={{ borderRadius: 3 }} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Skeleton variant="rounded" height={300} sx={{ borderRadius: 3, mb: 2.5 }} />
-            <Skeleton variant="rounded" height={300} sx={{ borderRadius: 3 }} />
-          </Grid>
-        </Grid>
+        <LoadingState kind="section" count={3} itemHeight={200} />
       </Box>
     );
   }
@@ -722,10 +659,18 @@ const DashboardPage: React.FC = () => {
   /* ---- error state ---- */
   if (error) {
     return (
-      <Box sx={{ maxWidth: 1200, mx: 'auto', textAlign: 'center', py: 10 }} role="alert">
-        <PageTitle sx={{ mb: 1 }}>Something went wrong</PageTitle>
-        <Typography color="text.secondary" sx={{ mb: 3 }}>{error}</Typography>
-        <Button variant="contained" onClick={refresh} startIcon={<RefreshIcon />}>Retry</Button>
+      <Box sx={{ maxWidth: 1200, mx: 'auto', py: 4 }} role="alert">
+        <DSEmptyState
+          icon={<RefreshIcon />}
+          title="Something went wrong"
+          description={error}
+          primaryAction={{
+            label: 'Retry',
+            onClick: refresh,
+            icon: <RefreshIcon />,
+            buttonProps: { variant: 'contained' },
+          }}
+        />
       </Box>
     );
   }
@@ -735,11 +680,13 @@ const DashboardPage: React.FC = () => {
     <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
 
       {/* ── Success toast ── */}
-      <Fade in={Boolean(successMsg)}>
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMsg(null)}>
-          {successMsg}
-        </Alert>
-      </Fade>
+      {successMsg && (
+        <Box sx={{ mb: 2 }}>
+          <InlineFeedback tone="success" onClose={() => setSuccessMsg(null)}>
+            {successMsg}
+          </InlineFeedback>
+        </Box>
+      )}
 
       {/* ── Onboarding quick-start (no apps AND no leads) ── */}
       {summary && summary.application_count === 0 && summary.lead_count === 0 && (
@@ -750,60 +697,56 @@ const DashboardPage: React.FC = () => {
           </Typography>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+<<<<<<< Updated upstream
               <Card
                 sx={{ height: '100%', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
                 onClick={() => navigate('/leads')}
               >
                 <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
+=======
+              <CardShell interactive onClick={() => setExtractDialogOpen(true)} padding="dense">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+>>>>>>> Stashed changes
                   <LeadsIcon color="primary" />
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Manage Leads</Typography>
                     <Typography variant="caption" color="text.secondary">Import or review opportunities</Typography>
                   </Box>
-                </CardContent>
-              </Card>
+                </Box>
+              </CardShell>
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <Card
-                sx={{ height: '100%', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
-                onClick={() => navigate('/me')}
-              >
-                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
+              <CardShell interactive onClick={() => navigate('/me')} padding="dense">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <PersonOutlineIcon color="primary" />
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Complete Your Profile</Typography>
                     <Typography variant="caption" color="text.secondary">Add your details</Typography>
                   </Box>
-                </CardContent>
-              </Card>
+                </Box>
+              </CardShell>
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <Card
-                sx={{ height: '100%', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
-                onClick={() => navigate('/network/discover')}
-              >
-                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
+              <CardShell interactive onClick={() => navigate('/network/discover')} padding="dense">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <PeopleOutlineIcon color="primary" />
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Discover People</Typography>
                     <Typography variant="caption" color="text.secondary">Browse your network</Typography>
                   </Box>
-                </CardContent>
-              </Card>
+                </Box>
+              </CardShell>
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <Card
-                sx={{ height: '100%', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}
-                onClick={() => navigate('/workspace/new')}
-              >
-                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2, '&:last-child': { pb: 2 } }}>
+              <CardShell interactive onClick={() => navigate('/workspace/new')} padding="dense">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <NoteAddIcon color="primary" />
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Create a Document</Typography>
                     <Typography variant="caption" color="text.secondary">Write a resume or cover letter</Typography>
                   </Box>
-                </CardContent>
-              </Card>
+                </Box>
+              </CardShell>
             </Grid>
           </Grid>
         </Box>
@@ -834,19 +777,16 @@ const DashboardPage: React.FC = () => {
         <Grid size={{ xs: 12, md: 8 }}>
           <Stack spacing={2.5}>
             {/* ── Action Items Panel ── */}
-            <Card>
-              <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="subtitle2" color="text.secondary">ACTION ITEMS</Typography>
-                    <Chip
-                      label={pendingCount}
-                      size="small"
-                      color="primary"
-                      sx={{ height: 22, fontSize: '0.7rem', fontWeight: 700 }}
-                    />
-                  </Stack>
-                </Box>
+            <SectionCard
+              header={
+                <SectionHeader
+                  icon={<ActionIcon />}
+                  title="Action Items"
+                  count={pendingCount}
+                  size="compact"
+                />
+              }
+            >
 
                 {/* Filter chips */}
                 <Stack direction="row" spacing={0.75} sx={{ mb: 2, flexWrap: 'wrap', gap: 0.75 }}>
@@ -865,18 +805,13 @@ const DashboardPage: React.FC = () => {
 
                 {/* Action items list */}
                 {filteredActions.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 5 }}>
-                    <CheckCircleIcon sx={{ fontSize: 40, color: alpha(theme.palette.success.main, 0.4), mb: 1.5 }} />
-                    <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      All clear
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      No action items match this filter.
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      Action items help you track follow-ups, deadlines, and next steps for your applications.
-                    </Typography>
-                  </Box>
+                  <DSEmptyState
+                    icon={<CheckCircleIcon />}
+                    title="All clear"
+                    description="No action items match this filter. Action items help you track follow-ups, deadlines, and next steps for your applications."
+                    layout="section"
+                    compact
+                  />
                 ) : (
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                     <SortableContext items={filteredActions.map((i) => i.id)} strategy={verticalListSortingStrategy}>
@@ -907,16 +842,19 @@ const DashboardPage: React.FC = () => {
                     </SortableContext>
                   </DndContext>
                 )}
-              </CardContent>
-            </Card>
+            </SectionCard>
 
             {/* ── Application Pipeline Strip ── */}
             {summary && (
-              <Card>
-                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    APPLICATION PIPELINE
-                  </Typography>
+              <SectionCard
+                header={
+                  <SectionHeader
+                    title="Application Pipeline"
+                    size="compact"
+                  />
+                }
+                padding="dense"
+              >
                   <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
                     {Object.entries(summary.status_breakdown).map(([status, count]) => {
                       const color = sc[status as keyof typeof sc] ?? theme.palette.text.secondary;
@@ -938,21 +876,19 @@ const DashboardPage: React.FC = () => {
                       );
                     })}
                   </Stack>
-                </CardContent>
-              </Card>
+              </SectionCard>
             )}
 
             {summary && (
-              <Card>
-                <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      PIPELINE ANALYTICS
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, maxWidth: 720 }}>
-                      Stage dwell time comes from recorded application status-history spans. Offer conversion carries each application forward to the deepest pipeline stage it reached so the funnel stays monotonic even when a step was skipped in the UI.
-                    </Typography>
-                  </Box>
+              <SectionCard
+                header={
+                  <SectionHeader
+                    title="Pipeline Analytics"
+                    supportingText="Stage dwell time comes from recorded application status-history spans. Offer conversion carries each application forward to the deepest pipeline stage it reached so the funnel stays monotonic even when a step was skipped in the UI."
+                    size="compact"
+                  />
+                }
+              >
 
                   {analyticsReady ? (
                     <>
@@ -1126,43 +1062,45 @@ const DashboardPage: React.FC = () => {
                       </Typography>
                     </Box>
                   )}
-                </CardContent>
-              </Card>
+              </SectionCard>
             )}
 
             {/* ── Recent Leads ── */}
-            <Card>
-              <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: leadsCollapsed ? 0 : 1.5 }}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="subtitle2" color="text.secondary">RECENT LEADS</Typography>
-                    <Chip
-                      label={leads.length}
-                      size="small"
-                      color="primary"
-                      sx={{ height: 22, fontSize: '0.7rem', fontWeight: 700 }}
-                    />
-                  </Stack>
-                  <Stack direction="row" spacing={0.5} alignItems="center">
-                    <Link
-                      component="button"
-                      variant="caption"
-                      underline="hover"
-                      onClick={() => navigate('/leads')}
-                      sx={{ fontWeight: 600 }}
-                    >
-                      View all &rarr;
-                    </Link>
-                    <IconButton size="small" onClick={toggleLeadsCollapsed} aria-label={leadsCollapsed ? 'Expand leads' : 'Collapse leads'}>
-                      {leadsCollapsed ? <ExpandMoreIcon fontSize="small" /> : <ExpandLessIcon fontSize="small" />}
-                    </IconButton>
-                  </Stack>
-                </Box>
+            <SectionCard
+              header={
+                <SectionHeader
+                  icon={<LeadsIcon />}
+                  title="Recent Leads"
+                  count={leads.length}
+                  size="compact"
+                  action={
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Link
+                        component="button"
+                        variant="caption"
+                        underline="hover"
+                        onClick={() => navigate('/leads')}
+                        sx={{ fontWeight: 600 }}
+                      >
+                        View all &rarr;
+                      </Link>
+                      <IconButton size="small" onClick={toggleLeadsCollapsed} aria-label={leadsCollapsed ? 'Expand leads' : 'Collapse leads'}>
+                        {leadsCollapsed ? <ExpandMoreIcon fontSize="small" /> : <ExpandLessIcon fontSize="small" />}
+                      </IconButton>
+                    </Stack>
+                  }
+                />
+              }
+              padding="dense"
+            >
                 <Collapse in={!leadsCollapsed}>
                   {leads.length === 0 ? (
-                    <Box sx={{ textAlign: 'center', py: 3 }}>
-                      <Typography variant="body2" color="text.secondary">No leads yet</Typography>
-                    </Box>
+                    <DSEmptyState
+                      icon={<LeadsIcon />}
+                      title="No leads yet"
+                      layout="section"
+                      compact
+                    />
                   ) : (
                     <Stack spacing={0}>
                       {leads.map((lead) => (
@@ -1204,8 +1142,7 @@ const DashboardPage: React.FC = () => {
                     </Stack>
                   )}
                 </Collapse>
-              </CardContent>
-            </Card>
+            </SectionCard>
           </Stack>
         </Grid>
 
@@ -1214,77 +1151,89 @@ const DashboardPage: React.FC = () => {
           <Stack spacing={2.5}>
             {/* ── Metrics Summary ── */}
             {summary && (
-              <Card>
-                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                    OVERVIEW
-                  </Typography>
-                  <Stack spacing={0.5}>
-                    <StatTile
-                      label="Active Applications"
-                      value={summary.active_application_count}
-                      icon={<AppIcon fontSize="small" />}
-                      accent={theme.palette.secondary.main}
-                      onClick={() => navigate('/applications')}
-                    />
-                    <StatTile
-                      label="Overdue Actions"
-                      value={summary.overdue_action_items}
-                      icon={<OverdueIcon fontSize="small" />}
-                      accent={sc.urgent}
-                      highlight={summary.overdue_action_items > 0}
-                    />
-                    <StatTile
-                      label="Due Today"
-                      value={summary.action_items_due_today}
-                      icon={<TodayIcon fontSize="small" />}
-                      accent={sc.pending}
-                      highlight={summary.action_items_due_today > 0}
-                    />
-                    <StatTile
-                      label="Unread Messages"
-                      value={summary.unread_messages}
-                      icon={<MessageIcon fontSize="small" />}
-                      accent={sc.interviewing}
-                      onClick={() => navigate('/network/messages')}
-                    />
-                    <StatTile
-                      label="Pending Connections"
-                      value={summary.pending_connections}
-                      icon={<ConnectionsIcon fontSize="small" />}
-                      accent={sc.screening}
-                      onClick={() => navigate('/network/connections')}
-                    />
-                    <StatTile
-                      label="Profile"
-                      value={`${summary.profile_completion}%`}
-                      icon={<PersonIcon fontSize="small" />}
-                      accent={theme.palette.success.main}
-                      onClick={() => navigate('/me')}
-                    />
-                  </Stack>
-                </CardContent>
-              </Card>
+              <SectionCard
+                header={
+                  <SectionHeader
+                    title="Overview"
+                    size="compact"
+                  />
+                }
+                padding="dense"
+              >
+                <MetricStrip
+                  variant="inline"
+                  items={[
+                    {
+                      label: 'Active Apps',
+                      value: summary.active_application_count,
+                      icon: <AppIcon fontSize="small" />,
+                      color: theme.palette.secondary.main,
+                      onClick: () => navigate('/applications'),
+                    },
+                    {
+                      label: 'Overdue',
+                      value: summary.overdue_action_items,
+                      icon: <OverdueIcon fontSize="small" />,
+                      color: sc.urgent,
+                    },
+                    {
+                      label: 'Due Today',
+                      value: summary.action_items_due_today,
+                      icon: <TodayIcon fontSize="small" />,
+                      color: sc.pending,
+                    },
+                  ]}
+                />
+                <Box sx={{ mt: 1.5 }}>
+                  <MetricStrip
+                    variant="inline"
+                    items={[
+                      {
+                        label: 'Messages',
+                        value: summary.unread_messages,
+                        icon: <MessageIcon fontSize="small" />,
+                        color: sc.interviewing,
+                        onClick: () => navigate('/network/messages'),
+                      },
+                      {
+                        label: 'Connections',
+                        value: summary.pending_connections,
+                        icon: <ConnectionsIcon fontSize="small" />,
+                        color: sc.screening,
+                        onClick: () => navigate('/network/connections'),
+                      },
+                      {
+                        label: 'Profile',
+                        value: `${summary.profile_completion}%`,
+                        icon: <PersonIcon fontSize="small" />,
+                        color: theme.palette.success.main,
+                        onClick: () => navigate('/me'),
+                      },
+                    ]}
+                  />
+                </Box>
+              </SectionCard>
             )}
 
             {/* ── Activity Feed ── */}
-            <Card>
-              <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                  <Typography variant="subtitle2" color="text.secondary">RECENT ACTIVITY</Typography>
-                  <Typography variant="caption" color="text.disabled">last 7 days</Typography>
-                </Box>
+            <SectionCard
+              header={
+                <SectionHeader
+                  title="Recent Activity"
+                  supportingText="last 7 days"
+                  size="compact"
+                />
+              }
+            >
 
                 {feed.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <ActionIcon sx={{ fontSize: 36, color: alpha(theme.palette.primary.main, 0.3), mb: 1 }} />
-                    <Typography variant="body2" color="text.secondary">
-                      No recent activity
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      Your recent activity across leads, applications, and documents will appear here.
-                    </Typography>
-                  </Box>
+                  <DSEmptyState
+                    icon={<ActionIcon />}
+                    title="No recent activity"
+                    description="Your recent activity across leads, applications, and documents will appear here."
+                    layout="section"
+                    compact
+                  />
                 ) : (
                   <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
                     <Stack spacing={0}>
@@ -1358,8 +1307,7 @@ const DashboardPage: React.FC = () => {
                     )}
                   </Box>
                 )}
-              </CardContent>
-            </Card>
+            </SectionCard>
           </Stack>
         </Grid>
       </Grid>

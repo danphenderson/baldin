@@ -6,7 +6,7 @@ name = "pypi"
 [packages]
 aws-cdk-lib = "==2.89.0"
 constructs = "<11.0.0,>=10.0.0"
-pytest = "==6.2.5"
+pytest = "==9.0.3"
 pydantic-settings = "*"
 python-dotenv = "*"
 pydantic = {extras = ["email"], version = "*"}

@@ -57,6 +57,8 @@ const STATUS_META: Record<DocumentStatus, { label: string; color: 'default' | 's
   archived: { label: 'Archived', color: 'warning' },
 };
 
+type SurfaceTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
+
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
@@ -77,6 +79,23 @@ function relativeTime(dateStr: string): string {
 function accentForKind(kind: DocumentKind, palette: Record<string, { main: string }>): string {
   const key = KIND_META[kind]?.colorKey ?? 'primary';
   return (palette as Record<string, { main: string }>)[key]?.main ?? palette.primary.main;
+}
+
+function toneForKind(kind: DocumentKind): SurfaceTone {
+  switch (kind) {
+    case 'resume':
+      return 'primary';
+    case 'reference_sheet':
+      return 'warning';
+    case 'freeform':
+      return 'success';
+    case 'cover_letter':
+    case 'follow_up':
+    case 'cell_doc':
+      return 'info';
+    default:
+      return 'neutral';
+  }
 }
 
 function formatPersonLabel(fullName?: string | null, email?: string | null, fallback = 'Unknown user'): string {
@@ -452,7 +471,7 @@ const DocumentListPage: React.FC = () => {
               <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={doc.id}>
                 <CardShell
                   interactive
-                  accentColor={accent}
+                  tone={toneForKind(doc.kind)}
                   onClick={() => navigate(`/workspace/${doc.id}`)}
                   sx={{
                     position: 'relative',
@@ -532,7 +551,7 @@ const DocumentListPage: React.FC = () => {
                         sx={{
                           mb: 1.5,
                           p: 1.25,
-                          borderRadius: 2,
+                          borderRadius: '8px',
                           background: alpha(theme.palette.info.main, 0.05),
                           border: `1px solid ${alpha(theme.palette.info.main, 0.14)}`,
                         }}

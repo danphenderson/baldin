@@ -129,7 +129,7 @@ const DirectoryPage: React.FC = () => {
 
   return (
     <Box>
-      <Card sx={{ mb: 3, borderRadius: 4, border: (theme) => `1px solid ${theme.palette.warning.light}` }}>
+      <Card sx={{ mb: 3, border: (theme) => `1px solid ${theme.palette.warning.light}` }}>
         <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2.5} alignItems={{ md: 'center' }}>
             <Box sx={{ flex: 1 }}>

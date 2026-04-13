@@ -5,27 +5,28 @@ import figma from 'figma';
 
 const instance = figma.selectedInstance;
 const label = instance.getString('Label');
-const variant = instance.getEnum('Variant', {
-  Filled: 'filled',
-  Outlined: 'outlined',
+const emphasis = instance.getEnum('Variant', {
+  Soft: 'soft',
+  Outline: 'outline',
+  Solid: 'solid',
 });
 const size = instance.getEnum('Size', {
   Small: 'small',
   Medium: 'medium',
 });
-const color = instance.getEnum('Tone', {
+const tone = instance.getEnum('Tone', {
   Primary: 'primary',
   Success: 'success',
   Warning: 'warning',
-  Error: 'error',
+  Danger: 'danger',
 });
 
 export default {
   example: figma.code`
     <StatusChip
-      label={${label}}
-      color="${color}"
-      variant="${variant}"
+      label="${label}"
+      tone="${tone}"
+      emphasis="${emphasis}"
       size="${size}"
     />
   `,

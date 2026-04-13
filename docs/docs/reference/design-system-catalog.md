@@ -28,6 +28,16 @@ Current rule:
 - New shared UI under `frontend/src/design-system/*` should use `spacingTokens` and `toSpacingPx(...)`.
 - Existing feature code may still use `theme.spacing()` until that surface is intentionally migrated.
 
+### Radius Compatibility Caveat
+
+MUI's `sx` system treats numeric `borderRadius` values as multipliers of `theme.shape.borderRadius`, not raw pixels. Baldin's radius tokens are pixel values, so feature-local `sx={{ borderRadius: 2 }}` does not mean `2px`.
+
+Current rule:
+
+- Shared design-system code should use `toRadiusPx(...)` when feeding Baldin radius tokens into `sx`.
+- Feature-local code should use `toRadiusPx(...)`, explicit pixel strings such as `'12px'`, or percentage radii such as `'50%'`.
+- New non-zero numeric `borderRadius` literals outside `design-system/tokens` and `design-system/theme` are blocked by `lint:theme`.
+
 ## Token Inventory
 
 | Token group | Path | Notes |
@@ -36,7 +46,7 @@ Current rule:
 | Effects | `frontend/src/design-system/tokens/effects.ts` | Exposes alpha constants plus gradient and surface helpers |
 | Elevation | `frontend/src/design-system/tokens/elevation.ts` | Exposes theme-aware shadow helpers |
 | Motion | `frontend/src/design-system/tokens/motion.ts` | Defines durations, easing, and small stagger values |
-| Radius | `frontend/src/design-system/tokens/radius.ts` | Defines shared radius values from `xs` through `pill` |
+| Radius | `frontend/src/design-system/tokens/radius.ts` | Defines shared radius values from `xs` through `pill` plus `toRadiusPx(...)` for `sx`-safe pixel output |
 | Spacing | `frontend/src/design-system/tokens/spacing.ts` | Defines the 4px-based spacing compatibility layer for shared UI |
 | Status | `frontend/src/design-system/tokens/status.ts` | Maps application, workflow, crawler, priority, and platform states to colors |
 | Typography | `frontend/src/design-system/tokens/typography.ts` | Defines font families, typography roles, and exported display/mono helpers |

@@ -1,5 +1,13 @@
 import { createTheme, type Theme } from '@mui/material/styles';
-import { alphaTokens, fontFamilies, getElevationTokens, getStatusTokens, motionTokens, radiusTokens } from '../tokens';
+import {
+  alphaTokens,
+  fontFamilies,
+  getColorTokens,
+  getElevationTokens,
+  getStatusTokens,
+  motionTokens,
+  radiusTokens,
+} from '../tokens';
 import { getPaletteOptions } from './palette';
 import { getShapeOptions } from './shape';
 import { getComponentOverrides } from './components';
@@ -7,6 +15,8 @@ import { getTypographyOptions } from './typography';
 import type { ThemeMode } from './theme-mode';
 
 function createBaldinThemeTokens(theme: Theme) {
+  const colors = getColorTokens(theme.palette.mode);
+
   return {
     status: getStatusTokens(theme),
     alpha: alphaTokens,
@@ -14,6 +24,9 @@ function createBaldinThemeTokens(theme: Theme) {
     elevation: getElevationTokens(theme),
     motion: motionTokens,
     fontFamily: fontFamilies,
+    surface: colors.surface,
+    border: colors.border,
+    state: colors.state,
   } as const;
 }
 

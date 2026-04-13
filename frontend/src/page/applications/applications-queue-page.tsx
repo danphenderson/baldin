@@ -49,6 +49,7 @@ import {
 /* ------------------------------------------------------------------ */
 
 type SortKey = 'updated' | 'company' | 'stage' | 'due';
+type SurfaceTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'updated', label: 'Recently Updated' },
@@ -63,6 +64,25 @@ const STAGE_ORDER = Object.fromEntries(STAGE_KEYS.map((k, i) => [k, i]));
 
 function stageOf(app: ApplicationRead): string {
   return effectiveStage(app);
+}
+
+function stageTone(status: string): SurfaceTone {
+  switch (status) {
+    case 'applied':
+      return 'primary';
+    case 'screening':
+      return 'info';
+    case 'interview':
+      return 'warning';
+    case 'offer':
+      return 'success';
+    case 'rejected':
+      return 'danger';
+    case 'registered':
+    case 'withdrawn':
+    default:
+      return 'neutral';
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -378,8 +398,8 @@ const ApplicationsQueuePage: React.FC = () => {
                 key={app.id}
                 onClick={() => handleCardClick(app)}
                 interactive
-                accentColor={column.color}
-                padding="dense"
+                tone={stageTone(column.key)}
+                density="compact"
                 sx={{
                   '&:hover': {
                     boxShadow: `0 4px 16px ${alpha(column.color, 0.15)}`,
@@ -398,7 +418,7 @@ const ApplicationsQueuePage: React.FC = () => {
                   sx={{
                     width: 4,
                     alignSelf: 'stretch',
-                    borderRadius: 2,
+                    borderRadius: '8px',
                     bgcolor: column.color,
                     flexShrink: 0,
                   }}
@@ -440,7 +460,7 @@ const ApplicationsQueuePage: React.FC = () => {
                     <StatusChip
                       label={column.label}
                       size="small"
-                      color={column.color}
+                      tone={stageTone(column.key)}
                       sx={{
                         fontSize: '0.7rem',
                         height: 22,

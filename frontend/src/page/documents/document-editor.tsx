@@ -892,7 +892,7 @@ const DocumentEditorPage: React.FC = () => {
                     key={v.id}
                     onClick={() => handleLoadVersion(v)}
                     sx={{
-                      borderRadius: 1, mb: 0.5,
+                      borderRadius: '4px', mb: 0.5,
                       border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                       '&:hover': { background: alpha(theme.palette.primary.main, 0.04) },
                     }}

@@ -6,20 +6,20 @@ export interface SectionCardProps extends Omit<CardShellProps, 'children'> {
   id?: string;
   header: React.ReactNode;
   children: React.ReactNode;
-  padding?: 'default' | 'dense';
+  density?: 'comfortable' | 'compact';
 }
 
 export const SectionCard: React.FC<SectionCardProps> = ({
   id,
   header,
   children,
-  padding = 'default',
+  density = 'comfortable',
   ...props
 }) => (
   <CardShell
     {...props}
     id={id}
-    padding={padding}
+    density={density}
   >
     {header}
     {children}

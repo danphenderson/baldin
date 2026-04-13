@@ -48,6 +48,7 @@ import {
 /* ------------------------------------------------------------------ */
 
 type BoardStatus = string;
+type SurfaceTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
 
 const BOARD_EMPTY_HINTS: Record<string, string> = {
   registered: 'Registered applications stay here until you are ready to work them in the pipeline.',
@@ -67,6 +68,25 @@ function laneId(status: BoardStatus): string {
 function statusFromLaneId(id: string | null | undefined): BoardStatus | null {
   if (!id || !id.startsWith('lane:')) return null;
   return id.slice('lane:'.length) as BoardStatus;
+}
+
+function stageTone(status: BoardStatus): SurfaceTone {
+  switch (status) {
+    case 'applied':
+      return 'primary';
+    case 'screening':
+      return 'info';
+    case 'interview':
+      return 'warning';
+    case 'offer':
+      return 'success';
+    case 'rejected':
+      return 'danger';
+    case 'registered':
+    case 'withdrawn':
+    default:
+      return 'neutral';
+  }
 }
 
 interface AppCardProps {
@@ -177,8 +197,8 @@ const ApplicationCard: React.FC<AppCardProps> = ({
   return (
     <CardShell
       interactive
-      accentColor={column.color}
-      padding="dense"
+      tone={stageTone(column.key as BoardStatus)}
+      density="compact"
       onClick={() => onView(app)}
       sx={{
         opacity: isDragging ? 0.6 : 1,
@@ -237,7 +257,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
               onKeyDown={(event) => event.stopPropagation()}
               sx={{
                 p: 1.25,
-                borderRadius: 2,
+                borderRadius: '8px',
                 border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
                 bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.08 : 0.04),
               }}
@@ -281,7 +301,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
                     mb: 0.75,
                     px: 1,
                     py: 0.5,
-                    borderRadius: 1.5,
+                    borderRadius: '6px',
                     bgcolor: alpha(theme.palette.warning.main, 0.12),
                     border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
                   }}
@@ -358,7 +378,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
                     color: theme.palette.text.secondary,
                     cursor: 'grab',
                     touchAction: 'none',
-                    borderRadius: 1,
+                    borderRadius: '4px',
                     '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.05) },
                   }}
                   {...dragHandleProps}
@@ -381,7 +401,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
                     py: 0.25,
                     minHeight: 0,
                     lineHeight: 1.5,
-                    borderRadius: 1.5,
+                    borderRadius: '6px',
                     borderColor: theme.palette.primary.main,
                     color: theme.palette.primary.main,
                     fontWeight: 600,
@@ -644,7 +664,7 @@ const BoardLane: React.FC<BoardLaneProps> = ({
         spacing={1.5}
         sx={{
           p: 1,
-          borderRadius: 3,
+          borderRadius: '12px',
           minHeight: 220,
           background: alpha(column.color, isOver ? 0.1 : (theme.palette.mode === 'dark' ? 0.03 : 0.025)),
           border: `1px solid ${alpha(column.color, isOver ? 0.32 : (theme.palette.mode === 'dark' ? 0.1 : 0.12))}`,
@@ -782,7 +802,7 @@ const ApplicationsBoardPage: React.FC = () => {
           <IconButton
             onClick={refresh}
             aria-label="Refresh applications"
-            sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 2 }}
+            sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '8px' }}
           >
             <RefreshIcon />
           </IconButton>

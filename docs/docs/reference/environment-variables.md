@@ -5,7 +5,7 @@ title: Look Up Settings
 description: Look up runtime configuration, derived startup behavior, and the settings most likely to matter.
 ---
 
-<!-- last-verified: 2026-04-12 -->
+<!-- last-verified: 2026-04-13 -->
 
 # Look Up Settings
 
@@ -84,6 +84,20 @@ Precedence order:
 | `CRAWLER_QUEUE_NAME` | Redis list name used for crawler and seed background jobs |
 | `CRAWLER_EXECUTION_MODE` | `inline` runs jobs in the API process; `worker` enqueues them to Redis |
 | `CRAWLER_SCHEDULER_INTERVAL` | Poll interval, in seconds, for the recurring crawler scheduler |
+
+### ETL Service (Internal)
+
+| Variable | Local example | Purpose |
+|----------|---------------|---------|
+| `ETL_SERVICE_URL` | `http://etl-service:8010` | Base URL for the internal ETL crawler execution service |
+| `ETL_SERVICE_TIMEOUT_SECONDS` | `180` | HTTP timeout for ETL service requests |
+
+### Monitoring (Optional)
+
+| Variable | Purpose |
+|----------|---------|
+| `SENTRY_DSN` | Sentry DSN for backend error monitoring. Leave empty to disable. |
+| `SENTRY_TRACES_SAMPLE_RATE` | Sentry performance tracing sample rate (`0` to `1`). Set to `0` locally. |
 
 ### Startup Behavior
 

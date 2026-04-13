@@ -521,7 +521,7 @@ const ApplicationDetailPage: React.FC = () => {
       {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
       {/* Main content */}
-      <Stack spacing={0} divider={<Divider />} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden', bgcolor: theme.palette.background.paper }}>
+      <Stack spacing={0} divider={<Divider />} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '12px', overflow: 'hidden', bgcolor: theme.palette.background.paper }}>
         {/* -------- Overview -------- */}
         <Box sx={{ px: 3, py: 3 }}>
           <PageTitle gutterBottom>
@@ -748,7 +748,7 @@ const ApplicationDetailPage: React.FC = () => {
                     <Box
                       sx={{
                         border: `1px solid ${alpha(col.color, 0.16)}`,
-                        borderRadius: 2.5,
+                        borderRadius: '10px',
                         px: 2,
                         py: 1.5,
                         bgcolor: alpha(col.color, theme.palette.mode === 'dark' ? 0.08 : 0.04),
@@ -815,7 +815,7 @@ const ApplicationDetailPage: React.FC = () => {
                   key={doc.id}
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1,
-                    borderRadius: 2, border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px', border: `1px solid ${theme.palette.divider}`,
                     bgcolor: alpha(doc.kind === 'resume' ? theme.palette.primary.main : theme.palette.secondary.main, 0.03),
                   }}
                 >
@@ -875,7 +875,7 @@ const ApplicationDetailPage: React.FC = () => {
                   key={r.id}
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1,
-                    borderRadius: 2, border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px', border: `1px solid ${theme.palette.divider}`,
                     bgcolor: alpha(theme.palette.primary.main, 0.03),
                   }}
                 >
@@ -929,7 +929,7 @@ const ApplicationDetailPage: React.FC = () => {
                   key={cl.id}
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1,
-                    borderRadius: 2, border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px', border: `1px solid ${theme.palette.divider}`,
                     bgcolor: alpha(theme.palette.secondary.main, 0.03),
                   }}
                 >
@@ -1002,7 +1002,7 @@ const ApplicationDetailPage: React.FC = () => {
               )}
             </Stack>
           )}
-          {generating && <LinearProgress sx={{ mt: 1.5, borderRadius: 1 }} />}
+          {generating && <LinearProgress sx={{ mt: 1.5, borderRadius: '4px' }} />}
         </Box>
       </Stack>
 

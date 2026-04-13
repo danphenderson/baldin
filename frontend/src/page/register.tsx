@@ -99,7 +99,7 @@ const RegisterPage: React.FC = () => {
 
       <Card sx={{ boxShadow: `0 8px 40px ${alpha(theme.palette.common.black, 0.2)}` }}>
         <CardContent sx={{ p: 4 }}>
-          {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           <form onSubmit={handleSubmit}>
             <Grid container spacing={2}>
               <Grid size={6}>
@@ -128,10 +128,10 @@ const RegisterPage: React.FC = () => {
                   variant="determinate"
                   value={strengthPercent}
                   sx={{
-                    height: 6, borderRadius: 3,
+                    height: 6, borderRadius: '12px',
                     backgroundColor: alpha(theme.palette.error.main, 0.15),
                     '& .MuiLinearProgress-bar': {
-                      borderRadius: 3,
+                      borderRadius: '12px',
                       backgroundColor: allPassed
                         ? theme.palette.success.main
                         : passedCount >= 2

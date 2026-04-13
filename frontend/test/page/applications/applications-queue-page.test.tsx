@@ -2,8 +2,10 @@ import React from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CssBaseline, ThemeProvider as MuiThemeProvider } from '@mui/material';
 import { MemoryRouter } from 'react-router-dom';
 import { UserContext } from '@/context/user-context';
+import { createBaldinTheme } from '@/design-system/theme';
 import { ToolbarHeaderContext } from '@/layout/toolbar-header-context';
 
 /* ── Mock the useApplications hook ────────────────────────────────── */
@@ -118,14 +120,19 @@ const userContextValue = {
 };
 
 function renderPage() {
+  const theme = createBaldinTheme('dark');
+
   return render(
-    <ToolbarHeaderContext.Provider value={vi.fn()}>
-      <UserContext.Provider value={userContextValue}>
-        <MemoryRouter>
-          <ApplicationsQueuePage />
-        </MemoryRouter>
-      </UserContext.Provider>
-    </ToolbarHeaderContext.Provider>,
+    <MuiThemeProvider theme={theme}>
+      <CssBaseline />
+      <ToolbarHeaderContext.Provider value={vi.fn()}>
+        <UserContext.Provider value={userContextValue}>
+          <MemoryRouter>
+            <ApplicationsQueuePage />
+          </MemoryRouter>
+        </UserContext.Provider>
+      </ToolbarHeaderContext.Provider>
+    </MuiThemeProvider>,
   );
 }
 

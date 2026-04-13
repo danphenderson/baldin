@@ -40,7 +40,7 @@ export const CalloutNodeView: React.FC<NodeViewProps> = ({ node, updateAttribute
           display: 'flex',
           gap: 1,
           borderLeft: `4px solid ${borderColor}`,
-          borderRadius: 1,
+          borderRadius: '4px',
           background: bgColor,
           p: 1.5,
           my: 1,

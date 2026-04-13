@@ -647,7 +647,7 @@ const AppLayout: React.FC = () => {
               <ListItemButton
                 onClick={() => toggleGroup(item.id)}
                 sx={{
-                  borderRadius: 2,
+                  borderRadius: '8px',
                   minHeight: isNested ? 40 : 44,
                   px: collapsed ? 1.75 : 2,
                   pl: collapsed ? 1.75 : 2 + (depth * 1.5),
@@ -722,7 +722,7 @@ const AppLayout: React.FC = () => {
           <ListItemButton
             onClick={() => navigate(item.path)}
             sx={{
-              borderRadius: 2,
+              borderRadius: '8px',
               minHeight: isNested ? 40 : 44,
               px: collapsed ? 1.75 : 2,
               pl: collapsed ? 1.75 : 2 + (depth * 1.5),
@@ -804,7 +804,7 @@ const AppLayout: React.FC = () => {
             color: 'primary.main',
             px: 2,
             py: 1,
-            borderRadius: 1,
+            borderRadius: '4px',
             boxShadow: 4,
             fontWeight: 600,
             fontSize: '0.875rem',
@@ -960,7 +960,7 @@ const AppLayout: React.FC = () => {
                 px: collapsed ? 0 : 1.5,
                 py: collapsed ? 0.75 : 1.25,
                 mb: 0.75,
-                borderRadius: 3,
+                borderRadius: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: collapsed ? 'center' : 'flex-start',

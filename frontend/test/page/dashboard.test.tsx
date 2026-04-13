@@ -1,8 +1,10 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CssBaseline, ThemeProvider as MuiThemeProvider } from '@mui/material';
 import { MemoryRouter } from 'react-router-dom';
 import { UserContext } from '@/context/user-context';
+import { createBaldinTheme } from '@/design-system/theme';
 import { ToolbarHeaderContext } from '@/layout/toolbar-header-context';
 
 /* ── Mock service modules ─────────────────────────────────────────── */
@@ -122,14 +124,19 @@ function renderPage(
   ctxOverrides: Partial<typeof userContextValue> = {},
   setToolbarHeader = vi.fn(),
 ) {
+  const theme = createBaldinTheme('dark');
+
   return render(
-    <ToolbarHeaderContext.Provider value={setToolbarHeader}>
-      <UserContext.Provider value={{ ...userContextValue, ...ctxOverrides }}>
-        <MemoryRouter>
-          <DashboardPage />
-        </MemoryRouter>
-      </UserContext.Provider>
-    </ToolbarHeaderContext.Provider>,
+    <MuiThemeProvider theme={theme}>
+      <CssBaseline />
+      <ToolbarHeaderContext.Provider value={setToolbarHeader}>
+        <UserContext.Provider value={{ ...userContextValue, ...ctxOverrides }}>
+          <MemoryRouter>
+            <DashboardPage />
+          </MemoryRouter>
+        </UserContext.Provider>
+      </ToolbarHeaderContext.Provider>
+    </MuiThemeProvider>,
   );
 }
 

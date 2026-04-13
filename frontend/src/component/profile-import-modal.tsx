@@ -203,7 +203,7 @@ const ProfileImportModal: React.FC<ProfileImportModalProps> = ({
                   alignItems="center"
                   sx={{
                     p: 1.5,
-                    borderRadius: 1,
+                    borderRadius: '4px',
                     border: '1px solid',
                     borderColor: 'divider',
                   }}

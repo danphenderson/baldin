@@ -251,7 +251,7 @@ const AgentsPage: React.FC = () => {
         <Grid container spacing={2}>
           {Array.from({ length: 6 }).map((_, i) => (
             <Grid size={{ xs: 12, md: 6 }} key={i}>
-              <Skeleton variant="rounded" height={180} sx={{ borderRadius: 3 }} />
+              <Skeleton variant="rounded" height={180} sx={{ borderRadius: '12px' }} />
             </Grid>
           ))}
         </Grid>

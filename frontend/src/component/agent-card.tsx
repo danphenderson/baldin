@@ -24,12 +24,26 @@ const KIND_LABELS: Record<AgentKind, string> = {
   custom: 'Custom',
 };
 
+type SurfaceTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
+
 export function kindColor(kind: AgentKind, theme: Theme): string {
   switch (kind) {
     case 'cover_letter': return theme.palette.primary.main;
     case 'follow_up': return theme.palette.secondary.main;
     case 'outreach': return theme.palette.info.main;
     default: return theme.palette.text.secondary;
+  }
+}
+
+function kindTone(kind: AgentKind): SurfaceTone {
+  switch (kind) {
+    case 'cover_letter':
+      return 'primary';
+    case 'follow_up':
+    case 'outreach':
+      return 'info';
+    default:
+      return 'neutral';
   }
 }
 
@@ -64,13 +78,14 @@ const AgentCard: React.FC<AgentCardProps> = ({
 }) => {
   const theme = useTheme();
   const kColor = kindColor(agent.kind, theme);
+  const kTone = kindTone(agent.kind);
 
   return (
     <CardShell
       aria-label={`Open agent ${agent.name}`}
       onClick={() => onClick(agent)}
       interactive
-      accentColor={kColor}
+      tone={kTone}
     >
         {/* Header: name + enabled switch */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
@@ -93,7 +108,7 @@ const AgentCard: React.FC<AgentCardProps> = ({
         <StatusChip
           label={KIND_LABELS[agent.kind] ?? agent.kind}
           size="small"
-          color={kColor}
+          tone={kTone}
           sx={{ mt: 1, alignSelf: 'flex-start', fontSize: '0.75rem' }}
         />
 
@@ -119,7 +134,7 @@ const AgentCard: React.FC<AgentCardProps> = ({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5, pt: 1, borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}` }}>
           <Tooltip title={new Date(agent.updated_at).toLocaleString()}>
             <Box>
-              <Caption sx={getStatusMetaSx(theme, kColor)}>Updated {timeAgo(agent.updated_at)}</Caption>
+              <Caption sx={getStatusMetaSx(theme, kTone)}>Updated {timeAgo(agent.updated_at)}</Caption>
             </Box>
           </Tooltip>
 

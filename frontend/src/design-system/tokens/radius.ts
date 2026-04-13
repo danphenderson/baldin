@@ -7,3 +7,7 @@ export const radiusTokens = {
   feature: 20,
   pill: 999,
 } as const;
+
+export function toRadiusPx(radius: number): string {
+  return `${radius}px`;
+}

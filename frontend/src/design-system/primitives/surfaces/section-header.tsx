@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Divider, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import { radiusTokens } from '../../tokens/radius';
+import { radiusTokens, toRadiusPx } from '../../tokens/radius';
 import { spacingTokens, toSpacingPx } from '../../tokens/spacing';
 import { StatusChip } from '../status/status-chip';
 
@@ -47,9 +47,10 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
               justifyContent: 'center',
               width: iconSize,
               height: iconSize,
-              borderRadius: cornerRadius,
+              borderRadius: toRadiusPx(cornerRadius),
               color: theme.palette.primary.main,
-              backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.18 : 0.08),
+              backgroundColor: theme.baldin.state.selected,
+              border: `1px solid ${theme.baldin.border.accent}`,
               flexShrink: 0,
             }}
           >
@@ -70,7 +71,8 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
             {typeof count !== 'undefined' && (
               <StatusChip
                 label={count}
-                color={theme.palette.primary.main}
+                tone="primary"
+                emphasis="soft"
                 size="small"
               />
             )}
@@ -94,7 +96,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
       </Box>
 
       {divider && (
-        <Divider sx={{ mt: toSpacingPx(compact ? 3 : 4) }} />
+        <Divider sx={{ mt: toSpacingPx(compact ? 3 : 4), borderColor: theme.baldin.border.subtle }} />
       )}
     </Box>
   );

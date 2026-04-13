@@ -257,7 +257,7 @@ const MetricPill: React.FC<{
     sx={{
       px: 1.5,
       py: 1,
-      borderRadius: 999,
+      borderRadius: '999px',
       backgroundColor: tone || 'rgba(255,255,255,0.12)',
       minWidth: 0,
     }}
@@ -349,7 +349,6 @@ const CommentThread: React.FC<{
       variant="outlined"
       sx={{
         p: { xs: 1.5, sm: 2 },
-        borderRadius: 3,
         backgroundColor: nested ? 'transparent' : 'background.paper',
         borderColor: 'divider',
       }}
@@ -717,7 +716,7 @@ const LeadModal: React.FC<LeadModalProps> = ({
             variant="outlined"
             sx={{
               p: { xs: 2, sm: 2.5 },
-              borderRadius: 4,
+              borderRadius: '16px',
               background: softBrandGradient(theme, {
                 startTone: 'main',
                 endTone: 'main',
@@ -988,7 +987,7 @@ const LeadModal: React.FC<LeadModalProps> = ({
 
     return (
       <Stack spacing={2.5}>
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 4 }}>
+        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
           <Stack spacing={1}>
             <Typography variant="subtitle2" color="text.secondary">Registration Status</Typography>
             <Typography variant="body2" color="text.secondary">
@@ -1053,7 +1052,7 @@ const LeadModal: React.FC<LeadModalProps> = ({
 
     return (
       <Stack spacing={2.5}>
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 4 }}>
+        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
           <Stack spacing={1}>
             <Typography variant="subtitle2" color="text.secondary">Threaded Collaboration</Typography>
             <Typography variant="body2" color="text.secondary">
@@ -1082,11 +1081,11 @@ const LeadModal: React.FC<LeadModalProps> = ({
         {commentsLoading ? (
           <Stack spacing={1.5}>
             {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} variant="rounded" height={110} sx={{ borderRadius: 3 }} />
+              <Skeleton key={index} variant="rounded" height={110} sx={{ borderRadius: '12px' }} />
             ))}
           </Stack>
         ) : comments.length === 0 ? (
-          <Paper variant="outlined" sx={{ p: 3, borderRadius: 4, textAlign: 'center' }}>
+          <Paper variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="body1" fontWeight={700}>No comments yet</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Start the thread with interview context, recruiter signal, or process notes. Anonymous posting is already enabled.
@@ -1120,7 +1119,7 @@ const LeadModal: React.FC<LeadModalProps> = ({
 
     return (
       <Stack spacing={2.5}>
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 4 }}>
+        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
           <Stack spacing={1}>
             <Typography variant="subtitle2" color="text.secondary">Participant Context</Typography>
             <Typography variant="body2" color="text.secondary">
@@ -1134,7 +1133,7 @@ const LeadModal: React.FC<LeadModalProps> = ({
         </Paper>
 
         {participants.length === 0 ? (
-          <Paper variant="outlined" sx={{ p: 3, borderRadius: 4 }}>
+          <Paper variant="outlined" sx={{ p: 3 }}>
             <Typography variant="body1" fontWeight={700}>No public participant profiles yet</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               If you are registered on this lead, you can opt into profile visibility from the My Notes tab.
@@ -1327,8 +1326,8 @@ const LeadModal: React.FC<LeadModalProps> = ({
           <Box sx={{ p: { xs: 2, sm: 3 } }}>
             {loading && !lead ? (
               <Stack spacing={2}>
-                <Skeleton variant="rounded" height={120} sx={{ borderRadius: 4 }} />
-                <Skeleton variant="rounded" height={320} sx={{ borderRadius: 4 }} />
+                <Skeleton variant="rounded" height={120} sx={{ borderRadius: '16px' }} />
+                <Skeleton variant="rounded" height={320} sx={{ borderRadius: '16px' }} />
               </Stack>
             ) : loadError ? (
               <Stack spacing={2}>

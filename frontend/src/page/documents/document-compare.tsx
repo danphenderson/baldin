@@ -283,7 +283,7 @@ const DocumentComparePage: React.FC = () => {
     return (
       <Box>
         <Skeleton variant="text" width={300} height={40} />
-        <Skeleton variant="rounded" height={400} sx={{ mt: 2, borderRadius: 3 }} />
+        <Skeleton variant="rounded" height={400} sx={{ mt: 2, borderRadius: '12px' }} />
       </Box>
     );
   }
@@ -465,7 +465,7 @@ const DocumentComparePage: React.FC = () => {
         sx={{
           overflow: 'auto', maxHeight: 'calc(100vh - 400px)',
           border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 2,
+          borderRadius: '8px',
         }}
       >
         {usesBlockSnapshotDiff ? (

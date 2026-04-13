@@ -83,7 +83,7 @@ const LoginPage: React.FC = () => {
 
         <Card sx={{ boxShadow: `0 8px 40px ${alpha(theme.palette.common.black, 0.2)}` }}>
           <CardContent sx={{ p: 4 }}>
-            {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
             <form onSubmit={handleMfaSubmit}>
               <TextField
@@ -146,7 +146,7 @@ const LoginPage: React.FC = () => {
 
       <Card sx={{ boxShadow: `0 8px 40px ${alpha(theme.palette.common.black, 0.2)}` }}>
         <CardContent sx={{ p: 4 }}>
-          {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
           <form onSubmit={handleSubmit}>
             <TextField

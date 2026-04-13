@@ -11,7 +11,6 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
-import type { Theme } from '@mui/material/styles';
 import {
   CheckRounded as ApplyIcon,
   CloseRounded as DismissIcon,
@@ -54,17 +53,19 @@ export interface AgentTaskComposerProps {
   promptPlaceholder?: string;
 }
 
-function getToneColor(theme: Theme, tone: 'info' | 'success' | 'warning' | 'error'): string {
+type StatusTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
+
+function getStatusChipTone(tone: 'info' | 'success' | 'warning' | 'error'): StatusTone {
   switch (tone) {
     case 'success':
-      return theme.palette.success.main;
+      return 'success';
     case 'warning':
-      return theme.palette.warning.main;
+      return 'warning';
     case 'error':
-      return theme.palette.error.main;
+      return 'danger';
     case 'info':
     default:
-      return theme.palette.info.main;
+      return 'info';
   }
 }
 
@@ -197,8 +198,8 @@ const AgentTaskComposer: React.FC<AgentTaskComposerProps> = ({
           {displayState && (
             <StatusChip
               label={displayState.label}
-              variant={displayState.tone === 'warning' ? 'outlined' : 'filled'}
-              color={getToneColor(theme, displayState.tone)}
+              emphasis={displayState.tone === 'warning' ? 'outline' : 'soft'}
+              tone={getStatusChipTone(displayState.tone)}
             />
           )}
         </Stack>
@@ -317,7 +318,7 @@ const AgentTaskComposer: React.FC<AgentTaskComposerProps> = ({
                   sx={{
                     border: '1px solid',
                     borderColor: 'divider',
-                    borderRadius: 2,
+                    borderRadius: '8px',
                     bgcolor: 'background.paper',
                     px: 1.5,
                     py: 1.25,

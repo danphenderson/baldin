@@ -1,4 +1,13 @@
-import type { alphaTokens, fontFamilies, motionTokens, radiusTokens, StatusTokens } from '../tokens';
+import type {
+  alphaTokens,
+  BorderTokens,
+  fontFamilies,
+  motionTokens,
+  radiusTokens,
+  StateTokens,
+  StatusTokens,
+  SurfaceTokens,
+} from '../tokens';
 import type { ElevationTokens } from '../tokens/elevation';
 
 declare module '@mui/material/styles' {
@@ -10,6 +19,9 @@ declare module '@mui/material/styles' {
       elevation: ElevationTokens;
       motion: typeof motionTokens;
       fontFamily: typeof fontFamilies;
+      surface: SurfaceTokens;
+      border: BorderTokens;
+      state: StateTokens;
     };
   }
 

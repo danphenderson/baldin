@@ -123,7 +123,7 @@ const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({ open, onClo
             onDrop={handleDrop}
             sx={{
               border: `2px dashed ${dragOver ? theme.palette.primary.main : alpha(theme.palette.divider, 0.5)}`,
-              borderRadius: 2,
+              borderRadius: '8px',
               p: 4,
               textAlign: 'center',
               cursor: 'pointer',

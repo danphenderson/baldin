@@ -2,7 +2,7 @@ import React from 'react';
 import { Alert, Fade, type AlertColor } from '@mui/material';
 import { alpha, useTheme, type SxProps, type Theme } from '@mui/material/styles';
 import { motionTokens } from '../../tokens/motion';
-import { radiusTokens } from '../../tokens/radius';
+import { radiusTokens, toRadiusPx } from '../../tokens/radius';
 import { spacingTokens, toSpacingPx } from '../../tokens/spacing';
 
 export interface InlineFeedbackProps {
@@ -42,9 +42,10 @@ export const InlineFeedback: React.FC<InlineFeedbackProps> = ({
   const baldin = (theme as Theme & { baldin?: Theme['baldin'] }).baldin;
   const toneColor = getToneColor(theme, tone);
   const compact = density === 'compact';
+  const outlinedBorder = alpha(toneColor, theme.palette.mode === 'dark' ? 0.34 : 0.2);
   const alertSx = {
     width: '100%',
-    borderRadius: baldin?.radius.lg ?? radiusTokens.lg,
+    borderRadius: toRadiusPx(baldin?.radius.lg ?? radiusTokens.lg),
     alignItems: 'flex-start',
     px: compact ? toSpacingPx(3) : toSpacingPx(4),
     py: compact ? toSpacingPx(1.5) : toSpacingPx(2),
@@ -62,11 +63,15 @@ export const InlineFeedback: React.FC<InlineFeedbackProps> = ({
     },
     ...(variant === 'soft' ? {
       color: theme.palette.text.primary,
-      backgroundColor: alpha(toneColor, theme.palette.mode === 'dark' ? 0.16 : 0.1),
-      border: `1px solid ${alpha(toneColor, theme.palette.mode === 'dark' ? 0.22 : 0.18)}`,
+      backgroundColor: alpha(toneColor, theme.palette.mode === 'dark' ? 0.14 : 0.09),
+      border: `1px solid ${outlinedBorder}`,
     } : {}),
     ...(variant === 'outlined' ? {
-      borderColor: alpha(toneColor, theme.palette.mode === 'dark' ? 0.42 : 0.28),
+      borderColor: outlinedBorder,
+      backgroundColor: theme.baldin.surface.inset,
+    } : {}),
+    ...(variant === 'filled' ? {
+      borderColor: 'transparent',
     } : {}),
     ...(compact ? {
       minHeight: toSpacingPx(spacingTokens.base * 2),

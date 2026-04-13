@@ -90,6 +90,7 @@ For deeper setup, service topology, and environment details, use [docs/docs/gett
 | `db` | PostgreSQL 15 primary application database |
 | `test_db` | PostgreSQL 15 database used by pytest |
 | `redis` | Redis 7 queue backing background jobs |
+| `etl-service` | Internal ETL crawler execution boundary |
 | `web` | FastAPI backend, API, and admin surface |
 | `crawler-worker` | Background worker consuming Redis jobs |
 | `frontend` | React/Vite frontend |

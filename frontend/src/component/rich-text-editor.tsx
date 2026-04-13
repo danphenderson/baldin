@@ -78,7 +78,7 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({ icon, label, active, disabled, 
           disabled={disabled}
           aria-label={label}
           sx={{
-            borderRadius: 1,
+            borderRadius: '4px',
             width: 32, height: 32,
             ...(active && {
               background: alpha(theme.palette.primary.main, 0.12),

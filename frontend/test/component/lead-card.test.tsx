@@ -1,8 +1,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { ThemeProvider as MuiThemeProvider, CssBaseline } from '@mui/material';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import LeadCard from '@/component/lead-card';
+import { createBaldinTheme } from '@/design-system/theme';
 import type { LeadRead } from '@/service/leads';
 
 const buildLead = (overrides: Partial<LeadRead> = {}): LeadRead => ({
@@ -37,17 +39,27 @@ const buildLead = (overrides: Partial<LeadRead> = {}): LeadRead => ({
 });
 
 describe('LeadCard', () => {
-  it('renders collaboration metrics and capability-aware actions', () => {
-    render(
-      <LeadCard
-        lead={buildLead()}
-        applying={false}
-        onOpen={vi.fn()}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onApply={vi.fn()}
-      />,
+  function renderLeadCard(props: Partial<React.ComponentProps<typeof LeadCard>> = {}) {
+    const theme = createBaldinTheme('dark');
+
+    return render(
+      <MuiThemeProvider theme={theme}>
+        <CssBaseline />
+        <LeadCard
+          lead={buildLead()}
+          applying={false}
+          onOpen={vi.fn()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onApply={vi.fn()}
+          {...props}
+        />
+      </MuiThemeProvider>,
     );
+  }
+
+  it('renders collaboration metrics and capability-aware actions', () => {
+    renderLeadCard();
 
     expect(screen.getByText('Following')).toBeInTheDocument();
     expect(screen.getByText('3 tracking')).toBeInTheDocument();
@@ -61,16 +73,7 @@ describe('LeadCard', () => {
     const onOpen = vi.fn();
     const onApply = vi.fn();
 
-    render(
-      <LeadCard
-        lead={buildLead()}
-        applying={false}
-        onOpen={onOpen}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onApply={onApply}
-      />,
-    );
+    renderLeadCard({ onOpen, onApply });
 
     await user.click(screen.getByRole('button', { name: 'Open lead Senior Product Designer' }));
     expect(onOpen).toHaveBeenCalledTimes(1);
@@ -88,16 +91,7 @@ describe('LeadCard', () => {
     const onOpen = vi.fn();
     const onEdit = vi.fn();
 
-    render(
-      <LeadCard
-        lead={buildLead()}
-        applying={false}
-        onOpen={onOpen}
-        onEdit={onEdit}
-        onDelete={vi.fn()}
-        onApply={vi.fn()}
-      />,
-    );
+    renderLeadCard({ onOpen, onEdit });
 
     const editButton = screen.getByRole('button', { name: 'Edit Senior Product Designer' });
     await user.click(editButton);
@@ -112,28 +106,21 @@ describe('LeadCard', () => {
   });
 
   it('hides shared edit actions when the server does not grant them', () => {
-    render(
-      <LeadCard
-        lead={buildLead({
-          viewer_is_registered: false,
-          viewer_permissions: {
-            can_register: true,
-            can_leave_registration: false,
-            can_update_registration: false,
-            can_update_shared_fields: false,
-            can_clear_or_overwrite_shared_fields: false,
-            can_delete_shared_lead: false,
-            can_view_comments: false,
-            can_post_comments: false,
-          },
-        })}
-        applying={false}
-        onOpen={vi.fn()}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onApply={vi.fn()}
-      />,
-    );
+    renderLeadCard({
+      lead: buildLead({
+        viewer_is_registered: false,
+        viewer_permissions: {
+          can_register: true,
+          can_leave_registration: false,
+          can_update_registration: false,
+          can_update_shared_fields: false,
+          can_clear_or_overwrite_shared_fields: false,
+          can_delete_shared_lead: false,
+          can_view_comments: false,
+          can_post_comments: false,
+        },
+      }),
+    });
 
     expect(screen.queryByLabelText('Edit Senior Product Designer')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Delete Senior Product Designer')).not.toBeInTheDocument();
@@ -141,20 +128,12 @@ describe('LeadCard', () => {
   });
 
   it('renders aspiration fit score and alignment as inline text', () => {
-    render(
-      <LeadCard
-        lead={buildLead()}
-        applying={false}
-        ranking={{
-          relevanceScore: 8,
-          message: "Strong match for the user's aspiration to move into senior design leadership roles.",
-        }}
-        onOpen={vi.fn()}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onApply={vi.fn()}
-      />,
-    );
+    renderLeadCard({
+      ranking: {
+        relevanceScore: 8,
+        message: "Strong match for the user's aspiration to move into senior design leadership roles.",
+      },
+    });
 
     expect(screen.getByText('Aspiration fit 8/10')).toBeInTheDocument();
     expect(
@@ -163,24 +142,16 @@ describe('LeadCard', () => {
   });
 
   it('renders ready-to-apply handoff copy and keeps the create action enabled', () => {
-    render(
-      <LeadCard
-        lead={buildLead()}
-        applying={false}
-        ranking={{
-          relevanceScore: 9,
-          message: 'High aspiration fit for product design leadership.',
-        }}
-        applicationHandoff={{
-          state: 'ready',
-          message: 'High aspiration fit - ready to apply?',
-        }}
-        onOpen={vi.fn()}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onApply={vi.fn()}
-      />,
-    );
+    renderLeadCard({
+      ranking: {
+        relevanceScore: 9,
+        message: 'High aspiration fit for product design leadership.',
+      },
+      applicationHandoff: {
+        state: 'ready',
+        message: 'High aspiration fit - ready to apply?',
+      },
+    });
 
     expect(screen.getByText('Ready to apply')).toBeInTheDocument();
     expect(screen.getByText('High aspiration fit - ready to apply?')).toBeInTheDocument();
@@ -188,30 +159,33 @@ describe('LeadCard', () => {
   });
 
   it('renders existing-application handoff copy and disables creation', () => {
-    render(
-      <LeadCard
-        lead={buildLead()}
-        applying={false}
-        ranking={{
-          relevanceScore: 9,
-          message: 'High aspiration fit for product design leadership.',
-        }}
-        applicationHandoff={{
-          state: 'already-applied',
-          message: 'An existing application is already in the pipeline for this lead.',
-          applicationLabel: 'Applied',
-          ctaLabel: 'Application exists',
-        }}
-        onOpen={vi.fn()}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onApply={vi.fn()}
-      />,
-    );
+    renderLeadCard({
+      ranking: {
+        relevanceScore: 9,
+        message: 'High aspiration fit for product design leadership.',
+      },
+      applicationHandoff: {
+        state: 'already-applied',
+        message: 'An existing application is already in the pipeline for this lead.',
+        applicationLabel: 'Applied',
+        ctaLabel: 'Application exists',
+      },
+    });
 
     expect(screen.getByText('Duplicate guard active')).toBeInTheDocument();
     expect(screen.getByText('Existing application: Applied')).toBeInTheDocument();
     expect(screen.getByText('An existing application is already in the pipeline for this lead.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Existing application for Senior Product Designer' })).toBeDisabled();
+  });
+
+  it('uses fixed pixel radii for the lead shell and collaboration strip', () => {
+    renderLeadCard();
+
+    expect(screen.getByRole('button', { name: 'Open lead Senior Product Designer' })).toHaveStyle({
+      borderRadius: '12px',
+    });
+    expect(screen.getByTestId('lead-card-collaboration-strip')).toHaveStyle({
+      borderRadius: '12px',
+    });
   });
 });

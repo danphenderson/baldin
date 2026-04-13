@@ -1,6 +1,8 @@
 import React from 'react';
 import { Box, ButtonBase, Divider, Stack, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { CardShell } from '../../primitives/surfaces/card-shell';
+import { radiusTokens, toRadiusPx } from '../../tokens/radius';
 
 export interface MetricStripItem {
   label: string;
@@ -15,7 +17,7 @@ export interface MetricStripProps {
   variant: 'inline' | 'card';
 }
 
-const MetricStripContent: React.FC<{ items: MetricStripItem[] }> = ({ items }) => (
+const MetricStripContent: React.FC<{ items: MetricStripItem[]; focusRing: string }> = ({ items, focusRing }) => (
   <Stack
     direction="row"
     divider={<Divider orientation="vertical" flexItem />}
@@ -60,10 +62,14 @@ const MetricStripContent: React.FC<{ items: MetricStripItem[] }> = ({ items }) =
               textAlign: 'center',
               minWidth: 64,
               flexShrink: 0,
-              borderRadius: 1,
-              px: 0.5,
-              py: 0.25,
-              '&:hover': { opacity: 0.8 },
+              borderRadius: toRadiusPx(radiusTokens.xs),
+              px: 1,
+              py: 0.5,
+              transition: 'background-color 180ms ease, box-shadow 180ms ease',
+              '&:hover': { backgroundColor: 'action.hover' },
+              '&.Mui-focusVisible': {
+                boxShadow: `0 0 0 4px ${focusRing}`,
+              },
             }}
           >
             {content}
@@ -81,10 +87,15 @@ const MetricStripContent: React.FC<{ items: MetricStripItem[] }> = ({ items }) =
 );
 
 export const MetricStrip: React.FC<MetricStripProps> = ({ items, variant }) => {
+  const theme = useTheme();
+  const baldin = (theme as typeof theme & { baldin?: typeof theme.baldin }).baldin;
+  const stripRadius = baldin?.radius.lg ?? radiusTokens.lg;
+  const focusRing = baldin?.state.focusRing ?? theme.palette.action.focus;
+
   if (variant === 'card') {
     return (
-      <CardShell padding="dense" contentSx={{ py: 2, '&:last-child': { pb: 2 } }}>
-        <MetricStripContent items={items} />
+      <CardShell density="compact" surface="raised" contentSx={{ py: 2, '&:last-child': { pb: 2 } }}>
+        <MetricStripContent items={items} focusRing={focusRing} />
       </CardShell>
     );
   }
@@ -94,16 +105,13 @@ export const MetricStrip: React.FC<MetricStripProps> = ({ items, variant }) => {
       sx={{
         px: 2,
         py: 1.5,
-        borderRadius: 2,
-        bgcolor: (theme) =>
-          theme.palette.mode === 'dark'
-            ? 'rgba(255,255,255,0.03)'
-            : 'rgba(0,0,0,0.02)',
-        border: (theme) => `1px solid ${theme.palette.divider}`,
+        borderRadius: toRadiusPx(stripRadius),
+        bgcolor: theme.baldin.surface.inset,
+        border: `1px solid ${theme.baldin.border.default}`,
         overflowX: 'auto',
       }}
     >
-      <MetricStripContent items={items} />
+      <MetricStripContent items={items} focusRing={focusRing} />
     </Box>
   );
 };

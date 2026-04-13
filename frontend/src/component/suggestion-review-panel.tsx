@@ -9,7 +9,6 @@ import {
   CheckCircle as AcceptAllIcon,
   Close as DiscardIcon,
 } from '@mui/icons-material';
-import { useTheme } from '@mui/material/styles';
 import { CardShell, InlineFeedback, StatusChip } from '../design-system';
 import { CardTitle, Caption } from './common/text';
 import {
@@ -157,7 +156,6 @@ const SuggestionReviewPanel: React.FC<SuggestionReviewPanelProps> = ({
   adapter,
   onAccepted,
 }) => {
-  const theme = useTheme();
   const [drafts, setDrafts] = useState<AspirationSuggestionDraft[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState(false);
@@ -355,8 +353,8 @@ const SuggestionReviewPanel: React.FC<SuggestionReviewPanelProps> = ({
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
         <StatusChip
           label={`${drafts.length} suggestion${drafts.length === 1 ? '' : 's'}`}
-          variant="outlined"
-          color={theme.palette.info.main}
+          emphasis="outline"
+          tone="info"
           size="small"
         />
         <Button

@@ -15,7 +15,7 @@ import {
 } from '@mui/icons-material';
 import type { LeadRead } from '../service/leads';
 import type { ApplicationCreationIntent } from '../service/applications';
-import { CardShell, StatusChip, getStatusMetaSx } from '../design-system';
+import { CardShell, StatusChip, getStatusMetaSx, radiusTokens, toRadiusPx } from '../design-system';
 import ApplicationIntentButton from './application-intent-button';
 import { timeAgo } from '../util/format';
 import { brandGradient } from '../theme/effects';
@@ -43,16 +43,18 @@ export interface LeadCardProps {
   onApply: (lead: LeadRead, intent: ApplicationCreationIntent) => void;
 }
 
+type StatusTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
+
 /* ------------------------------------------------------------------ */
 /*  Internal helpers                                                   */
 /* ------------------------------------------------------------------ */
 
 function MetaChip({
-  icon, label, color,
+  icon, label, tone = 'neutral',
 }: {
   icon: React.ReactElement;
   label: string | null | undefined;
-  color?: string;
+  tone?: StatusTone;
 }) {
   if (!label) return null;
   return (
@@ -60,8 +62,8 @@ function MetaChip({
       icon={icon}
       label={label}
       size="small"
-      variant="outlined"
-      color={color}
+      tone={tone}
+      emphasis="outline"
     />
   );
 }
@@ -85,6 +87,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
   const theme = useTheme();
   const companyName = lead.companies?.[0]?.name;
   const gradientBg = brandGradient(theme);
+  const activityRadius = theme.baldin?.radius.lg ?? radiusTokens.lg;
   const otherInterestCount = getOtherInterestCount(lead);
   const canEdit = Boolean(lead.viewer_permissions?.can_update_shared_fields);
   const canDelete = Boolean(lead.viewer_permissions?.can_delete_shared_lead);
@@ -100,23 +103,30 @@ const LeadCard: React.FC<LeadCardProps> = ({
       aria-label={`Open lead ${lead.title || 'Untitled Position'}`}
       onClick={() => onOpen(lead)}
       interactive
-      accentColor={theme.palette.primary.main}
+      tone="primary"
     >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
           <Box sx={{ minWidth: 0, flexGrow: 1 }}>
             <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
-              {lead.viewer_is_registered && <StatusChip size="small" color={theme.palette.success.main} label="Following" />}
-              {isActive && <StatusChip size="small" color={theme.palette.secondary.main} label="Active" />}
+              {lead.viewer_is_registered && <StatusChip size="small" tone="success" label="Following" />}
+              {isActive && <StatusChip size="small" tone="info" label="Active" />}
               {ranking && (
                 <StatusChip
                   size="small"
-                  variant="outlined"
-                  color={theme.palette.warning.main}
+                  emphasis="outline"
+                  tone="warning"
                   icon={<AspirationIcon sx={{ fontSize: 14 }} />}
                   label={`Aspiration fit ${ranking.relevanceScore}/10`}
                 />
               )}
-              {!lead.viewer_is_registered && lead.viewer_permissions?.can_register && <StatusChip size="small" variant="outlined" color={theme.palette.primary.main} label="Joinable" />}
+              {!lead.viewer_is_registered && lead.viewer_permissions?.can_register && (
+                <StatusChip
+                  size="small"
+                  emphasis="outline"
+                  tone="primary"
+                  label="Joinable"
+                />
+              )}
             </Stack>
             <Typography
               variant="body1"
@@ -217,10 +227,10 @@ const LeadCard: React.FC<LeadCardProps> = ({
         )}
 
         <Stack direction="row" sx={{ mt: 1.25, flexWrap: 'wrap', gap: { xs: 0.5, sm: 0.75 } }}>
-          <MetaChip icon={<WorkIcon sx={{ fontSize: 14 }} />} label={lead.employment_type} color={theme.palette.primary.main} />
-          <MetaChip icon={<SeniorityIcon sx={{ fontSize: 14 }} />} label={lead.seniority_level} color={theme.palette.secondary.main} />
-          <MetaChip icon={<FunctionIcon sx={{ fontSize: 14 }} />} label={lead.job_function} />
-          <MetaChip icon={<EducationIcon sx={{ fontSize: 14 }} />} label={lead.education_level} />
+          <MetaChip icon={<WorkIcon sx={{ fontSize: 14 }} />} label={lead.employment_type} tone="primary" />
+          <MetaChip icon={<SeniorityIcon sx={{ fontSize: 14 }} />} label={lead.seniority_level} tone="info" />
+          <MetaChip icon={<FunctionIcon sx={{ fontSize: 14 }} />} label={lead.job_function} tone="neutral" />
+          <MetaChip icon={<EducationIcon sx={{ fontSize: 14 }} />} label={lead.education_level} tone="neutral" />
         </Stack>
 
         {lead.salary && (
@@ -249,17 +259,18 @@ const LeadCard: React.FC<LeadCardProps> = ({
         )}
 
         <Box
+          data-testid="lead-card-collaboration-strip"
           sx={{
             mt: 1.5,
             p: 1.5,
-            borderRadius: 3,
+            borderRadius: toRadiusPx(activityRadius),
             backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.12 : 0.06),
           }}
         >
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} justifyContent="space-between">
             <Stack spacing={0.5}>
               <Stack direction="row" spacing={0.75} alignItems="center">
-                <GroupsIcon sx={{ fontSize: 16, ...getStatusMetaSx(theme, theme.palette.primary.main) }} />
+                <GroupsIcon sx={{ fontSize: 16, ...getStatusMetaSx(theme, 'primary') }} />
                 <Typography variant="body2" fontWeight={700}>{lead.interest_count ?? 0} tracking</Typography>
               </Stack>
               <Typography variant="caption" color="text.secondary">
@@ -274,7 +285,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
             </Stack>
             <Stack spacing={0.5}>
               <Stack direction="row" spacing={0.75} alignItems="center">
-                <CommentIcon sx={{ fontSize: 16, ...getStatusMetaSx(theme, theme.palette.secondary.main) }} />
+                <CommentIcon sx={{ fontSize: 16, ...getStatusMetaSx(theme, 'secondary') }} />
                 <Typography variant="body2" fontWeight={700}>{lead.comment_count ?? 0} comments</Typography>
               </Stack>
               <Typography variant="caption" color="text.secondary">
@@ -292,14 +303,14 @@ const LeadCard: React.FC<LeadCardProps> = ({
             <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 0.75 }}>
               <StatusChip
                 size="small"
-                variant="outlined"
-                color={hasExistingApplication ? theme.palette.info.main : theme.palette.warning.main}
+                emphasis="outline"
+                tone={hasExistingApplication ? 'info' : 'warning'}
                 label={hasExistingApplication ? 'Duplicate guard active' : 'Ready to apply'}
               />
               {applicationHandoff.applicationLabel && (
                 <StatusChip
                   size="small"
-                  color={theme.palette.success.main}
+                  tone="success"
                   label={`Existing application: ${applicationHandoff.applicationLabel}`}
                 />
               )}
@@ -332,7 +343,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
           </Stack>
           <Tooltip title={new Date(lead.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}>
             <Stack direction="row" spacing={0.5} alignItems="center" sx={{ cursor: 'default' }}>
-              <TimeIcon sx={{ fontSize: 13, ...getStatusMetaSx(theme, theme.palette.text.secondary), opacity: 0.6 }} />
+              <TimeIcon sx={{ fontSize: 13, ...getStatusMetaSx(theme, 'neutral'), opacity: 0.6 }} />
               <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.7 }}>
                 {timeAgo(lead.created_at)}
               </Typography>

@@ -62,7 +62,7 @@ export const DocumentsSummary: React.FC<DocumentsSummaryProps> = ({ token }) => 
     <MotionBox {...stagger} transition={{ duration: 0.25 }}>
       <Card
         sx={{
-          borderRadius: 3,
+          borderRadius: '12px',
           background: softBrandGradient(theme, {
             startTone: 'main',
             endTone: 'main',
@@ -89,7 +89,7 @@ export const DocumentsSummary: React.FC<DocumentsSummaryProps> = ({ token }) => 
               justifyContent: 'center',
               width: 40,
               height: 40,
-              borderRadius: 2,
+              borderRadius: '8px',
               bgcolor: alpha(theme.palette.primary.main, 0.08),
               color: theme.palette.primary.main,
               flexShrink: 0,

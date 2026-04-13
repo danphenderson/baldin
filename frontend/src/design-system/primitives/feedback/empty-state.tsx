@@ -51,7 +51,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           borderRadius: '50%',
           mb: toSpacingPx(compact ? 3 : 4),
           color: theme.palette.primary.main,
-          backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.18 : 0.08),
+          backgroundColor: theme.baldin.state.selected,
+          border: `1px solid ${theme.baldin.border.accent}`,
+          boxShadow: `0 10px 30px ${alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.14 : 0.08)}`,
           '& svg': {
             fontSize: compact ? 24 : isPageLayout ? 32 : 28,
           },
@@ -61,7 +63,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       </Box>
 
       <Typography
-        variant={isPageLayout ? 'h6' : 'body1'}
+        variant={isPageLayout ? 'h5' : 'body1'}
         color="text.primary"
         fontWeight={700}
       >

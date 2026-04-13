@@ -409,7 +409,7 @@ const CompaniesPage: React.FC = () => {
         <Grid container spacing={2} aria-busy="true" aria-label="Loading companies">
           {[1, 2, 3, 4].map(i => (
             <Grid size={{ xs: 12, md: 6 }} key={i}>
-              <Skeleton variant="rounded" height={180} sx={{ borderRadius: 3 }} />
+              <Skeleton variant="rounded" height={180} sx={{ borderRadius: '12px' }} />
             </Grid>
           ))}
         </Grid>
@@ -605,7 +605,7 @@ const CompaniesPage: React.FC = () => {
                             <ListItem
                               key={lead.id}
                               sx={{
-                                borderRadius: 1.5,
+                                borderRadius: '6px',
                                 mb: 0.25,
                                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) },
                               }}

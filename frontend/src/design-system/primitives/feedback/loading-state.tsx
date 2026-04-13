@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Skeleton, Stack } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { useTheme } from '@mui/material/styles';
-import { radiusTokens } from '../../tokens/radius';
+import { radiusTokens, toRadiusPx } from '../../tokens/radius';
 
 export interface LoadingStateProps {
   kind: 'list' | 'grid' | 'section';
@@ -26,7 +26,9 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   columns,
 }) => {
   const theme = useTheme();
-  const radius = (theme as typeof theme & { baldin?: typeof theme.baldin }).baldin?.radius.lg ?? radiusTokens.lg;
+  const baldin = (theme as typeof theme & { baldin?: typeof theme.baldin }).baldin;
+  const radius = baldin?.radius.lg ?? radiusTokens.lg;
+  const insetSurface = baldin?.surface.inset ?? theme.palette.action.hover;
 
   if (kind === 'list') {
     return (
@@ -36,7 +38,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
             key={index}
             variant="rounded"
             height={itemHeight ?? 88}
-            sx={{ borderRadius: radius }}
+            sx={{ borderRadius: toRadiusPx(radius), bgcolor: insetSurface }}
           />
         ))}
       </Stack>
@@ -60,7 +62,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
             <Skeleton
               variant="rounded"
               height={itemHeight ?? 180}
-              sx={{ borderRadius: radius }}
+              sx={{ borderRadius: toRadiusPx(radius), bgcolor: insetSurface }}
             />
           </Grid>
         ))}
@@ -75,7 +77,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
           <Skeleton
             variant="rounded"
             height={itemHeight ?? 160}
-            sx={{ borderRadius: radius }}
+            sx={{ borderRadius: toRadiusPx(radius), bgcolor: insetSurface }}
           />
         </Box>
       ))}

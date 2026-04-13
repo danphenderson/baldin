@@ -128,7 +128,7 @@ const CommandPaletteDialog: React.FC<CommandPaletteDialogProps> = ({
         sx: {
           mt: { xs: 4, sm: 8 },
           alignSelf: 'flex-start',
-          borderRadius: 3,
+          borderRadius: '12px',
         },
       }}
     >
@@ -198,7 +198,7 @@ const CommandPaletteDialog: React.FC<CommandPaletteDialogProps> = ({
                     sx={(theme) => ({
                       mx: 1,
                       mb: 0.5,
-                      borderRadius: 2,
+                      borderRadius: '8px',
                       alignItems: 'flex-start',
                       gap: 1.5,
                       '&.Mui-selected': {

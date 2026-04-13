@@ -38,6 +38,14 @@ The foundation intentionally kept old MUI spacing behavior in place. `createBald
 
 That split is still real in the repo today. Future migrations should preserve it unless Baldin explicitly chooses a repo-wide spacing reset.
 
+### Radius Compatibility Caveat
+
+The same MUI system caveat applies to `borderRadius`: numeric values inside `sx` are multipliers of `theme.shape.borderRadius`, not raw pixels.
+
+- Shared design-system files should convert Baldin radius tokens with `toRadiusPx(...)` before handing them to `sx`.
+- Feature-local code should use `toRadiusPx(...)`, explicit pixel strings, or percentages for circles.
+- `lint:theme` blocks new non-zero numeric `borderRadius` literals outside the token and theme layers.
+
 ## What Was Migrated
 
 ### Leads family

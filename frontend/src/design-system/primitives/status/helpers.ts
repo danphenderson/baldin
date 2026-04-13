@@ -2,39 +2,52 @@ import type { SxProps, Theme } from '@mui/material/styles';
 import { alpha } from '@mui/material/styles';
 import { getStatusColors, type StatusColorKey } from '../../tokens/status';
 
-export type StatusToneColor = StatusColorKey | string | undefined;
+export type StatusTone = StatusColorKey | undefined;
+export type StatusChipEmphasis = 'soft' | 'outline' | 'solid';
 
-export function resolveStatusColor(theme: Theme, color: StatusToneColor): string {
-  if (!color) {
-    return theme.palette.text.secondary;
+export function resolveStatusColor(theme: Theme, tone: StatusTone): string {
+  if (!tone) {
+    return getStatusColors(theme).neutral;
   }
 
   const statusColors = getStatusColors(theme);
-  return color in statusColors
-    ? statusColors[color as StatusColorKey]
-    : color;
+  return statusColors[tone];
 }
 
 export function getStatusChipSx(
   theme: Theme,
-  color: StatusToneColor,
-  variant: 'filled' | 'outlined' = 'filled',
+  tone: StatusTone,
+  emphasis: StatusChipEmphasis = 'soft',
 ): SxProps<Theme> {
-  const resolvedColor = resolveStatusColor(theme, color);
+  const resolvedColor = resolveStatusColor(theme, tone);
+  const isDark = theme.palette.mode === 'dark';
 
-  if (variant === 'outlined') {
+  if (emphasis === 'outline') {
     return {
-      borderColor: alpha(resolvedColor, theme.palette.mode === 'dark' ? 0.42 : 0.28),
+      borderColor: alpha(resolvedColor, isDark ? 0.38 : 0.24),
       color: resolvedColor,
-      backgroundColor: alpha(resolvedColor, theme.palette.mode === 'dark' ? 0.08 : 0.04),
+      backgroundColor: alpha(resolvedColor, isDark ? 0.08 : 0.04),
       '& .MuiChip-icon': {
         color: resolvedColor,
       },
     };
   }
 
+  if (emphasis === 'solid') {
+    const contrastText = theme.palette.getContrastText(resolvedColor);
+    return {
+      borderColor: 'transparent',
+      backgroundColor: resolvedColor,
+      color: contrastText,
+      '& .MuiChip-icon': {
+        color: contrastText,
+      },
+    };
+  }
+
   return {
-    backgroundColor: alpha(resolvedColor, theme.palette.mode === 'dark' ? 0.22 : 0.12),
+    borderColor: 'transparent',
+    backgroundColor: alpha(resolvedColor, isDark ? 0.20 : 0.12),
     color: resolvedColor,
     '& .MuiChip-icon': {
       color: resolvedColor,
@@ -42,8 +55,8 @@ export function getStatusChipSx(
   };
 }
 
-export function getStatusMetaSx(theme: Theme, color: StatusToneColor): SxProps<Theme> {
+export function getStatusMetaSx(theme: Theme, tone: StatusTone): SxProps<Theme> {
   return {
-    color: resolveStatusColor(theme, color),
+    color: resolveStatusColor(theme, tone),
   };
 }

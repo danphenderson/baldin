@@ -10,8 +10,8 @@ import {
   type DialogProps,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-import { useTheme } from '@mui/material/styles';
-import { radiusTokens } from '../../tokens/radius';
+import { alpha, useTheme } from '@mui/material/styles';
+import { radiusTokens, toRadiusPx } from '../../tokens/radius';
 import { spacingTokens, toSpacingPx } from '../../tokens/spacing';
 
 export interface FormDialogShellProps {
@@ -66,7 +66,9 @@ export const FormDialogShell: React.FC<FormDialogShellProps> = ({
       aria-describedby={subtitle ? subtitleId : undefined}
       PaperProps={{
         sx: {
-          borderRadius,
+          borderRadius: toRadiusPx(borderRadius),
+          background: theme.baldin.surface.overlay,
+          border: `1px solid ${theme.baldin.border.default}`,
         },
       }}
     >
@@ -76,6 +78,7 @@ export const FormDialogShell: React.FC<FormDialogShellProps> = ({
           px: toSpacingPx(spacingTokens.dialogPadding),
           pt: toSpacingPx(spacingTokens.dialogPadding - 1),
           pb: toSpacingPx(3),
+          borderBottom: `1px solid ${theme.baldin.border.subtle}`,
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
@@ -108,6 +111,13 @@ export const FormDialogShell: React.FC<FormDialogShellProps> = ({
                   size="small"
                   aria-label="Close dialog"
                   disabled={!canDismiss}
+                  sx={{
+                    color: 'text.secondary',
+                    backgroundColor: alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.05 : 0.035),
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.08 : 0.06),
+                    },
+                  }}
                 >
                   <CloseIcon />
                 </IconButton>
@@ -122,6 +132,9 @@ export const FormDialogShell: React.FC<FormDialogShellProps> = ({
         sx={{
           px: toSpacingPx(spacingTokens.dialogPadding),
           py: toSpacingPx(4),
+          backgroundColor: theme.baldin.surface.base,
+          borderTopColor: theme.baldin.border.subtle,
+          borderBottomColor: theme.baldin.border.subtle,
         }}
       >
         {children}
@@ -132,6 +145,8 @@ export const FormDialogShell: React.FC<FormDialogShellProps> = ({
           px: toSpacingPx(spacingTokens.dialogPadding),
           py: toSpacingPx(4),
           gap: 1,
+          borderTop: `1px solid ${theme.baldin.border.subtle}`,
+          backgroundColor: theme.baldin.surface.raised,
         }}
       >
         {actions}

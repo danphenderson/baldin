@@ -88,7 +88,7 @@ const VersionHistoryPanel: React.FC<{ extractorId: string; token: string | null 
                   key={v.id}
                   sx={{
                     display: 'flex', alignItems: 'flex-start', gap: 1.5,
-                    p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'divider',
+                    p: 1.5, borderRadius: '4px', border: '1px solid', borderColor: 'divider',
                   }}
                 >
                   <Chip label={`v${v.version_number}`} size="small" color="primary" variant="outlined" />

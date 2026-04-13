@@ -89,10 +89,10 @@ export const ProfileBuilderPanel: React.FC<ProfileBuilderPanelProps> = ({
             value={completionPercent}
             sx={{
               height: 6,
-              borderRadius: 3,
+              borderRadius: '12px',
               bgcolor: alpha(theme.palette.primary.main, 0.08),
               '& .MuiLinearProgress-bar': {
-                borderRadius: 3,
+                borderRadius: '12px',
                 background: isComplete
                   ? theme.palette.success.main
                   : brandGradient(theme, 90),
@@ -113,7 +113,7 @@ export const ProfileBuilderPanel: React.FC<ProfileBuilderPanelProps> = ({
               gap: 1.5,
               mt: 2,
               p: 2,
-              borderRadius: 2,
+              borderRadius: '8px',
               bgcolor: alpha(theme.palette.success.main, 0.06),
             }}
           >
@@ -155,7 +155,7 @@ export const ProfileBuilderPanel: React.FC<ProfileBuilderPanelProps> = ({
                     justifyContent: 'center',
                     width: 32,
                     height: 32,
-                    borderRadius: 1.5,
+                    borderRadius: '6px',
                     bgcolor: alpha(theme.palette.primary.main, 0.08),
                     color: theme.palette.primary.main,
                     flexShrink: 0,

@@ -208,7 +208,7 @@ const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
         {(searchResults.length > 0 || searching) && !selectedUser && (
           <Box sx={{
             border: `1px solid ${theme.palette.divider}`,
-            borderRadius: 1, mb: 2, maxHeight: 200, overflow: 'auto',
+            borderRadius: '4px', mb: 2, maxHeight: 200, overflow: 'auto',
             background: theme.palette.background.paper,
           }}>
             {searching ? (
@@ -286,7 +286,7 @@ const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
                   </IconButton>
                 }
                 sx={{
-                  borderRadius: 1, mb: 0.5,
+                  borderRadius: '4px', mb: 0.5,
                   border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                 }}
               >

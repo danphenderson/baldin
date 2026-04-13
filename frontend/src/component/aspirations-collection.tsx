@@ -236,7 +236,7 @@ const AspirationsCollection: React.FC<AspirationsCollectionProps> = ({
         <Grid container spacing={2}>
           {Array.from({ length: 4 }).map((_, i) => (
             <Grid size={{ xs: 12, md: 6 }} key={i}>
-              <Skeleton variant="rounded" height={140} sx={{ borderRadius: 3 }} />
+              <Skeleton variant="rounded" height={140} sx={{ borderRadius: '12px' }} />
             </Grid>
           ))}
         </Grid>

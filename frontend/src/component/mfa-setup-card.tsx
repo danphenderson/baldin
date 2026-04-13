@@ -118,8 +118,8 @@ const MFASetupCard: React.FC = () => {
             <Typography variant="h6" fontWeight={700}>Two-Factor Authentication</Typography>
           </Stack>
 
-          {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
+          {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+          {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Add an extra layer of security to your account by requiring a verification
@@ -149,7 +149,7 @@ const MFASetupCard: React.FC = () => {
           </Stack>
 
           {!enabled && (
-            <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
+            <Alert severity="warning" sx={{ mt: 2 }}>
               If you lose access to your authenticator app, a Baldin superuser must reset MFA
               before you can sign in again.
             </Alert>
@@ -157,7 +157,7 @@ const MFASetupCard: React.FC = () => {
 
           {/* ── Setup flow ─────────────────────────────────────────── */}
           {setupData && !enabled && (
-            <Box sx={{ mt: 3, p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+            <Box sx={{ mt: 3, p: 2, borderRadius: '8px', bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
               <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
                 Set up authenticator app
               </Typography>
@@ -168,7 +168,7 @@ const MFASetupCard: React.FC = () => {
 
               {/* Client-side QR code generation – secret never leaves the browser */}
               <Box sx={{ textAlign: 'center', mb: 2 }}>
-                <Box sx={{ display: 'inline-block', p: 1.5, borderRadius: 2, border: `1px solid ${alpha(theme.palette.common.black, 0.08)}`, bgcolor: 'common.white' }}>
+                <Box sx={{ display: 'inline-block', p: 1.5, borderRadius: '8px', border: `1px solid ${alpha(theme.palette.common.black, 0.08)}`, bgcolor: 'common.white' }}>
                   <QRCodeSVG value={setupData.provisioning_uri} size={200} />
                 </Box>
               </Box>
@@ -209,7 +209,7 @@ const MFASetupCard: React.FC = () => {
             Save your authenticator app before you verify setup. If you later lose access to
             that app, you cannot recover this account yourself.
           </Typography>
-          <Alert severity="warning" sx={{ borderRadius: 2 }}>
+          <Alert severity="warning">
             A Baldin superuser must reset MFA for your account before you can sign in again.
           </Alert>
         </DialogContent>

@@ -574,7 +574,7 @@ const AgentChatShellPage: React.FC = () => {
             minHeight: 0,
             border: '1px solid',
             borderColor: 'divider',
-            borderRadius: 4,
+            borderRadius: '16px',
             bgcolor: 'background.default',
             p: { xs: 1.5, sm: 2 },
           }}

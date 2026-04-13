@@ -9,7 +9,7 @@ const body = instance.getString('Body');
 
 export default {
   example: figma.code`
-    <CardShell>
+    <CardShell tone="primary" surface="raised" density="comfortable">
       <div>
         <strong>${title}</strong>
         <p>${body}</p>

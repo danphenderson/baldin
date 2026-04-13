@@ -89,7 +89,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
               p: 2,
               maxWidth: 600,
               overflow: 'auto',
-              borderRadius: 1,
+              borderRadius: '4px',
               bgcolor: 'action.hover',
               color: 'error.main',
               fontFamily: monoFontFamily,

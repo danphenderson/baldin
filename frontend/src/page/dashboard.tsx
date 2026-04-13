@@ -214,7 +214,7 @@ function SortableActionItem({ item, overdue, linked, priorityColor, onComplete, 
         gap: 1,
         py: 1.25,
         px: 1,
-        borderRadius: 2,
+        borderRadius: '8px',
         borderLeft: `3px solid ${priorityColor}`,
         mb: 0.5,
         '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.03) },
@@ -227,7 +227,7 @@ function SortableActionItem({ item, overdue, linked, priorityColor, onComplete, 
         <ButtonBase
           onClick={() => onCyclePriority(item)}
           sx={{
-            width: 6, minHeight: 32, borderRadius: 1,
+            width: 6, minHeight: 32, borderRadius: '4px',
             bgcolor: priorityColor, flexShrink: 0,
             '&:hover': { opacity: 0.7 },
           }}
@@ -690,7 +690,7 @@ const DashboardPage: React.FC = () => {
           </Typography>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <CardShell interactive onClick={() => navigate('/leads')} padding="dense">
+              <CardShell interactive onClick={() => navigate('/leads')} density="compact">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <LeadsIcon color="primary" />
                   <Box>
@@ -701,7 +701,7 @@ const DashboardPage: React.FC = () => {
               </CardShell>
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <CardShell interactive onClick={() => navigate('/me')} padding="dense">
+              <CardShell interactive onClick={() => navigate('/me')} density="compact">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <PersonOutlineIcon color="primary" />
                   <Box>
@@ -712,7 +712,7 @@ const DashboardPage: React.FC = () => {
               </CardShell>
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <CardShell interactive onClick={() => navigate('/network/discover')} padding="dense">
+              <CardShell interactive onClick={() => navigate('/network/discover')} density="compact">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <PeopleOutlineIcon color="primary" />
                   <Box>
@@ -723,7 +723,7 @@ const DashboardPage: React.FC = () => {
               </CardShell>
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <CardShell interactive onClick={() => navigate('/workspace/new')} padding="dense">
+              <CardShell interactive onClick={() => navigate('/workspace/new')} density="compact">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <NoteAddIcon color="primary" />
                   <Box>
@@ -838,7 +838,7 @@ const DashboardPage: React.FC = () => {
                     size="compact"
                   />
                 }
-                padding="dense"
+                density="compact"
               >
                   <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
                     {Object.entries(summary.status_breakdown).map(([status, count]) => {
@@ -914,7 +914,7 @@ const DashboardPage: React.FC = () => {
                           <Box
                             sx={{
                               p: 2,
-                              borderRadius: 3,
+                              borderRadius: '12px',
                               bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.12 : 0.05),
                               border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
                               height: '100%',
@@ -944,7 +944,7 @@ const DashboardPage: React.FC = () => {
                                       sx={{
                                         mt: 0.75,
                                         height: 10,
-                                        borderRadius: 999,
+                                        borderRadius: '999px',
                                         bgcolor: alpha(color, 0.12),
                                         overflow: 'hidden',
                                       }}
@@ -953,7 +953,7 @@ const DashboardPage: React.FC = () => {
                                         sx={{
                                           width: `${width}%`,
                                           height: '100%',
-                                          borderRadius: 999,
+                                          borderRadius: '999px',
                                           background: progressGradient(color),
                                         }}
                                       />
@@ -972,7 +972,7 @@ const DashboardPage: React.FC = () => {
                           <Box
                             sx={{
                               p: 2,
-                              borderRadius: 3,
+                              borderRadius: '12px',
                               bgcolor: alpha(sc.offer, theme.palette.mode === 'dark' ? 0.1 : 0.04),
                               border: `1px solid ${alpha(sc.offer, 0.14)}`,
                               height: '100%',
@@ -996,7 +996,7 @@ const DashboardPage: React.FC = () => {
                                         width: `${width}%`,
                                         maxWidth: '100%',
                                         mx: 'auto',
-                                        borderRadius: 2.5,
+                                        borderRadius: '10px',
                                         px: 1.5,
                                         py: 1.1,
                                         bgcolor: alpha(color, 0.14),
@@ -1032,7 +1032,7 @@ const DashboardPage: React.FC = () => {
                   ) : (
                     <Box
                       sx={{
-                        borderRadius: 3,
+                        borderRadius: '12px',
                         border: `1px dashed ${alpha(theme.palette.text.primary, 0.14)}`,
                         px: 2,
                         py: 3,
@@ -1076,7 +1076,7 @@ const DashboardPage: React.FC = () => {
                   }
                 />
               }
-              padding="dense"
+              density="compact"
             >
                 <Collapse in={!leadsCollapsed}>
                   {leads.length === 0 ? (
@@ -1093,7 +1093,7 @@ const DashboardPage: React.FC = () => {
                           key={lead.id}
                           sx={{
                             display: 'flex', alignItems: 'center', gap: 1, py: 1, px: 0.5,
-                            borderRadius: 1,
+                            borderRadius: '4px',
                             cursor: 'pointer',
                             '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.03) },
                           }}
@@ -1143,7 +1143,7 @@ const DashboardPage: React.FC = () => {
                     size="compact"
                   />
                 }
-                padding="dense"
+                density="compact"
               >
                 <MetricStrip
                   variant="inline"
@@ -1238,7 +1238,7 @@ const DashboardPage: React.FC = () => {
                               }),
                               ...(path && {
                                 cursor: 'pointer',
-                                borderRadius: 1,
+                                borderRadius: '4px',
                                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.03) },
                               }),
                             }}

@@ -24,7 +24,7 @@ export const ToggleNodeView: React.FC<NodeViewProps> = ({ node, updateAttributes
         data-testid="toggle-node-view"
         sx={{
           border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 1,
+          borderRadius: '4px',
           my: 1,
           p: 1,
           opacity: isLocked ? 0.78 : 1,

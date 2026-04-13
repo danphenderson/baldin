@@ -1,21 +1,21 @@
 import React from 'react';
 import { Chip, type ChipProps } from '@mui/material';
 import { useTheme, type SxProps, type Theme } from '@mui/material/styles';
-import { radiusTokens } from '../../tokens/radius';
-import { getStatusChipSx, type StatusToneColor } from './helpers';
+import { radiusTokens, toRadiusPx } from '../../tokens/radius';
+import { getStatusChipSx, type StatusChipEmphasis, type StatusTone } from './helpers';
 
 export interface StatusChipProps extends Omit<ChipProps, 'color' | 'icon' | 'label' | 'size' | 'variant'> {
   label: React.ReactNode;
   icon?: React.ReactElement;
-  color?: StatusToneColor;
-  variant?: 'filled' | 'outlined';
+  tone?: StatusTone;
+  emphasis?: StatusChipEmphasis;
   size?: 'small' | 'medium';
   sx?: SxProps<Theme>;
 }
 
 export const StatusChip: React.FC<StatusChipProps> = ({
-  color,
-  variant = 'filled',
+  tone,
+  emphasis = 'soft',
   size = 'small',
   sx,
   ...props
@@ -24,8 +24,8 @@ export const StatusChip: React.FC<StatusChipProps> = ({
   const pillRadius = (theme as Theme & { baldin?: Theme['baldin'] }).baldin?.radius.pill ?? radiusTokens.pill;
   const chipSx = {
     fontWeight: 600,
-    borderRadius: pillRadius,
-    ...getStatusChipSx(theme, color, variant),
+    borderRadius: toRadiusPx(pillRadius),
+    ...getStatusChipSx(theme, tone, emphasis),
   } as SxProps<Theme>;
   const mergedSx = (sx ? [chipSx, sx] : chipSx) as SxProps<Theme>;
 
@@ -33,7 +33,7 @@ export const StatusChip: React.FC<StatusChipProps> = ({
     <Chip
       {...props}
       size={size}
-      variant={variant}
+      variant={emphasis === 'outline' ? 'outlined' : 'filled'}
       sx={mergedSx}
     />
   );

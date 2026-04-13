@@ -342,7 +342,7 @@ const EventRow: React.FC<{
           gap: 1.5,
           px: 2,
           py: 1.25,
-          borderRadius: 2,
+          borderRadius: '8px',
           border: `1px solid ${theme.palette.divider}`,
           transition: 'border-color 0.15s',
           '&:hover': { borderColor: alpha(cfg.color, 0.3) },
@@ -701,13 +701,13 @@ const PipelinesPage: React.FC = () => {
             <Skeleton variant="text" width={80} height={20} sx={{ mb: 2 }} />
             <Stack spacing={2}>
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} variant="rounded" height={100} sx={{ borderRadius: 3 }} />
+                <Skeleton key={i} variant="rounded" height={100} sx={{ borderRadius: '12px' }} />
               ))}
             </Stack>
           </Grid>
           <Grid size={{ xs: 12, md: 7 }}>
             <Skeleton variant="text" width={120} height={20} sx={{ mb: 2 }} />
-            <Skeleton variant="rounded" height={280} sx={{ borderRadius: 3 }} />
+            <Skeleton variant="rounded" height={280} sx={{ borderRadius: '12px' }} />
           </Grid>
         </Grid>
       ) : (
@@ -795,7 +795,7 @@ const PipelinesPage: React.FC = () => {
             {eventsLoading ? (
               <Stack spacing={1}>
                 {[1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} variant="rounded" height={56} sx={{ borderRadius: 2 }} />
+                  <Skeleton key={i} variant="rounded" height={56} sx={{ borderRadius: '8px' }} />
                 ))}
               </Stack>
             ) : eventsPage.items.length === 0 ? (
@@ -1164,7 +1164,7 @@ const PipelineDetailContent: React.FC<{
 
           {/* Source / Destination display */}
           {(srcLabel || dstLabel) && (
-            <Box sx={{ p: 1.5, borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}>
+            <Box sx={{ p: 1.5, borderRadius: '8px', border: `1px solid ${theme.palette.divider}` }}>
               <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
                 {srcLabel && (
                   <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -1199,7 +1199,7 @@ const PipelineDetailContent: React.FC<{
               <Box
                 sx={{
                   p: 2,
-                  borderRadius: 2,
+                  borderRadius: '8px',
                   background: alpha(theme.palette.text.primary, 0.03),
                   border: `1px solid ${theme.palette.divider}`,
                   overflow: 'auto',
@@ -1243,7 +1243,7 @@ const PipelineDetailContent: React.FC<{
                           alignItems: 'center',
                           gap: 1.5,
                           p: 1.5,
-                          borderRadius: 2,
+                          borderRadius: '8px',
                           border: `1px solid ${theme.palette.divider}`,
                         }}
                       >

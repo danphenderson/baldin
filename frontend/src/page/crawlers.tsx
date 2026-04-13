@@ -399,7 +399,7 @@ const CrawlerPipelineCard: React.FC<{
                       gap: 1.5,
                       px: 1.5,
                       py: 1,
-                      borderRadius: 1.5,
+                      borderRadius: '6px',
                       border: `1px solid ${theme.palette.divider}`,
                     }}
                   >

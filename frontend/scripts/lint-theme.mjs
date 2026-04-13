@@ -13,6 +13,7 @@ const THEME_FILE_RE = /\.[jt]sx?$/;
 const HEX_RE = /#[0-9a-fA-F]{3,8}\b/g;
 const GRADIENT_RE = /\b(?:linear|radial)-gradient\(/g;
 const RAW_FONT_FAMILY_RE = /fontFamily\s*[:=]\s*(['"`]).+?\1/g;
+const RAW_BORDER_RADIUS_RE = /\bborderRadius\s*:\s*(\d+(?:\.\d+)?)\b/g;
 
 const TOKENS_PREFIX = 'design-system/tokens/';
 const THEME_PREFIX = 'design-system/theme/';
@@ -59,6 +60,10 @@ function shouldAllowGradient(relPath) {
 
 function shouldAllowFont(relPath) {
   return RAW_FONT_ALLOWLIST_FILES.has(relPath) || isTestFile(relPath);
+}
+
+function shouldAllowNumericBorderRadius(relPath) {
+  return relPath.startsWith(TOKENS_PREFIX) || relPath.startsWith(THEME_PREFIX) || isTestFile(relPath);
 }
 
 function isLegacySharedPath(relPath) {
@@ -188,6 +193,23 @@ export function lintFileContent({ relPath, content, addedLegacyPaths = new Set()
             relPath,
             lineNumber,
             `Raw fontFamily override ${match[0]} is not allowed here; use design-system typography tokens.`,
+          ),
+        );
+      }
+    }
+
+    if (!shouldAllowNumericBorderRadius(relPath)) {
+      for (const match of line.matchAll(RAW_BORDER_RADIUS_RE)) {
+        if (match[1] === '0') {
+          continue;
+        }
+
+        violations.push(
+          makeViolation(
+            'no-numeric-border-radius',
+            relPath,
+            lineNumber,
+            `Numeric borderRadius ${match[1]} is not allowed here; use toRadiusPx(...), an explicit pixel string, or a percentage radius.`,
           ),
         );
       }

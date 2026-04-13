@@ -38,6 +38,56 @@ describe('lint-theme', () => {
     expect(violations).toHaveLength(0);
   });
 
+  it('flags non-zero numeric borderRadius outside the theme and token layers', () => {
+    const violations = lintFileContent({
+      relPath: 'page/login.tsx',
+      content: 'const style = { borderRadius: 2 };',
+    });
+
+    expect(violations.map((violation) => violation.rule)).toContain('no-numeric-border-radius');
+  });
+
+  it('allows zero-valued numeric borderRadius for flat surfaces', () => {
+    const violations = lintFileContent({
+      relPath: 'layout/home-layout.tsx',
+      content: 'const style = { borderRadius: 0 };',
+    });
+
+    expect(violations).toHaveLength(0);
+  });
+
+  it('allows explicit pixel string borderRadius values in feature code', () => {
+    const violations = lintFileContent({
+      relPath: 'page/login.tsx',
+      content: "const style = { borderRadius: '12px' };",
+    });
+
+    expect(violations).toHaveLength(0);
+  });
+
+  it('allows percentage borderRadius values for circles', () => {
+    const violations = lintFileContent({
+      relPath: 'page/dashboard.tsx',
+      content: "const style = { borderRadius: '50%' };",
+    });
+
+    expect(violations).toHaveLength(0);
+  });
+
+  it('allows toRadiusPx(...) in feature code and numeric radii in the theme layer', () => {
+    const featureViolations = lintFileContent({
+      relPath: 'page/dashboard.tsx',
+      content: 'const style = { borderRadius: toRadiusPx(radiusTokens.lg) };',
+    });
+    const themeViolations = lintFileContent({
+      relPath: 'design-system/theme/components.ts',
+      content: 'const style = { borderRadius: 2 };',
+    });
+
+    expect(featureViolations).toHaveLength(0);
+    expect(themeViolations).toHaveLength(0);
+  });
+
   it('flags new legacy shared files that are not re-export shims', () => {
     const violations = lintFileContent({
       relPath: 'component/common/new-banner.tsx',

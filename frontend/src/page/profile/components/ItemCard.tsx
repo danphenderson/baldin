@@ -19,7 +19,7 @@ export const ItemCard: React.FC<{
       {...stagger}
       transition={{ duration: 0.22 }}
       sx={{
-        p: 2.5, borderRadius: 2.5,
+        p: 2.5, borderRadius: '10px',
         border: `1px solid ${theme.palette.divider}`,
         '&:hover': { borderColor: alpha(theme.palette.primary.main, 0.3), bgcolor: alpha(theme.palette.primary.main, 0.02) },
         transition: 'border-color 0.2s, background-color 0.2s',

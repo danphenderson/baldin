@@ -65,31 +65,47 @@ export function mutedGradient(theme: Theme, opacity = ALPHA_ACTIVE): string {
 }
 
 export function cardSurfaceGradient(theme: Theme, angle = 135): string {
+  const raised = theme.baldin?.surface.raised ?? theme.palette.background.paper;
+  const overlay = theme.baldin?.surface.overlay ?? theme.palette.background.paper;
+  const base = theme.baldin?.surface.base ?? theme.palette.background.paper;
+
   if (theme.palette.mode === 'dark') {
-    return `linear-gradient(${angle}deg, ${alpha(theme.palette.background.paper, 0.8)} 0%, ${alpha(theme.palette.background.paper, 0.95)} 100%)`;
+    return `linear-gradient(${angle}deg, ${alpha(overlay, 0.92)} 0%, ${alpha(raised, 0.98)} 100%)`;
   }
 
-  return theme.palette.background.paper;
+  return `linear-gradient(${angle}deg, ${alpha(raised, 0.98)} 0%, ${alpha(base, 0.98)} 100%)`;
 }
 
 export function sidebarGradient(theme: Theme): string {
+  const surface = theme.baldin?.surface;
+
   if (theme.palette.mode === 'dark') {
-    const top = alpha(theme.palette.background.paper, 0.95);
-    const bottom = theme.palette.background.default;
+    const top = alpha(surface?.base ?? theme.palette.background.paper, 0.98);
+    const bottom = surface?.canvas ?? theme.palette.background.default;
     return `linear-gradient(180deg, ${top} 0%, ${bottom} 100%)`;
   }
-  return theme.palette.background.paper;
+
+  const top = alpha(surface?.raised ?? theme.palette.background.paper, 0.98);
+  const bottom = surface?.base ?? theme.palette.background.default;
+  return `linear-gradient(180deg, ${top} 0%, ${bottom} 100%)`;
 }
 
 export function authBackgroundGradient(theme: Theme): string {
+  const surface = theme.baldin?.surface;
+
   if (theme.palette.mode === 'dark') {
     return [
-      `radial-gradient(ellipse at 20% 50%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%)`,
-      `radial-gradient(ellipse at 80% 20%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%)`,
-      theme.palette.background.default,
+      `radial-gradient(ellipse at 20% 40%, ${alpha(theme.palette.primary.dark, 0.22)} 0%, transparent 54%)`,
+      `radial-gradient(ellipse at 80% 10%, ${alpha(theme.palette.secondary.main, 0.16)} 0%, transparent 48%)`,
+      surface?.canvas ?? theme.palette.background.default,
     ].join(', ');
   }
-  return theme.palette.background.default;
+
+  return [
+    `radial-gradient(ellipse at 10% 20%, ${alpha(theme.palette.primary.light, 0.12)} 0%, transparent 52%)`,
+    `radial-gradient(ellipse at 90% 0%, ${alpha(theme.palette.secondary.light, 0.10)} 0%, transparent 44%)`,
+    surface?.canvas ?? theme.palette.background.default,
+  ].join(', ');
 }
 
 export function accentGradient(
@@ -115,4 +131,8 @@ export function accentGradient(
 
 export function progressGradient(color: string, angle = 90): string {
   return `linear-gradient(${angle}deg, ${alpha(color, 0.68)} 0%, ${color} 100%)`;
+}
+
+export function stateOverlay(fill: string): string {
+  return `linear-gradient(0deg, ${fill}, ${fill})`;
 }

@@ -76,7 +76,7 @@ const ChatThread: React.FC<ChatThreadProps> = ({
           position: 'absolute',
           right: 16,
           bottom: 12,
-          borderRadius: 999,
+          borderRadius: '999px',
           boxShadow: 2,
         }}
       >

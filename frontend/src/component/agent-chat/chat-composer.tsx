@@ -125,7 +125,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
           sx={{
             border: '1px solid',
             borderColor: 'divider',
-            borderRadius: 3,
+            borderRadius: '12px',
             px: 1.5,
             py: 1.25,
             bgcolor: 'background.default',

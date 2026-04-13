@@ -176,7 +176,7 @@ const ChatMessageBubble: React.FC<ChatMessageBubbleProps> = ({ message }) => {
               py: 1.2,
               bgcolor: bubbleColor,
               color: textColor,
-              borderRadius: 3,
+              borderRadius: '12px',
               borderTopRightRadius: isUser ? 1 : 3,
               borderTopLeftRadius: isUser ? 3 : 1,
             }}

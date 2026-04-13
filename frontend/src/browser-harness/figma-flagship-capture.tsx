@@ -274,7 +274,7 @@ function SuggestedAspirationCard({ suggestion }: { suggestion: AspirationSuggest
       <Stack spacing={1.25}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
           <CardTitle sx={{ minWidth: 0 }}>{suggestion.label}</CardTitle>
-          <StatusChip label="Suggested" variant="outlined" color="primary" />
+          <StatusChip label="Suggested" emphasis="outline" tone="primary" />
         </Box>
 
         {suggestion.reason && (
@@ -333,7 +333,7 @@ export const AspirationsCaptureScreen: React.FC<{
           <Grid container spacing={2} sx={{ mt: 2 }}>
             {Array.from({ length: 4 }).map((_, i) => (
               <Grid size={{ xs: 12, md: 6 }} key={i}>
-                <Skeleton variant="rounded" height={120} sx={{ borderRadius: 3 }} />
+                <Skeleton variant="rounded" height={120} sx={{ borderRadius: '12px' }} />
               </Grid>
             ))}
           </Grid>

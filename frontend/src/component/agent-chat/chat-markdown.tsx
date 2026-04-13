@@ -11,7 +11,7 @@ export interface ChatMarkdownProps {
 const inlineCodeSx = {
   px: 0.5,
   py: 0.1,
-  borderRadius: 1,
+  borderRadius: '4px',
   bgcolor: 'action.hover',
   fontFamily: monoFontFamily,
   fontSize: '0.85em',
@@ -24,7 +24,7 @@ const ChatMarkdown: React.FC<ChatMarkdownProps> = ({ children, color = 'inherit'
       '& pre': {
         overflowX: 'auto',
         p: 1.5,
-        borderRadius: 2,
+        borderRadius: '8px',
         bgcolor: 'rgba(15, 23, 42, 0.08)',
         fontSize: '0.85rem',
         lineHeight: 1.5,

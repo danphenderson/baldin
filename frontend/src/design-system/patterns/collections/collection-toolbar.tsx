@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Stack, type SxProps, type Theme } from '@mui/material';
+import { toSpacingPx } from '../../tokens/spacing';
 
 export interface CollectionToolbarProps {
   search?: React.ReactNode;
@@ -18,7 +19,13 @@ export const CollectionToolbar: React.FC<CollectionToolbarProps> = ({
 }) => (
   <Stack
     spacing={secondary ? 1.5 : 0}
-    sx={sx}
+    sx={[
+      {
+        px: { xs: 0, md: toSpacingPx(0.5) },
+        py: toSpacingPx(0.5),
+      },
+      ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+    ]}
   >
     <Stack
       direction={{ xs: 'column', md: 'row' }}

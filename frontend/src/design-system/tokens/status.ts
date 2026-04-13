@@ -77,7 +77,13 @@ export function getStatusColors(theme: Theme) {
   const status = getStatusTokens(theme);
 
   return {
+    neutral: theme.palette.text.secondary,
     primary: theme.palette.primary.main,
+    secondary: theme.palette.secondary.main,
+    success: theme.palette.success.main,
+    warning: theme.palette.warning.main,
+    danger: theme.palette.error.main,
+    info: theme.palette.info.main,
     registered: status.application.registered,
     applied: status.application.applied,
     screening: status.application.screening,
@@ -85,7 +91,6 @@ export function getStatusColors(theme: Theme) {
     offer: status.application.offer,
     rejected: status.application.rejected,
     withdrawn: status.application.withdrawn,
-    success: status.workflow.success,
     failure: status.workflow.failure,
     pending: status.workflow.pending,
     running: status.workflow.running,

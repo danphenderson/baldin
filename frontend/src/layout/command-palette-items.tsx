@@ -87,6 +87,7 @@ const secondaryPathIcons: Record<string, ReactNode> = {
   '/leads/companies': <CompaniesIcon fontSize="small" />,
   '/applications/board': <ApplicationsIcon fontSize="small" />,
   '/workflows/extractors': <ExtractorIcon fontSize="small" />,
+  '/workflows/db-management': <WorkflowsIcon fontSize="small" />,
   '/workflows/review': <WorkflowsIcon fontSize="small" />,
   '/workflows/crawlers': <WorkflowsIcon fontSize="small" />,
 };

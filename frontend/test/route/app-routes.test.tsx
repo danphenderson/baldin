@@ -47,6 +47,9 @@ vi.mock('@/page/pipelines', () => ({
 vi.mock('@/page/extractor', () => ({
   default: () => <div data-testid="page-extractor">Extractor</div>,
 }));
+vi.mock('@/page/db-management', () => ({
+  default: () => <div data-testid="page-db-management">DB Management</div>,
+}));
 vi.mock('@/page/directory', () => ({
   default: () => <div data-testid="page-discover">Discover</div>,
 }));
@@ -178,14 +181,18 @@ vi.mock('@/layout/settings-group-layout', () => ({
 
 function renderRoutes(
   initialPath: string,
-  auth: { token: string | null; loading: boolean } = { token: 'test-token', loading: false },
+  auth: { token: string | null; loading: boolean; isSuperuser?: boolean } = {
+    token: 'test-token',
+    loading: false,
+    isSuperuser: false,
+  },
 ) {
   return render(
     <ToolbarHeaderContext.Provider value={vi.fn()}>
       <UserContext.Provider
         value={{
           user: auth.token
-            ? ({ id: 'u1', first_name: 'Jane', is_superuser: false } as never)
+            ? ({ id: 'u1', first_name: 'Jane', is_superuser: auth.isSuperuser ?? false } as never)
             : null,
           setUser: vi.fn(),
           token: auth.token,
@@ -298,6 +305,16 @@ describe('AppRoutes', () => {
   it('renders subscription page for /settings/subscription when authenticated', async () => {
     renderRoutes('/settings/subscription');
     expect(await screen.findByTestId('page-settings-subscription')).toBeInTheDocument();
+  });
+
+  it('renders db-management for superusers on /workflows/db-management', async () => {
+    renderRoutes('/workflows/db-management', { token: 'test-token', loading: false, isSuperuser: true });
+    expect(await screen.findByTestId('page-db-management')).toBeInTheDocument();
+  });
+
+  it('redirects non-superusers away from /workflows/db-management', async () => {
+    renderRoutes('/workflows/db-management');
+    expect(await screen.findByTestId('page-pipelines')).toBeInTheDocument();
   });
 
   /* ── Legacy redirects ── */

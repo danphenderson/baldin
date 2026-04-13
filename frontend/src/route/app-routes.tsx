@@ -31,6 +31,7 @@ const ProfilePage = React.lazy(() => import('../page/profile/index'));
 const PipelinesPage = React.lazy(() => import('../page/pipelines'));
 const CompaniesPage = React.lazy(() => import('../page/companies'));
 const ExtractorPage = React.lazy(() => import('../page/extractor'));
+const DbManagementPage = React.lazy(() => import('../page/db-management'));
 const DiscoverPage = React.lazy(() => import('../page/directory'));
 const UserProfilePage = React.lazy(() => import('../page/user-profile'));
 const ConnectionsPage = React.lazy(() => import('../page/connections'));
@@ -117,6 +118,7 @@ const AppRoutes: React.FC = () => {
           <Route path="workflows" element={<WorkflowsGroupLayout />}>
             <Route index element={<PipelinesPage />} />
             <Route path="extractors" element={<ExtractorPage />} />
+            <Route path="db-management" element={<SuperuserRoute><DbManagementPage /></SuperuserRoute>} />
             <Route path="review" element={<SuperuserRoute><ReviewQueuePage /></SuperuserRoute>} />
             <Route path="crawlers" element={<SuperuserRoute><CrawlersPage /></SuperuserRoute>} />
           </Route>

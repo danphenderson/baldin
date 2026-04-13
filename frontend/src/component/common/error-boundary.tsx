@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, Button } from '@mui/material';
 import { ErrorOutline as ErrorIcon } from '@mui/icons-material';
 import { monoFontFamily } from '../../design-system/tokens/typography';
-import { brandGradient } from '../../theme/effects';
+import { brandGradient } from '../../design-system';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;

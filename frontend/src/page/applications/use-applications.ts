@@ -4,7 +4,7 @@ import {
   getApplications, updateApplication, deleteApplication,
   type ApplicationRead, type ApplicationUpdate,
 } from '../../service/applications';
-import { getStatusColors } from '../../theme/status-colors';
+import { getStatusColors } from '../../design-system';
 
 /* ------------------------------------------------------------------ */
 /*  Pipeline stage columns (progression only — no terminal outcomes)   */

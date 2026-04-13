@@ -3,16 +3,9 @@ import {
   Avatar,
   Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   CircularProgress,
   Collapse,
-  Dialog,
-  DialogActions,
-  DialogContent,
   DialogContentText,
-  DialogTitle,
   IconButton,
   Snackbar,
   Alert,
@@ -21,6 +14,15 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import {
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogActions as DialogActions,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogTitle as DialogTitle,
+} from '../../design-system';
 import {
   ArrowBack as ArrowBackIcon,
   Delete as DeleteIcon,
@@ -227,7 +229,11 @@ const ConversationDetailPage: React.FC = () => {
         )}
         {isGroup && (
           <Tooltip title={showParticipants ? 'Hide participants' : 'Show participants'}>
-            <IconButton size="small" onClick={() => setShowParticipants((v) => !v)}>
+            <IconButton
+              size="small"
+              onClick={() => setShowParticipants((v) => !v)}
+              aria-label={showParticipants ? 'Hide participants' : 'Show participants'}
+            >
               {showParticipants ? <ExpandLessIcon /> : <ExpandMoreIcon />}
               <GroupIcon sx={{ ml: 0.5 }} fontSize="small" />
             </IconButton>
@@ -366,12 +372,13 @@ const ConversationDetailPage: React.FC = () => {
                             <IconButton
                               size="small"
                               onClick={() => { setEditingId(msg.id); setEditContent(msg.content); }}
+                              aria-label="Edit message"
                             >
                               <EditIcon sx={{ fontSize: 14 }} />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Delete">
-                            <IconButton size="small" onClick={() => setDeleteTarget(msg.id)}>
+                            <IconButton size="small" onClick={() => setDeleteTarget(msg.id)} aria-label="Delete message">
                               <DeleteIcon sx={{ fontSize: 14 }} />
                             </IconButton>
                           </Tooltip>

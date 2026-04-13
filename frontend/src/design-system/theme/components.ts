@@ -1,6 +1,12 @@
 import { alpha, type Components, type Theme } from '@mui/material/styles';
-import { cardSurfaceGradient } from '../tokens/effects';
+import { brandGradient, brandHoverGradient, cardSurfaceGradient } from '../tokens/effects';
 import { getColorTokens } from '../tokens/color';
+
+declare module '@mui/material/Button' {
+  interface ButtonPropsVariantOverrides {
+    brand: true;
+  }
+}
 
 export function getComponentOverrides(theme: Theme): Components<Theme> {
   const colors = getColorTokens(theme.palette.mode);
@@ -71,6 +77,30 @@ export function getComponentOverrides(theme: Theme): Components<Theme> {
           },
         },
       },
+      variants: [
+        {
+          props: { variant: 'brand' },
+          style: {
+            color: theme.palette.common.white,
+            background: brandGradient(theme),
+            boxShadow: elevation.interactive(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.34 : 0.24),
+            '&:hover': {
+              background: brandHoverGradient(theme),
+              boxShadow: elevation.interactive(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.42 : 0.3),
+            },
+            '&:active': {
+              transform: 'translateY(1px)',
+            },
+            '&.Mui-disabled': {
+              color: alpha(theme.palette.common.white, theme.palette.mode === 'dark' ? 0.7 : 0.78),
+              boxShadow: 'none',
+            },
+            '&.Mui-focusVisible': {
+              boxShadow: `0 0 0 4px ${state.focusRing}`,
+            },
+          },
+        },
+      ],
     },
     MuiButtonBase: {
       styleOverrides: {

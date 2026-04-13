@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { NodeViewWrapper } from '@tiptap/react';
+import {
+  NodeViewWrapper } from '@tiptap/react';
 import type { NodeViewProps } from '@tiptap/react';
 import {
   Box,
   Button,
-  Chip,
   Paper,
   Stack,
   TextField,
@@ -12,6 +12,7 @@ import {
   alpha,
   useTheme,
 } from '@mui/material';
+import { StatusChip as Chip } from '../../../design-system';
 import { SmartToyOutlined as AgentIcon } from '@mui/icons-material';
 
 import type {

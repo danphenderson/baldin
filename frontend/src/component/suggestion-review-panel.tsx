@@ -9,8 +9,7 @@ import {
   CheckCircle as AcceptAllIcon,
   Close as DiscardIcon,
 } from '@mui/icons-material';
-import { CardShell, InlineFeedback, StatusChip } from '../design-system';
-import { CardTitle, Caption } from './common/text';
+import { Caption, CardShell, CardTitle, InlineFeedback, StatusChip } from '../design-system';
 import {
   AspirationServiceError,
   type AspirationAdapter,

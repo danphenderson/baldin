@@ -5,13 +5,13 @@ title: Frontend Design System
 description: Shipped frontend design-system architecture, theme contract, ownership boundaries, and compatibility rules.
 ---
 
-<!-- last-verified: 2026-04-12 -->
+<!-- last-verified: 2026-04-13 -->
 
 # Frontend Design System
 
-Baldin's frontend design system is a thin shared UI layer over MUI, not a separate component framework or redesign. It formalizes the Phase 1 theme and token foundation, adds the small Phase 2 primitive and pattern layer that now exists, and leaves product behavior inside feature code.
+Baldin's frontend design system is the canonical shared UI layer for the frontend. `frontend/src/design-system/*` owns shared tokens, shared theme contracts, domain-neutral primitives, and slot-based patterns. Feature folders keep workflow logic, service calls, route copy, and entity rendering.
 
-Use this page for structure and ownership. Use [Design System Catalog](../reference/design-system-catalog.md) for the current inventory, [Design System Governance](../engineering/design-system-governance.md) for the operating rules, [Design System Workflow](../engineering/design-system-workflow.md) for contribution flow, and [Design System Migration Guide](../engineering/design-system-migration-guide.md) for rollout status.
+Use this page for structure and ownership. Use [Design System Catalog](../reference/design-system-catalog.md) for the current inventory, [Design System Governance](../engineering/design-system-governance.md) for operating rules, [Design System Workflow](../engineering/design-system-workflow.md) for day-to-day contribution flow, and [Design System Migration Guide](../engineering/design-system-migration-guide.md) for the current rollout ledger.
 
 ## Current Source Layout
 
@@ -24,16 +24,17 @@ frontend/src/
 │   ├── patterns/
 │   └── index.ts
 ├── theme/
-│   ├── theme-provider.tsx
-│   ├── effects.ts
-│   └── status-colors.ts
+│   └── theme-provider.tsx
 ├── component/common/
-└── component/auth/
+│   ├── empty-state.tsx
+│   ├── confirm-dialog.tsx
+│   └── text.tsx
+└── page/** and component/**
 ```
 
 The active app entrypoint is `frontend/src/theme/theme-provider.tsx`. It imports `createBaldinTheme`, `DEFAULT_THEME_MODE`, `parseThemeMode`, `THEME_STORAGE_KEY`, and `toggleThemeMode` from `frontend/src/design-system/theme/*`, then passes the resulting theme into MUI's `ThemeProvider`.
 
-`frontend/src/theme/effects.ts` and `frontend/src/theme/status-colors.ts` remain as compatibility re-export shims over the canonical token layer.
+Legacy theme shims at `frontend/src/theme/effects.ts` and `frontend/src/theme/status-colors.ts` have been removed. Any shared token or status helper import now comes directly from `frontend/src/design-system/*`.
 
 ## Theme Contract
 
@@ -46,7 +47,9 @@ Baldin uses two theme-access paths on purpose.
 
 Use `theme.palette.*` when the value already fits MUI's semantic palette. Use `theme.baldin.*` when the value is Baldin-specific and does not belong in the MUI palette model.
 
-### Spacing Compatibility Caveat
+Component overrides also carry a small set of canonical interaction patterns. `MuiButton` exposes a `brand` variant for the shared gradient CTA treatment, so feature code does not need to restyle primary buttons locally.
+
+### Spacing compatibility caveat
 
 Phase 1 intentionally left MUI spacing compatibility in place. `createBaldinTheme()` does not override MUI's `spacing` option, so:
 
@@ -55,54 +58,27 @@ Phase 1 intentionally left MUI spacing compatibility in place. `createBaldinThem
 
 New shared UI under `frontend/src/design-system/*` should use `spacingTokens` and `toSpacingPx(...)`. Existing feature code can keep using `theme.spacing()` until that surface is intentionally migrated.
 
-## Status Usage Hierarchy
-
-Status color is accessible through five paths. The decision tree below specifies the preferred order so contributors do not create parallel conventions.
-
-```text
-Need a status-colored chip?
-  └─ YES → use StatusChip from design-system/primitives/status/status-chip.tsx
-Need status-colored metadata text (label, date, icon)?
-  └─ YES → use getStatusMetaSx() from design-system/primitives/status/helpers.ts
-Need a custom status-styled surface (not a chip or text)?
-  └─ YES → use getStatusChipSx() or resolveStatusColor() from design-system/primitives/status/helpers.ts
-Need a raw status color value in new shared UI?
-  └─ YES → use theme.baldin.status.* (the theme augmentation)
-None of the above?
-  └─ Use theme.palette.success / warning / error / info for generic semantic feedback
-```
-
-### Path reference
-
-| Path | Location | Use it for | Do not use it for |
-| --- | --- | --- | --- |
-| `StatusChip` | `design-system/primitives/status/status-chip.tsx` | Any MUI `Chip`-shaped status indicator. Semantic tone keys now include shared status tokens plus `primary` for non-domain accent chips and Figma mappings. | Custom surfaces that are not chips |
-| `getStatusChipSx` / `getStatusMetaSx` | `design-system/primitives/status/helpers.ts` | Applying token-backed status color to custom elements or metadata text | Replacing `StatusChip` when a chip is the right primitive |
-| `theme.baldin.status.*` | `design-system/theme/mui-augmentations.d.ts` | Reading raw status color tokens inside new shared design-system code | Feature code that can use the helpers above instead |
-| `theme/status-colors.ts` | `frontend/src/theme/status-colors.ts` | **Compatibility only** — existing feature imports that have not migrated yet | New code; migrate to `design-system/tokens/status.ts` or the helpers above |
-| `design-system/tokens/status.ts` | `frontend/src/design-system/tokens/status.ts` | Authoring new status helpers or extending the token map itself | Feature code that already has a higher-level helper available |
-
 ## Layer Contract
 
 | Layer | Location | Owns | Must not own |
 | --- | --- | --- | --- |
-| Tokens | `frontend/src/design-system/tokens/*` | Spacing, radius, elevation, motion, typography, palette helpers, status color mappings | Route copy, feature semantics, service imports |
-| Theme | `frontend/src/design-system/theme/*` | MUI palette, typography, shape, component overrides, `theme.baldin` extensions, theme-mode parsing/toggling | Feature UI, route logic, API contracts |
-| Primitives | `frontend/src/design-system/primitives/*` | Domain-neutral feedback, surfaces, status presentation, shared interaction behavior | Service calls, entity-specific props, route-specific copy |
-| Patterns | `frontend/src/design-system/patterns/*` | Slot-based structural composition over primitives | Business workflows, domain data shaping |
-| Compatibility shims and wrappers | `frontend/src/theme/*`, `frontend/src/component/common/*`, and a few feature-local adapters | Backward-compatible imports, prop translation, and migration safety | New shared abstractions or new shared logic |
-| Feature code | `frontend/src/page/**`, feature components under `frontend/src/component/**` | Product copy, service usage, route types, workflow state, entity-specific rendering | New domain-neutral shared infrastructure |
+| Tokens | `frontend/src/design-system/tokens/*` | Spacing, radius, elevation, motion, typography, palette helpers, status mappings | Route copy, feature semantics, service imports |
+| Theme | `frontend/src/design-system/theme/*` | MUI palette, typography, shape, component overrides, `theme.baldin` extensions, theme-mode parsing and toggling | Feature UI, route logic, API contracts |
+| Primitives | `frontend/src/design-system/primitives/*` | Domain-neutral typography, feedback, surfaces, status presentation, shared interaction behavior | Service calls, entity-specific props, route-specific copy |
+| Patterns | `frontend/src/design-system/patterns/*` | Slot-based structure over primitives | Business workflows, domain data shaping |
+| Compatibility shims | `frontend/src/component/common/*` and a few feature-local adapters | Import preservation only when needed during migration | New shared abstractions or new shared logic |
+| Feature code | `frontend/src/page/**`, feature components under `frontend/src/component/**` | Product copy, service usage, route state, workflow behavior, entity rendering | New domain-neutral shared infrastructure |
 
-## Shared Surface That Exists Now
+## Canonical Shared Surface
 
-The current shared layer is intentionally small.
+The shared layer is still intentionally narrow, but it is now the sole canonical source for shared frontend UI.
 
 | Shared area | Shipped exports |
 | --- | --- |
 | Tokens | `color`, `effects`, `elevation`, `motion`, `radius`, `spacing`, `status`, `typography` |
 | Theme | `createBaldinTheme`, palette helpers, typography helpers, shape helpers, MUI overrides, theme-mode helpers, JSON tree adapter |
-| Primitives | `EmptyState`, `InlineFeedback`, `LoadingState`, `StatusChip`, `getStatusChipSx`, `getStatusMetaSx`, `CardShell`, `FormDialogShell`, `SectionHeader` |
-| Patterns | `CollectionToolbar`, `MetricStrip`, `SectionCard` |
+| Primitives | `PageTitle`, `SectionTitle`, `CardTitle`, `Label`, `Caption`, `Overline`, `Mono`, `EmptyState`, `InlineFeedback`, `LoadingState`, `StatusChip`, `getStatusChipSx`, `getStatusMetaSx`, `CardShell`, `SurfaceCard`, `SurfaceDialog`, `ConfirmDialog`, `FormDialogShell`, `SectionHeader` |
+| Patterns | `CollectionToolbar`, `MetricStrip`, `SectionCard`, `AuthPanel` |
 
 Everything is re-exported through `frontend/src/design-system/index.ts`.
 
@@ -110,121 +86,60 @@ Everything is re-exported through `frontend/src/design-system/index.ts`.
 
 Current boundary:
 
-- A primitive is a domain-neutral leaf or shell such as `EmptyState`, `InlineFeedback`, `CardShell`, `FormDialogShell`, or `StatusChip`.
-- A pattern is slot-based structure over primitives, such as `CollectionToolbar` or `SectionCard`.
+- A primitive is a domain-neutral leaf or shell such as `PageTitle`, `EmptyState`, `SurfaceDialog`, `CardShell`, or `StatusChip`.
+- A pattern is slot-based structure over primitives, such as `CollectionToolbar`, `SectionCard`, `MetricStrip`, or `AuthPanel`.
 - A feature-owned component still owns workflow logic, data shaping, route copy, or entity semantics even when it renders inside a primitive or pattern.
 
-Examples that are still feature-owned today:
+Examples that remain feature-owned:
 
-- Leads still own `LeadModal`, extraction flow, and lead-specific CTA and status semantics.
-- Applications queue still owns stage semantics, row-card content, next-step behavior, and its local summary strip.
-- Profile still owns `ProfileHero`, `ProfileBuilderPanel`, `DocumentsSummary`, `MFASetupCard`, field schemas, and record rendering.
-- Conversations still own participant display, row layout, and navigation behavior.
-- Agents still own `kind` mapping and enable and disable behavior.
-
-## What Stays Feature-Owned
-
-The design system stops at neutral structure and presentation. These remain feature-owned today:
-
-- Leads: extraction bar, lead modal flow, lead-specific CTA and status choices, service integration.
-- Applications queue: stage semantics, filter behavior, row content, next-step behavior, local summary strip.
-- Profile: hero, builder panel, document summary, MFA setup, section field config, record rendering.
-- Conversations: participant display, row layout, navigation behavior.
-- Agents: `kind` mapping and enable and disable behavior.
-- Applications board, auth, dashboard, documents, crawlers, pipelines, and editor surfaces: `adopting` or `not-started` in the shared layer (see the [Route-Family Adoption Ledger](../reference/design-system-catalog.md#route-family-adoption-ledger)).
+- Leads still own extraction flow, ranking behavior, and lead-specific CTA and status semantics.
+- Applications still own stage semantics, row-card content, next-step behavior, and document workflows.
+- Profile still owns builder logic, field schemas, record rendering, and AI-assisted editing behavior.
+- Conversations still own participant display, row layout, and message workflow.
+- Agents still own `kind` mapping, orchestration behavior, and execution state.
 
 ## Compatibility Boundary
 
-`frontend/src/component/common/*` and `frontend/src/component/auth/*` are compatibility-only legacy locations, not destinations for new shared UI.
+`frontend/src/component/common/*` is a legacy compatibility location, not a destination for new shared UI.
 
 Current compatibility behavior:
 
-- `component/common/empty-state.tsx` adapts legacy `action` props to design-system `primaryAction`.
-- `component/common/confirm-dialog.tsx` composes `FormDialogShell` and still owns compatibility-only confirm framing through a `destructive` toggle.
-- `component/common/alert.tsx` and `component/common/error-message.tsx` wrap `InlineFeedback`.
-- `theme/effects.ts` and `theme/status-colors.ts` preserve older imports by re-exporting design-system token helpers.
+- `page/profile/components/EmptyState.tsx` remains a feature-local adapter because it keeps profile-specific copy local.
+- `component/lead-search-bar.tsx` remains a feature-local adapter because it keeps leads-specific search and pagination composition local.
 
-These wrappers and shims are allowed to translate prop shapes or preserve legacy call sites. They should stay thin. If a new shared primitive is needed, add it under `frontend/src/design-system/*` and only backfill a wrapper when compatibility is required.
+Legacy `component/common/*` re-export shims, `component/auth/*` shared wrappers, and the theme re-export shims have all been removed. New shared logic must not start in any compatibility location.
 
-## Quick-Reference Governance And Migration Summary
-
-This section provides the minimum-safe governance and migration context for standalone use. The full companion docs remain authoritative when more detail is needed.
-
-### Promotion gate
-
-Add shared UI under `frontend/src/design-system/*` only when the surface is domain-neutral, has at least two concrete consumers (or one consumer plus a near-term second), and uses neutral props or slots. Everything else stays feature-owned.
-
-### Compatibility wrapper rule
-
-Wrappers in `component/common/*`, `component/auth/*`, and `theme/*` may only translate old prop shapes or re-export canonical design-system sources. New shared logic must not start there.
-
-### Required docs update
-
-Any change to the shared surface must update the catalog, migration guide, and this page in the same PR. See [Design System Governance](../engineering/design-system-governance.md) for the full reviewer checklist.
-
-### Validation minimum
-
-| Change type | Minimum validation |
-| --- | --- |
-| Shared code | `cd frontend && npm run test` for the touched surface |
-| Exports or types | `cd frontend && ./node_modules/.bin/tsc --noEmit` |
-| Theme or token rules | `cd frontend && npm run lint:theme` |
-| Docs or sidebar | `npm --prefix docs run build` |
-
-### Migration state definitions
-
-See the [Adopted Surfaces](#migrated-surfaces) section below and the [Design System Catalog](../reference/design-system-catalog.md) for the formal route-family ledger and state model.
-
-## Import Rules
+## Import And Enforcement Rules
 
 - New shared UI belongs in `frontend/src/design-system/*`.
-- Feature code may import from `../../design-system` or narrower design-system paths.
-- Design-system code may depend on MUI, generic React state, and neutral helpers only.
-- Design-system code must not import service modules, generated API types, route modules, or domain copy.
-- Compatibility wrappers may import from `frontend/src/design-system/*`, but design-system code must not import back from `component/common/*`.
-- New shared-source growth should not start in `frontend/src/component/common/*` or `frontend/src/component/auth/*`.
+- Feature code may import from the root `design-system` barrel or a narrower canonical design-system path.
+- Feature-local adapters may lightly adapt canonical design-system sources only when they preserve feature-owned copy or composition.
+- Use `styled()` for reusable structure and `sx` for local composition. Shared wrappers should type `sx` as `SxProps<Theme>` when they expose it, and canonical shared surfaces should avoid static `style={{...}}` literals outside explicit runtime-computed escapes.
+- `frontend/scripts/lint-theme.mjs` blocks imports from retired wrapper paths such as `component/common/text`, `component/common/empty-state`, `component/common/confirm-dialog`, and any `component/auth/*` path.
+- `lint:theme` also blocks direct MUI shell imports of `Card`, `CardContent`, `CardHeader`, `CardActions`, `Chip`, `Dialog`, `DialogTitle`, `DialogContent`, and `DialogActions` outside `frontend/src/design-system/*`, tests, and `context/notification-context.tsx`.
+- `lint:theme` prefers modern `slotProps`/`slots` over `InputProps` and `PaperProps` in new shared surfaces; the current shared-surface exceptions remain documented until they are migrated.
 
-## Proved Boundaries
+That enforcement keeps the shared design-system layer canonical without forcing feature-specific behavior into the shared layer.
 
-The current shared APIs have enough real reuse to act as the baseline for adjacent route families:
+## Adopted Route Families
 
-- `CollectionToolbar` is used in leads, applications queue, and conversations.
-- `CardShell` is used in leads, agents, and applications queue row shells.
-- `FormDialogShell` is used in leads, agents, profile, and the compatibility confirm wrapper.
-- `SectionCard` and `SectionHeader` are used in both profile and conversations.
+The current shared APIs are now used across the route families that own shared-eligible shells:
 
-That proof is still intentionally narrow. It does not imply repo-wide replacement of direct MUI `Card`, `Chip`, `Alert`, or dialog usage.
+- Auth: login, registration, and MFA flows use `AuthPanel`, `InlineFeedback`, and shared typography.
+- Applications: queue, board, and detail routes use design-system status, surface, and dialog primitives.
+- Leads: cards, dialogs, search shell, and empty/loading states use canonical shared surfaces.
+- Profile: section framing, dialogs, feedback, hero shells, and summary surfaces use canonical shared surfaces plus documented adapters.
+- Conversations and agent chat: collection chrome, section framing, chips, and supporting dialogs use canonical shared surfaces.
+- Dashboard, documents/editor, workflows/admin, settings, network/discovery, and company surfaces now import overlapping shell UI through `frontend/src/design-system/*` instead of local wrappers or theme shims.
 
-## Migrated Surfaces
-
-Route-family adoption uses three states: `adopted` (all shared-eligible surfaces migrated), `adopting` (migration in progress), and `not-started`. See the [Design System Catalog](../reference/design-system-catalog.md#route-family-adoption-ledger) for the full ledger with per-family shared-piece lists.
-
-### Adopted
-
-- Applications queue: `applications-queue-page.tsx`
-- Profile family: `ProfilePage.tsx`, `ProfileSection.tsx`, `EditDialog.tsx`, `DeleteDialog.tsx`, `EmptyState.tsx`
-- Conversations: `conversations-page.tsx`
-
-### Adopting
-
-- Leads family: `leads.tsx`, `lead-card.tsx`, `lead-form-dialog.tsx`, `lead-search-bar.tsx`
-- Agents: `agent-card.tsx`, `agent-form-dialog.tsx`
-- Pipelines: `pipelines.tsx` (MetricStrip and typography tokens only)
-- Crawlers: `crawlers.tsx` (MetricStrip and typography tokens only)
-- Applications board: `applications-board-page.tsx` (MetricStrip only)
-
-### Not started
-
-- Auth, dashboard, documents, editor surfaces
+See the [Route-Family Adoption Ledger](../reference/design-system-catalog.md#route-family-adoption-ledger) for the current status table.
 
 ## Deferred Architecture Decisions
 
-These were intentionally left out of the current shared layer:
+These remain intentionally deferred:
 
-- No standalone shared `ErrorState`.
-- No applications board extraction into shared patterns.
-- No shared `LeadModal` abstraction.
-- No repo-wide replacement of direct MUI `Alert`, `Chip`, or card usage.
-- No reopening of the Phase 1 theme entrypoints in `frontend/src/theme/*`.
+- No standalone shared `ErrorState` yet.
+- No shared domain abstractions such as `LeadModal`, applications board semantics, or profile-builder logic.
+- No movement of service calls, generated types, or route copy into the design-system layer.
 
 Those deferrals are part of the architecture. They are not gaps in the docs.

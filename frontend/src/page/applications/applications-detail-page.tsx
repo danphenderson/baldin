@@ -1,10 +1,24 @@
 import React, { useContext, useEffect, useState, useCallback } from 'react';
 import {
-  Box, Typography, Chip, Stack, Button, useTheme, alpha,
-  Select, MenuItem, FormControl, InputLabel, IconButton, Tooltip,
-  Skeleton, Alert, LinearProgress, Divider, useMediaQuery,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-} from '@mui/material';
+  Box,
+  Typography,
+  Stack,
+  Button,
+  useTheme,
+  alpha,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  IconButton,
+  Tooltip,
+  Skeleton,
+  Alert,
+  LinearProgress,
+  Divider,
+  useMediaQuery,
+  TextField,
+  } from '@mui/material';
 import {
   ArrowBack as BackIcon,
   Delete as DeleteIcon,
@@ -15,27 +29,44 @@ import {
   OpenInNew as OpenIcon,
   Warning as WarningIcon,
   PlaylistAdd as PlaylistAddIcon,
-} from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
+  } from '@mui/icons-material';
+import { useParams,
+  useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import {
-  getApplication, updateApplication, deleteApplication,
-  getApplicationDocuments, addApplicationDocument, detachApplicationDocument,
+  getApplication,
+  updateApplication,
+  deleteApplication,
+  getApplicationDocuments,
+  addApplicationDocument,
+  detachApplicationDocument,
   type ApplicationDetailRead,
-} from '../../service/applications';
+  } from '../../service/applications';
 import {
-  getDocuments, downloadDocument, generateDocument,
-  type DocumentRead, type DocumentGenerateRequest,
-} from '../../service/documents';
-import { useStageColumns, relativeDate, type Column } from './use-applications';
-import { PageTitle } from '../../component/common/text';
+  getDocuments,
+  downloadDocument,
+  generateDocument,
+  type DocumentRead,
+  type DocumentGenerateRequest,
+  } from '../../service/documents';
+import { useStageColumns,
+  relativeDate,
+  type Column } from './use-applications';
+import { PageTitle,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../../design-system';
 import CreateActionItemDialog from '../../component/create-action-item-dialog';
 import RunAgentMenu from '../../component/run-agent-menu';
 import ChatAgentMenu from '../../component/chat-agent-menu';
 import type { AgentRunRead } from '../../service/agents';
 import type { ActionItemRead, ActionItemCreate } from '../../service/action-items';
 import { AgentEnabledMultilineField } from '../../component/agent-surface';
+import { radiusTokens, toRadiusPx } from '../../design-system/tokens/radius';
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -521,7 +552,7 @@ const ApplicationDetailPage: React.FC = () => {
       {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
       {/* Main content */}
-      <Stack spacing={0} divider={<Divider />} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '12px', overflow: 'hidden', bgcolor: theme.palette.background.paper }}>
+      <Stack spacing={0} divider={<Divider />} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: toRadiusPx(radiusTokens.lg), overflow: 'hidden', bgcolor: theme.palette.background.paper }}>
         {/* -------- Overview -------- */}
         <Box sx={{ px: 3, py: 3 }}>
           <PageTitle gutterBottom>
@@ -748,7 +779,7 @@ const ApplicationDetailPage: React.FC = () => {
                     <Box
                       sx={{
                         border: `1px solid ${alpha(col.color, 0.16)}`,
-                        borderRadius: '10px',
+                        borderRadius: toRadiusPx(radiusTokens.md),
                         px: 2,
                         py: 1.5,
                         bgcolor: alpha(col.color, theme.palette.mode === 'dark' ? 0.08 : 0.04),
@@ -815,7 +846,7 @@ const ApplicationDetailPage: React.FC = () => {
                   key={doc.id}
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1,
-                    borderRadius: '8px', border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: toRadiusPx(radiusTokens.sm), border: `1px solid ${theme.palette.divider}`,
                     bgcolor: alpha(doc.kind === 'resume' ? theme.palette.primary.main : theme.palette.secondary.main, 0.03),
                   }}
                 >
@@ -875,7 +906,7 @@ const ApplicationDetailPage: React.FC = () => {
                   key={r.id}
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1,
-                    borderRadius: '8px', border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: toRadiusPx(radiusTokens.sm), border: `1px solid ${theme.palette.divider}`,
                     bgcolor: alpha(theme.palette.primary.main, 0.03),
                   }}
                 >
@@ -929,7 +960,7 @@ const ApplicationDetailPage: React.FC = () => {
                   key={cl.id}
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1,
-                    borderRadius: '8px', border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: toRadiusPx(radiusTokens.sm), border: `1px solid ${theme.palette.divider}`,
                     bgcolor: alpha(theme.palette.secondary.main, 0.03),
                   }}
                 >

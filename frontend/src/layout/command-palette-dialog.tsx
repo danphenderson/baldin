@@ -1,18 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import {
   Box,
-  Dialog,
-  DialogContent,
   Divider,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  TextField,
   Typography,
   alpha,
 } from '@mui/material';
-import { Search as SearchIcon, KeyboardReturn as EnterIcon } from '@mui/icons-material';
+import { SurfaceDialog as Dialog, SurfaceDialogContent as DialogContent, SearchField } from '../design-system';
+import { KeyboardReturn as EnterIcon } from '@mui/icons-material';
+import { radiusTokens, toRadiusPx } from '../design-system/tokens/radius';
 
 export type CommandPaletteDisplaySection = 'recent' | 'actions' | 'navigation';
 
@@ -123,30 +122,27 @@ const CommandPaletteDialog: React.FC<CommandPaletteDialogProps> = ({
       onClose={onClose}
       fullWidth
       maxWidth="sm"
-      PaperProps={{
-        'data-command-palette-dialog': 'true',
-        sx: {
-          mt: { xs: 4, sm: 8 },
-          alignSelf: 'flex-start',
-          borderRadius: '12px',
-        },
+      paperSx={{
+        mt: { xs: 4, sm: 8 },
+        alignSelf: 'flex-start',
+        borderRadius: toRadiusPx(radiusTokens.lg),
+      }}
+      slotProps={{
+        paper: {
+          'data-command-palette-dialog': 'true',
+        } as React.HTMLAttributes<HTMLDivElement>,
       }}
     >
       <DialogContent sx={{ p: 0 }}>
         <Box sx={{ px: 2, pt: 2, pb: 1.5 }}>
-          <TextField
+          <SearchField
             inputRef={inputRef}
             fullWidth
             placeholder="Search routes and commands…"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             onKeyDown={handleKeyDown}
-            inputProps={{ 'data-testid': 'command-palette-input' }}
-            slotProps={{
-              input: {
-                startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-              },
-            }}
+            slotProps={{ htmlInput: { 'data-testid': 'command-palette-input' } }}
           />
         </Box>
 
@@ -198,7 +194,7 @@ const CommandPaletteDialog: React.FC<CommandPaletteDialogProps> = ({
                     sx={(theme) => ({
                       mx: 1,
                       mb: 0.5,
-                      borderRadius: '8px',
+                      borderRadius: toRadiusPx(radiusTokens.sm),
                       alignItems: 'flex-start',
                       gap: 1.5,
                       '&.Mui-selected': {

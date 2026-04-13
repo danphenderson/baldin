@@ -1,10 +1,22 @@
 import React, { useContext, useState, useMemo, useDeferredValue, useCallback } from 'react';
 import {
-  Box, Typography, TextField, InputAdornment, Stack, Chip, Divider,
-  IconButton, Tooltip, Snackbar, FormControl, InputLabel,
-  Select, MenuItem, useMediaQuery,
-} from '@mui/material';
-import { useTheme, alpha } from '@mui/material/styles';
+  Box,
+  Typography,
+  TextField,
+  InputAdornment,
+  Stack,
+  Divider,
+  IconButton,
+  Tooltip,
+  Snackbar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  useMediaQuery,
+  } from '@mui/material';
+import { useTheme,
+  alpha } from '@mui/material/styles';
 import {
   Search as SearchIcon,
   ArrowForward as ArrowIcon,
@@ -16,7 +28,7 @@ import {
   SearchOff as SearchOffIcon,
   Warning as WarningIcon,
   Description as DocIcon,
-} from '@mui/icons-material';
+  } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
@@ -31,17 +43,18 @@ import {
   applicationHasResume,
   applicationHasCoverLetter,
   type Column,
-} from './use-applications';
+  } from './use-applications';
 import type { ApplicationRead } from '../../service/applications';
-import ConfirmDialog from '../../component/common/confirm-dialog';
 import {
   CollectionToolbar,
+  ConfirmDialog,
   EmptyState,
   InlineFeedback,
   LoadingState,
   CardShell,
   MetricStrip,
   StatusChip,
+  StatusChip as Chip,
 } from '../../design-system';
 
 /* ------------------------------------------------------------------ */
@@ -401,6 +414,7 @@ const ApplicationsQueuePage: React.FC = () => {
                 tone={stageTone(column.key)}
                 density="compact"
                 sx={{
+                  '&:focus-within .queue-actions': { opacity: 1 },
                   '&:hover': {
                     boxShadow: `0 4px 16px ${alpha(column.color, 0.15)}`,
                     '& .queue-actions': { opacity: 1 },

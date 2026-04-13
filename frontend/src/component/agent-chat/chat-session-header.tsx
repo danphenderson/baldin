@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import {
+  Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Button,
-  Chip,
   Link,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
+import { StatusChip as Chip } from '../../design-system';
 import {
   ArrowBack as BackIcon,
   DescriptionOutlined as DocumentIcon,

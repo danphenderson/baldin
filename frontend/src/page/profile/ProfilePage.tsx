@@ -1,13 +1,19 @@
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, Chip, Stack, useTheme,
+  Box,
+  Typography,
+  Stack,
+  useTheme,
   Snackbar,
-} from '@mui/material';
+  } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
-  Code as SkillIcon, Work as WorkIcon, School as SchoolIcon,
-  CardMembership as CertIcon, Contacts as ContactIcon,
-} from '@mui/icons-material';
+  Code as SkillIcon,
+  Work as WorkIcon,
+  School as SchoolIcon,
+  CardMembership as CertIcon,
+  Contacts as ContactIcon,
+  } from '@mui/icons-material';
 import { AnimatePresence } from 'motion/react';
 import { motion } from 'motion/react';
 import { UserContext } from '../../context/user-context';
@@ -27,7 +33,10 @@ import { DateSpan } from './components/DateSpan';
 import { EditDialog } from './components/EditDialog';
 import { DeleteDialog } from './components/DeleteDialog';
 import { DocumentsSummary } from './components/DocumentsSummary';
-import { InlineFeedback, LoadingState } from '../../design-system';
+import { InlineFeedback,
+  LoadingState,
+  StatusChip as Chip,
+} from '../../design-system';
 import ProfileImportModal from '../../component/profile-import-modal';
 import MFASetupCard from '../../component/mfa-setup-card';
 

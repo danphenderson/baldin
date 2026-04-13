@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import sys
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
@@ -38,6 +39,15 @@ class StructuredJSONFormatter(logging.Formatter):
             "process_id": record.process,
             "thread_id": record.thread,
         }
+        structured_data = getattr(record, "structured_data", None)
+        if isinstance(structured_data, Mapping):
+            for key, value in structured_data.items():
+                if key in log_entry:
+                    log_entry[f"structured_{key}"] = value
+                else:
+                    log_entry[key] = value
+        elif structured_data is not None:
+            log_entry["structured_data"] = structured_data
         if record.exc_info and record.exc_info[1] is not None:
             log_entry["exception"] = self.formatException(record.exc_info)
         return json.dumps(log_entry)

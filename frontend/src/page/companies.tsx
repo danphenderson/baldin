@@ -1,37 +1,83 @@
 import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
 import {
-  Box, Card, CardContent, Typography, Button, Chip, Stack, TextField,
-  useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  Tooltip, Skeleton, Alert, InputAdornment, Divider, Collapse, List, ListItem,
-  ListItemText, ListItemIcon, CircularProgress, useMediaQuery,
-} from '@mui/material';
+  Box,
+  Typography,
+  Button,
+  Stack,
+  TextField,
+  useTheme,
+  alpha,
+  IconButton,
+  Tooltip,
+  Skeleton,
+  Alert,
+  InputAdornment,
+  Divider,
+  Collapse,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  CircularProgress,
+  useMediaQuery,
+  } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
-  Business as CompanyIcon, Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
-  Search as SearchIcon, AutoAwesome as AIIcon, LocationOn as LocationIcon,
-  People as SizeIcon, Category as IndustryIcon, Work as LeadIcon,
-  ExpandMore, ExpandLess, OpenInNew as OpenIcon, Refresh as RefreshIcon,
-  WarningAmber as WarningIcon, Schedule as TimeIcon,
-} from '@mui/icons-material';
+  Business as CompanyIcon,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Search as SearchIcon,
+  AutoAwesome as AIIcon,
+  LocationOn as LocationIcon,
+  People as SizeIcon,
+  Category as IndustryIcon,
+  Work as LeadIcon,
+  ExpandMore,
+  ExpandLess,
+  OpenInNew as OpenIcon,
+  Refresh as RefreshIcon,
+  WarningAmber as WarningIcon,
+  Schedule as TimeIcon,
+  } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import {
-  getCompanies, createCompany, updateCompany, deleteCompany, getCompanyLeads, extractCompany,
-  type CompanyRead, type CompanyCreate, type CompanyUpdate,
-} from '../service/companies';
+  getCompanies,
+  createCompany,
+  updateCompany,
+  deleteCompany,
+  getCompanyLeads,
+  extractCompany,
+  type CompanyRead,
+  type CompanyCreate,
+  type CompanyUpdate,
+  } from '../service/companies';
 import {
   createApplication,
   findExistingApplicationForLead,
   getApplicationStateLabel,
   type ApplicationCreationIntent,
-} from '../service/applications';
+  } from '../service/applications';
 import { components } from '../schema';
-import { timeAgo, monogram, monogramColor } from '../util/format';
-import EmptyState from '../component/common/empty-state';
+import { timeAgo,
+  monogram,
+  monogramColor } from '../util/format';
 import ApplicationIntentButton from '../component/application-intent-button';
 import { AgentEnabledMultilineField } from '../component/agent-surface';
-import { displayFontFamily } from '../design-system/tokens/typography';
-import { accentGradient, brandGradient, softBrandGradient } from '../theme/effects';
+import {
+  EmptyState,
+  accentGradient,
+  displayFontFamily,
+  softBrandGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../design-system';
 
 type LeadRead = components['schemas']['LeadRead'];
 
@@ -311,7 +357,7 @@ const CompaniesPage: React.FC = () => {
             />
 
             <Button
-              variant="contained"
+              variant="brand"
               onClick={handleExtract}
               disabled={extracting || !extractUrl.trim()}
               startIcon={extracting ? <CircularProgress size={16} color="inherit" /> : undefined}
@@ -319,7 +365,6 @@ const CompaniesPage: React.FC = () => {
                 px: 3,
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
-                background: brandGradient(theme),
               }}
             >
               {extracting ? 'Extracting…' : 'Extract'}

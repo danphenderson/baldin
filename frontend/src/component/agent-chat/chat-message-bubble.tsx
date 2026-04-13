@@ -1,15 +1,16 @@
 import React from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import {
+  Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
   Avatar,
   Box,
-  Chip,
   Link,
   Paper,
   Stack,
   Typography,
 } from '@mui/material';
+import { StatusChip as Chip } from '../../design-system';
 import {
   PersonOutline as UserIcon,
   SmartToyOutlined as AssistantIcon,

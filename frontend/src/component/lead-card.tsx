@@ -18,7 +18,7 @@ import type { ApplicationCreationIntent } from '../service/applications';
 import { CardShell, StatusChip, getStatusMetaSx, radiusTokens, toRadiusPx } from '../design-system';
 import ApplicationIntentButton from './application-intent-button';
 import { timeAgo } from '../util/format';
-import { brandGradient } from '../theme/effects';
+import { brandGradient } from '../design-system';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */

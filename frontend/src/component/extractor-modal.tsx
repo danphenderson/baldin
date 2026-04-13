@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button, CircularProgress } from '@mui/material';
+import { TextField, Button, CircularProgress } from '@mui/material';
 import { ExtractorRun, ExtractorCreate, ExtractorRead, ExtractorExampleRead, ExtractorExmpleCreate, ExtractorResponse, ExtractorUpdate, runExtractor, createExtractor, createExtractorExample, getExtractorExamples, deleteExtractorExample} from '../service/extractor';
 import  FilePicker  from '../component/common/file-picker';
 import { useContext } from 'react';
 import { UserContext } from '../context/user-context';
+import { UploadFileOutlined as UploadFileIcon } from '@mui/icons-material';
+import {
+  SurfaceDialog as Dialog,
+  SurfaceDialogActions as DialogActions,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogTitle as DialogTitle,
+  ReadonlyField,
+} from '../design-system';
 
 interface ExtractRunModalProps {
   open: boolean;
@@ -74,7 +82,9 @@ export const ExtractRunModal: React.FC<ExtractRunModalProps> = ({ open, onClose,
 
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Run Extractor</DialogTitle>
+      <DialogTitle icon={<UploadFileIcon />} subtitle="Upload a file or supply raw text for extraction.">
+        Run Extractor
+      </DialogTitle>
       <DialogContent>
         <FilePicker
           value={data.file ? [data.file] : []}
@@ -85,11 +95,10 @@ export const ExtractRunModal: React.FC<ExtractRunModalProps> = ({ open, onClose,
           isRequired={true}
           onChange={handleFileSelection}
         />
-        <TextField
+        <ReadonlyField
           label="Selected file"
           value={data.file?.name ?? ''}
           fullWidth
-          InputProps={{ readOnly: true }}
         />
         <TextField
           label="Text"
@@ -154,7 +163,9 @@ export const ExtractorCreateModal: React.FC<ExtractorCreateModalProps> = ({ open
 
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Create Extractor</DialogTitle>
+      <DialogTitle subtitle="Define the extractor name, instructions, and schema.">
+        Create Extractor
+      </DialogTitle>
       <DialogContent>
         <TextField
           label="Name"
@@ -189,7 +200,7 @@ export const ExtractorCreateModal: React.FC<ExtractorCreateModalProps> = ({ open
       </DialogActions>
     </Dialog>
   );
-}
+};
 
 
 export const ExampleCreateModal: React.FC<ExampleCreateModalProps> = ({ open, extractorId, onClose, onSave, onError }) => {

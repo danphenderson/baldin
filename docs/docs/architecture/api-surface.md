@@ -123,7 +123,17 @@ The document surface is now the canonical API for resumes, cover letters, and ot
 
 | Tag | Prefix | Purpose |
 | --- | --- | --- |
-| `db-management` | `/db-management` | Database inspection and reset helpers used in local or admin workflows |
+| `db-management` | `/db-management` | Superuser-only database inspection, admin cleanup previews, destructive user cleanup, and local diagnostics helpers |
+
+#### DB Management Public Surfaces
+
+- `GET /db-management/status` reports the current stamped Alembic revision, repo head revision, whether the database is at head, and the number of public tables.
+- `GET /db-management/tables` and `GET /db-management/tables/{table_name}` provide exact row counts and column metadata for public-schema tables.
+- `GET /db-management/users` is the admin discovery surface for cleanup workflows, with search and superuser/active filters plus capped pagination.
+- `GET /db-management/users/{user_id}/cleanup-preview` previews what `purge` or `delete` would affect, including the selected cleanup domains plus separate delete and purge safeguard signals.
+- `PATCH /db-management/users/{user_id}/purge` now accepts optional repeated `domains` query params to run a scoped purge instead of the legacy full purge; omitting `domains` preserves the existing full-purge behavior.
+- `PATCH /db-management/users/{user_id}/purge` and `DELETE /db-management/users/{user_id}` emit structured admin audit log records for successful and blocked destructive operations.
+- `GET /db-management/list-tables` and `GET /db-management/table-details/{table_name}` remain available for compatibility but are now deprecated in favor of the richer `/tables*` routes.
 
 ## Access Model
 

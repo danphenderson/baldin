@@ -1,8 +1,9 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CssBaseline, ThemeProvider as MuiThemeProvider } from '@mui/material';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { UserContext } from '@/context/user-context';
 import { createBaldinTheme } from '@/design-system/theme';
 import { ToolbarHeaderContext } from '@/layout/toolbar-header-context';
@@ -92,6 +93,11 @@ function makeActionItem(overrides: Partial<Record<string, unknown>> = {}) {
   };
 }
 
+const LocationDisplay: React.FC = () => {
+  const location = useLocation();
+  return <div data-testid="location-display">{`${location.pathname}${location.search}`}</div>;
+};
+
 function makeFeedItem(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     type: 'status_change',
@@ -132,7 +138,10 @@ function renderPage(
       <ToolbarHeaderContext.Provider value={setToolbarHeader}>
         <UserContext.Provider value={{ ...userContextValue, ...ctxOverrides }}>
           <MemoryRouter>
-            <DashboardPage />
+            <>
+              <DashboardPage />
+              <LocationDisplay />
+            </>
           </MemoryRouter>
         </UserContext.Provider>
       </ToolbarHeaderContext.Provider>
@@ -213,6 +222,34 @@ describe('DashboardPage', () => {
 
     expect(await screen.findByText('Follow up with Google recruiter')).toBeInTheDocument();
     expect(screen.getByText('Prepare resume for Meta')).toBeInTheDocument();
+  });
+
+  it('navigates lead-linked action chips to the lead-scoped route and exposes the due date as a button', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    mockedGetCommandCenterSummary.mockResolvedValue(makeSummary() as never);
+    mockedGetActivityFeed.mockResolvedValue({ items: [], total: 0 } as never);
+    mockedGetActionItems.mockResolvedValue([
+      makeActionItem({
+        title: 'Review Acme lead',
+        lead_id: 'lead-42',
+        lead: { title: 'Acme Staff Engineer' },
+        due_at: null,
+      }),
+    ] as never);
+    mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 5 } as never);
+
+    renderPage();
+
+    expect(await screen.findByText('Review Acme lead')).toBeInTheDocument();
+
+    const dueDateButton = screen.getByRole('button', { name: 'Set due date for "Review Acme lead"' });
+    expect(dueDateButton).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Lead: Acme Staff Engineer' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-display')).toHaveTextContent('/leads?leadId=lead-42');
+    });
   });
 
   it('renders activity feed when data loads', async () => {

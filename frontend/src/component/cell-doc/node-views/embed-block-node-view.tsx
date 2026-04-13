@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { NodeViewWrapper } from '@tiptap/react';
+import {
+  NodeViewWrapper } from '@tiptap/react';
 import type { NodeViewProps } from '@tiptap/react';
 import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   List,
   ListItemButton,
@@ -17,6 +17,7 @@ import {
   alpha,
   useTheme,
 } from '@mui/material';
+import { StatusChip as Chip } from '../../../design-system';
 import {
   AccountTree as EmbedIcon,
   ArrowBack as BackIcon,

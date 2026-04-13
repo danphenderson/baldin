@@ -5,11 +5,11 @@ title: Design System Catalog
 description: Canonical inventory of Baldin's shipped frontend design-system theme contract, tokens, primitives, patterns, compatibility shims, and current adopters.
 ---
 
-<!-- last-verified: 2026-04-12 -->
+<!-- last-verified: 2026-04-13 -->
 
 # Design System Catalog
 
-This catalog describes the shared frontend UI surface that actually ships in the repo today. It is intentionally narrower than a full app-wide component library.
+This catalog describes the shared frontend UI surface that ships in the repo today. `frontend/src/design-system/*` is the canonical inventory. Legacy wrappers are documented only so contributors know what still exists and what has already been removed.
 
 ## Theme Contract
 
@@ -18,25 +18,6 @@ This catalog describes the shared frontend UI surface that actually ships in the
 | `theme.palette.*` | `frontend/src/design-system/tokens/color.ts` via `getPaletteOptions()` | Standard MUI semantic roles such as `primary`, `secondary`, `background`, `text`, `success`, `warning`, `error`, and `info` | Baldin-only token groups such as radius, motion, or status maps |
 | `theme.baldin.*` | `frontend/src/design-system/theme/create-baldin-theme.ts` and `mui-augmentations.d.ts` | Baldin-specific token bags: `status`, `alpha`, `radius`, `elevation`, `motion`, `fontFamily` | Replacing normal MUI palette roles or inventing feature-specific state |
 | `spacingTokens` and `toSpacingPx()` | `frontend/src/design-system/tokens/spacing.ts` | New shared layout spacing in `frontend/src/design-system/*` | Assuming `theme.spacing()` matches Baldin token math |
-
-### Spacing Compatibility Caveat
-
-`createBaldinTheme()` does not override MUI's `spacing` option, so `theme.spacing()` still uses MUI's default 8px scale. Baldin's design-system spacing tokens use `spacingTokens.base = 4`.
-
-Current rule:
-
-- New shared UI under `frontend/src/design-system/*` should use `spacingTokens` and `toSpacingPx(...)`.
-- Existing feature code may still use `theme.spacing()` until that surface is intentionally migrated.
-
-### Radius Compatibility Caveat
-
-MUI's `sx` system treats numeric `borderRadius` values as multipliers of `theme.shape.borderRadius`, not raw pixels. Baldin's radius tokens are pixel values, so feature-local `sx={{ borderRadius: 2 }}` does not mean `2px`.
-
-Current rule:
-
-- Shared design-system code should use `toRadiusPx(...)` when feeding Baldin radius tokens into `sx`.
-- Feature-local code should use `toRadiusPx(...)`, explicit pixel strings such as `'12px'`, or percentage radii such as `'50%'`.
-- New non-zero numeric `borderRadius` literals outside `design-system/tokens` and `design-system/theme` are blocked by `lint:theme`.
 
 ## Token Inventory
 
@@ -49,7 +30,7 @@ Current rule:
 | Radius | `frontend/src/design-system/tokens/radius.ts` | Defines shared radius values from `xs` through `pill` plus `toRadiusPx(...)` for `sx`-safe pixel output |
 | Spacing | `frontend/src/design-system/tokens/spacing.ts` | Defines the 4px-based spacing compatibility layer for shared UI |
 | Status | `frontend/src/design-system/tokens/status.ts` | Maps application, workflow, crawler, priority, and platform states to colors |
-| Typography | `frontend/src/design-system/tokens/typography.ts` | Defines font families, typography roles, and exported display/mono helpers |
+| Typography | `frontend/src/design-system/tokens/typography.ts` | Defines font families, typography roles, and exported display and mono helpers |
 
 ## Theme Inventory
 
@@ -61,60 +42,55 @@ Current rule:
 | Typography mapping | `frontend/src/design-system/theme/typography.ts` | Maps Baldin font families into MUI typography |
 | Shape mapping | `frontend/src/design-system/theme/shape.ts` | Sets the base MUI `shape.borderRadius` |
 | Component overrides | `frontend/src/design-system/theme/components.ts` | Applies shared MUI defaults and override rules |
+| `MuiButton` `brand` variant | `frontend/src/design-system/theme/components.ts` | Canonical gradient CTA button variant for auth and app-shell surfaces | Reapplying the gradient button style locally |
 | JSON tree adapter | `frontend/src/design-system/theme/adapters/json-tree.ts` | Supplies a theme adapter for JSONTree consumers |
 
 ## Primitive Inventory
+
+### Typography
+
+| Primitive | Path | Canonical role | Current known consumers |
+| --- | --- | --- | --- |
+| `PageTitle`, `SectionTitle`, `CardTitle`, `Label`, `Caption`, `Overline`, `Mono` | `frontend/src/design-system/primitives/typography/text.tsx` | Shared typography roles exported from the canonical design-system layer | Auth, dashboard, documents, profile, agents, browser harness, compatibility text shim |
 
 ### Feedback
 
 | Primitive | Path | Canonical role | Current known consumers |
 | --- | --- | --- | --- |
-| `EmptyState` | `frontend/src/design-system/primitives/feedback/empty-state.tsx` | Neutral empty-state shell with `primaryAction`, `layout`, and `compact` options | Applications queue, conversations, profile adapter, `component/common/empty-state.tsx` |
-| `InlineFeedback` | `frontend/src/design-system/primitives/feedback/inline-feedback.tsx` | Persistent inline feedback block with shared tone and close behavior | Applications queue, profile, `component/common/alert.tsx`, `component/common/error-message.tsx` |
-| `LoadingState` | `frontend/src/design-system/primitives/feedback/loading-state.tsx` | Shared list, grid, and section loading skeletons | Leads, applications queue, profile, conversations |
+| `EmptyState` | `frontend/src/design-system/primitives/feedback/empty-state.tsx` | Neutral empty-state shell with `primaryAction`, legacy `action`, `layout`, and `compact` options | Applications, conversations, profile adapter, compatibility empty-state shim |
+| `InlineFeedback` | `frontend/src/design-system/primitives/feedback/inline-feedback.tsx` | Persistent inline feedback block with shared tone and close behavior | Auth, applications, profile, settings, workflow and admin pages |
+| `LoadingState` | `frontend/src/design-system/primitives/feedback/loading-state.tsx` | Shared list, grid, and section loading skeletons | Leads, applications, profile, conversations, documents |
 
 ### Surfaces
 
 | Primitive | Path | Canonical role | Current known consumers |
 | --- | --- | --- | --- |
-| `CardShell` | `frontend/src/design-system/primitives/surfaces/card-shell.tsx` | Shared static or interactive card frame with token-backed padding, motion, and focus handling | `lead-card.tsx`, `agent-card.tsx`, applications queue rows, `SectionCard` |
-| `SectionHeader` | `frontend/src/design-system/primitives/surfaces/section-header.tsx` | Shared section header with icon, count, supporting text, divider, and action slot | Profile section cards, conversations |
-| `FormDialogShell` | `frontend/src/design-system/primitives/surfaces/form-dialog-shell.tsx` | Shared dialog chrome for form, confirm, create, edit, and delete flows | Lead form dialog, agent form dialog, profile edit/delete dialogs, `component/common/confirm-dialog.tsx` |
+| `CardShell` | `frontend/src/design-system/primitives/surfaces/card-shell.tsx` | Shared static or interactive card frame with token-backed padding, motion, and focus handling | Leads, agents, applications queue rows, `SectionCard`, `AuthPanel` |
+| `SurfaceCard` and `SurfaceCardContent` | `frontend/src/design-system/primitives/surfaces/surface-card.tsx` | Canonical wrapper for feature-owned card shells that still need MUI card semantics | Dashboard, documents, settings, discovery, profile, lead and agent surfaces |
+| `SurfaceDialog`, `SurfaceDialogTitle`, `SurfaceDialogContent`, `SurfaceDialogActions` | `frontend/src/design-system/primitives/surfaces/surface-dialog.tsx` | Canonical wrapper for feature-owned dialog shells that still need MUI dialog semantics | Documents, settings, workflows/admin, applications, profile import, chat and composer dialogs |
+| `ConfirmDialog` | `frontend/src/design-system/primitives/surfaces/confirm-dialog.tsx` | Canonical shared confirm surface for lightweight destructive or informational confirmations | Applications, crawlers, agents, lead flows, compatibility confirm-dialog shim |
+| `FormDialogShell` | `frontend/src/design-system/primitives/surfaces/form-dialog-shell.tsx` | Shared dialog chrome for form, create, edit, and delete flows | Lead form dialog, agent form dialog, profile edit/delete dialogs |
+| `SectionHeader` | `frontend/src/design-system/primitives/surfaces/section-header.tsx` | Shared section header with icon, count, supporting text, divider, and action slot | Profile sections, conversations, detail panels |
 
 ### Status
 
 | Primitive | Path | Canonical role | Current known consumers |
 | --- | --- | --- | --- |
-| `StatusChip` | `frontend/src/design-system/primitives/status/status-chip.tsx` | Token-backed status chip wrapper over MUI `Chip`, including the shared `primary` tone used by Figma mappings and accent handoff states | Leads, agents, applications queue, section headers |
-| Status helpers | `frontend/src/design-system/primitives/status/helpers.ts` | Shared status/meta styling helpers using the status token map | Lead and agent card metadata |
+| `StatusChip` | `frontend/src/design-system/primitives/status/status-chip.tsx` | Token-backed chip wrapper over MUI `Chip`, including compatibility mapping for `color` and `variant` | Applications, dashboard, profile, documents, agent chat, connection status, discovery, cell-doc node views |
+| Status helpers | `frontend/src/design-system/primitives/status/helpers.ts` | Shared status and metadata styling helpers using the status token map | Lead and agent card metadata, dashboard summaries, pipeline and crawler status surfaces |
 
 ## Pattern Inventory
 
 | Pattern | Path | Canonical role | Current known consumers |
 | --- | --- | --- | --- |
-| `CollectionToolbar` | `frontend/src/design-system/patterns/collections/collection-toolbar.tsx` | Slot-based collection header with `search`, `controls`, `actions`, and `secondary` regions | Leads via `lead-search-bar.tsx`, applications queue, conversations |
-| `MetricStrip` | `frontend/src/design-system/patterns/metrics/metric-strip.tsx` | Read-only stat row with `inline` (flush) and `card` (CardShell-wrapped) variants | Applications queue, applications board, leads, pipelines, crawlers |
+| `CollectionToolbar` | `frontend/src/design-system/patterns/collections/collection-toolbar.tsx` | Slot-based collection header with `search`, `controls`, `actions`, and `secondary` regions | Leads via `lead-search-bar.tsx`, applications, conversations |
+| `MetricStrip` | `frontend/src/design-system/patterns/metrics/metric-strip.tsx` | Read-only stat row with `inline` and `card` variants | Applications, dashboard, leads, pipelines, crawlers |
 | `SectionCard` | `frontend/src/design-system/patterns/sections/section-card.tsx` | Thin `CardShell` composition for section layouts with shared header framing | Profile sections, conversations |
+| `AuthPanel` | `frontend/src/design-system/patterns/auth/auth-panel.tsx` | Shared centered auth shell with icon, title, description, content, and footer slots | Login, registration, MFA verification flows |
 
 ## Compatibility Inventory
 
-These files are still active, but they are not the canonical place for new shared UI.
-
-### Theme compatibility shims
-
-| Shim | Backing source | Lifecycle state | Why it still exists |
-| --- | --- | --- | --- |
-| `frontend/src/theme/effects.ts` | `frontend/src/design-system/tokens/effects.ts` plus `theme/adapters/json-tree.ts` | `re-export` | Preserves long-lived imports such as `brandGradient`, `softBrandGradient`, and `jsonTreeTheme` |
-| `frontend/src/theme/status-colors.ts` | `frontend/src/design-system/tokens/status.ts` | `re-export` | Preserves older `getStatusColors()` imports in existing features |
-
-### Legacy shared wrappers
-
-| Wrapper | Backing source | Lifecycle state | Why it still exists |
-| --- | --- | --- | --- |
-| `frontend/src/component/common/empty-state.tsx` | `EmptyState` | `translating` | Preserves the legacy `action` prop while mapping to `primaryAction` |
-| `frontend/src/component/common/confirm-dialog.tsx` | `FormDialogShell` | `translating` | Preserves the confirm-dialog API and compatibility-only title/icon framing |
-| `frontend/src/component/common/alert.tsx` | `InlineFeedback` | `re-export` | Preserves alert-style call sites |
-| `frontend/src/component/common/error-message.tsx` | `InlineFeedback` | `re-export` | Preserves error-only helper call sites |
+These files still exist, but they are not the canonical place for new shared UI.
 
 ### Feature-local adapters
 
@@ -123,17 +99,26 @@ These files are still active, but they are not the canonical place for new share
 | `frontend/src/page/profile/components/EmptyState.tsx` | `EmptyState` | `translating` | Keeps profile-specific copy and CTA wording local |
 | `frontend/src/component/lead-search-bar.tsx` | `CollectionToolbar` | `translating` | Keeps leads-specific search, filter, and pagination composition local |
 
-Lifecycle states (`translating` → `re-export` → `removable`) are defined in [Design System Governance](../engineering/design-system-governance.md#compatibility-wrapper-lifecycle).
+### Removed compatibility files
+
+| Removed file | Replacement |
+| --- | --- |
+| `frontend/src/component/common/text.tsx` | Typography primitives imported from `frontend/src/design-system` |
+| `frontend/src/component/common/empty-state.tsx` | `EmptyState` imported from `frontend/src/design-system` |
+| `frontend/src/component/common/confirm-dialog.tsx` | `ConfirmDialog` imported from `frontend/src/design-system` |
+| `frontend/src/component/common/alert.tsx` | `InlineFeedback` imported from `frontend/src/design-system` |
+| `frontend/src/component/common/error-message.tsx` | `InlineFeedback` imported from `frontend/src/design-system` |
+| `frontend/src/theme/effects.ts` | `frontend/src/design-system/tokens/effects.ts` |
+| `frontend/src/theme/status-colors.ts` | `frontend/src/design-system/tokens/status.ts` and status helpers |
+| `frontend/src/component/auth/signin.tsx` and `frontend/src/component/auth/signup.tsx` | Auth surfaces now compose canonical auth and form primitives directly |
 
 ## Compatibility-Only Legacy Locations
 
-The repo currently treats these locations as compatibility or legacy source, not as the destination for new shared-source growth:
-
 | Location | Current status |
 | --- | --- |
-| `frontend/src/component/common/*` | Legacy shared folder; thin wrappers and older helpers may remain, but new shared UI should not start here |
-| `frontend/src/component/auth/*` | Legacy shared folder; `lint:theme` blocks new shared-source growth here too |
-| `frontend/src/theme/effects.ts` and `frontend/src/theme/status-colors.ts` | Compatibility re-export shims over the canonical design-system token layer |
+| `frontend/src/component/common/*` | Legacy shared folder; retired for shared UI wrappers and new shared-source growth |
+| `frontend/src/component/auth/*` | Retired for shared UI; new shared-source growth and new consumers are not allowed |
+| `frontend/src/theme/effects.ts` and `frontend/src/theme/status-colors.ts` | Removed; import canonical design-system sources instead |
 
 ## Migration State Definitions
 
@@ -141,47 +126,33 @@ Every route family in the ledger below uses one of these states:
 
 | State | Meaning | Entry criteria | Exit criteria |
 | --- | --- | --- | --- |
-| `adopted` | All shared-eligible surfaces consume the design-system layer. Remaining wrappers are thin and documented. | PR merged with shared-layer imports, wrapper inventory updated, catalog and migration guide updated in the same change. | N/A — terminal state unless the shared API is retired or replaced. |
+| `adopted` | All shared-eligible surfaces consume the design-system layer. Remaining wrappers are thin and documented. | PR merged with shared-layer imports, wrapper inventory updated, and docs updated in the same change. | N/A |
 | `adopting` | Active migration in progress. Some surfaces already consume the shared layer; others still use local or legacy implementations. | At least one page or component in the family imports from `frontend/src/design-system`. | All shared-eligible surfaces migrated → `adopted`. |
-| `not-started` | The family has not begun consuming the Phase 2 shared layer beyond the token and theme foundation. | Default state. | First shared-layer import merged → `adopting`. |
+| `not-started` | The family has not begun consuming the shared layer beyond the token and theme foundation. | Default state. | First shared-layer import merged → `adopting`. |
 
 ### Route-Family Adoption Ledger
 
 | Route family | State | Shared pieces in use | Notes |
 | --- | --- | --- | --- |
-| Applications queue | `adopted` | `CollectionToolbar`, `EmptyState`, `InlineFeedback`, `LoadingState`, `CardShell`, `StatusChip`, `MetricStrip` | — |
-| Profile family | `adopted` | `LoadingState`, `InlineFeedback`, adapter-backed `EmptyState`, `SectionCard`, `SectionHeader`, `FormDialogShell` | — |
-| Conversations | `adopted` | `CollectionToolbar`, `SectionCard`, `SectionHeader`, `LoadingState`, `EmptyState` | — |
-| Leads family | `adopting` | `LoadingState`, wrapper-backed `EmptyState`, `CollectionToolbar` via `lead-search-bar`, `CardShell`, `StatusChip`, `FormDialogShell`, `MetricStrip` | Lead modal, extraction bar, and lead-specific CTA remain feature-owned |
-| Agents | `adopting` | wrapper-backed `EmptyState`, `CardShell`, `StatusChip`, `FormDialogShell` | `kind` mapping and enable/disable behavior remain feature-owned |
-| Pipelines | `adopting` | `MetricStrip`, typography tokens | Most page UI still outside the shared layer |
-| Crawlers | `adopting` | `MetricStrip`, typography tokens | Most page UI still outside the shared layer |
-| Applications board | `adopting` | `MetricStrip` | Board chrome and stage semantics remain feature-owned |
-| Auth | `not-started` | — | — |
-| Dashboard | `not-started` | — | — |
-| Documents / editor | `not-started` | — | — |
-
-### Broader token and shim adoption
-
-These files are outside the Phase 2 primitive/pattern pilot but already consume the shared foundation:
-
-- `frontend/src/theme/theme-provider.tsx` uses the design-system theme entrypoint.
-- `frontend/src/layout/app-layout.tsx` uses design-system motion tokens and compatibility effect helpers.
-- `frontend/src/page/companies.tsx`, `frontend/src/page/pipelines.tsx`, `frontend/src/page/crawlers.tsx`, and several document/workspace files use typography tokens or theme compatibility shims.
-- `frontend/src/component/common/text.tsx`, `content-modal.tsx`, `error-boundary.tsx`, and `rich-text-editor.tsx` already consume design-system typography or effect helpers.
+| Auth | `adopted` | `AuthPanel`, `InlineFeedback`, typography primitives | Login, registration, and MFA verification all use the canonical auth shell |
+| Applications | `adopted` | `CollectionToolbar`, `StatusChip`, `MetricStrip`, `SurfaceDialog`, `ConfirmDialog`, `SurfaceCard` | Queue, board, and detail routes all consume canonical shared surfaces |
+| Leads | `adopted` | `CollectionToolbar` via adapter, `CardShell`, `StatusChip`, `FormDialogShell`, `MetricStrip`, `LoadingState`, `EmptyState` | Lead-specific ranking and extraction behavior remain feature-owned |
+| Profile family | `adopted` | `SectionCard`, `SectionHeader`, `SurfaceCard`, `FormDialogShell`, `InlineFeedback`, adapter-backed `EmptyState` | Builder logic and field schemas remain feature-owned |
+| Conversations and agent chat | `adopted` | `CollectionToolbar`, `SectionCard`, `SectionHeader`, `StatusChip`, `SurfaceDialog`, `EmptyState`, `LoadingState` | Message workflow remains feature-owned |
+| Agents | `adopted` | `CardShell`, `StatusChip`, `ConfirmDialog`, `FormDialogShell`, shared typography | `kind` mapping and orchestration remain feature-owned |
+| Dashboard | `adopted` | `MetricStrip`, `StatusChip`, `SurfaceCard`, shared typography and status helpers | Dashboard business logic remains feature-owned |
+| Documents / editor | `adopted` | `SurfaceCard`, `SurfaceDialog`, `StatusChip`, shared typography | Editing, compare, and share workflows remain feature-owned |
+| Workflows / admin | `adopted` | `MetricStrip`, `SurfaceDialog`, `ConfirmDialog`, `StatusChip`, shared typography | Pipelines and crawlers retain workflow-specific behavior |
+| Network / discovery | `adopted` | `SurfaceCard`, `StatusChip`, `EmptyState`, shared typography | Companies, directory, and connections use canonical shared shell imports |
+| Settings | `adopted` | `SurfaceCard`, `SurfaceDialog`, `StatusChip`, `InlineFeedback` | Billing, account, discoverability, and graduation flows keep local logic |
 
 ## Explicitly Deferred Or Missing Shared Pieces
 
 These are not part of the shipped catalog today:
 
 - Shared `ErrorState`
-- Applications board extraction
-- Shared `LeadModal`
-- Auth panel systemization
-- Dashboard migration
-- Document workspace and editor migration
-- Pipelines and crawlers migration
-- Repo-wide replacement of direct MUI `Alert`, `Chip`, card, or dialog usage
+- Shared domain abstractions such as `LeadModal`, profile-builder orchestration, or applications-board semantics
+- Shared service-layer helpers or generated API contracts inside the design-system layer
 
 ## Catalog Rules
 

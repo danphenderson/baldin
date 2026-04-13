@@ -1,9 +1,27 @@
 import React, { useContext, useState } from 'react';
 import {
-  Box, Card, CardContent, Typography, Chip, Button, Stack,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Dialog, DialogTitle, DialogContent, DialogActions, useTheme, alpha,
+  Box,
+  Typography,
+  Button,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  useTheme,
+  alpha,
 } from '@mui/material';
+import {
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../../design-system';
 import {
   CheckCircle as CheckIcon,
   Cancel as NoIcon,

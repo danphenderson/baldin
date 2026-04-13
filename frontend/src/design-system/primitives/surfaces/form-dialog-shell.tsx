@@ -42,7 +42,13 @@ export const FormDialogShell: React.FC<FormDialogShellProps> = ({
   headerActions,
 }) => {
   const theme = useTheme();
-  const borderRadius = (theme as typeof theme & { baldin?: typeof theme.baldin }).baldin?.radius.xl ?? radiusTokens.xl;
+  const baldin = (theme as typeof theme & { baldin?: typeof theme.baldin }).baldin;
+  const borderRadius = baldin?.radius.xl ?? radiusTokens.xl;
+  const overlaySurface = baldin?.surface.overlay ?? theme.palette.background.paper;
+  const baseSurface = baldin?.surface.base ?? theme.palette.background.default;
+  const raisedSurface = baldin?.surface.raised ?? theme.palette.background.paper;
+  const defaultBorder = baldin?.border.default ?? theme.palette.divider;
+  const subtleBorder = baldin?.border.subtle ?? theme.palette.divider;
   const titleId = useId();
   const subtitleId = useId();
   const canDismiss = dismissible && !busy;
@@ -67,8 +73,8 @@ export const FormDialogShell: React.FC<FormDialogShellProps> = ({
       PaperProps={{
         sx: {
           borderRadius: toRadiusPx(borderRadius),
-          background: theme.baldin.surface.overlay,
-          border: `1px solid ${theme.baldin.border.default}`,
+          background: overlaySurface,
+          border: `1px solid ${defaultBorder}`,
         },
       }}
     >
@@ -78,7 +84,7 @@ export const FormDialogShell: React.FC<FormDialogShellProps> = ({
           px: toSpacingPx(spacingTokens.dialogPadding),
           pt: toSpacingPx(spacingTokens.dialogPadding - 1),
           pb: toSpacingPx(3),
-          borderBottom: `1px solid ${theme.baldin.border.subtle}`,
+          borderBottom: `1px solid ${subtleBorder}`,
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
@@ -132,9 +138,9 @@ export const FormDialogShell: React.FC<FormDialogShellProps> = ({
         sx={{
           px: toSpacingPx(spacingTokens.dialogPadding),
           py: toSpacingPx(4),
-          backgroundColor: theme.baldin.surface.base,
-          borderTopColor: theme.baldin.border.subtle,
-          borderBottomColor: theme.baldin.border.subtle,
+          backgroundColor: baseSurface,
+          borderTopColor: subtleBorder,
+          borderBottomColor: subtleBorder,
         }}
       >
         {children}
@@ -145,8 +151,8 @@ export const FormDialogShell: React.FC<FormDialogShellProps> = ({
           px: toSpacingPx(spacingTokens.dialogPadding),
           py: toSpacingPx(4),
           gap: 1,
-          borderTop: `1px solid ${theme.baldin.border.subtle}`,
-          backgroundColor: theme.baldin.surface.raised,
+          borderTop: `1px solid ${subtleBorder}`,
+          backgroundColor: raisedSurface,
         }}
       >
         {actions}

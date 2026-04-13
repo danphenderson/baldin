@@ -1,10 +1,33 @@
 import React, { useContext, useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
-  Box, Typography, Chip, Stack, Button, Skeleton, Tooltip, Switch, FormControlLabel,
-  useTheme, Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
-  Paper, CircularProgress, Pagination, Link, FormControl, InputLabel, Select, MenuItem,
-} from '@mui/material';
+  useParams,
+  useNavigate,
+  Link as RouterLink } from 'react-router-dom';
+import {
+  Box,
+  Typography,
+  Stack,
+  Button,
+  Skeleton,
+  Tooltip,
+  Switch,
+  FormControlLabel,
+  useTheme,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableContainer,
+  Paper,
+  CircularProgress,
+  Pagination,
+  Link,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
   Edit as EditIcon,
@@ -20,30 +43,38 @@ import {
   ArchiveOutlined as ArchiveIcon,
   UnarchiveOutlined as UnarchiveIcon,
   DeleteOutline as DeleteIcon,
-} from '@mui/icons-material';
+  } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import { useNotification } from '../context/notification-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
-import { getAgent, updateAgent, getAgentRuns, runAgent } from '../service/agents';
-import type { AgentRead, AgentUpdate, AgentRunSummaryRead, AgentRunsPaginatedRead } from '../service/agents';
+import { getAgent,
+  updateAgent,
+  getAgentRuns,
+  runAgent } from '../service/agents';
+import type { AgentRead,
+  AgentUpdate,
+  AgentRunSummaryRead,
+  AgentRunsPaginatedRead } from '../service/agents';
 import {
   createChatSession,
   deleteChatSession,
   getAvailableModels,
   getChatSessions,
   updateChatSession,
-} from '../service/agent-chat';
+  } from '../service/agent-chat';
 import type {
   AgentChatSessionRead,
   AgentChatSessionStatus,
   AgentChatSessionSummaryRead,
-} from '../service/agent-chat';
+  } from '../service/agent-chat';
 import AgentFormDialog from '../component/agent-form-dialog';
-import EmptyState from '../component/common/empty-state';
-import ConfirmDialog from '../component/common/confirm-dialog';
-import { Caption } from '../component/common/text';
+import { Caption,
+  ConfirmDialog,
+  EmptyState,
+  StatusChip as Chip,
+} from '../design-system';
 import { getKindLabel } from '../component/agent-card';
-import { ALPHA_CHIP } from '../theme/effects';
+import { ALPHA_CHIP } from '../design-system';
 import { timeAgo } from '../util/format';
 import {
   getAgentConfiguredModelName,

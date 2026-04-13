@@ -1,22 +1,50 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Box, Card, CardContent, Typography, Chip, Stack, Button, TextField,
-  useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  Tooltip, Skeleton, Alert, Divider, Select, MenuItem, FormControl, InputLabel,
-  useMediaQuery, InputAdornment, Collapse, TablePagination,
-} from '@mui/material';
+  Box,
+  Typography,
+  Stack,
+  Button,
+  TextField,
+  useTheme,
+  alpha,
+  IconButton,
+  Tooltip,
+  Skeleton,
+  Alert,
+  Divider,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  useMediaQuery,
+  InputAdornment,
+  Collapse,
+  TablePagination,
+  } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
-  Hub as PipelineIcon, PlayArrow as RunIcon, Delete as DeleteIcon,
-  Add as AddIcon, Refresh as RefreshIcon, CheckCircle as SuccessIcon,
-  Error as ErrorIcon, HourglassEmpty as PendingIcon, Loop as RunningIcon,
-  Edit as EditIcon, Schedule as ScheduleIcon, DataObject as DefinitionIcon,
-  WarningAmber as WarningIcon, Search as SearchIcon,
-  FiberManualRecord as DotIcon, ExpandMore as ExpandMoreIcon,
-  KeyboardArrowRight as CollapseIcon, TrendingUp as TrendingIcon,
-} from '@mui/icons-material';
-import { AnimatePresence, motion } from 'motion/react';
+  Hub as PipelineIcon,
+  PlayArrow as RunIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  Refresh as RefreshIcon,
+  CheckCircle as SuccessIcon,
+  Error as ErrorIcon,
+  HourglassEmpty as PendingIcon,
+  Loop as RunningIcon,
+  Edit as EditIcon,
+  Schedule as ScheduleIcon,
+  DataObject as DefinitionIcon,
+  WarningAmber as WarningIcon,
+  Search as SearchIcon,
+  FiberManualRecord as DotIcon,
+  ExpandMore as ExpandMoreIcon,
+  KeyboardArrowRight as CollapseIcon,
+  TrendingUp as TrendingIcon,
+  } from '@mui/icons-material';
+import { AnimatePresence,
+  motion } from 'motion/react';
 import { JSONTree } from 'react-json-tree';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
@@ -28,16 +56,35 @@ import {
   type OrchestrationPipelineRead,
   type OrchestrationEventPaginatedRead,
   type EventQueryParams,
-  getOrchestrationPipelines, createOrchestrationPipeline, deleteOrchestrationPipeline,
-  getOrchestrationPipeline, getOrchestrationEvents, createOrchestrationEvent,
-  updateOrchestrationPipeline, updateOrchestrationEvent,
+  getOrchestrationPipelines,
+  createOrchestrationPipeline,
+  deleteOrchestrationPipeline,
+  getOrchestrationPipeline,
+  getOrchestrationEvents,
+  createOrchestrationEvent,
+  updateOrchestrationPipeline,
+  updateOrchestrationEvent,
   retryOrchestrationEvent,
   formatURI,
-} from '../service/data-orchestration';
-import { getStatusColors } from '../theme/status-colors';
-import { mutedGradient, jsonTreeTheme, ALPHA_CHIP, ALPHA_BORDER } from '../theme/effects';
-import { monoFontFamily } from '../design-system/tokens/typography';
-import { MetricStrip } from '../design-system';
+  } from '../service/data-orchestration';
+import { radiusTokens,
+  toRadiusPx } from '../design-system/tokens/radius';
+import {
+  ALPHA_BORDER,
+  ALPHA_CHIP,
+  MetricStrip,
+  getStatusColors,
+  jsonTreeTheme,
+  monoFontFamily,
+  mutedGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../design-system';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -78,7 +125,7 @@ const getStatusConfigForTheme = (theme: import('@mui/material/styles').Theme) =>
   } as Record<OrchestrationEventStatus, { icon: React.ReactElement; color: string; label: string }>;
 };
 
-// JSON tree theme — see theme/effects.ts
+// JSON tree theme is adapted from the shared design-system theme helpers.
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -202,7 +249,7 @@ const PipelineCard: React.FC<{
               sx={{
                 width: 34,
                 height: 34,
-                borderRadius: '10px',
+                borderRadius: toRadiusPx(radiusTokens.md),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -342,7 +389,7 @@ const EventRow: React.FC<{
           gap: 1.5,
           px: 2,
           py: 1.25,
-          borderRadius: '8px',
+          borderRadius: toRadiusPx(radiusTokens.sm),
           border: `1px solid ${theme.palette.divider}`,
           transition: 'border-color 0.15s',
           '&:hover': { borderColor: alpha(cfg.color, 0.3) },
@@ -353,7 +400,7 @@ const EventRow: React.FC<{
           sx={{
             width: 32,
             height: 32,
-            borderRadius: '8px',
+            borderRadius: toRadiusPx(radiusTokens.sm),
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -617,7 +664,7 @@ const PipelinesPage: React.FC = () => {
             <IconButton
               onClick={refresh}
               aria-label="Refresh workflows"
-              sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '10px' }}
+              sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: toRadiusPx(radiusTokens.md) }}
             >
               <RefreshIcon />
             </IconButton>
@@ -725,7 +772,7 @@ const PipelinesPage: React.FC = () => {
                     sx={{
                       width: 56,
                       height: 56,
-                      borderRadius: '16px',
+                      borderRadius: toRadiusPx(radiusTokens.xl),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -805,7 +852,7 @@ const PipelinesPage: React.FC = () => {
                     sx={{
                       width: 56,
                       height: 56,
-                      borderRadius: '16px',
+                      borderRadius: toRadiusPx(radiusTokens.xl),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1043,7 +1090,7 @@ const PipelinesPage: React.FC = () => {
             sx={{
               width: 40,
               height: 40,
-              borderRadius: '12px',
+              borderRadius: toRadiusPx(radiusTokens.lg),
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1103,7 +1150,7 @@ const PipelineDetailContent: React.FC<{
             sx={{
               width: 40,
               height: 40,
-              borderRadius: '12px',
+              borderRadius: toRadiusPx(radiusTokens.lg),
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1164,7 +1211,7 @@ const PipelineDetailContent: React.FC<{
 
           {/* Source / Destination display */}
           {(srcLabel || dstLabel) && (
-            <Box sx={{ p: 1.5, borderRadius: '8px', border: `1px solid ${theme.palette.divider}` }}>
+            <Box sx={{ p: 1.5, borderRadius: toRadiusPx(radiusTokens.sm), border: `1px solid ${theme.palette.divider}` }}>
               <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
                 {srcLabel && (
                   <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -1199,7 +1246,7 @@ const PipelineDetailContent: React.FC<{
               <Box
                 sx={{
                   p: 2,
-                  borderRadius: '8px',
+                  borderRadius: toRadiusPx(radiusTokens.sm),
                   background: alpha(theme.palette.text.primary, 0.03),
                   border: `1px solid ${theme.palette.divider}`,
                   overflow: 'auto',
@@ -1243,7 +1290,7 @@ const PipelineDetailContent: React.FC<{
                           alignItems: 'center',
                           gap: 1.5,
                           p: 1.5,
-                          borderRadius: '8px',
+                          borderRadius: toRadiusPx(radiusTokens.sm),
                           border: `1px solid ${theme.palette.divider}`,
                         }}
                       >
@@ -1251,7 +1298,7 @@ const PipelineDetailContent: React.FC<{
                           sx={{
                             width: 28,
                             height: 28,
-                            borderRadius: '8px',
+                            borderRadius: toRadiusPx(radiusTokens.sm),
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',

@@ -3,14 +3,7 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
   DialogContentText,
-  DialogTitle,
   FormControlLabel,
   Paper,
   Snackbar,
@@ -26,6 +19,15 @@ import {
   useTheme,
   alpha,
 } from '@mui/material';
+import {
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogActions as DialogActions,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogTitle as DialogTitle,
+} from '../../design-system';
 import {
   AutoAwesome as AutoAwesomeIcon,
   Cancel as NoIcon,

@@ -1,10 +1,28 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {
-  Box, Card, CardContent, Typography, TextField, Button, Alert,
-  CircularProgress, Stack, useTheme, alpha, Switch, Divider,
-  InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions,
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  CircularProgress,
+  Stack,
+  useTheme,
+  alpha,
+  Switch,
+  Divider,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
-import { Security as SecurityIcon, Lock } from '@mui/icons-material';
+import {
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../design-system';
+import { Security as SecurityIcon, Lock, Close as CloseIcon } from '@mui/icons-material';
 import { QRCodeSVG } from 'qrcode.react';
 import { UserContext } from '../context/user-context';
 import { mfaStatus, mfaSetup, mfaVerify, mfaDisable, MFASetup } from '../service/auth';
@@ -102,7 +120,7 @@ const MFASetupCard: React.FC = () => {
   if (loading || enabled === null) {
     return (
       <Card sx={{ boxShadow: `0 2px 12px ${alpha(theme.palette.common.black, 0.08)}` }}>
-        <CardContent sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CardContent centered density="spacious">
           <CircularProgress size={28} />
         </CardContent>
       </Card>
@@ -181,9 +199,11 @@ const MFASetupCard: React.FC = () => {
                 <TextField
                   size="small" fullWidth label="6-digit code" value={verifyCode}
                   onChange={(e) => setVerifyCode(sanitizeTotpInput(e.target.value))}
-                  inputProps={{ maxLength: 6, inputMode: 'numeric', pattern: '[0-9]*' }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><Lock sx={{ fontSize: 18, color: 'text.secondary' }} /></InputAdornment>,
+                  slotProps={{
+                    htmlInput: { maxLength: 6, inputMode: 'numeric', pattern: '[0-9]*' },
+                    input: {
+                      startAdornment: <InputAdornment position="start"><Lock sx={{ fontSize: 18, color: 'text.secondary' }} /></InputAdornment>,
+                    },
                   }}
                 />
                 <Button
@@ -203,7 +223,21 @@ const MFASetupCard: React.FC = () => {
         open={showRecoveryNotice}
         onClose={() => setShowRecoveryNotice(false)}
       >
-        <DialogTitle>Before you enable two-factor authentication</DialogTitle>
+        <DialogTitle
+          icon={<SecurityIcon />}
+          subtitle="Save your authenticator app before you continue."
+          actions={(
+            <IconButton
+              onClick={() => setShowRecoveryNotice(false)}
+              size="small"
+              aria-label="Close dialog"
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          )}
+        >
+          Before you enable two-factor authentication
+        </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Save your authenticator app before you verify setup. If you later lose access to
@@ -229,7 +263,21 @@ const MFASetupCard: React.FC = () => {
 
       {/* ── Disable confirmation dialog ────────────────────────────── */}
       <Dialog open={showDisable} onClose={() => { setShowDisable(false); setDisableCode(''); setError(''); }}>
-        <DialogTitle>Disable Two-Factor Authentication</DialogTitle>
+        <DialogTitle
+          icon={<SecurityIcon />}
+          subtitle="Enter a valid code from your authenticator app to disable MFA."
+          actions={(
+            <IconButton
+              onClick={() => { setShowDisable(false); setDisableCode(''); setError(''); }}
+              size="small"
+              aria-label="Close dialog"
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          )}
+        >
+          Disable Two-Factor Authentication
+        </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Enter a code from your authenticator app to confirm.
@@ -238,7 +286,7 @@ const MFASetupCard: React.FC = () => {
           <TextField
             fullWidth label="6-digit code" value={disableCode}
             onChange={(e) => setDisableCode(sanitizeTotpInput(e.target.value))}
-            inputProps={{ maxLength: 6, inputMode: 'numeric', pattern: '[0-9]*' }}
+            slotProps={{ htmlInput: { maxLength: 6, inputMode: 'numeric', pattern: '[0-9]*' } }}
             autoFocus
           />
         </DialogContent>

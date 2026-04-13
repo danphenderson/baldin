@@ -1,19 +1,36 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, Chip, Stack, Button, TextField, useTheme, alpha,
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  IconButton, Tooltip, Alert, Fade, Menu, MenuItem,
+  Box,
+  Typography,
+  Stack,
+  Button,
+  TextField,
+  useTheme,
+  alpha,
+  IconButton,
+  Tooltip,
+  Alert,
+  Fade,
+  Menu,
+  MenuItem,
   useMediaQuery,
-} from '@mui/material';
+  } from '@mui/material';
 import {
-  Delete as DeleteIcon, Refresh as RefreshIcon,
+  Delete as DeleteIcon,
+  Refresh as RefreshIcon,
   ArrowForward as ArrowIcon,
-  WorkOutline as WorkIcon, Assignment as AssignmentIcon,
-  LocationOn as LocationIcon, AttachMoney as SalaryIcon,
-  Warning as WarningIcon, Schedule as ScheduleIcon,
-  Block as RejectIcon, Undo as WithdrawIcon,
-  Description as DocIcon, DragIndicator as DragIcon, SwapHoriz as MoveIcon,
-} from '@mui/icons-material';
+  WorkOutline as WorkIcon,
+  Assignment as AssignmentIcon,
+  LocationOn as LocationIcon,
+  AttachMoney as SalaryIcon,
+  Warning as WarningIcon,
+  Schedule as ScheduleIcon,
+  Block as RejectIcon,
+  Undo as WithdrawIcon,
+  Description as DocIcon,
+  DragIndicator as DragIcon,
+  SwapHoriz as MoveIcon,
+  } from '@mui/icons-material';
 import {
   DndContext,
   PointerSensor,
@@ -23,20 +40,26 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-} from '@dnd-kit/core';
+  } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import type { ApplicationRead } from '../../service/applications';
-import { getStatusColors } from '../../theme/status-colors';
 import {
   CardShell,
   EmptyState as DSEmptyState,
   InlineFeedback,
   LoadingState,
   MetricStrip,
+  getStatusColors,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
 } from '../../design-system';
+import { radiusTokens, toRadiusPx } from '../../design-system/tokens/radius';
 import {
   useApplications, useStageColumns, COLUMN_EMPTY_HINTS, relativeDate, nextStage,
   applicationDocumentCount,
@@ -257,7 +280,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
               onKeyDown={(event) => event.stopPropagation()}
               sx={{
                 p: 1.25,
-                borderRadius: '8px',
+                borderRadius: toRadiusPx(radiusTokens.sm),
                 border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
                 bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.08 : 0.04),
               }}
@@ -378,7 +401,7 @@ const ApplicationCard: React.FC<AppCardProps> = ({
                     color: theme.palette.text.secondary,
                     cursor: 'grab',
                     touchAction: 'none',
-                    borderRadius: '4px',
+                    borderRadius: toRadiusPx(radiusTokens.xs),
                     '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.05) },
                   }}
                   {...dragHandleProps}
@@ -401,7 +424,6 @@ const ApplicationCard: React.FC<AppCardProps> = ({
                     py: 0.25,
                     minHeight: 0,
                     lineHeight: 1.5,
-                    borderRadius: '6px',
                     borderColor: theme.palette.primary.main,
                     color: theme.palette.primary.main,
                     fontWeight: 600,
@@ -664,7 +686,7 @@ const BoardLane: React.FC<BoardLaneProps> = ({
         spacing={1.5}
         sx={{
           p: 1,
-          borderRadius: '12px',
+          borderRadius: toRadiusPx(radiusTokens.lg),
           minHeight: 220,
           background: alpha(column.color, isOver ? 0.1 : (theme.palette.mode === 'dark' ? 0.03 : 0.025)),
           border: `1px solid ${alpha(column.color, isOver ? 0.32 : (theme.palette.mode === 'dark' ? 0.1 : 0.12))}`,
@@ -802,7 +824,7 @@ const ApplicationsBoardPage: React.FC = () => {
           <IconButton
             onClick={refresh}
             aria-label="Refresh applications"
-            sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '8px' }}
+            sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: toRadiusPx(radiusTokens.sm) }}
           >
             <RefreshIcon />
           </IconButton>

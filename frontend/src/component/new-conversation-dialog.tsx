@@ -5,10 +5,6 @@ import {
   Button,
   Checkbox,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   List,
   ListItem,
@@ -20,6 +16,12 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import {
+  SurfaceDialog as Dialog,
+  SurfaceDialogActions as DialogActions,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogTitle as DialogTitle,
+} from '../design-system';
 import { UserContext } from '../context/user-context';
 import { getConnections, type ConnectionRead } from '../service/connections';
 import { createConversation } from '../service/messages';

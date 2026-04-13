@@ -3,6 +3,7 @@ import { Box, Stack, IconButton, Tooltip, useTheme, alpha } from '@mui/material'
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { motion } from 'motion/react';
 import { stagger } from '../constants';
+import { radiusTokens, toRadiusPx } from '../../../design-system/tokens/radius';
 
 const MotionBox = motion.create(Box);
 
@@ -19,7 +20,7 @@ export const ItemCard: React.FC<{
       {...stagger}
       transition={{ duration: 0.22 }}
       sx={{
-        p: 2.5, borderRadius: '10px',
+        p: 2.5, borderRadius: toRadiusPx(radiusTokens.md),
         border: `1px solid ${theme.palette.divider}`,
         '&:hover': { borderColor: alpha(theme.palette.primary.main, 0.3), bgcolor: alpha(theme.palette.primary.main, 0.02) },
         transition: 'border-color 0.2s, background-color 0.2s',

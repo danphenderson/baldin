@@ -1,17 +1,35 @@
 import React, { useRef } from 'react';
 import {
-  Box, Card, CardContent, Typography, Chip, Stack, Button, TextField,
-  useTheme, alpha, Avatar, IconButton, Tooltip, CircularProgress,
-} from '@mui/material';
+  Box,
+  Typography,
+  Stack,
+  Button,
+  TextField,
+  useTheme,
+  alpha,
+  Avatar,
+  IconButton,
+  Tooltip,
+  CircularProgress,
+  } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
-  Edit as EditIcon, Close as CloseIcon, Save as SaveIcon,
-  CameraAlt as CameraIcon, FileUpload as ImportIcon,
-} from '@mui/icons-material';
-import type { UserRead, UserUpdate } from '../../../service/users';
+  Edit as EditIcon,
+  Close as CloseIcon,
+  Save as SaveIcon,
+  CameraAlt as CameraIcon,
+  FileUpload as ImportIcon,
+  } from '@mui/icons-material';
+import type { UserRead,
+  UserUpdate } from '../../../service/users';
 import { avatarUrl } from '../../../service/users';
-import { PageTitle } from '../../../component/common/text';
-import { brandGradient, softBrandGradient } from '../../../theme/effects';
+import { PageTitle,
+  brandGradient,
+  softBrandGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+} from '../../../design-system';
 
 export interface SectionCounts {
   skills: number;
@@ -176,6 +194,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                   onClick={handleAvatarClick}
                   disabled={avatarUploading}
                   size="small"
+                  aria-label="Change profile picture"
                   sx={{
                     position: 'absolute',
                     bottom: -4,

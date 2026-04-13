@@ -1,16 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { timeAgo } from '../util/format';
+import {
+  timeAgo } from '../util/format';
 import {
   Alert,
   Avatar,
   Box,
   Button,
-  Card,
-  CardContent,
   Checkbox,
-  Chip,
-  Dialog,
-  DialogContent,
   Divider,
   FormControl,
   FormControlLabel,
@@ -29,7 +25,7 @@ import {
   Typography,
   useMediaQuery,
   useTheme,
-} from '@mui/material';
+  } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { alpha } from '@mui/material/styles';
 import {
@@ -49,9 +45,15 @@ import {
   PersonAdd as PersonAddIcon,
   WorkspacesOutlined as LeadIcon,
   PlaylistAdd as PlaylistAddIcon,
-} from '@mui/icons-material';
-import { softBrandGradient } from '../theme/effects';
-import ConfirmDialog from './common/confirm-dialog';
+  } from '@mui/icons-material';
+import { ConfirmDialog,
+  softBrandGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogContent as DialogContent,
+} from '../design-system';
 import CreateActionItemDialog from './create-action-item-dialog';
 import type { ActionItemRead, ActionItemCreate } from '../service/action-items';
 import type { CompanyRead } from '../service/companies';
@@ -107,6 +109,8 @@ interface LeadModalProps {
   leadId: string | null;
   companies: CompanyRead[];
   applying: boolean;
+  hasExistingApplication?: boolean;
+  applicationCtaLabel?: string;
   extractContext: LeadExtractResponse | null;
   initialTab?: LeadTab;
   onClose: () => void;
@@ -431,6 +435,8 @@ const LeadModal: React.FC<LeadModalProps> = ({
   leadId,
   companies,
   applying,
+  hasExistingApplication = false,
+  applicationCtaLabel = 'Create Application',
   extractContext,
   initialTab,
   onClose,
@@ -1281,9 +1287,12 @@ const LeadModal: React.FC<LeadModalProps> = ({
                   <ApplicationIntentButton
                     onSelect={(intent) => onApply(lead, intent)}
                     loading={applying}
-                    label="Create Application"
+                    disabled={hasExistingApplication}
+                    label={applicationCtaLabel}
                     loadingLabel="Creating..."
-                    ariaLabel={`Create application for ${lead.title || 'this lead'}`}
+                    ariaLabel={hasExistingApplication
+                      ? `Existing application for ${lead.title || 'this lead'}`
+                      : `Create application for ${lead.title || 'this lead'}`}
                   />
                   <Button
                     variant="outlined"

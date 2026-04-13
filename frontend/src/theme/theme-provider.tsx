@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
-import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
+import React, { createContext, useContext, useMemo } from 'react';
+import { StyledEngineProvider, ThemeProvider as MuiThemeProvider, useColorScheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import {
   createBaldinTheme,
@@ -10,35 +10,51 @@ import {
   type ThemeMode,
 } from '../design-system/theme';
 
-const ThemeModeContext = createContext<{ mode: ThemeMode; toggleMode: () => void }>({
+const theme = createBaldinTheme();
+
+const ThemeModeContext = createContext<{
+  mode: ThemeMode;
+  setMode: (mode: ThemeMode | null) => void;
+  toggleMode: () => void;
+}>({
   mode: DEFAULT_THEME_MODE,
+  setMode: () => {},
   toggleMode: () => {},
 });
 
 export const useThemeMode = () => useContext(ThemeModeContext);
 
-const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [mode, setMode] = useState<ThemeMode>(
-    () => parseThemeMode(localStorage.getItem(THEME_STORAGE_KEY))
+const ThemeModeBridge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { mode, setMode } = useColorScheme();
+  const resolvedMode = parseThemeMode(mode);
+
+  const value = useMemo(
+    () => ({
+      mode: resolvedMode,
+      setMode: (nextMode: ThemeMode | null) => setMode(nextMode),
+      toggleMode: () => setMode(toggleThemeMode(resolvedMode)),
+    }),
+    [resolvedMode, setMode],
   );
 
-  const toggleMode = () => {
-    setMode((prev) => {
-      const next = toggleThemeMode(prev);
-      localStorage.setItem(THEME_STORAGE_KEY, next);
-      return next;
-    });
-  };
-
-  const theme = useMemo(() => createBaldinTheme(mode), [mode]);
-
   return (
-    <ThemeModeContext.Provider value={{ mode, toggleMode }}>
-      <MuiThemeProvider theme={theme}>
+    <ThemeModeContext.Provider value={value}>{children}</ThemeModeContext.Provider>
+  );
+};
+
+const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <StyledEngineProvider injectFirst>
+      <MuiThemeProvider
+        theme={theme}
+        defaultMode={DEFAULT_THEME_MODE}
+        modeStorageKey={THEME_STORAGE_KEY}
+        forceThemeRerender
+      >
         <CssBaseline />
-        {children}
+        <ThemeModeBridge>{children}</ThemeModeBridge>
       </MuiThemeProvider>
-    </ThemeModeContext.Provider>
+    </StyledEngineProvider>
   );
 };
 

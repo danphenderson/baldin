@@ -1,16 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Card, CardContent, Typography, Button, Skeleton, useTheme, alpha,
-} from '@mui/material';
+  Box,
+  Typography,
+  Button,
+  Skeleton,
+  useTheme,
+  alpha,
+  } from '@mui/material';
 import {
   Description as DocIcon,
   ArrowForward as ArrowIcon,
-} from '@mui/icons-material';
+  } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { getDocuments, getPinnedDocuments } from '../../../service/documents';
+import { getDocuments,
+  getPinnedDocuments } from '../../../service/documents';
 import { stagger } from '../constants';
-import { softBrandGradient } from '../../../theme/effects';
+import { softBrandGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+} from '../../../design-system';
+import { radiusTokens, toRadiusPx } from '../../../design-system/tokens/radius';
 
 const MotionBox = motion.create(Box);
 
@@ -62,7 +72,7 @@ export const DocumentsSummary: React.FC<DocumentsSummaryProps> = ({ token }) => 
     <MotionBox {...stagger} transition={{ duration: 0.25 }}>
       <Card
         sx={{
-          borderRadius: '12px',
+          borderRadius: toRadiusPx(radiusTokens.lg),
           background: softBrandGradient(theme, {
             startTone: 'main',
             endTone: 'main',
@@ -89,7 +99,7 @@ export const DocumentsSummary: React.FC<DocumentsSummaryProps> = ({ token }) => 
               justifyContent: 'center',
               width: 40,
               height: 40,
-              borderRadius: '8px',
+              borderRadius: toRadiusPx(radiusTokens.sm),
               bgcolor: alpha(theme.palette.primary.main, 0.08),
               color: theme.palette.primary.main,
               flexShrink: 0,

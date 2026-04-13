@@ -1,6 +1,22 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Stack, Typography, Button, Snackbar, Alert, CircularProgress, Paper, Box, Switch, FormControlLabel, Collapse, IconButton, Tooltip, Chip } from '@mui/material';
+import {
+  DataGrid,
+  GridColDef } from '@mui/x-data-grid';
+import { Stack,
+  Typography,
+  Button,
+  Snackbar,
+  Alert,
+  CircularProgress,
+  Paper,
+  Box,
+  Switch,
+  FormControlLabel,
+  Collapse,
+  IconButton,
+  Tooltip,
+} from '@mui/material';
+import { StatusChip as Chip } from '../design-system';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import HistoryIcon from '@mui/icons-material/History';
 import { UserContext } from '../context/user-context';

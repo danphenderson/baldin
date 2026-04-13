@@ -1,9 +1,25 @@
 import React, { useState, useCallback } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button,
-  TextField, Typography, Box, LinearProgress, Alert, Stack,
-  Chip, IconButton, Menu, MenuItem, ListItemIcon, ListItemText,
+  Button,
+  TextField,
+  Typography,
+  Box,
+  LinearProgress,
+  Alert,
+  Stack,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
+import {
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+  StatusChip as Chip,
+} from '../design-system';
 import {
   Upload as UploadIcon,
   Link as LinkIcon,

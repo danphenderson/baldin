@@ -8,6 +8,7 @@ import Grid from '@mui/material/Grid';
 import {
   Bolt as BoltIcon, Search as SearchIcon, Add as AddIcon,
 } from '@mui/icons-material';
+import { useSearchParams } from 'react-router-dom';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import {
@@ -42,9 +43,7 @@ import LeadCard from '../component/lead-card';
 import LeadModal, { type LeadModalTab } from '../component/lead-modal';
 import LeadExtractionBar from '../component/lead-extraction-bar';
 import LeadSearchBar from '../component/lead-search-bar';
-import ConfirmDialog from '../component/common/confirm-dialog';
-import EmptyState from '../component/common/empty-state';
-import { LoadingState, MetricStrip } from '../design-system';
+import { ConfirmDialog, EmptyState, LoadingState, MetricStrip } from '../design-system';
 import { useNotification } from '../context/notification-context';
 
 function isValidUrl(str: string): boolean {
@@ -123,6 +122,7 @@ const buildReadyHandoff = (relevanceScore: number) => ({
 
 const LeadsPage: React.FC = () => {
   const { token } = useContext(UserContext);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Data
   const [leads, setLeads] = useState<LeadRead[]>([]);
@@ -255,6 +255,10 @@ const LeadsPage: React.FC = () => {
 
     return entries;
   }, [applications]);
+  const selectedLeadApplication = useMemo(
+    () => (selectedLeadId ? applicationsByLeadId.get(selectedLeadId) ?? null : null),
+    [applicationsByLeadId, selectedLeadId],
+  );
 
   const rankedFiltered = useMemo(() => {
     if (!rankingResult) {
@@ -293,6 +297,7 @@ const LeadsPage: React.FC = () => {
   const joinedCount = useMemo(() => leads.filter((lead) => lead.viewer_is_registered).length, [leads]);
   const activeCount = useMemo(() => leads.filter((lead) => (lead.interest_count ?? 0) > 1 || (lead.comment_count ?? 0) > 0).length, [leads]);
   const discussionCount = useMemo(() => leads.filter((lead) => (lead.comment_count ?? 0) > 0).length, [leads]);
+  const leadIdParam = searchParams.get('leadId');
 
   useEffect(() => {
     setPage(1);
@@ -313,7 +318,23 @@ const LeadsPage: React.FC = () => {
     setSelectedLeadId(null);
     setSelectedLeadTab('overview');
     setExtractContext(null);
-  }, []);
+    if (leadIdParam) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('leadId');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [leadIdParam, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!leadIdParam || selectedLeadId || loading) {
+      return;
+    }
+
+    const matchedLead = leads.find((lead) => lead.id === leadIdParam);
+    if (matchedLead) {
+      openLead(matchedLead);
+    }
+  }, [leadIdParam, leads, loading, openLead, selectedLeadId]);
 
   const handleExtract = async () => {
     if (!token || !extractUrl.trim()) return;
@@ -598,6 +619,8 @@ const LeadsPage: React.FC = () => {
         leadId={selectedLeadId}
         companies={companies}
         applying={Boolean(selectedLeadId && applyingId === selectedLeadId)}
+        hasExistingApplication={Boolean(selectedLeadApplication)}
+        applicationCtaLabel={selectedLeadApplication ? buildExistingApplicationHandoff(selectedLeadApplication).ctaLabel : undefined}
         extractContext={extractContext}
         initialTab={selectedLeadTab}
         onClose={closeLead}

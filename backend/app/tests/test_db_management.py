@@ -1,12 +1,12 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import AsyncGenerator
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app import models
 from app.core import conf
@@ -54,9 +54,12 @@ async def _ensure_db_ready() -> None:
 
 
 async def _create_user(
-    password: str, *, is_superuser: bool = False
+    password: str,
+    *,
+    email: str | None = None,
+    is_superuser: bool = False,
 ) -> tuple[str, UUID]:
-    email = utils.random_email()
+    email = email or utils.random_email()
     async with session_context() as session:
         user = await utils.create_db_user(
             email,
@@ -66,6 +69,15 @@ async def _create_user(
         )
         await session.commit()
     return email, user.id
+
+
+async def _update_user(user_id: UUID, **attrs: object) -> None:
+    async with session_context() as session:
+        user = await session.get(models.User, user_id)
+        assert user is not None
+        for key, value in attrs.items():
+            setattr(user, key, value)
+        await session.commit()
 
 
 def _expected_deleted_records() -> dict[str, int]:
@@ -88,10 +100,66 @@ def _expected_deleted_records() -> dict[str, int]:
         "user_experiences": 1,
         "user_education": 1,
         "user_certificates": 1,
+        "aspirations": 1,
         "contacts": 1,
         "documents": 1,
         "extractors": 1,
         "orchestration_pipelines": 1,
+    }
+
+
+_DOMAIN_ORDER = (
+    "profile",
+    "leads",
+    "applications",
+    "documents",
+    "agents",
+    "extractors",
+    "orchestration",
+)
+
+_TABLE_DOMAINS = {
+    "agent_runs": {"agents"},
+    "agent_chat_messages": {"agents"},
+    "agent_chat_sessions": {"agents"},
+    "agents": {"agents"},
+    "orchestration_events": {"orchestration"},
+    "extractor_examples": {"extractors"},
+    "lead_registrations": {"leads"},
+    "lead_comments": {"leads"},
+    "documents_x_applications": {"applications", "documents"},
+    "document_embeddings": {"documents"},
+    "document_shares": {"documents"},
+    "document_activities": {"documents"},
+    "document_versions": {"documents"},
+    "applications": {"applications"},
+    "user_skills": {"profile"},
+    "user_experiences": {"profile"},
+    "user_education": {"profile"},
+    "user_certificates": {"profile"},
+    "aspirations": {"profile"},
+    "contacts": {"profile"},
+    "documents": {"documents"},
+    "extractors": {"extractors"},
+    "orchestration_pipelines": {"orchestration"},
+}
+
+
+def _expected_domains(*domains: str) -> list[str]:
+    if not domains:
+        return list(_DOMAIN_ORDER)
+    selected = set(domains)
+    return [domain for domain in _DOMAIN_ORDER if domain in selected]
+
+
+def _expected_deleted_records_for_domains(*domains: str) -> dict[str, int]:
+    if not domains:
+        return _expected_deleted_records()
+    selected = set(domains)
+    return {
+        table_name: count
+        for table_name, count in _expected_deleted_records().items()
+        if _TABLE_DOMAINS[table_name] & selected
     }
 
 
@@ -135,6 +203,12 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
             expiration_date=datetime.now(),
             user_id=user_id,
         )
+        aspiration = models.Aspiration(
+            user_id=user_id,
+            kind="role",
+            label="Staff Engineer",
+            reason="Core target role",
+        )
         contact = models.Contact(
             first_name="Jaskier",
             last_name="Bard",
@@ -177,6 +251,7 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
                 experience,
                 education,
                 certificate,
+                aspiration,
                 contact,
                 document,
                 application,
@@ -295,6 +370,7 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
         "experience_id": experience.id,
         "education_id": education.id,
         "certificate_id": certificate.id,
+        "aspiration_id": aspiration.id,
         "contact_id": contact.id,
         "document_id": document.id,
         "document_version_id": document_version.id,
@@ -347,6 +423,31 @@ async def test_db_management_rejects_non_superusers() -> None:
     assert response.status_code == 403
 
 
+async def test_db_management_cleanup_preview_requires_authentication() -> None:
+    await _ensure_db_ready()
+    _, target_user_id = await _create_user("target-pass")
+    async with _client() as client:
+        response = await client.get(
+            f"/api/v1/db-management/users/{target_user_id}/cleanup-preview"
+        )
+
+    assert response.status_code == 401
+
+
+async def test_db_management_cleanup_preview_rejects_non_superusers() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        password = "user-pass"
+        email, target_user_id = await _create_user(password)
+        headers = await _auth_headers(client, email, password)
+        response = await client.get(
+            f"/api/v1/db-management/users/{target_user_id}/cleanup-preview",
+            headers=headers,
+        )
+
+    assert response.status_code == 403
+
+
 async def test_db_management_allows_superusers() -> None:
     await _ensure_db_ready()
     async with _client() as client:
@@ -359,6 +460,361 @@ async def test_db_management_allows_superusers() -> None:
 
     assert response.status_code == 200
     assert "email" in response.json()
+
+
+async def test_db_management_cleanup_preview_returns_expected_counts() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        admin_password = "admin-preview-pass"
+        admin_email, admin_user_id = await _create_user(
+            admin_password,
+            email="admin-preview@example.com",
+            is_superuser=True,
+        )
+        _, target_user_id = await _create_user(
+            "target-preview-pass",
+            email="target-preview@example.com",
+        )
+        target_data = await _seed_user_data(target_user_id)
+        headers = await _auth_headers(client, admin_email, admin_password)
+        response = await client.get(
+            f"/api/v1/db-management/users/{target_user_id}/cleanup-preview",
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user_id"] == str(target_user_id)
+    assert body["domains"] == _expected_domains()
+    assert body["cleared_profile_fields"] == 3
+    assert body["deleted_records"] == _expected_deleted_records()
+    assert body["delete_allowed"] is True
+    assert body["delete_block_reason"] is None
+    assert body["purge_allowed"] is True
+    assert body["purge_block_reason"] is None
+
+    async with session_context() as session:
+        user = await session.get(models.User, target_user_id)
+        assert user is not None
+        assert user.first_name == "Target"
+        assert (
+            await session.get(models.Document, target_data["document_id"]) is not None
+        )
+        assert await session.get(models.User, admin_user_id) is not None
+
+
+async def test_db_management_cleanup_preview_can_be_scoped_to_profile_domain() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        admin_password = "admin-preview-domain-pass"
+        admin_email, _ = await _create_user(
+            admin_password,
+            email="admin-preview-domain@example.com",
+            is_superuser=True,
+        )
+        _, target_user_id = await _create_user(
+            "target-preview-domain-pass",
+            email="target-preview-domain@example.com",
+        )
+        await _seed_user_data(target_user_id)
+        headers = await _auth_headers(client, admin_email, admin_password)
+        response = await client.get(
+            f"/api/v1/db-management/users/{target_user_id}/cleanup-preview",
+            headers=headers,
+            params={"domains": "profile"},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user_id"] == str(target_user_id)
+    assert body["domains"] == _expected_domains("profile")
+    assert body["cleared_profile_fields"] == 3
+    assert body["deleted_records"] == _expected_deleted_records_for_domains("profile")
+    assert body["delete_allowed"] is True
+    assert body["delete_block_reason"] is None
+    assert body["purge_allowed"] is True
+    assert body["purge_block_reason"] is None
+
+
+async def test_db_management_cleanup_preview_returns_404_for_missing_user() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        admin_password = "admin-preview-404-pass"
+        admin_email, _ = await _create_user(
+            admin_password,
+            email="admin-preview-404@example.com",
+            is_superuser=True,
+        )
+        headers = await _auth_headers(client, admin_email, admin_password)
+        response = await client.get(
+            f"/api/v1/db-management/users/{uuid4()}/cleanup-preview",
+            headers=headers,
+        )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "User not found"}
+
+
+async def test_db_management_cleanup_preview_blocks_self_delete() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        admin_password = "self-preview-pass"
+        admin_email, admin_user_id = await _create_user(
+            admin_password,
+            email="self-preview@example.com",
+            is_superuser=True,
+        )
+        _, peer_superuser_id = await _create_user(
+            "peer-preview-pass",
+            email="peer-preview@example.com",
+            is_superuser=True,
+        )
+        await _set_superusers({admin_user_id, peer_superuser_id})
+        headers = await _auth_headers(client, admin_email, admin_password)
+        response = await client.get(
+            f"/api/v1/db-management/users/{admin_user_id}/cleanup-preview",
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    assert response.json()["domains"] == _expected_domains()
+    assert response.json()["delete_allowed"] is False
+    assert response.json()["delete_block_reason"] == "self_delete"
+    assert response.json()["purge_allowed"] is False
+    assert response.json()["purge_block_reason"] == "self_delete"
+
+
+async def test_db_management_cleanup_preview_blocks_last_remaining_superuser() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        admin_password = "last-preview-pass"
+        admin_email, admin_user_id = await _create_user(
+            admin_password,
+            email="last-preview@example.com",
+            is_superuser=True,
+        )
+        await _set_superusers({admin_user_id})
+        headers = await _auth_headers(client, admin_email, admin_password)
+        response = await client.get(
+            f"/api/v1/db-management/users/{admin_user_id}/cleanup-preview",
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    assert response.json()["domains"] == _expected_domains()
+    assert response.json()["delete_allowed"] is False
+    assert response.json()["delete_block_reason"] == "last_remaining_superuser"
+    assert response.json()["purge_allowed"] is False
+    assert response.json()["purge_block_reason"] == "last_remaining_superuser"
+
+
+async def test_db_management_list_users_rejects_non_superusers() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        password = "user-list-pass"
+        email, _ = await _create_user(password, email="user-list@example.com")
+        headers = await _auth_headers(client, email, password)
+        response = await client.get("/api/v1/db-management/users", headers=headers)
+
+    assert response.status_code == 403
+
+
+async def test_db_management_list_users_supports_search_filters_and_pagination() -> (
+    None
+):
+    await _ensure_db_ready()
+    async with _client() as client:
+        admin_password = "admin-list-pass"
+        admin_email, admin_user_id = await _create_user(
+            admin_password,
+            email="admin.db-management@example.com",
+            is_superuser=True,
+        )
+        _, alice_user_id = await _create_user(
+            "alice-list-pass",
+            email="alice.db-management@example.com",
+        )
+        _, inactive_user_id = await _create_user(
+            "inactive-list-pass",
+            email="inactive.db-management@example.com",
+        )
+        _, peer_superuser_id = await _create_user(
+            "peer-list-pass",
+            email="peer-super.db-management@example.com",
+            is_superuser=True,
+        )
+        await _update_user(
+            alice_user_id,
+            first_name="Alice",
+            last_name="Searchable",
+        )
+        await _update_user(
+            inactive_user_id,
+            first_name="Ina",
+            last_name="Ctive",
+            is_active=False,
+        )
+        headers = await _auth_headers(client, admin_email, admin_password)
+
+        search_response = await client.get(
+            "/api/v1/db-management/users",
+            headers=headers,
+            params={"q": "alice.db-management", "request_count": True},
+        )
+        inactive_response = await client.get(
+            "/api/v1/db-management/users",
+            headers=headers,
+            params={"is_active": False, "request_count": True},
+        )
+        superuser_response = await client.get(
+            "/api/v1/db-management/users",
+            headers=headers,
+            params={
+                "q": "db-management",
+                "is_superuser": True,
+                "page_size": 1,
+                "request_count": True,
+            },
+        )
+
+    assert search_response.status_code == 200
+    search_body = search_response.json()
+    assert search_body["total"] == 1
+    assert len(search_body["items"]) == 1
+    assert search_body["items"][0]["user_id"] == str(alice_user_id)
+    assert search_body["items"][0]["display_name"] == "Alice Searchable"
+
+    assert inactive_response.status_code == 200
+    inactive_body = inactive_response.json()
+    assert inactive_body["total"] == 1
+    assert len(inactive_body["items"]) == 1
+    assert inactive_body["items"][0]["user_id"] == str(inactive_user_id)
+    assert inactive_body["items"][0]["is_active"] is False
+
+    assert superuser_response.status_code == 200
+    superuser_body = superuser_response.json()
+    assert superuser_body["total"] == 2
+    assert superuser_body["page_size"] == 1
+    assert len(superuser_body["items"]) == 1
+    assert superuser_body["items"][0]["user_id"] in {
+        str(admin_user_id),
+        str(peer_superuser_id),
+    }
+
+
+async def test_db_management_status_reports_revisions() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        admin_password = "admin-status-pass"
+        admin_email, _ = await _create_user(
+            admin_password,
+            email="admin-status@example.com",
+            is_superuser=True,
+        )
+        headers = await _auth_headers(client, admin_email, admin_password)
+        response = await client.get("/api/v1/db-management/status", headers=headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "current_revision" in body
+    assert body["head_revision"] is not None
+    assert body["public_table_count"] > 0
+    assert body["is_at_head"] == (
+        body["current_revision"] == body["head_revision"]
+        and body["head_revision"] is not None
+    )
+
+
+async def test_db_management_tables_include_known_table_summaries() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        admin_password = "admin-tables-pass"
+        admin_email, _ = await _create_user(
+            admin_password,
+            email="admin-tables@example.com",
+            is_superuser=True,
+        )
+        headers = await _auth_headers(client, admin_email, admin_password)
+        response = await client.get("/api/v1/db-management/tables", headers=headers)
+
+    assert response.status_code == 200
+    users_table = next(
+        item for item in response.json() if item["table_name"] == "users"
+    )
+    assert set(users_table.keys()) == {"table_name", "column_count", "row_count"}
+    assert users_table["column_count"] > 0
+    assert users_table["row_count"] >= 1
+
+
+async def test_db_management_legacy_list_tables_keeps_public_view_compatibility() -> (
+    None
+):
+    await _ensure_db_ready()
+    async with session_context() as session:
+        await session.execute(
+            text(
+                "CREATE OR REPLACE VIEW public.test_db_management_view AS SELECT id FROM users"
+            )
+        )
+        await session.commit()
+
+    async with _client() as client:
+        admin_password = "admin-legacy-tables-pass"
+        admin_email, _ = await _create_user(
+            admin_password,
+            email="admin-legacy-tables@example.com",
+            is_superuser=True,
+        )
+        headers = await _auth_headers(client, admin_email, admin_password)
+        legacy_response = await client.get(
+            "/api/v1/db-management/list-tables",
+            headers=headers,
+        )
+        summary_response = await client.get(
+            "/api/v1/db-management/tables",
+            headers=headers,
+        )
+
+    assert legacy_response.status_code == 200
+    assert "test_db_management_view" in legacy_response.json()
+    assert summary_response.status_code == 200
+    assert all(
+        item["table_name"] != "test_db_management_view"
+        for item in summary_response.json()
+    )
+
+
+async def test_db_management_table_detail_returns_table_or_404() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        admin_password = "admin-table-detail-pass"
+        admin_email, _ = await _create_user(
+            admin_password,
+            email="admin-table-detail@example.com",
+            is_superuser=True,
+        )
+        headers = await _auth_headers(client, admin_email, admin_password)
+        detail_response = await client.get(
+            "/api/v1/db-management/tables/users",
+            headers=headers,
+        )
+        missing_response = await client.get(
+            "/api/v1/db-management/tables/not_a_real_table",
+            headers=headers,
+        )
+
+    assert detail_response.status_code == 200
+    detail_body = detail_response.json()
+    assert set(detail_body.keys()) == {"table_name", "row_count", "columns"}
+    assert detail_body["table_name"] == "users"
+    assert detail_body["row_count"] >= 1
+    email_column = next(
+        column for column in detail_body["columns"] if column["name"] == "email"
+    )
+    assert set(email_column.keys()) == {"name", "data_type", "is_nullable", "default"}
+
+    assert missing_response.status_code == 404
+    assert missing_response.json() == {"detail": "Table not found"}
 
 
 async def test_db_management_purges_user_data_without_deleting_user() -> None:
@@ -380,6 +836,7 @@ async def test_db_management_purges_user_data_without_deleting_user() -> None:
     body = response.json()
     assert body["user_id"] == str(target_user_id)
     assert body["user_deleted"] is False
+    assert body["domains"] == _expected_domains()
     assert body["cleared_profile_fields"] == 3
     assert body["deleted_records"] == _expected_deleted_records()
 
@@ -396,6 +853,9 @@ async def test_db_management_purges_user_data_without_deleting_user() -> None:
         assert await session.get(models.Education, target_data["education_id"]) is None
         assert (
             await session.get(models.Certificate, target_data["certificate_id"]) is None
+        )
+        assert (
+            await session.get(models.Aspiration, target_data["aspiration_id"]) is None
         )
         assert await session.get(models.Contact, target_data["contact_id"]) is None
         assert await session.get(models.Document, target_data["document_id"]) is None
@@ -450,6 +910,73 @@ async def test_db_management_purges_user_data_without_deleting_user() -> None:
         assert await session.get(models.Skill, other_skill_id) is not None
 
 
+async def test_db_management_purges_only_selected_profile_domain() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        admin_password = "admin-profile-purge-pass"
+        admin_email, _ = await _create_user(
+            admin_password,
+            email="admin-profile-purge@example.com",
+            is_superuser=True,
+        )
+        _, target_user_id = await _create_user(
+            "target-profile-purge-pass",
+            email="target-profile-purge@example.com",
+        )
+        target_data = await _seed_user_data(target_user_id)
+        headers = await _auth_headers(client, admin_email, admin_password)
+        response = await client.patch(
+            f"/api/v1/db-management/users/{target_user_id}/purge",
+            headers=headers,
+            params={"domains": "profile"},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user_id"] == str(target_user_id)
+    assert body["user_deleted"] is False
+    assert body["domains"] == _expected_domains("profile")
+    assert body["cleared_profile_fields"] == 3
+    assert body["deleted_records"] == _expected_deleted_records_for_domains("profile")
+
+    async with session_context() as session:
+        user = await session.get(models.User, target_user_id)
+        assert user is not None
+        assert user.first_name is None
+        assert user.last_name is None
+        assert user.city is None
+        assert await session.get(models.Skill, target_data["skill_id"]) is None
+        assert (
+            await session.get(models.Experience, target_data["experience_id"]) is None
+        )
+        assert await session.get(models.Education, target_data["education_id"]) is None
+        assert (
+            await session.get(models.Certificate, target_data["certificate_id"]) is None
+        )
+        assert (
+            await session.get(models.Aspiration, target_data["aspiration_id"]) is None
+        )
+        assert await session.get(models.Contact, target_data["contact_id"]) is None
+        assert (
+            await session.get(models.Document, target_data["document_id"]) is not None
+        )
+        assert (
+            await session.get(models.Application, target_data["application_id"])
+            is not None
+        )
+        assert (
+            await session.get(models.AgentChatSession, target_data["chat_session_id"])
+            is not None
+        )
+        assert (
+            await session.get(models.Extractor, target_data["extractor_id"]) is not None
+        )
+        assert (
+            await session.get(models.OrchestrationPipeline, target_data["pipeline_id"])
+            is not None
+        )
+
+
 async def test_db_management_deletes_user_and_owned_data() -> None:
     await _ensure_db_ready()
     async with _client() as client:
@@ -469,6 +996,7 @@ async def test_db_management_deletes_user_and_owned_data() -> None:
     body = response.json()
     assert body["user_id"] == str(target_user_id)
     assert body["user_deleted"] is True
+    assert body["domains"] == _expected_domains()
     assert body["cleared_profile_fields"] == 0
     assert body["deleted_records"] == _expected_deleted_records()
 
@@ -481,6 +1009,9 @@ async def test_db_management_deletes_user_and_owned_data() -> None:
         assert await session.get(models.Education, target_data["education_id"]) is None
         assert (
             await session.get(models.Certificate, target_data["certificate_id"]) is None
+        )
+        assert (
+            await session.get(models.Aspiration, target_data["aspiration_id"]) is None
         )
         assert await session.get(models.Contact, target_data["contact_id"]) is None
         assert await session.get(models.Document, target_data["document_id"]) is None
@@ -525,6 +1056,57 @@ async def test_db_management_deletes_user_and_owned_data() -> None:
         )
         assert lead_registration.scalar_one_or_none() is None
         assert await session.get(models.Skill, other_skill_id) is not None
+
+
+async def test_db_management_rejects_full_self_purge_but_allows_scoped_purge() -> None:
+    await _ensure_db_ready()
+    async with _client() as client:
+        admin_password = "self-purge-admin-pass"
+        admin_email, admin_user_id = await _create_user(
+            admin_password,
+            email="self-purge-admin@example.com",
+            is_superuser=True,
+        )
+        _, peer_superuser_id = await _create_user(
+            "self-purge-peer-pass",
+            email="self-purge-peer@example.com",
+            is_superuser=True,
+        )
+        await _set_superusers({admin_user_id, peer_superuser_id})
+        target_data = await _seed_user_data(admin_user_id)
+        headers = await _auth_headers(client, admin_email, admin_password)
+
+        blocked_response = await client.patch(
+            f"/api/v1/db-management/users/{admin_user_id}/purge",
+            headers=headers,
+        )
+        scoped_response = await client.patch(
+            f"/api/v1/db-management/users/{admin_user_id}/purge",
+            headers=headers,
+            params={"domains": "profile"},
+        )
+
+    assert blocked_response.status_code == 409
+    assert blocked_response.json() == {
+        "detail": (
+            "Superusers cannot fully purge their own account. "
+            "Use scoped cleanup domains for targeted cleanup."
+        )
+    }
+    assert scoped_response.status_code == 200
+    assert scoped_response.json()["domains"] == _expected_domains("profile")
+    assert scoped_response.json()[
+        "deleted_records"
+    ] == _expected_deleted_records_for_domains("profile")
+
+    async with session_context() as session:
+        user = await session.get(models.User, admin_user_id)
+        assert user is not None
+        assert user.is_superuser is True
+        assert await session.get(models.Skill, target_data["skill_id"]) is None
+        assert (
+            await session.get(models.Document, target_data["document_id"]) is not None
+        )
 
 
 async def test_db_management_rejects_current_superuser_deletion() -> None:

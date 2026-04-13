@@ -29,24 +29,6 @@ vi.mock('@/page/applications/use-applications', async () => {
   };
 });
 
-vi.mock('@/component/common/confirm-dialog', () => ({
-  default: () => null,
-}));
-
-vi.mock('@/component/common/empty-state', () => ({
-  default: ({ title, description, action }: {
-    title: string;
-    description?: string;
-    action?: { label: string; onClick: () => void };
-  }) => (
-    <div data-testid="empty-state">
-      <span>{title}</span>
-      {description && <span>{description}</span>}
-      {action && <button onClick={action.onClick}>{action.label}</button>}
-    </div>
-  ),
-}));
-
 import ApplicationsQueuePage from '@/page/applications/applications-queue-page';
 // Static stage columns for assertions (colors not needed in tests)
 const STAGE_COLUMNS = [

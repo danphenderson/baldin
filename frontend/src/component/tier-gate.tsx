@@ -1,6 +1,15 @@
 import React, { useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, Typography, Button, Stack } from '@mui/material';
+import {
+  useNavigate } from 'react-router-dom';
+import {
+  Typography,
+  Button,
+  Stack,
+} from '@mui/material';
+import {
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+} from '../design-system';
 import { Lock as LockIcon } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 

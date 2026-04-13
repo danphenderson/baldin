@@ -8,7 +8,7 @@ import { Box, Button, CircularProgress, Skeleton, Stack, Typography } from '@mui
 import { AutoAwesome as SuggestIcon } from '@mui/icons-material';
 
 import AspirationsCollection from '../component/aspirations-collection';
-import { Caption, CardTitle } from '../component/common/text';
+import { Caption, CardTitle } from '../design-system';
 import LeadCard from '../component/lead-card';
 import LeadSearchBar from '../component/lead-search-bar';
 import {

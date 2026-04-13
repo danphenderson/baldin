@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
+import { TextField, Button } from '@mui/material';
 import { EducationRead, EducationCreate, EducationUpdate } from '../service/education';  // Adjust import path as necessary
+import {
+  SurfaceDialog as Dialog,
+  SurfaceDialogActions as DialogActions,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogTitle as DialogTitle,
+} from '../design-system';
 
 interface EducationModalProps {
   open: boolean;

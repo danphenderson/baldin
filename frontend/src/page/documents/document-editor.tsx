@@ -1,10 +1,27 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Box, Typography, Chip, Stack, Button, useTheme, alpha, TextField,
-  Alert, Paper, Divider, List, ListItemButton, ListItemText, MenuItem,
-  Select, FormControl, InputLabel, type SelectChangeEvent,
-  ToggleButtonGroup, ToggleButton,
+  Box,
+  Typography,
+  Stack,
+  Button,
+  useTheme,
+  alpha,
+  TextField,
+  Alert,
+  Paper,
+  Divider,
+  List,
+  ListItemButton,
+  ListItemText,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  type SelectChangeEvent,
+  ToggleButtonGroup,
+  ToggleButton,
 } from '@mui/material';
+import { StatusChip as Chip } from '../../design-system';
 import Grid from '@mui/material/Grid';
 import type { Editor } from '@tiptap/core';
 import {

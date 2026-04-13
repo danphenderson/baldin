@@ -5,28 +5,32 @@ import {
   Badge,
   Box,
   Button,
-  Card,
   CardActionArea,
-  CardContent,
   Pagination as MuiPagination,
   Stack,
   TextField,
   Typography,
-} from '@mui/material';
+  } from '@mui/material';
 import {
   Add as AddIcon,
   Chat as ChatIcon,
   Search as SearchIcon,
-} from '@mui/icons-material';
+  } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import {
   getConversations,
   type ConversationRead,
-} from '../../service/messages';
+  } from '../../service/messages';
 import { avatarUrl } from '../../service/users';
-import { CollectionToolbar, EmptyState, LoadingState, SectionHeader } from '../../design-system';
+import { CollectionToolbar,
+  EmptyState,
+  LoadingState,
+  SectionHeader,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+} from '../../design-system';
 import NewConversationDialog from '../../component/new-conversation-dialog';
 import { useNotification } from '../../context/notification-context';
 
@@ -128,7 +132,7 @@ const ConversationsPage: React.FC = () => {
         icon={<ChatIcon />}
         title="Conversations"
         count={loading ? undefined : filtered.length}
-        action={filtered.length > 0 ? (
+        action={conversations.length > 0 ? (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -156,6 +160,7 @@ const ConversationsPage: React.FC = () => {
               icon={<SearchIcon />}
               title="No results match your filters"
               description="Try adjusting your search or clearing filters."
+              primaryAction={{ label: 'New Message', onClick: () => setDialogOpen(true), icon: <AddIcon /> }}
             />
           )
         ) : (

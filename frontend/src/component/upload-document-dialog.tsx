@@ -1,9 +1,26 @@
 import React, { useContext, useState, useRef, useCallback } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
-  Box, Typography, Alert, LinearProgress, Select, MenuItem, FormControl,
-  InputLabel, Stack, alpha, useTheme, type SelectChangeEvent,
+  Button,
+  TextField,
+  Box,
+  Typography,
+  Alert,
+  LinearProgress,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Stack,
+  alpha,
+  useTheme,
+  type SelectChangeEvent,
 } from '@mui/material';
+import {
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../design-system';
 import { CloudUpload as CloudUploadIcon, PictureAsPdf as PdfIcon } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import { uploadDocument, type DocumentDetailRead, type DocumentKind } from '../service/documents';

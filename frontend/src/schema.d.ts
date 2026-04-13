@@ -92,12 +92,40 @@ export interface paths {
     post: operations["mfa_login_verify_api_v1_auth_mfa_login_verify_post"];
   };
   "/api/v1/db-management/list-tables": {
-    /** List Tables */
+    /**
+     * List Tables
+     * @deprecated
+     * @description Deprecated. Use `GET /api/v1/db-management/tables` instead.
+     */
     get: operations["list_tables_api_v1_db_management_list_tables_get"];
   };
   "/api/v1/db-management/table-details/{table_name}": {
-    /** Get Table Details */
+    /**
+     * Get Table Details
+     * @deprecated
+     * @description Deprecated. Use `GET /api/v1/db-management/tables/{table_name}` instead.
+     */
     get: operations["get_table_details_api_v1_db_management_table_details__table_name__get"];
+  };
+  "/api/v1/db-management/status": {
+    /** Get Db Management Status */
+    get: operations["get_db_management_status_api_v1_db_management_status_get"];
+  };
+  "/api/v1/db-management/tables": {
+    /** List Db Management Tables */
+    get: operations["list_db_management_tables_api_v1_db_management_tables_get"];
+  };
+  "/api/v1/db-management/tables/{table_name}": {
+    /** Get Db Management Table */
+    get: operations["get_db_management_table_api_v1_db_management_tables__table_name__get"];
+  };
+  "/api/v1/db-management/users": {
+    /** List Db Management Users */
+    get: operations["list_db_management_users_api_v1_db_management_users_get"];
+  };
+  "/api/v1/db-management/users/{user_id}/cleanup-preview": {
+    /** Preview User Data Operation */
+    get: operations["preview_user_data_operation_api_v1_db_management_users__user_id__cleanup_preview_get"];
   };
   "/api/v1/db-management/users/{user_id}/purge": {
     /** Purge User Data */
@@ -3758,6 +3786,134 @@ export interface components {
      * @enum {string}
      */
     CrawlerTriggerType: "manual" | "scheduled";
+    /** DbManagementColumnRead */
+    DbManagementColumnRead: {
+      /**
+       * Name
+       * @description Column name
+       */
+      name: string;
+      /**
+       * Data Type
+       * @description Database type name
+       */
+      data_type: string;
+      /**
+       * Is Nullable
+       * @description Whether the column accepts null values
+       */
+      is_nullable: boolean;
+      /**
+       * Default
+       * @description Column default expression
+       */
+      default?: string | null;
+    };
+    /**
+     * DbManagementPurgeDomain
+     * @enum {string}
+     */
+    DbManagementPurgeDomain: "profile" | "leads" | "applications" | "documents" | "agents" | "extractors" | "orchestration";
+    /** DbManagementStatusRead */
+    DbManagementStatusRead: {
+      /**
+       * Current Revision
+       * @description Alembic revision currently stamped in the database
+       */
+      current_revision?: string | null;
+      /**
+       * Head Revision
+       * @description Latest Alembic revision available in the repo
+       */
+      head_revision?: string | null;
+      /**
+       * Is At Head
+       * @description Whether the current database revision matches the repo head
+       */
+      is_at_head: boolean;
+      /**
+       * Public Table Count
+       * @description Number of base tables currently in the public schema
+       */
+      public_table_count: number;
+    };
+    /** DbManagementTableDetailRead */
+    DbManagementTableDetailRead: {
+      /**
+       * Table Name
+       * @description Table name in the public schema
+       */
+      table_name: string;
+      /**
+       * Row Count
+       * @description Exact row count for the table
+       */
+      row_count: number;
+      /**
+       * Columns
+       * @description Ordered column metadata for the table
+       */
+      columns?: components["schemas"]["DbManagementColumnRead"][];
+    };
+    /** DbManagementTableSummaryRead */
+    DbManagementTableSummaryRead: {
+      /**
+       * Table Name
+       * @description Table name in the public schema
+       */
+      table_name: string;
+      /**
+       * Column Count
+       * @description Number of columns on the table
+       */
+      column_count: number;
+      /**
+       * Row Count
+       * @description Exact row count for the table
+       */
+      row_count: number;
+    };
+    /** DbManagementUserSummaryRead */
+    DbManagementUserSummaryRead: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Email
+       * Format: email
+       * @description User email address
+       */
+      email: string;
+      /**
+       * Display Name
+       * @description Resolved display name for admin workflows
+       */
+      display_name: string;
+      /**
+       * Is Active
+       * @description Whether the user is active
+       */
+      is_active: boolean;
+      /**
+       * Is Superuser
+       * @description Whether the user is a Baldin superuser
+       */
+      is_superuser: boolean;
+      /**
+       * Is Discoverable
+       * @description Whether the user is discoverable in the public directory
+       */
+      is_discoverable: boolean;
+      /**
+       * Created At
+       * Format: date-time
+       * @description When the user was created
+       */
+      created_at: string;
+    };
     /** DocumentActivityRead */
     DocumentActivityRead: {
       /**
@@ -7094,6 +7250,32 @@ export interface components {
        */
       page_size?: number;
     };
+    /** PaginatedResponse[DbManagementUserSummaryRead] */
+    PaginatedResponse_DbManagementUserSummaryRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["DbManagementUserSummaryRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
     /** PaginatedResponse[DocumentSummaryRead] */
     PaginatedResponse_DocumentSummaryRead_: {
       /**
@@ -7748,6 +7930,53 @@ export interface components {
        */
       is_verified?: boolean | null;
     };
+    /** UserDataOperationPreview */
+    UserDataOperationPreview: {
+      /**
+       * User Id
+       * Format: uuid4
+       * @description User affected by the previewed operation
+       */
+      user_id: string;
+      /**
+       * Domains
+       * @description Cleanup domains represented by the preview
+       */
+      domains?: components["schemas"]["DbManagementPurgeDomain"][];
+      /**
+       * Cleared Profile Fields
+       * @description Number of profile fields that would be cleared
+       * @default 0
+       */
+      cleared_profile_fields?: number;
+      /**
+       * Deleted Records
+       * @description Deleted record counts grouped by table or association
+       */
+      deleted_records?: {
+        [key: string]: number;
+      };
+      /**
+       * Delete Allowed
+       * @description Whether the user can be deleted under the current safeguards
+       */
+      delete_allowed: boolean;
+      /**
+       * Delete Block Reason
+       * @description Reason deletion is blocked, when applicable
+       */
+      delete_block_reason?: ("self_delete" | "last_remaining_superuser") | null;
+      /**
+       * Purge Allowed
+       * @description Whether the requested purge can run under the current safeguards
+       */
+      purge_allowed: boolean;
+      /**
+       * Purge Block Reason
+       * @description Reason the requested purge is blocked, when applicable
+       */
+      purge_block_reason?: ("self_delete" | "last_remaining_superuser") | null;
+    };
     /** UserDataOperationResult */
     UserDataOperationResult: {
       /**
@@ -7761,6 +7990,11 @@ export interface components {
        * @description Whether the user row was removed
        */
       user_deleted: boolean;
+      /**
+       * Domains
+       * @description Cleanup domains applied to the operation
+       */
+      domains?: components["schemas"]["DbManagementPurgeDomain"][];
       /**
        * Cleared Profile Fields
        * @description Number of profile fields cleared from the retained user
@@ -8471,7 +8705,11 @@ export interface operations {
       };
     };
   };
-  /** List Tables */
+  /**
+   * List Tables
+   * @deprecated
+   * @description Deprecated. Use `GET /api/v1/db-management/tables` instead.
+   */
   list_tables_api_v1_db_management_list_tables_get: {
     responses: {
       /** @description Successful Response */
@@ -8482,7 +8720,11 @@ export interface operations {
       };
     };
   };
-  /** Get Table Details */
+  /**
+   * Get Table Details
+   * @deprecated
+   * @description Deprecated. Use `GET /api/v1/db-management/tables/{table_name}` instead.
+   */
   get_table_details_api_v1_db_management_table_details__table_name__get: {
     parameters: {
       path: {
@@ -8506,9 +8748,116 @@ export interface operations {
       };
     };
   };
+  /** Get Db Management Status */
+  get_db_management_status_api_v1_db_management_status_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DbManagementStatusRead"];
+        };
+      };
+    };
+  };
+  /** List Db Management Tables */
+  list_db_management_tables_api_v1_db_management_tables_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DbManagementTableSummaryRead"][];
+        };
+      };
+    };
+  };
+  /** Get Db Management Table */
+  get_db_management_table_api_v1_db_management_tables__table_name__get: {
+    parameters: {
+      path: {
+        table_name: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DbManagementTableDetailRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Db Management Users */
+  list_db_management_users_api_v1_db_management_users_get: {
+    parameters: {
+      query?: {
+        /** @description Search by email, first name, or last name */
+        q?: string | null;
+        /** @description Filter by superuser status */
+        is_superuser?: boolean | null;
+        /** @description Filter by active status */
+        is_active?: boolean | null;
+        /** @description Page number starting from 1 */
+        page?: number;
+        /** @description Number of records per page (max 100) */
+        page_size?: number;
+        /** @description Return total count of records */
+        request_count?: boolean;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedResponse_DbManagementUserSummaryRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Preview User Data Operation */
+  preview_user_data_operation_api_v1_db_management_users__user_id__cleanup_preview_get: {
+    parameters: {
+      query?: {
+        /** @description Optional cleanup domains to target. Repeat the query parameter to scope preview counts. */
+        domains?: components["schemas"]["DbManagementPurgeDomain"][] | null;
+      };
+      path: {
+        user_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserDataOperationPreview"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Purge User Data */
   purge_user_data_api_v1_db_management_users__user_id__purge_patch: {
     parameters: {
+      query?: {
+        /** @description Optional cleanup domains to purge. Repeat the query parameter to scope the destructive cleanup. */
+        domains?: components["schemas"]["DbManagementPurgeDomain"][] | null;
+      };
       path: {
         user_id: string;
       };

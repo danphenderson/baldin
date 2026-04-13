@@ -83,7 +83,23 @@ vi.mock('@/component/lead-card', () => ({
 }));
 
 vi.mock('@/component/lead-modal', () => ({
-  default: () => null,
+  default: ({
+    open,
+    leadId,
+    hasExistingApplication,
+    applicationCtaLabel,
+  }: {
+    open: boolean;
+    leadId: string | null;
+    hasExistingApplication?: boolean;
+    applicationCtaLabel?: string;
+  }) => (open ? (
+    <div data-testid="lead-modal">
+      <span>{leadId}</span>
+      <span>{hasExistingApplication ? 'existing-application' : 'new-application'}</span>
+      <span>{applicationCtaLabel ?? 'Create Application'}</span>
+    </div>
+  ) : null),
 }));
 
 vi.mock('@/component/lead-extraction-bar', () => ({
@@ -126,19 +142,6 @@ vi.mock('@/component/lead-search-bar', () => ({
       {rankingActive && (
         <button onClick={onClearRanking}>Clear ranking</button>
       )}
-    </div>
-  ),
-}));
-
-vi.mock('@/component/common/confirm-dialog', () => ({
-  default: () => null,
-}));
-
-vi.mock('@/component/common/empty-state', () => ({
-  default: ({ title, description }: { title: string; description?: string }) => (
-    <div data-testid="empty-state">
-      <span>{title}</span>
-      {description && <span>{description}</span>}
     </div>
   ),
 }));
@@ -188,12 +191,12 @@ const userContextValue = {
   canAccessTier: vi.fn(() => true),
 };
 
-function renderPage() {
+function renderPage(initialEntries: string[] = ['/']) {
   return render(
     <ToolbarHeaderContext.Provider value={vi.fn()}>
       <UserContext.Provider value={userContextValue}>
         <NotificationProvider>
-          <MemoryRouter>
+          <MemoryRouter initialEntries={initialEntries}>
             <LeadsPage />
           </MemoryRouter>
         </NotificationProvider>
@@ -406,6 +409,28 @@ describe('LeadsPage', () => {
     });
     expect(screen.getByRole('button', { name: 'Apply now for Senior Frontend Engineer' })).toBeDisabled();
     expect(mockedCreateApplication).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the lead modal from the leadId query param and carries duplicate CTA state', async () => {
+    mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
+    mockedGetCompanies.mockResolvedValue([] as never);
+    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+    mockedGetApplications.mockResolvedValue([{
+      id: 'app-1',
+      lead_id: 'lead-1',
+      status: 'applied',
+      stage: 'applied',
+      outcome: null,
+    }] as never);
+
+    renderPage(['/leads?leadId=lead-1']);
+
+    expect(await screen.findByText('Senior Frontend Engineer')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('lead-modal')).toHaveTextContent('lead-1');
+    });
+    expect(screen.getByTestId('lead-modal')).toHaveTextContent('existing-application');
+    expect(screen.getByTestId('lead-modal')).toHaveTextContent('Application exists');
   });
 
   it('disables ranking when the user has no aspirations', async () => {

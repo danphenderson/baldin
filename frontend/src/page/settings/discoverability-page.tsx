@@ -3,15 +3,13 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   FormControlLabel,
   Snackbar,
   Stack,
   Switch,
   Typography,
 } from '@mui/material';
+import { SurfaceCard as Card, SurfaceCardContent as CardContent, StatusChip as Chip } from '../../design-system';
 import {
   AutoAwesome as AutoAwesomeIcon,
   TravelExplore as TravelExploreIcon,

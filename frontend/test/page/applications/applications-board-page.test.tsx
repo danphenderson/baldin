@@ -16,10 +16,6 @@ vi.mock('@/page/applications/use-applications', async () => {
   };
 });
 
-vi.mock('@/component/common/confirm-dialog', () => ({
-  default: () => null,
-}));
-
 import ApplicationsBoardPage from '@/page/applications/applications-board-page';
 
 function makeApplication(overrides: Partial<Record<string, unknown>> = {}) {

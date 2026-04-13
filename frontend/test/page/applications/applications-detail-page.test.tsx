@@ -110,8 +110,8 @@ describe('ApplicationDetailPage', () => {
     renderPage('app-123');
 
     expect(await screen.findByText('Senior Frontend Engineer')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Run Agent' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Chat with Agent' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Run Agent' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Chat with Agent' })).toBeInTheDocument();
   });
 
   it('shows an error state when the direct application fetch fails', async () => {

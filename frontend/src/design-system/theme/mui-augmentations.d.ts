@@ -1,3 +1,4 @@
+import '@mui/material/themeCssVarsAugmentation';
 import type {
   alphaTokens,
   BorderTokens,

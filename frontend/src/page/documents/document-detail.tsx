@@ -1,31 +1,69 @@
 import React, { useContext, useEffect, useState, useCallback } from 'react';
 import {
-  Box, Typography, Chip, Stack, Button, useTheme, alpha, IconButton,
-  Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, Skeleton,
-  Alert, Collapse, Divider, Paper,
-} from '@mui/material';
+  Box,
+  Typography,
+  Stack,
+  Button,
+  useTheme,
+  alpha,
+  IconButton,
+  Tooltip,
+  Skeleton,
+  Alert,
+  Collapse,
+  Divider,
+  Paper,
+  } from '@mui/material';
 import {
-  Edit as EditIcon, Download as DownloadIcon, Delete as DeleteIcon,
-  ArrowBack as BackIcon, PushPin as PushPinIcon, Archive as ArchiveIcon,
-  Unarchive as UnarchiveIcon, CompareArrows as CompareIcon,
-  ExpandMore as ExpandIcon, ExpandLess as CollapseIcon,
-  Article as ResumeIcon, Mail as LetterIcon, Replay as FollowUpIcon,
-  MenuBook as RefSheetIcon, TextSnippet as FreeformIcon,
+  Edit as EditIcon,
+  Download as DownloadIcon,
+  Delete as DeleteIcon,
+  ArrowBack as BackIcon,
+  PushPin as PushPinIcon,
+  Archive as ArchiveIcon,
+  Unarchive as UnarchiveIcon,
+  CompareArrows as CompareIcon,
+  ExpandMore as ExpandIcon,
+  ExpandLess as CollapseIcon,
+  Article as ResumeIcon,
+  Mail as LetterIcon,
+  Replay as FollowUpIcon,
+  MenuBook as RefSheetIcon,
+  TextSnippet as FreeformIcon,
   Description as CellDocIcon,
-  PictureAsPdf as PdfIcon, Share as ShareIcon,
-} from '@mui/icons-material';
-import { useNavigate, useParams } from 'react-router-dom';
+  PictureAsPdf as PdfIcon,
+  Share as ShareIcon,
+  } from '@mui/icons-material';
+import { useNavigate,
+  useParams } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import CellDocEditor from '../../component/cell-doc/cell-doc-editor';
 import RichTextEditor from '../../component/rich-text-editor';
 import {
-  getDocument, updateDocument, deleteDocument, downloadDocument, pinDocument, downloadOriginal,
+  getDocument,
+  updateDocument,
+  deleteDocument,
+  downloadDocument,
+  pinDocument,
+  downloadOriginal,
   getDocumentActivity,
-  type DocumentActivityRead, type DocumentActivityType, type DocumentDetailRead, type DocumentVersionRead, type DocumentKind, type DocumentStatus,
-} from '../../service/documents';
+  type DocumentActivityRead,
+  type DocumentActivityType,
+  type DocumentDetailRead,
+  type DocumentVersionRead,
+  type DocumentKind,
+  type DocumentStatus,
+  } from '../../service/documents';
 import ShareDocumentDialog from '../../component/share-document-dialog';
-import { PageTitle } from '../../component/common/text';
+import { PageTitle,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../../design-system';
+import { radiusTokens, toRadiusPx } from '../../design-system/tokens/radius';
 import { monoFontFamily } from '../../design-system/tokens/typography';
 
 /* ------------------------------------------------------------------ */
@@ -567,7 +605,7 @@ const DocumentDetailPage: React.FC = () => {
                     sx={{
                       width: 36,
                       height: 36,
-                      borderRadius: '12px',
+                      borderRadius: toRadiusPx(radiusTokens.lg),
                       flexShrink: 0,
                       display: 'flex',
                       alignItems: 'center',
@@ -628,7 +666,7 @@ const DocumentDetailPage: React.FC = () => {
                 <Box
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 2, py: 1.5, px: 2,
-                    borderRadius: '8px',
+                    borderRadius: toRadiusPx(radiusTokens.sm),
                     background: isSelected ? alpha(accent, 0.06) : 'transparent',
                     '&:hover': { background: alpha(theme.palette.action.hover, 0.04) },
                   }}
@@ -691,7 +729,7 @@ const DocumentDetailPage: React.FC = () => {
                 <Collapse in={isExpanded}>
                   <Box sx={{
                     ml: 7, mr: 2, mb: 2, p: 2,
-                    borderRadius: '8px',
+                    borderRadius: toRadiusPx(radiusTokens.sm),
                     background: alpha(theme.palette.background.default, 0.6),
                     border: `1px solid ${theme.palette.divider}`,
                     maxHeight: 400, overflow: 'auto',

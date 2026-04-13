@@ -7,10 +7,11 @@ import {
   Select,
   MenuItem,
   Stack,
-  Chip,
-} from '@mui/material';
+  } from '@mui/material';
 import Grid from '@mui/material/Grid';
-import { FormDialogShell } from '../design-system';
+import { FormDialogShell,
+  StatusChip as Chip,
+} from '../design-system';
 import type { LeadRead, LeadCreate, LeadUpdate } from '../service/leads';
 import type { CompanyRead } from '../service/companies';
 import { AgentEnabledMultilineField } from './agent-surface';

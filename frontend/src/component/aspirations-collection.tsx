@@ -18,10 +18,12 @@ import type {
   AspirationCreate,
   AspirationUpdate,
 } from '../service/aspirations';
+import {
+  ConfirmDialog,
+  EmptyState,
+} from '../design-system';
 import AspirationCard from './aspiration-card';
 import AspirationFormDialog from './aspiration-form-dialog';
-import ConfirmDialog from './common/confirm-dialog';
-import EmptyState from './common/empty-state';
 import SuggestionReviewPanel from './suggestion-review-panel';
 
 /* ------------------------------------------------------------------ */

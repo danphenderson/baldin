@@ -1,10 +1,20 @@
 import React from 'react';
 import {
-  Card, CardContent, Typography, Button, TextField, Stack,
-  InputAdornment, LinearProgress, useTheme,
-} from '@mui/material';
-import { Bolt as BoltIcon, OpenInNew as OpenIcon } from '@mui/icons-material';
-import { brandGradient, softBrandGradient } from '../theme/effects';
+  Typography,
+  Button,
+  TextField,
+  Stack,
+  InputAdornment,
+  LinearProgress,
+  useTheme,
+  } from '@mui/material';
+import { Bolt as BoltIcon,
+  OpenInNew as OpenIcon } from '@mui/icons-material';
+import { brandGradient,
+  softBrandGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+} from '../design-system';
 
 export interface LeadExtractionBarProps {
   url: string;

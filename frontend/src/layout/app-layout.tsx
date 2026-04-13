@@ -1,10 +1,30 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
-  AppBar, Toolbar, Typography, IconButton, Chip, Divider, Collapse, ButtonBase,
-  useTheme, alpha, Tooltip, Badge, ClickAwayListener, useMediaQuery,
-} from '@mui/material';
+  Outlet,
+  useNavigate,
+  useLocation } from 'react-router-dom';
+import {
+  Box,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  AppBar,
+  Toolbar,
+  Typography,
+  IconButton,
+  Divider,
+  Collapse,
+  ButtonBase,
+  useTheme,
+  alpha,
+  Tooltip,
+  Badge,
+  ClickAwayListener,
+  useMediaQuery,
+  } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
   WorkOutline as LeadsIcon,
@@ -30,15 +50,15 @@ import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
   Search as SearchIcon,
-} from '@mui/icons-material';
+  } from '@mui/icons-material';
 import Fuse from 'fuse.js';
 import { UserContext } from '../context/user-context';
 import { logout as logoutApi } from '../service/auth';
 import { getUnreadCount } from '../service/messages';
 import { useThemeMode } from '../theme/theme-provider';
-import { brandGradient, sidebarGradient } from '../theme/effects';
 import { avatarUrl } from '../service/users';
-import { ToolbarHeaderContext, type ToolbarHeaderContent } from './toolbar-header-context';
+import { ToolbarHeaderContext,
+  type ToolbarHeaderContent } from './toolbar-header-context';
 import { useNotification } from '../context/notification-context';
 import SecondaryNavBar from '../component/common/secondary-nav-bar';
 import ErrorBoundary from '../component/common/error-boundary';
@@ -48,7 +68,12 @@ import AgentFormDialog from '../component/agent-form-dialog';
 import LeadFormDialog from '../component/lead-form-dialog';
 import WorkflowFormDialog from '../component/workflow-form-dialog';
 import { ExtractorCreateModal } from '../component/extractor-modal';
-import { motionTokens } from '../design-system/tokens/motion';
+import { brandGradient,
+  motionTokens,
+  sidebarGradient,
+  StatusChip as Chip,
+} from '../design-system';
+import { radiusTokens, toRadiusPx } from '../design-system/tokens/radius';
 import { createAgent, type AgentCreate, type AgentUpdate } from '../service/agents';
 import { getCompanies, type CompanyRead } from '../service/companies';
 import { createLead, type LeadCreate, type LeadUpdate } from '../service/leads';
@@ -647,7 +672,7 @@ const AppLayout: React.FC = () => {
               <ListItemButton
                 onClick={() => toggleGroup(item.id)}
                 sx={{
-                  borderRadius: '8px',
+                  borderRadius: toRadiusPx(radiusTokens.sm),
                   minHeight: isNested ? 40 : 44,
                   px: collapsed ? 1.75 : 2,
                   pl: collapsed ? 1.75 : 2 + (depth * 1.5),
@@ -722,7 +747,7 @@ const AppLayout: React.FC = () => {
           <ListItemButton
             onClick={() => navigate(item.path)}
             sx={{
-              borderRadius: '8px',
+              borderRadius: toRadiusPx(radiusTokens.sm),
               minHeight: isNested ? 40 : 44,
               px: collapsed ? 1.75 : 2,
               pl: collapsed ? 1.75 : 2 + (depth * 1.5),
@@ -804,7 +829,7 @@ const AppLayout: React.FC = () => {
             color: 'primary.main',
             px: 2,
             py: 1,
-            borderRadius: '4px',
+            borderRadius: toRadiusPx(radiusTokens.xs),
             boxShadow: 4,
             fontWeight: 600,
             fontSize: '0.875rem',
@@ -854,7 +879,7 @@ const AppLayout: React.FC = () => {
                 sx={{
                   width: 40,
                   height: 40,
-                  borderRadius: '12px',
+                  borderRadius: toRadiusPx(radiusTokens.lg),
                   color: theme.palette.text.secondary,
                   border: `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
                   backgroundColor: alpha(theme.palette.common.white, theme.palette.mode === 'dark' ? 0.04 : 0.5),
@@ -873,7 +898,7 @@ const AppLayout: React.FC = () => {
                 sx={{
                   width: 36,
                   height: 36,
-                  borderRadius: '10px',
+                  borderRadius: toRadiusPx(radiusTokens.md),
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -960,7 +985,7 @@ const AppLayout: React.FC = () => {
                 px: collapsed ? 0 : 1.5,
                 py: collapsed ? 0.75 : 1.25,
                 mb: 0.75,
-                borderRadius: '12px',
+                borderRadius: toRadiusPx(radiusTokens.lg),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: collapsed ? 'center' : 'flex-start',
@@ -1152,10 +1177,10 @@ const AppLayout: React.FC = () => {
                         }}
                       >
                         <Chip
-                          clickable
+                          clickable={isAccountDialOpen && !action.disabled}
                           icon={action.icon}
                           label={action.label}
-                          onClick={action.disabled ? undefined : action.onClick}
+                          onClick={isAccountDialOpen && !action.disabled ? action.onClick : undefined}
                           sx={{
                             height: 38,
                             borderRadius: '999px',

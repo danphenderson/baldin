@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Box, useTheme } from '@mui/material';
-import { authBackgroundGradient } from '../theme/effects';
+import { authBackgroundGradient } from '../design-system';
 
 const AuthLayout: React.FC = () => {
   const theme = useTheme();
@@ -15,7 +15,7 @@ const AuthLayout: React.FC = () => {
         background: authBackgroundGradient(theme),
       }}
     >
-      <Box sx={{ maxWidth: 480, mx: 'auto', width: '100%' }}>
+      <Box sx={{ mx: 'auto', width: '100%' }}>
         <Outlet />
       </Box>
     </Box>

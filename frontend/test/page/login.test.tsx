@@ -56,7 +56,7 @@ describe('LoginPage', () => {
     const { setToken } = renderLoginPage();
 
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'user@example.com' } });
-    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'Password1' } });
+    fireEvent.change(screen.getByLabelText(/Password/i, { selector: 'input' }), { target: { value: 'Password1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Sign In' }));
 
     expect(await screen.findByText('Two-Factor Authentication')).toBeInTheDocument();
@@ -70,5 +70,15 @@ describe('LoginPage', () => {
       expect(mockedMfaLoginVerify).toHaveBeenCalledWith('challenge-token', '123456');
     });
     expect(setToken).toHaveBeenCalledWith('verified-access-token');
+  });
+
+  it('labels the password visibility toggle for assistive technology', () => {
+    renderLoginPage();
+
+    expect(screen.getByRole('button', { name: 'Show password' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
+
+    expect(screen.getByRole('button', { name: 'Hide password' })).toBeInTheDocument();
   });
 });

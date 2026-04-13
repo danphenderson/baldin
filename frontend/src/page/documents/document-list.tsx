@@ -1,25 +1,53 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Box, Typography, Chip, Stack, Button, useTheme, alpha,
-  IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  Tooltip, InputAdornment, Menu, MenuItem, Fab, Tabs, Tab,
-} from '@mui/material';
+  Box,
+  Typography,
+  Stack,
+  Button,
+  useTheme,
+  alpha,
+  IconButton,
+  TextField,
+  Tooltip,
+  InputAdornment,
+  Menu,
+  MenuItem,
+  Fab,
+  Tabs,
+  Tab,
+  } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
-  Description as DocIcon, Download as DownloadIcon, Delete as DeleteIcon,
-  Edit as EditIcon, Search as SearchIcon, Visibility as ViewIcon,
-  NoteAdd as NoteAddIcon, SortByAlpha as SortIcon, PushPin as PushPinIcon,
-  Add as AddIcon, Article as ResumeIcon, Mail as LetterIcon,
-  Replay as FollowUpIcon, MenuBook as RefSheetIcon, TextSnippet as FreeformIcon,
+  Description as DocIcon,
+  Download as DownloadIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Search as SearchIcon,
+  Visibility as ViewIcon,
+  NoteAdd as NoteAddIcon,
+  SortByAlpha as SortIcon,
+  PushPin as PushPinIcon,
+  Add as AddIcon,
+  Article as ResumeIcon,
+  Mail as LetterIcon,
+  Replay as FollowUpIcon,
+  MenuBook as RefSheetIcon,
+  TextSnippet as FreeformIcon,
   CloudUpload as CloudUploadIcon,
-} from '@mui/icons-material';
+  } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import {
-  getDocuments, deleteDocument, downloadDocument, pinDocument, getSharedWithMe,
-  type DocumentRead, type DocumentKind, type DocumentStatus,
-} from '../../service/documents';
+  getDocuments,
+  deleteDocument,
+  downloadDocument,
+  pinDocument,
+  getSharedWithMe,
+  type DocumentRead,
+  type DocumentKind,
+  type DocumentStatus,
+  } from '../../service/documents';
 import UploadDocumentDialog from '../../component/upload-document-dialog';
 import {
   CardShell,
@@ -27,7 +55,13 @@ import {
   EmptyState as DSEmptyState,
   InlineFeedback,
   LoadingState,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
 } from '../../design-system';
+import { radiusTokens, toRadiusPx } from '../../design-system/tokens/radius';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -476,6 +510,7 @@ const DocumentListPage: React.FC = () => {
                   sx={{
                     position: 'relative',
                     '& .doc-actions': { opacity: { xs: 1, md: 0 }, transition: 'opacity 0.15s ease' },
+                    '&:focus-within .doc-actions': { opacity: 1 },
                     '@media (hover: hover)': { '&:hover .doc-actions': { opacity: 1 } },
                   }}
                   role="article"
@@ -485,7 +520,7 @@ const DocumentListPage: React.FC = () => {
                     {/* header */}
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1.5 }}>
                       <Box sx={{
-                        width: 40, height: 40, borderRadius: '10px', flexShrink: 0,
+                        width: 40, height: 40, borderRadius: toRadiusPx(radiusTokens.md), flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: alpha(accent, 0.1),
                         color: accent,
@@ -551,7 +586,7 @@ const DocumentListPage: React.FC = () => {
                         sx={{
                           mb: 1.5,
                           p: 1.25,
-                          borderRadius: '8px',
+                            borderRadius: toRadiusPx(radiusTokens.sm),
                           background: alpha(theme.palette.info.main, 0.05),
                           border: `1px solid ${alpha(theme.palette.info.main, 0.14)}`,
                         }}

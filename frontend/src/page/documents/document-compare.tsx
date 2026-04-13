@@ -1,7 +1,16 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Box, Typography, Chip, Stack, Button, useTheme, alpha, Alert, Paper, Skeleton,
+  Box,
+  Typography,
+  Stack,
+  Button,
+  useTheme,
+  alpha,
+  Alert,
+  Paper,
+  Skeleton,
 } from '@mui/material';
+import { StatusChip as Chip } from '../../design-system';
 import Grid from '@mui/material/Grid';
 import {
   ArrowBack as BackIcon, Restore as RestoreIcon,
@@ -20,6 +29,7 @@ import {
   getVersion, getDocument, createVersion,
   type DocumentVersionRead, type DocumentDetailRead, type DocumentVersionCreate,
 } from '../../service/documents';
+import { radiusTokens, toRadiusPx } from '../../design-system/tokens/radius';
 
 /* ------------------------------------------------------------------ */
 /*  Diff algorithm — simple LCS-based line diff                        */
@@ -465,7 +475,7 @@ const DocumentComparePage: React.FC = () => {
         sx={{
           overflow: 'auto', maxHeight: 'calc(100vh - 400px)',
           border: `1px solid ${theme.palette.divider}`,
-          borderRadius: '8px',
+          borderRadius: toRadiusPx(radiusTokens.sm),
         }}
       >
         {usesBlockSnapshotDiff ? (

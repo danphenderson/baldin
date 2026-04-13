@@ -30,7 +30,7 @@ import ChatComposer, { type ChatComposerError } from '../component/agent-chat/ch
 import ChatThread from '../component/agent-chat/chat-thread';
 import ChatSessionHeader from '../component/agent-chat/chat-session-header';
 import type { ChatDisplayMessage } from '../component/agent-chat/chat-message-bubble';
-import EmptyState from '../component/common/empty-state';
+import { EmptyState } from '../design-system';
 import { getAgentModelDisplayLabel } from '../util/agent-models';
 
 interface StreamState {

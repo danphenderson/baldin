@@ -15,6 +15,7 @@ export interface EmptyStateProps {
   title: string;
   description?: string;
   primaryAction?: EmptyStateAction;
+  action?: EmptyStateAction;
   layout?: 'page' | 'section';
   compact?: boolean;
   sx?: SxProps<Theme>;
@@ -25,13 +26,18 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   title,
   description,
   primaryAction,
+  action,
   layout = 'page',
   compact = false,
   sx,
 }) => {
   const theme = useTheme();
+  const baldin = (theme as Theme & { baldin?: Theme['baldin'] }).baldin;
+  const resolvedAction = primaryAction ?? action;
   const isPageLayout = layout === 'page';
   const iconSize = compact ? 48 : isPageLayout ? 72 : 56;
+  const selectedState = baldin?.state.selected ?? alpha(theme.palette.primary.main, 0.08);
+  const accentBorder = baldin?.border.accent ?? alpha(theme.palette.primary.main, 0.16);
   const rootSx = {
     textAlign: 'center',
     py: toSpacingPx(isPageLayout ? (compact ? 8 : 10) : (compact ? 5 : 6)),
@@ -51,8 +57,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           borderRadius: '50%',
           mb: toSpacingPx(compact ? 3 : 4),
           color: theme.palette.primary.main,
-          backgroundColor: theme.baldin.state.selected,
-          border: `1px solid ${theme.baldin.border.accent}`,
+          backgroundColor: selectedState,
+          border: `1px solid ${accentBorder}`,
           boxShadow: `0 10px 30px ${alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.14 : 0.08)}`,
           '& svg': {
             fontSize: compact ? 24 : isPageLayout ? 32 : 28,
@@ -76,7 +82,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           color="text.secondary"
           sx={{
             mt: toSpacingPx(1),
-            mb: primaryAction ? toSpacingPx(compact ? 3 : 4) : 0,
+            mb: resolvedAction ? toSpacingPx(compact ? 3 : 4) : 0,
             maxWidth: isPageLayout ? 420 : 340,
             mx: 'auto',
             lineHeight: 1.6,
@@ -86,15 +92,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         </Typography>
       )}
 
-      {primaryAction && (
+      {resolvedAction && (
         <Button
           variant={isPageLayout ? 'outlined' : 'text'}
           size={compact ? 'small' : 'medium'}
-          startIcon={primaryAction.icon}
-          onClick={primaryAction.onClick}
-          {...primaryAction.buttonProps}
+          startIcon={resolvedAction.icon}
+          onClick={resolvedAction.onClick}
+          {...resolvedAction.buttonProps}
         >
-          {primaryAction.label}
+          {resolvedAction.label}
         </Button>
       )}
     </Box>

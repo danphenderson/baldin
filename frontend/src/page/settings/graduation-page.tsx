@@ -1,9 +1,23 @@
 import React, { useContext, useState } from 'react';
 import {
-  Box, Card, CardContent, Typography, Button, Stack, Chip,
-  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
-  Snackbar, Alert, useTheme,
+  Box,
+  Typography,
+  Button,
+  Stack,
+  DialogContentText,
+  Snackbar,
+  Alert,
+  useTheme,
 } from '@mui/material';
+import {
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../../design-system';
 import {
   EmojiEvents as TrophyIcon,
   SchoolOutlined as AlumniIcon,

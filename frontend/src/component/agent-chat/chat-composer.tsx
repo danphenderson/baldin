@@ -4,7 +4,6 @@ import {
   Autocomplete,
   Box,
   Button,
-  Chip,
   FormControlLabel,
   Paper,
   Stack,
@@ -12,12 +11,14 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { StatusChip as Chip } from '../../design-system';
 import {
   Close as CancelIcon,
   Send as SendIcon,
 } from '@mui/icons-material';
 import type { AgentSurfaceEntityRef } from '../../service/agents';
 import { AgentEnabledMultilineField } from '../agent-surface';
+import { radiusTokens, toRadiusPx } from '../../design-system/tokens/radius';
 
 export interface ChatComposerError {
   message: string;
@@ -125,7 +126,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({
           sx={{
             border: '1px solid',
             borderColor: 'divider',
-            borderRadius: '12px',
+            borderRadius: toRadiusPx(radiusTokens.lg),
             px: 1.5,
             py: 1.25,
             bgcolor: 'background.default',

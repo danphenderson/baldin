@@ -3,10 +3,7 @@ import {
   Avatar,
   Box,
   Button,
-  Card,
   CardActionArea,
-  CardContent,
-  Chip,
   CircularProgress,
   Pagination as MuiPagination,
   Skeleton,
@@ -14,7 +11,7 @@ import {
   TextField,
   Tooltip,
   Typography,
-} from '@mui/material';
+  } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
   AutoAwesome as AutoAwesomeIcon,
@@ -22,17 +19,22 @@ import {
   Search as SearchIcon,
   People as PeopleIcon,
   Lock as LockIcon,
-} from '@mui/icons-material';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+  } from '@mui/icons-material';
+import { useNavigate,
+  useSearchParams } from 'react-router-dom';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import {
   getDirectoryUsers,
   type UserDirectoryRead,
-} from '../service/directory';
+  } from '../service/directory';
 import { createConnection } from '../service/connections';
 import { avatarUrl } from '../service/users';
-import EmptyState from '../component/common/empty-state';
+import { EmptyState,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+} from '../design-system';
 import { useNotification } from '../context/notification-context';
 
 const PAGE_SIZE = 12;

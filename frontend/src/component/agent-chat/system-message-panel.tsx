@@ -1,5 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { Box, Button, Chip, Collapse, Paper, Stack, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Collapse,
+  Paper,
+  Stack,
+  Typography,
+} from '@mui/material';
+import { StatusChip as Chip } from '../../design-system';
 import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,

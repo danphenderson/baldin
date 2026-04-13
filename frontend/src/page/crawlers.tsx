@@ -1,27 +1,51 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Box, Card, CardContent, Typography, Chip, Stack, Button, TextField,
-  useTheme, alpha, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  Tooltip, Skeleton, Alert, Divider, Select, MenuItem, FormControl, InputLabel,
-  Switch, FormControlLabel, Collapse, TablePagination,
-} from '@mui/material';
+  Box,
+  Typography,
+  Stack,
+  Button,
+  TextField,
+  useTheme,
+  alpha,
+  IconButton,
+  Tooltip,
+  Skeleton,
+  Alert,
+  Divider,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Switch,
+  FormControlLabel,
+  Collapse,
+  TablePagination,
+  } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
-  Hub as PipelineIcon, PlayArrow as RunIcon, Add as AddIcon,
-  Refresh as RefreshIcon, CheckCircle as SuccessIcon,
-  Error as ErrorIcon, HourglassEmpty as PendingIcon, Loop as RunningIcon,
-  Edit as EditIcon, Schedule as ScheduleIcon,
-  FiberManualRecord as DotIcon, ExpandMore as ExpandMoreIcon,
-  TrendingUp as TrendingIcon, Cancel as CancelIcon,
-  Pause as PauseIcon, PlayCircle as ResumeIcon,
+  Hub as PipelineIcon,
+  PlayArrow as RunIcon,
+  Add as AddIcon,
+  Refresh as RefreshIcon,
+  CheckCircle as SuccessIcon,
+  Error as ErrorIcon,
+  HourglassEmpty as PendingIcon,
+  Loop as RunningIcon,
+  Edit as EditIcon,
+  Schedule as ScheduleIcon,
+  FiberManualRecord as DotIcon,
+  ExpandMore as ExpandMoreIcon,
+  TrendingUp as TrendingIcon,
+  Cancel as CancelIcon,
+  Pause as PauseIcon,
+  PlayCircle as ResumeIcon,
   BugReport as CrawlerIcon,
-} from '@mui/icons-material';
-import { AnimatePresence, motion } from 'motion/react';
+  } from '@mui/icons-material';
+import { AnimatePresence,
+  motion } from 'motion/react';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
-import EmptyState from '../component/common/empty-state';
-import ConfirmDialog from '../component/common/confirm-dialog';
 import { AgentEnabledMultilineField } from '../component/agent-surface';
 import {
   type CrawlerPipelineRead,
@@ -31,14 +55,30 @@ import {
   type CrawlerRunsPaginatedRead,
   type CrawlerRunStatus,
   type CrawlerSourceType,
-  getCrawlerPipelines, createCrawlerPipeline, updateCrawlerPipeline,
-  getCrawlerRuns, triggerCrawlerRun, cancelCrawlerRun, pauseCrawlerRun, resumeCrawlerRun,
+  getCrawlerPipelines,
+  createCrawlerPipeline,
+  updateCrawlerPipeline,
+  getCrawlerRuns,
+  triggerCrawlerRun,
+  cancelCrawlerRun,
+  pauseCrawlerRun,
+  resumeCrawlerRun,
   retryCrawlerRun,
-} from '../service/crawlers';
+  } from '../service/crawlers';
 import { monoFontFamily } from '../design-system/tokens/typography';
-import { getStatusColors } from '../theme/status-colors';
-import { softBrandGradient } from '../theme/effects';
-import { MetricStrip } from '../design-system';
+import { ConfirmDialog,
+  EmptyState,
+  MetricStrip,
+  getStatusColors,
+  softBrandGradient,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogActions as DialogActions,
+} from '../design-system';
 
 // ---------------------------------------------------------------------------
 // Helpers

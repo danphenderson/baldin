@@ -1,13 +1,28 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { timeAgo as relativeDate, timeAgoShort, statusLabel } from '../util/format';
 import {
-  Box, Typography, Button, Chip, IconButton,
-  useTheme, alpha, Stack, TextField, ButtonBase, Checkbox, Tooltip,
-  Popover, Menu, MenuItem, Collapse, Link,
-} from '@mui/material';
+  useNavigate } from 'react-router-dom';
+import { timeAgo as relativeDate,
+  timeAgoShort,
+  statusLabel } from '../util/format';
+import {
+  Box,
+  Typography,
+  Button,
+  IconButton,
+  useTheme,
+  alpha,
+  Stack,
+  TextField,
+  ButtonBase,
+  Checkbox,
+  Tooltip,
+  Popover,
+  Menu,
+  MenuItem,
+  Collapse,
+  Link,
+  } from '@mui/material';
 import Grid from '@mui/material/Grid';
-import { progressGradient } from '../theme/effects';
 import {
   Add as AddIcon,
   SwapHoriz as StatusChangeIcon,
@@ -34,13 +49,22 @@ import {
   ExpandLess as ExpandLessIcon,
   LocationOn as LocationIcon,
   DragIndicator as DragIndicatorIcon,
-} from '@mui/icons-material';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+  } from '@mui/icons-material';
+import { DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
-import { getLeads, type LeadRead } from '../service/leads';
+import { getLeads,
+  type LeadRead } from '../service/leads';
 import {
   getActionItems,
   updateActionItem,
@@ -48,15 +72,14 @@ import {
   type ActionItemRead,
   type ActionItemDetailRead,
   type ActionItemCreate,
-} from '../service/action-items';
+  } from '../service/action-items';
 import {
   getActivityFeed,
   getCommandCenterSummary,
   type ActivityFeedItem,
   type CommandCenterSummary,
-} from '../service/activity-feed';
+  } from '../service/activity-feed';
 import CreateActionItemDialog from '../component/create-action-item-dialog';
-import { getStatusColors } from '../theme/status-colors';
 import {
   SectionCard,
   SectionHeader,
@@ -65,7 +88,11 @@ import {
   EmptyState as DSEmptyState,
   LoadingState,
   CardShell,
+  getStatusColors,
+  progressGradient,
+  StatusChip as Chip,
 } from '../design-system';
+import { radiusTokens, toRadiusPx } from '../design-system/tokens/radius';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -116,7 +143,7 @@ function linkedEntityLabel(item: ActionItemDetailRead): { text: string; path: st
   }
   if (item.lead_id) {
     const label = item.lead?.title || 'Lead';
-    return { text: `Lead: ${label}`, path: '/leads' };
+    return { text: `Lead: ${label}`, path: `/leads?leadId=${item.lead_id}` };
   }
   if (item.document_id) {
     const label = item.document?.title || 'Document';
@@ -177,6 +204,12 @@ function formatDays(value: number): string {
   return `${formatMetricNumber(value)} day${value === 1 ? '' : 's'}`;
 }
 
+function getDueDateActionLabel(item: ActionItemDetailRead): string {
+  return item.due_at
+    ? `Change due date for "${item.title}"`
+    : `Set due date for "${item.title}"`;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Sortable action-item row (DnD)                                     */
 /* ------------------------------------------------------------------ */
@@ -214,7 +247,7 @@ function SortableActionItem({ item, overdue, linked, priorityColor, onComplete, 
         gap: 1,
         py: 1.25,
         px: 1,
-        borderRadius: '8px',
+        borderRadius: toRadiusPx(radiusTokens.sm),
         borderLeft: `3px solid ${priorityColor}`,
         mb: 0.5,
         '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.03) },
@@ -227,7 +260,7 @@ function SortableActionItem({ item, overdue, linked, priorityColor, onComplete, 
         <ButtonBase
           onClick={() => onCyclePriority(item)}
           sx={{
-            width: 6, minHeight: 32, borderRadius: '4px',
+            width: 6, minHeight: 32, borderRadius: toRadiusPx(radiusTokens.xs),
             bgcolor: priorityColor, flexShrink: 0,
             '&:hover': { opacity: 0.7 },
           }}
@@ -261,21 +294,27 @@ function SortableActionItem({ item, overdue, linked, priorityColor, onComplete, 
             variant="outlined"
             sx={{ fontSize: '0.65rem', height: 20 }}
           />
-          <Typography
-            component="span"
-            variant="caption"
+          <ButtonBase
             onClick={(e) => onDueDateOpen(e, item)}
+            aria-label={getDueDateActionLabel(item)}
             sx={{
               color: overdue ? 'error.main' : 'text.secondary',
               fontWeight: overdue ? 600 : 400,
-              cursor: 'pointer',
+              borderRadius: toRadiusPx(radiusTokens.xs),
+              px: 0.25,
               '&:hover': { textDecoration: 'underline' },
+              '&:focus-visible': {
+                outline: `2px solid ${theme.palette.primary.main}`,
+                outlineOffset: 2,
+              },
             }}
           >
+            <Typography component="span" variant="caption">
             {item.due_at
               ? `${overdue ? 'Overdue · ' : ''}${formatDate(item.due_at)}`
               : 'Set date'}
-          </Typography>
+            </Typography>
+          </ButtonBase>
           {linked && (
             <Chip
               label={linked.text}
@@ -914,7 +953,7 @@ const DashboardPage: React.FC = () => {
                           <Box
                             sx={{
                               p: 2,
-                              borderRadius: '12px',
+                              borderRadius: toRadiusPx(radiusTokens.lg),
                               bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.12 : 0.05),
                               border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
                               height: '100%',
@@ -972,7 +1011,7 @@ const DashboardPage: React.FC = () => {
                           <Box
                             sx={{
                               p: 2,
-                              borderRadius: '12px',
+                              borderRadius: toRadiusPx(radiusTokens.lg),
                               bgcolor: alpha(sc.offer, theme.palette.mode === 'dark' ? 0.1 : 0.04),
                               border: `1px solid ${alpha(sc.offer, 0.14)}`,
                               height: '100%',
@@ -996,7 +1035,7 @@ const DashboardPage: React.FC = () => {
                                         width: `${width}%`,
                                         maxWidth: '100%',
                                         mx: 'auto',
-                                        borderRadius: '10px',
+                                        borderRadius: toRadiusPx(radiusTokens.md),
                                         px: 1.5,
                                         py: 1.1,
                                         bgcolor: alpha(color, 0.14),
@@ -1032,7 +1071,7 @@ const DashboardPage: React.FC = () => {
                   ) : (
                     <Box
                       sx={{
-                        borderRadius: '12px',
+                        borderRadius: toRadiusPx(radiusTokens.lg),
                         border: `1px dashed ${alpha(theme.palette.text.primary, 0.14)}`,
                         px: 2,
                         py: 3,
@@ -1093,7 +1132,7 @@ const DashboardPage: React.FC = () => {
                           key={lead.id}
                           sx={{
                             display: 'flex', alignItems: 'center', gap: 1, py: 1, px: 0.5,
-                            borderRadius: '4px',
+                            borderRadius: toRadiusPx(radiusTokens.xs),
                             cursor: 'pointer',
                             '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.03) },
                           }}
@@ -1238,7 +1277,7 @@ const DashboardPage: React.FC = () => {
                               }),
                               ...(path && {
                                 cursor: 'pointer',
-                                borderRadius: '4px',
+                                borderRadius: toRadiusPx(radiusTokens.xs),
                                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.03) },
                               }),
                             }}

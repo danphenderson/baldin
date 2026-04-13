@@ -3,16 +3,13 @@ import {
   Avatar,
   Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   CircularProgress,
   Pagination as MuiPagination,
   Skeleton,
   Stack,
   TextField,
   Typography,
-} from '@mui/material';
+  } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
   AutoAwesome as AutoAwesomeIcon,
@@ -23,7 +20,7 @@ import {
   Mail as MessageIcon,
   Search as SearchIcon,
   People as PeopleIcon,
-} from '@mui/icons-material';
+  } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
@@ -33,10 +30,14 @@ import {
   declineConnection,
   deleteConnection,
   type ConnectionRead,
-} from '../service/connections';
+  } from '../service/connections';
 import { avatarUrl } from '../service/users';
 import { createConversation } from '../service/messages';
-import EmptyState from '../component/common/empty-state';
+import { EmptyState,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+} from '../design-system';
 import { useNotification } from '../context/notification-context';
 
 const PAGE_SIZE = 12;

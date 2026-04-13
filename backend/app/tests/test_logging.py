@@ -139,6 +139,30 @@ def test_structured_json_formatter_captures_correlation_id():
         correlation_id.reset(token)
 
 
+def test_structured_json_formatter_merges_structured_data():
+    formatter = StructuredJSONFormatter()
+    record = logging.LogRecord(
+        name="audit_logger",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="audit event",
+        args=(),
+        exc_info=None,
+    )
+    record.structured_data = {
+        "event": "db_management_admin_operation",
+        "operation": "purge_user_data",
+        "deleted_records": {"documents": 2},
+    }
+
+    parsed = json.loads(formatter.format(record))
+
+    assert parsed["event"] == "db_management_admin_operation"
+    assert parsed["operation"] == "purge_user_data"
+    assert parsed["deleted_records"] == {"documents": 2}
+
+
 def test_logs_path_uses_public_var_logs():
     assert (
         conf.settings.LOGS_PATH

@@ -45,4 +45,18 @@ describe('RegisterPage', () => {
     expect(await screen.findByText('Password does not meet the requirements below.')).toBeInTheDocument();
     expect(mockedRegister).not.toHaveBeenCalled();
   });
+
+  it('labels the password visibility toggle for assistive technology', () => {
+    render(
+      <MemoryRouter>
+        <RegisterPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Show password' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
+
+    expect(screen.getByRole('button', { name: 'Hide password' })).toBeInTheDocument();
+  });
 });

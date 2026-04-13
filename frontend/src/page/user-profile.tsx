@@ -4,13 +4,10 @@ import {
   Avatar,
   Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   CircularProgress,
   Stack,
   Typography,
-} from '@mui/material';
+  } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   AutoAwesome as AutoAwesomeIcon,
@@ -18,19 +15,26 @@ import {
   LocationOn as LocationIcon,
   Lock as LockIcon,
   Mail as MessageIcon,
-} from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
+  } from '@mui/icons-material';
+import { useParams,
+  useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import {
   getDirectoryProfile,
   type UserPublicProfileRead,
-} from '../service/directory';
-import { createConnection, getConnections, type ConnectionRead } from '../service/connections';
+  } from '../service/directory';
+import { createConnection,
+  getConnections,
+  type ConnectionRead } from '../service/connections';
 import { createConversation } from '../service/messages';
 import { avatarUrl } from '../service/users';
 import { useNotification } from '../context/notification-context';
-import { PageTitle } from '../component/common/text';
+import { PageTitle,
+  SurfaceCard as Card,
+  SurfaceCardContent as CardContent,
+  StatusChip as Chip,
+} from '../design-system';
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();

@@ -1,8 +1,14 @@
 // frontend/src/common/component/contacts-modal.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, TextField, DialogActions, Button } from '@mui/material';
+import { TextField, Button } from '@mui/material';
 import { ContactRead, ContactCreate, ContactUpdate } from '../service/contacts';  // Adjust import path as necessary
+import {
+  SurfaceDialog as Dialog,
+  SurfaceDialogActions as DialogActions,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogTitle as DialogTitle,
+} from '../design-system';
 
 interface ContactModalProps {
   open: boolean;

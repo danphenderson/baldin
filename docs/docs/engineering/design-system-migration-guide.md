@@ -4,188 +4,113 @@ title: Design System Migration Guide
 description: Current adoption status, compatibility strategy, migrated surfaces, and next-step migration guidance for Baldin's frontend design-system rollout.
 ---
 
-<!-- last-verified: 2026-04-12 -->
+<!-- last-verified: 2026-04-13 -->
 
 # Design System Migration Guide
 
-This guide describes the migration that actually exists now. It is not a future-state plan.
+This guide describes the migration that exists in the repo today. It is not a future-state plan.
 
 ## Current Rollout Status
 
 | Area | Status | Notes |
 | --- | --- | --- |
 | Token and theme foundation | Complete | `frontend/src/design-system/tokens/*` and `theme/*` are active, and `theme-provider.tsx` consumes them |
-| Shared primitives | Complete for current Phase 2 scope | Feedback, surfaces, and status primitives are shipped |
-| Shared patterns | Complete for current Phase 2 scope | `CollectionToolbar`, `MetricStrip`, and `SectionCard` are shipped |
-| Compatibility wrappers and shims | Active transitional layer | `component/common/*`, `component/auth/*`, and `theme/*` still preserve older call sites |
-| Route-family adoption | Mixed | See the [Route-Family Adoption Ledger](../reference/design-system-catalog.md#route-family-adoption-ledger) for per-family states (`adopted`, `adopting`, `not-started`) |
+| Shared primitives | Complete for the current shared scope | Feedback, typography, surface, and status primitives are shipped |
+| Shared patterns | Complete for the current shared scope | `CollectionToolbar`, `MetricStrip`, `SectionCard`, and `AuthPanel` are shipped |
+| Compatibility wrappers | Narrow transitional layer | Only documented re-export shims and feature-local adapters remain |
+| Route-family adoption | Broadly complete | See the [Route-Family Adoption Ledger](../reference/design-system-catalog.md#route-family-adoption-ledger) |
 
-## Phase 1 Foundation That Is Active Now
+## What Changed In This Enforcement Pass
 
-The Phase 1 foundation is still the live base for every Phase 2 primitive and pattern:
+This migration pass completed the design-system ownership boundary for shared-eligible frontend shells.
 
-- `frontend/src/theme/theme-provider.tsx` now sources theme creation and mode helpers from `frontend/src/design-system/theme/*`.
-- `frontend/src/theme/effects.ts` and `frontend/src/theme/status-colors.ts` are compatibility shims over design-system token helpers.
-- `theme.palette.*` is the canonical access path for standard MUI semantic colors.
-- `theme.baldin.*` is the canonical access path for Baldin-only token groups such as `status`, `alpha`, `radius`, `elevation`, `motion`, and `fontFamily`.
+### Canonical shared layer changes
 
-### Spacing Compatibility Caveat
+- Shared typography exports moved into `frontend/src/design-system/primitives/typography/*` and are re-exported through the root design-system barrel.
+- `AuthPanel` now owns the centered auth card shell used by login, MFA verification, and registration.
+- `ConfirmDialog`, `SurfaceCard`, and `SurfaceDialog` provide canonical wrappers for feature-owned confirm, card, and dialog shells.
+- `StatusChip` now supports compatibility-style `color` and `variant` handoff so feature code can migrate off raw MUI `Chip` imports without losing shared styling.
 
-The foundation intentionally kept old MUI spacing behavior in place. `createBaldinTheme()` does not override `spacing`, so:
+### Compatibility cleanup
 
-- `theme.spacing()` still uses MUI's default 8px scale.
-- Shared design-system files use the 4px-based `spacingTokens` and `toSpacingPx(...)` helpers instead.
+- `frontend/src/theme/effects.ts` and `frontend/src/theme/status-colors.ts` were removed.
+- `frontend/src/component/common/alert.tsx` and `frontend/src/component/common/error-message.tsx` were removed.
+- `frontend/src/component/auth/signin.tsx` and `frontend/src/component/auth/signup.tsx` were removed.
+- `frontend/src/component/common/text.tsx`, `empty-state.tsx`, and `confirm-dialog.tsx` were removed after their final in-repo consumers were migrated.
 
-That split is still real in the repo today. Future migrations should preserve it unless Baldin explicitly chooses a repo-wide spacing reset.
+### Import-boundary enforcement
 
-### Radius Compatibility Caveat
+- Feature code now imports shared-eligible card, chip, and dialog shells through `frontend/src/design-system/*`.
+- `lint:theme` blocks imports from retired or compatibility-only shared paths.
+- `lint:theme` also blocks direct imports of overlapping MUI shell primitives outside `frontend/src/design-system/*`, tests, and `context/notification-context.tsx`.
 
-The same MUI system caveat applies to `borderRadius`: numeric values inside `sx` are multipliers of `theme.shape.borderRadius`, not raw pixels.
+## Route Families That Are Now Adopted
 
-- Shared design-system files should convert Baldin radius tokens with `toRadiusPx(...)` before handing them to `sx`.
-- Feature-local code should use `toRadiusPx(...)`, explicit pixel strings, or percentages for circles.
-- `lint:theme` blocks new non-zero numeric `borderRadius` literals outside the token and theme layers.
+The current shared APIs are in active use across the route families that own shared-eligible shells:
 
-## What Was Migrated
+- Auth
+- Applications
+- Leads
+- Profile
+- Conversations and agent chat
+- Agents
+- Dashboard
+- Documents / editor
+- Workflows / admin
+- Network / discovery
+- Settings
 
-### Leads family
+Adopted here means shared-eligible typography, chip, card, and dialog shells now come from the canonical design-system layer, while business logic stays feature-owned.
 
-Migrated pieces:
+## Compatibility Strategy That Still Applies
 
-- `lead-search-bar.tsx` now composes `CollectionToolbar`.
-- `lead-card.tsx` uses `CardShell`, `StatusChip`, and status helpers.
-- `lead-form-dialog.tsx` uses `FormDialogShell`.
-- `leads.tsx` uses `LoadingState` and wrapper-backed `EmptyState`.
-
-What stayed feature-owned:
-
-- Lead extraction flow
-- Lead modal flow
-- Lead-specific CTA and status semantics
-- Application-creation behavior
-
-### Applications queue
-
-Migrated pieces:
-
-- Shared `CollectionToolbar`
-- Shared `InlineFeedback`
-- Shared `LoadingState`
-- Shared `EmptyState`
-- Shared `CardShell` for queue row framing
-- Shared `StatusChip` for the stage pill
-
-What stayed feature-owned:
-
-- Stage semantics
-- Card row content
-- Next-step actions
-- Local summary strip
-
-`MetricStrip` has since been promoted to the shared layer at `frontend/src/design-system/patterns/metrics/metric-strip.tsx` and is consumed by applications queue, applications board, leads, pipelines, and crawlers.
-
-### Profile
-
-Migrated pieces:
-
-- `ProfileSection` now composes `SectionCard` and `SectionHeader`.
-- `EditDialog` and `DeleteDialog` use `FormDialogShell`.
-- `ProfilePage` uses `LoadingState` and `InlineFeedback`.
-- `page/profile/components/EmptyState.tsx` delegates to design-system `EmptyState`.
-
-What stayed feature-owned:
-
-- Profile hero
-- Profile builder panel
-- Documents summary
-- MFA setup
-- Field schemas and record rendering
-
-### Proving adopters
-
-- Conversations use `CollectionToolbar`, `SectionCard`, `SectionHeader`, `LoadingState`, and `EmptyState`.
-- Agents use `CardShell`, `StatusChip`, `FormDialogShell`, and wrapper-backed `EmptyState`.
-
-These proving adopters matter because they confirm the shared APIs work outside the original pilot routes.
-
-## Compatibility Strategy
-
-The migration did not require a big-bang import rewrite. Baldin currently uses four compatibility paths:
+The migration did not require a big-bang rewrite of every feature abstraction. Baldin still uses two small compatibility patterns:
 
 | Path | Current rule |
 | --- | --- |
-| `frontend/src/component/common/*` | Allowed only as a thin compatibility facade backed by `frontend/src/design-system/*` |
-| `frontend/src/component/auth/*` | Treated as legacy shared source too; do not add new shared abstractions here |
-| `frontend/src/theme/effects.ts` and `frontend/src/theme/status-colors.ts` | Allowed only as re-export shims over the canonical token and theme layer |
-| Feature-local adapters like profile empty state or leads search bar | Allowed when they preserve feature copy, local prop shapes, or route-specific composition |
+| Feature-local adapters such as profile empty state and leads search bar | Allowed when they preserve feature copy, local prop shapes, or route-specific composition |
 
-Use a compatibility wrapper only when it lowers migration risk or preserves an existing public API. Do not use it as the long-term home for new shared logic.
+Do not reintroduce deleted common shims, theme shims, auth wrappers, or alert wrappers.
 
 ## Before And After Patterns
 
-### Legacy shared wrapper to canonical primitive
+### Legacy wrapper to canonical primitive
 
 Current rule:
 
-- Old call sites may still import `component/common/empty-state.tsx`.
-- The canonical shared implementation is `design-system/primitives/feedback/empty-state.tsx`.
-- Legacy `action` is translated to canonical `primaryAction`.
+- The canonical shared implementation lives in `frontend/src/design-system/*`.
+- Old wrapper paths are retired and blocked by `lint:theme`.
+- Any consumer should import the canonical design-system source directly.
+
+### Raw MUI shell to canonical shared shell
+
+Current rule:
+
+- Shared-eligible `Card`, `CardContent`, `Chip`, `Dialog`, `DialogTitle`, `DialogContent`, and `DialogActions` usage in feature code should come from `SurfaceCard`, `StatusChip`, and `SurfaceDialog` aliases imported through the design-system layer.
+- Direct MUI shell imports are reserved for `frontend/src/design-system/*`, tests, and `context/notification-context.tsx`.
 
 ### Feature-local composition to shared pattern
 
 Current rule:
 
-- A route can keep its local search fields, filters, and pagination controls.
-- The outer toolbar shell should be `CollectionToolbar` once the structure is proven reusable.
-
-### Feature-local dialog to shared shell
-
-Current rule:
-
-- Shared dialog framing lives in `FormDialogShell`.
-- Feature modules still own form fields, submit behavior, destructive messaging, and route copy.
-
-## Surfaces Using The Foundation Outside The Pilot
-
-The migration is not limited to the direct primitive and pattern adopters. These surfaces already consume the shared foundation without being Phase 2 primitive or pattern migrations:
-
-- `layout/app-layout.tsx` uses design-system motion tokens and theme effect helpers.
-- `page/companies.tsx`, `page/pipelines.tsx`, `page/crawlers.tsx`, and document workspace files use typography tokens or compatibility theme helpers.
-- `component/common/text.tsx`, `content-modal.tsx`, `error-boundary.tsx`, and `rich-text-editor.tsx` already consume design-system typography or effect helpers.
-
-That means the foundation is broader than the Phase 2 primitive and pattern catalog, even though repo-wide component migration is still incomplete.
+- A route can keep local search fields, filters, CTA wiring, and pagination controls.
+- The outer toolbar shell should be `CollectionToolbar` once the structure is shared.
+- Auth pages should use `AuthPanel` once they share the same centered shell.
 
 ## Deferred Work
 
-These items remain intentionally deferred and should stay documented as deferred until code lands:
+These items remain intentionally deferred:
 
 - Shared `ErrorState`
-- Applications board extraction
-- Shared `LeadModal`
-- Auth-panel systemization
-- Dashboard migration
-- Document workspace and editor migration
-- Pipelines and crawlers migration
-- Repo-wide replacement of direct MUI `Alert`, `Chip`, and card usage
-
-## Recommended Migration Order From Here
-
-If migration work resumes, keep the order proportional:
-
-1. Start with an existing primitive or pattern before proposing a new shared abstraction.
-2. Use thin compatibility wrappers only when they reduce migration risk or preserve a stable import path.
-3. Keep feature semantics, service logic, route copy, and entity rendering local even when the outer shell migrates.
-4. Finish obvious wrapper cleanups where the backing primitive already exists.
-5. Only extract a new shared surface after a second route family proves the same structure.
-6. Widen collection, card, and dialog adoption in route families already close to the shipped APIs before touching editor or admin-heavy surfaces.
-7. Update the catalog, workflow, and migration docs in the same change when the shared surface or adopter list changes.
+- Shared domain abstractions such as `LeadModal`, applications board semantics, or profile-builder orchestration
+- Shared service-layer helpers or generated API contracts inside the design-system layer
 
 ## What Counts As Done
 
 A migration slice is complete when:
 
-- The shared UI moved to `frontend/src/design-system/*` or an existing shared primitive was reused.
-- Remaining wrappers are thin and documented.
+- The shared UI moved to `frontend/src/design-system/*` or an existing shared primitive or pattern was reused.
+- Remaining wrappers are pure re-exports or clearly documented feature-local adapters.
 - Feature-owned logic stayed in the feature folder.
 - The catalog and this migration guide reflect the new state.
 - The smallest relevant validation for the touched shared surface was run.

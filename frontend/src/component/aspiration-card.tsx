@@ -3,8 +3,7 @@ import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import type { AspirationItem } from '../service/aspirations';
-import { CardShell } from '../design-system';
-import { CardTitle, Caption } from './common/text';
+import { Caption, CardShell, CardTitle } from '../design-system';
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */

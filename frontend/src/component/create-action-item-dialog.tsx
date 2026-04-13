@@ -1,10 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import {
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControl,
   InputLabel,
   MenuItem,
@@ -12,8 +8,14 @@ import {
   Stack,
   TextField,
   Typography,
-  Chip,
 } from '@mui/material';
+import {
+  SurfaceDialog as Dialog,
+  SurfaceDialogActions as DialogActions,
+  SurfaceDialogContent as DialogContent,
+  SurfaceDialogTitle as DialogTitle,
+  StatusChip as Chip,
+} from '../design-system';
 import { UserContext } from '../context/user-context';
 import {
   createActionItem,

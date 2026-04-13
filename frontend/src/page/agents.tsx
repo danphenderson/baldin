@@ -32,8 +32,7 @@ import type {
 } from '../service/agents';
 import AgentCard from '../component/agent-card';
 import AgentFormDialog from '../component/agent-form-dialog';
-import ConfirmDialog from '../component/common/confirm-dialog';
-import EmptyState from '../component/common/empty-state';
+import { ConfirmDialog, EmptyState } from '../design-system';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */

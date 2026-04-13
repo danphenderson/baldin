@@ -4,13 +4,13 @@ title: Design System Workflow
 description: Contribution flow, validation path, and practical handoff rules for Baldin's frontend design-system work.
 ---
 
-<!-- last-verified: 2026-04-12 -->
+<!-- last-verified: 2026-04-13 -->
 
 # Design System Workflow
 
 Use this workflow when adding, extending, or migrating shared frontend UI. The goal is to keep the shared layer small, documented, and aligned with what is already proven in Baldin.
 
-Use [Design System Governance](./design-system-governance.md) for the durable operating rules, promotion criteria, wrapper lifecycle, reviewer checklist, and anti-drift guidance. Use this page for the day-to-day contribution flow.
+Use [Design System Governance](./design-system-governance.md) for durable operating rules, promotion criteria, wrapper lifecycle, reviewer checklist, and anti-drift guidance. Use this page for the day-to-day contribution flow.
 
 ## Start With The Ownership Decision
 
@@ -26,8 +26,6 @@ Keep code feature-owned when any of these are true:
 - The component owns workflow logic, stage semantics, entity-specific labels, or feature-only CTAs.
 - The shape is still unstable or only proven in one surface.
 - The simplest API would expose domain props like `application`, `lead`, `agentKind`, or feature-specific status rules.
-
-For the full promotion and feature-owned boundary rules, see [Design System Governance](./design-system-governance.md).
 
 ## Shared-Layer Rules
 
@@ -51,15 +49,14 @@ If a value does not need runtime theme access, prefer the token file directly in
 
 ## Compatibility Policy
 
-`frontend/src/component/common/*`, `frontend/src/component/auth/*`, and the re-export shims under `frontend/src/theme/*` are compatibility-only.
+`frontend/src/component/common/*` is compatibility-only. `frontend/src/component/auth/*` is retired for shared UI.
 
 In workflow terms:
 
-- Repoint wrappers to the canonical design-system source when that lowers migration risk.
-- Keep surviving wrappers thin.
-- Document the backing source in [Design System Catalog](../reference/design-system-catalog.md).
-
-For deprecation and removal rules, use [Design System Governance](./design-system-governance.md).
+- Repoint old wrappers to the canonical design-system source when that lowers migration risk.
+- Prefer pure re-export shims over translation wrappers once the canonical source can absorb the compatibility behavior.
+- Delete dead wrappers and theme shims instead of keeping them around once in-repo consumers are gone.
+- Document any surviving wrapper in [Design System Catalog](../reference/design-system-catalog.md).
 
 ## Migration Checklist
 
@@ -67,13 +64,14 @@ For deprecation and removal rules, use [Design System Governance](./design-syste
 2. Reuse an existing primitive or pattern first.
 3. If no shipped primitive fits, add the smallest neutral shared surface that solves the repeated structure.
 4. Keep feature-specific copy, service calls, route state, and entity rendering in the feature module.
-5. If the feature already depends on a legacy wrapper, either keep the wrapper thin or migrate the consumer directly to `frontend/src/design-system`.
-6. Update the catalog or migration guide when the adoption status changes.
-7. Validate the touched surfaces before handoff.
+5. Replace any shared-eligible direct MUI shell import with the canonical design-system surface.
+6. Remove dead compatibility wrappers or convert them to pure re-export shims.
+7. Update the catalog or migration guide when the adoption status changes.
+8. Validate the touched surfaces before handoff.
 
 ## Current Validation Path
 
-Start with the smallest relevant check.
+Start with the smallest relevant check, then widen when the change affects public exports or enforcement rules.
 
 | Change type | Minimum useful validation |
 | --- | --- |
@@ -81,7 +79,7 @@ Start with the smallest relevant check.
 | Shared frontend code | `cd frontend && npm run test` when tests exist for the touched surface |
 | Shared frontend typing or exports | `cd frontend && node ./node_modules/typescript/bin/tsc --noEmit` |
 | Shared frontend behavior or bundling assumptions | `cd frontend && VITE_API_URL=https://api.preview.invalid npm run build` |
-| Theme or token rule changes | `cd frontend && npm run lint:theme` |
+| Theme, token, or import-boundary rules | `cd frontend && npm run lint:theme` |
 
 For this repo, docs build is mandatory when these design-system docs or the sidebar change.
 
@@ -90,34 +88,32 @@ For this repo, docs build is mandatory when these design-system docs or the side
 When adding or widening shared UI:
 
 - Update the canonical docs in the same change.
-- Update [Design System Governance](./design-system-governance.md) when the operating rules or reviewer expectations change.
+- Update [Design System Governance](./design-system-governance.md) when operating rules or reviewer expectations change.
 - Update [Design System Catalog](../reference/design-system-catalog.md) when a shared surface, wrapper, or adopter inventory changes.
 - Update [Design System Migration Guide](./design-system-migration-guide.md) when rollout status or migrated surfaces change.
 - Update [Frontend Design System](../architecture/frontend-design-system.md) when the layer contract, theme contract, or ownership boundary changes.
-- Run the smallest relevant frontend validation for the touched shared surface, then widen to `tsc`, `build`, or `lint:theme` when the change affects public exports, bundling assumptions, or token and theme rules.
-
-This repo does not require a full frontend suite by default for every shared UI edit, but shared UI should not hand off without at least the smallest relevant proof.
+- Run the smallest relevant frontend validation for the touched shared surface, then widen to `tsc`, `build`, or `lint:theme` when the change affects public exports, bundling assumptions, or enforcement rules.
 
 ## Do And Don't
 
 | Do | Don't |
 | --- | --- |
-| Add neutral slots like `search`, `controls`, or `actions` | Add domain props like `leadFilters` or `applicationColumns` to shared patterns |
-| Compose MUI and shipped tokens | Hardcode new color, radius, or spacing rules in shared files |
+| Add neutral slots like `search`, `controls`, `actions`, or `footer` | Add domain props like `leadFilters` or `applicationColumns` to shared patterns |
+| Compose MUI and shipped tokens inside `design-system/*` | Import overlapping MUI shell primitives directly in feature code |
 | Leave unstable product behavior in feature code | Abstract a component just because two pages both use a `Card` |
-| Preserve legacy call sites with thin wrappers when migration risk is high | Let wrappers become the primary implementation surface |
-| Update docs in the same change | Treat the closeout note as the only current source of truth |
-| Keep new shared-source files out of `component/common/*` and `component/auth/*` | Use those folders as a second design-system home |
+| Preserve legacy call sites with thin re-export shims only when needed | Let legacy wrappers become the primary implementation surface |
+| Update docs in the same change | Treat migration notes as the only source of truth |
+| Delete dead compatibility files promptly | Keep inert shims after in-repo consumers are gone |
 
 ## Current Defaults
 
-- Prefer the exported `frontend/src/design-system` barrel in feature code unless a narrower import is materially clearer.
-- Prefer global toasts for transient success and error feedback and `InlineFeedback` for persistent contextual feedback.
+- Prefer the exported `frontend/src/design-system` barrel in feature code unless a narrower canonical path is materially clearer.
+- Prefer `AuthPanel` for auth shells and `SurfaceDialog` or `SurfaceCard` when a feature still owns the dialog or card body.
 - Prefer `SectionHeader` plus `SectionCard` for reusable section framing instead of feature-local section chrome.
 - Prefer `MetricStrip` for read-only stat rows across route families. Use the `inline` variant for flush layouts and the `card` variant for sections that need a card frame.
 
 ## When To Stop Sharing
 
-Do not widen the shared layer if the proposed API starts to require entity-specific terminology, route-specific filtering semantics, local data-fetch timing, service-layer error normalization, or feature-owned animation and editor behavior.
+Do not widen the shared layer if the proposed API starts to require entity-specific terminology, route-specific filtering semantics, local data-fetch timing, service-layer error normalization, or feature-owned editor behavior.
 
-At that point the design system has reached its current boundary, and the code should stay in the feature folder.
+At that point the design system has reached its boundary, and the code should stay in the feature folder.

@@ -18,14 +18,6 @@ vi.mock('@/service/crawlers', () => ({
   retryCrawlerRun: vi.fn(),
 }));
 
-vi.mock('@/component/common/confirm-dialog', () => ({
-  default: () => null,
-}));
-
-vi.mock('@/component/common/empty-state', () => ({
-  default: ({ title }: { title: string }) => <div>{title}</div>,
-}));
-
 import * as crawlerService from '@/service/crawlers';
 import CrawlersPage from '@/page/crawlers';
 

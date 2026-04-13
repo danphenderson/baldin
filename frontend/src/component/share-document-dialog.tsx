@@ -1,10 +1,30 @@
 import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, Button, TextField, Box, Typography,
-  Alert, List, ListItem, ListItemText, IconButton, Select, MenuItem,
-  Stack, Divider, CircularProgress, alpha, useTheme, type SelectChangeEvent,
-  Avatar, ListItemAvatar,
+  Button,
+  TextField,
+  Box,
+  Typography,
+  Alert,
+  List,
+  ListItem,
+  ListItemText,
+  IconButton,
+  Select,
+  MenuItem,
+  Stack,
+  Divider,
+  CircularProgress,
+  alpha,
+  useTheme,
+  type SelectChangeEvent,
+  Avatar,
+  ListItemAvatar,
 } from '@mui/material';
+import {
+  SurfaceDialog as Dialog,
+  SurfaceDialogTitle as DialogTitle,
+  SurfaceDialogContent as DialogContent,
+} from '../design-system';
 import { PersonAdd as PersonAddIcon, Delete as DeleteIcon, Share as ShareIcon } from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import {

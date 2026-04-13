@@ -91,6 +91,8 @@ export const MetricStrip: React.FC<MetricStripProps> = ({ items, variant }) => {
   const baldin = (theme as typeof theme & { baldin?: typeof theme.baldin }).baldin;
   const stripRadius = baldin?.radius.lg ?? radiusTokens.lg;
   const focusRing = baldin?.state.focusRing ?? theme.palette.action.focus;
+  const insetSurface = baldin?.surface.inset ?? theme.palette.action.hover;
+  const defaultBorder = baldin?.border.default ?? theme.palette.divider;
 
   if (variant === 'card') {
     return (
@@ -106,8 +108,8 @@ export const MetricStrip: React.FC<MetricStripProps> = ({ items, variant }) => {
         px: 2,
         py: 1.5,
         borderRadius: toRadiusPx(stripRadius),
-        bgcolor: theme.baldin.surface.inset,
-        border: `1px solid ${theme.baldin.border.default}`,
+        bgcolor: insetSurface,
+        border: `1px solid ${defaultBorder}`,
         overflowX: 'auto',
       }}
     >

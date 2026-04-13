@@ -25,10 +25,14 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   size = 'default',
 }) => {
   const theme = useTheme();
-  const cornerRadius = (theme as typeof theme & { baldin?: typeof theme.baldin }).baldin?.radius.md ?? radiusTokens.md;
+  const baldin = (theme as typeof theme & { baldin?: typeof theme.baldin }).baldin;
+  const cornerRadius = baldin?.radius.md ?? radiusTokens.md;
   const compact = size === 'compact';
   const iconSize = compact ? 36 : 40;
   const bottomSpacing = compact ? spacingTokens.controlGap + 2 : spacingTokens.controlGap + 3;
+  const selectedState = baldin?.state.selected ?? alpha(theme.palette.primary.main, 0.08);
+  const accentBorder = baldin?.border.accent ?? alpha(theme.palette.primary.main, 0.16);
+  const subtleBorder = baldin?.border.subtle ?? theme.palette.divider;
 
   return (
     <Box sx={{ mb: toSpacingPx(bottomSpacing) }}>
@@ -49,8 +53,8 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
               height: iconSize,
               borderRadius: toRadiusPx(cornerRadius),
               color: theme.palette.primary.main,
-              backgroundColor: theme.baldin.state.selected,
-              border: `1px solid ${theme.baldin.border.accent}`,
+              backgroundColor: selectedState,
+              border: `1px solid ${accentBorder}`,
               flexShrink: 0,
             }}
           >
@@ -96,7 +100,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
       </Box>
 
       {divider && (
-        <Divider sx={{ mt: toSpacingPx(compact ? 3 : 4), borderColor: theme.baldin.border.subtle }} />
+        <Divider sx={{ mt: toSpacingPx(compact ? 3 : 4), borderColor: subtleBorder }} />
       )}
     </Box>
   );

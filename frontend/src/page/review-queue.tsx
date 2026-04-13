@@ -11,7 +11,6 @@ import {
   Checkbox,
   IconButton,
   Tooltip,
-  Chip,
   Button,
   Alert,
   CircularProgress,
@@ -23,14 +22,16 @@ import {
   Typography,
   Snackbar,
   Collapse,
-} from '@mui/material';
+  } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import RateReviewIcon from '@mui/icons-material/RateReview';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
-import EmptyState from '../component/common/empty-state';
+import { EmptyState,
+  StatusChip as Chip,
+} from '../design-system';
 import RichJsonDisplay from '../component/common/json-modal';
 import {
   type ReviewItem,

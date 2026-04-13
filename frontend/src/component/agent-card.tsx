@@ -9,8 +9,7 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import type { AgentSummaryRead, AgentKind } from '../service/agents';
-import { CardShell, StatusChip, getStatusMetaSx } from '../design-system';
-import { CardTitle, Caption } from './common/text';
+import { Caption, CardShell, CardTitle, StatusChip, getStatusMetaSx } from '../design-system';
 import { timeAgo } from '../util/format';
 
 /* ------------------------------------------------------------------ */

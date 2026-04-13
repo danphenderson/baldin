@@ -2058,12 +2058,111 @@ class ProfileExtractResponse(BaseSchema):
 class UserDataOperationResult(BaseSchema):
     user_id: UUID4 = Field(description="User affected by the data-management operation")
     user_deleted: bool = Field(description="Whether the user row was removed")
+    domains: list["DbManagementPurgeDomain"] = Field(
+        default_factory=list,
+        description="Cleanup domains applied to the operation",
+    )
     cleared_profile_fields: int = Field(
         0, description="Number of profile fields cleared from the retained user"
     )
     deleted_records: dict[str, int] = Field(
         default_factory=dict,
         description="Deleted record counts grouped by table or association",
+    )
+
+
+class DbManagementPurgeDomain(str, Enum):
+    PROFILE = "profile"
+    LEADS = "leads"
+    APPLICATIONS = "applications"
+    DOCUMENTS = "documents"
+    AGENTS = "agents"
+    EXTRACTORS = "extractors"
+    ORCHESTRATION = "orchestration"
+
+
+class UserDataOperationPreview(BaseSchema):
+    user_id: UUID4 = Field(description="User affected by the previewed operation")
+    domains: list[DbManagementPurgeDomain] = Field(
+        default_factory=list,
+        description="Cleanup domains represented by the preview",
+    )
+    cleared_profile_fields: int = Field(
+        0, description="Number of profile fields that would be cleared"
+    )
+    deleted_records: dict[str, int] = Field(
+        default_factory=dict,
+        description="Deleted record counts grouped by table or association",
+    )
+    delete_allowed: bool = Field(
+        description="Whether the user can be deleted under the current safeguards"
+    )
+    delete_block_reason: Literal["self_delete", "last_remaining_superuser"] | None = (
+        Field(
+            None,
+            description="Reason deletion is blocked, when applicable",
+        )
+    )
+    purge_allowed: bool = Field(
+        description=("Whether the requested purge can run under the current safeguards")
+    )
+    purge_block_reason: Literal["self_delete", "last_remaining_superuser"] | None = (
+        Field(
+            None,
+            description="Reason the requested purge is blocked, when applicable",
+        )
+    )
+
+
+class DbManagementUserSummaryRead(BaseSchema):
+    user_id: UUID4 = Field(description="User identifier")
+    email: EmailStr = Field(description="User email address")
+    display_name: str = Field(description="Resolved display name for admin workflows")
+    is_active: bool = Field(description="Whether the user is active")
+    is_superuser: bool = Field(description="Whether the user is a Baldin superuser")
+    is_discoverable: bool = Field(
+        description="Whether the user is discoverable in the public directory"
+    )
+    created_at: datetime = Field(description="When the user was created")
+
+
+DbManagementUserPaginatedRead = PaginatedResponse[DbManagementUserSummaryRead]
+
+
+class DbManagementStatusRead(BaseSchema):
+    current_revision: str | None = Field(
+        None, description="Alembic revision currently stamped in the database"
+    )
+    head_revision: str | None = Field(
+        None, description="Latest Alembic revision available in the repo"
+    )
+    is_at_head: bool = Field(
+        description="Whether the current database revision matches the repo head"
+    )
+    public_table_count: int = Field(
+        description="Number of base tables currently in the public schema"
+    )
+
+
+class DbManagementTableSummaryRead(BaseSchema):
+    table_name: str = Field(description="Table name in the public schema")
+    column_count: int = Field(description="Number of columns on the table")
+    row_count: int = Field(description="Exact row count for the table")
+
+
+class DbManagementColumnRead(BaseSchema):
+    name: str = Field(description="Column name")
+    data_type: str = Field(description="Database type name")
+    is_nullable: bool = Field(description="Whether the column accepts null values")
+    default: str | None = Field(None, description="Column default expression")
+
+
+class DbManagementTableDetailRead(BaseSchema):
+    table_name: str = Field(description="Table name in the public schema")
+    row_count: int = Field(description="Exact row count for the table")
+    columns: list[DbManagementColumnRead] = Field(
+        default_factory=list,
+        description="Ordered column metadata for the table",
     )
 
 

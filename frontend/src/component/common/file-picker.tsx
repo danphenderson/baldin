@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Button } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { styled } from '@mui/material/styles';
+import type { SxProps, Theme } from '@mui/material/styles';
 
 const Input = styled('input')({
   display: 'none',
@@ -14,7 +15,7 @@ interface FilePickerProps {
   disabled: boolean;
   name: string;
   isRequired: boolean;
-  sx?: object; // optional sx prop for styling
+  sx?: SxProps<Theme>;
   onChange: (files: FileList | null) => void; // callback when file is selected
 }
 
@@ -33,7 +34,7 @@ const FilePicker: React.FC<FilePickerProps> = ({
   };
 
   return (
-    <Box style={sx}>
+    <Box sx={sx}>
       <label htmlFor={name}>
         <Input
           accept="*"

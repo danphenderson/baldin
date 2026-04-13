@@ -18,7 +18,10 @@ from app.schemas import (
     DocumentSearchResult,
     LeadEnrichRequest,
     LeadEnrichResponse,
+    LeadRankedEntryRead,
+    LeadRankInput,
     LeadRankRequest,
+    LeadRankResponse,
 )
 
 _UUID1 = str(uuid4())
@@ -130,13 +133,36 @@ class TestLeadEnrichSchemas:
 class TestLeadRankSchemas:
     def test_valid_request(self):
         req = LeadRankRequest(
-            leads=[{"title": "SWE", "description": "Backend developer"}]
+            leads=[
+                {
+                    "id": _UUID1,
+                    "title": "SWE",
+                    "description": "Backend developer",
+                }
+            ]
         )
         assert len(req.leads) == 1
+        assert isinstance(req.leads[0], LeadRankInput)
 
     def test_empty_leads_rejected(self):
         with pytest.raises(ValidationError):
             LeadRankRequest(leads=[])
+
+    def test_response(self):
+        response = LeadRankResponse(
+            ranking="Lead Rankings",
+            ranked_leads=[
+                LeadRankedEntryRead(
+                    lead_id=_UUID1,
+                    lead_index=1,
+                    title="SWE",
+                    relevance_score=9,
+                    explanation="The role closely matches the backend experience in the user's profile.",
+                    aspiration_alignment="Direct match to the user's backend engineering aspirations.",
+                )
+            ],
+        )
+        assert str(response.ranked_leads[0].lead_id) == _UUID1
 
 
 class TestCompanySummarizeSchemas:

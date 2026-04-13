@@ -28,7 +28,8 @@
     "jsx": "react-jsx",
     "types": [
       "vite/client",
-      "vitest/globals"
+      "vitest/globals",
+      "@figma/code-connect/figma-types"
     ]
   },
   "include": [

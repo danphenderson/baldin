@@ -420,6 +420,131 @@ class CertificateUpdate(BaseCertificate):
     pass
 
 
+def _normalize_aspiration_label(value: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("Label cannot be blank")
+    return normalized
+
+
+def _normalize_optional_aspiration_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+class AspirationKind(str, Enum):
+    ROLE = "role"
+    COMPANY = "company"
+
+
+class BaseAspiration(BaseSchema):
+    kind: AspirationKind
+    label: str
+    reason: str | None = None
+    notes: str | None = None
+    priority: int = 0
+    extracted_attributes: dict[str, Any] | None = None
+
+    @field_validator("label")
+    @classmethod
+    def normalize_label(cls, value: str) -> str:
+        return _normalize_aspiration_label(value)
+
+    @field_validator("reason", "notes")
+    @classmethod
+    def normalize_optional_text(cls, value: str | None) -> str | None:
+        return _normalize_optional_aspiration_text(value)
+
+
+class AspirationCreate(BaseAspiration):
+    pass
+
+
+class AspirationUpdate(BaseSchema):
+    kind: AspirationKind | None = None
+    label: str | None = None
+    reason: str | None = None
+    notes: str | None = None
+    priority: int | None = None
+    extracted_attributes: dict[str, Any] | None = None
+
+    @field_validator("label")
+    @classmethod
+    def normalize_optional_label(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return _normalize_aspiration_label(value)
+
+    @field_validator("reason", "notes")
+    @classmethod
+    def normalize_update_optional_text(cls, value: str | None) -> str | None:
+        return _normalize_optional_aspiration_text(value)
+
+    @model_validator(mode="after")
+    def validate_non_nullable_updates(self) -> "AspirationUpdate":
+        if "kind" in self.model_fields_set and self.kind is None:
+            raise ValueError("kind cannot be null")
+        if "label" in self.model_fields_set and self.label is None:
+            raise ValueError("label cannot be null")
+        if "priority" in self.model_fields_set and self.priority is None:
+            raise ValueError("priority cannot be null")
+        return self
+
+
+class AspirationSummaryRead(BaseRead):
+    kind: AspirationKind
+    label: str
+    reason: str | None = None
+    notes: str | None = None
+    priority: int = 0
+
+
+class AspirationRead(AspirationSummaryRead):
+    extracted_attributes: dict[str, Any] | None = None
+
+
+class AspirationMatchInput(BaseAspiration):
+    client_key: str | None = Field(
+        None,
+        description="Caller-supplied correlation key for unsaved aspirations",
+    )
+
+    @field_validator("client_key")
+    @classmethod
+    def normalize_client_key(cls, value: str | None) -> str | None:
+        return _normalize_optional_aspiration_text(value)
+
+
+class AspirationLeadMatch(BaseSchema):
+    lead_id: UUID4 = Field(description="Lead identifier")
+    match_score: int = Field(..., ge=1, le=10, description="Aspiration match score")
+    explanation: str = Field(
+        ...,
+        min_length=20,
+        max_length=400,
+        description="Why the lead matches this aspiration",
+    )
+
+
+class AspirationMatchResult(AspirationMatchInput):
+    lead_matches: list[AspirationLeadMatch] = Field(
+        default_factory=list,
+        description="Lead matches for this aspiration",
+    )
+    total: int = Field(0, ge=0, description="Total lead matches before pagination")
+    page: int = Field(1, ge=1, description="Current page for this aspiration result")
+    page_size: int = Field(1, ge=1, description="Page size for this aspiration result")
+
+
+class AspirationMatchResponse(BaseSchema):
+    results: list[AspirationMatchResult] = Field(
+        default_factory=list,
+        description="Per-aspiration lead matching results",
+    )
+
+
 class BaseCompany(BaseSchema):
     name: str | None = Field(None, description="Company name")
     industry: str | None = Field(None, description="Industry of the company")
@@ -1327,15 +1452,66 @@ class LeadEnrichResponse(BaseSchema):
     enrichment: str = Field(description="AI-generated enrichment analysis")
 
 
+class LeadRankInput(BaseSchema):
+    id: UUID4 = Field(description="Lead identifier")
+    title: str = Field(..., min_length=1, description="Lead title")
+    description: str | None = Field(None, description="Lead description")
+
+
+class LeadRankedEntryRead(BaseSchema):
+    lead_id: UUID4 = Field(description="Lead identifier")
+    lead_index: int = Field(..., ge=1, description="1-based lead position from input")
+    title: str = Field(..., min_length=1, description="Lead title")
+    relevance_score: int = Field(..., ge=1, le=10, description="Relevance score")
+    explanation: str = Field(
+        ..., min_length=20, max_length=400, description="Why the lead was ranked here"
+    )
+    aspiration_alignment: str | None = Field(
+        None,
+        description="How the lead aligns to the user's aspirations, if any",
+    )
+
+
 class LeadRankRequest(BaseSchema):
-    leads: list[dict[str, Any]] = Field(
-        ..., min_length=1, description="List of leads with title and description"
+    leads: list[LeadRankInput] = Field(
+        ..., min_length=1, description="List of typed leads to rank"
     )
     k: int = Field(5, ge=1, le=20, description="Context chunks per lead")
 
 
 class LeadRankResponse(BaseSchema):
     ranking: str = Field(description="AI-generated lead ranking")
+    ranked_leads: list[LeadRankedEntryRead] = Field(
+        default_factory=list,
+        description="Structured ranked lead entries for frontend consumption",
+    )
+
+
+class AspirationMatchRequest(BaseSchema):
+    aspirations: list[AspirationMatchInput] = Field(
+        ..., min_length=1, description="Aspirations to match against the input leads"
+    )
+    leads: list[LeadRankInput] = Field(
+        ..., min_length=1, description="Typed leads to score for each aspiration"
+    )
+    k: int = Field(5, ge=1, le=20, description="Context chunks to retrieve")
+    page: int | None = Field(
+        None, ge=1, description="Optional page for single-aspiration matching"
+    )
+    page_size: int | None = Field(
+        None,
+        ge=1,
+        le=PAGINATION_MAX_PAGE_SIZE,
+        description="Optional page size for single-aspiration matching",
+    )
+
+    @model_validator(mode="after")
+    def normalize_pagination(self) -> "AspirationMatchRequest":
+        if self.page is None and self.page_size is not None:
+            self.page = 1
+        if self.page is not None and self.page_size is None:
+            self.page_size = 20
+        return self
 
 
 class CompanySummarizeRequest(BaseSchema):

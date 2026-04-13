@@ -437,6 +437,24 @@ export interface paths {
     /** Detach Document From Application */
     delete: operations["detach_document_from_application_api_v1_applications__id__documents__document_id__delete"];
   };
+  "/api/v1/aspirations": {
+    /** List Aspirations */
+    get: operations["list_aspirations_api_v1_aspirations_get"];
+    /** Create Aspiration */
+    post: operations["create_aspiration_api_v1_aspirations_post"];
+  };
+  "/api/v1/aspirations/match": {
+    /** Match Aspirations */
+    post: operations["match_aspirations_api_v1_aspirations_match_post"];
+  };
+  "/api/v1/aspirations/{id}": {
+    /** Get User Aspiration */
+    get: operations["get_user_aspiration_api_v1_aspirations__id__get"];
+    /** Delete Aspiration */
+    delete: operations["delete_aspiration_api_v1_aspirations__id__delete"];
+    /** Update Aspiration */
+    patch: operations["update_aspiration_api_v1_aspirations__id__patch"];
+  };
   "/api/v1/documents/upload": {
     /**
      * Upload Document
@@ -2327,6 +2345,243 @@ export interface components {
        * @default false
        */
       reopen?: boolean;
+    };
+    /** AspirationCreate */
+    AspirationCreate: {
+      kind: components["schemas"]["AspirationKind"];
+      /** Label */
+      label: string;
+      /** Reason */
+      reason?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /**
+       * Priority
+       * @default 0
+       */
+      priority?: number;
+      /** Extracted Attributes */
+      extracted_attributes?: {
+        [key: string]: unknown;
+      } | null;
+    };
+    /**
+     * AspirationKind
+     * @enum {string}
+     */
+    AspirationKind: "role" | "company";
+    /** AspirationLeadMatch */
+    AspirationLeadMatch: {
+      /**
+       * Lead Id
+       * Format: uuid4
+       * @description Lead identifier
+       */
+      lead_id: string;
+      /**
+       * Match Score
+       * @description Aspiration match score
+       */
+      match_score: number;
+      /**
+       * Explanation
+       * @description Why the lead matches this aspiration
+       */
+      explanation: string;
+    };
+    /** AspirationMatchInput */
+    AspirationMatchInput: {
+      kind: components["schemas"]["AspirationKind"];
+      /** Label */
+      label: string;
+      /** Reason */
+      reason?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /**
+       * Priority
+       * @default 0
+       */
+      priority?: number;
+      /** Extracted Attributes */
+      extracted_attributes?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Client Key
+       * @description Caller-supplied correlation key for unsaved aspirations
+       */
+      client_key?: string | null;
+    };
+    /** AspirationMatchRequest */
+    AspirationMatchRequest: {
+      /**
+       * Aspirations
+       * @description Aspirations to match against the input leads
+       */
+      aspirations: components["schemas"]["AspirationMatchInput"][];
+      /**
+       * Leads
+       * @description Typed leads to score for each aspiration
+       */
+      leads: components["schemas"]["LeadRankInput"][];
+      /**
+       * K
+       * @description Context chunks to retrieve
+       * @default 5
+       */
+      k?: number;
+      /**
+       * Page
+       * @description Optional page for single-aspiration matching
+       */
+      page?: number | null;
+      /**
+       * Page Size
+       * @description Optional page size for single-aspiration matching
+       */
+      page_size?: number | null;
+    };
+    /** AspirationMatchResponse */
+    AspirationMatchResponse: {
+      /**
+       * Results
+       * @description Per-aspiration lead matching results
+       */
+      results?: components["schemas"]["AspirationMatchResult"][];
+    };
+    /** AspirationMatchResult */
+    AspirationMatchResult: {
+      kind: components["schemas"]["AspirationKind"];
+      /** Label */
+      label: string;
+      /** Reason */
+      reason?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /**
+       * Priority
+       * @default 0
+       */
+      priority?: number;
+      /** Extracted Attributes */
+      extracted_attributes?: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Client Key
+       * @description Caller-supplied correlation key for unsaved aspirations
+       */
+      client_key?: string | null;
+      /**
+       * Lead Matches
+       * @description Lead matches for this aspiration
+       */
+      lead_matches?: components["schemas"]["AspirationLeadMatch"][];
+      /**
+       * Total
+       * @description Total lead matches before pagination
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page for this aspiration result
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Page size for this aspiration result
+       * @default 1
+       */
+      page_size?: number;
+    };
+    /** AspirationRead */
+    AspirationRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      kind: components["schemas"]["AspirationKind"];
+      /** Label */
+      label: string;
+      /** Reason */
+      reason?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /**
+       * Priority
+       * @default 0
+       */
+      priority?: number;
+      /** Extracted Attributes */
+      extracted_attributes?: {
+        [key: string]: unknown;
+      } | null;
+    };
+    /** AspirationSummaryRead */
+    AspirationSummaryRead: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The unique uuid4 record identifier.
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       * @description The time the item was created
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description The time the item was last updated
+       */
+      updated_at: string;
+      kind: components["schemas"]["AspirationKind"];
+      /** Label */
+      label: string;
+      /** Reason */
+      reason?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /**
+       * Priority
+       * @default 0
+       */
+      priority?: number;
+    };
+    /** AspirationUpdate */
+    AspirationUpdate: {
+      kind?: components["schemas"]["AspirationKind"] | null;
+      /** Label */
+      label?: string | null;
+      /** Reason */
+      reason?: string | null;
+      /** Notes */
+      notes?: string | null;
+      /** Priority */
+      priority?: number | null;
+      /** Extracted Attributes */
+      extracted_attributes?: {
+        [key: string]: unknown;
+      } | null;
     };
     /**
      * BearerResponse
@@ -5551,15 +5806,32 @@ export interface components {
        */
       connection_id?: string | null;
     };
+    /** LeadRankInput */
+    LeadRankInput: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description Lead identifier
+       */
+      id: string;
+      /**
+       * Title
+       * @description Lead title
+       */
+      title: string;
+      /**
+       * Description
+       * @description Lead description
+       */
+      description?: string | null;
+    };
     /** LeadRankRequest */
     LeadRankRequest: {
       /**
        * Leads
-       * @description List of leads with title and description
+       * @description List of typed leads to rank
        */
-      leads: {
-          [key: string]: unknown;
-        }[];
+      leads: components["schemas"]["LeadRankInput"][];
       /**
        * K
        * @description Context chunks per lead
@@ -5574,6 +5846,45 @@ export interface components {
        * @description AI-generated lead ranking
        */
       ranking: string;
+      /**
+       * Ranked Leads
+       * @description Structured ranked lead entries for frontend consumption
+       */
+      ranked_leads?: components["schemas"]["LeadRankedEntryRead"][];
+    };
+    /** LeadRankedEntryRead */
+    LeadRankedEntryRead: {
+      /**
+       * Lead Id
+       * Format: uuid4
+       * @description Lead identifier
+       */
+      lead_id: string;
+      /**
+       * Lead Index
+       * @description 1-based lead position from input
+       */
+      lead_index: number;
+      /**
+       * Title
+       * @description Lead title
+       */
+      title: string;
+      /**
+       * Relevance Score
+       * @description Relevance score
+       */
+      relevance_score: number;
+      /**
+       * Explanation
+       * @description Why the lead was ranked here
+       */
+      explanation: string;
+      /**
+       * Aspiration Alignment
+       * @description How the lead aligns to the user's aspirations, if any
+       */
+      aspiration_alignment?: string | null;
     };
     /** LeadRead */
     LeadRead: {
@@ -6525,6 +6836,32 @@ export interface components {
        * @description Paginated items
        */
       items?: components["schemas"]["ApplicationSummaryRead"][];
+      /**
+       * Total
+       * @description Total number of matching records
+       * @default 0
+       */
+      total?: number;
+      /**
+       * Page
+       * @description Current page number
+       * @default 1
+       */
+      page?: number;
+      /**
+       * Page Size
+       * @description Items per page
+       * @default 20
+       */
+      page_size?: number;
+    };
+    /** PaginatedResponse[AspirationSummaryRead] */
+    PaginatedResponse_AspirationSummaryRead_: {
+      /**
+       * Items
+       * @description Paginated items
+       */
+      items?: components["schemas"]["AspirationSummaryRead"][];
       /**
        * Total
        * @description Total number of matching records
@@ -10345,6 +10682,143 @@ export interface operations {
       /** @description Successful Response */
       204: {
         content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Aspirations */
+  list_aspirations_api_v1_aspirations_get: {
+    parameters: {
+      query?: {
+        kind?: components["schemas"]["AspirationKind"] | null;
+        page?: number;
+        page_size?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedResponse_AspirationSummaryRead_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Aspiration */
+  create_aspiration_api_v1_aspirations_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AspirationCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["AspirationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Match Aspirations */
+  match_aspirations_api_v1_aspirations_match_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AspirationMatchRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["AspirationMatchResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get User Aspiration */
+  get_user_aspiration_api_v1_aspirations__id__get: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["AspirationRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Aspiration */
+  delete_aspiration_api_v1_aspirations__id__delete: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        content: never;
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Aspiration */
+  update_aspiration_api_v1_aspirations__id__patch: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AspirationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["AspirationRead"];
+        };
       };
       /** @description Validation Error */
       422: {

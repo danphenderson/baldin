@@ -139,4 +139,31 @@ describe('LeadCard', () => {
     expect(screen.queryByLabelText('Delete Senior Product Designer')).not.toBeInTheDocument();
     expect(screen.getByText('Joinable')).toBeInTheDocument();
   });
+
+  it('renders aspiration fit metadata with tooltip copy', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <LeadCard
+        lead={buildLead()}
+        applying={false}
+        ranking={{
+          relevanceScore: 8,
+          message: "Strong match for the user's aspiration to move into senior design leadership roles.",
+        }}
+        onOpen={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+
+    const chip = screen.getByText('Aspiration fit 8/10');
+    expect(chip).toBeInTheDocument();
+
+    await user.hover(chip);
+    expect(
+      await screen.findByText("Strong match for the user's aspiration to move into senior design leadership roles."),
+    ).toBeInTheDocument();
+  });
 });

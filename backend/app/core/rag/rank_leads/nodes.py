@@ -31,25 +31,58 @@ from app.core.rag.shared import (
 )
 
 
-def _build_ranking_prompt(repair_note: str | None = None) -> ChatPromptTemplate:
+def _format_aspirations_text(aspirations: list[dict]) -> str:
+    parts: list[str] = []
+    for aspiration in aspirations:
+        kind = str(aspiration.get("kind", "aspiration")).strip() or "aspiration"
+        label = str(aspiration.get("label", "")).strip()
+        if not label:
+            continue
+        priority = aspiration.get("priority")
+        reason = str(aspiration.get("reason", "")).strip()
+        line = f"- {kind.title()}: {label}"
+        if isinstance(priority, int) and priority > 0:
+            line += f" (priority {priority})"
+        if reason:
+            line += f" - {reason}"
+        parts.append(line)
+    return "\n".join(parts)
+
+
+def _build_ranking_prompt(
+    aspirations_text: str | None = None,
+    repair_note: str | None = None,
+) -> ChatPromptTemplate:
     messages: list[tuple[str, str]] = [
         (
             "system",
             "You are a career advisor. Rank the following job leads by relevance "
             "to the user's background as reflected in the provided document context. "
             "For each lead, provide a relevance score (1-10) and a brief explanation "
-            "grounded in the context. Return concise structured output that matches "
-            "the required schema exactly.",
+            "grounded in the context. When aspirations are provided, also explain "
+            "how each lead aligns or conflicts with them. Return concise structured "
+            "output that matches the required schema exactly.",
         ),
     ]
+    if aspirations_text:
+        messages.append(
+            (
+                "system",
+                "The user has these career aspirations:\n{aspirations_text}\n\n"
+                "Use them as an additional ranking signal. Populate aspiration_alignment "
+                "with a short note when you can tie the lead to those aspirations. "
+                "If there is no meaningful tie, omit aspiration_alignment.",
+            )
+        )
     if repair_note:
         messages.append(
             (
                 "system",
                 "Repair the previous attempt. Requirements: each lead needs "
                 "lead_index (1-based int), title (1-200 chars), relevance_score "
-                "(1-10), explanation (20-400 chars). All entries must have unique "
-                f"lead_index values. Prior failure: {repair_note}",
+                "(1-10), explanation (20-400 chars), and optional aspiration_alignment "
+                "(5-240 chars). All entries must have unique lead_index values. "
+                f"Prior failure: {repair_note}",
             )
         )
     messages.append(
@@ -245,7 +278,8 @@ async def build_context(state: LeadRankingState) -> LeadRankingState:
 async def generate_ranking(state: LeadRankingState) -> LeadRankingState:
     started = perf_counter()
     attempt = int(state.get("generation_attempts", 0)) + 1
-    prompt = _build_ranking_prompt()
+    aspirations_text = _format_aspirations_text(state.get("aspirations", []))
+    prompt = _build_ranking_prompt(aspirations_text or None)
     leads_text = _format_leads_text(state.get("leads", []))
     try:
         draft = await ainvoke_structured_prompt(
@@ -253,6 +287,7 @@ async def generate_ranking(state: LeadRankingState) -> LeadRankingState:
             {
                 "context": state["context"],
                 "leads_text": leads_text,
+                "aspirations_text": aspirations_text,
             },
             LeadRankingDraft,
             model_name=state.get("model_name"),
@@ -294,7 +329,10 @@ async def generate_ranking(state: LeadRankingState) -> LeadRankingState:
 async def repair_generation(state: LeadRankingState) -> LeadRankingState:
     started = perf_counter()
     attempt = int(state.get("generation_attempts", 0)) + 1
-    prompt = _build_ranking_prompt(state.get("generation_error_summary"))
+    aspirations_text = _format_aspirations_text(state.get("aspirations", []))
+    prompt = _build_ranking_prompt(
+        aspirations_text or None, state.get("generation_error_summary")
+    )
     leads_text = _format_leads_text(state.get("leads", []))
     try:
         draft = await ainvoke_structured_prompt(
@@ -302,6 +340,7 @@ async def repair_generation(state: LeadRankingState) -> LeadRankingState:
             {
                 "context": state["context"],
                 "leads_text": leads_text,
+                "aspirations_text": aspirations_text,
             },
             LeadRankingDraft,
             model_name=state.get("model_name"),

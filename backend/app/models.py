@@ -149,6 +149,7 @@ ACTION_ITEM_KIND_VALUES = (
     "custom",
 )
 ACTION_ITEM_PRIORITY_VALUES = ("low", "medium", "high", "urgent")
+ASPIRATION_KIND_VALUES = ("role", "company")
 AGENT_KIND_VALUES = ("cover_letter", "follow_up", "outreach", "custom")
 AGENT_RUN_TRIGGER_KIND_VALUES = ("manual", "event", "surface_mention")
 AGENT_RUN_STATUS_VALUES = ("pending", "running", "completed", "failed")
@@ -612,6 +613,38 @@ class Certificate(Base):
     issued_date = Column(DateTime(timezone=True))
     user_id = Column(UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="certificates")
+
+
+class Aspiration(Base):
+    """Represents a user-owned role or company aspiration."""
+
+    __tablename__ = "aspirations"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "kind",
+            "label",
+            name="uq_aspirations_user_kind_label",
+        ),
+        _string_in_check_constraint(
+            "kind",
+            ASPIRATION_KIND_VALUES,
+            name="ck_aspirations_kind",
+        ),
+        Index("ix_aspirations_user_kind", "user_id", "kind"),
+    )
+
+    user_id = Column(
+        UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    kind = Column(String, nullable=False)
+    label = Column(String, nullable=False)
+    reason = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    priority = Column(Integer, nullable=False, default=0, server_default="0")
+    extracted_attributes = Column(JSONB, nullable=True)
+
+    user = relationship("User", back_populates="aspirations")
 
 
 class Application(Base):
@@ -1498,6 +1531,11 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     experiences = relationship("Experience", back_populates="user")
     education = relationship("Education", back_populates="user")
     certificates = relationship("Certificate", back_populates="user")
+    aspirations = relationship(
+        "Aspiration",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
     documents = relationship("Document", back_populates="user")
     extractors = relationship("Extractor", back_populates="user")
     chat_sessions = relationship("AgentChatSession", back_populates="user")

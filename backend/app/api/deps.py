@@ -597,6 +597,20 @@ async def create_contact(
     return contact
 
 
+async def get_aspiration(
+    id: UUID4,
+    db: AsyncSession = Depends(get_async_session),
+    user: schemas.UserRead = Depends(get_current_user),
+) -> models.Aspiration:
+    aspiration = await db.get(models.Aspiration, id)
+    if not aspiration:
+        raise await _404(aspiration, id)
+    if aspiration.user_id != user.id:
+        raise await _403(user.id, aspiration, id)
+    await log.info(f"get_aspiration: {aspiration}")
+    return aspiration
+
+
 async def get_application(
     id: UUID4,
     db: AsyncSession = Depends(get_async_session),

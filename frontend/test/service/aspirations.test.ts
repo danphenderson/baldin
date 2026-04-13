@@ -1,6 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { createInMemoryAdapter } from '@/service/aspirations';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createApiAdapter, createInMemoryAdapter, getAspirations } from '@/service/aspirations';
 import type { AspirationAdapter } from '@/service/aspirations';
+import { createApiClient } from '@/service/api-client';
+
+vi.mock('@/service/api-client', () => ({
+  createApiClient: vi.fn(),
+}));
+
+const mockedCreateApiClient = vi.mocked(createApiClient);
 
 describe('createInMemoryAdapter', () => {
   let adapter: AspirationAdapter;
@@ -89,13 +96,85 @@ describe('createInMemoryAdapter', () => {
 
   it('returns items sorted newest-first', async () => {
     setup();
-    const first = await adapter.create('role', { label: 'First' });
+    await adapter.create('role', { label: 'First' });
     // Small delay so timestamps differ
     await new Promise((r) => setTimeout(r, 5));
-    const second = await adapter.create('role', { label: 'Second' });
+    await adapter.create('role', { label: 'Second' });
 
     const roles = await adapter.list('role');
     expect(roles[0]?.label).toBe('Second');
     expect(roles[1]?.label).toBe('First');
+  });
+});
+
+describe('createApiAdapter', () => {
+  beforeEach(() => {
+    mockedCreateApiClient.mockReset();
+  });
+
+  it('lists aspirations across paginated responses', async () => {
+    const GET = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: {
+          items: [{ id: 'a-1', kind: 'role', label: 'Staff Engineer', created_at: '2026-04-01T00:00:00Z', updated_at: '2026-04-01T00:00:00Z' }],
+          total: 2,
+          page: 1,
+          page_size: 500,
+        },
+        response: new Response(),
+      })
+      .mockResolvedValueOnce({
+        data: {
+          items: [{ id: 'a-2', kind: 'role', label: 'Platform Engineer', created_at: '2026-04-02T00:00:00Z', updated_at: '2026-04-02T00:00:00Z' }],
+          total: 2,
+          page: 2,
+          page_size: 500,
+        },
+        response: new Response(),
+      });
+    mockedCreateApiClient.mockReturnValue({ GET } as never);
+
+    const items = await getAspirations('test-token', 'role');
+
+    expect(items.map((item) => item.label)).toEqual(['Staff Engineer', 'Platform Engineer']);
+    expect(GET).toHaveBeenNthCalledWith(1, '/api/v1/aspirations', {
+      params: { query: { kind: 'role', page: 1, page_size: 500 } },
+    });
+    expect(GET).toHaveBeenNthCalledWith(2, '/api/v1/aspirations', {
+      params: { query: { kind: 'role', page: 2, page_size: 500 } },
+    });
+  });
+
+  it('creates, updates, and removes aspirations through the API adapter', async () => {
+    const GET = vi.fn();
+    const POST = vi.fn().mockResolvedValue({
+      data: { id: 'a-1', kind: 'role', label: 'Staff Engineer', created_at: '2026-04-01T00:00:00Z', updated_at: '2026-04-01T00:00:00Z' },
+      response: new Response(),
+    });
+    const PATCH = vi.fn().mockResolvedValue({
+      data: { id: 'a-1', kind: 'role', label: 'Principal Engineer', created_at: '2026-04-01T00:00:00Z', updated_at: '2026-04-02T00:00:00Z' },
+      response: new Response(),
+    });
+    const DELETE = vi.fn().mockResolvedValue({ response: new Response() });
+    mockedCreateApiClient.mockReturnValue({ GET, POST, PATCH, DELETE } as never);
+
+    const adapter = createApiAdapter('test-token');
+    const created = await adapter.create('role', { label: 'Staff Engineer' });
+    const updated = await adapter.update('a-1', { label: 'Principal Engineer' });
+    await adapter.remove('a-1');
+
+    expect(created.label).toBe('Staff Engineer');
+    expect(updated.label).toBe('Principal Engineer');
+    expect(POST).toHaveBeenCalledWith('/api/v1/aspirations', {
+      body: { kind: 'role', label: 'Staff Engineer' },
+    });
+    expect(PATCH).toHaveBeenCalledWith('/api/v1/aspirations/{id}', {
+      params: { path: { id: 'a-1' } },
+      body: { label: 'Principal Engineer' },
+    });
+    expect(DELETE).toHaveBeenCalledWith('/api/v1/aspirations/{id}', {
+      params: { path: { id: 'a-1' } },
+    });
   });
 });

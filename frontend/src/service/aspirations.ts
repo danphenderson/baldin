@@ -1,40 +1,76 @@
-/**
- * Aspirations domain layer — types and transport-agnostic adapter.
- *
- * The `AspirationAdapter` interface is the contract boundary between UI
- * components and persistence.  The current implementation uses an in-memory
- * store so pages can be developed before backend routes exist.
- *
- * ## Swapping to the real API
- *
- * 1. Add backend aspiration routes and regenerate `openapi.json` / `schema.d.ts`.
- * 2. Implement `createApiAdapter(token)` in this file using the
- *    `createApiClient` + `unwrap` pattern from `./agents.ts`.
- * 3. Import generated types from `../schema.d.ts` and alias them here.
- * 4. In the page wrappers (`roles-page.tsx`, `companies-page.tsx`), replace
- *    `createInMemoryAdapter()` with `createApiAdapter(token)`.
- *    No other component changes are needed.
- */
+import { components } from '../schema';
+import { createApiClient } from './api-client';
+import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-export type AspirationKind = 'role' | 'company';
-
-export interface AspirationItem {
-  id: string;
-  kind: AspirationKind;
-  label: string;
-  notes?: string;
-  reason?: string;
-  created_at: string;
-  updated_at: string;
+export type AspirationKind = components['schemas']['AspirationKind'];
+export type AspirationItem = components['schemas']['AspirationSummaryRead'];
+export type AspirationCreate = Omit<components['schemas']['AspirationCreate'], 'kind'>;
+export interface AspirationUpdate {
+  label?: string;
+  reason?: string | null;
+  notes?: string | null;
+  priority?: number;
+  extracted_attributes?: { [key: string]: unknown } | null;
 }
+type AspirationRead = components['schemas']['AspirationRead'];
+type AspirationPage = components['schemas']['PaginatedResponse_AspirationSummaryRead_'];
 
-export type AspirationCreate = Pick<AspirationItem, 'label' | 'notes' | 'reason'>;
+const unwrap = <T,>(
+  result: { data?: T; error?: unknown; response: Response },
+): T => {
+  if (result.error !== undefined) {
+    const detail = result.error as { detail?: unknown };
+    let message = 'API request failed';
+    if (detail?.detail) {
+      message = typeof detail.detail === 'string' ? detail.detail : JSON.stringify(detail.detail);
+    }
+    throw new Error(message);
+  }
+  return result.data as T;
+};
 
-export type AspirationUpdate = Partial<AspirationCreate>;
+const listAspirationsPage = async (
+  token: string,
+  kind: AspirationKind | undefined,
+  page: number,
+): Promise<ReturnType<typeof normalizePaginatedResponse<AspirationItem>>> => {
+  const client = createApiClient(token);
+  const response = unwrap<AspirationPage>(await client.GET('/api/v1/aspirations', {
+    params: {
+      query: {
+        kind,
+        page,
+        page_size: FULL_LIST_PAGE_SIZE,
+      },
+    },
+  }));
+  return normalizePaginatedResponse(response, { page, page_size: FULL_LIST_PAGE_SIZE });
+};
+
+export const getAspirations = async (
+  token: string,
+  kind?: AspirationKind,
+): Promise<AspirationItem[]> => {
+  let page = 1;
+  let total = 0;
+  const items: AspirationItem[] = [];
+
+  do {
+    const nextPage = await listAspirationsPage(token, kind, page);
+    total = nextPage.total;
+    items.push(...nextPage.items);
+    if (nextPage.items.length === 0) {
+      break;
+    }
+    page += 1;
+  } while (items.length < total);
+
+  return items;
+};
 
 /* ------------------------------------------------------------------ */
 /*  Adapter interface                                                  */
@@ -45,6 +81,40 @@ export interface AspirationAdapter {
   create(kind: AspirationKind, data: AspirationCreate): Promise<AspirationItem>;
   update(id: string, data: AspirationUpdate): Promise<AspirationItem>;
   remove(id: string): Promise<void>;
+}
+
+/* ------------------------------------------------------------------ */
+/*  API adapter                                                        */
+/* ------------------------------------------------------------------ */
+
+export function createApiAdapter(token: string): AspirationAdapter {
+  return {
+    async list(kind) {
+      return getAspirations(token, kind);
+    },
+
+    async create(kind, data) {
+      const client = createApiClient(token);
+      return unwrap<AspirationRead>(await client.POST('/api/v1/aspirations', {
+        body: { ...data, kind },
+      }));
+    },
+
+    async update(id, data) {
+      const client = createApiClient(token);
+      return unwrap<AspirationRead>(await client.PATCH('/api/v1/aspirations/{id}', {
+        params: { path: { id } },
+        body: data,
+      }));
+    },
+
+    async remove(id) {
+      const client = createApiClient(token);
+      unwrap(await client.DELETE('/api/v1/aspirations/{id}', {
+        params: { path: { id } },
+      }));
+    },
+  };
 }
 
 /* ------------------------------------------------------------------ */

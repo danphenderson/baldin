@@ -1,9 +1,9 @@
 import React from 'react';
 import {
-  TextField, FormControl, InputLabel, Select, MenuItem,
+  TextField, FormControl, InputLabel, Select, MenuItem, Button, Tooltip,
   InputAdornment, Pagination as MuiPagination,
 } from '@mui/material';
-import { Search as SearchIcon } from '@mui/icons-material';
+import { Search as SearchIcon, Bolt as BoltIcon } from '@mui/icons-material';
 import { CollectionToolbar } from '../design-system';
 
 export interface LeadSearchBarProps {
@@ -11,14 +11,21 @@ export interface LeadSearchBarProps {
   filter: string;
   page: number;
   pageCount: number;
+  rankingActive: boolean;
+  rankingPending: boolean;
+  rankingDisabledReason?: string;
   onSearchChange: (value: string) => void;
   onFilterChange: (value: string) => void;
   onPageChange: (page: number) => void;
+  onRank: () => void;
+  onClearRanking: () => void;
 }
 
 const LeadSearchBar: React.FC<LeadSearchBarProps> = ({
   search, filter, page, pageCount,
+  rankingActive, rankingPending, rankingDisabledReason,
   onSearchChange, onFilterChange, onPageChange,
+  onRank, onClearRanking,
 }) => (
   <CollectionToolbar
     sx={{ mb: 3 }}
@@ -57,6 +64,32 @@ const LeadSearchBar: React.FC<LeadSearchBarProps> = ({
           <MenuItem value="fulltime">Full-time</MenuItem>
         </Select>
       </FormControl>
+    )}
+    actions={(
+      <>
+        <Tooltip title={rankingDisabledReason ?? ''} disableHoverListener={!rankingDisabledReason}>
+          <span>
+            <Button
+              variant={rankingActive ? 'outlined' : 'contained'}
+              startIcon={<BoltIcon />}
+              onClick={onRank}
+              disabled={Boolean(rankingDisabledReason) || rankingPending}
+            >
+              {rankingPending ? 'Ranking...' : 'Rank with aspirations'}
+            </Button>
+          </span>
+        </Tooltip>
+        {rankingActive && (
+          <Button
+            variant="text"
+            color="inherit"
+            onClick={onClearRanking}
+            disabled={rankingPending}
+          >
+            Clear ranking
+          </Button>
+        )}
+      </>
     )}
     secondary={pageCount > 1 ? (
       <MuiPagination

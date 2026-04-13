@@ -11,7 +11,7 @@ import {
   AccessTime as TimeIcon,
   School as EducationIcon, Category as FunctionIcon,
   Groups as GroupsIcon, ChatBubbleOutline as CommentIcon,
-  ArrowForward as ArrowIcon,
+  ArrowForward as ArrowIcon, Stars as AspirationIcon,
 } from '@mui/icons-material';
 import type { LeadRead } from '../service/leads';
 import type { ApplicationCreationIntent } from '../service/applications';
@@ -27,6 +27,10 @@ import { brandGradient } from '../theme/effects';
 export interface LeadCardProps {
   lead: LeadRead;
   applying: boolean;
+  ranking?: {
+    relevanceScore: number;
+    message: string;
+  } | null;
   onOpen: (lead: LeadRead) => void;
   onEdit: (lead: LeadRead) => void;
   onDelete: (lead: LeadRead) => void;
@@ -70,7 +74,7 @@ const stopCardClick: React.MouseEventHandler<HTMLElement> = (event) => {
 };
 
 const LeadCard: React.FC<LeadCardProps> = ({
-  lead, applying, onOpen, onEdit, onDelete, onApply,
+  lead, applying, ranking, onOpen, onEdit, onDelete, onApply,
 }) => {
   const theme = useTheme();
   const companyName = lead.companies?.[0]?.name;
@@ -92,6 +96,19 @@ const LeadCard: React.FC<LeadCardProps> = ({
             <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
               {lead.viewer_is_registered && <StatusChip size="small" color={theme.palette.success.main} label="Following" />}
               {isActive && <StatusChip size="small" color={theme.palette.secondary.main} label="Active" />}
+              {ranking && (
+                <Tooltip title={ranking.message}>
+                  <Box>
+                    <StatusChip
+                      size="small"
+                      variant="outlined"
+                      color={theme.palette.warning.main}
+                      icon={<AspirationIcon sx={{ fontSize: 14 }} />}
+                      label={`Aspiration fit ${ranking.relevanceScore}/10`}
+                    />
+                  </Box>
+                </Tooltip>
+              )}
               {!lead.viewer_is_registered && lead.viewer_permissions?.can_register && <StatusChip size="small" variant="outlined" color={theme.palette.primary.main} label="Joinable" />}
             </Stack>
             <Typography

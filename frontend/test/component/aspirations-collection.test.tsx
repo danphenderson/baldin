@@ -41,6 +41,31 @@ function renderCollection(
 /* ------------------------------------------------------------------ */
 
 describe('AspirationsCollection', () => {
+  it('renders cards from an API-shaped adapter mock', async () => {
+    const adapter: AspirationAdapter = {
+      list: vi.fn().mockResolvedValue([
+        {
+          id: 'role-1',
+          kind: 'role',
+          label: 'Staff Engineer',
+          reason: 'Career target',
+          created_at: '2026-04-01T00:00:00Z',
+          updated_at: '2026-04-01T00:00:00Z',
+        },
+      ]),
+      create: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
+    };
+
+    renderCollection(adapter);
+
+    await waitFor(() => {
+      expect(screen.getByText('Staff Engineer')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Career target')).toBeInTheDocument();
+  });
+
   it('renders the empty state when there are no items', async () => {
     const adapter = createInMemoryAdapter();
     renderCollection(adapter);

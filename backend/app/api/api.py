@@ -8,6 +8,7 @@ from app.api.routes import (
     activity_feed,
     agents,
     applications,
+    aspirations,
     auth,
     certificate,
     collaboration,
@@ -104,6 +105,11 @@ api_router.include_router(
     applications.router,
     prefix="/applications",
     tags=["applications"],
+)
+api_router.include_router(
+    aspirations.router,
+    prefix="/aspirations",
+    tags=["aspirations"],
 )
 api_router.include_router(
     documents.router,

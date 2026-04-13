@@ -279,6 +279,47 @@ async def test_enrich_lead_returns_503_when_openai_disabled(
     )
 
 
+async def test_match_aspirations_returns_503_when_openai_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _ensure_db_ready()
+    monkeypatch.setattr(conf.openai, "API_KEY", "")
+
+    async with _client() as client:
+        email, _user_id = await _create_user("aspiration-match-disabled-pass")
+        headers = await _auth_headers(client, email, "aspiration-match-disabled-pass")
+        response = await client.post(
+            "/api/v1/aspirations/match",
+            json={
+                "aspirations": [
+                    {
+                        "kind": "role",
+                        "label": "Staff Engineer",
+                    }
+                ],
+                "leads": [
+                    {
+                        "id": str(uuid4()),
+                        "title": "Platform Engineer",
+                        "description": "Backend systems and workflow tooling",
+                    }
+                ],
+                "k": 5,
+            },
+            headers=headers,
+        )
+
+    assert response.status_code == 503, response.text
+    assert (
+        response.json()["detail"]
+        == "Aspiration matching is disabled because OPENAI_API_KEY is not configured."
+    )
+
+    async with session_context() as session:
+        result = await session.execute(select(models.OrchestrationEvent))
+        assert result.scalars().all() == []
+
+
 async def test_summarize_company_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

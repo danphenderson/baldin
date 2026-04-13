@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState, useCallback, useMemo, useDeferredValue } from 'react';
+import React, { useContext, useEffect, useState, useCallback, useMemo, useDeferredValue, useRef } from 'react';
 import {
   Box, Typography,
   Pagination as MuiPagination,
@@ -16,12 +16,15 @@ import {
   updateLead,
   deleteLead,
   extractLead,
+  rankLeads,
 } from '../service/leads';
 import type {
   LeadRead,
   LeadCreate,
   LeadExtractResponse,
   LeadSharedUpdate,
+  LeadRankResponse,
+  LeadRankedEntryRead,
 } from '../service/leads';
 import {
   createApplication,
@@ -30,6 +33,7 @@ import {
   type ApplicationCreationIntent,
 } from '../service/applications';
 import { getCompanies, type CompanyRead } from '../service/companies';
+import { getAspirations } from '../service/aspirations';
 import LeadFormDialog from '../component/lead-form-dialog';
 import LeadCard from '../component/lead-card';
 import LeadModal, { type LeadModalTab } from '../component/lead-modal';
@@ -97,7 +101,10 @@ const LeadsPage: React.FC = () => {
   // Data
   const [leads, setLeads] = useState<LeadRead[]>([]);
   const [companies, setCompanies] = useState<CompanyRead[]>([]);
+  const [aspirationCount, setAspirationCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [rankingResult, setRankingResult] = useState<LeadRankResponse | null>(null);
+  const [rankingPending, setRankingPending] = useState(false);
 
   // Search / filter / pagination (client-side)
   const [search, setSearch] = useState('');
@@ -124,9 +131,15 @@ const LeadsPage: React.FC = () => {
 
   // Quick-apply
   const [applyingId, setApplyingId] = useState<string | null>(null);
+  const rankingRequestIdRef = useRef(0);
 
   // Feedback
   const { notify } = useNotification();
+  const clearRanking = useCallback(() => {
+    rankingRequestIdRef.current += 1;
+    setRankingResult(null);
+    setRankingPending(false);
+  }, []);
 
   /* ---- Data fetching ---- */
 
@@ -134,17 +147,38 @@ const LeadsPage: React.FC = () => {
     if (!token) return;
     setLoading(true);
     try {
-      const [res, co] = await Promise.all([
+      const [leadResult, companyResult, aspirationResult] = await Promise.allSettled([
         getLeads(token, { page: 1, page_size: 500, request_count: false }),
         getCompanies(token),
+        getAspirations(token),
       ]);
-      setLeads(res.items ?? []);
-      setCompanies(co ?? []);
+
+      if (leadResult.status !== 'fulfilled') {
+        throw leadResult.reason;
+      }
+      if (companyResult.status !== 'fulfilled') {
+        throw companyResult.reason;
+      }
+
+      setLeads(leadResult.value.items ?? []);
+      setCompanies(companyResult.value ?? []);
+      if (aspirationResult.status === 'fulfilled') {
+        setAspirationCount(aspirationResult.value.length);
+      } else {
+        setAspirationCount(0);
+        notify(
+          aspirationResult.reason instanceof Error
+            ? aspirationResult.reason.message
+            : 'Failed to load aspirations',
+          'error',
+        );
+      }
+      clearRanking();
     } catch (e: unknown) {
       notify(e instanceof Error ? e.message : 'Failed to load leads', 'error');
     }
     setLoading(false);
-  }, [token, notify]);
+  }, [token, notify, clearRanking]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -166,14 +200,56 @@ const LeadsPage: React.FC = () => {
     });
   }, [deferredSearch, filter, leads]);
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const rankingByLeadId = useMemo(() => {
+    const entries = new Map<string, LeadRankedEntryRead>();
+    for (const entry of rankingResult?.ranked_leads ?? []) {
+      entries.set(entry.lead_id, entry);
+    }
+    return entries;
+  }, [rankingResult]);
+
+  const rankedFiltered = useMemo(() => {
+    if (!rankingResult) {
+      return filtered;
+    }
+
+    const order = new Map<string, number>();
+    (rankingResult.ranked_leads ?? []).forEach((entry, index) => {
+      order.set(entry.lead_id, index);
+    });
+
+    return filtered
+      .map((lead, index) => ({
+        lead,
+        baseIndex: index,
+        rankIndex: order.get(lead.id),
+      }))
+      .sort((left, right) => {
+        if (left.rankIndex !== undefined && right.rankIndex !== undefined) {
+          return left.rankIndex - right.rankIndex;
+        }
+        if (left.rankIndex !== undefined) {
+          return -1;
+        }
+        if (right.rankIndex !== undefined) {
+          return 1;
+        }
+        return left.baseIndex - right.baseIndex;
+      })
+      .map(({ lead }) => lead);
+  }, [filtered, rankingResult]);
+
+  const pageCount = Math.max(1, Math.ceil(rankedFiltered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = rankedFiltered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const joinedCount = useMemo(() => leads.filter((lead) => lead.viewer_is_registered).length, [leads]);
   const activeCount = useMemo(() => leads.filter((lead) => (lead.interest_count ?? 0) > 1 || (lead.comment_count ?? 0) > 0).length, [leads]);
   const discussionCount = useMemo(() => leads.filter((lead) => (lead.comment_count ?? 0) > 0).length, [leads]);
 
-  useEffect(() => { setPage(1); }, [deferredSearch, filter]);
+  useEffect(() => {
+    setPage(1);
+    clearRanking();
+  }, [deferredSearch, filter, clearRanking]);
 
   usePageToolbarHeader('Job Leads', `${leads.length} leads`);
 
@@ -201,6 +277,7 @@ const LeadsPage: React.FC = () => {
     try {
       const response = await extractLead(token, extractUrl.trim());
       setLeads((current) => filterLeadIntoList(current, response.lead, true));
+      clearRanking();
       setExtractUrl('');
       setPage(1);
       notify(extractMessage(response));
@@ -217,6 +294,7 @@ const LeadsPage: React.FC = () => {
     try {
       await deleteLead(token, deleteTarget.id);
       setLeads((current) => current.filter((lead) => lead.id !== deleteTarget.id));
+      clearRanking();
       setDeleteTarget(null);
       notify('Lead deleted');
       if (selectedLeadId === deleteTarget.id) {
@@ -234,10 +312,12 @@ const LeadsPage: React.FC = () => {
       if (formLead?.id) {
         const updated = await updateLead(token, formLead.id, data as LeadSharedUpdate);
         setLeads((current) => filterLeadIntoList(current, updated));
+        clearRanking();
         notify('Lead updated');
       } else {
         const created = await createLead(token, data as LeadCreate);
         setLeads((current) => filterLeadIntoList(current, created, true));
+        clearRanking();
         notify('Lead created');
         openLead(created);
       }
@@ -270,15 +350,63 @@ const LeadsPage: React.FC = () => {
   const openCreate = () => { setFormLead(null); setFormOpen(true); };
 
   const handleLeadChange = useCallback((lead: LeadRead) => {
+    clearRanking();
     setLeads((current) => filterLeadIntoList(current, lead));
-  }, []);
+  }, [clearRanking]);
 
   const handleLeadDeleted = useCallback((leadId: string) => {
+    clearRanking();
     setLeads((current) => current.filter((lead) => lead.id !== leadId));
     if (selectedLeadId === leadId) {
       closeLead();
     }
-  }, [closeLead, selectedLeadId]);
+  }, [clearRanking, closeLead, selectedLeadId]);
+
+  const handleRank = useCallback(async () => {
+    if (!token || filtered.length === 0 || aspirationCount === 0) {
+      return;
+    }
+
+    const requestId = rankingRequestIdRef.current + 1;
+    rankingRequestIdRef.current = requestId;
+    setRankingPending(true);
+    try {
+      const response = await rankLeads(
+        token,
+        filtered.map((lead) => ({
+          id: lead.id,
+          title: lead.title?.trim() || 'Untitled Position',
+          description: lead.description ?? null,
+        })),
+      );
+      if (rankingRequestIdRef.current !== requestId) {
+        return;
+      }
+      setRankingResult(response);
+      setPage(1);
+      const rankedCount = response.ranked_leads?.length ?? 0;
+      notify(
+        `Ranked ${rankedCount} lead${rankedCount === 1 ? '' : 's'} with your aspirations.`,
+      );
+    } catch (e: unknown) {
+      if (rankingRequestIdRef.current !== requestId) {
+        return;
+      }
+      notify(e instanceof Error ? e.message : 'Failed to rank leads', 'error');
+    } finally {
+      if (rankingRequestIdRef.current === requestId) {
+        setRankingPending(false);
+      }
+    }
+  }, [token, filtered, aspirationCount, notify]);
+
+  const rankingDisabledReason = loading
+    ? 'Loading leads and aspirations...'
+    : filtered.length === 0
+      ? 'No leads match the current filters.'
+      : aspirationCount === 0
+        ? 'Add role or company aspirations on the Aspirations pages to rank leads against them.'
+        : undefined;
 
   /* ================================================================ */
   /*  JSX                                                              */
@@ -300,9 +428,14 @@ const LeadsPage: React.FC = () => {
         filter={filter}
         page={safePage}
         pageCount={pageCount}
+        rankingActive={Boolean(rankingResult)}
+        rankingPending={rankingPending}
+        rankingDisabledReason={rankingDisabledReason}
         onSearchChange={setSearch}
         onFilterChange={setFilter}
         onPageChange={setPage}
+        onRank={handleRank}
+        onClearRanking={clearRanking}
       />
 
       <Box sx={{ mb: 3 }}>
@@ -346,6 +479,12 @@ const LeadsPage: React.FC = () => {
               <LeadCard
                 lead={lead}
                 applying={applyingId === lead.id}
+                ranking={rankingByLeadId.has(lead.id) ? {
+                  relevanceScore: rankingByLeadId.get(lead.id)?.relevance_score ?? 0,
+                  message: rankingByLeadId.get(lead.id)?.aspiration_alignment
+                    ?? rankingByLeadId.get(lead.id)?.explanation
+                    ?? '',
+                } : null}
                 onOpen={(l) => openLead(l)}
                 onEdit={(l) => openLead(l, 'edit')}
                 onDelete={setDeleteTarget}

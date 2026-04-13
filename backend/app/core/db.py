@@ -687,6 +687,7 @@ class DataBaseManager:
             models.Experience.__tablename__: 0,
             models.Education.__tablename__: 0,
             models.Certificate.__tablename__: 0,
+            models.Aspiration.__tablename__: 0,
             models.Contact.__tablename__: 0,
             models.Document.__tablename__: 0,
             models.Extractor.__tablename__: 0,
@@ -813,6 +814,9 @@ class DataBaseManager:
         )
         deleted_records[models.Certificate.__tablename__] = await self._delete_rows(
             models.Certificate, models.Certificate.user_id == user_id
+        )
+        deleted_records[models.Aspiration.__tablename__] = await self._delete_rows(
+            models.Aspiration, models.Aspiration.user_id == user_id
         )
         deleted_records[models.Contact.__tablename__] = await self._delete_rows(
             models.Contact, models.Contact.user_id == user_id

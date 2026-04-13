@@ -1,10 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useContext, useMemo } from 'react';
 import { BusinessOutlined as CompaniesIcon } from '@mui/icons-material';
 import AspirationsCollection from '../../component/aspirations-collection';
-import { createInMemoryAdapter } from '../../service/aspirations';
+import { UserContext } from '../../context/user-context';
+import { createApiAdapter } from '../../service/aspirations';
 
 const AspirationCompaniesPage: React.FC = () => {
-  const adapter = useMemo(() => createInMemoryAdapter(), []);
+  const { token } = useContext(UserContext);
+  const adapter = useMemo(() => (token ? createApiAdapter(token) : null), [token]);
+
+  if (!adapter) {
+    return null;
+  }
 
   return (
     <AspirationsCollection

@@ -7,6 +7,9 @@ export type LeadDetailRead = components['schemas']['LeadDetailRead'];
 export type LeadCreate = components['schemas']['LeadCreate'];
 export type LeadUpdate = components['schemas']['LeadSharedUpdate'];
 export type LeadSharedUpdate = components['schemas']['LeadSharedUpdate'];
+export type LeadRankInput = components['schemas']['LeadRankInput'];
+export type LeadRankResponse = components['schemas']['LeadRankResponse'];
+export type LeadRankedEntryRead = components['schemas']['LeadRankedEntryRead'];
 export type LeadExtractResponse = components['schemas']['LeadExtractResponse'];
 export type LeadExtractDisposition = components['schemas']['LeadExtractDisposition'];
 export type LeadRegistrationRead = components['schemas']['LeadRegistrationRead'];
@@ -151,6 +154,17 @@ export const extractLead = async (token: string, extractionUrl: string): Promise
   const client = createApiClient(token);
   return unwrap(await client.POST('/api/v1/leads/extract', {
     params: { query: { extraction_url: extractionUrl } },
+  }));
+};
+
+export const rankLeads = async (
+  token: string,
+  leads: LeadRankInput[],
+  k = 5,
+): Promise<LeadRankResponse> => {
+  const client = createApiClient(token);
+  return unwrap(await client.POST('/api/v1/documents/rag/rank-leads', {
+    body: { leads, k },
   }));
 };
 

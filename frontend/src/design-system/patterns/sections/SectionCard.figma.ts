@@ -8,15 +8,17 @@ const title = instance.getString('Title');
 const count = instance.getString('Count');
 const body = instance.getString('Body');
 
-const header = figma.code`
+const countProp = count ? figma.tsx`count="${count}"` : '';
+
+const header = figma.tsx`
   <SectionHeader
-    title={${title}}
-    count={${count}}
+    title="${title}"
+    ${countProp}
   />
 `;
 
 export default {
-  example: figma.code`
+  example: figma.tsx`
     <SectionCard header={${header}}>
       <p>${body}</p>
     </SectionCard>

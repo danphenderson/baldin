@@ -16,7 +16,7 @@ const label3 = instance.getString('Label 3');
 const value3 = instance.getString('Value 3');
 
 export default {
-  example: figma.code`
+  example: figma.tsx`
     <MetricStrip
       variant="${variant}"
       items={[

@@ -12,19 +12,20 @@ const layout = instance.getEnum('Layout', {
   Stacked: 'stacked',
 });
 
-const controls = figma.code`<button type="button">${secondaryActionLabel}</button>`;
-const actions = figma.code`<button type="button">${primaryActionLabel}</button>`;
+const search = figma.tsx`<input placeholder="${searchPlaceholder}" />`;
+const controls = figma.tsx`<button type="button">${secondaryActionLabel}</button>`;
+const actions = figma.tsx`<button type="button">${primaryActionLabel}</button>`;
 const secondary = layout === 'stacked'
-  ? figma.code`secondary={<div>Active only</div>}`
+  ? figma.tsx`<div>Active only</div>`
   : null;
 
 export default {
-  example: figma.code`
+  example: figma.tsx`
     <CollectionToolbar
-      search={<input placeholder="${searchPlaceholder}" />}
+      search={${search}}
       controls={${controls}}
       actions={${actions}}
-      ${secondary}
+      ${secondary ? figma.tsx`secondary={${secondary}}` : ''}
     />
   `,
   imports: ['import { CollectionToolbar } from "@/design-system"'],

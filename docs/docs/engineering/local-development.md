@@ -93,6 +93,15 @@ http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=apply&state=alread
 
 The harness is the supported local capture surface for Figma work. Keep the frontend stack warm and switch harness states instead of wiring a live backend for design review.
 
+### Professional-Plan Default
+
+Baldin's supported Figma workflow assumes a Professional-plan workspace and does not require a Dev seat.
+
+- Use the local harness plus `webdev` to put the product into the exact state you need.
+- Use Figma MCP read or write tools when your seat and auth allow it.
+- If your seat only allows basic inspection, keep the same harness flow and use screenshots or inspection instead of blocking on Dev Mode-specific UX.
+- Treat `frontend/figma.config.json` and `frontend/src/design-system/**/*.figma.ts` as optional local metadata. They can help future Code Connect or design-system work, but publish is not required for normal Baldin delivery.
+
 ## Resetting Databases
 
 When schema changes cause drift, reset both developer databases:

@@ -29,6 +29,7 @@ Use `AGENTS.md` as the shared repo baseline. This file preserves the same expect
 - If backend API routes or schemas change during active development, prefer `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` so contract regeneration works before files are staged.
 - Do not hand-edit `openapi.json`, `frontend/src/schema.d.ts`, or `docs/build/**`.
 - Contract regeneration imports the backend app. Use the tracked `backend/.env` baseline and supply a non-empty `OPENAI_API_KEY` through process env or `backend/.env.local`; a dummy local value is acceptable when real API access is not needed.
+- For Figma work, assume the supported path is a Professional-plan workflow without requiring a Dev seat: use the local browser harness plus Figma MCP or basic inspection, and do not block on Code Connect publish.
 
 ## Copilot-Specific Surfaces
 

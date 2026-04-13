@@ -16,6 +16,14 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces.
 - Running services outside Compose is a secondary path. If you run backend tests from the host, use `127.0.0.1:5431` for `test_db`; inside Compose the hostname is `test_db`.
 - If local schema drift blocks work and local data is disposable, use `./scripts/reset_local_db.sh`. Use `./scripts/repair_local_db_collation.sh` only for collation mismatch recovery when local data must survive.
 
+## Figma Workflow
+
+- Baldin's supported Figma workflow assumes a Professional-plan workspace and does not depend on a Dev seat.
+- For agentic Figma work, prefer the local browser harness plus Figma MCP read or write tools when available.
+- Treat basic inspection, screenshots, and harness-driven capture as sufficient when seat limits block Dev Mode-specific UX.
+- Do not make Code Connect publish, Dev Mode-only setup, or organization-only Figma features a required step for completing repo work.
+- Keep `frontend/figma.config.json` and `frontend/src/design-system/**/*.figma.ts` as optional local metadata and future-proofing, not as a blocking delivery dependency.
+
 ## Owner Model
 
 - Backend-only routes, models, auth, ETL, extraction, or backend tests: use `baldin_backend` in Codex or Baldin Backend Agent in Copilot.

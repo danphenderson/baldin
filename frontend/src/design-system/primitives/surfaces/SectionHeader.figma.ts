@@ -17,23 +17,24 @@ const showCount = instance.getBoolean('Show Count');
 const showAction = instance.getBoolean('Show Action');
 const showDivider = instance.getBoolean('Show Divider');
 
-const countProp = showCount ? figma.code`count={${count}}` : null;
+const countProp = showCount ? figma.tsx`count="${count}"` : null;
 const actionProp = showAction
-  ? figma.code`action={<button type="button">${actionLabel}</button>}`
+  ? figma.tsx`action={<button type="button">${actionLabel}</button>}`
   : null;
 const iconProp = showIcon
-  ? figma.code`icon={<span aria-hidden="true" />}`
+  ? figma.tsx`icon={<span aria-hidden="true" />}`
   : null;
+const dividerProp = showDivider ? 'divider' : '';
 
 export default {
-  example: figma.code`
+  example: figma.tsx`
     <SectionHeader
       ${iconProp}
-      title={${title}}
-      supportingText={${supportingText}}
+      title="${title}"
+      supportingText="${supportingText}"
       ${countProp}
       ${actionProp}
-      divider={${showDivider}}
+      ${dividerProp}
       size="${size}"
     />
   `,

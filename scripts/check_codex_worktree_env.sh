@@ -6,8 +6,10 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 require_openai="${BALDIN_REQUIRE_OPENAI_API_KEY:-1}"
 codex_config_path="${repo_root}/.codex/config.toml"
 figma_harness_path="${repo_root}/frontend/browser-harness/figma-wave1.html"
+figma_config_path="${repo_root}/frontend/figma.config.json"
 frontend_base_url="http://127.0.0.1:5173"
 figma_harness_url="${frontend_base_url}/browser-harness/figma-wave1.html"
+figma_mapping_count="$(find "${repo_root}/frontend/src/design-system" -name '*.figma.ts' | wc -l | tr -d ' ')"
 
 missing_files=0
 for rel_path in backend/.env frontend/.env; do
@@ -90,6 +92,10 @@ printf 'webdev_mcp: configured\n'
 printf 'figma_harness_file: %s\n' "${figma_harness_path}"
 printf 'frontend_base_url: %s\n' "${frontend_base_url}"
 printf 'figma_harness_url: %s\n' "${figma_harness_url}"
+printf 'figma_account_baseline: professional-plan without Dev-seat dependency\n'
+printf 'figma_workflow: harness + MCP/basic inspection; Code Connect publish optional\n'
+printf 'figma_config_file: %s\n' "$([[ -f "${figma_config_path}" ]] && printf '%s' "${figma_config_path}" || printf 'absent')"
+printf 'figma_mapping_files: %s\n' "${figma_mapping_count}"
 printf 'OPENAI_API_KEY: %s\n' "$(presence OPENAI_API_KEY)"
 printf 'LINKEDIN_USERNAME: %s\n' "$(presence LINKEDIN_USERNAME)"
 printf 'LINKEDIN_PASSWORD: %s\n' "$(presence LINKEDIN_PASSWORD)"

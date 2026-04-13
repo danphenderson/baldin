@@ -25,6 +25,8 @@ This document inventories Baldin's shared agentic customization surface across C
 - Real secrets belong in Codex UI environment variables or ignored `backend/.env.local` / `frontend/.env.local` overrides.
 - `scripts/check_codex_worktree_env.sh` is the supported Codex setup hook for validating env readiness inside a new worktree.
 - Baldin standardizes the Playwright MCP server as `webdev` for repo-level browser automation and Figma capture work. The repo-owned contract lives in `.codex/config.toml` as `mcp_servers.webdev`, and the setup hook validates that it still points at `@playwright/mcp`.
+- Baldin's repo baseline assumes a Professional-plan Figma workflow without a Dev-seat dependency. The supported path is `webdev` plus the local browser harness, then Figma MCP or basic inspection as seat access allows.
+- `frontend/figma.config.json` and `frontend/src/design-system/**/*.figma.ts` are optional local Figma metadata for future reuse. They must not become a required Code Connect publish gate for routine repo work.
 
 ### Instructions (2)
 | File | Scope |

@@ -21,6 +21,7 @@ applyTo: AGENTS.md, .codex/config.toml, .codex/agents/*.toml, .github/copilot-in
 - Favor direct backend, frontend, or full-stack execution prompts when ownership is already obvious. Do not route small local fixes through extra planning or multi-agent coordination by default.
 - Keep `docs/docs/engineering/local-development.md`, `docs/docs/engineering/testing.md`, and `docs/docs/engineering/contract-management.md` aligned with prompt and agent defaults so local commands, recovery paths, and contract regeneration behavior do not drift.
 - When documenting contract regeneration, mention the staged-file gate on `./scripts/update_frontend_schemas.sh`, the `SCHEMA_UPDATE_FORCE=1` local-iteration path, and the need to confirm whether generated artifacts actually changed.
+- Keep Baldin's Figma guidance aligned across `AGENTS.md`, `.github/**`, and local-development docs: assume a Professional-plan workflow without a Dev-seat dependency, prefer the browser harness plus Figma MCP or basic inspection, and treat Code Connect publish as optional.
 - Use keyword-rich descriptions that say "Use when..." and include the actual trigger phrases a user or parent agent would search for.
 - Favor fewer, stronger prompts. If a prompt is routing, validation, review, or synthesis, keep it single-purpose and stop when ownership should change.
 - Favor fewer, stronger agents. Only create a new agent if the existing Backend, Frontend, Lead Full-Stack Architect, and Project Manager split cannot own the work cleanly.

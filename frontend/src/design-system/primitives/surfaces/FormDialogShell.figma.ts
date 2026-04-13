@@ -10,7 +10,7 @@ const bodyCopy = instance.getString('Body Copy');
 const secondaryButtonLabel = instance.getString('Secondary Button Label');
 const primaryButtonLabel = instance.getString('Primary Button Label');
 
-const actions = figma.code`
+const actions = figma.tsx`
   <>
     <button type="button">${secondaryButtonLabel}</button>
     <button type="button">${primaryButtonLabel}</button>
@@ -18,12 +18,12 @@ const actions = figma.code`
 `;
 
 export default {
-  example: figma.code`
+  example: figma.tsx`
     <FormDialogShell
       open
       onClose={() => {}}
-      title={${title}}
-      subtitle={${subtitle}}
+      title="${title}"
+      subtitle="${subtitle}"
       actions={${actions}}
     >
       <p>${bodyCopy}</p>

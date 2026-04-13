@@ -22,7 +22,7 @@ const tone = instance.getEnum('Tone', {
 });
 
 export default {
-  example: figma.code`
+  example: figma.tsx`
     <StatusChip
       label="${label}"
       tone="${tone}"

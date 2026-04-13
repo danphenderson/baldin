@@ -8,7 +8,7 @@ const title = instance.getString('Title');
 const body = instance.getString('Body');
 
 export default {
-  example: figma.code`
+  example: figma.tsx`
     <CardShell tone="primary" surface="raised" density="comfortable">
       <div>
         <strong>${title}</strong>

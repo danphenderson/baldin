@@ -20,30 +20,42 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 | `POST /api/v1/aspirations/match` | Complete — RAG-backed, lead-requirement extraction, 20+ tests |
 | Aspiration-aware lead ranking | Complete — `aspiration_alignment` on `RankedLeadEntry` |
 
-### Frontend — CRUD shell only
+### Frontend — stabilization slice landed; flagship UI still pending
 
 | Surface | Status |
 |---------|--------|
 | Aspirations pages (Roles, Companies tabs) | Complete — cards, form dialog, search |
-| Aspirations service adapter | Partial — CRUD only; no suggest or match methods |
+| Aspirations service adapter | Partial — CRUD plus typed suggest seam (`getAspirationSuggestions(token)`, `AspirationAdapter.suggest(kind)`); no UI wiring or explicit error-category normalization yet |
 | Generated types for suggest + match | Complete in `schema.d.ts` |
-| Leads ranking | Partial — ranking works, alignment tooltip, 20-lead cap |
-| Application creation | Complete — intent button, duplicate guard, queue/board/detail |
+| Leads ranking | Partial — ranking works, alignment tooltip, 20-lead cap; flagship visual redesign still pending |
+| Application creation | Partial — intent button and duplicate guard exist; leads page now preloads applications and renders inline already-applied handoff, but ranking-context ready-state copy is still pending in the real page |
 
 ### Design System & Harness
 
 | Surface | Status |
 |---------|--------|
-| Token inventory + primitives + Figma Code Connect | Complete — 7 `.figma.ts` mappings |
-| `lint:theme` gate | Failing — 2 violations (see Story 2) |
-| Browser harness | Wave 1 only — no aspirations, leads, or apply states |
+| Token inventory + primitives + Figma Code Connect | Complete — 7 `.figma.ts` mappings plus shared `primary` status tone for `StatusChip` / Figma parity |
+| `lint:theme` gate | Complete — green as of 2026-04-13 |
+| Browser harness | Partial — canonical `figma-wave1` now supports aspirations empty/seeded plus leads/apply capture states; suggestion-loading and no-signal aspirations captures still missing |
 
 ### Docs
 
 | Surface | Status |
 |---------|--------|
-| Aspirations in architecture docs | Routing table mention only |
+| Aspirations in architecture docs | Partial — design-system and local-development docs updated for the stabilization slice; full flagship architecture writeup still pending |
 | API surface docs listing aspirations | Missing |
+
+## Progress Snapshot (2026-04-13)
+
+| Story | Status | Notes |
+|-------|--------|-------|
+| S2 — Fix design-system lint gate | Complete | `lint:theme` green; `chat-markdown` and `StatusChip.figma.ts` fixed; shared `primary` status tone added |
+| S5 — Wire suggest service method into the frontend | Partial | Typed suggest seam landed in `aspirations.ts`; explicit error-category normalization remains open |
+| S7 — Expand browser harness for aspirations captures | Partial | `figma-wave1` supports `screen=aspirations-roles|aspirations-companies` with `state=empty|seeded`; loading / no-signal captures still open |
+| S9 — Expand browser harness for leads ranking captures | Complete | `figma-wave1` supports `unranked|ranked|disabled|error` leads captures |
+| S10 — Strengthen application-start handoff from leads | Partial | Preloaded applications map, duplicate-safe inline state, fallback backstop, and post-create map update landed; real-page ready-state copy still open |
+| S11 — Expand browser harness for application-start captures | Complete | `figma-wave1` supports `ready|already-applied` apply captures |
+| S13 — Backfill docs, harness, and Figma references | Partial | Local-development + design-system docs updated; broader flagship architecture/API docs still open |
 
 ## Decisions Log
 
@@ -62,6 +74,8 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 | D11 | Ranking remains aspiration-gated this quarter. Users without aspirations do not get generic relevance-only ranking; they continue to see the disabled state with clearer guidance to add aspirations first | 2026-04-13 |
 | D12 | Figma is upstream for flow/layout decisions after the lint baseline is fixed. Harness expansion is downstream reference/capture work that reflects the approved Figma direction and implemented UI states | 2026-04-13 |
 | D13 | Validation commands in this epic use repo-aligned working-directory forms. Host-side backend pytest must set `TEST_DATABASE_HOSTNAME=127.0.0.1` and `TEST_DATABASE_PORT=5431` explicitly to avoid the tracked `backend/.env` Compose hostname mismatch | 2026-04-13 |
+| D14 | Frontend stabilization slice landed on 2026-04-13: `lint:theme` is green, `StatusChip` has a shared `primary` tone, the leads page preloads applications for duplicate-safe inline state, and `figma-wave1` now covers aspirations/leads/apply capture routes | 2026-04-13 |
+| D15 | The shipped suggest seam is `getAspirationSuggestions(token)` plus `AspirationAdapter.suggest(kind)` returning draft suggestions filtered client-side by active kind. Explicit error-category normalization remains part of the UI implementation slice, not the stabilization slice | 2026-04-13 |
 
 ## User Stories
 
@@ -85,9 +99,9 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** frontend developer, **I want** `npm run lint:theme` green, **so that** new design work starts from a clean baseline.
 
 **Acceptance criteria:**
-- [ ] `chat-markdown.tsx` uses `fontFamilies.mono` instead of raw `'monospace'`
-- [ ] `StatusChip.figma.ts` replaces `'#0891b2'` with a theme-palette reference
-- [ ] `npm run lint:theme` exits 0
+- [x] `chat-markdown.tsx` uses the shared mono typography token instead of raw `'monospace'`
+- [x] `StatusChip.figma.ts` replaces `'#0891b2'` with the semantic `primary` tone backed by the theme palette
+- [x] `npm run lint:theme` exits 0
 
 **Surfaces:** frontend
 **Dependencies:** none
@@ -131,11 +145,13 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** job seeker, **I want** the frontend to be able to call the suggest endpoint, **so that** the suggestion-review UI has a typed service layer.
 
 **Acceptance criteria:**
-- [ ] `suggestAspirations(token)` added to `aspirations.ts` returning `AspirationSuggestResponse`
+- [x] `getAspirationSuggestions(token)` added to `aspirations.ts` returning `AspirationSuggestionDraft[]`
+- [x] `AspirationAdapter.suggest(kind)` added and filters drafts client-side to the active kind
 - [ ] Service layer normalizes suggest failures into explicit frontend categories per D8: `no_signal`, `rate_limited`, `ai_disabled`, `network`, `unknown`
 - [ ] `400` from `/aspirations/suggest` maps to `no_signal` only when the backend detail is the existing no-usable-profile message; other `400` responses fall back to `unknown`
-- [ ] Service tests cover success with drafts, `400` no-signal, `429`, `503`, and network failure
-- [ ] No UI wiring — service layer only
+- [x] Service tests cover success with drafts, in-memory default empty suggestions, and adapter kind filtering
+- [ ] Service tests cover `400` no-signal, `429`, `503`, and network failure
+- [x] No UI wiring — service layer only
 
 **Surfaces:** frontend
 **Dependencies:** Story 1
@@ -182,10 +198,10 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** designer, **I want** harness-rendered aspirations screens for Figma review without a live backend.
 
 **Acceptance criteria:**
-- [ ] New harness HTML/TSX entry for aspirations with mock data
-- [ ] States: no aspirations, loading suggestions, suggestions returned (role + company), no-usable-signal guidance
-- [ ] Both theme modes render correctly
-- [ ] No network dependency
+- [x] Canonical `figma-wave1` harness supports `screen=aspirations-roles|aspirations-companies` with mock data and `state=empty|seeded`
+- [ ] Add additional aspirations capture states: loading suggestions, suggestions returned per kind, and no-usable-signal guidance
+- [ ] Both theme modes visually verified
+- [x] No network dependency
 
 **Surfaces:** frontend (browser-harness)
 **Dependencies:** Stories 6, 12
@@ -217,9 +233,9 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** designer, **I want** harness screens for the leads ranking redesign.
 
 **Acceptance criteria:**
-- [ ] Harness entry with mock ranked + unranked lead data
-- [ ] States: unranked, ranked with aspiration alignment, ranking unavailable/error
-- [ ] Both theme modes
+- [x] Harness entry with mock ranked + unranked lead data
+- [x] States: unranked, ranked with aspiration alignment, ranking disabled, ranking unavailable/error
+- [x] Existing `mode=dark|light` query path supported by the canonical harness
 
 **Surfaces:** frontend (browser-harness)
 **Dependencies:** Stories 8, 12
@@ -232,14 +248,14 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** job seeker looking at a ranked lead, **I want** the apply action to feel like a natural continuation of ranking context.
 
 **Acceptance criteria:**
-- [ ] Leads page loads the existing application list once through the current frontend applications service, derives a local `lead_id -> application` map, and passes that derived state into lead cards (D10)
-- [ ] Intent button preserved (register/apply distinction)
-- [ ] Inline already-applied state is computed from the derived applications map, not from a new backend field
-- [ ] Existing duplicate guard remains as a runtime backstop on click; the preloaded map is the primary render path and is refreshed or updated after successful application creation
-- [ ] Inline state shows the existing application stage/outcome label for matching leads and disables the creation CTA when an application already exists
-- [ ] Handoff copy references ranking context (e.g., "High aspiration fit — ready to apply?")
-- [ ] No application route contract changes (backend untouched)
-- [ ] Component tests: inline existing-application state from preloaded map, duplicate guard UX, handoff copy, post-create map update
+- [x] Leads page loads the existing application list once through the current frontend applications service, derives a local `lead_id -> application` map, and passes that derived state into lead cards (D10)
+- [x] Intent button preserved (register/apply distinction)
+- [x] Inline already-applied state is computed from the derived applications map, not from a new backend field
+- [x] Existing duplicate guard remains as a runtime backstop on click; the preloaded map is the primary render path and is refreshed or updated after successful application creation
+- [x] Inline state shows the existing application stage/outcome label for matching leads and disables the creation CTA when an application already exists
+- [ ] Handoff copy references ranking context (e.g., "High aspiration fit — ready to apply?") in the real leads page
+- [x] No application route contract changes (backend untouched)
+- [x] Component tests: inline existing-application state from preloaded map, duplicate guard UX, and post-create map update
 
 **Surfaces:** frontend
 **Dependencies:** Stories 8, 12
@@ -252,9 +268,9 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** designer, **I want** harness screens for the application-start handoff.
 
 **Acceptance criteria:**
-- [ ] Harness entry with mock lead + ranking + application state
-- [ ] States: ready to apply (with ranking context), already-applied / duplicate-guard
-- [ ] Both theme modes
+- [x] Harness entry with mock lead + ranking + application state
+- [x] States: ready to apply (with ranking context), already-applied / duplicate-guard
+- [x] Existing `mode=dark|light` query path supported by the canonical harness
 
 **Surfaces:** frontend (browser-harness)
 **Dependencies:** Stories 10, 12
@@ -290,10 +306,10 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 
 **Acceptance criteria:**
 - [ ] Architecture docs updated for the full flagship flow
-- [ ] Design-system docs updated only where flagship changed the shared inventory
-- [ ] Harness states self-documenting
-- [ ] `docs build` passes
-- [ ] Figma file references linked from this plan doc
+- [x] Design-system docs updated only where flagship changed the shared inventory
+- [x] Harness query states documented in `local-development.md` and covered in browser verification smoke tests
+- [x] `docs build` passes
+- [x] Figma file references linked from this plan doc
 
 **Surfaces:** docs, frontend (browser-harness), plans
 **Dependencies:** Stories 6, 8, 10, 12

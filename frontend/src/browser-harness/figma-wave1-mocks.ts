@@ -306,6 +306,45 @@ const CONNECTIONS = [
   },
 ];
 
+const ASPIRATIONS = [
+  {
+    id: 'asp-role-1',
+    kind: 'role',
+    label: 'Staff Product Designer',
+    reason: 'Next-step role aligned with current portfolio direction.',
+    notes: 'Strong fit for design leadership and hiring workflow strategy.',
+    created_at: '2026-04-10T12:00:00Z',
+    updated_at: '2026-04-12T09:00:00Z',
+  },
+  {
+    id: 'asp-role-2',
+    kind: 'role',
+    label: 'Design Systems Lead',
+    reason: 'Build on recent design-system migration work.',
+    notes: null,
+    created_at: '2026-04-08T11:00:00Z',
+    updated_at: '2026-04-12T08:45:00Z',
+  },
+  {
+    id: 'asp-company-1',
+    kind: 'company',
+    label: 'Northstar',
+    reason: 'Active application pipeline and referral path.',
+    notes: 'Good fit for collaborative product design roles.',
+    created_at: '2026-04-11T14:00:00Z',
+    updated_at: '2026-04-12T10:30:00Z',
+  },
+  {
+    id: 'asp-company-2',
+    kind: 'company',
+    label: 'Harbor Health',
+    reason: 'Mission and senior UX engineering roles align well.',
+    notes: null,
+    created_at: '2026-04-09T16:00:00Z',
+    updated_at: '2026-04-12T07:30:00Z',
+  },
+] as const;
+
 type MockRouteHandler = (request: Request) => Promise<Response> | Response;
 
 let applicationsState: any[] = structuredClone(APPLICATIONS);
@@ -324,6 +363,16 @@ const paginated = <T,>(items: T[]) => ({
   page: 1,
   page_size: 500,
 });
+
+const currentHarnessState = () => new URL(window.location.href).searchParams.get('state');
+
+const aspirationsForState = (kind?: string | null) => {
+  if (currentHarnessState() !== 'seeded') {
+    return [];
+  }
+
+  return ASPIRATIONS.filter((aspiration) => !kind || aspiration.kind === kind);
+};
 
 const findApplication = (applicationId: string) =>
   applicationsState.find((application) => application.id === applicationId) ?? null;
@@ -389,6 +438,13 @@ const routeHandlers: Array<[(url: URL, method: string) => boolean, MockRouteHand
     },
   ],
   [(url, method) => method === 'GET' && url.pathname === '/api/v1/skills/', () => jsonResponse(paginated(SKILLS))],
+  [
+    (url, method) => method === 'GET' && url.pathname === '/api/v1/aspirations',
+    (request) => {
+      const url = new URL(request.url);
+      return jsonResponse(paginated(aspirationsForState(url.searchParams.get('kind'))));
+    },
+  ],
   [(url, method) => method === 'GET' && url.pathname === '/api/v1/experiences/', () => jsonResponse(paginated(EXPERIENCES))],
   [(url, method) => method === 'GET' && url.pathname === '/api/v1/education/', () => jsonResponse(paginated(EDUCATION))],
   [(url, method) => method === 'GET' && url.pathname === '/api/v1/certificates/', () => jsonResponse(paginated(CERTIFICATES))],

@@ -75,7 +75,7 @@ Current rule:
 
 | Primitive | Path | Canonical role | Current known consumers |
 | --- | --- | --- | --- |
-| `StatusChip` | `frontend/src/design-system/primitives/status/status-chip.tsx` | Token-backed status chip wrapper over MUI `Chip` | Leads, agents, applications queue, section headers |
+| `StatusChip` | `frontend/src/design-system/primitives/status/status-chip.tsx` | Token-backed status chip wrapper over MUI `Chip`, including the shared `primary` tone used by Figma mappings and accent handoff states | Leads, agents, applications queue, section headers |
 | Status helpers | `frontend/src/design-system/primitives/status/helpers.ts` | Shared status/meta styling helpers using the status token map | Lead and agent card metadata |
 
 ## Pattern Inventory

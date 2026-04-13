@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Link, Typography } from '@mui/material';
 import Markdown from 'markdown-to-jsx';
+import { monoFontFamily } from '../../design-system/tokens/typography';
 
 export interface ChatMarkdownProps {
   children: string;
@@ -12,7 +13,7 @@ const inlineCodeSx = {
   py: 0.1,
   borderRadius: 1,
   bgcolor: 'action.hover',
-  fontFamily: 'monospace',
+  fontFamily: monoFontFamily,
   fontSize: '0.85em',
 };
 

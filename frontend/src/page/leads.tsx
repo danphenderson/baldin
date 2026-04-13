@@ -29,8 +29,10 @@ import type {
 } from '../service/leads';
 import {
   createApplication,
+  getApplications,
   findExistingApplicationForLead,
   getApplicationStateLabel,
+  type ApplicationRead,
   type ApplicationCreationIntent,
 } from '../service/applications';
 import { getCompanies, type CompanyRead } from '../service/companies';
@@ -92,6 +94,29 @@ const duplicateApplicationMessage = (title: string, statusLabel: string): string
   `"${title}" already exists in your applications as ${statusLabel}.`
 );
 
+const formatApplicationLabel = (statusLabel: string): string => (
+  statusLabel ? `${statusLabel.charAt(0).toUpperCase()}${statusLabel.slice(1)}` : 'Tracked'
+);
+
+const buildExistingApplicationHandoff = (application: Pick<ApplicationRead, 'outcome' | 'stage'>) => {
+  const statusLabel = getApplicationStateLabel(application);
+  return {
+    state: 'already-applied' as const,
+    message: 'An existing application is already in the pipeline for this lead.',
+    applicationLabel: formatApplicationLabel(statusLabel),
+    ctaLabel: 'Application exists',
+  };
+};
+
+const buildReadyHandoff = (relevanceScore: number) => ({
+  state: 'ready' as const,
+  message: relevanceScore >= 7
+    ? 'High aspiration fit — ready to apply?'
+    : relevanceScore >= 4
+      ? 'Moderate aspiration fit — consider applying.'
+      : 'Low aspiration fit — review alignment before applying.',
+});
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -102,6 +127,8 @@ const LeadsPage: React.FC = () => {
   // Data
   const [leads, setLeads] = useState<LeadRead[]>([]);
   const [companies, setCompanies] = useState<CompanyRead[]>([]);
+  const [applications, setApplications] = useState<ApplicationRead[]>([]);
+  const [applicationsPreloaded, setApplicationsPreloaded] = useState(false);
   const [aspirationCount, setAspirationCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [rankingResult, setRankingResult] = useState<LeadRankResponse | null>(null);
@@ -148,9 +175,10 @@ const LeadsPage: React.FC = () => {
     if (!token) return;
     setLoading(true);
     try {
-      const [leadResult, companyResult, aspirationResult] = await Promise.allSettled([
+      const [leadResult, companyResult, applicationResult, aspirationResult] = await Promise.allSettled([
         getLeads(token, { page: 1, page_size: 500, request_count: false }),
         getCompanies(token),
+        getApplications(token),
         getAspirations(token),
       ]);
 
@@ -163,6 +191,13 @@ const LeadsPage: React.FC = () => {
 
       setLeads(leadResult.value.items ?? []);
       setCompanies(companyResult.value ?? []);
+      if (applicationResult.status === 'fulfilled') {
+        setApplications(applicationResult.value ?? []);
+        setApplicationsPreloaded(true);
+      } else {
+        setApplications([]);
+        setApplicationsPreloaded(false);
+      }
       if (aspirationResult.status === 'fulfilled') {
         setAspirationCount(aspirationResult.value.length);
       } else {
@@ -208,6 +243,18 @@ const LeadsPage: React.FC = () => {
     }
     return entries;
   }, [rankingResult]);
+
+  const applicationsByLeadId = useMemo(() => {
+    const entries = new Map<string, ApplicationRead>();
+
+    for (const application of applications) {
+      if (application.lead_id) {
+        entries.set(application.lead_id, application);
+      }
+    }
+
+    return entries;
+  }, [applications]);
 
   const rankedFiltered = useMemo(() => {
     if (!rankingResult) {
@@ -334,12 +381,25 @@ const LeadsPage: React.FC = () => {
     setApplyingId(lead.id);
     try {
       const title = lead.title || 'Untitled';
-      const existingApp = await findExistingApplicationForLead(token, lead.id);
+      const preloadedApplication = applicationsByLeadId.get(lead.id) ?? null;
+      const existingApp = preloadedApplication ?? (
+        applicationsPreloaded
+          ? null
+          : await findExistingApplicationForLead(token, lead.id)
+      );
       if (existingApp) {
+        if (!preloadedApplication) {
+          setApplications((current) => (
+            current.some((application) => application.id === existingApp.id)
+              ? current
+              : [existingApp, ...current]
+          ));
+        }
         notify(duplicateApplicationMessage(title, getApplicationStateLabel(existingApp)), 'warning');
         return;
       }
-      await createApplication(token, { lead_id: lead.id, stage: intent });
+      const createdApplication = await createApplication(token, { lead_id: lead.id, stage: intent });
+      setApplications((current) => [createdApplication, ...current.filter((application) => application.id !== createdApplication.id)]);
       notify(creationSuccessMessage(intent, title));
     } catch (e: unknown) {
       notify(e instanceof Error ? e.message : 'Failed to create application', 'error');
@@ -495,6 +555,11 @@ const LeadsPage: React.FC = () => {
                     ?? rankingByLeadId.get(lead.id)?.explanation
                     ?? '',
                 } : null}
+                applicationHandoff={applicationsByLeadId.has(lead.id)
+                  ? buildExistingApplicationHandoff(applicationsByLeadId.get(lead.id) as ApplicationRead)
+                  : rankingByLeadId.has(lead.id)
+                    ? buildReadyHandoff(rankingByLeadId.get(lead.id)?.relevance_score ?? 0)
+                    : null}
                 onOpen={(l) => openLead(l)}
                 onEdit={(l) => openLead(l, 'edit')}
                 onDelete={setDeleteTarget}

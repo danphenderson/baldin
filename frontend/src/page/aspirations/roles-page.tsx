@@ -20,6 +20,7 @@ const AspirationRolesPage: React.FC = () => {
       kindIcon={<RolesIcon />}
       emptyTitle="No role aspirations yet"
       emptyDescription="Track the job titles and role profiles you want Baldin to optimize for."
+      showSuggestions
     />
   );
 };

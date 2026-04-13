@@ -5,11 +5,11 @@ title: Work Locally
 description: Work locally with Docker Compose first, then use the shortest smoke-check loop that proves the change.
 ---
 
-<!-- last-verified: 2026-04-12 -->
+<!-- last-verified: 2026-04-13 -->
 
 # Work Locally
 
-Baldin uses Docker Compose as the local-first entry point. All seven app services start with a single command.
+Baldin uses Docker Compose as the local-first entry point. All eight app services start with a single command.
 
 Repo-tracked `backend/.env` and `frontend/.env` provide safe local defaults in every worktree. Put real secrets such as `OPENAI_API_KEY` in process env or ignored `backend/.env.local` / `frontend/.env.local` overrides.
 
@@ -32,6 +32,7 @@ Host-side backend tests should use `127.0.0.1:5431` for `test_db`. Compose servi
 | `db` | PostgreSQL 15 | 5432 | `./backend/public/db` |
 | `test_db` | PostgreSQL 15 | 5431 | `./backend/public/test_db` |
 | `redis` | Redis 7 | 6379 | none |
+| `etl-service` | Internal FastAPI ETL executor | 8010 (internal only) | `./backend` mounted |
 | `web` | FastAPI (Uvicorn, hot-reload) | 8004→8000 | `./backend` mounted |
 | `crawler-worker` | Python background worker | none | `./backend` mounted |
 | `frontend` | Vite dev server | 5173 | `./frontend` mounted |
@@ -47,7 +48,7 @@ The backend mounts `./backend` as a volume and runs Uvicorn with `--reload`, so 
 
 Leave the stack running across multiple edits. Rebuild only when Docker image inputs changed, such as dependencies or Dockerfiles.
 
-Redis backs the local background-job queue, and `crawler-worker` consumes crawler and seed jobs from that queue while the API stays responsive.
+Redis backs the local background-job queue, `crawler-worker` consumes crawler and seed jobs from that queue, and `etl-service` performs the crawler browser work behind an internal-only HTTP boundary while the API stays responsive.
 
 Use [Boot The Stack](../getting-started/quickstart.md) for first boot. This page is the day-two reference once the stack already makes sense to you.
 
@@ -62,13 +63,32 @@ For Figma capture and browser-driven design review, Baldin's repo-standard brows
 
 The canonical harness supports these query parameters:
 
-- `screen=applications|profile|messages`
+- `screen=applications|profile|messages|aspirations-roles|aspirations-companies|leads|apply`
 - `mode=dark|light`
+- `state=empty|seeded|suggested|no-signal|rate-limited` when `screen=aspirations-roles|aspirations-companies`
+- `state=unranked|ranked|disabled|error` when `screen=leads`
+- `state=ready|already-applied` when `screen=apply`
 
 Example:
 
 ```text
 http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=applications&mode=dark
+```
+
+```text
+http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=aspirations-roles&state=seeded&mode=light
+```
+
+```text
+http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=aspirations-companies&state=suggested&mode=dark
+```
+
+```text
+http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=leads&state=ranked&mode=dark
+```
+
+```text
+http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=apply&state=already-applied&mode=light
 ```
 
 The harness is the supported local capture surface for Figma work. Keep the frontend stack warm and switch harness states instead of wiring a live backend for design review.
@@ -111,7 +131,13 @@ uvicorn app.main:app --reload --port 8004
 
 Requires a running PostgreSQL instance matching the `backend/.env` connection settings.
 
-If you want worker-mode background execution outside Docker, run Redis separately and start the worker in another shell:
+If you want worker-mode background execution outside Docker, run Redis separately and start the ETL service and worker in separate shells:
+
+```bash
+cd backend
+pipenv install --dev
+pipenv run uvicorn app.etl_service_main:app --reload --port 8010
+```
 
 ```bash
 cd backend

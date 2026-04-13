@@ -77,6 +77,7 @@ export function getStatusColors(theme: Theme) {
   const status = getStatusTokens(theme);
 
   return {
+    primary: theme.palette.primary.main,
     registered: status.application.registered,
     applied: status.application.applied,
     screening: status.application.screening,

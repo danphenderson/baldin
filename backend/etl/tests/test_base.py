@@ -13,7 +13,10 @@ from etl.base import (
     RETRYABLE_EXCEPTIONS,
     CrawlerBase,
     CrawlerResult,
+    _apply_stealth,
     async_retry,
+    build_proxy_headers,
+    resolve_navigation_url,
 )
 
 # ---------------------------------------------------------------------------
@@ -216,3 +219,71 @@ class TestCrawlerBaseGuard:
         crawler = CrawlerBase()
         with pytest.raises(RuntimeError, match="not initialised"):
             crawler._require_page()
+
+
+class TestStealthApplication:
+    async def test_apply_stealth_awaits_class_based_api(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        page = object()
+        awaited: list[object] = []
+
+        class FakeStealth:
+            async def apply_stealth_async(self, received_page: object) -> None:
+                awaited.append(received_page)
+
+        monkeypatch.setattr("etl.base._Stealth", FakeStealth, raising=False)
+
+        await _apply_stealth(page)  # type: ignore[arg-type]
+
+        assert awaited == [page]
+
+
+class TestProxyHelpers:
+    """Proxy URL and header helpers for managed ETL execution."""
+
+    def test_resolve_navigation_url_direct_mode_returns_original_url(self) -> None:
+        url = "https://example.com/jobs/1"
+        assert resolve_navigation_url(url, {"mode": "direct"}) == url
+
+    def test_resolve_navigation_url_managed_mode_wraps_target_url(self) -> None:
+        url = "https://example.com/jobs/1"
+        resolved = resolve_navigation_url(
+            url,
+            {
+                "mode": "managed",
+                "upstream_base_url": "https://proxy.example.com/fetch?region=us",
+            },
+        )
+        assert resolved.startswith("https://proxy.example.com/fetch?")
+        assert "region=us" in resolved
+        assert "url=https%3A%2F%2Fexample.com%2Fjobs%2F1" in resolved
+
+    def test_build_proxy_headers_returns_authorization_header_from_env(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("TEST_PROXY_AUTH", "Bearer test-token")
+
+        assert build_proxy_headers(
+            {
+                "mode": "managed",
+                "auth_header_env": "TEST_PROXY_AUTH",
+            }
+        ) == {"Authorization": "Bearer test-token"}
+
+    def test_build_proxy_headers_returns_none_when_env_missing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.delenv("TEST_PROXY_AUTH", raising=False)
+
+        assert (
+            build_proxy_headers(
+                {
+                    "mode": "managed",
+                    "auth_header_env": "TEST_PROXY_AUTH",
+                }
+            )
+            is None
+        )

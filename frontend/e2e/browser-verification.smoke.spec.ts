@@ -185,3 +185,53 @@ test('renders one separator between the two applications filter groups', async (
   await expect(page.getByText('All Stages')).toBeVisible();
   await expect(page.getByTestId('applications-filter-divider')).toHaveCount(1);
 });
+
+test('renders the leads harness in all flagship capture states', async ({ page }) => {
+  await page.goto('/browser-harness/figma-wave1.html?screen=leads&state=unranked');
+  await expect(page.getByRole('button', { name: 'Rank with aspirations' })).toBeEnabled();
+  await expect(page.getByText('Senior Product Designer')).toBeVisible();
+
+  await page.goto('/browser-harness/figma-wave1.html?screen=leads&state=ranked');
+  await expect(page.getByText('Aspiration fit 9/10')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Clear ranking' })).toBeVisible();
+
+  await page.goto('/browser-harness/figma-wave1.html?screen=leads&state=disabled');
+  await expect(page.getByRole('button', { name: 'Rank with aspirations' })).toBeDisabled();
+  await expect(page.getByText('Senior Product Designer')).toBeVisible();
+
+  await page.goto('/browser-harness/figma-wave1.html?screen=leads&state=error');
+  await expect(page.getByText('Ranking is temporarily unavailable in this capture state.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Rank with aspirations' })).toBeEnabled();
+});
+
+test('renders the aspirations harness across flagship capture states', async ({ page }) => {
+  await page.goto('/browser-harness/figma-wave1.html?screen=aspirations-roles&state=empty');
+  await expect(page.getByText('No role aspirations yet')).toBeVisible();
+
+  await page.goto('/browser-harness/figma-wave1.html?screen=aspirations-roles&state=seeded');
+  await expect(page.getByText('Staff Product Designer')).toBeVisible();
+  await expect(page.getByText('Design Systems Lead')).toBeVisible();
+
+  await page.goto('/browser-harness/figma-wave1.html?screen=aspirations-roles&state=suggested');
+  await expect(page.getByText('Platform Design Director')).toBeVisible();
+  await expect(page.getByText('Profile-derived role suggestions are ready for review before you save them as aspirations.')).toBeVisible();
+
+  await page.goto('/browser-harness/figma-wave1.html?screen=aspirations-companies&state=no-signal');
+  await expect(page.getByText('No strong company signals were found in the current profile, so manual aspirations stay primary in this capture state.')).toBeVisible();
+
+  await page.goto('/browser-harness/figma-wave1.html?screen=aspirations-companies&state=rate-limited');
+  await expect(page.getByText('Northstar')).toBeVisible();
+  await expect(page.getByText('Harbor Health')).toBeVisible();
+  await expect(page.getByText('Profile-based aspiration suggestions are temporarily unavailable, but saved aspirations still support lead ranking and apply handoff.')).toBeVisible();
+});
+
+test('renders the apply harness ready and already-applied states', async ({ page }) => {
+  await page.goto('/browser-harness/figma-wave1.html?screen=apply&state=ready');
+  await expect(page.getByText('Aspiration fit 9/10')).toBeVisible();
+  await expect(page.getByText('High aspiration fit - ready to apply?')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Create application for Senior Product Designer' })).toBeEnabled();
+
+  await page.goto('/browser-harness/figma-wave1.html?screen=apply&state=already-applied');
+  await expect(page.getByText('Existing application: Applied')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Existing application for Senior Product Designer' })).toBeDisabled();
+});

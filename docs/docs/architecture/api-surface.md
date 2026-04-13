@@ -34,6 +34,7 @@ graph TD
 	Search --> S7[/companies]
 	Search --> S8[/leads]
 	Search --> S9[/applications]
+	Search --> S10[/aspirations]
 	Docs --> D1[/documents]
 	Docs --> D2[/documents/{id}/collaborate*]
 	Automation --> AU1[/extractors]
@@ -70,6 +71,14 @@ graph TD
 | `companies` | `/companies` | Company CRUD and lead associations |
 | `leads` | `/leads` | Lead CRUD, registration, comments, extraction, and related views |
 | `applications` | `/applications` | Application queue, board, detail, and status-history updates |
+| `aspirations` | `/aspirations` | Aspiration CRUD, profile-based suggestion generation, and aspiration-aware lead matching |
+
+#### Aspirations Public Surfaces
+
+- `GET /aspirations` and `POST /aspirations` provide paginated listing and creation of user aspirations, scoped with a `kind` enum (`role` or `company`).
+- `GET /aspirations/{id}`, `PATCH /aspirations/{id}`, and `DELETE /aspirations/{id}` manage individual aspirations.
+- `POST /aspirations/suggest` uses the user's profile to generate LLM-based aspiration suggestions (rate-limited, returns 400 when no usable profile signal exists).
+- `POST /aspirations/match` performs RAG-backed matching of aspirations against a set of leads, returning `aspiration_alignment` and `relevance_score` per lead entry.
 
 ### Documents and Collaboration
 

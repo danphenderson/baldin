@@ -4,6 +4,9 @@
 
 Consumes crawler and seed jobs from the Redis queue.
 
+Crawler jobs are dispatched to the internal ETL service for browser execution,
+then the backend applies normalized results to Baldin's run and lead models.
+
 Run with:
     python -m app.crawler_worker
 

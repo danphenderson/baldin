@@ -35,6 +35,7 @@ const sidebars: SidebarsConfig = {
         'architecture/extraction-pipeline',
         'architecture/document-collaboration',
         'architecture/networking-and-messaging',
+        'architecture/aspirations-to-apply',
       ],
     },
     {

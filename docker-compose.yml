@@ -44,6 +44,31 @@ services:
       timeout: 5s
       retries: 5
 
+  etl-service:
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile
+      target: dev
+    working_dir: /usr/src/app
+    command: uvicorn --app-dir /usr/src/app app.etl_service_main:app --reload --workers 1 --host 0.0.0.0 --port 8010
+    env_file:
+      - ./backend/.env
+    environment:
+      - OPENAI_API_KEY
+      - LINKEDIN_USERNAME
+      - LINKEDIN_PASSWORD
+      - GLASSDOOR_USERNAME
+      - GLASSDOOR_PASSWORD
+      - SENTRY_DSN
+      - SENTRY_TRACES_SAMPLE_RATE
+    volumes:
+      - ./backend:/usr/src/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   web:
     build:
       context: ./backend
@@ -66,6 +91,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CRAWLER_QUEUE_NAME=crawler_jobs
       - CRAWLER_EXECUTION_MODE=worker
+      - ETL_SERVICE_URL=http://etl-service:8010
     volumes:
       - ./backend:/usr/src/app
     ports:
@@ -76,6 +102,8 @@ services:
       test_db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      etl-service:
         condition: service_healthy
 
   crawler-worker:
@@ -98,12 +126,15 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CRAWLER_QUEUE_NAME=crawler_jobs
       - CRAWLER_EXECUTION_MODE=worker
+      - ETL_SERVICE_URL=http://etl-service:8010
     volumes:
       - ./backend:/usr/src/app
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      etl-service:
         condition: service_healthy
 
   frontend:

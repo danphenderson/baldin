@@ -31,6 +31,12 @@ export interface LeadCardProps {
     relevanceScore: number;
     message: string;
   } | null;
+  applicationHandoff?: {
+    state: 'ready' | 'already-applied';
+    message: string;
+    applicationLabel?: string;
+    ctaLabel?: string;
+  } | null;
   onOpen: (lead: LeadRead) => void;
   onEdit: (lead: LeadRead) => void;
   onDelete: (lead: LeadRead) => void;
@@ -74,7 +80,7 @@ const stopCardClick: React.MouseEventHandler<HTMLElement> = (event) => {
 };
 
 const LeadCard: React.FC<LeadCardProps> = ({
-  lead, applying, ranking, onOpen, onEdit, onDelete, onApply,
+  lead, applying, ranking, applicationHandoff, onOpen, onEdit, onDelete, onApply,
 }) => {
   const theme = useTheme();
   const companyName = lead.companies?.[0]?.name;
@@ -83,6 +89,11 @@ const LeadCard: React.FC<LeadCardProps> = ({
   const canEdit = Boolean(lead.viewer_permissions?.can_update_shared_fields);
   const canDelete = Boolean(lead.viewer_permissions?.can_delete_shared_lead);
   const isActive = (lead.interest_count ?? 0) > 1 || (lead.comment_count ?? 0) > 0;
+  const hasExistingApplication = applicationHandoff?.state === 'already-applied';
+  const applyButtonLabel = applicationHandoff?.ctaLabel ?? 'Create Application';
+  const applyButtonAriaLabel = hasExistingApplication
+    ? `Existing application for ${lead.title || 'this lead'}`
+    : `Create application for ${lead.title || 'this lead'}`;
 
   return (
     <CardShell
@@ -97,17 +108,13 @@ const LeadCard: React.FC<LeadCardProps> = ({
               {lead.viewer_is_registered && <StatusChip size="small" color={theme.palette.success.main} label="Following" />}
               {isActive && <StatusChip size="small" color={theme.palette.secondary.main} label="Active" />}
               {ranking && (
-                <Tooltip title={ranking.message}>
-                  <Box>
-                    <StatusChip
-                      size="small"
-                      variant="outlined"
-                      color={theme.palette.warning.main}
-                      icon={<AspirationIcon sx={{ fontSize: 14 }} />}
-                      label={`Aspiration fit ${ranking.relevanceScore}/10`}
-                    />
-                  </Box>
-                </Tooltip>
+                <StatusChip
+                  size="small"
+                  variant="outlined"
+                  color={theme.palette.warning.main}
+                  icon={<AspirationIcon sx={{ fontSize: 14 }} />}
+                  label={`Aspiration fit ${ranking.relevanceScore}/10`}
+                />
               )}
               {!lead.viewer_is_registered && lead.viewer_permissions?.can_register && <StatusChip size="small" variant="outlined" color={theme.palette.primary.main} label="Joinable" />}
             </Stack>
@@ -126,6 +133,23 @@ const LeadCard: React.FC<LeadCardProps> = ({
             >
               {lead.title || 'Untitled Position'}
             </Typography>
+            {ranking?.message && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  mt: 0.5,
+                  lineHeight: 1.45,
+                  fontStyle: 'italic',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {ranking.message}
+              </Typography>
+            )}
           </Box>
           <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0, ml: 0.5 }} onClick={stopCardClick}>
             {lead.url && (
@@ -263,6 +287,28 @@ const LeadCard: React.FC<LeadCardProps> = ({
         <Box sx={{ flexGrow: 1 }} />
 
         <Divider sx={{ mt: 1.5, mb: 1.25, opacity: 0.5 }} />
+        {applicationHandoff && (
+          <Box sx={{ mb: 1.25 }}>
+            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 0.75 }}>
+              <StatusChip
+                size="small"
+                variant="outlined"
+                color={hasExistingApplication ? theme.palette.info.main : theme.palette.warning.main}
+                label={hasExistingApplication ? 'Duplicate guard active' : 'Ready to apply'}
+              />
+              {applicationHandoff.applicationLabel && (
+                <StatusChip
+                  size="small"
+                  color={theme.palette.success.main}
+                  label={`Existing application: ${applicationHandoff.applicationLabel}`}
+                />
+              )}
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              {applicationHandoff.message}
+            </Typography>
+          </Box>
+        )}
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           spacing={1}
@@ -274,9 +320,10 @@ const LeadCard: React.FC<LeadCardProps> = ({
               variant="contained"
               onSelect={(intent) => onApply(lead, intent)}
               loading={applying}
-              label="Create Application"
+              disabled={hasExistingApplication}
+              label={applyButtonLabel}
               loadingLabel="Creating..."
-              ariaLabel={`Create application for ${lead.title || 'this lead'}`}
+              ariaLabel={applyButtonAriaLabel}
               sx={{ background: gradientBg, px: 2.5, fontSize: '0.8rem' }}
             />
             <Button size="small" endIcon={<ArrowIcon />} onClick={() => onOpen(lead)}>

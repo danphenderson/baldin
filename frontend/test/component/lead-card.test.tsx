@@ -140,9 +140,7 @@ describe('LeadCard', () => {
     expect(screen.getByText('Joinable')).toBeInTheDocument();
   });
 
-  it('renders aspiration fit metadata with tooltip copy', async () => {
-    const user = userEvent.setup();
-
+  it('renders aspiration fit score and alignment as inline text', () => {
     render(
       <LeadCard
         lead={buildLead()}
@@ -158,12 +156,62 @@ describe('LeadCard', () => {
       />,
     );
 
-    const chip = screen.getByText('Aspiration fit 8/10');
-    expect(chip).toBeInTheDocument();
-
-    await user.hover(chip);
+    expect(screen.getByText('Aspiration fit 8/10')).toBeInTheDocument();
     expect(
-      await screen.findByText("Strong match for the user's aspiration to move into senior design leadership roles."),
+      screen.getByText("Strong match for the user's aspiration to move into senior design leadership roles."),
     ).toBeInTheDocument();
+  });
+
+  it('renders ready-to-apply handoff copy and keeps the create action enabled', () => {
+    render(
+      <LeadCard
+        lead={buildLead()}
+        applying={false}
+        ranking={{
+          relevanceScore: 9,
+          message: 'High aspiration fit for product design leadership.',
+        }}
+        applicationHandoff={{
+          state: 'ready',
+          message: 'High aspiration fit - ready to apply?',
+        }}
+        onOpen={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Ready to apply')).toBeInTheDocument();
+    expect(screen.getByText('High aspiration fit - ready to apply?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create application for Senior Product Designer' })).toBeEnabled();
+  });
+
+  it('renders existing-application handoff copy and disables creation', () => {
+    render(
+      <LeadCard
+        lead={buildLead()}
+        applying={false}
+        ranking={{
+          relevanceScore: 9,
+          message: 'High aspiration fit for product design leadership.',
+        }}
+        applicationHandoff={{
+          state: 'already-applied',
+          message: 'An existing application is already in the pipeline for this lead.',
+          applicationLabel: 'Applied',
+          ctaLabel: 'Application exists',
+        }}
+        onOpen={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Duplicate guard active')).toBeInTheDocument();
+    expect(screen.getByText('Existing application: Applied')).toBeInTheDocument();
+    expect(screen.getByText('An existing application is already in the pipeline for this lead.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Existing application for Senior Product Designer' })).toBeDisabled();
   });
 });

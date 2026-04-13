@@ -76,7 +76,7 @@ None of the above?
 
 | Path | Location | Use it for | Do not use it for |
 | --- | --- | --- | --- |
-| `StatusChip` | `design-system/primitives/status/status-chip.tsx` | Any MUI `Chip`-shaped status indicator | Custom surfaces that are not chips |
+| `StatusChip` | `design-system/primitives/status/status-chip.tsx` | Any MUI `Chip`-shaped status indicator. Semantic tone keys now include shared status tokens plus `primary` for non-domain accent chips and Figma mappings. | Custom surfaces that are not chips |
 | `getStatusChipSx` / `getStatusMetaSx` | `design-system/primitives/status/helpers.ts` | Applying token-backed status color to custom elements or metadata text | Replacing `StatusChip` when a chip is the right primitive |
 | `theme.baldin.status.*` | `design-system/theme/mui-augmentations.d.ts` | Reading raw status color tokens inside new shared design-system code | Feature code that can use the helpers above instead |
 | `theme/status-colors.ts` | `frontend/src/theme/status-colors.ts` | **Compatibility only** — existing feature imports that have not migrated yet | New code; migrate to `design-system/tokens/status.ts` or the helpers above |

@@ -53,6 +53,7 @@ describe('AspirationsCollection', () => {
           updated_at: '2026-04-01T00:00:00Z',
         },
       ]),
+      suggest: vi.fn().mockResolvedValue([]),
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),

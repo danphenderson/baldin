@@ -21,6 +21,7 @@ vi.mock('@/service/leads', () => ({
 
 vi.mock('@/service/applications', () => ({
   createApplication: vi.fn(),
+  getApplications: vi.fn(),
   findExistingApplicationForLead: vi.fn(),
   getApplicationStateLabel: vi.fn((application: { outcome?: string | null; stage?: string | null }) => (
     application.outcome ?? application.stage ?? 'tracked'
@@ -43,19 +44,38 @@ vi.mock('@/component/lead-card', () => ({
   default: ({
     lead,
     ranking,
+    applicationHandoff,
     onApply,
   }: {
     lead: { title?: string } & Record<string, unknown>;
     ranking?: { relevanceScore: number } | null;
+    applicationHandoff?: {
+      state: 'ready' | 'already-applied';
+      message: string;
+      applicationLabel?: string;
+      ctaLabel?: string;
+    } | null;
     onApply: (lead: Record<string, unknown>, intent: 'registered' | 'applied') => void;
   }) => (
     <div data-testid="lead-card">
       <span>{lead.title ?? 'Untitled'}</span>
       {ranking && <span>{`Aspiration fit ${ranking.relevanceScore}/10`}</span>}
-      <button onClick={() => onApply(lead, 'registered')}>
+      {applicationHandoff && (
+        <>
+          <span>{applicationHandoff.message}</span>
+          {applicationHandoff.applicationLabel && <span>{`Existing application: ${applicationHandoff.applicationLabel}`}</span>}
+        </>
+      )}
+      <button
+        disabled={applicationHandoff?.state === 'already-applied'}
+        onClick={() => onApply(lead, 'registered')}
+      >
         Register interest for {lead.title ?? 'Untitled'}
       </button>
-      <button onClick={() => onApply(lead, 'applied')}>
+      <button
+        disabled={applicationHandoff?.state === 'already-applied'}
+        onClick={() => onApply(lead, 'applied')}
+      >
         Apply now for {lead.title ?? 'Untitled'}
       </button>
     </div>
@@ -134,6 +154,7 @@ const mockedRankLeads = vi.mocked(leadsService.rankLeads);
 const mockedGetCompanies = vi.mocked(companiesService.getCompanies);
 const mockedGetAspirations = vi.mocked(aspirationsService.getAspirations);
 const mockedCreateApplication = vi.mocked(applicationsService.createApplication);
+const mockedGetApplications = vi.mocked(applicationsService.getApplications);
 const mockedFindExistingApplicationForLead = vi.mocked(applicationsService.findExistingApplicationForLead);
 
 /* ── Test data ────────────────────────────────────────────────────── */
@@ -190,7 +211,9 @@ describe('LeadsPage', () => {
     mockedGetCompanies.mockReset();
     mockedGetAspirations.mockReset();
     mockedCreateApplication.mockReset();
+    mockedGetApplications.mockReset();
     mockedFindExistingApplicationForLead.mockReset();
+    mockedGetApplications.mockResolvedValue([] as never);
     mockedGetAspirations.mockResolvedValue([] as never);
   });
 
@@ -288,8 +311,12 @@ describe('LeadsPage', () => {
     mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
     mockedGetCompanies.mockResolvedValue([] as never);
     mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
-    mockedFindExistingApplicationForLead.mockResolvedValue(null);
-    mockedCreateApplication.mockResolvedValue({ id: 'app-1' } as never);
+    mockedCreateApplication.mockResolvedValue({
+      id: 'app-1',
+      lead_id: 'lead-1',
+      stage: 'registered',
+      outcome: null,
+    } as never);
 
     renderPage();
 
@@ -297,7 +324,8 @@ describe('LeadsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Register interest for Senior Frontend Engineer' }));
 
     await waitFor(() => {
-      expect(mockedFindExistingApplicationForLead).toHaveBeenCalledWith('test-token', 'lead-1');
+      expect(mockedGetApplications).toHaveBeenCalledWith('test-token');
+      expect(mockedFindExistingApplicationForLead).not.toHaveBeenCalled();
       expect(mockedCreateApplication).toHaveBeenCalledWith('test-token', {
         lead_id: 'lead-1',
         stage: 'registered',
@@ -305,14 +333,38 @@ describe('LeadsPage', () => {
     });
   });
 
-  it('warns before creating a duplicate application for the same lead', async () => {
+  it('renders duplicate handoff state from the preloaded application index', async () => {
+    mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
+    mockedGetCompanies.mockResolvedValue([] as never);
+    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+    mockedGetApplications.mockResolvedValue([{
+      id: 'app-1',
+      lead_id: 'lead-1',
+      status: 'applied',
+      stage: 'applied',
+      outcome: null,
+    }] as never);
+
+    renderPage();
+
+    await screen.findByText('Senior Frontend Engineer');
+
+    expect(await screen.findByText('An existing application is already in the pipeline for this lead.')).toBeInTheDocument();
+    expect(screen.getByText('Existing application: Applied')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apply now for Senior Frontend Engineer' })).toBeDisabled();
+    expect(mockedFindExistingApplicationForLead).not.toHaveBeenCalled();
+  });
+
+  it('falls back to per-click duplicate lookup when applications fail to preload', async () => {
     const user = userEvent.setup();
 
     mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
     mockedGetCompanies.mockResolvedValue([] as never);
     mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+    mockedGetApplications.mockRejectedValue(new Error('applications unavailable'));
     mockedFindExistingApplicationForLead.mockResolvedValue({
       id: 'app-1',
+      lead_id: 'lead-1',
       status: 'applied',
       stage: 'applied',
       outcome: null,
@@ -323,8 +375,37 @@ describe('LeadsPage', () => {
     await screen.findByText('Senior Frontend Engineer');
     await user.click(screen.getByRole('button', { name: 'Apply now for Senior Frontend Engineer' }));
 
+    await waitFor(() => {
+      expect(mockedFindExistingApplicationForLead).toHaveBeenCalledWith('test-token', 'lead-1');
+    });
     expect(mockedCreateApplication).not.toHaveBeenCalled();
     expect(await screen.findByText('"Senior Frontend Engineer" already exists in your applications as applied.')).toBeInTheDocument();
+    expect(await screen.findByText('Existing application: Applied')).toBeInTheDocument();
+  });
+
+  it('adds newly created applications into page-local duplicate state', async () => {
+    const user = userEvent.setup();
+
+    mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
+    mockedGetCompanies.mockResolvedValue([] as never);
+    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+    mockedCreateApplication.mockResolvedValue({
+      id: 'app-1',
+      lead_id: 'lead-1',
+      stage: 'applied',
+      outcome: null,
+    } as never);
+
+    renderPage();
+
+    await screen.findByText('Senior Frontend Engineer');
+    await user.click(screen.getByRole('button', { name: 'Apply now for Senior Frontend Engineer' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Existing application: Applied')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: 'Apply now for Senior Frontend Engineer' })).toBeDisabled();
+    expect(mockedCreateApplication).toHaveBeenCalledTimes(1);
   });
 
   it('disables ranking when the user has no aspirations', async () => {

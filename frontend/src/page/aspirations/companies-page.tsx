@@ -20,6 +20,7 @@ const AspirationCompaniesPage: React.FC = () => {
       kindIcon={<CompaniesIcon />}
       emptyTitle="No company aspirations yet"
       emptyDescription="Track the companies and employers you want Baldin to prioritize in your search."
+      showSuggestions
     />
   );
 };

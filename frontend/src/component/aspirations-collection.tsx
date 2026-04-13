@@ -8,7 +8,7 @@ import {
   ErrorOutline as ErrorIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/notification-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import type {
@@ -22,6 +22,7 @@ import AspirationCard from './aspiration-card';
 import AspirationFormDialog from './aspiration-form-dialog';
 import ConfirmDialog from './common/confirm-dialog';
 import EmptyState from './common/empty-state';
+import SuggestionReviewPanel from './suggestion-review-panel';
 
 /* ------------------------------------------------------------------ */
 /*  Cross-navigation tabs                                              */
@@ -43,6 +44,9 @@ export interface AspirationsCollectionProps {
   kindIcon: React.ReactElement;
   emptyTitle: string;
   emptyDescription: string;
+  auxiliaryContent?: React.ReactNode;
+  /** When true, render the suggestion-review panel. Defaults to false (e.g. harness overrides via auxiliaryContent). */
+  showSuggestions?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -56,10 +60,11 @@ const AspirationsCollection: React.FC<AspirationsCollectionProps> = ({
   kindIcon,
   emptyTitle,
   emptyDescription,
+  auxiliaryContent,
+  showSuggestions = false,
 }) => {
   const { notify } = useNotification();
   const navigate = useNavigate();
-  const location = useLocation();
 
   /* ---- Data ---- */
   const [items, setItems] = useState<AspirationItem[]>([]);
@@ -214,6 +219,17 @@ const AspirationsCollection: React.FC<AspirationsCollectionProps> = ({
           </Button>
         )}
       </Box>
+
+      {auxiliaryContent}
+
+      {showSuggestions && !auxiliaryContent && (
+        <SuggestionReviewPanel
+          kind={kind}
+          kindLabel={kindLabel}
+          adapter={adapter}
+          onAccepted={refresh}
+        />
+      )}
 
       {/* Content area */}
       {loading ? (

@@ -107,6 +107,11 @@ class Settings(_BaseSettings):
     # How often (in seconds) the crawler scheduler polls for pending runs.
     CRAWLER_SCHEDULER_INTERVAL: int = 60
 
+    # Internal ETL execution service consumed by the crawler worker and inline
+    # fallback path when applying crawler runs through the backend boundary.
+    ETL_SERVICE_URL: str = "http://etl-service:8010"
+    ETL_SERVICE_TIMEOUT_SECONDS: float = 180.0
+
     # VALIDATORS
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod

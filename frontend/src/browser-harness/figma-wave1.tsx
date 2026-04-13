@@ -19,29 +19,90 @@ import ConversationsPage from '../page/messages/conversations-page';
 import ProfilePage from '../page/profile';
 import ThemeProvider from '../theme/theme-provider';
 import {
+  ApplyCaptureScreen,
+  AspirationsCaptureScreen,
+  LeadsCaptureScreen,
+  type ApplyCaptureState,
+  type AspirationsCaptureState,
+  type LeadsCaptureState,
+} from './figma-flagship-capture';
+import {
   getCurrentUser,
   getHarnessToken,
   installFigmaWave1FetchMock,
-  screenPath,
   type FigmaWave1Screen,
 } from './figma-wave1-mocks';
 
-function readScreen(value: string | null): FigmaWave1Screen {
-  if (value === 'profile' || value === 'messages') {
+type FigmaHarnessScreen = FigmaWave1Screen | 'aspirations-roles' | 'aspirations-companies' | 'leads' | 'apply';
+
+function readScreen(value: string | null): FigmaHarnessScreen {
+  if (
+    value === 'profile'
+    || value === 'messages'
+    || value === 'aspirations-roles'
+    || value === 'aspirations-companies'
+    || value === 'leads'
+    || value === 'apply'
+  ) {
     return value;
   }
   return 'applications';
+}
+
+function screenPath(screen: FigmaHarnessScreen) {
+  switch (screen) {
+    case 'profile':
+      return '/me';
+    case 'messages':
+      return '/network/messages';
+    case 'aspirations-roles':
+      return '/me/aspirations/roles';
+    case 'aspirations-companies':
+      return '/me/aspirations/companies';
+    case 'leads':
+      return '/leads';
+    case 'apply':
+      return '/apply';
+    case 'applications':
+    default:
+      return '/applications';
+  }
 }
 
 function readMode(value: string | null): ThemeMode {
   return value === 'light' ? 'light' : 'dark';
 }
 
+function readLeadsState(value: string | null): LeadsCaptureState {
+  if (value === 'ranked' || value === 'disabled' || value === 'error') {
+    return value;
+  }
+  return 'unranked';
+}
+
+function readApplyState(value: string | null): ApplyCaptureState {
+  return value === 'already-applied' ? 'already-applied' : 'ready';
+}
+
+function readAspirationsState(value: string | null): AspirationsCaptureState {
+  if (value === 'seeded' || value === 'loading' || value === 'suggested' || value === 'no-signal' || value === 'rate-limited') {
+    return value;
+  }
+  return 'empty';
+}
+
 const params = new URLSearchParams(window.location.search);
 const screen = readScreen(params.get('screen'));
 const mode = readMode(params.get('mode'));
+const state = screen === 'leads'
+  ? readLeadsState(params.get('state'))
+  : screen === 'apply'
+    ? readApplyState(params.get('state'))
+    : screen === 'aspirations-roles' || screen === 'aspirations-companies'
+      ? readAspirationsState(params.get('state'))
+    : null;
 
-document.title = `Baldin Wave 1 Harness · ${screen} · ${mode}`;
+document.title = `Baldin Wave 1 Harness · ${screen}${state ? ` · ${state}` : ''} · ${mode}`;
 localStorage.setItem(THEME_STORAGE_KEY, mode);
 localStorage.setItem('baldin_token', getHarnessToken());
 installFigmaWave1FetchMock();
@@ -72,7 +133,17 @@ createRoot(rootElement).render(
               <Route element={<AppLayout />}>
                 <Route path="/applications" element={<ApplicationsQueuePage />} />
                 <Route path="/me" element={<ProfilePage />} />
+                <Route
+                  path="/me/aspirations/roles"
+                  element={<AspirationsCaptureScreen kind="role" state={readAspirationsState(params.get('state'))} />}
+                />
+                <Route
+                  path="/me/aspirations/companies"
+                  element={<AspirationsCaptureScreen kind="company" state={readAspirationsState(params.get('state'))} />}
+                />
                 <Route path="/network/messages" element={<ConversationsPage />} />
+                <Route path="/leads" element={<LeadsCaptureScreen state={readLeadsState(params.get('state'))} />} />
+                <Route path="/apply" element={<ApplyCaptureScreen state={readApplyState(params.get('state'))} />} />
               </Route>
             </Routes>
           </MemoryRouter>

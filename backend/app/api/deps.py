@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path  # noqa
 from typing import Any, Awaitable, Callable, Sequence
 
+import httpx
 from fastapi import (  # noqa
     BackgroundTasks,
     Depends,
@@ -44,6 +45,11 @@ from app.core.security import (  # noqa
     fastapi_users,
     get_current_superuser,
     get_current_user,
+)
+from app.etl_service.schemas import (
+    CrawlerExecutionTerminalStatus,
+    CrawlRunExecuteRequest,
+    CrawlRunExecuteResponse,
 )
 from app.extractor.parsing import (  # noqa
     MAX_FILE_SIZE_MB,
@@ -1021,29 +1027,43 @@ def crawler_result_to_lead_create(result) -> schemas.LeadCreate:
     )
 
 
-def _instantiate_adapter(
-    source: str, query_definition: dict, execution_policy: dict | None
-):
-    """Lazily import and instantiate the correct ETL adapter."""
-    if source == "linkedin":
-        from etl.linkedin import LinkedInCrawler
+def build_crawler_execute_request(
+    run: models.CrawlerRun,
+    pipeline: models.CrawlerPipeline,
+) -> CrawlRunExecuteRequest:
+    return CrawlRunExecuteRequest(
+        run_id=run.id,
+        source=pipeline.source,
+        query_definition=pipeline.query_definition or {},
+        execution_policy=pipeline.execution_policy or {},
+        schedule_definition=pipeline.schedule_definition or None,
+        trigger_type=run.trigger_type,
+    )
 
-        return LinkedInCrawler(
-            keywords=query_definition.get("keywords", []),
-            location=query_definition.get("location", ""),
-            page_start=query_definition.get("page_start", 1),
-            page_end=query_definition.get("page_end", 5),
-            headless=(execution_policy or {}).get("headless", True),
-        )
-    if source == "glassdoor":
-        from etl.glassdoor import GlassdoorCrawler
 
-        return GlassdoorCrawler(
-            keywords=query_definition.get("keywords", ""),
-            location=query_definition.get("location", ""),
-            headless=(execution_policy or {}).get("headless", True),
+async def call_etl_service_execute(
+    request_payload: CrawlRunExecuteRequest,
+    *,
+    client: httpx.AsyncClient | None = None,
+    base_url: str | None = None,
+) -> CrawlRunExecuteResponse:
+    owns_client = client is None
+    if client is None:
+        client = httpx.AsyncClient(
+            base_url=base_url or conf.settings.ETL_SERVICE_URL,
+            timeout=conf.settings.ETL_SERVICE_TIMEOUT_SECONDS,
         )
-    raise ValueError(f"Unsupported crawler source: {source}")
+
+    try:
+        response = await client.post(
+            "/internal/crawl-runs/execute",
+            json=request_payload.model_dump(mode="json"),
+        )
+        response.raise_for_status()
+        return CrawlRunExecuteResponse.model_validate(response.json())
+    finally:
+        if owns_client:
+            await client.aclose()
 
 
 async def _find_orchestration_event_for_run(
@@ -1058,12 +1078,115 @@ async def _find_orchestration_event_for_run(
     return result.scalars().first()
 
 
+def _build_crawler_run_stats(
+    crawl_response: CrawlRunExecuteResponse,
+) -> dict[str, int]:
+    return {
+        "leads_found": crawl_response.stats.get(
+            "leads_found", len(crawl_response.results)
+        ),
+        "leads_created": 0,
+        "leads_deduped": 0,
+        "errors": crawl_response.stats.get("errors", 0),
+    }
+
+
+async def _mark_crawler_run_cancelled(
+    run: models.CrawlerRun,
+    event: models.OrchestrationEvent | None,
+    db: AsyncSession,
+    stats: dict[str, int],
+) -> models.CrawlerRun:
+    run.stats = stats
+    if not run.finished_at:
+        run.finished_at = datetime.utcnow()
+    await db.commit()
+    if event is not None:
+        event.status = "failure"
+        event.message = "Crawler run cancelled externally"
+        await db.commit()
+    return run
+
+
+async def _mark_crawler_run_paused(
+    run: models.CrawlerRun,
+    event: models.OrchestrationEvent | None,
+    db: AsyncSession,
+    stats: dict[str, int],
+) -> models.CrawlerRun:
+    run.stats = stats
+    await db.commit()
+    if event is not None:
+        event.message = f"Crawler run paused after {stats['leads_found']} leads"
+        await db.commit()
+    return run
+
+
+async def _mark_crawler_run_failed(
+    run: models.CrawlerRun,
+    event: models.OrchestrationEvent | None,
+    db: AsyncSession,
+    stats: dict[str, int],
+    error_summary: str,
+) -> models.CrawlerRun:
+    run.status = "failed"
+    run.finished_at = datetime.utcnow()
+    run.stats = stats
+    run.error_summary = error_summary[:2000]
+    await db.commit()
+
+    if event is not None:
+        event.status = "failure"
+        event.message = f"Crawler run failed: {error_summary[:500]}"
+        await db.commit()
+
+    return run
+
+
+async def _complete_crawler_run(
+    run: models.CrawlerRun,
+    event: models.OrchestrationEvent | None,
+    pipeline: models.CrawlerPipeline,
+    db: AsyncSession,
+    stats: dict[str, int],
+) -> models.CrawlerRun:
+    if pipeline.requires_approval and stats["leads_created"] > 0:
+        run.status = "pending_review"
+        run.finished_at = datetime.utcnow()
+        run.stats = stats
+        await db.commit()
+
+        if event is not None:
+            event.status = "pending_review"
+            event.message = (
+                f"Crawler run completed, held for review: {stats['leads_created']} created, "
+                f"{stats['leads_deduped']} deduped, {stats['errors']} errors"
+            )
+            await db.commit()
+        return run
+
+    run.status = "success"
+    run.finished_at = datetime.utcnow()
+    run.stats = stats
+    await db.commit()
+
+    if event is not None:
+        event.status = "success"
+        event.message = (
+            f"Crawler run completed: {stats['leads_created']} created, "
+            f"{stats['leads_deduped']} deduped, {stats['errors']} errors"
+        )
+        await db.commit()
+
+    return run
+
+
 async def execute_crawler_run(
     run: models.CrawlerRun,
     db: AsyncSession,
     user: models.User,
 ) -> models.CrawlerRun:
-    """Execute a crawler run: instantiate adapter, crawl, persist leads, update stats."""
+    """Execute a crawler run via the ETL service, then persist normalized results."""
     stats = {
         "leads_found": 0,
         "leads_created": 0,
@@ -1092,96 +1215,63 @@ async def execute_crawler_run(
     user_read = schemas.UserRead.model_validate(user, from_attributes=True)
 
     try:
-        adapter = _instantiate_adapter(
-            pipeline.source,
-            pipeline.query_definition or {},
-            pipeline.execution_policy,
+        crawl_response = await call_etl_service_execute(
+            build_crawler_execute_request(run, pipeline)
         )
+        stats = _build_crawler_run_stats(crawl_response)
 
-        async with adapter:
-            async for result in adapter.search_jobs():
-                await db.refresh(run, ["status"])
-                if run.status == "cancelled":
-                    run.stats = stats
-                    if not run.finished_at:
-                        run.finished_at = datetime.utcnow()
-                    await db.commit()
-                    if event is not None:
-                        event.status = "failure"
-                        event.message = "Crawler run cancelled externally"
-                        await db.commit()
-                    return run
-                if run.status == "paused":
-                    run.stats = stats
-                    await db.commit()
-                    if event is not None:
-                        event.message = (
-                            f"Crawler run paused after {stats['leads_found']} leads"
-                        )
-                        await db.commit()
-                    return run
+        for warning in crawl_response.warnings:
+            await log.warning(
+                "Crawler run %s ETL warning: %s",
+                run.id,
+                warning,
+            )
 
-                stats["leads_found"] += 1
+        await db.refresh(run, ["status"])
+        if run.status == "cancelled":
+            return await _mark_crawler_run_cancelled(run, event, db, stats)
+        if run.status == "paused":
+            return await _mark_crawler_run_paused(run, event, db, stats)
 
-                if not result.url:
-                    await log.warning("Skipping CrawlerResult with empty URL")
-                    stats["errors"] += 1
-                    continue
+        if crawl_response.terminal_status == CrawlerExecutionTerminalStatus.FAILED:
+            error_summary = (
+                crawl_response.error_summary or "ETL service execution failed"
+            )
+            return await _mark_crawler_run_failed(
+                run,
+                event,
+                db,
+                stats,
+                error_summary,
+            )
 
-                try:
-                    lead_payload = crawler_result_to_lead_create(result)
-                    lead_result = await create_lead(lead_payload, db, user_read)
-                    if (
-                        lead_result.disposition
-                        == schemas.LeadExtractDisposition.CREATED
-                    ):
-                        stats["leads_created"] += 1
-                    else:
-                        stats["leads_deduped"] += 1
-                except Exception:
-                    await log.exception(f"Error persisting lead from {result.url}")
-                    stats["errors"] += 1
+        for result in crawl_response.results:
+            await db.refresh(run, ["status"])
+            if run.status == "cancelled":
+                return await _mark_crawler_run_cancelled(run, event, db, stats)
+            if run.status == "paused":
+                return await _mark_crawler_run_paused(run, event, db, stats)
 
-        if pipeline.requires_approval and stats["leads_created"] > 0:
-            run.status = "pending_review"
-            run.finished_at = datetime.utcnow()
-            run.stats = stats
-            await db.commit()
+            if not result.url:
+                await log.warning("Skipping crawl result with empty URL")
+                stats["errors"] += 1
+                continue
 
-            if event is not None:
-                event.status = "pending_review"
-                event.message = (
-                    f"Crawler run completed, held for review: {stats['leads_created']} created, "
-                    f"{stats['leads_deduped']} deduped, {stats['errors']} errors"
-                )
-                await db.commit()
-        else:
-            run.status = "success"
-            run.finished_at = datetime.utcnow()
-            run.stats = stats
-            await db.commit()
-
-            if event is not None:
-                event.status = "success"
-                event.message = (
-                    f"Crawler run completed: {stats['leads_created']} created, "
-                    f"{stats['leads_deduped']} deduped, {stats['errors']} errors"
-                )
-                await db.commit()
+            try:
+                lead_payload = crawler_result_to_lead_create(result)
+                lead_result = await create_lead(lead_payload, db, user_read)
+                if lead_result.disposition == schemas.LeadExtractDisposition.CREATED:
+                    stats["leads_created"] += 1
+                else:
+                    stats["leads_deduped"] += 1
+            except Exception:
+                await log.exception(f"Error persisting lead from {result.url}")
+                stats["errors"] += 1
     except Exception as exc:
         await log.exception(f"Crawler run {run.id} failed: {exc}")
-        run.status = "failed"
-        run.finished_at = datetime.utcnow()
-        run.stats = stats
-        run.error_summary = str(exc)[:2000]
-        await db.commit()
+        return await _mark_crawler_run_failed(run, event, db, stats, str(exc))
 
-        if event is not None:
-            event.status = "failure"
-            event.message = f"Crawler run failed: {str(exc)[:500]}"
-            await db.commit()
-
-    return run
+    return await _complete_crawler_run(run, event, pipeline, db, stats)
 
 
 async def execute_crawler_run_background(run_id: uuid.UUID, user_id: uuid.UUID) -> None:

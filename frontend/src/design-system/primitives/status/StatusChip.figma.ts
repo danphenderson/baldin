@@ -14,7 +14,7 @@ const size = instance.getEnum('Size', {
   Medium: 'medium',
 });
 const color = instance.getEnum('Tone', {
-  Primary: '#0891b2',
+  Primary: 'primary',
   Success: 'success',
   Warning: 'warning',
   Error: 'error',

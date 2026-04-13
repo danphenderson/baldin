@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createApiAdapter, createInMemoryAdapter, getAspirations } from '@/service/aspirations';
+import {
+  createApiAdapter,
+  createInMemoryAdapter,
+  getAspirations,
+  getAspirationSuggestions,
+  AspirationServiceError,
+  type AspirationSuggestionDraft,
+} from '@/service/aspirations';
 import type { AspirationAdapter } from '@/service/aspirations';
 import { createApiClient } from '@/service/api-client';
 
@@ -105,6 +112,27 @@ describe('createInMemoryAdapter', () => {
     expect(roles[0]?.label).toBe('Second');
     expect(roles[1]?.label).toBe('First');
   });
+
+  it('returns seeded suggestions filtered by kind', async () => {
+    adapter = createInMemoryAdapter({
+      suggestions: [
+        { kind: 'role', label: 'Staff Product Designer', reason: 'Profile title alignment' },
+        { kind: 'company', label: 'Northstar', reason: 'Recent employer overlap' },
+      ],
+    });
+
+    const suggestions = await adapter.suggest('role');
+
+    expect(suggestions).toEqual([
+      { kind: 'role', label: 'Staff Product Designer', reason: 'Profile title alignment' },
+    ]);
+  });
+
+  it('returns an empty suggestion list when no in-memory suggestions are seeded', async () => {
+    setup();
+
+    await expect(adapter.suggest('role')).resolves.toEqual([]);
+  });
 });
 
 describe('createApiAdapter', () => {
@@ -176,5 +204,183 @@ describe('createApiAdapter', () => {
     expect(DELETE).toHaveBeenCalledWith('/api/v1/aspirations/{id}', {
       params: { path: { id: 'a-1' } },
     });
+  });
+
+  it('loads suggestion drafts and filters them by kind in the API adapter', async () => {
+    const suggestions: AspirationSuggestionDraft[] = [
+      { kind: 'role', label: 'Staff Product Designer', reason: 'Matches the current profile focus' },
+      { kind: 'company', label: 'Northstar', reason: 'Recent shared lead activity' },
+    ];
+    const POST = vi.fn().mockResolvedValue({
+      data: { suggestions },
+      response: new Response(),
+    });
+    mockedCreateApiClient.mockReturnValue({ POST } as never);
+
+    const adapter = createApiAdapter('test-token');
+    const result = await adapter.suggest('role');
+
+    expect(result).toEqual([
+      { kind: 'role', label: 'Staff Product Designer', reason: 'Matches the current profile focus' },
+    ]);
+    expect(POST).toHaveBeenCalledWith('/api/v1/aspirations/suggest');
+  });
+});
+
+describe('getAspirationSuggestions', () => {
+  beforeEach(() => {
+    mockedCreateApiClient.mockReset();
+  });
+
+  it('returns an empty array when the API omits suggestions', async () => {
+    const POST = vi.fn().mockResolvedValue({
+      data: {},
+      response: new Response(),
+    });
+    mockedCreateApiClient.mockReturnValue({ POST } as never);
+
+    await expect(getAspirationSuggestions('test-token')).resolves.toEqual([]);
+  });
+
+  it('returns suggestion drafts from the suggest endpoint', async () => {
+    const POST = vi.fn().mockResolvedValue({
+      data: {
+        suggestions: [
+          { kind: 'role', label: 'Principal Product Designer' },
+        ],
+      },
+      response: new Response(),
+    });
+    mockedCreateApiClient.mockReturnValue({ POST } as never);
+
+    await expect(getAspirationSuggestions('test-token')).resolves.toEqual([
+      { kind: 'role', label: 'Principal Product Designer' },
+    ]);
+  });
+
+  it('classifies a 400 with no-usable-profile detail as no_signal', async () => {
+    const POST = vi.fn().mockResolvedValue({
+      error: { detail: 'No usable profile data found for suggestion generation.' },
+      response: new Response(null, { status: 400 }),
+    });
+    mockedCreateApiClient.mockReturnValue({ POST } as never);
+
+    await expect(getAspirationSuggestions('test-token')).rejects.toThrow(AspirationServiceError);
+    try {
+      await getAspirationSuggestions('test-token');
+    } catch (e) {
+      expect((e as AspirationServiceError).category).toBe('no_signal');
+    }
+  });
+
+  it('classifies a 400 with unrecognized detail as unknown', async () => {
+    const POST = vi.fn().mockResolvedValue({
+      error: { detail: 'Some other validation error' },
+      response: new Response(null, { status: 400 }),
+    });
+    mockedCreateApiClient.mockReturnValue({ POST } as never);
+
+    try {
+      await getAspirationSuggestions('test-token');
+    } catch (e) {
+      expect(e).toBeInstanceOf(AspirationServiceError);
+      expect((e as AspirationServiceError).category).toBe('unknown');
+    }
+  });
+
+  it('classifies a 429 as rate_limited', async () => {
+    const POST = vi.fn().mockResolvedValue({
+      error: { detail: 'Rate limit exceeded' },
+      response: new Response(null, { status: 429 }),
+    });
+    mockedCreateApiClient.mockReturnValue({ POST } as never);
+
+    try {
+      await getAspirationSuggestions('test-token');
+    } catch (e) {
+      expect(e).toBeInstanceOf(AspirationServiceError);
+      expect((e as AspirationServiceError).category).toBe('rate_limited');
+    }
+  });
+
+  it('classifies a 503 as ai_disabled', async () => {
+    const POST = vi.fn().mockResolvedValue({
+      error: { detail: 'Service unavailable' },
+      response: new Response(null, { status: 503 }),
+    });
+    mockedCreateApiClient.mockReturnValue({ POST } as never);
+
+    try {
+      await getAspirationSuggestions('test-token');
+    } catch (e) {
+      expect(e).toBeInstanceOf(AspirationServiceError);
+      expect((e as AspirationServiceError).category).toBe('ai_disabled');
+    }
+  });
+
+  it('classifies a fetch-level network failure as network', async () => {
+    const POST = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    mockedCreateApiClient.mockReturnValue({ POST } as never);
+
+    try {
+      await getAspirationSuggestions('test-token');
+    } catch (e) {
+      expect(e).toBeInstanceOf(AspirationServiceError);
+      expect((e as AspirationServiceError).category).toBe('network');
+    }
+  });
+});
+
+describe('API adapter create error classification', () => {
+  beforeEach(() => {
+    mockedCreateApiClient.mockReset();
+  });
+
+  it('classifies a 409 create response as duplicate', async () => {
+    const POST = vi.fn().mockResolvedValue({
+      error: { detail: 'Aspiration already exists' },
+      response: new Response(null, { status: 409 }),
+    });
+    mockedCreateApiClient.mockReturnValue({ POST } as never);
+
+    const adapter = createApiAdapter('test-token');
+    try {
+      await adapter.create('role', { label: 'Staff Engineer' });
+    } catch (e) {
+      expect(e).toBeInstanceOf(AspirationServiceError);
+      expect((e as AspirationServiceError).category).toBe('duplicate');
+    }
+  });
+
+  it('classifies a 429 create response as rate_limited', async () => {
+    const POST = vi.fn().mockResolvedValue({
+      error: { detail: 'Rate limit exceeded' },
+      response: new Response(null, { status: 429 }),
+    });
+    mockedCreateApiClient.mockReturnValue({ POST } as never);
+
+    const adapter = createApiAdapter('test-token');
+    try {
+      await adapter.create('role', { label: 'Staff Engineer' });
+    } catch (e) {
+      expect(e).toBeInstanceOf(AspirationServiceError);
+      expect((e as AspirationServiceError).category).toBe('rate_limited');
+    }
+  });
+
+  it('classifies a 503 create response as ai_disabled', async () => {
+    const POST = vi.fn().mockResolvedValue({
+      error: { detail: 'Service unavailable' },
+      response: new Response(null, { status: 503 }),
+    });
+    mockedCreateApiClient.mockReturnValue({ POST } as never);
+
+    const adapter = createApiAdapter('test-token');
+    try {
+      await adapter.create('role', { label: 'Staff Engineer' });
+    } catch (e) {
+      expect(e).toBeInstanceOf(AspirationServiceError);
+      expect((e as AspirationServiceError).category).toBe('ai_disabled');
+    }
   });
 });

@@ -9,7 +9,7 @@ description: Shipped frontend design-system architecture, theme contract, owners
 
 # Frontend Design System
 
-Baldin's frontend design system is the canonical shared UI layer for the frontend. `frontend/src/design-system/*` owns shared tokens, shared theme contracts, domain-neutral primitives, and slot-based patterns. Feature folders keep workflow logic, service calls, route copy, and entity rendering.
+Baldin's frontend design system spans the comprehensive Baldin-Library target in Figma and the shipped shared UI layer in `frontend/src/design-system/*`. In the repo, `frontend/src/design-system/*` owns the implemented tokens, theme contracts, domain-neutral primitives, and slot-based patterns, while feature folders keep workflow logic, service calls, route copy, and entity rendering.
 
 Use this page for structure and ownership. Use [Design System Catalog](../reference/design-system-catalog.md) for the current inventory, [Design System Governance](../engineering/design-system-governance.md) for operating rules, [Design System Workflow](../engineering/design-system-workflow.md) for day-to-day contribution flow, and [Design System Migration Guide](../engineering/design-system-migration-guide.md) for the current rollout ledger.
 
@@ -71,7 +71,7 @@ New shared UI under `frontend/src/design-system/*` should use `spacingTokens` an
 
 ## Canonical Shared Surface
 
-The shared layer is still intentionally narrow, but it is now the sole canonical source for shared frontend UI.
+The shipped code layer is narrower than the full Baldin-Library target in Figma, but it is the canonical implementation source for the shared frontend UI that already lives in the repo.
 
 | Shared area | Shipped exports |
 | --- | --- |

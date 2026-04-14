@@ -8,7 +8,7 @@ description: Contribution flow, validation path, and practical handoff rules for
 
 # Design System Workflow
 
-Use this workflow when adding, extending, or migrating shared frontend UI. The goal is to keep the shared layer small, documented, and aligned with what is already proven in Baldin.
+Use this workflow when adding, extending, or migrating shared frontend UI. The goal is to build out a comprehensive shared library in Figma while keeping the shipped `frontend/src/design-system/*` layer documented and aligned with the subset that is ready to live in code.
 
 Use [Design System Governance](./design-system-governance.md) for durable operating rules, promotion criteria, wrapper lifecycle, reviewer checklist, and anti-drift guidance. Use this page for the day-to-day contribution flow.
 

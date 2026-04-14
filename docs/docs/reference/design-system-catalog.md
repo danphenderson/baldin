@@ -2,14 +2,14 @@
 sidebar_position: 2
 slug: /reference/design-system-catalog
 title: Design System Catalog
-description: Canonical inventory of Baldin's shipped frontend design-system theme contract, tokens, primitives, patterns, compatibility shims, and current adopters.
+description: Canonical inventory of Baldin's shipped frontend design-system implementation, its compatibility shims, current adopters, and its mapping back to Baldin-Library in Figma.
 ---
 
 <!-- last-verified: 2026-04-13 -->
 
 # Design System Catalog
 
-This catalog describes the shared frontend UI surface that ships in the repo today. `frontend/src/design-system/*` is the canonical inventory. Legacy wrappers are documented only so contributors know what still exists and what has already been removed.
+This catalog describes the shared frontend UI surface that ships in the repo today. `frontend/src/design-system/*` is the canonical inventory of the implemented code layer, not the exhaustive inventory of Baldin-Library in Figma. Legacy wrappers are documented only so contributors know what still exists and what has already been removed.
 
 ## Theme Contract
 
@@ -91,6 +91,8 @@ This catalog describes the shared frontend UI surface that ships in the repo tod
 ## Figma Mapping Inventory
 
 These files are optional repo-local metadata, but they are the practical verification fallback when workspace Code Connect reads are seat-blocked. The canonical library target for all eight mappings is [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library).
+
+This table is intentionally code-backed rather than exhaustive. Baldin-Library can grow beyond these entries before new surfaces are promoted into `frontend/src/design-system/*`.
 
 | Surface | Local mapping file | Library node |
 | --- | --- | --- |
@@ -193,5 +195,6 @@ These are not part of the shipped catalog today:
 ## Catalog Rules
 
 - The canonical catalog lives under `frontend/src/design-system/*`, not under `component/common/*` or `component/auth/*`.
-- Do not add a new catalog entry unless it is domain-neutral and already justified by multiple route families or app-shell behavior.
+- Baldin-Library in Figma can expand ahead of this catalog; only code-backed shared surfaces belong here.
+- Do not add a new catalog entry unless it is already implemented in `frontend/src/design-system/*`, domain-neutral, and already justified by multiple route families or app-shell behavior.
 - When a compatibility wrapper survives, document the wrapper and the backing primitive together so contributors know which file is canonical.

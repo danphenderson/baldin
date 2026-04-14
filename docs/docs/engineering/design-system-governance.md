@@ -149,6 +149,6 @@ Keep enforcement lightweight and practical.
 ## Defaults
 
 - Prefer reusing a shipped primitive or pattern before proposing a new one.
-- Prefer documenting a narrow shared abstraction over introducing a broad reusable API with unstable semantics.
+- Prefer promoting the next grounded shared abstraction from the Figma library into code over introducing a broad reusable API with unstable semantics.
 - Prefer deleting dead wrappers over keeping inert compatibility files around.
-- Prefer real consumption proof over aspirational design-system inventory growth.
+- Prefer real consumption proof before promoting Figma-library surfaces into code, even when the Figma library grows ahead of the repo implementation.

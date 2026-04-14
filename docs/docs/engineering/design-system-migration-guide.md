@@ -1,24 +1,26 @@
 ---
 slug: /engineering/design-system-migration-guide
 title: Design System Migration Guide
-description: Current adoption status, compatibility strategy, migrated surfaces, and next-step migration guidance for Baldin's frontend design-system rollout.
+description: Current implementation adoption status, compatibility strategy, migrated surfaces, and next-step guidance for Baldin's shipped frontend design-system layer.
 ---
 
 <!-- last-verified: 2026-04-13 -->
 
 # Design System Migration Guide
 
-This guide describes the migration that exists in the repo today. It is not a future-state plan.
+This guide describes the migration that exists in the repo today. It tracks the shipped `frontend/src/design-system/*` layer, not the full future inventory of Baldin-Library in Figma.
 
 ## Current Rollout Status
 
 | Area | Status | Notes |
 | --- | --- | --- |
 | Token and theme foundation | Complete | `frontend/src/design-system/tokens/*` and `theme/*` are active, and `theme-provider.tsx` consumes them |
-| Shared primitives | Complete for the current shared scope | Feedback, typography, surface, and status primitives are shipped |
-| Shared patterns | Complete for the current shared scope | `CollectionToolbar`, `MetricStrip`, `SectionCard`, and `AuthPanel` are shipped |
+| Shared primitives | Complete for the current implemented code scope | Feedback, typography, surface, and status primitives are shipped |
+| Shared patterns | Complete for the current implemented code scope | `CollectionToolbar`, `MetricStrip`, `SectionCard`, and `AuthPanel` are shipped |
 | Compatibility wrappers | Narrow transitional layer | Only documented re-export shims and feature-local adapters remain |
 | Route-family adoption | Broadly complete | See the [Route-Family Adoption Ledger](../reference/design-system-catalog.md#route-family-adoption-ledger) |
+
+Figma can lead code. Baldin-Library may define broader library inventory ahead of what is promoted into `frontend/src/design-system/*`.
 
 ## What Changed In This Enforcement Pass
 

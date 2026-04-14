@@ -1,14 +1,14 @@
 ---
 slug: /engineering/phase-2-design-system-closeout
 title: Close Out Phase 2 Design System
-description: Historical implementation closeout for the Phase 2 frontend design-system rollout.
+description: Historical implementation closeout for the Phase 2 frontend design-system code rollout.
 ---
 
-<!-- last-verified: 2026-04-12 -->
+<!-- last-verified: 2026-04-13 -->
 
 # Close Out Phase 2 Design System
 
-This note is the historical Phase 2 closeout record. The canonical design-system source of truth now lives in:
+This note is the historical Phase 2 closeout record for the shipped code layer. The active design-system docs now distinguish the broader Baldin-Library target in Figma from the subset implemented in the repo:
 
 - [See Frontend Design System](../architecture/frontend-design-system.md)
 - [Design System Catalog](../reference/design-system-catalog.md)

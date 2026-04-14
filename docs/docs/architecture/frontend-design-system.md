@@ -77,7 +77,7 @@ The shipped code layer is narrower than the full Baldin-Library target in Figma,
 | --- | --- |
 | Tokens | `color`, `effects`, `elevation`, `motion`, `radius`, `spacing`, `status`, `typography` |
 | Theme | `createBaldinTheme`, palette helpers, typography helpers, shape helpers, MUI overrides, theme-mode helpers, JSON tree adapter |
-| Primitives | `PageTitle`, `SectionTitle`, `CardTitle`, `Label`, `Caption`, `Overline`, `Mono`, `EmptyState`, `InlineFeedback`, `LoadingState`, `StatusChip`, `getStatusChipSx`, `getStatusMetaSx`, `CardShell`, `SurfaceCard`, `SurfaceDialog`, `ConfirmDialog`, `FormDialogShell`, `SectionHeader` |
+| Primitives | `PageTitle`, `SectionTitle`, `CardTitle`, `Label`, `Caption`, `Overline`, `Mono`, `EmptyState`, `InlineFeedback`, `LoadingState`, `SearchField`, `ReadonlyField`, `StatusChip`, `getStatusChipSx`, `getStatusMetaSx`, `CardShell`, `SurfaceCard`, `SurfaceDialog`, `ConfirmDialog`, `FormDialogShell`, `SectionHeader` |
 | Patterns | `CollectionToolbar`, `MetricStrip`, `SectionCard`, `AuthPanel` |
 
 Everything is re-exported through `frontend/src/design-system/index.ts`.

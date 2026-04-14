@@ -47,6 +47,12 @@ This catalog describes the shared frontend UI surface that ships in the repo tod
 
 ## Primitive Inventory
 
+### Fields
+
+| Primitive | Path | Canonical role | Current known consumers |
+| --- | --- | --- | --- |
+| `SearchField`, `ReadonlyField` | `frontend/src/design-system/primitives/fields/text-field.tsx` | Shared `TextField` wrappers for search affordances and read-only presentation | Command palette, extractor modal |
+
 ### Typography
 
 | Primitive | Path | Canonical role | Current known consumers |
@@ -90,19 +96,24 @@ This catalog describes the shared frontend UI surface that ships in the repo tod
 
 ## Figma Mapping Inventory
 
-These files are optional repo-local metadata, but they are the practical verification fallback when workspace Code Connect reads are seat-blocked. The canonical library target for all eight mappings is [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library).
+These files are optional repo-local metadata, but they are the practical verification fallback when workspace Code Connect reads are seat-blocked. The canonical library target for all thirteen mappings is [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library).
 
-This table is intentionally code-backed rather than exhaustive. Baldin-Library can grow beyond these entries before new surfaces are promoted into `frontend/src/design-system/*`.
+This table is intentionally code-backed rather than exhaustive. Baldin-Library can grow beyond these entries before new surfaces are promoted into `frontend/src/design-system/*`. Figma-first work that is ahead of, or intentionally outside of, the code-backed catalog belongs in [Baldin Library Buildout Ledger](./baldin-library-buildout-ledger.md).
 
 | Surface | Local mapping file | Library node |
 | --- | --- | --- |
 | `CollectionToolbar` | `frontend/src/design-system/patterns/collections/CollectionToolbar.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=8-23 |
 | `MetricStrip` | `frontend/src/design-system/patterns/metrics/MetricStrip.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=7-31 |
 | `SectionCard` | `frontend/src/design-system/patterns/sections/SectionCard.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=7-5 |
+| `AuthPanel` | `frontend/src/design-system/patterns/auth/AuthPanel.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=49-11 |
+| `EmptyState` | `frontend/src/design-system/primitives/feedback/EmptyState.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=47-65 |
 | `InlineFeedback` | `frontend/src/design-system/primitives/feedback/InlineFeedback.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=30-62 |
+| `LoadingState` | `frontend/src/design-system/primitives/feedback/LoadingState.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=202-83 |
+| `SearchField` | `frontend/src/design-system/primitives/fields/SearchField.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=40-48 |
 | `StatusChip` | `frontend/src/design-system/primitives/status/StatusChip.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=5-34 |
 | `CardShell` | `frontend/src/design-system/primitives/surfaces/CardShell.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=7-2 |
 | `FormDialogShell` | `frontend/src/design-system/primitives/surfaces/FormDialogShell.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=8-24 |
+| `SurfaceDialog` | `frontend/src/design-system/primitives/surfaces/SurfaceDialog.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=45-33 |
 | `SectionHeader` | `frontend/src/design-system/primitives/surfaces/SectionHeader.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=6-24 |
 
 ## Reviewed Make Sandbox

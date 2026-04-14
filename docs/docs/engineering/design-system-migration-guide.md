@@ -4,7 +4,7 @@ title: Design System Migration Guide
 description: Current implementation adoption status, compatibility strategy, migrated surfaces, and next-step guidance for Baldin's shipped frontend design-system layer.
 ---
 
-<!-- last-verified: 2026-04-13 -->
+<!-- last-verified: 2026-04-14 -->
 
 # Design System Migration Guide
 
@@ -17,6 +17,7 @@ This guide describes the migration that exists in the repo today. It tracks the 
 | Token and theme foundation | Complete | `frontend/src/design-system/tokens/*` and `theme/*` are active, and `theme-provider.tsx` consumes them |
 | Shared primitives | Complete for the current implemented code scope | Feedback, typography, surface, and status primitives are shipped |
 | Shared patterns | Complete for the current implemented code scope | `CollectionToolbar`, `MetricStrip`, `SectionCard`, and `AuthPanel` are shipped |
+| Storybook verification lane | Seeded | `frontend/.storybook/*` plus colocated stories now cover the current code-backed Figma mapping set |
 | Compatibility wrappers | Narrow transitional layer | Only documented re-export shims and feature-local adapters remain |
 | Route-family adoption | Broadly complete | See the [Route-Family Adoption Ledger](../reference/design-system-catalog.md#route-family-adoption-ledger) |
 
@@ -32,6 +33,7 @@ This migration pass completed the design-system ownership boundary for shared-el
 - `AuthPanel` now owns the centered auth card shell used by login, MFA verification, and registration.
 - `ConfirmDialog`, `SurfaceCard`, and `SurfaceDialog` provide canonical wrappers for feature-owned confirm, card, and dialog shells.
 - `StatusChip` now supports compatibility-style `color` and `variant` handoff so feature code can migrate off raw MUI `Chip` imports without losing shared styling.
+- Storybook now provides the canonical component verification lane for code-backed shared surfaces, with `parameters.design` sourced from each colocated `.figma.ts` mapping.
 
 ### Compatibility cleanup
 
@@ -112,6 +114,7 @@ These items remain intentionally deferred:
 A migration slice is complete when:
 
 - The shared UI moved to `frontend/src/design-system/*` or an existing shared primitive or pattern was reused.
+- Public shared React surfaces have a colocated Storybook story, and mapped surfaces keep their Figma link sourced from the colocated `.figma.ts` file.
 - Remaining wrappers are pure re-exports or clearly documented feature-local adapters.
 - Feature-owned logic stayed in the feature folder.
 - The catalog and this migration guide reflect the new state.

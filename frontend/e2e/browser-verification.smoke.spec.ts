@@ -235,3 +235,28 @@ test('renders the apply harness ready and already-applied states', async ({ page
   await expect(page.getByText('Existing application: Applied')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Existing application for Senior Product Designer' })).toBeDisabled();
 });
+
+test('requires an explicit supported harness screen', async ({ page }) => {
+  await page.goto('/browser-harness/figma-wave1.html');
+  await expect(page.getByRole('heading', { name: 'Unsupported harness request' })).toBeVisible();
+  await expect(page.getByText('Missing required `screen` query parameter.')).toBeVisible();
+
+  await page.goto('/browser-harness/figma-wave1.html?screen=applications-board');
+  await expect(page.getByRole('heading', { name: 'Unsupported harness request' })).toBeVisible();
+  await expect(page.getByText('Unsupported `screen` value "applications-board".')).toBeVisible();
+  await expect(page.getByText('Wave 2 and Wave 3 closeout follow direct shipped-route review plus MCP structure or screenshot inspection.')).toBeVisible();
+});
+
+test('rejects invalid harness states while keeping omitted state baselines', async ({ page }) => {
+  await page.goto('/browser-harness/figma-wave1.html?screen=leads');
+  await expect(page.getByRole('button', { name: 'Rank with aspirations' })).toBeEnabled();
+  await expect(page.getByText('Senior Product Designer')).toBeVisible();
+
+  await page.goto('/browser-harness/figma-wave1.html?screen=leads&state=rankd');
+  await expect(page.getByRole('heading', { name: 'Unsupported harness request' })).toBeVisible();
+  await expect(page.getByText('Unsupported `state` value "rankd" for `screen=leads`. Supported states: unranked, ranked, disabled, error.')).toBeVisible();
+
+  await page.goto('/browser-harness/figma-wave1.html?screen=applications&state=loading');
+  await expect(page.getByRole('heading', { name: 'Unsupported harness request' })).toBeVisible();
+  await expect(page.getByText('The `applications` harness screen does not accept a `state` query parameter.')).toBeVisible();
+});

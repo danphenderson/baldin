@@ -5,7 +5,7 @@ title: Design System Catalog
 description: Canonical inventory of Baldin's shipped frontend design-system implementation, its compatibility shims, current adopters, and its mapping back to Baldin-Library in Figma.
 ---
 
-<!-- last-verified: 2026-04-13 -->
+<!-- last-verified: 2026-04-14 -->
 
 # Design System Catalog
 
@@ -99,6 +99,8 @@ This catalog describes the shared frontend UI surface that ships in the repo tod
 These files are optional repo-local metadata, but they are the practical verification fallback when workspace Code Connect reads are seat-blocked. The canonical library target for all sixteen mappings is [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library).
 
 This table is intentionally code-backed rather than exhaustive. Baldin-Library can grow beyond these entries before new surfaces are promoted into `frontend/src/design-system/*`. Figma-first work that is ahead of, or intentionally outside of, the code-backed catalog belongs in [Baldin Library Buildout Ledger](./baldin-library-buildout-ledger.md).
+
+Each mapped surface now also has a colocated Storybook story under `frontend/src/design-system/**/*stories.tsx`. The story reads its `parameters.design` URL from the same `.figma.ts` file via raw import, so the local mapping metadata stays the single repo-backed source of truth for the Figma node link. Chromatic publishes those stories when `CHROMATIC_PROJECT_TOKEN` is available.
 
 | Surface | Local mapping file | Library node |
 | --- | --- | --- |

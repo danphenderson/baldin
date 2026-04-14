@@ -34,6 +34,7 @@
   },
   "include": [
     "src",
-    "test"
+    "test",
+    ".storybook"
   ]
 }

@@ -5,7 +5,7 @@ title: Frontend Design System
 description: Shipped frontend design-system architecture, theme contract, ownership boundaries, and compatibility rules.
 ---
 
-<!-- last-verified: 2026-04-13 -->
+<!-- last-verified: 2026-04-14 -->
 
 # Frontend Design System
 
@@ -17,11 +17,15 @@ Use this page for structure and ownership. Use [Design System Catalog](../refere
 
 ```text
 frontend/src/
+├── .storybook/
+│   ├── main.ts
+│   └── preview.tsx
 ├── design-system/
 │   ├── tokens/
 │   ├── theme/
 │   ├── primitives/
 │   ├── patterns/
+│   ├── storybook/
 │   └── index.ts
 ├── theme/
 │   └── theme-provider.tsx
@@ -81,6 +85,17 @@ The shipped code layer is narrower than the full Baldin-Library target in Figma,
 | Patterns | `CollectionToolbar`, `MetricStrip`, `SectionCard`, `AuthPanel` |
 
 Everything is re-exported through `frontend/src/design-system/index.ts`.
+
+## Verification Surface
+
+The canonical verification surface for code-backed shared UI now lives in Storybook:
+
+- `frontend/.storybook/*` owns the Storybook runtime and Baldin theme wrapper.
+- Colocated `*.stories.tsx` files under `frontend/src/design-system/*` are the review surface for shared React exports.
+- Colocated `*.figma.ts` files remain the metadata source for Figma node URLs. Storybook stories read those files and set `parameters.design` from the same source of truth instead of duplicating links manually.
+- Chromatic is the publish lane for branch previews and Storybook Connect links when `CHROMATIC_PROJECT_TOKEN` is available.
+
+This keeps Baldin Figma-first without treating Dev-seat-only flows as a blocker. The Figma library remains the design origin, the shared React layer remains the implementation origin, and Storybook is the inspection bridge between them.
 
 ## Primitive Vs Pattern Vs Feature-Owned
 

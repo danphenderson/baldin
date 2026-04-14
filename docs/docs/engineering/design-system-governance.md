@@ -4,7 +4,7 @@ title: Design System Governance
 description: Lightweight operating rules for promoting, reviewing, documenting, and keeping Baldin's frontend design-system layer coherent.
 ---
 
-<!-- last-verified: 2026-04-13 -->
+<!-- last-verified: 2026-04-14 -->
 
 # Design System Governance
 
@@ -60,6 +60,7 @@ Shared UI with behavior needs targeted tests.
 - Add Vitest and React Testing Library coverage when shared UI has interaction, accessibility semantics, branching behavior, callback wiring, or wrapper compatibility behavior.
 - Cover the behavior that makes the surface shared: keyboard and focus handling, variant branching, fallback behavior, wrapper passthrough, or slot orchestration.
 - Pure token mapping, static composition, or styling-only changes can rely on the existing validation path unless new logic is introduced.
+- Public shared React exports should have a colocated Storybook story. When the surface also has a colocated `.figma.ts` mapping, the story should source its `parameters.design` URL from that file instead of duplicating the link manually.
 - Any new `lint-theme` rule must include a matching test in `frontend/test/design-system/theme/lint-theme.test.ts`.
 
 ## Documentation Requirements
@@ -128,6 +129,7 @@ For design-system PRs, reviewers should check:
 - Does it avoid raw hex, raw gradients, raw font-family overrides, legacy wrapper imports, and direct MUI shell imports outside the allowed paths?
 - Does it keep `style=` limited to runtime-computed escapes or legacy compatibility shims, instead of static object literals?
 - Are compatibility wrappers thinner or fewer after the change, not broader?
+- Does every touched shared React surface still have the expected Storybook coverage, and does any mapped surface still point at the canonical Figma node?
 - Are the required docs updated in the same PR?
 - Are the smallest relevant tests and checks present?
 
@@ -145,6 +147,7 @@ Keep enforcement lightweight and practical.
 - `lint:theme` requires shared design-system wrappers to type `sx` as `SxProps<Theme>` instead of `object`.
 - `lint:theme` flags new shared-surface uses of `InputProps` and `PaperProps`; the current `surface-dialog` and `form-dialog-shell` files remain documented exceptions until their slots-based refactor lands.
 - Keep docs build mandatory when design-system docs or sidebar wiring changes.
+- `storybook:build` should be treated as a normal check when a PR changes public shared React surfaces or their Figma-linked story contracts.
 
 ## Defaults
 

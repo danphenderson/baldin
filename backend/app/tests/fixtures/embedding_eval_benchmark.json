@@ -1,0 +1,168 @@
+{
+  "corpus": [
+    {
+      "id": "resume_python_backend",
+      "kind": "resume_experience",
+      "text": "Built Python and FastAPI backend services, designed PostgreSQL schemas, and shipped async APIs for internal tools."
+    },
+    {
+      "id": "resume_data_ml",
+      "kind": "resume_experience",
+      "text": "Created machine learning data pipelines in Python, tuned ranking features, and evaluated retrieval quality for search products."
+    },
+    {
+      "id": "resume_frontend_react",
+      "kind": "resume_experience",
+      "text": "Developed React and TypeScript interfaces, improved accessibility, and integrated REST APIs for customer dashboards."
+    },
+    {
+      "id": "resume_devops_platform",
+      "kind": "resume_experience",
+      "text": "Maintained Docker, CI pipelines, infrastructure automation, and production observability for cloud hosted applications."
+    },
+    {
+      "id": "resume_product_analytics",
+      "kind": "resume_experience",
+      "text": "Owned product analytics, experimentation, SQL reporting, and KPI storytelling for growth and retention teams."
+    },
+    {
+      "id": "resume_recruiting_ops",
+      "kind": "resume_experience",
+      "text": "Coordinated recruiting operations, candidate scheduling, ATS hygiene, and executive reporting for talent teams."
+    },
+    {
+      "id": "skills_python_fastapi",
+      "kind": "skills",
+      "text": "Skills: Python, FastAPI, PostgreSQL, SQLAlchemy, async APIs, pytest."
+    },
+    {
+      "id": "skills_ml_ranking",
+      "kind": "skills",
+      "text": "Skills: embeddings, reranking, retrieval evaluation, feature engineering, pandas, numpy."
+    },
+    {
+      "id": "skills_frontend",
+      "kind": "skills",
+      "text": "Skills: React, TypeScript, component libraries, accessibility, frontend testing."
+    },
+    {
+      "id": "cert_aws",
+      "kind": "certification",
+      "text": "Certification: AWS Certified Developer Associate with hands on deployment and cloud architecture experience."
+    },
+    {
+      "id": "cert_scrum",
+      "kind": "certification",
+      "text": "Certification: Certified ScrumMaster focused on agile delivery, sprint planning, and stakeholder coordination."
+    },
+    {
+      "id": "lead_backend_platform",
+      "kind": "job_requirement",
+      "text": "Backend platform engineer role requires Python, FastAPI, PostgreSQL, Docker, and API design for internal developer tooling."
+    },
+    {
+      "id": "lead_ml_search",
+      "kind": "job_requirement",
+      "text": "Machine learning engineer role focused on search relevance, embeddings, reranking, offline evaluation, and ranking metrics."
+    },
+    {
+      "id": "lead_frontend_product",
+      "kind": "job_requirement",
+      "text": "Frontend product engineer role requires React, TypeScript, accessibility, and collaboration with design systems."
+    },
+    {
+      "id": "lead_talent_ops",
+      "kind": "job_requirement",
+      "text": "Talent operations specialist role requires recruiting coordination, ATS workflows, scheduling, and candidate experience reporting."
+    },
+    {
+      "id": "aspiration_backend_ai",
+      "kind": "aspiration",
+      "text": "Aspiration: pursue backend or applied AI platform roles where Python services and retrieval systems matter."
+    },
+    {
+      "id": "aspiration_frontend_ux",
+      "kind": "aspiration",
+      "text": "Aspiration: pursue frontend product roles centered on polished React experiences and accessibility."
+    },
+    {
+      "id": "aspiration_people_ops",
+      "kind": "aspiration",
+      "text": "Aspiration: move toward recruiting operations and people programs with strong process design."
+    }
+  ],
+  "queries": [
+    {
+      "id": "query_backend_python_services",
+      "kind": "retrieval_query",
+      "text": "Python backend services with FastAPI and Postgres experience",
+      "relevant_ids": ["resume_python_backend", "skills_python_fastapi", "lead_backend_platform", "aspiration_backend_ai"]
+    },
+    {
+      "id": "query_ml_embeddings",
+      "kind": "retrieval_query",
+      "text": "embedding search ranking and offline retrieval evaluation work",
+      "relevant_ids": ["resume_data_ml", "skills_ml_ranking", "lead_ml_search", "aspiration_backend_ai"]
+    },
+    {
+      "id": "query_frontend_react_accessibility",
+      "kind": "retrieval_query",
+      "text": "React TypeScript accessibility product UI engineering",
+      "relevant_ids": ["resume_frontend_react", "skills_frontend", "lead_frontend_product", "aspiration_frontend_ux"]
+    },
+    {
+      "id": "query_recruiting_operations",
+      "kind": "retrieval_query",
+      "text": "recruiting operations ATS scheduling and candidate coordination",
+      "relevant_ids": ["resume_recruiting_ops", "lead_talent_ops", "aspiration_people_ops"]
+    },
+    {
+      "id": "query_devops_docker_ci",
+      "kind": "retrieval_query",
+      "text": "Docker CI and deployment experience for platform systems",
+      "relevant_ids": ["resume_devops_platform", "cert_aws", "lead_backend_platform"]
+    },
+    {
+      "id": "query_product_analytics_growth",
+      "kind": "retrieval_query",
+      "text": "SQL analytics experimentation and growth reporting experience",
+      "relevant_ids": ["resume_product_analytics"]
+    },
+    {
+      "id": "query_backend_role_match",
+      "kind": "lead_match_query",
+      "text": "Which snippets match a backend platform engineer opening?",
+      "relevant_ids": ["lead_backend_platform", "resume_python_backend", "skills_python_fastapi", "aspiration_backend_ai"]
+    },
+    {
+      "id": "query_search_role_match",
+      "kind": "lead_match_query",
+      "text": "Which snippets match a search relevance or ranking engineer opening?",
+      "relevant_ids": ["lead_ml_search", "resume_data_ml", "skills_ml_ranking", "aspiration_backend_ai"]
+    },
+    {
+      "id": "query_frontend_role_match",
+      "kind": "lead_match_query",
+      "text": "Which snippets fit a frontend product engineer opening?",
+      "relevant_ids": ["lead_frontend_product", "resume_frontend_react", "skills_frontend", "aspiration_frontend_ux"]
+    },
+    {
+      "id": "query_talent_ops_role_match",
+      "kind": "lead_match_query",
+      "text": "Which snippets fit a talent operations opening?",
+      "relevant_ids": ["lead_talent_ops", "resume_recruiting_ops", "aspiration_people_ops"]
+    },
+    {
+      "id": "query_cloud_certification",
+      "kind": "retrieval_query",
+      "text": "cloud certification and deployment background",
+      "relevant_ids": ["cert_aws", "resume_devops_platform"]
+    },
+    {
+      "id": "query_agile_delivery",
+      "kind": "retrieval_query",
+      "text": "agile delivery and scrum planning credentials",
+      "relevant_ids": ["cert_scrum"]
+    }
+  ]
+}

@@ -67,16 +67,17 @@ Track active screen and state coverage in [Baldin App Screens Inventory](../refe
 
 1. Start or keep the local stack running with `docker-compose up --build`.
 2. Use the frontend dev server at `http://127.0.0.1:5173`.
-3. Open the supported Figma harness at `http://127.0.0.1:5173/browser-harness/figma-wave1.html`.
-4. Use `webdev` Playwright MCP tools to drive the harness into the state you want to capture or inspect in Figma.
+3. Open the supported Wave 1 Figma harness at `http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=...`.
+4. Use `webdev` Playwright MCP tools to drive the Wave 1 harness into the state you want to capture or inspect in Figma. For Wave 2 and Wave 3 closeout, use direct shipped-route review plus MCP structure or screenshot inspection instead of expanding the harness.
 
 The canonical harness supports these query parameters:
 
-- `screen=applications|profile|messages|aspirations-roles|aspirations-companies|leads|apply`
+- `screen=applications|profile|messages|aspirations-roles|aspirations-companies|leads|apply` and it is required
 - `mode=dark|light`
 - `state=empty|seeded|loading|suggested|no-signal|rate-limited` when `screen=aspirations-roles|aspirations-companies`
 - `state=unranked|ranked|disabled|error` when `screen=leads`
 - `state=ready|already-applied` when `screen=apply`
+- Missing or invalid explicit params render an unsupported-harness page instead of falling back to another screen or state.
 
 Example:
 
@@ -100,15 +101,16 @@ http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=leads&state=ranked
 http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=apply&state=already-applied&mode=light
 ```
 
-The harness is the supported local capture surface for Figma work. Keep the frontend stack warm and switch harness states instead of wiring a live backend for design review.
+The harness is the supported local capture surface for the Wave 1 screens it already backs. Keep the frontend stack warm and switch harness states instead of wiring a live backend for Wave 1 design review. For Wave 2 and Wave 3 closeout, follow the app-screens inventory ledger and use direct shipped-route review plus MCP structure or screenshot inspection rather than harness expansion.
 
 ### Professional-Plan Default
 
 Baldin's supported Figma workflow assumes a Professional-plan workspace and does not require a Dev seat.
 
-- Use the local harness plus `webdev` to put the product into the exact state you need.
+- Use the local harness plus `webdev` to put Wave 1 screens into the exact state you need.
+- For Wave 2 and Wave 3 closeout, treat the app-screens inventory ledger as the active policy source and use direct shipped-route review plus MCP structure or screenshot inspection.
 - Use Figma MCP read or write tools when your seat and auth allow it.
-- If your seat only allows basic inspection, keep the same harness flow and use screenshots or inspection instead of blocking on Dev Mode-specific UX.
+- If your seat only allows basic inspection, keep the same evidence order and use screenshots or inspection instead of blocking on Dev Mode-specific UX.
 - Use MCP for structure, component, and screenshot inspection even when Dev Mode is unavailable. Full version-history review still requires browser or web access to the Figma UI.
 - Code Connect workspace reads and publish flows require a Developer seat on an Organization or Enterprise plan. On the current Professional-plan expert seat, treat `frontend/figma.config.json` and `frontend/src/design-system/**/*.figma.ts` as repo-local metadata rather than an active workspace dependency.
 - The reviewed Make sources (`App.tsx`, `theme.css`, `button.tsx`, `card.tsx`, `badge.tsx`, and `Guidelines.md`) did not contain a meaningful direct port candidate. Do not promote generic Tailwind or shadcn scaffolding into the canonical Baldin system.

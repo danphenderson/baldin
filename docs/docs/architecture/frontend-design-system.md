@@ -15,28 +15,42 @@ Use this page for structure and ownership. Use [Design System Catalog](../refere
 
 ## Current Source Layout
 
+Representative layout of the shared-UI-relevant frontend sources:
+
 ```text
-frontend/src/
+frontend/
 ├── .storybook/
 │   ├── main.ts
 │   └── preview.tsx
-├── design-system/
-│   ├── tokens/
-│   ├── theme/
-│   ├── primitives/
-│   ├── patterns/
-│   ├── storybook/
-│   └── index.ts
-├── theme/
-│   └── theme-provider.tsx
-├── component/common/
-│   ├── empty-state.tsx
-│   ├── confirm-dialog.tsx
-│   └── text.tsx
-└── page/** and component/**
+└── src/
+    ├── admin/
+    │   ├── admin-layout.tsx
+    │   ├── admin-routes.tsx
+    │   ├── main.tsx
+    │   └── paths.ts
+    ├── bootstrap/
+    │   └── app-providers.tsx
+    ├── design-system/
+    │   ├── tokens/
+    │   ├── theme/
+    │   ├── primitives/
+    │   ├── patterns/
+    │   ├── storybook/
+    │   └── index.ts
+    ├── theme/
+    │   └── theme-provider.tsx
+    ├── component/common/
+    │   ├── content-modal.tsx
+    │   ├── error-boundary.tsx
+    │   ├── file-picker.tsx
+    │   ├── footer.tsx
+    │   ├── json-modal.tsx
+    │   ├── secondary-nav-bar.tsx
+    │   └── user-avatar.tsx
+    └── page/**, layout/**, route/**, and component/**
 ```
 
-The active app entrypoint is `frontend/src/theme/theme-provider.tsx`. It imports `createBaldinTheme`, `DEFAULT_THEME_MODE`, `parseThemeMode`, `THEME_STORAGE_KEY`, and `toggleThemeMode` from `frontend/src/design-system/theme/*`, then passes the resulting theme into MUI's `ThemeProvider`.
+The product-app browser entrypoint is `frontend/src/index.tsx`. It renders `AppProviders` from `frontend/src/bootstrap/app-providers.tsx`, which wires in `ThemeProvider` from `frontend/src/theme/theme-provider.tsx`. The dedicated Admin SPA has its own browser entrypoint at `frontend/src/admin/main.tsx`.
 
 Legacy theme shims at `frontend/src/theme/effects.ts` and `frontend/src/theme/status-colors.ts` have been removed. Any shared token or status helper import now comes directly from `frontend/src/design-system/*`.
 
@@ -95,6 +109,8 @@ The canonical verification surface for code-backed shared UI now lives in Storyb
 - Colocated `*.figma.ts` files remain the metadata source for Figma node URLs. Storybook stories read those files and set `parameters.design` from the same source of truth instead of duplicating links manually.
 - Chromatic is the publish lane for branch previews and Storybook Connect links when `CHROMATIC_PROJECT_TOKEN` is available.
 
+Treat Storybook and Chromatic as already-landed infrastructure for the current mapping set. Future migration work should expand this existing review lane instead of re-scoping it as a prerequisite migration stream.
+
 This keeps Baldin Figma-first without treating Dev-seat-only flows as a blocker. The Figma library remains the design origin, the shared React layer remains the implementation origin, and Storybook is the inspection bridge between them.
 
 ## Primitive Vs Pattern Vs Feature-Owned
@@ -121,6 +137,7 @@ Current compatibility behavior:
 
 - `page/profile/components/EmptyState.tsx` remains a feature-local adapter because it keeps profile-specific copy local.
 - `component/lead-search-bar.tsx` remains a feature-local adapter because it keeps leads-specific search and pagination composition local.
+- The remaining files under `component/common/*` are local shell or utility components, not canonical shared-surface wrappers.
 
 Legacy `component/common/*` re-export shims, `component/auth/*` shared wrappers, and the theme re-export shims have all been removed. New shared logic must not start in any compatibility location.
 
@@ -145,7 +162,7 @@ The current shared APIs are now used across the route families that own shared-e
 - Leads: cards, dialogs, search shell, and empty/loading states use canonical shared surfaces.
 - Profile: section framing, dialogs, feedback, hero shells, and summary surfaces use canonical shared surfaces plus documented adapters.
 - Conversations and agent chat: collection chrome, section framing, chips, and supporting dialogs use canonical shared surfaces.
-- Dashboard, documents/editor, workflows/admin, settings, network/discovery, and company surfaces now import overlapping shell UI through `frontend/src/design-system/*` instead of local wrappers or theme shims.
+- Dashboard, documents/editor, product-app workflows, the dedicated Admin SPA, settings, network/discovery, and company surfaces now import overlapping shell UI through `frontend/src/design-system/*` instead of local wrappers or theme shims.
 
 See the [Route-Family Adoption Ledger](../reference/design-system-catalog.md#route-family-adoption-ledger) for the current status table.
 

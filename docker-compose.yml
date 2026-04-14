@@ -142,6 +142,26 @@ services:
       etl-service:
         condition: service_healthy
 
+  backend-test:
+    profiles: ["test"]
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile
+      target: test
+    working_dir: /usr/src/app
+    env_file:
+      - ./backend/.env
+    environment:
+      - ENVIRONMENT=PYTEST
+      - TEST_DATABASE_HOSTNAME=test_db
+      - TEST_DATABASE_PORT=5432
+      - OPENAI_API_KEY
+    volumes:
+      - ./backend:/usr/src/app
+    depends_on:
+      test_db:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./frontend

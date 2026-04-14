@@ -9,7 +9,7 @@ description: Work locally with Docker Compose first, then use the shortest smoke
 
 # Work Locally
 
-Baldin uses Docker Compose as the local-first entry point. All eight app services start with a single command.
+Baldin uses Docker Compose as the local-first entry point. The default `docker-compose up --build` stack brings up eight long-running services, and an on-demand `backend-test` runner is available for DB-backed pytest.
 
 Repo-tracked `backend/.env` and `frontend/.env` provide safe local defaults in every worktree. Put real secrets such as `OPENAI_API_KEY` in process env or ignored `backend/.env.local` / `frontend/.env.local` overrides.
 
@@ -23,7 +23,7 @@ If you use Baldin's workspace skills, `/baldin-local-stack-doctor` helps triage 
 4. If backend API routes or schemas changed before you staged files, run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh`.
 5. Use broader validation only when the touched surface needs it or the branch is ready for handoff or push.
 
-Host-side backend tests should use `./scripts/run_backend_pytest.sh` so `PIPENV_DONT_LOAD_ENV=1` and the documented `127.0.0.1:5431` `test_db` path stay aligned. Compose service-to-service traffic still uses `test_db` as the hostname.
+Backend tests should use `./scripts/run_backend_pytest.sh`, which keeps DB-backed pytest inside Compose networking and targets `test_db:5432`. If you explicitly need a host `.venv` loop, use `./scripts/run_backend_pytest_host.sh`, which overrides the test DB path to `127.0.0.1:5431`.
 
 ## Services
 
@@ -35,6 +35,7 @@ Host-side backend tests should use `./scripts/run_backend_pytest.sh` so `PIPENV_
 | `etl-service` | Internal FastAPI ETL executor | 8010 (internal only) | `./backend` mounted |
 | `web` | FastAPI (Uvicorn, hot-reload) | 8004→8000 | `./backend` mounted |
 | `crawler-worker` | Python background worker | none | `./backend` mounted |
+| `backend-test` | On-demand pytest runner (`test` profile) | none | `./backend` mounted |
 | `frontend` | Vite dev server | 5173 | `./frontend` mounted |
 | `docs` | Docusaurus dev server | 3001→3000 | `./docs` mounted |
 
@@ -49,6 +50,8 @@ The backend mounts `./backend` as a volume and runs Uvicorn with `--reload`, so 
 Leave the stack running across multiple edits. Rebuild only when Docker image inputs changed, such as dependencies or Dockerfiles.
 
 Redis backs the local background-job queue, `crawler-worker` consumes crawler and seed jobs from that queue, and `etl-service` performs the crawler browser work behind an internal-only HTTP boundary while the API stays responsive.
+
+The `backend-test` service is profile-gated and is not started by the default `docker-compose up --build` stack. `./scripts/run_backend_pytest.sh` enables it on demand.
 
 Use [Boot The Stack](../getting-started/quickstart.md) for first boot. This page is the day-two reference once the stack already makes sense to you.
 
@@ -67,8 +70,9 @@ Track active screen and state coverage in [Baldin App Screens Inventory](../refe
 
 1. Start or keep the local stack running with `docker-compose up --build`.
 2. Use the frontend dev server at `http://127.0.0.1:5173`.
-3. Open the supported Wave 1 Figma harness at `http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=...`.
-4. Use `webdev` Playwright MCP tools to drive the Wave 1 harness into the state you want to capture or inspect in Figma. For Wave 2 and Wave 3 closeout, use direct shipped-route review plus MCP structure or screenshot inspection instead of expanding the harness.
+3. Open the supported Wave 1 Figma harness at `http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=...` for harness-backed product screens.
+4. For privileged admin capture, start from `http://127.0.0.1:5173/browser-harness/admin-session.html?next=/admin/db-management` or another `/admin/...` target so the browser session receives the configured local superuser token before opening the Admin SPA.
+5. Use `webdev` Playwright MCP tools to drive the Wave 1 harness or the bootstrapped admin route into the state you want to capture or inspect in Figma. For Wave 2 and Wave 3 closeout, use direct shipped-route review plus MCP structure or screenshot inspection instead of expanding the harness.
 
 The canonical harness supports these query parameters:
 
@@ -102,6 +106,14 @@ http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=apply&state=alread
 ```
 
 The harness is the supported local capture surface for the Wave 1 screens it already backs. Keep the frontend stack warm and switch harness states instead of wiring a live backend for Wave 1 design review. For Wave 2 and Wave 3 closeout, follow the app-screens inventory ledger and use direct shipped-route review plus MCP structure or screenshot inspection rather than harness expansion.
+
+For privileged admin routes, the supported preflight is the repo-owned admin session bootstrap page rather than a manual login step:
+
+```text
+http://127.0.0.1:5173/browser-harness/admin-session.html?next=/admin/db-management
+```
+
+The bootstrap page calls the DEV-only backend route `POST /api/v1/auth/jwt/dev-bootstrap-superuser`, writes the returned JWT into `baldin_token`, and then redirects to the requested `/admin/...` path. This keeps MCP server config unchanged because the auth handoff lives in browser session state, not the Figma or Playwright transport.
 
 ### Professional-Plan Default
 
@@ -154,6 +166,14 @@ uvicorn app.main:app --reload --port 8004
 
 Requires a running PostgreSQL instance matching the `backend/.env` connection settings.
 
+For an optional host-side backend test loop:
+
+```bash
+cd backend
+pipenv install --dev
+../scripts/run_backend_pytest_host.sh app/tests/test_target.py -q
+```
+
 If you want worker-mode background execution outside Docker, run Redis separately and start the ETL service and worker in separate shells:
 
 ```bash
@@ -189,6 +209,8 @@ npm --prefix docs run start
 | Task | Command |
 | --- | --- |
 | Reset local databases | `./scripts/reset_local_db.sh` |
+| Run DB-backed backend pytest in Compose | `./scripts/run_backend_pytest.sh -q app/tests/test_target.py` |
+| Run DB-backed backend pytest from the host | `./scripts/run_backend_pytest_host.sh -q app/tests/test_target.py` |
 | Regenerate API contracts during active work | `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` |
 | Regenerate API contracts from staged files | `./scripts/update_frontend_schemas.sh` |
 | Build docs site | `npm --prefix docs run build` |
@@ -210,6 +232,7 @@ npm --prefix docs run start
 | http://127.0.0.1:5173 | Frontend |
 | http://127.0.0.1:5173/admin/ | Admin SPA |
 | http://127.0.0.1:5173/browser-harness/figma-wave1.html | Figma browser harness |
+| http://127.0.0.1:5173/browser-harness/admin-session.html?next=/admin/db-management | Admin capture bootstrap |
 | http://localhost:3001/baldin/docs | Product docs |
 | http://localhost:8004 | API root |
 | http://localhost:8004/health | API liveness |

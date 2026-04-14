@@ -3,12 +3,6 @@ from operator import itemgetter
 from typing import Any, Optional
 
 from fastapi import HTTPException
-
-try:
-    from langchain_text_splitters import CharacterTextSplitter
-except ImportError:  # pragma: no cover
-    from langchain.text_splitter import CharacterTextSplitter
-
 from langchain_community.vectorstores import FAISS
 from langchain_core.runnables import RunnableLambda
 
@@ -25,6 +19,15 @@ from app.schemas import ExtractorRead, ExtractorRequest, ExtractorResponse
 def _make_extract_requests(input_dict: dict[str, Any]) -> list[ExtractorRequest]:
     docs = input_dict.pop("text")
     return [ExtractorRequest(text=doc.page_content, **input_dict) for doc in docs]
+
+
+def _build_character_text_splitter(**kwargs: Any):
+    try:
+        from langchain_text_splitters import CharacterTextSplitter
+    except ImportError:  # pragma: no cover
+        from langchain.text_splitter import CharacterTextSplitter
+
+    return CharacterTextSplitter(**kwargs)
 
 
 async def extract_from_content(
@@ -44,7 +47,7 @@ async def extract_from_content(
             "chunk_size": 1000,
             "chunk_overlap": 50,
         }
-    text_splitter = CharacterTextSplitter(**text_splitter_kwargs)
+    text_splitter = _build_character_text_splitter(**text_splitter_kwargs)
     docs = text_splitter.create_documents([content])
     doc_contents = [doc.page_content for doc in docs]
 

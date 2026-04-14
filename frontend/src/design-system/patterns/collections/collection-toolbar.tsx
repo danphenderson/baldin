@@ -27,39 +27,70 @@ export const CollectionToolbar: React.FC<CollectionToolbarProps> = ({
       ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
     ]}
   >
-    <Stack
-      direction={{ xs: 'column', md: 'row' }}
-      spacing={2}
-      alignItems={{ md: 'center' }}
+    <Box
+      sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: { md: 'center' },
+        columnGap: 2,
+        rowGap: 1.5,
+      }}
     >
       {search && (
-        <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Box
+          sx={{
+            minWidth: 0,
+            flex: { xs: '1 1 100%', md: '1 1 320px' },
+            display: 'flex',
+            '& > *': {
+              flex: 1,
+              minWidth: 0,
+              maxWidth: '100%',
+            },
+          }}
+        >
           {search}
         </Box>
       )}
 
       {controls && (
-        <Stack
-          direction="row"
-          spacing={1.5}
-          useFlexGap
-          sx={{ flexWrap: 'wrap' }}
+        <Box
+          sx={{
+            minWidth: 0,
+            flex: { xs: '1 1 100%', md: '1 1 auto' },
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: 1.5,
+            '& > *': {
+              maxWidth: '100%',
+            },
+          }}
         >
           {controls}
-        </Stack>
+        </Box>
       )}
 
       {actions && (
-        <Stack
-          direction="row"
-          spacing={1.5}
-          useFlexGap
-          sx={{ flexWrap: 'wrap', justifyContent: { md: 'flex-end' } }}
+        <Box
+          sx={{
+            minWidth: 0,
+            flex: { xs: '1 1 100%', md: '0 1 auto' },
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: 1.5,
+            justifyContent: { xs: 'flex-start', md: 'flex-end' },
+            ml: { md: 'auto' },
+            '& > *': {
+              maxWidth: '100%',
+            },
+          }}
         >
           {actions}
-        </Stack>
+        </Box>
       )}
-    </Stack>
+    </Box>
 
     {secondary && <Box>{secondary}</Box>}
   </Stack>

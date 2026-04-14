@@ -12,12 +12,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app import models, schemas
+from app.core import conf
 from app.core.rate_limit import limiter
 from app.core.security import (
     AUTH_BACKEND,
     create_mfa_token,
     fastapi_users,
     get_jwt_strategy,
+    get_user_by_email,
     get_user_manager,
 )
 
@@ -53,6 +55,50 @@ async def login(
         return schemas.MFALoginRequired(
             mfa_required=True,
             mfa_token=create_mfa_token(user.id),
+        )
+
+    strategy = get_jwt_strategy()
+    response = await AUTH_BACKEND.login(strategy, user)
+    await user_manager.on_after_login(user, request, response)
+    return response
+
+
+@router.post("/dev-bootstrap-superuser", response_model=schemas.BearerResponse)
+async def dev_bootstrap_superuser(
+    request: Request,
+    user_manager=Depends(get_user_manager),
+):
+    """Mint a JWT for the configured bootstrap superuser in DEV/PYTEST only."""
+    if conf.settings.ENVIRONMENT not in {"DEV", "PYTEST"}:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    user = await get_user_by_email(str(conf.settings.FIRST_SUPERUSER_EMAIL))
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Configured FIRST_SUPERUSER_EMAIL account was not found for DEV bootstrap. "
+                "Start the local stack once or verify the configured bootstrap email."
+            ),
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Configured FIRST_SUPERUSER_EMAIL account is inactive and cannot be used "
+                "for DEV bootstrap."
+            ),
+        )
+
+    if not user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Configured FIRST_SUPERUSER_EMAIL account is not a superuser and cannot "
+                "be used for DEV bootstrap."
+            ),
         )
 
     strategy = get_jwt_strategy()

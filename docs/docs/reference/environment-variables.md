@@ -5,7 +5,7 @@ title: Look Up Settings
 description: Look up runtime configuration, derived startup behavior, and the settings most likely to matter.
 ---
 
-<!-- last-verified: 2026-04-13 -->
+<!-- last-verified: 2026-04-14 -->
 
 # Look Up Settings
 
@@ -42,7 +42,7 @@ Precedence order:
 | `DEFAULT_DATABASE_USER` | `postgres` | Main database user |
 | `DEFAULT_DATABASE_PASSWORD` | `postgres` | Main database password |
 | `TEST_DATABASE_HOSTNAME` | `test_db` | Test database host |
-| `TEST_DATABASE_PORT` | `5431` | Test database port |
+| `TEST_DATABASE_PORT` | `5432` | Test database port inside Compose networking |
 | `TEST_DATABASE_DB` | `test_db` | Test database name |
 | `TEST_DATABASE_USER` | `postgres` | Test database user |
 | `TEST_DATABASE_PASSWORD` | `postgres` | Test database password |
@@ -101,6 +101,8 @@ Precedence order:
 | `SENTRY_TRACES_SAMPLE_RATE` | Sentry performance tracing sample rate (`0` to `1`). Set to `0` locally. |
 
 ### Startup Behavior
+
+For host-side backend pytest, use `./scripts/run_backend_pytest_host.sh`. That helper overrides the repo-tracked Compose default and targets `127.0.0.1:5431`.
 
 | Setting | Source | Meaning |
 |----------|--------|---------|

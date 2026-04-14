@@ -5,7 +5,7 @@ title: Run The Right Checks
 description: Run the smallest effective smoke check first, then widen validation only when the change actually needs it.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-14 -->
 
 # Run The Right Checks
 
@@ -44,31 +44,30 @@ Backend tests use `pytest` with a dedicated PostgreSQL test database.
 
 Start with the narrowest test file or `-k` selection that exercises the edited route, model, ETL path, or bug. Only widen to the broader backend suite when the changed surface or missing coverage makes that necessary.
 
-The wrapper keeps host-side pytest aligned with the documented local test database path by exporting `PIPENV_DONT_LOAD_ENV=1` and defaulting `TEST_DATABASE_HOSTNAME=127.0.0.1` plus `TEST_DATABASE_PORT=5431`. Use plain `pipenv run pytest` only when you intentionally want a custom shell flow.
+The wrapper is now Compose-native: it starts or reuses `test_db`, waits for readiness, and runs pytest inside the on-demand `backend-test` service. This keeps agent and human DB-backed verification aligned with the local stack instead of relying on host localhost access.
+
+Use `./scripts/run_backend_pytest_host.sh` only when you intentionally want a host `.venv` flow. That helper overrides the test DB path to `127.0.0.1:5431`.
 
 ### Coverage gate
 
 CI enforces a **60% minimum coverage** threshold across `app/` and `etl/`:
 
 ```bash
-pytest --cov=app --cov=etl --cov-report=term-missing --cov-fail-under=60
+./scripts/run_backend_pytest.sh --cov=app --cov=etl --cov-report=term-missing --cov-fail-under=60
 ```
 
 ### Test database
 
-Tests run against a separate PostgreSQL instance (`test_db` on port 5431 locally, or the CI-provisioned service). The test database is configured through environment variables:
+Tests run against a separate PostgreSQL instance (`test_db` in the local Compose network, or the CI-provisioned service).
 
-| Variable | Default (local) |
-|----------|----------------|
-| `TEST_DATABASE_HOSTNAME` | `127.0.0.1` |
-| `TEST_DATABASE_PORT` | `5431` |
-| `TEST_DATABASE_DB` | `test_db` |
-| `TEST_DATABASE_USER` | `postgres` |
-| `TEST_DATABASE_PASSWORD` | `postgres` |
+| Local path | Host | Port |
+|----------|------|------|
+| Compose-native wrapper (`./scripts/run_backend_pytest.sh`) | `test_db` | `5432` |
+| Optional host fast path (`./scripts/run_backend_pytest_host.sh`) | `127.0.0.1` | `5431` |
 
 Test fixtures use drop-and-recreate patterns via `conftest.py`.
 
-When the local `test_db` service is unavailable, the backend now fails fast in `PYTEST` mode instead of hanging on connection attempts.
+When the local `test_db` service is unavailable, the wrapper starts it first and the backend still fails fast in `PYTEST` mode instead of hanging on connection attempts.
 
 ## Frontend Tests
 

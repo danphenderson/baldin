@@ -74,7 +74,7 @@ This catalog describes the shared frontend UI surface that ships in the repo tod
 | `CardShell` | `frontend/src/design-system/primitives/surfaces/card-shell.tsx` | Shared static or interactive card frame with token-backed padding, motion, and focus handling | Leads, agents, applications queue rows, `SectionCard`, `AuthPanel` |
 | `SurfaceCard` and `SurfaceCardContent` | `frontend/src/design-system/primitives/surfaces/surface-card.tsx` | Canonical wrapper for feature-owned card shells that still need MUI card semantics | Dashboard, documents, settings, discovery, profile, lead and agent surfaces |
 | `SurfaceDialog`, `SurfaceDialogTitle`, `SurfaceDialogContent`, `SurfaceDialogActions` | `frontend/src/design-system/primitives/surfaces/surface-dialog.tsx` | Canonical wrapper for feature-owned dialog shells that still need MUI dialog semantics | Documents, settings, workflows/admin, applications, profile import, chat and composer dialogs |
-| `ConfirmDialog` | `frontend/src/design-system/primitives/surfaces/confirm-dialog.tsx` | Canonical shared confirm surface for lightweight destructive or informational confirmations | Applications, crawlers, agents, lead flows, compatibility confirm-dialog shim |
+| `ConfirmDialog` | `frontend/src/design-system/primitives/surfaces/confirm-dialog.tsx` | Canonical shared confirm surface for lightweight destructive or informational confirmations | Applications, crawlers, agents, lead flows, workflows/admin |
 | `FormDialogShell` | `frontend/src/design-system/primitives/surfaces/form-dialog-shell.tsx` | Shared dialog chrome for form, create, edit, and delete flows | Lead form dialog, agent form dialog, profile edit/delete dialogs |
 | `SectionHeader` | `frontend/src/design-system/primitives/surfaces/section-header.tsx` | Shared section header with icon, count, supporting text, divider, and action slot | Profile sections, conversations, detail panels |
 
@@ -89,7 +89,7 @@ This catalog describes the shared frontend UI surface that ships in the repo tod
 
 | Pattern | Path | Canonical role | Current known consumers |
 | --- | --- | --- | --- |
-| `CollectionToolbar` | `frontend/src/design-system/patterns/collections/collection-toolbar.tsx` | Slot-based collection header with `search`, `controls`, `actions`, and `secondary` regions | Leads via `lead-search-bar.tsx`, applications, conversations |
+| `CollectionToolbar` | `frontend/src/design-system/patterns/collections/collection-toolbar.tsx` | Slot-based collection header with `search`, `controls`, `actions`, and `secondary` regions | Leads via `lead-search-bar.tsx`, applications, conversations, documents |
 | `MetricStrip` | `frontend/src/design-system/patterns/metrics/metric-strip.tsx` | Read-only stat row with `inline` and `card` variants | Applications, dashboard, leads, pipelines, crawlers |
 | `SectionCard` | `frontend/src/design-system/patterns/sections/section-card.tsx` | Thin `CardShell` composition for section layouts with shared header framing | Profile sections, conversations |
 | `AuthPanel` | `frontend/src/design-system/patterns/auth/auth-panel.tsx` | Shared centered auth shell with icon, title, description, content, and footer slots | Login, registration, MFA verification flows |
@@ -195,8 +195,8 @@ Every route family in the ledger below uses one of these states:
 | Conversations and agent chat | `adopted` | `CollectionToolbar`, `SectionCard`, `SectionHeader`, `StatusChip`, `SurfaceDialog`, `EmptyState`, `LoadingState` | Message workflow remains feature-owned |
 | Agents | `adopted` | `CardShell`, `StatusChip`, `ConfirmDialog`, `FormDialogShell`, shared typography | `kind` mapping and orchestration remain feature-owned |
 | Dashboard | `adopted` | `MetricStrip`, `StatusChip`, `SurfaceCard`, shared typography and status helpers | Dashboard business logic remains feature-owned |
-| Documents / editor | `adopted` | `SurfaceCard`, `SurfaceDialog`, `StatusChip`, shared typography | Editing, compare, and share workflows remain feature-owned |
-| Workflows / admin | `adopted` | `MetricStrip`, `SurfaceDialog`, `ConfirmDialog`, `StatusChip`, shared typography | Pipelines and crawlers retain workflow-specific behavior |
+| Documents / editor | `adopted` | `CollectionToolbar`, `SurfaceCard`, `SurfaceDialog`, `StatusChip`, shared typography | Editing, compare, and share workflows remain feature-owned |
+| Workflows / admin | `adopted` | `MetricStrip`, `SurfaceDialog`, `ConfirmDialog`, `StatusChip`, shared typography | Pipelines remain in the product app. Privileged DB management, review queue, and crawler routes now hand off to the dedicated Admin SPA while still reusing canonical shared surfaces. |
 | Network / discovery | `adopted` | `SurfaceCard`, `StatusChip`, `EmptyState`, shared typography | Companies, directory, and connections use canonical shared shell imports |
 | Settings | `adopted` | `SurfaceCard`, `SurfaceDialog`, `StatusChip`, `InlineFeedback` | Billing, account, discoverability, and graduation flows keep local logic |
 

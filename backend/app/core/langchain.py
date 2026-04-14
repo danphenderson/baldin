@@ -4,6 +4,7 @@
 Client for interacting with the Langchain API.
 """
 
+from functools import lru_cache
 from typing import Any, Literal, TypeVar
 
 import httpx
@@ -13,7 +14,6 @@ from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import async_playwright
 from pydantic import BaseModel
@@ -244,16 +244,23 @@ async def ainvoke_structured_prompt(
 #  Text chunking helpers
 # ---------------------------------------------------------------------------
 
-_text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=800,
-    chunk_overlap=200,
-    length_function=len,
-    separators=["\n\n", "\n", ". ", " ", ""],
-)
+
+@lru_cache(maxsize=1)
+def _get_text_splitter():
+    # Import lazily so routes that do not need chunking can boot without
+    # pulling the embedding stack during module import.
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+    return RecursiveCharacterTextSplitter(
+        chunk_size=800,
+        chunk_overlap=200,
+        length_function=len,
+        separators=["\n\n", "\n", ". ", " ", ""],
+    )
 
 
 def chunk_text(text: str) -> list[str]:
     """Split *text* into overlapping chunks suitable for embedding."""
     if not text or not text.strip():
         return []
-    return _text_splitter.split_text(text)
+    return _get_text_splitter().split_text(text)

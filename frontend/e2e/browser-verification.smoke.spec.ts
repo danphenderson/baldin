@@ -14,6 +14,12 @@ const mockUser = {
   updated_at: '2026-04-12T00:00:00Z',
 };
 
+const mockSuperuser = {
+  ...mockUser,
+  email: 'admin@baldin.app',
+  is_superuser: true,
+};
+
 const mockApplication = {
   id: 'app-1',
   lead_id: 'lead-1',
@@ -158,6 +164,64 @@ async function mockAuthenticatedApp(page: Page) {
   });
 }
 
+async function mockAdminBootstrapApp(
+  page: Page,
+  options: { bootstrapStatus?: number; detail?: string } = {},
+) {
+  const bootstrapStatus = options.bootstrapStatus ?? 200;
+  const detail = options.detail ?? 'DEV bootstrap failed';
+
+  await page.route('**/api/v1/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = url.pathname;
+    const method = request.method();
+
+    if (method === 'POST' && path === '/api/v1/auth/jwt/dev-bootstrap-superuser') {
+      if (bootstrapStatus !== 200) {
+        return route.fulfill({
+          status: bootstrapStatus,
+          contentType: 'application/json',
+          body: JSON.stringify({ detail }),
+        });
+      }
+
+      return jsonResponse(route, {
+        access_token: 'dev-bootstrap-token',
+        token_type: 'bearer',
+      });
+    }
+
+    if (method === 'GET' && path === '/api/v1/users/me') {
+      return jsonResponse(route, mockSuperuser);
+    }
+
+    if (method === 'GET' && path === '/api/v1/db-management/status') {
+      return jsonResponse(route, {
+        current_revision: '20260414_admin_bootstrap',
+        head_revision: '20260414_admin_bootstrap',
+        is_at_head: true,
+        public_table_count: 12,
+      });
+    }
+
+    if (method === 'GET' && path === '/api/v1/db-management/tables') {
+      return jsonResponse(route, []);
+    }
+
+    if (method === 'GET' && path === '/api/v1/db-management/users') {
+      return jsonResponse(route, {
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 10,
+      });
+    }
+
+    return jsonResponse(route, {});
+  });
+}
+
 test('mounts AgentEnabledMultilineField outside a router tree', async ({ page }) => {
   await page.goto('/browser-harness/agent-enabled-multiline-field.html');
 
@@ -166,6 +230,39 @@ test('mounts AgentEnabledMultilineField outside a router tree', async ({ page })
   await expect(field).toBeVisible();
   await field.fill('Updated in browser verification');
   await expect(field).toHaveValue('Updated in browser verification');
+});
+
+test('bootstraps a DEV admin session and redirects to the default admin route', async ({ page }) => {
+  await mockAdminBootstrapApp(page);
+
+  await page.goto('/browser-harness/admin-session.html');
+
+  await page.waitForURL('**/admin/db-management');
+  await expect(page).toHaveURL(/\/admin\/db-management$/);
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem('baldin_token'))).toBe('dev-bootstrap-token');
+});
+
+test('falls back to /admin/db-management when next is not an /admin route', async ({ page }) => {
+  await mockAdminBootstrapApp(page);
+
+  await page.goto('/browser-harness/admin-session.html?next=/login');
+
+  await page.waitForURL('**/admin/db-management');
+  await expect(page).toHaveURL(/\/admin\/db-management$/);
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem('baldin_token'))).toBe('dev-bootstrap-token');
+});
+
+test('renders bootstrap failure feedback when DEV admin session attach fails', async ({ page }) => {
+  await mockAdminBootstrapApp(page, {
+    bootstrapStatus: 503,
+    detail: 'Configured FIRST_SUPERUSER_EMAIL account was not found for DEV bootstrap.',
+  });
+
+  await page.goto('/browser-harness/admin-session.html?next=/admin/review');
+
+  await expect(page.getByRole('heading', { name: 'Attach superuser session' })).toBeVisible();
+  await expect(page.getByText('Configured FIRST_SUPERUSER_EMAIL account was not found for DEV bootstrap.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry bootstrap' })).toBeVisible();
 });
 
 test('keeps the chat composer textarea accessible by name', async ({ page }) => {

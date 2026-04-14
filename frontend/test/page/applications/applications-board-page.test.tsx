@@ -7,12 +7,21 @@ import { UserContext } from '@/context/user-context';
 import { ToolbarHeaderContext } from '@/layout/toolbar-header-context';
 
 const mockUseApplications = vi.fn();
+const mockNavigate = vi.fn();
 
 vi.mock('@/page/applications/use-applications', async () => {
   const actual = await vi.importActual<typeof import('@/page/applications/use-applications')>('@/page/applications/use-applications');
   return {
     ...actual,
     useApplications: (...args: unknown[]) => mockUseApplications(...args),
+  };
+});
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
   };
 });
 
@@ -106,6 +115,27 @@ describe('ApplicationsBoardPage', () => {
     vi.clearAllMocks();
   });
 
+  it('routes empty-board browse action through the shared empty state CTA', async () => {
+    const user = userEvent.setup();
+    mockUseApplications.mockReturnValue(
+      makeHookReturn({
+        applications: [],
+        buckets: new Map([
+          ['applied', []],
+          ['screening', []],
+          ['interview', []],
+          ['offer', []],
+        ]),
+      }),
+    );
+
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: 'Browse Leads' }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/leads');
+  });
+
   it('saves inline reminder edits from a board card', async () => {
     const user = userEvent.setup();
     const hookReturn = makeHookReturn();
@@ -196,5 +226,39 @@ describe('ApplicationsBoardPage', () => {
     await user.click(await screen.findByRole('menuitem', { name: 'Applied' }));
 
     expect(hookReturn.handleStatusChange).toHaveBeenCalledWith('app-1', 'applied');
+  });
+
+  it('uses the shared confirm dialog when deleting a board card', async () => {
+    const user = userEvent.setup();
+    const application = makeApplication();
+    const confirmDelete = vi.fn();
+    mockUseApplications.mockImplementation(() => {
+      const [deleteTarget, setDeleteTarget] = React.useState<typeof application | null>(null);
+      return makeHookReturn({
+        applications: [application],
+        confirmDelete,
+        deleteTarget,
+        setDeleteTarget,
+        buckets: new Map([
+          ['applied', [application]],
+          ['screening', []],
+          ['interview', []],
+          ['offer', []],
+        ]),
+      });
+    });
+
+    renderPage();
+
+    expect(screen.queryByText('Delete Application')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Delete application' }));
+
+    expect(screen.getByText('Delete Application')).toBeInTheDocument();
+    expect(screen.getByText(/Remove/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(confirmDelete).toHaveBeenCalledTimes(1);
   });
 });

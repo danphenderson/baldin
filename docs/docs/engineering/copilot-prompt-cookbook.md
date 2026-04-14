@@ -23,6 +23,7 @@ Assume the local `docker-compose.yml` stack is the default development environme
 
 - Backend-only and already clear: start with `Backend Runtime Slice`.
 - Frontend-only and already clear: start with `Frontend Product Slice`.
+- Figma-first design work, browser-harness capture, or `Baldin-Library` and `Baldin-App-Screens` updates: start with Baldin Design Lead Agent directly.
 - Small cross-stack, contract, compose, or local integration fix: start with `Local Preview Integration Fix` or the Baldin Lead Full-Stack Architect directly.
 - Use `Issue Dispatch Kickoff`, `Plan Slice Kickoff`, or Baldin Project Manager only when the owner, scope, or sequencing is not already obvious.
 - Ask for the lightest useful smoke check first. Add broader type, build, docs, or full-suite validation only when the touched surface or handoff needs it.
@@ -40,6 +41,7 @@ Use the same owner model in both. Copilot prompt files are convenience entry poi
 |------|--------------|------------|
 | Backend-only implementation | `Backend Runtime Slice` or Baldin Backend Agent | Ask Codex to use `baldin_backend` |
 | Frontend-only implementation | `Frontend Product Slice` or Baldin Frontend Agent | Ask Codex to use `baldin_frontend` |
+| Figma-first design work | Baldin Design Lead Agent | Ask Codex to use `baldin_frontend` for repo-backed shared UI sync, or start with `/plan` when the slice is still design-only |
 | Cross-stack implementation | `Local Preview Integration Fix`, `API Contract Change Orchestrator`, or Baldin Lead Full-Stack Architect | Ask Codex to use `baldin_full_stack_architect` |
 | Unclear ownership or sequencing | `Issue Dispatch Kickoff`, `Plan Slice Kickoff`, or Baldin Project Manager | Start with `/plan` or ask Codex to use `baldin_project_manager` |
 | Read-only scouting | Explore | Use the built-in `explorer` agent or ask for read-only scouting |
@@ -80,6 +82,7 @@ Prompts and agents should link back to these layers and to the docs below instea
 |------|---------------------|
 | Backend-only routes, models, auth, ETL, or tests | Baldin Backend Agent |
 | Frontend-only UI, accessibility, routing, state handling, or typed service consumption | Baldin Frontend Agent |
+| Figma-first design work, design-system mapping, browser-harness capture, or app-screen inventory | Baldin Design Lead Agent |
 | Backend and frontend together, API contracts, schema regeneration, scripts, CI, docs, or docker-compose | Baldin Lead Full-Stack Architect |
 | Unclear ownership, multi-stream work, or sequencing and handoffs | Baldin Project Manager |
 | Read-only scouting before assigning a real owner | Explore |
@@ -216,7 +219,7 @@ Return:
 - Recommended next owner, if any.
 ```
 
-Baldin Project Manager should require this schema in handoff packets, and the backend, frontend, and architect agents should return it verbatim.
+Baldin Project Manager should require this schema in handoff packets, and the backend, frontend, design lead, and architect agents should return it verbatim.
 
 ## Baldin Project Manager
 
@@ -339,6 +342,54 @@ Best for:
 - loading, empty, and error states
 - frontend state or service integration bugs when the API contract already exists
 
+## Baldin Design Lead Agent
+
+Use when the task is Figma-first: `Baldin-Library` work, `Baldin-App-Screens` capture, browser-harness review, repo-backed `.figma.ts` mapping, Storybook design-link alignment, or design-to-code handoff preparation.
+
+```text
+Lead this as Figma-first design work.
+
+Objective:
+[Figma, design-system, or capture outcome]
+
+Context:
+[screen, library surface, design review reason, or handoff need]
+
+Allowed paths:
+- ./frontend/figma.config.json
+- ./frontend/browser-harness/**
+- ./frontend/src/browser-harness/**
+- ./frontend/src/design-system/**/*.figma.ts
+- ./frontend/src/design-system/**/*stories.tsx
+- ./docs/docs/reference/baldin-app-screens-inventory.md
+- ./docs/docs/reference/baldin-library-buildout-ledger.md
+- ./docs/docs/reference/design-system-catalog.md
+
+Out of scope:
+- backend API design
+- broad frontend product implementation
+- invented design states that are not backed by repo or harness evidence
+
+Validation:
+- capture or inspect the relevant Figma node or browser-harness state
+- run npm --prefix docs run build when docs changed
+- run cd frontend && npm run storybook:build when a code-backed mapping changed
+- widen to frontend typecheck or build only if shared React implementation changed
+
+Return:
+- use the Standard Handback schema from this cookbook.
+
+Stop and hand off if the task becomes general frontend implementation or cross-stack delivery.
+```
+
+Best for:
+
+- `Baldin-Library` buildout
+- `Baldin-App-Screens` inventory and capture
+- Figma MCP inspection or write work
+- `.figma.ts` mapping and Storybook design-link alignment
+- shared-surface promotion review before code implementation
+
 ## Baldin Lead Full-Stack Architect
 
 Use when the task genuinely spans backend, frontend, generated contracts, scripts, CI, docs, or local integration.
@@ -455,6 +506,33 @@ Validation:
 Stop and hand off if the needed state is not available from the current API contract.
 ```
 
+### Figma-first design work
+
+Start with Baldin Design Lead Agent.
+
+```text
+Lead this as Figma-first design work.
+
+Objective:
+Capture and align the next shared auth surface in Baldin-Library and keep the repo-backed mapping metadata current.
+
+Context:
+The surface is already evidenced by shipped auth flows, but the Figma library and the local mapping or story links need a clean sync before any broader React implementation work.
+
+Allowed paths:
+- ./frontend/src/design-system/**/*.figma.ts
+- ./frontend/src/design-system/**/*stories.tsx
+- ./docs/docs/reference/baldin-library-buildout-ledger.md
+- ./docs/docs/reference/design-system-catalog.md
+
+Validation:
+- capture or inspect the relevant Figma node
+- run `cd frontend && npm run storybook:build` if the code-backed mapping changed
+- run `npm --prefix docs run build` if design docs changed
+
+Stop and hand off if the task becomes broad frontend implementation or needs backend or contract work.
+```
+
 ### New field end to end
 
 Start with Baldin Lead Full-Stack Architect.
@@ -518,6 +596,7 @@ Do not implement yet unless this is obviously a tiny single-owner fix.
 
 - Do not ask Baldin Project Manager to be the default implementation owner for real code changes.
 - Do not ask Baldin Frontend Agent to own backend-driven contract regeneration unless you want a deliberate cross-stack assignment.
+- Do not ask Baldin Frontend Agent to own Figma-first library buildout or app-screen inventory when the task is still primarily design work.
 - Do not ask Baldin Backend Agent to patch frontend, docs, or CI as a hidden side quest.
 - Do not use Baldin Lead Full-Stack Architect for a plainly backend-only or frontend-only task when a smaller owner would do.
 - Do not give any agent a fuzzy “just handle everything automatically” prompt without a stop condition, validation expectations, and a named owner.

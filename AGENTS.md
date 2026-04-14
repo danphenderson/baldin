@@ -22,6 +22,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces.
 - Treat `Baldin-Library` as the canonical reusable-component source and `Baldin-App-Screens` as the canonical product-flow source of truth.
 - Treat the current Figma Make file as a reviewed archived sandbox. The 2026-04-13 salvage review found an empty app shell, stock guidelines, and generic Tailwind or shadcn scaffolding rather than a canonical Baldin buildout.
 - For agentic Figma work, prefer the local browser harness plus Figma MCP read or write tools when available. Structure and component inspection can proceed through MCP without a Developer seat.
+- For privileged admin capture, start from `/browser-harness/admin-session.html?next=/admin/...` so the browser session receives the configured local superuser token before opening `/admin/*`.
 - Treat basic inspection, screenshots, and harness-driven capture as sufficient when seat limits block Dev Mode-specific UX.
 - Version-history review still depends on browser or web access to the Figma UI. If browser automation is unavailable, fall back to direct web review instead of making Dev Mode a prerequisite.
 - Do not make Code Connect publish, Code Connect workspace reads, Dev Mode-only setup, or organization-only Figma features a required step for completing repo work. Current workspace reads and publish flows are seat-blocked without a Developer seat on an Organization or Enterprise plan.
@@ -32,6 +33,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces.
 
 - Backend-only routes, models, auth, ETL, extraction, or backend tests: use `baldin_backend` in Codex or Baldin Backend Agent in Copilot.
 - Frontend-only UI, UX, accessibility, routing, state handling, or typed service consumption: use `baldin_frontend` in Codex or Baldin Frontend Agent in Copilot.
+- Figma-first design work, `Baldin-Library` or `Baldin-App-Screens` updates, browser-harness capture, repo-backed `.figma.ts` mapping, or design-to-code handoff: use Baldin Design Lead Agent in Copilot. In Codex, route repo-backed implementation through `baldin_frontend` or use `baldin_project_manager` when the slice is still design-only and needs routing.
 - Cross-stack contracts, schema generation, docs, CI, scripts, docker-compose, or release-path work: use `baldin_full_stack_architect` in Codex or Baldin Lead Full-Stack Architect in Copilot.
 - Unclear ownership, sequencing, or multi-stream planning: use `baldin_project_manager` in Codex or Baldin Project Manager in Copilot.
 - Read-only scouting: use Codex's built-in `explorer` agent or Copilot's Explore agent. Do not treat a scout as the implementation owner.
@@ -55,6 +57,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces.
 
 - Project-scoped Codex custom agents live under `.codex/agents/`.
 - Copilot-specific prompts, agents, skills, and scoped instructions live under `.github/`.
+- Baldin's Figma-first design owner currently exists as Copilot's Baldin Design Lead Agent only; in Codex, route equivalent work through `baldin_frontend` when repo-backed UI implementation is in scope or `baldin_project_manager` when the slice still needs owner selection.
 - Do not force a one-to-one Codex equivalent for every Copilot prompt file. Use the same owner model, but let Codex rely on `AGENTS.md`, `/plan`, and named custom agents where that is cleaner.
 
 ## Standard Handback

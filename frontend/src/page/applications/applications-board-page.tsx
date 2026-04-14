@@ -48,16 +48,13 @@ import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import type { ApplicationRead } from '../../service/applications';
 import {
   CardShell,
+  ConfirmDialog,
   EmptyState as DSEmptyState,
   InlineFeedback,
   LoadingState,
   MetricStrip,
   getStatusColors,
   StatusChip as Chip,
-  SurfaceDialog as Dialog,
-  SurfaceDialogTitle as DialogTitle,
-  SurfaceDialogContent as DialogContent,
-  SurfaceDialogActions as DialogActions,
 } from '../../design-system';
 import { radiusTokens, toRadiusPx } from '../../design-system/tokens/radius';
 import {
@@ -527,43 +524,22 @@ const ApplicationCard: React.FC<AppCardProps> = ({
 /*  Delete confirmation                                                */
 /* ------------------------------------------------------------------ */
 
-interface DeleteConfirmProps {
-  open: boolean;
-  app: ApplicationRead | null;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
-
-const DeleteConfirmDialog: React.FC<DeleteConfirmProps> = ({ open, app, onConfirm, onCancel }) => (
-  <Dialog open={open} onClose={onCancel} maxWidth="xs" fullWidth>
-    <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700 }}>
-      <WarningIcon color="error" /> Delete Application
-    </DialogTitle>
-    <DialogContent>
-      <Typography variant="body2" color="text.secondary">
-        Remove <strong>{app?.lead?.title || 'this application'}</strong>
-        {app?.lead?.companies?.[0]?.name ? ` at ${app.lead.companies[0].name}` : ''}? This action cannot be undone.
-      </Typography>
-    </DialogContent>
-    <DialogActions sx={{ px: 3, pb: 2.5 }}>
-      <Button onClick={onCancel}>Cancel</Button>
-      <Button variant="contained" color="error" onClick={onConfirm}>Delete</Button>
-    </DialogActions>
-  </Dialog>
-);
-
 /* ------------------------------------------------------------------ */
 /*  Empty state                                                        */
 /* ------------------------------------------------------------------ */
 
-const BoardEmptyState: React.FC = () => (
+interface BoardEmptyStateProps {
+  onBrowseLeads: () => void;
+}
+
+const BoardEmptyState: React.FC<BoardEmptyStateProps> = ({ onBrowseLeads }) => (
   <DSEmptyState
     icon={<AssignmentIcon />}
     title="No applications yet"
     description="When you apply to leads, they'll appear here as a pipeline board so you can track every stage of your job search."
     primaryAction={{
       label: 'Browse Leads',
-      onClick: () => { window.location.href = '/leads'; },
+      onClick: onBrowseLeads,
       icon: <WorkIcon />,
     }}
   />
@@ -755,7 +731,6 @@ const ApplicationsBoardPage: React.FC = () => {
     handleStatusChange,
     handleAdvance,
     handleClose,
-    handleDelete,
     handleReminderUpdate,
     confirmDelete,
     deleteTarget,
@@ -793,6 +768,10 @@ const ApplicationsBoardPage: React.FC = () => {
 
   const viewApplication = (app: ApplicationRead) => {
     navigate(`/applications/${app.id}`);
+  };
+
+  const requestDeleteApplication = (app: ApplicationRead) => {
+    setDeleteTarget(app);
   };
 
   const moveApplication = (app: ApplicationRead, targetStatus: BoardStatus) => {
@@ -869,7 +848,7 @@ const ApplicationsBoardPage: React.FC = () => {
       {loading ? (
         <LoadingState kind="grid" count={5} itemHeight={260} columns={{ xs: 1, sm: 2, md: 5 }} />
       ) : applications.length === 0 ? (
-        <BoardEmptyState />
+        <BoardEmptyState onBrowseLeads={() => navigate('/leads')} />
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <Stack spacing={3}>
@@ -913,7 +892,7 @@ const ApplicationsBoardPage: React.FC = () => {
                       onView={viewApplication}
                       onAdvance={handleAdvance}
                       onClose={handleClose}
-                      onDelete={handleDelete}
+                      onDelete={requestDeleteApplication}
                       onMove={moveApplication}
                       onReminderSave={(application, reminder) => handleReminderUpdate(application.id, reminder)}
                     />
@@ -925,9 +904,22 @@ const ApplicationsBoardPage: React.FC = () => {
         </DndContext>
       )}
 
-      <DeleteConfirmDialog
+      <ConfirmDialog
         open={deleteTarget !== null}
-        app={deleteTarget}
+        title="Delete Application"
+        message={
+          <>
+            Remove{' '}
+            <Typography component="span" fontWeight={600} color="text.primary">
+              {deleteTarget?.lead?.title || 'this application'}
+            </Typography>
+            {deleteTarget?.lead?.companies?.[0]?.name
+              ? ` at ${deleteTarget.lead.companies[0].name}`
+              : ''}
+            ? This action cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />

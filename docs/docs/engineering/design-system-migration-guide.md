@@ -17,11 +17,13 @@ This guide describes the migration that exists in the repo today. It tracks the 
 | Token and theme foundation | Complete | `frontend/src/design-system/tokens/*` and `theme/*` are active, and `theme-provider.tsx` consumes them |
 | Shared primitives | Complete for the current implemented code scope | Feedback, typography, surface, and status primitives are shipped |
 | Shared patterns | Complete for the current implemented code scope | `CollectionToolbar`, `MetricStrip`, `SectionCard`, and `AuthPanel` are shipped |
-| Storybook verification lane | Seeded | `frontend/.storybook/*` plus colocated stories now cover the current code-backed Figma mapping set |
+| Storybook verification lane | Seeded and already landed | `frontend/.storybook/*` plus colocated stories now cover the current code-backed Figma mapping set |
 | Compatibility wrappers | Narrow transitional layer | Only documented re-export shims and feature-local adapters remain |
 | Route-family adoption | Broadly complete | See the [Route-Family Adoption Ledger](../reference/design-system-catalog.md#route-family-adoption-ledger) |
 
 Figma can lead code. Baldin-Library may define broader library inventory ahead of what is promoted into `frontend/src/design-system/*`.
+
+Future migration slices should treat Storybook and Chromatic as existing verification infrastructure. Expand the current lane when shared surfaces change instead of reopening them as foundational migration work.
 
 ## What Changed In This Enforcement Pass
 

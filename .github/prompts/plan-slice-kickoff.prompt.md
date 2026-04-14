@@ -15,7 +15,7 @@ Task:
 - Distill the objective, current phase context, acceptance criteria, non-goals, dependencies, and stop conditions.
 - Separate already-complete work from the still-open work inside a partially completed phase or plan section before proposing the slice.
 - Classify the slice as repo-only, external-only, or mixed.
-- Choose the smallest correct owner: [Baldin Backend Agent](../agents/baldin-backend.agent.md), [Baldin Frontend Agent](../agents/baldin-frontend-agent.agent.md), [Baldin Lead Full-Stack Architect](../agents/baldin-lead-full-stack-architect.agent.md), or keep ownership with [Baldin Project Manager](../agents/baldin-project-manager.agent.md) if scope is still ambiguous.
+- Choose the smallest correct owner: [Baldin Backend Agent](../agents/baldin-backend.agent.md), [Baldin Frontend Agent](../agents/baldin-frontend-agent.agent.md), [Baldin Design Lead Agent](../agents/baldin-design-lead-agent.agent.md), [Baldin Lead Full-Stack Architect](../agents/baldin-lead-full-stack-architect.agent.md), or keep ownership with [Baldin Project Manager](../agents/baldin-project-manager.agent.md) if scope is still ambiguous.
 - If the slice is too broad, split it into at most three low-conflict workstreams with explicit sequencing.
 - If the selected slice depends on GitHub, cloud, or other settings outside the repo, state that explicitly, name the required human or admin permission, and convert the slice into an operator-assisted plan instead of assuming an in-repo owner can complete it alone.
 - Call out generated-artifact, docs, CI, local-development, or release-phase implications before implementation begins.

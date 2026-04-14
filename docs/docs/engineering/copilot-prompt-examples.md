@@ -156,6 +156,54 @@ Why it works:
 - It keeps the Baldin Frontend Agent focused on UI and typed contract consumption.
 - It avoids hiding backend dependency problems behind frontend workarounds.
 
+## Example 3B: Figma-First Design Work
+
+Bad prompt:
+
+```text
+Update the design system in Figma and wire up the code too.
+```
+
+Why it is weak:
+
+- It mixes Figma-first design work with code implementation in one sentence.
+- It does not say whether the output is a library study, app-screen capture, or repo-backed mapping change.
+- It does not ask for design evidence or a handoff when implementation should move to another owner.
+
+Good prompt:
+
+```text
+Lead this as Figma-first design work.
+
+Objective:
+Capture the shared auth surface in Baldin-Library and keep the repo-backed mapping metadata aligned.
+
+Context:
+The auth shell is already evidenced by shipped login and register flows, but the design library, mapping file, and Storybook design link need a clean sync before broader implementation work.
+
+Allowed paths:
+- ./frontend/src/design-system/**/*.figma.ts
+- ./frontend/src/design-system/**/*stories.tsx
+- ./docs/docs/reference/baldin-library-buildout-ledger.md
+- ./docs/docs/reference/design-system-catalog.md
+
+Validation:
+- capture or inspect the relevant Figma node
+- run `cd frontend && npm run storybook:build` if the code-backed mapping changed
+- run `npm --prefix docs run build` if design docs changed
+
+Return:
+- use the Standard Handback fields from the Agentic Workflow Cookbook.
+
+Stop and hand off if the task becomes broad frontend implementation or cross-stack delivery.
+```
+
+Why it works:
+
+- It gives Baldin Design Lead Agent a clearly design-first slice instead of mixing ownership.
+- It requires Figma or harness evidence, not invented polish.
+- It makes the frontend or architect handoff explicit if the work stops being primarily design.
+
 ## Example 4: Cross-Stack Feature
 
 Bad prompt:
@@ -324,6 +372,7 @@ Own cross-stack design, delegation, and integration across backend, frontend, an
 
 - If ownership is unclear, start with Baldin Project Manager.
 - If the task is obviously backend-only or frontend-only, start with that specialist directly instead of routing through issue-dispatch prompts.
+- If the task is primarily Figma-first design work, start with Baldin Design Lead Agent before asking for repo implementation.
 - If the task changes backend responses consumed by the frontend, either start with Baldin Lead Full-Stack Architect or explicitly require a next-owner handoff.
 - Ask for the standard handback fields whenever an agent is expected to implement or validate changes.
 - Ask for generated-artifact status whenever API routes or schemas might move.

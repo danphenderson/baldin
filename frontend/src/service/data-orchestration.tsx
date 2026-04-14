@@ -8,7 +8,7 @@ import { fetchAllPages, FULL_LIST_PAGE_SIZE, normalizePaginatedResponse, type Pa
 // Types re-exported from the generated OpenAPI schema
 // ---------------------------------------------------------------------------
 
-export type OrchestrationEventRead = components['schemas']['OrchestrationEventRead-Output'];
+export type OrchestrationEventRead = components['schemas']['OrchestrationEventRead'];
 export type OrchestrationEventCreate = components['schemas']['OrchestrationEventCreate'];
 export type OrchestrationEventUpdate = components['schemas']['OrchestrationEventUpdate'];
 export type OrchestrationEventStatus = components['schemas']['OrchestrationEventStatusType'];

@@ -40,6 +40,8 @@ Keep code feature-owned when any of these are true:
 
 For exported shared React surfaces, Baldin now uses a single review loop:
 
+Treat Storybook and Chromatic as existing repo infrastructure for the current code-backed mapping set. Expand that lane when shared surfaces change; do not open a separate migration stream just to "add Storybook" or "introduce Chromatic".
+
 1. Keep the canonical reusable design in `Baldin-Library`, not in route screens.
 2. Keep the code-backed mapping in the colocated `*.figma.ts` file.
 3. Keep a colocated `*.stories.tsx` file for the shared surface.

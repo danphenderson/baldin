@@ -25,6 +25,13 @@ export interface paths {
      */
     post: operations["login_api_v1_auth_jwt_login_post"];
   };
+  "/api/v1/auth/jwt/dev-bootstrap-superuser": {
+    /**
+     * Dev Bootstrap Superuser
+     * @description Mint a JWT for the configured bootstrap superuser in DEV/PYTEST only.
+     */
+    post: operations["dev_bootstrap_superuser_api_v1_auth_jwt_dev_bootstrap_superuser_post"];
+  };
   "/api/v1/auth/jwt/logout": {
     /** Logout */
     post: operations["logout_api_v1_auth_jwt_logout_post"];
@@ -6737,66 +6744,7 @@ export interface components {
       pipeline_id: string;
     };
     /** OrchestrationEventRead */
-    "OrchestrationEventRead-Input": {
-      /**
-       * Id
-       * Format: uuid4
-       * @description The unique uuid4 record identifier.
-       */
-      id: string;
-      /**
-       * Created At
-       * Format: date-time
-       * @description The time the item was created
-       */
-      created_at: string;
-      /**
-       * Updated At
-       * Format: date-time
-       * @description The time the item was last updated
-       */
-      updated_at: string;
-      /**
-       * Message
-       * @description Error message
-       */
-      message?: string | null;
-      /**
-       * Payload
-       * @description Payload of the triggering event
-       */
-      payload?: {
-        [key: string]: unknown;
-      } | null;
-      /**
-       * Environment
-       * @description Application environment setting
-       */
-      environment?: string | null;
-      /** @description Source of the pipeline */
-      source_uri?: components["schemas"]["URI"] | null;
-      /** @description Destination of the pipeline */
-      destination_uri?: components["schemas"]["URI"] | null;
-      /** @description Status of the event */
-      status?: components["schemas"]["OrchestrationEventStatusType"] | null;
-      /**
-       * Pipeline Id
-       * @description Pipeline ID
-       */
-      pipeline_id?: string | null;
-      /**
-       * Version Hash
-       * @description Extractor version hash used for this run
-       */
-      version_hash?: string | null;
-      /**
-       * Retry Of Id
-       * @description ID of the original event this is a retry of
-       */
-      retry_of_id?: string | null;
-    };
-    /** OrchestrationEventRead */
-    "OrchestrationEventRead-Output": {
+    OrchestrationEventRead: {
       /**
        * Id
        * Format: uuid4
@@ -6975,7 +6923,7 @@ export interface components {
        * @description Events in the pipeline
        * @default []
        */
-      orchestration_events?: components["schemas"]["OrchestrationEventRead-Output"][];
+      orchestration_events?: components["schemas"]["OrchestrationEventRead"][];
       /**
        * Run Count
        * @description Total number of runs
@@ -7023,7 +6971,7 @@ export interface components {
        * @description Events in the pipeline
        * @default []
        */
-      events?: components["schemas"]["OrchestrationEventRead-Input"][];
+      events?: components["schemas"]["OrchestrationEventRead"][];
     };
     /** PaginatedResponse[ActionItemDetailRead] */
     PaginatedResponse_ActionItemDetailRead_: {
@@ -7499,7 +7447,7 @@ export interface components {
        * Items
        * @description Paginated items
        */
-      items?: components["schemas"]["OrchestrationEventRead-Output"][];
+      items?: components["schemas"]["OrchestrationEventRead"][];
       /**
        * Total
        * @description Total number of matching records
@@ -8563,6 +8511,20 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Dev Bootstrap Superuser
+   * @description Mint a JWT for the configured bootstrap superuser in DEV/PYTEST only.
+   */
+  dev_bootstrap_superuser_api_v1_auth_jwt_dev_bootstrap_superuser_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["BearerResponse"];
         };
       };
     };
@@ -9941,7 +9903,7 @@ export interface operations {
       /** @description Successful Response */
       202: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+          "application/json": components["schemas"]["OrchestrationEventRead"];
         };
       };
       /** @description Validation Error */
@@ -9989,7 +9951,7 @@ export interface operations {
       /** @description Successful Response */
       202: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+          "application/json": components["schemas"]["OrchestrationEventRead"];
         };
       };
       /** @description Validation Error */
@@ -10016,7 +9978,7 @@ export interface operations {
       /** @description Successful Response */
       202: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+          "application/json": components["schemas"]["OrchestrationEventRead"];
         };
       };
       /** @description Validation Error */
@@ -10041,7 +10003,7 @@ export interface operations {
       /** @description Successful Response */
       202: {
         content: {
-          "application/json": components["schemas"]["OrchestrationEventRead-Output"];
+          "application/json": components["schemas"]["OrchestrationEventRead"];
         };
       };
       /** @description Validation Error */

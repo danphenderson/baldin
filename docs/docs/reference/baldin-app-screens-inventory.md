@@ -29,7 +29,10 @@ Use [Baldin Library Buildout Ledger](./baldin-library-buildout-ledger.md) only f
 - `2026-04-14`: the `Applications board` Wave 2 matrix was ported into `Baldin-App-Screens` with current Figma coverage for loading, empty board, active lanes, terminal lanes, overdue reminders, move menu, and delete confirm.
 - `2026-04-14`: the remaining Wave 2 inventory set was ported into `Baldin-App-Screens` with current Figma coverage for `Application detail`, `Conversation detail`, and `Profile MFA states`.
 - `2026-04-14`: the remaining non-blocked Wave 3 inventory set was ported into `Baldin-App-Screens` with current Figma coverage for `Login states`, `Login MFA challenge states`, `Register states`, and `Extractor workflow states`.
-- Privileged workflow routes remain in scope, but they are only counted as fully captured when a superuser browser session is attached.
+- `2026-04-14`: the dedicated Admin SPA landed at `/admin/*`. The legacy `/workflows/db-management`, `/workflows/review`, and `/workflows/crawlers` routes now act as browser handoff entries into the admin app rather than canonical privileged screens.
+- `2026-04-14`: admin login and access-denied states were added to the active app-screen inventory from repo-truth review. The login flow reuses the shipped auth shell, while the access-denied state remains feature-owned inside the dedicated admin app, so this pass still does not open a new shared-surface migration lane.
+- `2026-04-14`: a live superuser browser session was attached to the dedicated Admin SPA, and the canonical privileged-route baselines were captured into `Baldin-App-Screens` at [node 184:4929](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=184-4929), [node 192:4929](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=192-4929), and [node 201:4929](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=201-4929) for `DB management workflow`, `Review queue workflow`, and `Crawlers workflow`.
+- Privileged workflow routes remain in scope, and this pass now anchors them with live superuser capture rather than leaving them tooling blocked.
 
 ## Wave 1: Mandatory Harness-Backed Inventory
 
@@ -52,14 +55,16 @@ Use [Baldin Library Buildout Ledger](./baldin-library-buildout-ledger.md) only f
 | `Conversation detail` | `/network/messages/:conversationId` | `App-screen inventory` | Direct shipped-route review from `app-routes.tsx` and `conversation-detail-page.tsx` | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | Current Figma coverage is now present for direct thread, group thread with participants, empty thread, loading, error, edit message, and delete confirm states. Read-state behavior remains route logic, not a separate rendered frame. |
 | `Profile MFA states` | `/me`: disabled baseline, recovery notice, setup QR and verify, enabled baseline, disable-confirmation dialog | `App-screen inventory` | Direct shipped-route review from `ProfilePage.tsx` and `mfa-setup-card.tsx`; Wave 1 harness tie-back exists only for the parent `/me` shell | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | Current Figma coverage is now present for disabled, recovery notice dialog, setup verify, enabled, disable confirm, and loading states. These remain valid app-screen inventory without MFA harness backing, so the reproducibility gap stays documented rather than opening harness work. |
 
-## Wave 3: Privileged Or Harder-Access Direct Review
+## Wave 3: Privileged, Admin, Or Harder-Access Direct Review
 
 | Surface | Route/state | Lane | Evidence source | Figma target | Status | Handoff bucket | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `Admin login states` | `/admin/login`: baseline, resolving authenticated session, and redirect when a superuser is already signed in | `App-screen inventory` | Direct shipped-route review from `admin-routes.tsx`, `login.tsx`, and `frontend/test/admin/admin-routes.test.tsx` | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | Repo-truth review confirms the admin-specific auth-shell baseline, the full-screen resolving spinner while an authenticated user is still loading, and the direct superuser redirect to `/admin/db-management`. Keep it in the app-screen lane before any shared-surface promotion work. |
+| `Admin access denied state` | `/admin/db-management` or `/admin/review` with an authenticated non-superuser session | `App-screen inventory` | Direct shipped-route review from `admin-routes.tsx`, `admin-layout.tsx`, and `frontend/test/admin/admin-routes.test.tsx` | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | This is explicit superuser access-state inventory, not a new shared primitive candidate. The state clears the unauthorized admin session, shows the dedicated access-denied copy, and offers both `Sign in again` and `Open product app` exits. |
 | `Extractor workflow` | `/workflows/extractors` | `App-screen inventory` | Direct shipped-route review from `app-routes.tsx` and `extractor.tsx`; existing `ReadonlyField` library evidence can support structure review | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | Current Figma coverage is now present for loading, selected detail, create extractor dialog, run extractor dialog, run result, create example dialog, and version history expanded states. This remains an authenticated-user workflow and was ported through repo-truth review plus Figma validation rather than harness expansion. |
-| `DB management workflow` | `/workflows/db-management` | `App-screen inventory` | Superuser-only direct review from `app-routes.tsx`, `db-management.tsx`, and backend superuser routing | `Baldin-App-Screens` | `blocked` | `tooling blocked but design-valid` | Repo truth is clear, but this sprint did not attach a live superuser session. Keep it in inventory and treat final capture as blocked by access. |
-| `Review queue workflow` | `/workflows/review` | `App-screen inventory` | Superuser-only direct review from `app-routes.tsx`, `review-queue.tsx`, and backend superuser routing | `Baldin-App-Screens` | `blocked` | `tooling blocked but design-valid` | Repo truth is clear, but this sprint did not attach a live superuser session. |
-| `Crawlers workflow` | `/workflows/crawlers` | `App-screen inventory` | Superuser-only direct review from `app-routes.tsx`, `crawlers.tsx`, and backend superuser routing | `Baldin-App-Screens` | `blocked` | `tooling blocked but design-valid` | Existing library-dialog evidence helps with structure, but final screen capture remains access-blocked in this sprint. |
+| `DB management workflow` | `/admin/db-management` with legacy `/workflows/db-management` browser handoff | `App-screen inventory` | Live superuser browser capture on `2026-04-14` plus direct shipped-route review from `app-routes.tsx`, `admin-routes.tsx`, `admin-layout.tsx`, `db-management.tsx`, and backend superuser routing | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | The dedicated Admin SPA is the canonical privileged route, and the legacy `/workflows/db-management` entry is only a browser handoff into it. Live capture now anchors the canonical DB-management baseline at [node 184:4929](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=184-4929); repo-truth review continues to carry the broader loading, warning, preview, and confirm-dialog matrix without reopening harness work. |
+| `Review queue workflow` | `/admin/review` with legacy `/workflows/review` browser handoff | `App-screen inventory` | Live superuser browser capture on `2026-04-14` plus direct shipped-route review from `app-routes.tsx`, `admin-routes.tsx`, `admin-layout.tsx`, `review-queue.tsx`, and backend superuser routing | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | The dedicated Admin SPA is the canonical privileged route, and the legacy `/workflows/review` entry is only a browser handoff into it. Live capture now anchors the current empty-queue baseline at [node 192:4929](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=192-4929); repo-truth review still carries the loading, populated queue, expanded detail row, batch toolbar, and snackbar matrix as route evidence. |
+| `Crawlers workflow` | `/admin/crawlers` with legacy `/workflows/crawlers` browser handoff | `App-screen inventory` | Live superuser browser capture on `2026-04-14` plus direct shipped-route review from `app-routes.tsx`, `admin-routes.tsx`, `admin-layout.tsx`, `crawlers.tsx`, and backend superuser routing | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | The dedicated Admin SPA is the canonical privileged route, and the legacy `/workflows/crawlers` entry is only a browser handoff into it. Live capture now anchors the populated pipeline baseline at [node 201:4929](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=201-4929); repo-truth review still carries the loading skeleton, expanded run history, dialogs, and failed or paused run controls inline in run history. |
 | `Login baseline` | `/login` | `App-screen inventory` | Direct shipped-route review from `app-routes.tsx` and `login.tsx` | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | Current Figma coverage is now present for baseline, error, and loading states. The baseline auth shell remains separate from the MFA challenge. |
 | `Register baseline` | `/register` | `App-screen inventory` | Direct shipped-route review from `app-routes.tsx` and `register.tsx` | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | Current Figma coverage is now present for baseline, password rules, validation error, and loading states. These remain auth-specific inventory, not promotion candidates. |
 | `Login MFA challenge` | `/login` when `mfa_required` | `App-screen inventory` | Direct shipped-route review from `login.tsx`, `service/auth.tsx`, and the auth/MFA backend contract | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | Current Figma coverage is now present for challenge, error, and loading states. The separate MFA verification step remains distinct from the baseline login form per the auth contract. |
@@ -82,6 +87,13 @@ Only review promotion at closeout. A surface can move into `Promotion candidate`
 
 If a surface clears that bar, create a separate follow-on repo-promotion item. Do not expand this sprint into code sync, new `.figma.ts` mappings, or shared-system implementation.
 
+Current closeout result for this pass:
+
+- `Promotion candidate` remains empty.
+- `Admin login states` stay `screen-inventory only` because they reuse `AuthPanel`, `InlineFeedback`, and existing auth-shell primitives rather than proving a new shared abstraction.
+- `Admin access denied`, `AdminLayout`, and the remaining privileged admin workflows stay feature-owned because their semantics are bound to superuser authorization and are only proven inside the dedicated Admin SPA.
+- The privileged admin workflows stay `screen-inventory only` after live superuser capture; none of them cleared the policy bar for repo promotion in this pass.
+
 ## Handoff Buckets
 
 Use exactly one closeout bucket per item:
@@ -98,13 +110,16 @@ Use exactly one closeout bucket per item:
 - The current routed/harness split is coherent. `/applications`, `/me`, `/network/messages`, `/leads`, and `/apply` align between `app-routes.tsx` and `figma-wave1.tsx`.
 - The harness accepts `state=loading` for aspiration screens, but [local-development.md](../engineering/local-development.md) had omitted that state before this sprint execution pass.
 - The Wave 1 targeted Playwright suite exposed one stale expectation in the aspirations companies `no-signal` copy. The actual harness copy is now treated as the source of truth for this sprint review, and the verification baseline was updated in the same pass.
-- No Wave 2 or Wave 3 surface cleared the current policy bar for `Promotion candidate`.
+- The dedicated Admin SPA is now the canonical privileged screen surface. `/workflows/db-management`, `/workflows/review`, and `/workflows/crawlers` remain product-app handoff entries only.
+- The app route tests already lock the three legacy admin workflow entries into browser handoffs even when the viewer is logged out, so they should not be inventoried as first-class product-app screens.
+- This pass revalidated the privileged admin state matrices from repo truth and attached a live superuser browser session, so the three privileged admin routes now have anchored Figma coverage rather than remaining `tooling blocked but design-valid`.
+- No current Wave 2 or Wave 3 surface, including the admin SPA states reviewed in this pass, cleared the current policy bar for `Promotion candidate`.
 
 ## Next Owners
 
 | Owner | Immediate responsibility | Exit condition |
 | --- | --- | --- |
-| `baldin_frontend` | Port the reviewed product flows into `Baldin-App-Screens`, starting with all Wave 1 surfaces, then Wave 2 direct-review surfaces, then the non-blocked Wave 3 auth and extractor surfaces. | Every `screen-inventory only` item has current Figma coverage with evidence tied back to this ledger. |
+| `baldin_frontend` | Port the reviewed product flows into `Baldin-App-Screens`, starting with all Wave 1 surfaces, then Wave 2 direct-review surfaces, then the admin login and access states, then the non-blocked Wave 3 auth and extractor surfaces. | Every `screen-inventory only` item, including the admin SPA entry states, has current Figma coverage with evidence tied back to this ledger. |
 | `baldin_full_stack_architect` | Review completed Figma surfaces against [Design System Catalog](./design-system-catalog.md) and [Design System Governance](../engineering/design-system-governance.md), then decide which surfaces stay feature-owned and which become closeout promotion candidates. | The closeout list cleanly separates `ready for repo promotion`, `library-only for now`, `screen-inventory only`, and `tooling blocked but design-valid`. |
 | `baldin_frontend` | Build or refine `Baldin-Library` only from promoted shared surfaces with clear cross-route evidence. | Every promoted Figma surface has a neutral component contract, stable semantics, and more than one shipped consumer. |
 | `baldin_frontend` | Integrate promoted design-system surfaces into `frontend/src/design-system/*` as React TypeScript code, then migrate the relevant route families onto those shared primitives or patterns. | The promoted surfaces ship in code with docs, tests, and route adoption updates. |
@@ -112,16 +127,16 @@ Use exactly one closeout bucket per item:
 ## Next Steps
 
 1. Finish the Figma port of the Baldin prototype by capturing every reviewed `screen-inventory only` item in `Baldin-App-Screens`.
-   Start with the verified Wave 1 harness-backed states, then complete Wave 2 direct-review states, then finish the non-blocked Wave 3 auth and extractor states.
+   Start with the verified Wave 1 harness-backed states, then complete Wave 2 direct-review states, then port the admin login and access-denied states, then finish the non-blocked Wave 3 auth and extractor states.
 
 2. Run a Figma-only shared-surface review after the app-screen port is current.
-   Compare repeated structures across `applications`, `messages`, `profile`, `auth`, and workflow screens. Move a surface toward `Baldin-Library` only if it is domain-neutral, stable, and justified by multiple shipped consumers.
+   Compare repeated structures across `applications`, `messages`, `profile`, `auth`, and admin or workflow screens. Move a surface toward `Baldin-Library` only if it is domain-neutral, stable, and justified by multiple shipped consumers.
 
 3. Build out the production-grade Figma design system from proven shared surfaces, not from speculative abstractions.
    Expand `Baldin-Library` around tokens, primitives, and patterns that are already evidenced by the ported app screens. Keep `SecondaryNavBar` and similar shell studies library-only until promotion review proves otherwise.
 
 4. Run a UX polish pass after the Figma port and the initial library buildout are coherent.
-   Focus on consistency, hierarchy, empty/loading/error behavior, auth friction, message and application detail clarity, and privileged workflow usability. Treat polish as a Figma-first pass before code integration.
+   Focus on consistency, hierarchy, empty/loading/error behavior, auth friction, message and application detail clarity, and privileged admin workflow usability. Treat polish as a Figma-first pass before code integration.
 
 5. Integrate the promoted design system into the repo as React TypeScript code.
    Implement only the surfaces that passed promotion review in `frontend/src/design-system/*`, update the catalog and governance docs in the same PR, add the smallest useful tests, then migrate the consuming route families.

@@ -229,8 +229,8 @@ close_reason_for_disposition() {
 project_field_options() {
   case "$1" in
     Status) echo "Ready,Needs Decision,Needs Verification,Close Candidate" ;;
-    Surface) echo "backend,frontend,docs,etl,devops,cross-stack" ;;
-    Owner) echo "Baldin Backend Agent,Baldin Frontend Agent,Baldin Lead Full-Stack Architect,Baldin Project Manager" ;;
+    Surface) echo "backend,frontend,design,docs,etl,devops,cross-stack" ;;
+    Owner) echo "Baldin Backend Agent,Baldin Frontend Agent,Baldin Design Lead Agent,Baldin Lead Full-Stack Architect,Baldin Project Manager" ;;
     Workstream) echo "Quality Gate,Runtime Foundations,Runtime Hardening,Security Hardening,Availability Hardening,Frontend UX,Docs and Onboarding,Observability,Architecture Decisions,Developer Experience,Verification,Backlog Cleanup,Runtime Consistency,ETL Reliability" ;;
     Dispatch\ Ready) echo "Yes,No" ;;
     Phase) echo "Phase 2 - Integration Gate,Phase 5 - Runtime Blockers,Phase 6 - Minimum Safety Controls,Stretch - Feature Completeness,Decision Gate" ;;
@@ -2254,7 +2254,7 @@ EOF
 
 - Status: Ready, Needs Decision, Needs Verification, Close Candidate
 - Surface: backend, frontend, docs, etl, devops, cross-stack
-- Owner: Baldin Backend Agent, Baldin Frontend Agent, Baldin Lead Full-Stack Architect, Baldin Project Manager
+- Owner: Baldin Backend Agent, Baldin Frontend Agent, Baldin Design Lead Agent, Baldin Lead Full-Stack Architect, Baldin Project Manager
 - Workstream: Quality Gate, Runtime Foundations, Runtime Hardening, Security Hardening, Availability Hardening, Frontend UX, Docs and Onboarding, Observability, Architecture Decisions, Developer Experience, Verification
 - Dispatch Ready: Yes, No
 - Phase: Phase 2 - Integration Gate, Phase 5 - Runtime Blockers, Phase 6 - Minimum Safety Controls, Stretch - Feature Completeness, Decision Gate

@@ -24,7 +24,7 @@ applyTo: AGENTS.md, .codex/config.toml, .codex/agents/*.toml, .github/copilot-in
 - Keep Baldin's Figma guidance aligned across `AGENTS.md`, `.github/**`, and local-development docs: assume a Professional-plan workflow without a Dev-seat dependency, prefer the browser harness plus Figma MCP or basic inspection, and treat Code Connect publish as optional.
 - Use keyword-rich descriptions that say "Use when..." and include the actual trigger phrases a user or parent agent would search for.
 - Favor fewer, stronger prompts. If a prompt is routing, validation, review, or synthesis, keep it single-purpose and stop when ownership should change.
-- Favor fewer, stronger agents. Only create a new agent if the existing Backend, Frontend, Lead Full-Stack Architect, and Project Manager split cannot own the work cleanly.
+- Favor fewer, stronger agents. Only create a new agent if the existing Backend, Frontend, Design Lead, Lead Full-Stack Architect, and Project Manager split cannot own the work cleanly.
 - Do not force a one-to-one Codex equivalent for every Copilot prompt file. Prefer `AGENTS.md`, Codex `/plan`, and named custom agents when that is the cleaner translation.
 - Use least-privilege tools. Include only the aliases or specific tools the agent truly needs. If a Copilot agent declares `agents:`, include the `agent` tool alias. Keep Codex custom agents narrow and prefer read-only sandboxes for planner or scout roles.
 - Keep prompts, agents, skills, Codex agent files, and docs aligned. When you materially change the operating model, update `docs/docs/engineering/copilot-prompt-cookbook.md` and `docs/docs/engineering/copilot-prompt-examples.md` or explain why no doc change is needed.

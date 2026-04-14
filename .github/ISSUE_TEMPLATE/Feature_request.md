@@ -20,6 +20,7 @@ A clear and concise description of any alternative solutions or features you've 
 - [ ] `backend/app`
 - [ ] `backend/etl`
 - [ ] `frontend/src`
+- [ ] Figma, browser harness, or design-system metadata
 - [ ] API contract or generated schema (`openapi.json`, `frontend/src/schema.d.ts`)
 - [ ] Docs
 - [ ] Scripts, CI, or `docker-compose`
@@ -32,6 +33,7 @@ Best guess only. Use `Unknown` if you are not sure.
 
 - [ ] Baldin Backend Agent
 - [ ] Baldin Frontend Agent
+- [ ] Baldin Design Lead Agent
 - [ ] Baldin Lead Full-Stack Architect
 - [ ] Baldin Project Manager
 - [ ] Unknown

@@ -19,7 +19,7 @@ Use `AGENTS.md` as the shared repo baseline. This file preserves the same expect
 
 ## Agent Routing Bias
 
-- Prefer direct execution when ownership is obvious: backend-only -> Baldin Backend Agent, frontend-only -> Baldin Frontend Agent, real cross-stack work -> Baldin Lead Full-Stack Architect.
+- Prefer direct execution when ownership is obvious: backend-only -> Baldin Backend Agent, frontend-only code work -> Baldin Frontend Agent, Figma-first design work -> Baldin Design Lead Agent, real cross-stack work -> Baldin Lead Full-Stack Architect.
 - Use Baldin Project Manager only when ownership, scope, or sequencing is genuinely unclear.
 - Use Explore only for read-only scouting before handing work to a real owner.
 

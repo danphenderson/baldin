@@ -30,6 +30,7 @@ This document inventories Baldin's shared agentic customization surface across C
 - User-scoped or globally configured Codex MCP servers can still appear alongside the repo-local mirror on an individual machine. They are outside this repo-owned contract.
 - Baldin's repo baseline assumes a Professional-plan Figma workflow without a Dev-seat dependency. Use `figma` for Figma MCP design context and Figma-side tools when user auth is available, and use `webdev` plus the local browser harness for Playwright automation and harness-driven review.
 - Figma auth, account linkage, and desktop enablement remain user-scoped prerequisites rather than repo-managed setup logic.
+- Privileged admin app capture auth is repo-managed through `/browser-harness/admin-session.html?next=/admin/...`, which attaches the configured local superuser session before `/admin/*` review.
 - `frontend/figma.config.json` and `frontend/src/design-system/**/*.figma.ts` are optional local Figma metadata for future reuse. They must not become a required Code Connect publish gate for routine repo work.
 
 ### Instructions (2)
@@ -38,12 +39,13 @@ This document inventories Baldin's shared agentic customization surface across C
 | `baldin-project.instructions.md` | Runtime, delivery, docs, contracts, release-path |
 | `baldin-agent-customization.instructions.md` | Agentic instructions, prompts, agents, skills, `AGENTS.md`, and Codex custom-agent alignment |
 
-### Copilot Agents (4)
+### Copilot Agents (5)
 | Agent | Role |
 |-------|------|
 | Baldin Project Manager | Coordination, delegation, workstream planning |
 | Baldin Backend Agent | Backend implementation in `./backend` |
 | Baldin Frontend Agent | Frontend implementation in `./frontend` |
+| Baldin Design Lead Agent | Figma-first design work, browser-harness capture, and design-to-code handoff |
 | Baldin Lead Full-Stack Architect | Cross-stack architecture and integration |
 
 ### Copilot Prompts (14)
@@ -63,7 +65,7 @@ Codex uses `AGENTS.md` plus `.codex/agents/*.toml` rather than a mirrored prompt
 
 - **Shared rule**: prefer `AGENTS.md` for durable repo-wide guidance that both Copilot and Codex should follow.
 - **New Copilot prompt**: create under `prompts/`, keep it single-purpose, and add a cookbook entry in `docs/docs/engineering/copilot-prompt-cookbook.md`.
-- **New Copilot agent**: only if the current four-agent split cannot own the work cleanly. Requires CODEOWNERS review.
+- **New Copilot agent**: only if the current owner split cannot own the work cleanly. Requires CODEOWNERS review.
 - **New Codex custom agent**: create under `.codex/agents/` only when the current owner model cannot be expressed cleanly through the existing custom agents plus Codex planning.
 - **New skill**: for repeatable multi-step workflows that benefit from tested instructions.
 - **New instruction**: only for a genuinely new scoping dimension not covered by existing files.

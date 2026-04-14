@@ -6,3 +6,6 @@ max_depth = 1
 command = "npx"
 args = ["-y", "@playwright/mcp@0.0.70"]
 cwd = "."
+
+[mcp_servers.webdev.tools.browser_navigate]
+approval_mode = "approve"

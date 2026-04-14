@@ -68,6 +68,15 @@ export const mfaLoginVerify = async (mfaToken: string, code: string): Promise<st
   return data.access_token;
 };
 
+export const devBootstrapSuperuserSession = async (): Promise<string> => {
+  const response = await fetchApi(`${BASE_URL}/jwt/dev-bootstrap-superuser`, {
+    method: "POST",
+    headers: JSON_HEADERS,
+  });
+  const data = await response.json();
+  return data.access_token;
+};
+
 // ---------------------------------------------------------------------------
 // MFA management
 // ---------------------------------------------------------------------------

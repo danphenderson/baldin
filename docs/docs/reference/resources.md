@@ -20,11 +20,12 @@ These links work when the local Docker Compose stack is running (`docker-compose
 | Resource | URL | Description |
 |----------|-----|-------------|
 | **Frontend** | [http://localhost:5173](http://localhost:5173) | React/Vite application UI |
+| **Admin SPA** | [http://localhost:5173/admin/](http://localhost:5173/admin/) | Dedicated superuser admin app running inside the frontend service |
 | **Product docs** | [http://localhost:3001/baldin/docs](http://localhost:3001/baldin/docs) | Docusaurus product documentation |
 | **Swagger UI** | [http://localhost:8004/docs](http://localhost:8004/docs) | Interactive API explorer |
 | **ReDoc** | [http://localhost:8004/redoc](http://localhost:8004/redoc) | Readable API reference |
 | **OpenAPI JSON** | [http://localhost:8004/openapi.json](http://localhost:8004/openapi.json) | Machine-readable API spec |
-| **Admin UI** | [http://localhost:8004/admin](http://localhost:8004/admin) | Starlette Admin interface (superuser credentials required) |
+| **Legacy Admin UI** | [http://localhost:8004/admin](http://localhost:8004/admin) | Starlette Admin fallback interface (superuser credentials required) |
 
 ## Repository Documentation
 

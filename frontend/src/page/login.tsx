@@ -9,7 +9,21 @@ import { login, mfaLoginVerify } from '../service/auth';
 import { UserContext } from '../context/user-context';
 import { AuthPanel, InlineFeedback } from '../design-system';
 
-const LoginPage: React.FC = () => {
+interface LoginPageProps {
+  description?: string;
+  footer?: React.ReactNode;
+  icon?: React.ReactNode;
+  postLoginPath?: string;
+  title?: string;
+}
+
+const LoginPage: React.FC<LoginPageProps> = ({
+  description = 'Sign in to your employment autopilot',
+  footer,
+  icon = <LogoIcon />,
+  postLoginPath = '/',
+  title = 'Welcome back',
+}) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { setToken } = useContext(UserContext);
@@ -33,7 +47,7 @@ const LoginPage: React.FC = () => {
         setMfaToken(result.mfa_token);
       } else if (result.access_token) {
         setToken(result.access_token);
-        navigate('/');
+        navigate(postLoginPath);
       }
     } catch (err: any) {
       setError(err.message || 'Invalid credentials');
@@ -50,7 +64,7 @@ const LoginPage: React.FC = () => {
     try {
       const accessToken = await mfaLoginVerify(mfaToken, mfaCode);
       setToken(accessToken);
-      navigate('/');
+      navigate(postLoginPath);
     } catch (err: any) {
       setError(err.message || 'Invalid verification code');
     } finally {
@@ -117,11 +131,11 @@ const LoginPage: React.FC = () => {
 
   return (
     <AuthPanel
-      icon={<LogoIcon />}
-      title="Welcome back"
-      description="Sign in to your employment autopilot"
+      icon={icon}
+      title={title}
+      description={description}
       maxWidth={420}
-      footer={(
+      footer={footer ?? (
         <Box sx={{ color: 'text.secondary', typography: 'body2' }}>
           Don't have an account?{' '}
           <Link component={RouterLink} to="/register" sx={{ fontWeight: 600, color: theme.palette.primary.main }}>

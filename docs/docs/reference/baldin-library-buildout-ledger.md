@@ -38,4 +38,8 @@ Use [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) for produc
 
 The current shipped shared-surface mapping set is complete. Future follow-on work should only add new `frontend/src/design-system/*` mapping files when additional shared primitives or patterns are promoted into the repo-backed catalog.
 
+`Baldin-Library` foundations now document the active token groups directly in the file. The live library includes `Baldin Colors`, `Baldin Numbers`, `Baldin Typography`, and `Baldin Elevation`, with the `Foundations` page summarizing the collections alongside the existing text and effect styles.
+
+`StatusChip` now reflects the shipped shared contract in the live library: `Tone` supports `Neutral`, `Primary`, `Secondary`, `Success`, `Warning`, `Danger`, and `Info`, and `Variant` supports `Soft`, `Outline`, and `Solid` while preserving the existing canonical node URL in the repo mapping catalog.
+
 `SecondaryNavBar` remains `library-only for now` in this slice. Product-flow coverage for `/applications`, `/applications/board`, `/leads`, `/workflows`, and related shell stories belongs in [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) until a closeout promotion review proves otherwise.

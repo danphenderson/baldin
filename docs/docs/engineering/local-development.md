@@ -208,6 +208,7 @@ npm --prefix docs run start
 | URL | What |
 |-----|------|
 | http://127.0.0.1:5173 | Frontend |
+| http://127.0.0.1:5173/admin/ | Admin SPA |
 | http://127.0.0.1:5173/browser-harness/figma-wave1.html | Figma browser harness |
 | http://localhost:3001/baldin/docs | Product docs |
 | http://localhost:8004 | API root |
@@ -215,4 +216,4 @@ npm --prefix docs run start
 | http://localhost:8004/ready | API readiness |
 | http://localhost:8004/docs | Swagger UI |
 | http://localhost:8004/redoc | ReDoc |
-| http://localhost:8004/admin | Starlette Admin |
+| http://localhost:8004/admin | Legacy Starlette Admin |

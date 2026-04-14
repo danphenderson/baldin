@@ -73,11 +73,12 @@ If you hit local schema drift after pulling breaking model changes, reset the de
 
 5. Open the local services:
    - Frontend: [http://localhost:5173](http://localhost:5173)
+   - Admin SPA: [http://localhost:5173/admin/](http://localhost:5173/admin/) using the bootstrapped superuser email and password from `FIRST_SUPERUSER_EMAIL` and `FIRST_SUPERUSER_PASSWORD`
    - Product docs: [http://localhost:3001/baldin/docs](http://localhost:3001/baldin/docs)
    - API: [http://localhost:8004](http://localhost:8004)
    - Swagger UI: [http://localhost:8004/docs](http://localhost:8004/docs)
    - ReDoc: [http://localhost:8004/redoc](http://localhost:8004/redoc)
-   - Admin: [http://localhost:8004/admin](http://localhost:8004/admin) using the bootstrapped superuser email and password from `FIRST_SUPERUSER_EMAIL` and `FIRST_SUPERUSER_PASSWORD`
+   - Legacy Admin: [http://localhost:8004/admin](http://localhost:8004/admin) using the same bootstrapped superuser credentials as a backend fallback surface
 
 The product docs now run inside the same Compose stack and are available at [http://localhost:3001/baldin/docs](http://localhost:3001/baldin/docs).
 
@@ -93,7 +94,7 @@ For deeper setup, service topology, and environment details, use [docs/docs/gett
 | `etl-service` | Internal ETL crawler execution boundary |
 | `web` | FastAPI backend, API, and admin surface |
 | `crawler-worker` | Background worker consuming Redis jobs |
-| `frontend` | React/Vite frontend |
+| `frontend` | React/Vite frontend plus the dedicated admin SPA at `/admin/` |
 | `docs` | Docusaurus product documentation |
 
 ## Contributing

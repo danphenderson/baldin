@@ -60,13 +60,14 @@ Optional local toolchain if you want to work outside containers:
    | Service | URL |
    |---------|-----|
    | Frontend | [http://localhost:5173](http://localhost:5173) |
+   | Admin SPA | [http://localhost:5173/admin/](http://localhost:5173/admin/) |
    | Product docs | [http://localhost:3001/baldin/docs](http://localhost:3001/baldin/docs) |
    | API | [http://localhost:8004](http://localhost:8004) |
    | Swagger UI | [http://localhost:8004/docs](http://localhost:8004/docs) |
    | ReDoc | [http://localhost:8004/redoc](http://localhost:8004/redoc) |
-   | Admin | [http://localhost:8004/admin](http://localhost:8004/admin) |
+   | Legacy Admin | [http://localhost:8004/admin](http://localhost:8004/admin) |
 
-   The Admin UI expects the email and password from `FIRST_SUPERUSER_EMAIL` / `FIRST_SUPERUSER_PASSWORD`.
+   The Admin SPA and the legacy backend admin both expect the email and password from `FIRST_SUPERUSER_EMAIL` / `FIRST_SUPERUSER_PASSWORD`.
 
 ## Resetting the Local Database
 
@@ -88,7 +89,7 @@ The backend starts in `DEV` mode and:
 2. Bootstraps the default superuser from `backend/.env`.
 3. Starts background helpers according to runtime settings such as `CRAWLER_SCHEDULER_ENABLED` and `RUN_REAPER_ENABLED`.
 
-The admin UI uses its own browser session under `/admin` and expects email-based sign-in.
+The Admin SPA lives under the frontend service at `/admin/` and reuses the normal JWT + MFA sign-in flow with a superuser check. The legacy Starlette Admin UI remains available at `http://localhost:8004/admin` as a backend fallback surface with its own browser session.
 
 ## Start Here Next
 

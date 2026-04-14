@@ -33,6 +33,7 @@ import {
   type NavigationItem,
   type NavigationLinkItem,
 } from '../route/navigation';
+import { navigateInBrowser } from '../util/browser-navigation';
 
 export interface CommandPaletteVisibilityContext {
   isSuperuser: boolean;
@@ -157,7 +158,7 @@ function buildNavigationItems(navigate: (path: string) => void): CommandPaletteI
           item.label,
           item.path,
           secondaryPathIcons[item.path] ?? <BrandIcon fontSize="small" />,
-          navigate,
+          item.navigationMode === 'browser' ? navigateInBrowser : navigate,
           item.paletteKeywords ?? [],
           item.superuserOnly ?? false,
         ),

@@ -5,6 +5,11 @@ import { MemoryRouter } from 'react-router-dom';
 import { UserContext } from '@/context/user-context';
 import { ToolbarHeaderContext } from '@/layout/toolbar-header-context';
 import AppRoutes from '@/route/app-routes';
+import { navigateInBrowser } from '@/util/browser-navigation';
+
+vi.mock('@/util/browser-navigation', () => ({
+  navigateInBrowser: vi.fn(),
+}));
 
 /* ── Mock all lazy page imports to lightweight stubs ───────────────── */
 
@@ -307,14 +312,25 @@ describe('AppRoutes', () => {
     expect(await screen.findByTestId('page-settings-subscription')).toBeInTheDocument();
   });
 
-  it('renders db-management for superusers on /workflows/db-management', async () => {
-    renderRoutes('/workflows/db-management', { token: 'test-token', loading: false, isSuperuser: true });
-    expect(await screen.findByTestId('page-db-management')).toBeInTheDocument();
+  it('hands /workflows/db-management off to the admin SPA even when logged out', async () => {
+    renderRoutes('/workflows/db-management', { token: null, loading: false });
+    await waitFor(() => {
+      expect(navigateInBrowser).toHaveBeenCalledWith('/admin/db-management', { replace: true });
+    });
   });
 
-  it('redirects non-superusers away from /workflows/db-management', async () => {
-    renderRoutes('/workflows/db-management');
-    expect(await screen.findByTestId('page-pipelines')).toBeInTheDocument();
+  it('hands /workflows/review off to the admin SPA even when logged out', async () => {
+    renderRoutes('/workflows/review', { token: null, loading: false });
+    await waitFor(() => {
+      expect(navigateInBrowser).toHaveBeenCalledWith('/admin/review', { replace: true });
+    });
+  });
+
+  it('hands /workflows/crawlers off to the admin SPA even when logged out', async () => {
+    renderRoutes('/workflows/crawlers', { token: null, loading: false });
+    await waitFor(() => {
+      expect(navigateInBrowser).toHaveBeenCalledWith('/admin/crawlers', { replace: true });
+    });
   });
 
   /* ── Legacy redirects ── */

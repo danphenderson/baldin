@@ -18,6 +18,8 @@ export interface SecondaryNavItem {
   path: string;
   /** When true the item is only visible to superusers. */
   superuserOnly?: boolean;
+  /** Use a full browser navigation instead of the product router. */
+  navigationMode?: 'browser' | 'router';
   /** Optional aliases used by the global command palette. */
   paletteKeywords?: string[];
 }
@@ -76,9 +78,13 @@ export const secondaryNavByGroup: Record<string, SecondaryNavItem[]> = {
   '/workflows': [
     { label: 'Pipelines', path: '/workflows', paletteKeywords: ['automation'] },
     { label: 'Extractors', path: '/workflows/extractors', paletteKeywords: ['parser', 'schema'] },
-    { label: 'DB Management', path: '/workflows/db-management', superuserOnly: true, paletteKeywords: ['database', 'admin', 'schema', 'users'] },
-    { label: 'Review Queue', path: '/workflows/review', superuserOnly: true },
-    { label: 'Crawlers', path: '/workflows/crawlers', superuserOnly: true },
+    {
+      label: 'Admin Console',
+      path: '/admin/',
+      superuserOnly: true,
+      navigationMode: 'browser',
+      paletteKeywords: ['database', 'admin', 'schema', 'users', 'review', 'crawlers'],
+    },
   ],
 };
 

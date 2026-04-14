@@ -13,8 +13,14 @@ import WorkflowsGroupLayout from '../layout/workflows-group-layout';
 import AutomationGroupLayout from '../layout/automation-group-layout';
 import NetworkGroupLayout from '../layout/network-group-layout';
 import SettingsGroupLayout from '../layout/settings-group-layout';
-import { UserContext } from '../context/user-context';
 import { legacyRedirects, legacyPrefixRedirects } from './navigation';
+import {
+  ADMIN_APP_ROOT_PATH,
+  ADMIN_CRAWLERS_PATH,
+  ADMIN_DB_MANAGEMENT_PATH,
+  ADMIN_REVIEW_PATH,
+} from '../admin/paths';
+import { navigateInBrowser } from '../util/browser-navigation';
 
 /* ── Lazy page imports ─────────────────────────────────────────────── */
 
@@ -31,7 +37,6 @@ const ProfilePage = React.lazy(() => import('../page/profile/index'));
 const PipelinesPage = React.lazy(() => import('../page/pipelines'));
 const CompaniesPage = React.lazy(() => import('../page/companies'));
 const ExtractorPage = React.lazy(() => import('../page/extractor'));
-const DbManagementPage = React.lazy(() => import('../page/db-management'));
 const DiscoverPage = React.lazy(() => import('../page/directory'));
 const UserProfilePage = React.lazy(() => import('../page/user-profile'));
 const ConnectionsPage = React.lazy(() => import('../page/connections'));
@@ -46,8 +51,6 @@ const DiscoverabilityPage = React.lazy(() => import('../page/settings/discoverab
 const GraduationPage = React.lazy(() => import('../page/settings/graduation-page'));
 const AspirationRolesPage = React.lazy(() => import('../page/aspirations/roles-page'));
 const AspirationCompaniesPage = React.lazy(() => import('../page/aspirations/companies-page'));
-const CrawlersPage = React.lazy(() => import('../page/crawlers'));
-const ReviewQueuePage = React.lazy(() => import('../page/review-queue'));
 const LoginPage = React.lazy(() => import('../page/login'));
 const RegisterPage = React.lazy(() => import('../page/register'));
 const UserTermsPage = React.lazy(() => import('../page/user-terms'));
@@ -61,13 +64,6 @@ const PageLoader: React.FC = () => (
   </Box>
 );
 
-/** Redirects non-superusers away from admin-only routes. */
-const SuperuserRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
-  const { user } = React.useContext(UserContext);
-  if (!user?.is_superuser) return <Navigate to="/workflows" replace />;
-  return children;
-};
-
 /** Redirects legacy path prefixes to their new canonical route families. */
 const LegacyPrefixRedirect: React.FC<{ toPrefix: string }> = ({ toPrefix }) => {
   const params = useParams();
@@ -77,11 +73,27 @@ const LegacyPrefixRedirect: React.FC<{ toPrefix: string }> = ({ toPrefix }) => {
   return <Navigate to={`${toPrefix}${suffix}${location.search}`} replace />;
 };
 
+const BrowserRedirect: React.FC<{ to: string }> = ({ to }) => {
+  React.useEffect(() => {
+    navigateInBrowser(to, { replace: true });
+  }, [to]);
+
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+      <CircularProgress aria-label="Redirecting to the admin console" />
+    </Box>
+  );
+};
+
 const AppRoutes: React.FC = () => {
   return (
     <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route element={<AppLayout />}>
+        <Route path="workflows/db-management" element={<BrowserRedirect to={ADMIN_DB_MANAGEMENT_PATH} />} />
+        <Route path="workflows/review" element={<BrowserRedirect to={ADMIN_REVIEW_PATH} />} />
+        <Route path="workflows/crawlers" element={<BrowserRedirect to={ADMIN_CRAWLERS_PATH} />} />
+        <Route path="workflows/admin" element={<BrowserRedirect to={ADMIN_APP_ROOT_PATH} />} />
         <Route path="/" element={<UserRoute />}>
           <Route index element={<DashboardPage />} />
 
@@ -118,9 +130,6 @@ const AppRoutes: React.FC = () => {
           <Route path="workflows" element={<WorkflowsGroupLayout />}>
             <Route index element={<PipelinesPage />} />
             <Route path="extractors" element={<ExtractorPage />} />
-            <Route path="db-management" element={<SuperuserRoute><DbManagementPage /></SuperuserRoute>} />
-            <Route path="review" element={<SuperuserRoute><ReviewQueuePage /></SuperuserRoute>} />
-            <Route path="crawlers" element={<SuperuserRoute><CrawlersPage /></SuperuserRoute>} />
           </Route>
 
           {/* ── Automation group ── */}

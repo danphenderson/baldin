@@ -15,10 +15,13 @@ const size = instance.getEnum('Size', {
   Medium: 'medium',
 });
 const tone = instance.getEnum('Tone', {
+  Neutral: 'neutral',
   Primary: 'primary',
+  Secondary: 'secondary',
   Success: 'success',
   Warning: 'warning',
   Danger: 'danger',
+  Info: 'info',
 });
 
 export default {

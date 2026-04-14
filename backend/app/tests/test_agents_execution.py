@@ -2,25 +2,22 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from typing import AsyncGenerator
 from uuid import UUID
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from sqlalchemy import select
 
 from app import models
 from app.api.routes import agents as agents_route
+from app.conftest import create_user, login_and_get_headers
 from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.main import app
+from app.core.db import session_context
 from app.tests import utils
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
-password_helper = PasswordHelper()
-_db_ready = False
+_client = None
 
 
 @pytest.fixture(autouse=True)
@@ -30,51 +27,16 @@ def _configure_openai_for_agent_execution_tests(
     monkeypatch.setattr(conf.openai, "API_KEY", "test-openai-key")
 
 
-@asynccontextmanager
-async def _client() -> AsyncGenerator[AsyncClient, None]:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
+@pytest.fixture(autouse=True)
+def _use_shared_client(client: AsyncClient) -> None:
+    """Bridge existing `_client()` call sites onto the shared client fixture."""
+    global _client
+
+    @asynccontextmanager
+    async def _ctx():
         yield client
 
-
-async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(password: str) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-        )
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient,
-    email: str,
-    password: str,
-) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200, response.text
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    _client = _ctx
 
 
 async def _create_agent(
@@ -203,7 +165,6 @@ async def _create_source_document(
 async def test_run_agent_uses_agent_configured_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     captured: dict[str, object | None] = {}
     resolved_model = object()
 
@@ -220,8 +181,10 @@ async def test_run_agent_uses_agent_configured_model(
     monkeypatch.setattr(agents_route, "generate_cover_letter", _generate_cover_letter)
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-run-explicit-model-pass")
-        headers = await _auth_headers(client, email, "agent-run-explicit-model-pass")
+        email, user_id = await create_user("agent-run-explicit-model-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-run-explicit-model-pass"
+        )
         application_context = await _create_application_context(user_id)
         await _create_pinned_resume(
             user_id,
@@ -246,7 +209,6 @@ async def test_run_agent_uses_agent_configured_model(
 async def test_run_agent_defaults_to_completion_model_when_model_name_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     captured: dict[str, object | None] = {}
     resolved_model = object()
 
@@ -263,8 +225,10 @@ async def test_run_agent_defaults_to_completion_model_when_model_name_missing(
     monkeypatch.setattr(agents_route, "generate_cover_letter", _generate_cover_letter)
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-run-default-model-pass")
-        headers = await _auth_headers(client, email, "agent-run-default-model-pass")
+        email, user_id = await create_user("agent-run-default-model-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-run-default-model-pass"
+        )
         application_context = await _create_application_context(user_id)
         await _create_pinned_resume(
             user_id,
@@ -286,7 +250,6 @@ async def test_run_agent_defaults_to_completion_model_when_model_name_missing(
 async def test_run_agent_returns_clear_error_for_invalid_model_name(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
 
     def _get_model(model_name: str | None = None):
         raise ValueError(
@@ -303,8 +266,10 @@ async def test_run_agent_returns_clear_error_for_invalid_model_name(
     )
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-run-invalid-model-pass")
-        headers = await _auth_headers(client, email, "agent-run-invalid-model-pass")
+        email, user_id = await create_user("agent-run-invalid-model-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-run-invalid-model-pass"
+        )
         application_context = await _create_application_context(user_id)
         await _create_pinned_resume(
             user_id,
@@ -340,7 +305,6 @@ async def test_run_agent_returns_clear_error_for_invalid_model_name(
 async def test_run_agent_creates_new_session_and_pins_application_version(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(
         agents_route,
         "generate_cover_letter",
@@ -350,8 +314,8 @@ async def test_run_agent_creates_new_session_and_pins_application_version(
     )
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-run-create-pass")
-        headers = await _auth_headers(client, email, "agent-run-create-pass")
+        email, user_id = await create_user("agent-run-create-pass")
+        headers = await login_and_get_headers(client, email, "agent-run-create-pass")
         application_context = await _create_application_context(user_id)
         await _create_pinned_resume(
             user_id,
@@ -425,7 +389,6 @@ async def test_run_agent_creates_new_session_and_pins_application_version(
 async def test_run_agent_rerun_creates_new_version_and_updates_attachment_pin(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     generated_drafts = iter(
         [
             "First tailored draft for this application.",
@@ -439,8 +402,8 @@ async def test_run_agent_rerun_creates_new_version_and_updates_attachment_pin(
     )
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-run-rerun-pass")
-        headers = await _auth_headers(client, email, "agent-run-rerun-pass")
+        email, user_id = await create_user("agent-run-rerun-pass")
+        headers = await login_and_get_headers(client, email, "agent-run-rerun-pass")
         application_context = await _create_application_context(user_id)
         await _create_pinned_resume(
             user_id,
@@ -522,7 +485,6 @@ async def test_run_agent_rerun_creates_new_version_and_updates_attachment_pin(
 async def test_run_agent_persists_failed_run_without_returning_500(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
 
     def _raise_generation_error(profile, job, template, model=None):
         del profile, job, template, model
@@ -531,8 +493,8 @@ async def test_run_agent_persists_failed_run_without_returning_500(
     monkeypatch.setattr(agents_route, "generate_cover_letter", _raise_generation_error)
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-run-fail-pass")
-        headers = await _auth_headers(client, email, "agent-run-fail-pass")
+        email, user_id = await create_user("agent-run-fail-pass")
+        headers = await login_and_get_headers(client, email, "agent-run-fail-pass")
         application_context = await _create_application_context(user_id)
         await _create_pinned_resume(
             user_id,
@@ -570,7 +532,6 @@ async def test_list_runs_by_session_document(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """GET /agents/runs?session_document_id= returns runs scoped to a session."""
-    await _ensure_db_ready()
     monkeypatch.setattr(
         agents_route,
         "generate_cover_letter",
@@ -578,8 +539,8 @@ async def test_list_runs_by_session_document(
     )
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-runs-by-doc-pass")
-        headers = await _auth_headers(client, email, "agent-runs-by-doc-pass")
+        email, user_id = await create_user("agent-runs-by-doc-pass")
+        headers = await login_and_get_headers(client, email, "agent-runs-by-doc-pass")
         app_ctx = await _create_application_context(user_id)
         await _create_pinned_resume(user_id, content="Resume for lookup test.")
         agent_id = await _create_agent(user_id)
@@ -615,11 +576,12 @@ async def test_list_runs_by_session_document_empty_for_unknown(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """GET /agents/runs?session_document_id= returns empty for a non-matching document."""
-    await _ensure_db_ready()
 
     async with _client() as client:
-        email, _user_id = await _create_user("agent-runs-by-doc-empty-pass")
-        headers = await _auth_headers(client, email, "agent-runs-by-doc-empty-pass")
+        email, _user_id = await create_user("agent-runs-by-doc-empty-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-runs-by-doc-empty-pass"
+        )
 
         lookup_resp = await client.get(
             "/api/v1/agents/runs",
@@ -635,7 +597,6 @@ async def test_list_runs_by_session_document_empty_for_unknown(
 async def test_create_agent_surface_run_without_application_context(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(
         agents_route.conf.openai,
         "get_model",
@@ -647,8 +608,8 @@ async def test_create_agent_surface_run_without_application_context(
     )
 
     async with _client() as client:
-        email, user_id = await _create_user("surface-run-no-app-pass")
-        headers = await _auth_headers(client, email, "surface-run-no-app-pass")
+        email, user_id = await create_user("surface-run-no-app-pass")
+        headers = await login_and_get_headers(client, email, "surface-run-no-app-pass")
         agent_id = await _create_agent(
             user_id,
             name="Surface Coach",
@@ -690,16 +651,15 @@ async def test_create_agent_surface_run_without_application_context(
     assert body["suggested_edit"]["content_format"] == "plain_text"
     assert body["suggested_edit"]["content"] == "A suggested follow-up paragraph."
     assert body["input_context"]["application"] == {}
-    assert body["input_context"]["source"]["surface_content"] == "Current composer draft."
     assert (
-        body["input_context"]["source"]["entity_refs"][0]["kind"] == "conversation"
+        body["input_context"]["source"]["surface_content"] == "Current composer draft."
     )
+    assert body["input_context"]["source"]["entity_refs"][0]["kind"] == "conversation"
 
 
 async def test_list_runs_by_source_filters(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(
         agents_route.conf.openai,
         "get_model",
@@ -709,8 +669,8 @@ async def test_list_runs_by_source_filters(
     )
 
     async with _client() as client:
-        email, user_id = await _create_user("surface-run-filter-pass")
-        headers = await _auth_headers(client, email, "surface-run-filter-pass")
+        email, user_id = await create_user("surface-run-filter-pass")
+        headers = await login_and_get_headers(client, email, "surface-run-filter-pass")
         agent_id = await _create_agent(user_id, name="Filter Coach", kind="custom")
 
         first = await client.post(
@@ -763,7 +723,6 @@ async def test_list_runs_by_source_filters(
 async def test_apply_agent_surface_run_links_document_version_and_records_activity(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(
         agents_route.conf.openai,
         "get_model",
@@ -773,8 +732,8 @@ async def test_apply_agent_surface_run_links_document_version_and_records_activi
     )
 
     async with _client() as client:
-        email, user_id = await _create_user("surface-run-apply-pass")
-        headers = await _auth_headers(client, email, "surface-run-apply-pass")
+        email, user_id = await create_user("surface-run-apply-pass")
+        headers = await login_and_get_headers(client, email, "surface-run-apply-pass")
         agent_id = await _create_agent(user_id, name="Apply Coach", kind="custom")
         source_document = await _create_source_document(user_id, content="Draft body.")
 
@@ -788,7 +747,9 @@ async def test_apply_agent_surface_run_links_document_version_and_records_activi
                 "surface_content": "Draft body.",
                 "prompt_text": "Improve the closing paragraph.",
                 "requested_apply_mode": "append_to_surface",
-                "entity_refs": [{"kind": "document", "id": str(source_document["document_id"])}],
+                "entity_refs": [
+                    {"kind": "document", "id": str(source_document["document_id"])}
+                ],
             },
             headers=headers,
         )
@@ -805,7 +766,9 @@ async def test_apply_agent_surface_run_links_document_version_and_records_activi
             )
             session.add(version)
             await session.flush()
-            document = await session.get(models.Document, source_document["document_id"])
+            document = await session.get(
+                models.Document, source_document["document_id"]
+            )
             assert document is not None
             document.head_version_id = version.id
             await session.commit()
@@ -830,7 +793,9 @@ async def test_apply_agent_surface_run_links_document_version_and_records_activi
     async with session_context() as session:
         activity_result = await session.execute(
             select(models.DocumentActivity)
-            .where(models.DocumentActivity.document_id == source_document["document_id"])
+            .where(
+                models.DocumentActivity.document_id == source_document["document_id"]
+            )
             .order_by(models.DocumentActivity.created_at.asc())
         )
         activities = activity_result.scalars().all()
@@ -843,7 +808,6 @@ async def test_apply_agent_surface_run_links_document_version_and_records_activi
 async def test_dismiss_agent_surface_run_records_activity(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(
         agents_route.conf.openai,
         "get_model",
@@ -853,10 +817,12 @@ async def test_dismiss_agent_surface_run_records_activity(
     )
 
     async with _client() as client:
-        email, user_id = await _create_user("surface-run-dismiss-pass")
-        headers = await _auth_headers(client, email, "surface-run-dismiss-pass")
+        email, user_id = await create_user("surface-run-dismiss-pass")
+        headers = await login_and_get_headers(client, email, "surface-run-dismiss-pass")
         agent_id = await _create_agent(user_id, name="Dismiss Coach", kind="custom")
-        source_document = await _create_source_document(user_id, content="Dismiss source.")
+        source_document = await _create_source_document(
+            user_id, content="Dismiss source."
+        )
 
         create_response = await client.post(
             f"/api/v1/agents/{agent_id}/surface-runs",

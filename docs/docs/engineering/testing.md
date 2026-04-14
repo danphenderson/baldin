@@ -25,7 +25,7 @@ If you use Baldin's workspace skills, `/baldin-backend-test-gap-planner` helps c
 
 | Surface | Fast local check | When to widen |
 | --- | --- | --- |
-| Backend behavior | `cd backend && pipenv run pytest -xvs app/tests/test_target.py -k "case"` | Expand to a larger pytest scope when no targeted coverage exists or the change crosses multiple backend paths |
+| Backend behavior | `./scripts/run_backend_pytest.sh -xvs app/tests/test_target.py -k "case"` | Expand to a larger pytest scope when no targeted coverage exists or the change crosses multiple backend paths |
 | Frontend behavior | `cd frontend && npm run test -- --watch` | Run the non-watch test command for handoff or when you need a clean one-shot result |
 | Frontend typing | `cd frontend && node ./node_modules/typescript/bin/tsc --noEmit` | Use when shared types, typed service consumption, or broader component contracts changed |
 | Production-style frontend build | `cd frontend && VITE_API_URL=https://api.preview.invalid npm run build` | Use when shipped behavior or bundling assumptions changed |
@@ -39,11 +39,12 @@ Backend tests use `pytest` with a dedicated PostgreSQL test database.
 ### Running tests
 
 ```bash
-cd backend
-pipenv run pytest -xvs app/tests/test_target.py -k "case"
+./scripts/run_backend_pytest.sh -xvs app/tests/test_target.py -k "case"
 ```
 
 Start with the narrowest test file or `-k` selection that exercises the edited route, model, ETL path, or bug. Only widen to the broader backend suite when the changed surface or missing coverage makes that necessary.
+
+The wrapper keeps host-side pytest aligned with the documented local test database path by exporting `PIPENV_DONT_LOAD_ENV=1` and defaulting `TEST_DATABASE_HOSTNAME=127.0.0.1` plus `TEST_DATABASE_PORT=5431`. Use plain `pipenv run pytest` only when you intentionally want a custom shell flow.
 
 ### Coverage gate
 

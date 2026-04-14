@@ -2,7 +2,7 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
-import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse, type PaginatedResponse } from './pagination';
+import { fetchAllPages, FULL_LIST_PAGE_SIZE, normalizePaginatedResponse, type PaginatedResponse } from './pagination';
 
 // ---------------------------------------------------------------------------
 // Types re-exported from the generated OpenAPI schema
@@ -187,15 +187,15 @@ export const updateOrchestrationPipeline = async (token: string, id: string, bod
 
 export const getOrchestrationPipelines = async (token: string): Promise<OrchestrationPipelineRead[]> => {
   const client = createApiClient(token);
-  const page = unwrap<RawOrchestrationPipelinePage>(await client.GET('/api/v1/orchestration-pipelines/pipelines', {
+  const items = await fetchAllPages<RawOrchestrationPipelineRead>(async (page, pageSize) => unwrap<RawOrchestrationPipelinePage>(await client.GET('/api/v1/orchestration-pipelines/pipelines', {
     params: {
       query: {
-        page: 1,
-        page_size: FULL_LIST_PAGE_SIZE,
+        page,
+        page_size: pageSize,
       },
     },
-  }));
-  return normalizePaginatedResponse(page, { page: 1, page_size: FULL_LIST_PAGE_SIZE }).items.map(normalizePipeline);
+  })), FULL_LIST_PAGE_SIZE);
+  return items.map(normalizePipeline);
 };
 
 export const deleteOrchestrationPipeline = async (token: string, id: string): Promise<void> => {

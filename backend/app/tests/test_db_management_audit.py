@@ -5,19 +5,34 @@ import pytest
 
 import app.logging as app_logging
 from app.api.routes import db_management as db_management_routes
+from app.conftest import (
+    async_client_ctx,
+)
+from app.conftest import (
+    create_user as _create_user,
+)
+from app.conftest import (
+    login_and_get_headers as _auth_headers,
+)
 from app.core import conf
 from app.core.db_management_audit import (
     log_db_management_delete_blocked,
     log_db_management_destructive_operation,
 )
-from app.tests.test_db_management import (
-    _auth_headers,
-    _client,
-    _create_user,
-    _ensure_db_ready,
-)
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
+
+
+@pytest.fixture(scope="module", autouse=True)
+async def _shared_db_ready(ensure_db: None) -> None:
+    del ensure_db
+
+
+async def _ensure_db_ready() -> None:
+    return None
+
+
+_client = async_client_ctx
 
 
 def _make_temp_logger(monkeypatch, tmp_path, label: str):

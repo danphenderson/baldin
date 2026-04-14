@@ -5,7 +5,7 @@ title: Planned Deployment
 description: Current deployment posture, planned production topology, and what is supported today.
 ---
 
-<!-- last-verified: 2026-04-08 -->
+<!-- last-verified: 2026-04-13 -->
 
 # Planned Deployment
 
@@ -17,13 +17,14 @@ This page explains what works today, what is planned, and what constraints shape
 
 ### Local Docker Compose
 
-The local stack is the supported development surface. It runs seven services:
+The local stack is the supported development surface. It runs eight services:
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
 | **db** | pgvector/pgvector:pg15 | 5432 | Main application database (with pgvector) |
 | **test_db** | pgvector/pgvector:pg15 | 5431 | Isolated test database |
 | **redis** | redis:7-alpine | 6379 | Background job queue and crawler dispatch |
+| **etl-service** | `backend/Dockerfile` (target: dev) | 8010 (internal) | Internal crawler execution boundary |
 | **web** | `backend/Dockerfile` (target: dev) | 8004 → 8000 | FastAPI/Uvicorn backend with hot reload |
 | **crawler-worker** | `backend/Dockerfile` | — | Background crawler worker consuming Redis jobs |
 | **frontend** | `frontend/Dockerfile` | 5173 | React/Vite dev server with HMR |
@@ -76,9 +77,20 @@ The `cdk/` directory contains partially restored AWS infrastructure code (VPC, E
 
 `scripts/sync_frontend_to_s3.sh` is intentionally disabled. The legacy S3 deployment path was removed when deployment ownership was consolidated into this repository.
 
-### Implicit Schema Bootstrap
+### Startup Readiness And Bootstrap
 
-The backend currently runs `create_db_and_tables()` during startup. That path still relies on SQLAlchemy `create_all`, but it also performs limited additive repair for missing columns and explicitly named unique constraints on existing local tables. This remains a known launch blocker — Phase 5 will replace it with proper database migrations.
+The backend now exposes `GET /health` for liveness and `GET /ready` for readiness. In worker mode, readiness requires database connectivity, Redis reachability, and ETL-service `/health`.
+
+The startup bootstrap path now defaults to Alembic migrations. `LEGACY_BOOTSTRAP=1` remains a temporary DEV/PYTEST-only escape hatch for local recovery and is ignored outside those environments.
+
+### Operator Visibility
+
+Superusers can inspect crawler runtime health through `GET /api/v1/crawlers/runtime-status`.
+
+- `redis.reachable=false` means worker-mode queue handoff is degraded and inline fallback may be taking over.
+- `etl_service.reachable=false` means crawler execution cannot reach the internal ETL boundary.
+- Non-zero `stale_run_count` or `stale_event_count` indicates scheduler/reaper follow-up is needed.
+- `enqueue_failure_count` and `recent_enqueue_failures` summarize recent queue handoff failures captured in orchestration event history.
 
 ## Deployment Decision Tree
 

@@ -105,7 +105,7 @@ async def list_action_items(
     due_before: datetime | None = None,
     due_after: datetime | None = None,
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=100),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):

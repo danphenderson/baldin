@@ -4,68 +4,30 @@ from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from sqlalchemy import select
 
 from app import models
+from app.conftest import create_user, login_and_get_headers
 from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.main import app
+from app.core.db import session_context
 from app.tests import utils
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
-password_helper = PasswordHelper()
-_db_ready = False
+_client = None
 
 
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
+@pytest.fixture(autouse=True)
+def _use_shared_client(client: AsyncClient) -> None:
+    """Bridge existing `_client()` call sites onto the shared client fixture."""
+    global _client
+
+    @asynccontextmanager
+    async def _ctx():
         yield client
 
-
-async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(password: str) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-        )
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient,
-    email: str,
-    password: str,
-) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200, response.text
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    _client = _ctx
 
 
 async def _create_lead(user_id: UUID) -> UUID:
@@ -153,12 +115,11 @@ async def _create_agent_chat_context(user_id: UUID) -> tuple[UUID, UUID]:
 async def test_suggest_extractor_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(conf.openai, "API_KEY", "")
 
     async with _client() as client:
-        email, _user_id = await _create_user("suggest-disabled-pass")
-        headers = await _auth_headers(client, email, "suggest-disabled-pass")
+        email, _user_id = await create_user("suggest-disabled-pass")
+        headers = await login_and_get_headers(client, email, "suggest-disabled-pass")
         response = await client.post(
             "/api/v1/extractors/suggest",
             json={"description": "Extract company data"},
@@ -175,12 +136,11 @@ async def test_suggest_extractor_returns_503_when_openai_disabled(
 async def test_extractor_configurables_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(conf.openai, "API_KEY", "")
 
     async with _client() as client:
-        email, _user_id = await _create_user("config-disabled-pass")
-        headers = await _auth_headers(client, email, "config-disabled-pass")
+        email, _user_id = await create_user("config-disabled-pass")
+        headers = await login_and_get_headers(client, email, "config-disabled-pass")
         response = await client.get("/api/v1/extractors/configurables", headers=headers)
 
     assert response.status_code == 503, response.text
@@ -193,12 +153,11 @@ async def test_extractor_configurables_returns_503_when_openai_disabled(
 async def test_generate_document_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(conf.openai, "API_KEY", "")
 
     async with _client() as client:
-        email, user_id = await _create_user("generate-disabled-pass")
-        headers = await _auth_headers(client, email, "generate-disabled-pass")
+        email, user_id = await create_user("generate-disabled-pass")
+        headers = await login_and_get_headers(client, email, "generate-disabled-pass")
         lead_id = await _create_lead(user_id)
         response = await client.post(
             "/api/v1/documents/generate",
@@ -216,12 +175,11 @@ async def test_generate_document_returns_503_when_openai_disabled(
 async def test_document_search_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(conf.openai, "API_KEY", "")
 
     async with _client() as client:
-        email, _user_id = await _create_user("search-disabled-pass")
-        headers = await _auth_headers(client, email, "search-disabled-pass")
+        email, _user_id = await create_user("search-disabled-pass")
+        headers = await login_and_get_headers(client, email, "search-disabled-pass")
         response = await client.post(
             "/api/v1/documents/search",
             json={"query": "platform engineering", "k": 5},
@@ -238,12 +196,11 @@ async def test_document_search_returns_503_when_openai_disabled(
 async def test_embed_document_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(conf.openai, "API_KEY", "")
 
     async with _client() as client:
-        email, _user_id = await _create_user("embed-disabled-pass")
-        headers = await _auth_headers(client, email, "embed-disabled-pass")
+        email, _user_id = await create_user("embed-disabled-pass")
+        headers = await login_and_get_headers(client, email, "embed-disabled-pass")
         response = await client.post(
             f"/api/v1/documents/{uuid4()}/embed",
             json={},
@@ -260,12 +217,11 @@ async def test_embed_document_returns_503_when_openai_disabled(
 async def test_enrich_lead_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(conf.openai, "API_KEY", "")
 
     async with _client() as client:
-        email, _user_id = await _create_user("rag-disabled-pass")
-        headers = await _auth_headers(client, email, "rag-disabled-pass")
+        email, _user_id = await create_user("rag-disabled-pass")
+        headers = await login_and_get_headers(client, email, "rag-disabled-pass")
         response = await client.post(
             "/api/v1/documents/rag/enrich-lead",
             json={"lead_description": "Platform engineering role", "k": 5},
@@ -282,12 +238,13 @@ async def test_enrich_lead_returns_503_when_openai_disabled(
 async def test_match_aspirations_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(conf.openai, "API_KEY", "")
 
     async with _client() as client:
-        email, _user_id = await _create_user("aspiration-match-disabled-pass")
-        headers = await _auth_headers(client, email, "aspiration-match-disabled-pass")
+        email, _user_id = await create_user("aspiration-match-disabled-pass")
+        headers = await login_and_get_headers(
+            client, email, "aspiration-match-disabled-pass"
+        )
         response = await client.post(
             "/api/v1/aspirations/match",
             json={
@@ -323,12 +280,13 @@ async def test_match_aspirations_returns_503_when_openai_disabled(
 async def test_suggest_aspirations_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(conf.openai, "API_KEY", "")
 
     async with _client() as client:
-        email, _user_id = await _create_user("aspiration-suggest-disabled-pass")
-        headers = await _auth_headers(client, email, "aspiration-suggest-disabled-pass")
+        email, _user_id = await create_user("aspiration-suggest-disabled-pass")
+        headers = await login_and_get_headers(
+            client, email, "aspiration-suggest-disabled-pass"
+        )
         response = await client.post(
             "/api/v1/aspirations/suggest",
             headers=headers,
@@ -348,12 +306,11 @@ async def test_suggest_aspirations_returns_503_when_openai_disabled(
 async def test_summarize_company_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(conf.openai, "API_KEY", "")
 
     async with _client() as client:
-        email, _user_id = await _create_user("summarize-disabled-pass")
-        headers = await _auth_headers(client, email, "summarize-disabled-pass")
+        email, _user_id = await create_user("summarize-disabled-pass")
+        headers = await login_and_get_headers(client, email, "summarize-disabled-pass")
         response = await client.post(
             "/api/v1/documents/rag/summarize-company",
             json={"url": "https://example.com"},
@@ -370,12 +327,13 @@ async def test_summarize_company_returns_503_when_openai_disabled(
 async def test_list_agent_models_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(conf.openai, "API_KEY", "")
 
     async with _client() as client:
-        email, _user_id = await _create_user("agent-models-disabled-pass")
-        headers = await _auth_headers(client, email, "agent-models-disabled-pass")
+        email, _user_id = await create_user("agent-models-disabled-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-models-disabled-pass"
+        )
         response = await client.get("/api/v1/agents/models", headers=headers)
 
     assert response.status_code == 503, response.text
@@ -388,12 +346,11 @@ async def test_list_agent_models_returns_503_when_openai_disabled(
 async def test_run_agent_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(conf.openai, "API_KEY", "")
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-disabled-pass")
-        headers = await _auth_headers(client, email, "agent-disabled-pass")
+        email, user_id = await create_user("agent-disabled-pass")
+        headers = await login_and_get_headers(client, email, "agent-disabled-pass")
         agent_id, application_id = await _create_agent_run_context(user_id)
         response = await client.post(
             f"/api/v1/agents/{agent_id}/run",
@@ -426,12 +383,11 @@ async def test_run_agent_returns_503_when_openai_disabled(
 async def test_send_agent_chat_message_returns_503_when_openai_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     monkeypatch.setattr(conf.openai, "API_KEY", "")
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-disabled-pass")
-        headers = await _auth_headers(client, email, "agent-chat-disabled-pass")
+        email, user_id = await create_user("agent-chat-disabled-pass")
+        headers = await login_and_get_headers(client, email, "agent-chat-disabled-pass")
         _agent_id, session_id = await _create_agent_chat_context(user_id)
         response = await client.post(
             f"/api/v1/agents/chat/{session_id}/messages",

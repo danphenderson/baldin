@@ -52,11 +52,15 @@ async def test_schedule_crawler_run_execution_falls_back_when_enqueue_fails(
 ) -> None:
     enqueue_mock = AsyncMock(return_value=False)
     execute_mock = AsyncMock()
+    record_fallback_mock = AsyncMock()
 
     monkeypatch.setattr(conf.settings, "ENVIRONMENT", "DEV")
     monkeypatch.setattr(crawler_queue, "_queue_enabled", lambda: True)
     monkeypatch.setattr(crawler_queue, "enqueue_crawler_job", enqueue_mock)
     monkeypatch.setattr(deps, "execute_crawler_run_background", execute_mock)
+    monkeypatch.setattr(
+        deps, "record_crawler_run_enqueue_fallback", record_fallback_mock
+    )
 
     background_tasks = BackgroundTasks()
     run_id = uuid4()
@@ -69,6 +73,11 @@ async def test_schedule_crawler_run_execution_falls_back_when_enqueue_fails(
     )
 
     enqueue_mock.assert_awaited_once_with(str(run_id), str(user_id))
+    record_fallback_mock.assert_awaited_once_with(
+        run_id,
+        error_summary="Redis enqueue failed",
+        fallback_mode="inline",
+    )
     assert len(background_tasks.tasks) == 1
     task = background_tasks.tasks[0]
     assert task.func is execute_mock
@@ -81,6 +90,7 @@ async def test_schedule_crawler_run_execution_uses_asyncio_task_without_backgrou
 ) -> None:
     enqueue_mock = AsyncMock(return_value=False)
     execute_mock = AsyncMock()
+    record_fallback_mock = AsyncMock()
     created_tasks: list[asyncio.Task] = []
     original_create_task = deps.asyncio.create_task
 
@@ -94,6 +104,9 @@ async def test_schedule_crawler_run_execution_uses_asyncio_task_without_backgrou
     monkeypatch.setattr(crawler_queue, "enqueue_crawler_job", enqueue_mock)
     monkeypatch.setattr(deps, "execute_crawler_run_background", execute_mock)
     monkeypatch.setattr(deps.asyncio, "create_task", _capture_task)
+    monkeypatch.setattr(
+        deps, "record_crawler_run_enqueue_fallback", record_fallback_mock
+    )
 
     run_id = uuid4()
     user_id = uuid4()
@@ -101,6 +114,11 @@ async def test_schedule_crawler_run_execution_uses_asyncio_task_without_backgrou
     await schedule_crawler_run_execution(run_id, user_id)
 
     enqueue_mock.assert_awaited_once_with(str(run_id), str(user_id))
+    record_fallback_mock.assert_awaited_once_with(
+        run_id,
+        error_summary="Redis enqueue failed",
+        fallback_mode="inline",
+    )
     assert len(created_tasks) == 1
     await created_tasks[0]
     execute_mock.assert_awaited_once_with(run_id, user_id)
@@ -113,6 +131,7 @@ async def test_schedule_crawler_run_execution_marks_run_failed_when_inline_task_
     enqueue_mock = AsyncMock(return_value=False)
     execute_mock = AsyncMock()
     mark_failed_mock = AsyncMock()
+    record_fallback_mock = AsyncMock()
 
     def _raise_runtime_error(coro):
         coro.close()
@@ -123,6 +142,9 @@ async def test_schedule_crawler_run_execution_marks_run_failed_when_inline_task_
     monkeypatch.setattr(crawler_queue, "enqueue_crawler_job", enqueue_mock)
     monkeypatch.setattr(deps, "execute_crawler_run_background", execute_mock)
     monkeypatch.setattr(deps, "mark_crawler_run_enqueue_failure", mark_failed_mock)
+    monkeypatch.setattr(
+        deps, "record_crawler_run_enqueue_fallback", record_fallback_mock
+    )
     monkeypatch.setattr(deps.asyncio, "create_task", _raise_runtime_error)
 
     run_id = uuid4()
@@ -132,6 +154,7 @@ async def test_schedule_crawler_run_execution_marks_run_failed_when_inline_task_
 
     enqueue_mock.assert_awaited_once_with(str(run_id), str(user_id))
     execute_mock.assert_not_awaited()
+    assert record_fallback_mock.await_count == 2
     mark_failed_mock.assert_awaited_once()
     assert mark_failed_mock.await_args.args[0] == run_id
     assert "loop closed" in mark_failed_mock.await_args.args[1]

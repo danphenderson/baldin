@@ -5,6 +5,7 @@ import {
   getAvailableModels,
   getChatHistory,
   getChatSession,
+  getAllChatSessions,
   getChatSessions,
   saveChatToDocument,
   sendChatMessage,
@@ -101,6 +102,62 @@ describe('agent chat service', () => {
     expect(request.url).toContain('/api/v1/agents/agent-1/chat');
     expect(request.url).toContain('page=1');
     expect(request.url).toContain('page_size=20');
+  });
+
+  it('lists all chat sessions across multiple pages for full-list callers', async () => {
+    const firstPageItems = Array.from({ length: 100 }, (_, index) => ({
+      id: `session-${index + 1}`,
+      created_at: '2026-04-11T12:00:00Z',
+      updated_at: '2026-04-11T12:05:00Z',
+      agent_id: 'agent-1',
+      title: `Acme intro ${index + 1}`,
+      model_name: 'gpt-5.4-mini',
+      status: 'active',
+      message_count: 2,
+      last_message_at: '2026-04-11T12:05:00Z',
+      application_id: 'app-1',
+    }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({
+        items: firstPageItems,
+        total: 101,
+        page: 1,
+        page_size: 100,
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        items: [
+          {
+            id: 'session-101',
+            created_at: '2026-04-11T12:00:00Z',
+            updated_at: '2026-04-11T12:05:00Z',
+            agent_id: 'agent-1',
+            title: 'Acme intro 101',
+            model_name: 'gpt-5.4-mini',
+            status: 'active',
+            message_count: 2,
+            last_message_at: '2026-04-11T12:05:00Z',
+            application_id: 'app-1',
+          },
+        ],
+        total: 101,
+        page: 2,
+        page_size: 100,
+      }));
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await getAllChatSessions('token-123', 'agent-1');
+
+    expect(result).toHaveLength(101);
+    expect(result[0]?.id).toBe('session-1');
+    expect(result[100]?.id).toBe('session-101');
+    const firstRequest = fetchMock.mock.calls[0][0] as Request;
+    const secondRequest = fetchMock.mock.calls[1][0] as Request;
+    expect(firstRequest.url).toContain('/api/v1/agents/agent-1/chat');
+    expect(firstRequest.url).toContain('page=1');
+    expect(firstRequest.url).toContain('page_size=100');
+    expect(secondRequest.url).toContain('page=2');
+    expect(secondRequest.url).toContain('page_size=100');
   });
 
   it('gets a single chat session with the requested limit and embedded messages intact', async () => {

@@ -134,7 +134,7 @@ async def get_applications(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
     """Get all applications for the current user."""
     base = (

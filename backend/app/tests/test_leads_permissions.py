@@ -1,69 +1,25 @@
-from contextlib import asynccontextmanager
 from uuid import UUID
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app import models
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.main import app
+from app.conftest import (
+    async_client_ctx as _client,
+)
+from app.conftest import (
+    create_user as _create_user,
+)
+from app.conftest import (
+    login_and_get_headers as _auth_headers,
+)
+from app.core.db import session_context
 from app.tests import utils
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
-
-password_helper = PasswordHelper()
-_db_ready = False
-
-
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
-
-
-async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(
-    password: str, *, is_superuser: bool = False
-) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-            is_superuser=is_superuser,
-        )
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient, email: str, password: str
-) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+pytestmark = [
+    pytest.mark.asyncio(loop_scope="module"),
+    pytest.mark.usefixtures("fresh_db"),
+]
 
 
 async def _create_company(name: str | None = None) -> UUID:
@@ -92,7 +48,6 @@ def _lead_payload(url: str | None = None, **overrides: object) -> dict[str, obje
 async def test_registered_viewer_can_fill_empty_shared_fields_and_add_companies() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, _ = await _create_user("fill-owner-pass")
         collaborator_email, _ = await _create_user("fill-collaborator-pass")
@@ -146,7 +101,6 @@ async def test_registered_viewer_can_fill_empty_shared_fields_and_add_companies(
 
 
 async def test_superuser_can_overwrite_populated_fields_and_replace_companies() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, _ = await _create_user("admin-owner-pass")
         admin_email, _ = await _create_user("admin-pass", is_superuser=True)
@@ -181,7 +135,6 @@ async def test_superuser_can_overwrite_populated_fields_and_replace_companies() 
 
 
 async def test_unregistered_viewer_can_read_lead_but_cannot_mutate_or_comment() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, _ = await _create_user("perm-owner-pass")
         other_email, _ = await _create_user("perm-other-pass")
@@ -226,7 +179,6 @@ async def test_unregistered_viewer_can_read_lead_but_cannot_mutate_or_comment() 
 
 
 async def test_regular_users_cannot_delete_shared_lead_but_superuser_can() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, _ = await _create_user("delete-owner-pass")
         admin_email, _ = await _create_user("delete-admin-pass", is_superuser=True)
@@ -265,7 +217,6 @@ async def test_regular_users_cannot_delete_shared_lead_but_superuser_can() -> No
 async def test_leads_purge_rejects_non_superusers_and_clears_registrations_and_comments() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
         user_email, _ = await _create_user("purge-user-pass")
         owner_email, _ = await _create_user("purge-owner-pass")

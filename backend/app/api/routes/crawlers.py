@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 
+import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import UUID4
 from sqlalchemy import delete, func, select
@@ -15,10 +16,26 @@ from app.api.deps import (
     models,
     schemas,
 )
+from app.core import conf
 from app.core.datetime_utils import now_utc_naive
 from app.core.rate_limit import limiter
+from app.crawler_queue import get_queue_backlog, get_queue_health
+from app.run_reaper import STALE_TIMEOUT_MINUTES
 
 router = APIRouter(dependencies=[Depends(get_current_superuser)])
+
+
+async def _get_etl_service_health() -> tuple[bool, str | None]:
+    url = f"{conf.settings.ETL_SERVICE_URL.rstrip('/')}/health"
+    timeout = min(conf.settings.ETL_SERVICE_TIMEOUT_SECONDS, 5.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.get(url)
+        if response.status_code != 200:
+            return False, f"ETL healthcheck returned {response.status_code}"
+        return True, None
+    except Exception as exc:
+        return False, str(exc)
 
 
 @router.post("/pipelines", response_model=schemas.CrawlerPipelineRead)
@@ -41,7 +58,7 @@ async def create_crawler_pipeline(
 async def list_crawler_pipelines(
     db: AsyncSession = Depends(get_async_session),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
     count_result = await db.execute(
         select(func.count()).select_from(models.CrawlerPipeline)
@@ -148,6 +165,93 @@ async def list_crawler_runs(
         total=total,
         page=pagination.page,
         page_size=pagination.page_size,
+    )
+
+
+@router.get("/runtime-status", response_model=schemas.CrawlerRuntimeStatusRead)
+async def get_crawler_runtime_status(
+    db: AsyncSession = Depends(get_async_session),
+):
+    queue_configured, queue_reachable, queue_detail = await get_queue_health()
+    queue_backlog = None
+    if queue_reachable:
+        try:
+            queue_backlog = await get_queue_backlog()
+        except Exception:
+            queue_detail = queue_detail or "Backlog inspection failed"
+    etl_reachable, etl_detail = await _get_etl_service_health()
+
+    stale_cutoff = now_utc_naive() - timedelta(minutes=STALE_TIMEOUT_MINUTES)
+    stale_runs_result = await db.execute(
+        select(func.count())
+        .select_from(models.CrawlerRun)
+        .where(
+            models.CrawlerRun.status.in_(
+                [models.CrawlerRunStatus.PENDING, models.CrawlerRunStatus.RUNNING]
+            ),
+            models.CrawlerRun.created_at < stale_cutoff,
+        )
+    )
+    stale_events_result = await db.execute(
+        select(func.count())
+        .select_from(models.OrchestrationEvent)
+        .where(
+            models.OrchestrationEvent.status.in_(["pending", "running"]),
+            models.OrchestrationEvent.created_at < stale_cutoff,
+        )
+    )
+    recent_events_result = await db.execute(
+        select(models.OrchestrationEvent)
+        .where(models.OrchestrationEvent.payload.is_not(None))
+        .order_by(models.OrchestrationEvent.created_at.desc())
+        .limit(100)
+    )
+
+    recent_enqueue_failures: list[schemas.CrawlerEnqueueFailureSampleRead] = []
+    enqueue_failure_count = 0
+    for event in recent_events_result.scalars():
+        payload = event.payload or {}
+        failures = payload.get("enqueue_failures") or []
+        if not failures:
+            continue
+        enqueue_failure_count += int(
+            payload.get("enqueue_failure_count", len(failures))
+        )
+        run_id = payload.get("crawler_run_id")
+        for failure in failures:
+            recorded_at = failure.get("recorded_at") or event.created_at
+            recent_enqueue_failures.append(
+                schemas.CrawlerEnqueueFailureSampleRead(
+                    run_id=run_id,
+                    created_at=recorded_at,
+                    fallback_mode=failure.get("fallback_mode", "unknown"),
+                    error_summary=failure.get(
+                        "error_summary", "Unknown enqueue failure"
+                    ),
+                )
+            )
+
+    recent_enqueue_failures.sort(key=lambda item: item.created_at, reverse=True)
+
+    return schemas.CrawlerRuntimeStatusRead(
+        execution_mode=conf.settings.CRAWLER_EXECUTION_MODE,
+        scheduler_enabled=conf.settings.SHOULD_RUN_CRAWLER_SCHEDULER,
+        reaper_enabled=conf.settings.SHOULD_RUN_REAPER,
+        redis=schemas.CrawlerRuntimeDependencyRead(
+            configured=queue_configured,
+            reachable=queue_reachable,
+            detail=queue_detail,
+        ),
+        etl_service=schemas.CrawlerRuntimeDependencyRead(
+            configured=True,
+            reachable=etl_reachable,
+            detail=etl_detail,
+        ),
+        queue_backlog=queue_backlog,
+        stale_run_count=int(stale_runs_result.scalar_one()),
+        stale_event_count=int(stale_events_result.scalar_one()),
+        enqueue_failure_count=enqueue_failure_count,
+        recent_enqueue_failures=recent_enqueue_failures[:5],
     )
 
 

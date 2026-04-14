@@ -35,7 +35,7 @@ async def read_current_user_experiences(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
     base = select(models.Experience).where(models.Experience.user_id == user.id)
     count_result = await db.execute(select(func.count()).select_from(base.subquery()))
@@ -56,7 +56,7 @@ async def create_user_experience(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    experience = models.Experience(**payload.dict(), user_id=user.id)
+    experience = models.Experience(**payload.model_dump(), user_id=user.id)
     log.info(f"Creating experience: {experience.__dict__}")
     db.add(experience)
     await db.commit()
@@ -77,7 +77,7 @@ async def update_user_experience(
     experience: schemas.ExperienceRead = Depends(get_experience),
     db: AsyncSession = Depends(get_async_session),
 ):
-    experience_data = payload.dict(exclude_unset=True)
+    experience_data = payload.model_dump(exclude_unset=True)
     for field in experience_data:
         setattr(experience, field, experience_data[field])
     await db.commit()

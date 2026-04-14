@@ -2,7 +2,7 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
-import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse, type PaginatedResponse } from './pagination';
+import { fetchAllPages, FULL_LIST_PAGE_SIZE, normalizePaginatedResponse, type PaginatedResponse } from './pagination';
 
 export type CrawlerPipelineCreate = components['schemas']['CrawlerPipelineCreate'];
 export type CrawlerPipelineRead = components['schemas']['CrawlerPipelineRead'];
@@ -46,15 +46,14 @@ const unwrap = <T,>(
 
 export const getCrawlerPipelines = async (token: string): Promise<CrawlerPipelineRead[]> => {
   const client = createApiClient(token);
-  const page = unwrap<RawCrawlerPipelinesPage>(await client.GET('/api/v1/crawlers/pipelines', {
+  return fetchAllPages<CrawlerPipelineRead>(async (page, pageSize) => unwrap<RawCrawlerPipelinesPage>(await client.GET('/api/v1/crawlers/pipelines', {
     params: {
       query: {
-        page: 1,
-        page_size: FULL_LIST_PAGE_SIZE,
+        page,
+        page_size: pageSize,
       },
     },
-  }));
-  return normalizePaginatedResponse(page, { page: 1, page_size: FULL_LIST_PAGE_SIZE }).items;
+  })), FULL_LIST_PAGE_SIZE);
 };
 
 export const getCrawlerPipeline = async (token: string, id: string): Promise<CrawlerPipelineRead> => {

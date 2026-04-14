@@ -16,43 +16,68 @@ describe('agents service', () => {
     vi.restoreAllMocks();
   });
 
-  it('lists agents with the generated kind filter and full-list pagination defaults', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({
-        items: [
-          {
-            id: 'agent-1',
-            created_at: '2026-04-11T12:00:00Z',
-            updated_at: '2026-04-11T12:00:00Z',
-            user_id: 'user-1',
-            name: 'Cover Letter Workspace',
-            description: 'Builds a draft workspace',
-            kind: 'cover_letter',
-            is_enabled: true,
-          },
-        ],
-        total: 1,
-        page: 1,
-        page_size: 500,
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    );
+  it('lists agents across multiple pages with the generated kind filter', async () => {
+    const firstPageItems = Array.from({ length: 100 }, (_, index) => ({
+      id: `agent-${index + 1}`,
+      created_at: '2026-04-11T12:00:00Z',
+      updated_at: '2026-04-11T12:00:00Z',
+      user_id: 'user-1',
+      name: `Cover Letter Workspace ${index + 1}`,
+      description: 'Builds a draft workspace',
+      kind: 'cover_letter',
+      is_enabled: true,
+    }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          items: firstPageItems,
+          total: 101,
+          page: 1,
+          page_size: 100,
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          items: [
+            {
+              id: 'agent-101',
+              created_at: '2026-04-11T12:00:00Z',
+              updated_at: '2026-04-11T12:00:00Z',
+              user_id: 'user-1',
+              name: 'Cover Letter Workspace 101',
+              description: 'Builds a draft workspace',
+              kind: 'cover_letter',
+              is_enabled: true,
+            },
+          ],
+          total: 101,
+          page: 2,
+          page_size: 100,
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
 
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await getAgents('token-123', { kind: 'cover_letter' });
 
-    expect(result).toHaveLength(1);
+    expect(result).toHaveLength(101);
     expect(result[0]?.kind).toBe('cover_letter');
-    const request = fetchMock.mock.calls[0][0] as Request;
-    expect(request.url).toContain('/agents/');
-    expect(request.url).toContain('kind=cover_letter');
-    expect(request.url).toContain('page=1');
-    expect(request.url).toContain('page_size=500');
-    expect(request.method).toBe('GET');
-    expect(request.headers.get('Authorization')).toBe('Bearer token-123');
+    const firstRequest = fetchMock.mock.calls[0][0] as Request;
+    const secondRequest = fetchMock.mock.calls[1][0] as Request;
+    expect(firstRequest.url).toContain('/agents/');
+    expect(firstRequest.url).toContain('kind=cover_letter');
+    expect(firstRequest.url).toContain('page=1');
+    expect(firstRequest.url).toContain('page_size=100');
+    expect(firstRequest.method).toBe('GET');
+    expect(firstRequest.headers.get('Authorization')).toBe('Bearer token-123');
+    expect(secondRequest.url).toContain('page=2');
+    expect(secondRequest.url).toContain('page_size=100');
   });
 
   it('returns normalized run-history pagination with session metadata intact', async () => {

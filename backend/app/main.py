@@ -10,12 +10,14 @@ import tracemalloc
 from contextlib import asynccontextmanager
 from time import time
 
+import httpx
 import sentry_sdk
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy import text
 from starlette.types import Receive, Scope, Send
 
 from app.admin import admin
@@ -26,7 +28,7 @@ from app.core.correlation_id import (
     CorrelationIdMiddleware,
     correlation_id,
 )
-from app.core.db import create_db_and_tables
+from app.core.db import async_engine, create_db_and_tables
 from app.core.document_collaboration import (
     ensure_document_collaboration_server_started,
     stop_document_collaboration_server,
@@ -74,6 +76,107 @@ def _internal_server_error_detail(exc: Exception) -> str:
         detail = str(exc).strip()
         return detail or exc.__class__.__name__
     return "Internal server error"
+
+
+async def _check_database_ready() -> tuple[bool, str | None]:
+    try:
+        async with async_engine.connect() as connection:
+            await connection.execute(text("SELECT 1"))
+        return True, None
+    except Exception as exc:
+        return False, str(exc)
+
+
+async def _check_redis_ready() -> tuple[bool, bool, str | None]:
+    redis_url = conf.settings.REDIS_URL
+    if not redis_url:
+        return False, False, "REDIS_URL is not configured"
+
+    import redis.asyncio as aioredis
+
+    client = aioredis.from_url(redis_url)
+    try:
+        result = await client.ping()
+        return True, bool(result), None if result else "Redis ping returned false"
+    except Exception as exc:
+        return True, False, str(exc)
+    finally:
+        await client.aclose()
+
+
+async def _check_etl_service_ready() -> tuple[bool, str | None]:
+    url = f"{conf.settings.ETL_SERVICE_URL.rstrip('/')}/health"
+    timeout = min(conf.settings.ETL_SERVICE_TIMEOUT_SECONDS, 5.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.get(url)
+        if response.status_code != 200:
+            return False, f"ETL healthcheck returned {response.status_code}"
+        return True, None
+    except Exception as exc:
+        return False, str(exc)
+
+
+def _sanitize_readiness_detail(
+    detail: object,
+    *,
+    ok: bool,
+    configured: bool = True,
+) -> str | None:
+    if ok:
+        return None
+    if configured is False:
+        return "not configured"
+    if not detail:
+        return "unreachable"
+
+    detail_text = str(detail).strip().lower()
+    if "returned false" in detail_text or "healthcheck returned" in detail_text:
+        return "unhealthy"
+    return "unreachable"
+
+
+def _sanitize_readiness_checks(
+    checks: dict[str, dict[str, object]],
+) -> dict[str, dict[str, object]]:
+    public_checks: dict[str, dict[str, object]] = {}
+    for name, check in checks.items():
+        configured = bool(check.get("configured", True))
+        ok = bool(check.get("ok"))
+        public_check = dict(check)
+        public_check["detail"] = _sanitize_readiness_detail(
+            check.get("detail"),
+            ok=ok,
+            configured=configured,
+        )
+        public_checks[name] = public_check
+    return public_checks
+
+
+async def _collect_readiness_checks() -> dict[str, dict[str, object]]:
+    database_ok, database_detail = await _check_database_ready()
+    checks: dict[str, dict[str, object]] = {
+        "database": {
+            "ok": database_ok,
+            "detail": database_detail,
+        }
+    }
+
+    if conf.settings.CRAWLER_EXECUTION_MODE == "worker":
+        redis_configured, redis_ok, redis_detail = await _check_redis_ready()
+        etl_ok, etl_detail = await _check_etl_service_ready()
+        checks["redis"] = {
+            "configured": redis_configured,
+            "ok": redis_ok,
+            "detail": redis_detail,
+        }
+        checks["etl_service"] = {
+            "configured": True,
+            "ok": etl_ok,
+            "detail": etl_detail,
+        }
+
+    return checks
 
 
 async def _startup(app: FastAPI) -> None:
@@ -172,6 +275,25 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+
+
+@app.get("/health", tags=["infra"])
+async def healthcheck() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/ready", tags=["infra"])
+async def readinesscheck() -> JSONResponse:
+    checks = await _collect_readiness_checks()
+    is_ready = all(bool(check.get("ok")) for check in checks.values())
+    public_checks = _sanitize_readiness_checks(checks)
+    return JSONResponse(
+        status_code=200 if is_ready else 503,
+        content={
+            "status": "ready" if is_ready else "degraded",
+            "checks": public_checks,
+        },
+    )
 
 
 # Keep unhandled route errors inside FastAPI's response pipeline so browser

@@ -58,6 +58,15 @@ In workflow terms:
 - Delete dead wrappers and theme shims instead of keeping them around once in-repo consumers are gone.
 - Document any surviving wrapper in [Design System Catalog](../reference/design-system-catalog.md).
 
+## Make Salvage Rule
+
+Figma Make experiments are reference material only. They may inspire layout, sequencing, or state-story decisions, but they do not define the canonical shared API.
+
+- Do not port Tailwind token names, `cva` variant contracts, shadcn wrapper props, or generic utility-class primitives directly into `frontend/src/design-system/*`.
+- Only salvage an idea from a Make file if it represents genuine Baldin-specific behavior or storytelling that is still missing from the canonical Figma files.
+- When you do salvage an idea, rewrite it through the existing Baldin tokens, MUI theme model, and shared primitives or patterns instead of translating the Make component surface literally.
+- If a Make-derived idea still looks feature-specific after review, keep it feature-owned and out of the shared layer.
+
 ## Migration Checklist
 
 1. Confirm the target UI should be shared instead of staying feature-owned.

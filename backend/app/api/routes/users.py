@@ -38,8 +38,10 @@ from app.core.document_storage import (
     MAX_AVATAR_UPLOAD_BYTES,
     build_avatar_path,
     find_avatar_file,
+    normalize_avatar_content_type,
     remove_avatar_files,
     save_avatar_file,
+    sniff_avatar_content_type,
 )
 from app.core.url_parsers import extract_text_from_url_smart
 from app.core.url_safety import UnsafeFetchUrlError
@@ -166,7 +168,9 @@ async def read_profile(
     if not user_with_details:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return schemas.UserProfileRead.from_orm(user_with_details)
+    return schemas.UserProfileRead.model_validate(
+        user_with_details, from_attributes=True
+    )
 
 
 @router.post("/me/avatar", response_model=schemas.UserRead)
@@ -176,7 +180,7 @@ async def upload_avatar(
     current_user: models.User = Depends(get_current_user),
 ):
     """Upload or replace the current user's profile picture."""
-    content_type = file.content_type or ""
+    content_type = normalize_avatar_content_type(file.content_type)
     if content_type not in ALLOWED_AVATAR_CONTENT_TYPES:
         raise HTTPException(
             status_code=400,
@@ -187,6 +191,20 @@ async def upload_avatar(
         )
 
     file_bytes = await file.read()
+    detected_content_type = sniff_avatar_content_type(file_bytes)
+    if detected_content_type is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Uploaded avatar bytes do not match a supported image type.",
+        )
+    if detected_content_type != content_type:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Uploaded avatar bytes do not match the declared image type "
+                f"('{content_type}')."
+            ),
+        )
     if len(file_bytes) > MAX_AVATAR_UPLOAD_BYTES:
         raise HTTPException(
             status_code=400,
@@ -229,7 +247,10 @@ async def serve_avatar(user_id: _UUID):
     return FileResponse(
         path=avatar_path,
         media_type=media_type,
-        headers={"Cache-Control": "public, max-age=3600"},
+        headers={
+            "Cache-Control": "public, max-age=3600",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

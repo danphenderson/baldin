@@ -109,7 +109,7 @@ class BaseRead(BaseSchema):
     updated_at: datetime = Field(description="The time the item was last updated")
 
 
-PAGINATION_MAX_PAGE_SIZE = 500
+PAGINATION_MAX_PAGE_SIZE = 100
 MATCH_ASPIRATIONS_MAX_LEADS = 20
 
 
@@ -566,7 +566,14 @@ class BaseCompany(BaseSchema):
 
 
 class CompanyRead(BaseCompany, BaseRead):
-    pass
+    creator_user_id: UUID4 | None = Field(
+        None,
+        description="User who created this company record, if known",
+    )
+    can_manage: bool = Field(
+        False,
+        description="Whether the current user can edit or delete this company",
+    )
 
 
 class CompanyCreate(BaseCompany):
@@ -3154,6 +3161,47 @@ class CrawlerRunDetailRead(CrawlerRunRead):
 
     events: list[OrchestrationEventSummary] = Field(
         [], description="Linked orchestration events"
+    )
+
+
+class CrawlerRuntimeDependencyRead(BaseSchema):
+    configured: bool = Field(description="Whether the dependency is configured")
+    reachable: bool = Field(description="Whether the dependency is reachable now")
+    detail: str | None = Field(None, description="Optional diagnostic detail")
+
+
+class CrawlerEnqueueFailureSampleRead(BaseSchema):
+    run_id: UUID4 | None = Field(None, description="Crawler run ID when known")
+    created_at: datetime = Field(description="When the failure was recorded")
+    fallback_mode: str = Field(
+        description="How execution recovered after enqueue failure"
+    )
+    error_summary: str = Field(description="Short enqueue failure summary")
+
+
+class CrawlerRuntimeStatusRead(BaseSchema):
+    execution_mode: Literal["inline", "worker"] = Field(
+        description="Current crawler execution mode"
+    )
+    scheduler_enabled: bool = Field(description="Whether the scheduler loop is enabled")
+    reaper_enabled: bool = Field(description="Whether the reaper loop is enabled")
+    redis: CrawlerRuntimeDependencyRead = Field(description="Redis queue health")
+    etl_service: CrawlerRuntimeDependencyRead = Field(description="ETL service health")
+    queue_backlog: int | None = Field(
+        None, description="Pending Redis jobs when worker mode is enabled"
+    )
+    stale_run_count: int = Field(
+        description="Crawler runs older than the stale threshold"
+    )
+    stale_event_count: int = Field(
+        description="Orchestration events older than the stale threshold"
+    )
+    enqueue_failure_count: int = Field(
+        description="Recent crawler queue handoff failures captured in orchestration events"
+    )
+    recent_enqueue_failures: list[CrawlerEnqueueFailureSampleRead] = Field(
+        default_factory=list,
+        description="Most recent enqueue failure samples",
     )
 
 

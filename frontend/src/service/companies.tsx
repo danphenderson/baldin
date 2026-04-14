@@ -2,7 +2,7 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
-import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
+import { fetchAllPages, FULL_LIST_PAGE_SIZE } from './pagination';
 
 export type CompanyRead = components['schemas']['CompanyRead'];
 export type CompanyCreate = components['schemas']['CompanyCreate'];
@@ -25,15 +25,14 @@ const unwrap = <T,>(
 
 export const getCompanies = async (token: string): Promise<CompanyRead[]> => {
   const client = createApiClient(token);
-  const page = unwrap<CompanyListPage>(await client.GET('/api/v1/companies/', {
+  return fetchAllPages<CompanyRead>(async (page, pageSize) => unwrap<CompanyListPage>(await client.GET('/api/v1/companies/', {
     params: {
       query: {
-        page: 1,
-        page_size: FULL_LIST_PAGE_SIZE,
+        page,
+        page_size: pageSize,
       },
     },
-  }));
-  return normalizePaginatedResponse(page, { page: 1, page_size: FULL_LIST_PAGE_SIZE }).items;
+  })), FULL_LIST_PAGE_SIZE);
 };
 
 export const getCompany = async (token: string, id: string): Promise<CompanyRead> => {

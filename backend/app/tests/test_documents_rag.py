@@ -1,22 +1,22 @@
 import json
-from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from sqlalchemy import select
 
 from app import models, schemas
+from app.conftest import (
+    async_client_ctx,
+    login_and_get_headers,
+)
+from app.conftest import (
+    create_user as _shared_create_user,
+)
 from app.core import conf
 from app.core import orchestration as orchestration_core
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
+from app.core.db import session_context
 from app.core.rag.state import LeadEnrichmentDraft, active_rag_event_id
-from app.main import app
-from app.tests import utils
-
-password_helper = PasswordHelper()
-_db_ready = False
 
 
 @pytest.fixture(autouse=True)
@@ -26,35 +26,17 @@ def _configure_openai_for_documents_rag_tests(
     monkeypatch.setattr(conf.openai, "API_KEY", "test-openai-key")
 
 
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url="http://testserver",
-    ) as client:
-        yield client
+@pytest.fixture(scope="module", autouse=True)
+async def _shared_db_ready(ensure_db: None) -> None:
+    del ensure_db
 
 
 async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
+    return None
 
 
 async def _create_user(password: str) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email, password_helper.hash(password), session
-        )
-        await session.commit()
-    return email, user.id
+    return await _shared_create_user(password)
 
 
 async def _auth_headers(
@@ -62,13 +44,10 @@ async def _auth_headers(
     email: str,
     password: str,
 ) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+    return await login_and_get_headers(client, email, password)
+
+
+_client = async_client_ctx
 
 
 def _route_draft() -> LeadEnrichmentDraft:

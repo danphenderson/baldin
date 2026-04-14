@@ -1,4 +1,5 @@
 # Path: app/core/conf.py
+import logging
 from os import environ, getenv
 from pathlib import Path
 from typing import Literal, Union
@@ -176,6 +177,7 @@ class Settings(_BaseSettings):
 
     CRAWLER_SCHEDULER_ENABLED: bool = True
     RUN_REAPER_ENABLED: bool = True
+    ALLOW_KMP_DUPLICATE_LIB_OK: bool = False
 
     @property
     def SHOULD_BOOTSTRAP_ON_STARTUP(self) -> bool:
@@ -223,14 +225,18 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
         if self.is_configured:
             models["gpt-5.4-mini-2026-03-17"] = {
                 "chat_model": ChatOpenAI(
-                    model="gpt-5.4-mini-2026-03-17", temperature=0
+                    model="gpt-5.4-mini-2026-03-17",
+                    temperature=0,
+                    api_key=self.API_KEY,
                 ),
                 "description": "GPT-5.4 Mini",
             }
             if getenv("DISABLE_GPT4", "").lower() != "true":
                 models["gpt-5.4-nano-2026-03-17"] = {
                     "chat_model": ChatOpenAI(
-                        model="gpt-5.4-nano-2026-03-17", temperature=0
+                        model="gpt-5.4-nano-2026-03-17",
+                        temperature=0,
+                        api_key=self.API_KEY,
                     ),
                     "description": "GPT-5.4 Nano",
                 }
@@ -257,6 +263,7 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
         return OpenAIEmbeddings(
             model=self.EMBEDDING_MODEL,
             dimensions=self.EMBEDDING_DIMENSIONS,
+            api_key=self.API_KEY,
         )
 
     def get_chunk_size(self, name: str) -> int:
@@ -339,6 +346,17 @@ def get_glassdoor_settings(**kwargs) -> Glassdoor:
     return glassdoor
 
 
+def apply_process_environment_hacks(current_settings: Settings) -> None:
+    if current_settings.ALLOW_KMP_DUPLICATE_LIB_OK and current_settings.ENVIRONMENT in {
+        "DEV",
+        "PYTEST",
+    }:
+        logging.getLogger("uvicorn").warning(
+            "ALLOW_KMP_DUPLICATE_LIB_OK=1 enabled; libomp duplicate-runtime guard is disabled for local development."
+        )
+        environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+
 settings = get_settings()
 
 openai = get_openai_settings()
@@ -347,6 +365,4 @@ linkedin = get_linkedin_settings()
 
 glassdoor = get_glassdoor_settings()
 
-# FIXME: Clean up the following hacks.
-environ["OPENAI_API_KEY"] = openai.API_KEY
-environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+apply_process_environment_hacks(settings)

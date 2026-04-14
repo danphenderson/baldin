@@ -46,7 +46,7 @@ async def _get_duplicate_aspiration(
 async def list_aspirations(
     kind: schemas.AspirationKind | None = None,
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):

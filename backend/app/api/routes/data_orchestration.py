@@ -34,7 +34,7 @@ async def read_orch_pipelines(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
     base = (
         select(models.OrchestrationPipeline)

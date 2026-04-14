@@ -4,7 +4,6 @@ import json
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path  # noqa
 from typing import Any, Awaitable, Callable, Sequence
 
 import httpx
@@ -29,6 +28,7 @@ from app.core import (
     security,  # noqa
 )
 from app.core import orchestration as orchestration_core  # noqa
+from app.core.datetime_utils import now_utc_naive
 from app.core.db import (  # noqa
     AsyncSession,
     DataBaseManager,
@@ -117,8 +117,8 @@ async def get_capped_pagination_params(
     page_size: int = Query(
         10,
         ge=1,
-        le=100,
-        description="Number of records per page (max 100)",
+        le=schemas.PAGINATION_MAX_PAGE_SIZE,
+        description=f"Number of records per page (max {schemas.PAGINATION_MAX_PAGE_SIZE})",
     ),
     request_count: bool = Query(False, description="Return total count of records"),
 ) -> schemas.Pagination:
@@ -1292,6 +1292,41 @@ async def execute_crawler_run_background(run_id: uuid.UUID, user_id: uuid.UUID) 
         await execute_crawler_run(run, db, user)
 
 
+async def record_crawler_run_enqueue_fallback(
+    run_id: uuid.UUID,
+    *,
+    error_summary: str,
+    fallback_mode: str,
+) -> None:
+    """Persist queue handoff failures so operator status can surface them later."""
+    async with session_context() as db:
+        event = await _find_orchestration_event_for_run(run_id, db)
+        if event is None:
+            return
+
+        payload = dict(event.payload or {})
+        history = list(payload.get("enqueue_failures") or [])
+        history.append(
+            {
+                "recorded_at": now_utc_naive().isoformat(),
+                "fallback_mode": fallback_mode,
+                "error_summary": error_summary[:500],
+            }
+        )
+        payload["enqueue_failures"] = history[-5:]
+        payload["enqueue_failure_count"] = (
+            int(payload.get("enqueue_failure_count", 0)) + 1
+        )
+        payload["last_enqueue_failure_at"] = history[-1]["recorded_at"]
+        payload["last_enqueue_failure_mode"] = fallback_mode
+        event.payload = payload
+        event.message = (
+            f"Crawler run queue handoff failed; falling back via {fallback_mode}: "
+            f"{error_summary[:200]}"
+        )
+        await db.commit()
+
+
 async def mark_crawler_run_enqueue_failure(
     run_id: uuid.UUID, error_summary: str
 ) -> None:
@@ -1335,6 +1370,11 @@ async def schedule_crawler_run_execution(
         enqueued = await enqueue_crawler_job(str(run_id), str(user_id))
         if enqueued:
             return
+        await record_crawler_run_enqueue_fallback(
+            run_id,
+            error_summary="Redis enqueue failed",
+            fallback_mode="inline",
+        )
         await log.warning(
             f"Falling back to inline crawler execution for run {run_id} after queue enqueue failure"
         )
@@ -1349,6 +1389,11 @@ async def schedule_crawler_run_execution(
         error_summary = (
             "Unable to schedule inline crawler execution after queue enqueue failure: "
             f"{exc}"
+        )
+        await record_crawler_run_enqueue_fallback(
+            run_id,
+            error_summary=error_summary,
+            fallback_mode="inline_unavailable",
         )
         await log.exception(error_summary)
         await mark_crawler_run_enqueue_failure(run_id, error_summary)

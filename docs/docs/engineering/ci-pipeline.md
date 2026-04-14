@@ -5,7 +5,7 @@ title: See Merge Gates
 description: See merge gates, contract freshness checks, and candidate artifact builds.
 ---
 
-<!-- last-verified: 2026-04-12 -->
+<!-- last-verified: 2026-04-13 -->
 
 # See Merge Gates
 
@@ -20,7 +20,7 @@ Triggers on push to `main` and pull requests. Ignores changes to `*.md`, `docs/*
 ```mermaid
 flowchart TD
     accTitle: CI Pipeline Job Graph
-    accDescr: Shows six CI jobs that all depend on lint passing first — backend-tests (pytest with coverage), frontend-tests (vitest), frontend-theme-lint (theme drift guard), frontend-typecheck (tsc), frontend-build (vite build), and schema-freshness (contract guard).
+    accDescr: Shows lint plus six downstream CI jobs — backend-tests (pytest with coverage), frontend-tests (vitest), frontend-theme-lint (theme drift guard), frontend-typecheck (tsc), frontend-build (vite build), and schema-freshness (contract guard).
     L["lint<br/>pre-commit hooks"] --> BT["backend-tests<br/>pytest + coverage"]
     L --> FT["frontend-tests<br/>vitest"]
     L --> FTL["frontend-theme-lint<br/>npm run lint:theme"]
@@ -70,7 +70,7 @@ The frontend build uses `VITE_API_URL=https://api.preview.invalid` as a placehol
 - All seven CI jobs must pass, and branches should be up to date before merge.
 - No force pushes or deletions allowed.
 
-Check names must match the CI job names exactly. See `.github/branch-protection.md` for the documented rules.
+Check names must match the CI job names exactly. See `.github/branch-protection.md` for the documented rules. The local `branch-protection-sync` pre-commit hook now fails when the documented required checks drift from `.github/workflows/ci.yml`.
 
 ## Why This Split Exists
 

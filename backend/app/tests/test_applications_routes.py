@@ -12,19 +12,16 @@ from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
 from app import models
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.main import app
+from app.conftest import create_user, login_and_get_headers
+from app.core.db import session_context
 from app.tests import utils
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
-password_helper = PasswordHelper()
-_db_ready = False
+_client = None
 
 # Module-level cached auth state (populated by first test that calls _get_auth).
 _cached_user: tuple[str, UUID, str] | None = None  # (email, uid, password)
@@ -36,53 +33,16 @@ _cached_headers: dict[str, str] | None = None
 # ---------------------------------------------------------------------------
 
 
-@asynccontextmanager
-async def _client():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
+@pytest.fixture(autouse=True)
+def _use_shared_client(client: AsyncClient) -> None:
+    """Bridge existing `_client()` call sites onto the shared client fixture."""
+    global _client
+
+    @asynccontextmanager
+    async def _ctx():
         yield client
 
-
-async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(
-    password: str, *, is_superuser: bool = False
-) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-            is_superuser=is_superuser,
-        )
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient, email: str, password: str
-) -> dict[str, str]:
-    app.state.limiter.reset()
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200, response.text
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    _client = _ctx
 
 
 async def _get_auth(client: AsyncClient) -> tuple[UUID, dict[str, str]]:
@@ -91,8 +51,8 @@ async def _get_auth(client: AsyncClient) -> tuple[UUID, dict[str, str]]:
     if _cached_headers is not None and _cached_user is not None:
         return _cached_user[1], _cached_headers
     password = "AppRouteTest1!"
-    email, uid = await _create_user(password)
-    headers = await _auth_headers(client, email, password)
+    email, uid = await create_user(password)
+    headers = await login_and_get_headers(client, email, password)
     _cached_user = (email, uid, password)
     _cached_headers = headers
     return uid, headers
@@ -191,7 +151,6 @@ async def _create_application_via_api(
 
 async def test_create_application_happy_path() -> None:
     """POST /applications/ with valid payload returns 201 and expected fields."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -221,7 +180,6 @@ async def test_create_application_happy_path() -> None:
 
 
 async def test_create_application_with_document_ids_returns_document_metadata() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -253,7 +211,6 @@ async def test_create_application_with_document_ids_returns_document_metadata() 
 
 async def test_create_application_duplicate_lead_returns_400() -> None:
     """Creating two applications for the same lead returns 400."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -277,7 +234,6 @@ async def test_create_application_duplicate_lead_returns_400() -> None:
 
 async def test_create_application_validation_error() -> None:
     """POST /applications/ with missing required fields returns 422."""
-    await _ensure_db_ready()
     async with _client() as client:
         _, headers = await _get_auth(client)
 
@@ -298,7 +254,6 @@ async def test_create_application_validation_error() -> None:
 
 async def test_list_applications() -> None:
     """GET /applications/ returns a paginated list with the expected shape."""
-    await _ensure_db_ready()
     async with _client() as client:
         _, headers = await _get_auth(client)
 
@@ -319,11 +274,10 @@ async def test_list_applications() -> None:
 
 
 async def test_application_responses_include_accessible_document_metadata() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         viewer_id, viewer_headers = await _get_auth(client)
-        _, shared_owner_id = await _create_user("SharedCountOwnerPass1!")
-        _, hidden_owner_id = await _create_user("HiddenCountOwnerPass1!")
+        _, shared_owner_id = await create_user("SharedCountOwnerPass1!")
+        _, hidden_owner_id = await create_user("HiddenCountOwnerPass1!")
         lead_id = await _create_lead()
 
         create_resp = await client.post(
@@ -420,11 +374,10 @@ async def test_application_responses_include_accessible_document_metadata() -> N
 
 async def test_list_applications_empty_for_new_user() -> None:
     """GET /applications/ returns empty list when user has no applications."""
-    await _ensure_db_ready()
     async with _client() as client:
         # Need a fresh user — costs one login
-        email, _ = await _create_user("app-empty-pass1!")
-        headers = await _auth_headers(client, email, "app-empty-pass1!")
+        email, _ = await create_user("app-empty-pass1!")
+        headers = await login_and_get_headers(client, email, "app-empty-pass1!")
 
         response = await client.get("/api/v1/applications/", headers=headers)
 
@@ -444,7 +397,6 @@ async def test_list_applications_empty_for_new_user() -> None:
 
 async def test_get_application_by_id() -> None:
     """GET /applications/{id} returns 200 with the correct application."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -466,7 +418,6 @@ async def test_get_application_by_id() -> None:
 
 async def test_get_application_not_found() -> None:
     """GET /applications/{id} with a non-existent id returns 404."""
-    await _ensure_db_ready()
     async with _client() as client:
         _, headers = await _get_auth(client)
 
@@ -482,7 +433,6 @@ async def test_get_application_not_found() -> None:
 
 async def test_update_application_happy_path() -> None:
     """PATCH /applications/{id} updates fields and returns 200."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -508,7 +458,6 @@ async def test_update_application_happy_path() -> None:
 
 async def test_update_application_stage_appends_history() -> None:
     """PATCH that changes stage appends to status_history."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -548,7 +497,6 @@ async def test_update_application_sets_outcome_reason_for_terminal_outcome(
     terminal_outcome: str,
     outcome_reason: str,
 ) -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -579,7 +527,6 @@ async def test_update_application_allows_outcome_reason_on_closed_application_wi
     terminal_outcome: str,
     outcome_reason: str,
 ) -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -609,7 +556,6 @@ async def test_update_application_allows_outcome_reason_on_closed_application_wi
 async def test_update_application_rejects_outcome_reason_for_active_application() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -632,7 +578,6 @@ async def test_update_application_rejects_implicit_reopen_from_terminal_outcome(
     terminal_outcome: str,
 ) -> None:
     """Closed applications cannot move back to an active stage without reopen=true."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -672,7 +617,6 @@ async def test_update_application_reopens_terminal_outcome_when_reopen_true(
     terminal_outcome: str,
 ) -> None:
     """reopen=true allows a terminal application to move back into an active stage."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -710,7 +654,6 @@ async def test_update_application_reopens_terminal_outcome_when_reopen_true(
 
 async def test_update_application_not_found() -> None:
     """PATCH /applications/{id} with non-existent id returns 404."""
-    await _ensure_db_ready()
     async with _client() as client:
         _, headers = await _get_auth(client)
 
@@ -730,7 +673,6 @@ async def test_update_application_not_found() -> None:
 
 async def test_delete_application_happy_path() -> None:
     """DELETE /applications/{id} returns 204 and the resource is gone."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -755,7 +697,6 @@ async def test_delete_application_happy_path() -> None:
 
 async def test_delete_application_not_found() -> None:
     """DELETE /applications/{id} with non-existent id returns 404."""
-    await _ensure_db_ready()
     async with _client() as client:
         _, headers = await _get_auth(client)
 
@@ -773,7 +714,6 @@ async def test_delete_application_not_found() -> None:
 
 async def test_get_application_documents_empty() -> None:
     """GET /applications/{id}/documents returns empty list when none attached."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -801,7 +741,6 @@ async def test_get_application_documents_empty() -> None:
 
 async def test_attach_and_detach_document() -> None:
     """POST then DELETE on the document-attachment sub-route works end-to-end."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -846,7 +785,6 @@ async def test_attach_and_detach_document() -> None:
 
 async def test_attach_duplicate_document_returns_400() -> None:
     """Attaching the same document twice returns 400."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()
@@ -879,10 +817,9 @@ async def test_attach_duplicate_document_returns_400() -> None:
 
 async def test_application_documents_include_shared_attachments() -> None:
     """GET /applications/{id}/documents includes shared documents attached by the caller."""
-    await _ensure_db_ready()
     async with _client() as client:
         viewer_id, viewer_headers = await _get_auth(client)
-        _, owner_id = await _create_user("SharedDocOwnerPass1!")
+        _, owner_id = await create_user("SharedDocOwnerPass1!")
         lead_id = await _create_lead()
 
         create_resp = await client.post(
@@ -929,10 +866,9 @@ async def test_application_documents_exclude_inaccessible_other_user_attachments
     None
 ):
     """GET /applications/{id}/documents excludes attached documents the caller cannot access."""
-    await _ensure_db_ready()
     async with _client() as client:
         owner_id, headers = await _get_auth(client)
-        _, other_user_id = await _create_user("OtherOwnerPass1!")
+        _, other_user_id = await create_user("OtherOwnerPass1!")
         lead_id = await _create_lead()
 
         create_resp = await client.post(
@@ -973,10 +909,9 @@ async def test_application_documents_exclude_inaccessible_other_user_attachments
 
 async def test_application_export_includes_shared_attached_documents() -> None:
     """GET /applications/{id}/export includes attached shared documents the caller can access."""
-    await _ensure_db_ready()
     async with _client() as client:
         viewer_id, viewer_headers = await _get_auth(client)
-        _, owner_id = await _create_user("SharedExportOwnerPass1!")
+        _, owner_id = await create_user("SharedExportOwnerPass1!")
         lead_id = await _create_lead()
 
         create_resp = await client.post(
@@ -1031,7 +966,6 @@ async def test_application_export_includes_shared_attached_documents() -> None:
 
 async def test_detach_document_not_attached_returns_404() -> None:
     """DELETE on a document not attached to the application returns 404."""
-    await _ensure_db_ready()
     async with _client() as client:
         uid, headers = await _get_auth(client)
         lead_id = await _create_lead()

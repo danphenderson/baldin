@@ -35,7 +35,7 @@ async def read_current_user_educations(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
     base = select(models.Education).where(models.Education.user_id == user.id)
     count_result = await db.execute(select(func.count()).select_from(base.subquery()))
@@ -63,7 +63,7 @@ async def create_user_education(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    education = models.Education(**payload.dict(), user_id=user.id)
+    education = models.Education(**payload.model_dump(), user_id=user.id)
     db.add(education)
     await db.commit()
     await db.refresh(education)

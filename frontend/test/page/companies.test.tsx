@@ -48,6 +48,8 @@ const makeCompany = () => ({
   size: '200-500',
   location: 'Remote',
   description: 'Makes tools for developers.',
+  creator_user_id: 'u1',
+  can_manage: true,
   created_at: '2026-04-01T00:00:00Z',
   updated_at: '2026-04-01T00:00:00Z',
 });
@@ -109,5 +111,22 @@ describe('CompaniesPage', () => {
         stage: 'applied',
       });
     });
+  });
+
+  it('renders shared-directory copy and hides management controls for unmanaged companies', async () => {
+    mockedGetCompanies.mockResolvedValue([{
+      ...makeCompany(),
+      id: 'company-2',
+      name: 'Shared Corp',
+      creator_user_id: 'u2',
+      can_manage: false,
+    }] as never);
+
+    renderPage();
+
+    expect(await screen.findByText('Shared company directory: everyone can browse these records. Only the creator or an admin can edit or delete a company.')).toBeInTheDocument();
+    expect(screen.getByText('Shared directory')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit Shared Corp' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete Shared Corp' })).not.toBeInTheDocument();
   });
 });

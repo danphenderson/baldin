@@ -1,72 +1,25 @@
 """Tests for the /connections endpoints (CRUD, tier gating, blocking)."""
 
-from contextlib import asynccontextmanager
 from uuid import UUID
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
 
 from app import models
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.main import app
-from app.tests import utils
+from app.conftest import (
+    async_client_ctx as _client,
+)
+from app.conftest import (
+    create_user as _create_user,
+)
+from app.conftest import (
+    login_and_get_headers as _auth_headers,
+)
+from app.core.db import session_context
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
-
-password_helper = PasswordHelper()
-_db_ready = False
-
-
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
-
-
-async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(
-    password: str, *, is_superuser: bool = False, tier: str = "free"
-) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-            is_superuser=is_superuser,
-        )
-        if tier != "free":
-            user.subscription_tier = tier
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient, email: str, password: str
-) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+pytestmark = [
+    pytest.mark.asyncio(loop_scope="module"),
+    pytest.mark.usefixtures("fresh_db"),
+]
 
 
 async def _set_user_fields(user_id: UUID, **values) -> None:
@@ -85,7 +38,6 @@ async def _set_user_fields(user_id: UUID, **values) -> None:
 
 async def test_create_connection_request() -> None:
     """POST /connections/ creates a pending connection for starter+ users."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("conn-a-pass", tier="starter")
         email_b, uid_b = await _create_user("conn-b-pass")
@@ -109,7 +61,6 @@ async def test_create_connection_request() -> None:
 
 async def test_free_tier_cannot_create_connection() -> None:
     """Free-tier users get 403 when trying to send a connection request."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_f, uid_f = await _create_user("conn-free-pass", tier="free")
         email_t, uid_t = await _create_user("conn-target-pass")
@@ -126,7 +77,6 @@ async def test_free_tier_cannot_create_connection() -> None:
 
 async def test_free_tier_can_create_connection_to_superuser() -> None:
     """Free-tier users can request a connection when the target is a superuser."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_f, uid_f = await _create_user("conn-free-super-pass", tier="free")
         email_s, uid_s = await _create_user(
@@ -150,7 +100,6 @@ async def test_free_tier_can_create_connection_to_superuser() -> None:
 
 async def test_cannot_connect_to_self() -> None:
     """A user cannot send a connection request to themselves."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_s, uid_s = await _create_user("conn-self-pass", tier="starter")
         headers = await _auth_headers(client, email_s, "conn-self-pass")
@@ -166,7 +115,6 @@ async def test_cannot_connect_to_self() -> None:
 
 async def test_duplicate_connection_returns_409() -> None:
     """Sending a duplicate connection request returns 409 conflict."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("conn-dup-a-pass", tier="starter")
         email_b, uid_b = await _create_user("conn-dup-b-pass")
@@ -189,7 +137,6 @@ async def test_duplicate_connection_returns_409() -> None:
 
 async def test_list_connections_with_status_filter() -> None:
     """GET /connections/?status=pending returns only pending connections."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("conn-list-a-pass", tier="starter")
         email_b, uid_b = await _create_user("conn-list-b-pass")
@@ -214,7 +161,6 @@ async def test_list_connections_with_status_filter() -> None:
 
 async def test_connection_list_exposes_superuser_metadata() -> None:
     """GET /connections/ includes superuser flags in participant summaries."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("conn-meta-a-pass", tier="starter")
         email_s, uid_s = await _create_user(
@@ -248,7 +194,6 @@ async def test_connection_list_exposes_superuser_metadata() -> None:
 
 async def test_accept_connection() -> None:
     """PATCH /connections/{id}/accept — only the addressee can accept."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("conn-acc-a-pass", tier="starter")
         email_b, uid_b = await _create_user("conn-acc-b-pass", tier="starter")
@@ -279,7 +224,6 @@ async def test_accept_connection() -> None:
 
 async def test_decline_connection() -> None:
     """PATCH /connections/{id}/decline — only the addressee can decline."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("conn-dec-a-pass", tier="starter")
         email_b, uid_b = await _create_user("conn-dec-b-pass", tier="starter")
@@ -310,7 +254,6 @@ async def test_decline_connection() -> None:
 
 async def test_remove_connection() -> None:
     """DELETE /connections/{id} — either party can remove an accepted connection."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("conn-rm-a-pass", tier="starter")
         email_b, uid_b = await _create_user("conn-rm-b-pass", tier="starter")
@@ -337,7 +280,6 @@ async def test_remove_connection() -> None:
 
 async def test_block_connection() -> None:
     """POST /connections/{id}/block sets the connection to blocked status."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("conn-blk-a-pass", tier="starter")
         email_b, uid_b = await _create_user("conn-blk-b-pass", tier="starter")

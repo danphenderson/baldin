@@ -1,22 +1,24 @@
 """Tests for the user avatar upload and serve endpoints."""
 
-from contextlib import asynccontextmanager
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
 
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
+from app.conftest import (
+    async_client_ctx as _client,
+)
+from app.conftest import (
+    create_user as _create_user,
+)
+from app.conftest import (
+    login_and_get_headers as _auth_headers,
+)
 from app.core.document_storage import find_avatar_file, remove_avatar_files
-from app.main import app
-from app.tests import utils
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
-
-password_helper = PasswordHelper()
-_db_ready = False
+pytestmark = [
+    pytest.mark.asyncio(loop_scope="module"),
+    pytest.mark.usefixtures("ensure_db"),
+]
 
 # A minimal valid 1x1 PNG image (67 bytes)
 _TINY_PNG = (
@@ -54,56 +56,22 @@ _TINY_JPEG = bytes(
     ]
 )
 
+_TINY_GIF = (
+    b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!"
+    b"\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00"
+    b"\x00\x02\x02D\x01\x00;"
+)
 
-@asynccontextmanager
-async def _client():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
-
-
-async def _ensure_db_ready():
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(password: str) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-        )
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient, email: str, password: str
-) -> dict[str, str]:
-    resp = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert resp.status_code == 200, resp.text
-    return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+_TINY_WEBP = (
+    b"RIFF$\x00\x00\x00WEBPVP8 \x18\x00\x00\x00"
+    b"\x30\x01\x00\x9d\x01*\x01\x00\x01\x00\x01@&%\xa4\x00\x03p\x00\xfe\xfb\xfdP\x00"
+)
 
 
 # ── Tests ────────────────────────────────────────────────────────────────
 
 
 async def test_upload_avatar_png():
-    await _ensure_db_ready()
     async with _client() as client:
         email, user_id = await _create_user("testpw")
         headers = await _auth_headers(client, email, "testpw")
@@ -128,7 +96,6 @@ async def test_upload_avatar_png():
 
 
 async def test_serve_avatar():
-    await _ensure_db_ready()
     async with _client() as client:
         email, user_id = await _create_user("testpw2")
         headers = await _auth_headers(client, email, "testpw2")
@@ -145,6 +112,7 @@ async def test_serve_avatar():
         resp = await client.get(f"/api/v1/users/{user_id}/avatar")
         assert resp.status_code == 200
         assert resp.headers["content-type"].startswith("image/")
+        assert resp.headers["x-content-type-options"] == "nosniff"
         assert len(resp.content) == len(_TINY_PNG)
 
         # Cleanup
@@ -152,7 +120,6 @@ async def test_serve_avatar():
 
 
 async def test_serve_avatar_not_found():
-    await _ensure_db_ready()
     async with _client() as client:
         # Random user ID with no avatar
         resp = await client.get(f"/api/v1/users/{uuid4()}/avatar")
@@ -160,7 +127,6 @@ async def test_serve_avatar_not_found():
 
 
 async def test_upload_avatar_replaces_previous():
-    await _ensure_db_ready()
     async with _client() as client:
         email, user_id = await _create_user("testpw3")
         headers = await _auth_headers(client, email, "testpw3")
@@ -194,7 +160,6 @@ async def test_upload_avatar_replaces_previous():
 
 
 async def test_upload_avatar_unsupported_type():
-    await _ensure_db_ready()
     async with _client() as client:
         email, _ = await _create_user("testpw4")
         headers = await _auth_headers(client, email, "testpw4")
@@ -208,14 +173,57 @@ async def test_upload_avatar_unsupported_type():
         assert "Unsupported" in resp.json()["detail"]
 
 
+@pytest.mark.parametrize(
+    ("filename", "file_bytes", "content_type", "expected_suffix"),
+    [
+        ("avatar.gif", _TINY_GIF, "image/gif", ".gif"),
+        ("avatar.webp", _TINY_WEBP, "image/webp", ".webp"),
+    ],
+)
+async def test_upload_avatar_accepts_supported_image_signatures(
+    filename: str,
+    file_bytes: bytes,
+    content_type: str,
+    expected_suffix: str,
+):
+    async with _client() as client:
+        email, user_id = await _create_user("testpw-supported")
+        headers = await _auth_headers(client, email, "testpw-supported")
+
+        resp = await client.post(
+            "/api/v1/users/me/avatar",
+            headers=headers,
+            files={"file": (filename, file_bytes, content_type)},
+        )
+        assert resp.status_code == 200, resp.text
+        avatar = find_avatar_file(user_id)
+        assert avatar is not None
+        assert avatar.suffix == expected_suffix
+        remove_avatar_files(user_id)
+
+
+async def test_upload_avatar_rejects_content_type_signature_mismatch():
+    async with _client() as client:
+        email, _ = await _create_user("testpw-mismatch")
+        headers = await _auth_headers(client, email, "testpw-mismatch")
+
+        resp = await client.post(
+            "/api/v1/users/me/avatar",
+            headers=headers,
+            files={"file": ("avatar.jpg", _TINY_PNG, "image/jpeg")},
+        )
+
+        assert resp.status_code == 400
+        assert "declared image type" in resp.json()["detail"]
+
+
 async def test_upload_avatar_too_large():
-    await _ensure_db_ready()
     async with _client() as client:
         email, _ = await _create_user("testpw5")
         headers = await _auth_headers(client, email, "testpw5")
 
-        # Create a file larger than 2 MB
-        large_file = b"\x00" * (2 * 1024 * 1024 + 1)
+        # Use a valid PNG signature so the request reaches the size guard.
+        large_file = _TINY_PNG[:8] + b"\x00" * (2 * 1024 * 1024 + 1)
         resp = await client.post(
             "/api/v1/users/me/avatar",
             headers=headers,
@@ -226,7 +234,6 @@ async def test_upload_avatar_too_large():
 
 
 async def test_upload_avatar_requires_auth():
-    await _ensure_db_ready()
     async with _client() as client:
         resp = await client.post(
             "/api/v1/users/me/avatar",

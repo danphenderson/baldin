@@ -1,8 +1,5 @@
 import React, { useContext, useEffect, useState, useCallback } from 'react';
-import {
-  useParams,
-  useNavigate,
-  Link as RouterLink } from 'react-router-dom';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -27,7 +24,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  } from '@mui/material';
+} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
   Edit as EditIcon,
@@ -43,32 +40,37 @@ import {
   ArchiveOutlined as ArchiveIcon,
   UnarchiveOutlined as UnarchiveIcon,
   DeleteOutline as DeleteIcon,
-  } from '@mui/icons-material';
+} from '@mui/icons-material';
 import { UserContext } from '../context/user-context';
 import { useNotification } from '../context/notification-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
-import { getAgent,
+import {
+  getAgent,
   updateAgent,
   getAgentRuns,
-  runAgent } from '../service/agents';
-import type { AgentRead,
+  runAgent,
+} from '../service/agents';
+import type {
+  AgentRead,
   AgentUpdate,
   AgentRunSummaryRead,
-  AgentRunsPaginatedRead } from '../service/agents';
+  AgentRunsPaginatedRead,
+} from '../service/agents';
 import {
   createChatSession,
   deleteChatSession,
   getAvailableModels,
-  getChatSessions,
+  getAllChatSessions,
   updateChatSession,
-  } from '../service/agent-chat';
+} from '../service/agent-chat';
 import type {
   AgentChatSessionRead,
   AgentChatSessionStatus,
   AgentChatSessionSummaryRead,
-  } from '../service/agent-chat';
+} from '../service/agent-chat';
 import AgentFormDialog from '../component/agent-form-dialog';
-import { Caption,
+import {
+  Caption,
   ConfirmDialog,
   EmptyState,
   StatusChip as Chip,
@@ -99,7 +101,9 @@ const AgentDetailPage: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [defaultModelName, setDefaultModelName] = useState<string | null>(null);
-  const [defaultModelLabel, setDefaultModelLabel] = useState<string | null>(null);
+  const [defaultModelLabel, setDefaultModelLabel] = useState<string | null>(
+    null,
+  );
 
   /* Run history state */
   const [runs, setRuns] = useState<AgentRunSummaryRead[]>([]);
@@ -110,14 +114,23 @@ const AgentDetailPage: React.FC = () => {
   const RUNS_PAGE_SIZE = 10;
 
   /* Chat sessions state */
-  const [chatSessions, setChatSessions] = useState<AgentChatSessionSummaryRead[]>([]);
+  const [chatSessions, setChatSessions] = useState<
+    AgentChatSessionSummaryRead[]
+  >([]);
   const [chatSessionsLoading, setChatSessionsLoading] = useState(false);
-  const [chatSessionsLoadError, setChatSessionsLoadError] = useState<string | null>(null);
-  const [chatSessionFilter, setChatSessionFilter] = useState<'active' | 'archived' | 'all'>('active');
+  const [chatSessionsLoadError, setChatSessionsLoadError] = useState<
+    string | null
+  >(null);
+  const [chatSessionFilter, setChatSessionFilter] = useState<
+    'active' | 'archived' | 'all'
+  >('active');
   const [chatSessionsPage, setChatSessionsPage] = useState(1);
-  const [chatSessionActingId, setChatSessionActingId] = useState<string | null>(null);
+  const [chatSessionActingId, setChatSessionActingId] = useState<string | null>(
+    null,
+  );
   const [creatingChat, setCreatingChat] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<AgentChatSessionSummaryRead | null>(null);
+  const [deleteTarget, setDeleteTarget] =
+    useState<AgentChatSessionSummaryRead | null>(null);
   const CHAT_SESSIONS_PAGE_SIZE = 8;
 
   usePageToolbarHeader(
@@ -152,7 +165,9 @@ const AgentDetailPage: React.FC = () => {
     }
   }, [token, agentId, notify]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   useEffect(() => {
     if (!token) {
@@ -193,42 +208,55 @@ const AgentDetailPage: React.FC = () => {
       setFormOpen(false);
       notify('Agent updated');
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to update agent', 'error');
+      notify(
+        e instanceof Error ? e.message : 'Failed to update agent',
+        'error',
+      );
     }
   };
 
   const handleToggleEnabled = async () => {
     if (!token || !agent) return;
     const next = !agent.is_enabled;
-    setAgent((prev) => prev ? { ...prev, is_enabled: next } : prev);
+    setAgent((prev) => (prev ? { ...prev, is_enabled: next } : prev));
     try {
       await updateAgent(token, agent.id, { is_enabled: next });
       notify(next ? 'Agent enabled' : 'Agent disabled');
     } catch (e: unknown) {
-      setAgent((prev) => prev ? { ...prev, is_enabled: !next } : prev);
-      notify(e instanceof Error ? e.message : 'Failed to update agent', 'error');
+      setAgent((prev) => (prev ? { ...prev, is_enabled: !next } : prev));
+      notify(
+        e instanceof Error ? e.message : 'Failed to update agent',
+        'error',
+      );
     }
   };
 
   /* ---- Run history ---- */
 
-  const refreshRuns = useCallback(async (page = runsPage) => {
-    if (!token || !agentId) return;
-    setRunsLoading(true);
-    try {
-      const result: AgentRunsPaginatedRead = await getAgentRuns(token, agentId, {
-        page,
-        page_size: RUNS_PAGE_SIZE,
-      });
-      setRuns(result.items);
-      setRunsTotal(result.total);
-      setRunsPage(page);
-    } catch {
-      /* run history errors are non-blocking */
-    } finally {
-      setRunsLoading(false);
-    }
-  }, [token, agentId, runsPage, RUNS_PAGE_SIZE]);
+  const refreshRuns = useCallback(
+    async (page = runsPage) => {
+      if (!token || !agentId) return;
+      setRunsLoading(true);
+      try {
+        const result: AgentRunsPaginatedRead = await getAgentRuns(
+          token,
+          agentId,
+          {
+            page,
+            page_size: RUNS_PAGE_SIZE,
+          },
+        );
+        setRuns(result.items);
+        setRunsTotal(result.total);
+        setRunsPage(page);
+      } catch {
+        /* run history errors are non-blocking */
+      } finally {
+        setRunsLoading(false);
+      }
+    },
+    [token, agentId, runsPage, RUNS_PAGE_SIZE],
+  );
 
   useEffect(() => {
     if (agent) refreshRuns(1);
@@ -240,13 +268,11 @@ const AgentDetailPage: React.FC = () => {
     setChatSessionsLoading(true);
     setChatSessionsLoadError(null);
     try {
-      const result = await getChatSessions(token, agentId, {
-        page: 1,
-        page_size: 500,
-      });
-      setChatSessions(result.items);
+      const result = await getAllChatSessions(token, agentId);
+      setChatSessions(result);
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Failed to load chat sessions';
+      const message =
+        e instanceof Error ? e.message : 'Failed to load chat sessions';
       setChatSessionsLoadError(message);
       notify(message, 'error');
     } finally {
@@ -264,7 +290,8 @@ const AgentDetailPage: React.FC = () => {
   }, [chatSessionFilter]);
 
   const handleRerun = async (run: AgentRunSummaryRead) => {
-    if (!token || !agentId || !run.session_document_id || !run.application_id) return;
+    if (!token || !agentId || !run.session_document_id || !run.application_id)
+      return;
     setRerunningRunId(run.id);
     try {
       const result = await runAgent(token, agentId, {
@@ -287,31 +314,40 @@ const AgentDetailPage: React.FC = () => {
   const runsTotalPages = Math.ceil(runsTotal / RUNS_PAGE_SIZE);
 
   const chatSessionsFiltered = [...chatSessions]
-    .filter((chatSession) => (
-      chatSessionFilter === 'all' ? true : chatSession.status === chatSessionFilter
-    ))
+    .filter((chatSession) =>
+      chatSessionFilter === 'all'
+        ? true
+        : chatSession.status === chatSessionFilter,
+    )
     .sort((left, right) => {
       const leftTimestamp = left.last_message_at ?? left.updated_at;
       const rightTimestamp = right.last_message_at ?? right.updated_at;
-      return new Date(rightTimestamp).getTime() - new Date(leftTimestamp).getTime();
+      return (
+        new Date(rightTimestamp).getTime() - new Date(leftTimestamp).getTime()
+      );
     });
 
   const chatSessionsTotalPages = Math.max(
     1,
     Math.ceil(chatSessionsFiltered.length / CHAT_SESSIONS_PAGE_SIZE),
   );
-  const safeChatSessionsPage = Math.min(chatSessionsPage, chatSessionsTotalPages);
+  const safeChatSessionsPage = Math.min(
+    chatSessionsPage,
+    chatSessionsTotalPages,
+  );
   const chatSessionsPageItems = chatSessionsFiltered.slice(
     (safeChatSessionsPage - 1) * CHAT_SESSIONS_PAGE_SIZE,
     safeChatSessionsPage * CHAT_SESSIONS_PAGE_SIZE,
   );
 
   const applyChatSessionUpdate = (updated: AgentChatSessionRead) => {
-    setChatSessions((current) => current.map((chatSession) => (
-      chatSession.id === updated.id
-        ? { ...chatSession, ...updated }
-        : chatSession
-    )));
+    setChatSessions((current) =>
+      current.map((chatSession) =>
+        chatSession.id === updated.id
+          ? { ...chatSession, ...updated }
+          : chatSession,
+      ),
+    );
   };
 
   const handleCreateChat = async () => {
@@ -321,7 +357,10 @@ const AgentDetailPage: React.FC = () => {
       const session = await createChatSession(token, agent.id, {});
       navigate(`/automation/agents/${agent.id}/chat/${session.id}`);
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to create chat session', 'error');
+      notify(
+        e instanceof Error ? e.message : 'Failed to create chat session',
+        'error',
+      );
     } finally {
       setCreatingChat(false);
     }
@@ -334,11 +373,16 @@ const AgentDetailPage: React.FC = () => {
     if (!token) return;
     setChatSessionActingId(chatSession.id);
     try {
-      const updated = await updateChatSession(token, chatSession.id, { status });
+      const updated = await updateChatSession(token, chatSession.id, {
+        status,
+      });
       applyChatSessionUpdate(updated);
       notify(status === 'archived' ? 'Chat archived' : 'Chat restored');
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to update chat session', 'error');
+      notify(
+        e instanceof Error ? e.message : 'Failed to update chat session',
+        'error',
+      );
     } finally {
       setChatSessionActingId(null);
     }
@@ -349,18 +393,25 @@ const AgentDetailPage: React.FC = () => {
     setChatSessionActingId(deleteTarget.id);
     try {
       await deleteChatSession(token, deleteTarget.id);
-      setChatSessions((current) => current.filter((chatSession) => chatSession.id !== deleteTarget.id));
+      setChatSessions((current) =>
+        current.filter((chatSession) => chatSession.id !== deleteTarget.id),
+      );
       setDeleteTarget(null);
       notify('Chat deleted');
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to delete chat session', 'error');
+      notify(
+        e instanceof Error ? e.message : 'Failed to delete chat session',
+        'error',
+      );
     } finally {
       setChatSessionActingId(null);
     }
   };
 
   const navigateToChatSession = (chatSession: AgentChatSessionSummaryRead) => {
-    navigate(`/automation/agents/${agentId ?? chatSession.agent_id}/chat/${chatSession.id}`);
+    navigate(
+      `/automation/agents/${agentId ?? chatSession.agent_id}/chat/${chatSession.id}`,
+    );
   };
 
   /* ---- Loading skeleton ---- */
@@ -398,7 +449,10 @@ const AgentDetailPage: React.FC = () => {
           icon={<AgentsIcon />}
           title="Agent not found"
           description="This agent may have been deleted."
-          action={{ label: 'Back to Agents', onClick: () => navigate('/automation/agents') }}
+          action={{
+            label: 'Back to Agents',
+            onClick: () => navigate('/automation/agents'),
+          }}
         />
       </Box>
     );
@@ -408,10 +462,14 @@ const AgentDetailPage: React.FC = () => {
 
   const kColor = (() => {
     switch (agent.kind) {
-      case 'cover_letter': return theme.palette.primary.main;
-      case 'follow_up': return theme.palette.secondary.main;
-      case 'outreach': return theme.palette.info.main;
-      default: return theme.palette.text.secondary;
+      case 'cover_letter':
+        return theme.palette.primary.main;
+      case 'follow_up':
+        return theme.palette.secondary.main;
+      case 'outreach':
+        return theme.palette.info.main;
+      default:
+        return theme.palette.text.secondary;
     }
   })();
 
@@ -419,7 +477,10 @@ const AgentDetailPage: React.FC = () => {
 
   const configuredModelName = getAgentConfiguredModelName(agent.configuration);
   const configuredModelLabel = getAgentModelDisplayLabel(configuredModelName);
-  const defaultModelHelperText = getAgentDefaultModelHelperText(defaultModelName, defaultModelLabel);
+  const defaultModelHelperText = getAgentDefaultModelHelperText(
+    defaultModelName,
+    defaultModelLabel,
+  );
 
   return (
     <Box sx={{ maxWidth: 720, mx: 'auto' }}>
@@ -437,7 +498,12 @@ const AgentDetailPage: React.FC = () => {
         </Tooltip>
       </Stack>
 
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ mb: 2 }}
+      >
         <Box>
           <Typography variant="h5" fontWeight={700} sx={{ mb: 0.75 }}>
             {agent.name}
@@ -461,7 +527,9 @@ const AgentDetailPage: React.FC = () => {
                 />
               }
               label={agent.is_enabled ? 'Enabled' : 'Disabled'}
-              slotProps={{ typography: { variant: 'caption', color: 'text.secondary' } }}
+              slotProps={{
+                typography: { variant: 'caption', color: 'text.secondary' },
+              }}
               sx={{ ml: 0.5 }}
             />
           </Stack>
@@ -478,7 +546,11 @@ const AgentDetailPage: React.FC = () => {
 
       {/* Description */}
       {agent.description && (
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 2.5, lineHeight: 1.6 }}>
+        <Typography
+          variant="body1"
+          color="text.secondary"
+          sx={{ mb: 2.5, lineHeight: 1.6 }}
+        >
           {agent.description}
         </Typography>
       )}
@@ -519,10 +591,14 @@ const AgentDetailPage: React.FC = () => {
       {/* Timestamps */}
       <Stack direction="row" spacing={2} sx={{ mb: 4 }}>
         <Tooltip title={new Date(agent.created_at).toLocaleString()}>
-          <Box><Caption>Created {timeAgo(agent.created_at)}</Caption></Box>
+          <Box>
+            <Caption>Created {timeAgo(agent.created_at)}</Caption>
+          </Box>
         </Tooltip>
         <Tooltip title={new Date(agent.updated_at).toLocaleString()}>
-          <Box><Caption>Updated {timeAgo(agent.updated_at)}</Caption></Box>
+          <Box>
+            <Caption>Updated {timeAgo(agent.updated_at)}</Caption>
+          </Box>
         </Tooltip>
       </Stack>
 
@@ -532,7 +608,12 @@ const AgentDetailPage: React.FC = () => {
           <HistoryIcon fontSize="small" />
           <span>Run History</span>
           {runsTotal > 0 && (
-            <Chip label={runsTotal} size="small" variant="outlined" sx={{ fontWeight: 700, height: 22 }} />
+            <Chip
+              label={runsTotal}
+              size="small"
+              variant="outlined"
+              sx={{ fontWeight: 700, height: 22 }}
+            />
           )}
           <Box sx={{ flex: 1 }} />
           <Tooltip title="Refresh run history">
@@ -568,19 +649,29 @@ const AgentDetailPage: React.FC = () => {
                   <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Session</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Version</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="right">
+                    Actions
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {runs.map((run) => {
                   const statusColor =
-                    run.status === 'completed' ? 'success' :
-                    run.status === 'failed' ? 'error' :
-                    run.status === 'running' ? 'warning' : 'default';
+                    run.status === 'completed'
+                      ? 'success'
+                      : run.status === 'failed'
+                        ? 'error'
+                        : run.status === 'running'
+                          ? 'warning'
+                          : 'default';
                   return (
                     <TableRow key={run.id} hover>
                       <TableCell>
-                        <Tooltip title={new Date(run.completed_at ?? run.created_at).toLocaleString()}>
+                        <Tooltip
+                          title={new Date(
+                            run.completed_at ?? run.created_at,
+                          ).toLocaleString()}
+                        >
                           <Typography variant="caption">
                             {timeAgo(run.completed_at ?? run.created_at)}
                           </Typography>
@@ -602,13 +693,19 @@ const AgentDetailPage: React.FC = () => {
                             to={`/workspace/${run.session_document_id}/edit`}
                             underline="hover"
                             variant="caption"
-                            sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.3 }}
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 0.3,
+                            }}
                           >
                             {run.session_document?.title ?? 'Session'}
                             <OpenIcon sx={{ fontSize: 12 }} />
                           </Link>
                         ) : (
-                          <Typography variant="caption" color="text.disabled">—</Typography>
+                          <Typography variant="caption" color="text.disabled">
+                            —
+                          </Typography>
                         )}
                       </TableCell>
                       <TableCell>
@@ -616,32 +713,46 @@ const AgentDetailPage: React.FC = () => {
                           <Chip
                             label={`v${run.session_version.version_number}`}
                             size="small"
-                            sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }}
+                            sx={{
+                              height: 20,
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                            }}
                           />
                         ) : (
-                          <Typography variant="caption" color="text.disabled">—</Typography>
+                          <Typography variant="caption" color="text.disabled">
+                            —
+                          </Typography>
                         )}
                       </TableCell>
                       <TableCell align="right">
-                        {run.status === 'completed' && run.session_document_id && run.application_id && !run.chat_session_id && (
-                          <Tooltip title="Rerun agent into the same session">
-                            <Box component="span">
-                              <Button
-                                size="small"
-                                startIcon={
-                                  rerunningRunId === run.id
-                                    ? <CircularProgress size={14} color="inherit" />
-                                    : <RerunIcon />
-                                }
-                                disabled={rerunningRunId !== null}
-                                onClick={() => handleRerun(run)}
-                                sx={{ textTransform: 'none' }}
-                              >
-                                Rerun
-                              </Button>
-                            </Box>
-                          </Tooltip>
-                        )}
+                        {run.status === 'completed' &&
+                          run.session_document_id &&
+                          run.application_id &&
+                          !run.chat_session_id && (
+                            <Tooltip title="Rerun agent into the same session">
+                              <Box component="span">
+                                <Button
+                                  size="small"
+                                  startIcon={
+                                    rerunningRunId === run.id ? (
+                                      <CircularProgress
+                                        size={14}
+                                        color="inherit"
+                                      />
+                                    ) : (
+                                      <RerunIcon />
+                                    )
+                                  }
+                                  disabled={rerunningRunId !== null}
+                                  onClick={() => handleRerun(run)}
+                                  sx={{ textTransform: 'none' }}
+                                >
+                                  Rerun
+                                </Button>
+                              </Box>
+                            </Tooltip>
+                          )}
                         {run.status === 'failed' && run.error_summary && (
                           <Tooltip title={run.error_summary}>
                             <ErrorIcon fontSize="small" color="error" />
@@ -681,18 +792,33 @@ const AgentDetailPage: React.FC = () => {
             Chat Sessions
           </Typography>
           {chatSessions.length > 0 && (
-            <Chip label={chatSessions.length} size="small" variant="outlined" sx={{ fontWeight: 700, height: 22 }} />
+            <Chip
+              label={chatSessions.length}
+              size="small"
+              variant="outlined"
+              sx={{ fontWeight: 700, height: 22 }}
+            />
           )}
         </Stack>
         <Box sx={{ flex: 1 }} />
-        <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          useFlexGap
+          flexWrap="wrap"
+        >
           <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel id="chat-session-filter-label">Filter</InputLabel>
             <Select
               labelId="chat-session-filter-label"
               label="Filter"
               value={chatSessionFilter}
-              onChange={(event) => setChatSessionFilter(event.target.value as 'active' | 'archived' | 'all')}
+              onChange={(event) =>
+                setChatSessionFilter(
+                  event.target.value as 'active' | 'archived' | 'all',
+                )
+              }
             >
               <MenuItem value="active">Active</MenuItem>
               <MenuItem value="archived">Archived</MenuItem>
@@ -714,7 +840,13 @@ const AgentDetailPage: React.FC = () => {
           <Button
             variant="outlined"
             size="small"
-            startIcon={creatingChat ? <CircularProgress size={14} color="inherit" /> : <AddIcon />}
+            startIcon={
+              creatingChat ? (
+                <CircularProgress size={14} color="inherit" />
+              ) : (
+                <AddIcon />
+              )
+            }
             onClick={handleCreateChat}
             disabled={creatingChat || chatSessionsLoading}
           >
@@ -730,28 +862,41 @@ const AgentDetailPage: React.FC = () => {
           icon={<ErrorIcon />}
           title="Unable to load chat sessions"
           description={chatSessionsLoadError}
-          action={{ label: 'Retry', onClick: refreshChatSessions, icon: <RefreshIcon /> }}
+          action={{
+            label: 'Retry',
+            onClick: refreshChatSessions,
+            icon: <RefreshIcon />,
+          }}
         />
       ) : chatSessions.length === 0 ? (
         <EmptyState
           icon={<ChatIcon />}
           title="Start a conversation with this agent"
           description="Create a new chat session to launch an interactive conversation."
-          action={{ label: 'New Chat', onClick: handleCreateChat, icon: <AddIcon /> }}
+          action={{
+            label: 'New Chat',
+            onClick: handleCreateChat,
+            icon: <AddIcon />,
+          }}
         />
       ) : chatSessionsFiltered.length === 0 ? (
         <EmptyState
           icon={<ChatIcon />}
           title={`No ${chatSessionFilter === 'all' ? '' : `${chatSessionFilter} `}chat sessions`}
           description="Try another filter or create a new chat session."
-          action={{ label: 'New Chat', onClick: handleCreateChat, icon: <AddIcon /> }}
+          action={{
+            label: 'New Chat',
+            onClick: handleCreateChat,
+            icon: <AddIcon />,
+          }}
         />
       ) : (
         <>
           <Stack spacing={1.5} sx={{ mb: 2 }}>
             {chatSessionsPageItems.map((chatSession) => {
               const acting = chatSessionActingId === chatSession.id;
-              const lastActiveAt = chatSession.last_message_at ?? chatSession.updated_at;
+              const lastActiveAt =
+                chatSession.last_message_at ?? chatSession.updated_at;
               return (
                 <Paper key={chatSession.id} variant="outlined">
                   <Stack direction={{ xs: 'column', sm: 'row' }}>
@@ -786,22 +931,42 @@ const AgentDetailPage: React.FC = () => {
                           justifyContent="space-between"
                           alignItems={{ md: 'center' }}
                         >
-                          <Typography variant="subtitle2" fontWeight={700} noWrap>
+                          <Typography
+                            variant="subtitle2"
+                            fontWeight={700}
+                            noWrap
+                          >
                             {chatSession.title?.trim() || 'Untitled chat'}
                           </Typography>
                           <Chip
-                            label={chatSession.status === 'archived' ? 'Archived' : 'Active'}
+                            label={
+                              chatSession.status === 'archived'
+                                ? 'Archived'
+                                : 'Active'
+                            }
                             size="small"
-                            color={chatSession.status === 'archived' ? 'default' : 'success'}
+                            color={
+                              chatSession.status === 'archived'
+                                ? 'default'
+                                : 'success'
+                            }
                             variant="outlined"
                             sx={{ width: 'fit-content', fontWeight: 600 }}
                           />
                         </Stack>
-                        <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
+                        <Stack
+                          direction="row"
+                          spacing={1.5}
+                          useFlexGap
+                          flexWrap="wrap"
+                        >
                           <Caption>
-                            {chatSession.message_count} message{chatSession.message_count === 1 ? '' : 's'}
+                            {chatSession.message_count} message
+                            {chatSession.message_count === 1 ? '' : 's'}
                           </Caption>
-                          <Caption title={new Date(lastActiveAt).toLocaleString()}>
+                          <Caption
+                            title={new Date(lastActiveAt).toLocaleString()}
+                          >
                             Last active {timeAgo(lastActiveAt)}
                           </Caption>
                           {chatSession.application_id && (
@@ -811,7 +976,11 @@ const AgentDetailPage: React.FC = () => {
                               underline="hover"
                               variant="caption"
                               onClick={(event) => event.stopPropagation()}
-                              sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.35 }}
+                              sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 0.35,
+                              }}
                             >
                               Application
                               <OpenIcon sx={{ fontSize: 12 }} />
@@ -827,25 +996,48 @@ const AgentDetailPage: React.FC = () => {
                       sx={{
                         p: 2,
                         pt: { xs: 0, sm: 2 },
-                        borderLeft: { sm: `1px solid ${theme.palette.divider}` },
-                        borderTop: { xs: `1px solid ${theme.palette.divider}`, sm: 'none' },
+                        borderLeft: {
+                          sm: `1px solid ${theme.palette.divider}`,
+                        },
+                        borderTop: {
+                          xs: `1px solid ${theme.palette.divider}`,
+                          sm: 'none',
+                        },
                       }}
                     >
                       <Button
                         size="small"
-                        startIcon={chatSession.status === 'archived' ? <UnarchiveIcon /> : <ArchiveIcon />}
-                        onClick={() => handleUpdateChatStatus(
-                          chatSession,
-                          chatSession.status === 'archived' ? 'active' : 'archived',
-                        )}
+                        startIcon={
+                          chatSession.status === 'archived' ? (
+                            <UnarchiveIcon />
+                          ) : (
+                            <ArchiveIcon />
+                          )
+                        }
+                        onClick={() =>
+                          handleUpdateChatStatus(
+                            chatSession,
+                            chatSession.status === 'archived'
+                              ? 'active'
+                              : 'archived',
+                          )
+                        }
                         disabled={acting}
                       >
-                        {chatSession.status === 'archived' ? 'Restore' : 'Archive'}
+                        {chatSession.status === 'archived'
+                          ? 'Restore'
+                          : 'Archive'}
                       </Button>
                       <Button
                         size="small"
                         color="error"
-                        startIcon={acting ? <CircularProgress size={14} color="inherit" /> : <DeleteIcon />}
+                        startIcon={
+                          acting ? (
+                            <CircularProgress size={14} color="inherit" />
+                          ) : (
+                            <DeleteIcon />
+                          )
+                        }
                         onClick={() => setDeleteTarget(chatSession)}
                         disabled={acting}
                       >
@@ -881,9 +1073,19 @@ const AgentDetailPage: React.FC = () => {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete chat session"
-        message={<>Are you sure you want to delete <strong>{deleteTarget?.title?.trim() || 'this chat session'}</strong>? This action cannot be undone.</>}
+        message={
+          <>
+            Are you sure you want to delete{' '}
+            <strong>
+              {deleteTarget?.title?.trim() || 'this chat session'}
+            </strong>
+            ? This action cannot be undone.
+          </>
+        }
         confirmLabel="Delete"
-        loading={Boolean(deleteTarget) && chatSessionActingId === deleteTarget?.id}
+        loading={
+          Boolean(deleteTarget) && chatSessionActingId === deleteTarget?.id
+        }
         onConfirm={handleConfirmDeleteChat}
         onCancel={() => setDeleteTarget(null)}
       />

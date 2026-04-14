@@ -210,6 +210,58 @@ function getDueDateActionLabel(item: ActionItemDetailRead): string {
     : `Set due date for "${item.title}"`;
 }
 
+function pluralize(value: number, singular: string, plural = `${singular}s`): string {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
+function getDashboardFocusCopy(summary: CommandCenterSummary | null, pendingCount: number): string {
+  if (!summary) {
+    return 'Pull your next actions, active applications, and recent movement into one place.';
+  }
+
+  if (summary.application_count === 0 && summary.lead_count === 0) {
+    return 'Start by adding your first lead, shaping your profile, or creating a document so this dashboard has momentum to track.';
+  }
+
+  const focusParts = [
+    pluralize(summary.active_application_count, 'active application'),
+    pluralize(pendingCount, 'open action item'),
+    pluralize(summary.unapplied_lead_count, 'unapplied lead'),
+  ];
+
+  if (summary.overdue_action_items > 0) {
+    return `${focusParts.join(', ')}. ${pluralize(summary.overdue_action_items, 'overdue follow-up')} needs attention first.`;
+  }
+
+  if (summary.action_items_due_today > 0) {
+    return `${focusParts.join(', ')}. ${pluralize(summary.action_items_due_today, 'item')} is due today.`;
+  }
+
+  return `${focusParts.join(', ')}. Everything is current, so this is a good window to push the pipeline forward.`;
+}
+
+function getActionSectionCopy(actionFilter: string, count: number): string {
+  if (actionFilter === 'overdue') {
+    return count > 0
+      ? 'Start with overdue work so follow-ups and deadlines do not slip.'
+      : 'Nothing is overdue right now.';
+  }
+  if (actionFilter === 'pending') {
+    return count > 0
+      ? 'Queued work that still needs a first pass.'
+      : 'No pending action items are waiting right now.';
+  }
+  if (actionFilter === 'in_progress') {
+    return count > 0
+      ? 'Work already underway that is still open.'
+      : 'No action items are currently marked in progress.';
+  }
+
+  return count > 0
+    ? 'Your working queue, ordered by urgency and due date.'
+    : 'No open action items right now.';
+}
+
 /* ------------------------------------------------------------------ */
 /*  Sortable action-item row (DnD)                                     */
 /* ------------------------------------------------------------------ */
@@ -365,6 +417,7 @@ const DashboardPage: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<ActionItemDetailRead | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [operationError, setOperationError] = useState<string | null>(null);
   const [leads, setLeads] = useState<LeadRead[]>([]);
   const [leadsCollapsed, setLeadsCollapsed] = useState(() =>
     localStorage.getItem('cc-leads-collapsed') === 'true',
@@ -378,6 +431,10 @@ const DashboardPage: React.FC = () => {
   const [dueDateValue, setDueDateValue] = useState('');
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<HTMLElement | null>(null);
   const [statusMenuItem, setStatusMenuItem] = useState<ActionItemDetailRead | null>(null);
+
+  const showOperationError = useCallback((message: string) => {
+    setOperationError(message);
+  }, []);
 
   /* ---- page header ---- */
   usePageToolbarHeader(greeting);
@@ -419,10 +476,12 @@ const DashboardPage: React.FC = () => {
       setSummary(summaryRes);
       setActionItems(actionRes as ActionItemDetailRead[]);
       setLastRefresh(Date.now());
+      setOperationError(null);
     } catch (e) {
       console.error(e);
+      showOperationError('Dashboard refresh failed. Showing your last loaded data.');
     }
-  }, [token]);
+  }, [showOperationError, token]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -474,10 +533,12 @@ const DashboardPage: React.FC = () => {
       setFeed((prev) => [...prev, ...feedRes.items]);
       setFeedPage(nextPage);
       setFeedTotal(feedRes.total);
+      setOperationError(null);
     } catch (e) {
       console.error(e);
+      showOperationError('Could not load more activity right now. Please try again.');
     }
-  }, [token, feedPage]);
+  }, [feedPage, showOperationError, token]);
 
   /* ---- action-item mutations ---- */
   const handleComplete = useCallback(async (item: ActionItemDetailRead) => {
@@ -487,21 +548,25 @@ const DashboardPage: React.FC = () => {
       const updated = await updateActionItem(token, item.id, { status: newStatus });
       setActionItems((prev) => prev.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)));
       setSuccessMsg(newStatus === 'completed' ? 'Marked complete' : 'Marked pending');
+      setOperationError(null);
       setTimeout(() => setSuccessMsg(null), 2500);
     } catch (e) {
       console.error(e);
+      showOperationError(`Could not update "${item.title}". No changes were applied.`);
     }
-  }, [token]);
+  }, [showOperationError, token]);
 
   const handleDismiss = useCallback(async (item: ActionItemDetailRead) => {
     if (!token) return;
     try {
       const updated = await updateActionItem(token, item.id, { status: 'dismissed' });
       setActionItems((prev) => prev.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)));
+      setOperationError(null);
     } catch (e) {
       console.error(e);
+      showOperationError(`Could not dismiss "${item.title}". It is still in your list.`);
     }
-  }, [token]);
+  }, [showOperationError, token]);
 
   /* ---- inline priority cycling ---- */
   const handleCyclePriority = useCallback(async (item: ActionItemDetailRead) => {
@@ -511,12 +576,14 @@ const DashboardPage: React.FC = () => {
     setActionItems((prev) => prev.map((a) => (a.id === item.id ? { ...a, priority: next } : a)));
     try {
       await updateActionItem(token, item.id, { priority: next });
+      setOperationError(null);
     } catch (e) {
       // Revert on failure
       setActionItems((prev) => prev.map((a) => (a.id === item.id ? { ...a, priority: item.priority } : a)));
       console.error(e);
+      showOperationError(`Could not update priority for "${item.title}". Restored the previous priority.`);
     }
-  }, [token]);
+  }, [showOperationError, token]);
 
   /* ---- inline due-date ---- */
   const handleDueDateOpen = useCallback((event: React.MouseEvent<HTMLElement>, item: ActionItemDetailRead) => {
@@ -531,12 +598,14 @@ const DashboardPage: React.FC = () => {
     try {
       const updated = await updateActionItem(token, dueDateItem.id, { due_at });
       setActionItems((prev) => prev.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)));
+      setOperationError(null);
+      setDueDateAnchor(null);
+      setDueDateItem(null);
     } catch (e) {
       console.error(e);
+      showOperationError(`Could not save the due date for "${dueDateItem.title}". Please try again.`);
     }
-    setDueDateAnchor(null);
-    setDueDateItem(null);
-  }, [token, dueDateItem]);
+  }, [dueDateItem, showOperationError, token]);
 
   /* ---- inline status context menu ---- */
   const handleStatusContextMenu = useCallback((event: React.MouseEvent<HTMLElement>, item: ActionItemDetailRead) => {
@@ -551,18 +620,21 @@ const DashboardPage: React.FC = () => {
       const updated = await updateActionItem(token, statusMenuItem.id, { status: status as ActionItemDetailRead['status'] });
       setActionItems((prev) => prev.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)));
       setSuccessMsg(`Status changed to ${status}`);
+      setOperationError(null);
       setTimeout(() => setSuccessMsg(null), 2500);
+      setStatusMenuAnchor(null);
+      setStatusMenuItem(null);
     } catch (e) {
       console.error(e);
+      showOperationError(`Could not change status for "${statusMenuItem.title}". Please try again.`);
     }
-    setStatusMenuAnchor(null);
-    setStatusMenuItem(null);
-  }, [token, statusMenuItem]);
+  }, [showOperationError, statusMenuItem, token]);
 
   /* ---- action item created ---- */
   const handleActionCreated = useCallback((item: ActionItemRead) => {
     setActionItems((prev) => [item as ActionItemDetailRead, ...prev]);
     setSuccessMsg('Action item created');
+    setOperationError(null);
     setTimeout(() => setSuccessMsg(null), 2500);
   }, []);
 
@@ -571,6 +643,7 @@ const DashboardPage: React.FC = () => {
     setActionItems((prev) => prev.map((a) => (a.id === item.id ? { ...a, ...item } : a)));
     setEditItem(null);
     setSuccessMsg('Action item updated');
+    setOperationError(null);
     setTimeout(() => setSuccessMsg(null), 2500);
     lightRefresh();
   }, [lightRefresh]);
@@ -625,7 +698,14 @@ const DashboardPage: React.FC = () => {
     () => actionItems.filter((a) => a.status === 'pending' || a.status === 'in_progress').length,
     [actionItems],
   );
-
+  const dashboardFocusCopy = useMemo(
+    () => getDashboardFocusCopy(summary, pendingCount),
+    [summary, pendingCount],
+  );
+  const actionSectionCopy = useMemo(
+    () => getActionSectionCopy(actionFilter, filteredActions.length),
+    [actionFilter, filteredActions.length],
+  );
   const stageVelocity = summary?.avg_days_per_stage ?? [];
   const offerConversionFunnel = summary?.offer_conversion_funnel ?? [];
   const appliedFunnelStage = offerConversionFunnel.find((entry) => entry.stage === 'applied');
@@ -655,6 +735,7 @@ const DashboardPage: React.FC = () => {
     if (oldIndex === -1 || newIndex === -1) return;
 
     const reordered = arrayMove(filteredActions, oldIndex, newIndex);
+    const previousActionItems = actionItems;
     setActionItems((prev) => {
       const newItems = [...prev];
       reordered.forEach((item, idx) => {
@@ -666,10 +747,13 @@ const DashboardPage: React.FC = () => {
 
     try {
       await reorderActionItems(token!, reordered.map((i) => i.id));
-    } catch {
-      refresh();
+      setOperationError(null);
+    } catch (e) {
+      console.error(e);
+      setActionItems(previousActionItems);
+      showOperationError('Could not reorder action items. Restored the previous order.');
     }
-  }, [filteredActions, token, refresh]);
+  }, [actionItems, filteredActions, showOperationError, token]);
 
   /* ---- filter chips ---- */
   const FILTER_CHIPS: Array<{ key: string; label: string }> = [
@@ -712,6 +796,13 @@ const DashboardPage: React.FC = () => {
     <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
 
       {/* ── Success toast ── */}
+      {operationError && (
+        <Box sx={{ mb: 2 }}>
+          <InlineFeedback tone="error" onClose={() => setOperationError(null)}>
+            {operationError}
+          </InlineFeedback>
+        </Box>
+      )}
       {successMsg && (
         <Box sx={{ mb: 2 }}>
           <InlineFeedback tone="success" onClose={() => setSuccessMsg(null)}>
@@ -776,25 +867,76 @@ const DashboardPage: React.FC = () => {
         </Box>
       )}
 
-      {/* ── Top action buttons + last-refreshed ── */}
-      <Stack direction="row" spacing={1} sx={{ mb: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
-        <Typography variant="caption" color="text.disabled" sx={{ mr: 'auto' }}>
-          Last refreshed {timeAgoShort(lastRefresh)}
-        </Typography>
-        <Tooltip title="Refresh now">
-          <IconButton size="small" onClick={() => { lightRefresh(); }} aria-label="Refresh">
-            <RefreshOutlinedIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<AddIcon />}
-          onClick={() => setCreateDialogOpen(true)}
-        >
-          Add Action
-        </Button>
-      </Stack>
+      <CardShell
+        density="compact"
+        surface="raised"
+        contentSx={{
+          mb: 3,
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.18 : 0.09)} 0%, ${alpha(theme.palette.secondary.main, theme.palette.mode === 'dark' ? 0.1 : 0.05)} 100%)`,
+        }}
+      >
+        <Stack spacing={2}>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={2}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', md: 'center' }}
+          >
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.08em' }}>
+                Today at a glance
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 750, mt: 0.25 }}>
+                {greeting}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, maxWidth: 760 }}>
+                {dashboardFocusCopy}
+              </Typography>
+            </Box>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              sx={{ width: { xs: '100%', md: 'auto' } }}
+            >
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={() => setCreateDialogOpen(true)}
+              >
+                Add Action
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<LeadsIcon />}
+                onClick={() => navigate('/leads')}
+              >
+                Review Leads
+              </Button>
+              <Tooltip title="Refresh now">
+                <IconButton size="small" onClick={() => { lightRefresh(); }} aria-label="Refresh dashboard">
+                  <RefreshOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          </Stack>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            justifyContent="space-between"
+          >
+            <Typography variant="caption" color="text.secondary">
+              {formatLongDate()}
+            </Typography>
+            <Typography variant="caption" color="text.disabled">
+              Last refreshed {timeAgoShort(lastRefresh)}
+            </Typography>
+          </Stack>
+        </Stack>
+      </CardShell>
 
       <Grid container spacing={2.5}>
         {/* ═══════════════ Left column ═══════════════ */}
@@ -807,6 +949,7 @@ const DashboardPage: React.FC = () => {
                   icon={<ActionIcon />}
                   title="Action Items"
                   count={pendingCount}
+                  supportingText={actionSectionCopy}
                   size="compact"
                 />
               }
@@ -833,6 +976,11 @@ const DashboardPage: React.FC = () => {
                     icon={<CheckCircleIcon />}
                     title="All clear"
                     description="No action items match this filter. Action items help you track follow-ups, deadlines, and next steps for your applications."
+                    primaryAction={{
+                      label: 'Add an action item',
+                      onClick: () => setCreateDialogOpen(true),
+                      icon: <AddIcon />,
+                    }}
                     layout="section"
                     compact
                   />
@@ -1096,6 +1244,7 @@ const DashboardPage: React.FC = () => {
                   icon={<LeadsIcon />}
                   title="Recent Leads"
                   count={leads.length}
+                  supportingText="Fresh opportunities and imports worth a second look."
                   size="compact"
                   action={
                     <Stack direction="row" spacing={0.5} alignItems="center">
@@ -1122,6 +1271,12 @@ const DashboardPage: React.FC = () => {
                     <DSEmptyState
                       icon={<LeadsIcon />}
                       title="No leads yet"
+                      description="Import a lead or save a role to start building your pipeline."
+                      primaryAction={{
+                        label: 'Import leads',
+                        onClick: () => navigate('/leads'),
+                        icon: <LeadsIcon />,
+                      }}
                       layout="section"
                       compact
                     />
@@ -1179,6 +1334,7 @@ const DashboardPage: React.FC = () => {
                 header={
                   <SectionHeader
                     title="Overview"
+                    supportingText="A compact read on your search health and what needs attention next."
                     size="compact"
                   />
                 }
@@ -1242,11 +1398,11 @@ const DashboardPage: React.FC = () => {
             {/* ── Activity Feed ── */}
             <SectionCard
               header={
-                <SectionHeader
-                  title="Recent Activity"
-                  supportingText="last 7 days"
-                  size="compact"
-                />
+                  <SectionHeader
+                    title="Recent Activity"
+                    supportingText="Signals from the last 7 days across applications, documents, and your network."
+                    size="compact"
+                  />
               }
             >
 
@@ -1255,6 +1411,11 @@ const DashboardPage: React.FC = () => {
                     icon={<ActionIcon />}
                     title="No recent activity"
                     description="Your recent activity across leads, applications, and documents will appear here."
+                    primaryAction={{
+                      label: 'Review applications',
+                      onClick: () => navigate('/applications'),
+                      icon: <AppIcon />,
+                    }}
                     layout="section"
                     compact
                   />

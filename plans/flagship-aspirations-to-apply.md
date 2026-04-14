@@ -34,9 +34,10 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 
 | Surface | Status |
 |---------|--------|
-| Token inventory + primitives + Figma Code Connect | Complete — 7 `.figma.ts` mappings plus shared `primary` status tone for `StatusChip` / Figma parity |
+| Token inventory + primitives + Figma metadata | Complete — 8 `.figma.ts` mappings aligned to `Baldin-Library`; shared `primary` status tone for `StatusChip`; workspace Code Connect reads remain seat-blocked and non-gating |
 | `lint:theme` gate | Complete — green as of 2026-04-13 |
-| Browser harness | Partial — canonical `figma-wave1` now supports aspirations empty/seeded plus leads/apply capture states; suggestion-loading and no-signal aspirations captures still missing |
+| Browser harness | Complete — canonical `figma-wave1` supports aspirations `empty|loading|suggested|no-signal|rate-limited`, leads `unranked|ranked|disabled|error`, and apply `ready|already-applied` |
+| Figma workspace | Complete — `Baldin-Library` is the reusable source, `Baldin-App-Screens` is the product-flow source of truth, `Baseline Captured Screens` remains separate for older captures, and the reviewed Make file is treated as an archived sandbox with no meaningful direct port candidate |
 
 ### Docs
 
@@ -51,11 +52,12 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 |-------|--------|-------|
 | S2 — Fix design-system lint gate | Complete | `lint:theme` green; `chat-markdown` and `StatusChip.figma.ts` fixed; shared `primary` status tone added |
 | S5 — Wire suggest service method into the frontend | Partial | Typed suggest seam landed in `aspirations.ts`; explicit error-category normalization remains open |
-| S7 — Expand browser harness for aspirations captures | Partial | `figma-wave1` supports `screen=aspirations-roles|aspirations-companies` with `state=empty|seeded`; loading / no-signal captures still open |
+| S7 — Expand browser harness for aspirations captures | Complete | `figma-wave1` now covers aspirations `empty|loading|suggested|no-signal|rate-limited` across the supported roles and companies screens |
 | S9 — Expand browser harness for leads ranking captures | Complete | `figma-wave1` supports `unranked|ranked|disabled|error` leads captures |
 | S10 — Strengthen application-start handoff from leads | Partial | Preloaded applications map, duplicate-safe inline state, fallback backstop, and post-create map update landed; real-page ready-state copy still open |
+| S12 — Design three linked Figma flow moments | Complete | `Baldin-App-Screens` now has a dedicated `Flagship Flow Screens` page for aspirations, ranked leads, and apply-handoff state inventory; older captures remain isolated on `Baseline Captured Screens` |
 | S11 — Expand browser harness for application-start captures | Complete | `figma-wave1` supports `ready|already-applied` apply captures |
-| S13 — Backfill docs, harness, and Figma references | Partial | Local-development + design-system docs updated; broader flagship architecture/API docs still open |
+| S13 — Backfill docs, harness, and Figma references | Partial | Local-development, AGENTS, design-system catalog, plan references, and mapping inventory updated; broader flagship architecture/API docs still open |
 
 ## Decisions Log
 
@@ -66,7 +68,7 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 | D3 | `aspiration_alignment` text renders alongside the relevance score as a secondary line, not as a tooltip replacement | 2026-04-13 |
 | D4 | Figma library access confirmed: https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library | 2026-04-13 |
 | D5 | `plans/business-model.md` is a separate artifact; not part of this roadmap's active plan inventory | 2026-04-13 |
-| D6 | Code Connect publish automation is an external dependency, not a quarter gate; harness + inspection workflow is sufficient | 2026-04-13 |
+| D6 | Code Connect publish or workspace-read automation is not a quarter gate. The current Professional-plan expert seat cannot use Developer-seat workspace reads, so harness + MCP or web inspection is the supported workflow | 2026-04-13 |
 | D7 | No new backend endpoints, models, or migrations this quarter; existing contract is sufficient | 2026-04-13 |
 | D8 | Suggestion fetch and accept flows use explicit frontend error categories: `no_signal` (400), `duplicate` (409 on create), `rate_limited` (429), `ai_disabled` (503), `network`, and `unknown`; UI copy and retry behavior are keyed off those categories | 2026-04-13 |
 | D9 | "Accept all" runs sequential creates for the active tab kind only. Successes are persisted and removed from drafts, `409` duplicates are treated as non-fatal already-satisfied items and removed from drafts, and the batch stops on the first retryable failure (`429`, `503`, `network`, or unknown 5xx) with untouched remaining drafts left visible for retry | 2026-04-13 |
@@ -76,6 +78,10 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 | D13 | Validation commands in this epic use repo-aligned working-directory forms. Host-side backend pytest must set `TEST_DATABASE_HOSTNAME=127.0.0.1` and `TEST_DATABASE_PORT=5431` explicitly to avoid the tracked `backend/.env` Compose hostname mismatch | 2026-04-13 |
 | D14 | Frontend stabilization slice landed on 2026-04-13: `lint:theme` is green, `StatusChip` has a shared `primary` tone, the leads page preloads applications for duplicate-safe inline state, and `figma-wave1` now covers aspirations/leads/apply capture routes | 2026-04-13 |
 | D15 | The shipped suggest seam is `getAspirationSuggestions(token)` plus `AspirationAdapter.suggest(kind)` returning draft suggestions filtered client-side by active kind. Explicit error-category normalization remains part of the UI implementation slice, not the stabilization slice | 2026-04-13 |
+| D16 | `Baldin-Library` and `Baldin-App-Screens` are the canonical Figma files. The reviewed Make file is treated as an archived sandbox and not part of the default delivery path | 2026-04-13 |
+| D17 | `Baldin-App-Screens` keeps `Baseline Captured Screens` separate from the new `Flagship Flow Screens` page so older captures remain available without implying flagship completeness | 2026-04-13 |
+| D18 | Full Figma version-history review depends on browser or web access. MCP remains the supported path for structure, screenshots, and component inspection without a Developer seat | 2026-04-13 |
+| D19 | The authoritative Make review (`App.tsx`, `theme.css`, `button.tsx`, `card.tsx`, `badge.tsx`, and `Guidelines.md`) found an empty app shell, stock guidelines, and generic Tailwind or shadcn scaffolding, so no Make-derived primitive or token surface is approved for direct migration | 2026-04-13 |
 
 ## User Stories
 
@@ -199,8 +205,8 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 
 **Acceptance criteria:**
 - [x] Canonical `figma-wave1` harness supports `screen=aspirations-roles|aspirations-companies` with mock data and `state=empty|seeded`
-- [ ] Add additional aspirations capture states: loading suggestions, suggestions returned per kind, and no-usable-signal guidance
-- [ ] Both theme modes visually verified
+- [x] Additional aspirations capture states landed: loading suggestions, suggestions returned per kind, no-usable-signal guidance, and rate-limited feedback
+- [x] Both theme modes visually verified in harness-generated capture references
 - [x] No network dependency
 
 **Surfaces:** frontend (browser-harness)
@@ -283,16 +289,15 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** designer, **I want** a connected Figma flow showing aspirations → ranked leads → apply.
 
 **Acceptance criteria:**
-- [ ] Three frames in Figma: (1) aspirations with suggest, (2) leads with ranking, (3) apply handoff
-- [ ] Figma work happens before implementation-heavy Stories 6, 8, and 10, using the current product pages plus the existing Baldin library as source material (D12)
-- [ ] Figma is the source of truth for flow ordering, layout, and state inventory; the harness is a downstream capture/reference artifact, not a prerequisite for design
-- [ ] Initial Figma frames include these states before implementation begins:
-  - aspirations: empty, loading, suggestions returned, no-signal, rate-limited / AI-unavailable
-  - leads: default unranked, ranked with aspiration alignment, ranking disabled because no aspirations, ranking unavailable/error
-  - apply handoff: ready to apply, already-applied inline state
-- [ ] Harness stories 7, 9, and 11 later mirror the approved Figma states and implemented UI, not the other way around
-- [ ] Uses existing Baldin library (https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library); no new shared abstractions unless reused ≥2 flow moments
-- [ ] Figma inspection available; Code Connect publish not required (D6)
+- [x] `Baldin-App-Screens` now has a dedicated `Flagship Flow Screens` page covering aspirations with suggest, ranked leads, and apply handoff
+- [x] Figma remains the source of truth for flagship flow ordering, layout grouping, and state inventory; the harness is a downstream capture and verification artifact
+- [x] The flagship page captures these states:
+  - aspirations: empty, loading, suggestions returned, no-signal, and rate-limited
+  - leads: unranked, ranked with aspiration alignment, ranking disabled because no aspirations, and ranking unavailable or error
+  - apply handoff: ready to apply and already-applied inline state
+- [x] `Baldin-App-Screens` keeps older messages, profile, and applications captures on a separate `Baseline Captured Screens` page
+- [x] Uses the existing Baldin library as the reusable-component source; no new shared abstractions were introduced for this workflow pass
+- [x] Figma inspection is available through MCP plus browser or web review; Code Connect publish and workspace reads remain non-gating because of the current seat constraints (D6, D18)
 
 **Surfaces:** Figma (external), frontend (harness reference)
 **Dependencies:** Story 2
@@ -308,6 +313,8 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 - [ ] Architecture docs updated for the full flagship flow
 - [x] Design-system docs updated only where flagship changed the shared inventory
 - [x] Harness query states documented in `local-development.md` and covered in browser verification smoke tests
+- [x] Repo docs record the current Figma access model, including the browser-history-review requirement and Code Connect seat limits
+- [x] Mapping inventory recorded in repo docs as the seat-safe fallback for library-to-code verification
 - [x] `docs build` passes
 - [x] Figma file references linked from this plan doc
 
@@ -424,7 +431,7 @@ S1 remains the branch-validation foundation; S2 is the design-entry gate.
 |---|------|-----------|--------|------------|
 | R1 | schema-v2 diverges from main over the quarter | Medium | High | Periodic rebase; merge to main when flagship is shippable |
 | R2 | Suggest endpoint responses too generic for UX | Medium | Medium | Accept LLM quality for POC; add "AI suggestions" framing; defer prompt tuning |
-| R3 | Figma Code Connect publish blocked by seat | Known | Low | Harness + inspection workflow is sufficient (D6) |
+| R3 | Figma Code Connect workspace reads or publish blocked by seat | Known | Low | Harness + MCP or web inspection workflow plus local mapping inventory is sufficient (D6, D18) |
 | R4 | Ranking redesign scope creeps into lead-card refactor | Medium | Medium | Scope to ranking-visible surfaces only |
 | R5 | Harness mock data diverges from real API shape | Low | Medium | Generate mocks from schema.d.ts types |
 

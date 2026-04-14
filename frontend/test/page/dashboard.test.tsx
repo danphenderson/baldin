@@ -38,6 +38,7 @@ import DashboardPage from '@/page/dashboard';
 const mockedGetCommandCenterSummary = vi.mocked(activityFeedService.getCommandCenterSummary);
 const mockedGetActivityFeed = vi.mocked(activityFeedService.getActivityFeed);
 const mockedGetActionItems = vi.mocked(actionItemsService.getActionItems);
+const mockedUpdateActionItem = vi.mocked(actionItemsService.updateActionItem);
 const mockedGetLeads = vi.mocked(leadsService.getLeads);
 
 /* ── Test data ────────────────────────────────────────────────────── */
@@ -158,6 +159,7 @@ describe('DashboardPage', () => {
     mockedGetCommandCenterSummary.mockReset();
     mockedGetActivityFeed.mockReset();
     mockedGetActionItems.mockReset();
+    mockedUpdateActionItem.mockReset();
     mockedGetLeads.mockReset();
 
     // localStorage is used by the component for persisting collapsed state
@@ -220,6 +222,8 @@ describe('DashboardPage', () => {
 
     renderPage();
 
+    expect(await screen.findByText('Today at a glance')).toBeInTheDocument();
+    expect(screen.getByText('3 active applications, 2 open action items, 4 unapplied leads. 1 overdue follow-up needs attention first.')).toBeInTheDocument();
     expect(await screen.findByText('Follow up with Google recruiter')).toBeInTheDocument();
     expect(screen.getByText('Prepare resume for Meta')).toBeInTheDocument();
   });
@@ -306,6 +310,7 @@ describe('DashboardPage', () => {
     renderPage();
 
     expect(await screen.findByText('All clear')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add an action item' })).toBeInTheDocument();
   });
 
   it('renders quick-start cards for new users with no leads or applications', async () => {
@@ -336,6 +341,128 @@ describe('DashboardPage', () => {
 
     expect(await screen.findByText('Something went wrong')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('routes empty-state actions to the related workflow surfaces', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    mockedGetCommandCenterSummary.mockResolvedValue(makeSummary() as never);
+    mockedGetActivityFeed.mockResolvedValue({ items: [], total: 0 } as never);
+    mockedGetActionItems.mockResolvedValue([] as never);
+    mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 5 } as never);
+
+    renderPage();
+
+    await screen.findByText('No recent activity');
+
+    await user.click(screen.getByRole('button', { name: 'Review applications' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-display')).toHaveTextContent('/applications');
+    });
+  });
+
+  it('routes the empty leads action to leads', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    mockedGetCommandCenterSummary.mockResolvedValue(makeSummary() as never);
+    mockedGetActivityFeed.mockResolvedValue({ items: [makeFeedItem()], total: 1 } as never);
+    mockedGetActionItems.mockResolvedValue([makeActionItem()] as never);
+    mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 5 } as never);
+
+    renderPage();
+
+    await screen.findByText('No leads yet');
+
+    await user.click(screen.getByRole('button', { name: 'Import leads' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-display')).toHaveTextContent('/leads');
+    });
+  });
+
+  it('shows inline feedback and keeps prior data visible when a manual refresh fails', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    mockedGetCommandCenterSummary.mockResolvedValueOnce(makeSummary() as never);
+    mockedGetActivityFeed.mockResolvedValueOnce({ items: [makeFeedItem()], total: 1 } as never);
+    mockedGetActionItems.mockResolvedValueOnce([makeActionItem()] as never);
+    mockedGetLeads.mockResolvedValueOnce({ items: [], total: 0, page: 1, page_size: 5 } as never);
+
+    mockedGetCommandCenterSummary.mockRejectedValueOnce(new Error('refresh failed'));
+    mockedGetActionItems.mockRejectedValueOnce(new Error('refresh failed'));
+
+    renderPage();
+
+    expect(await screen.findByText('Follow up with Google recruiter')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Refresh dashboard' }));
+
+    expect(await screen.findByText('Dashboard refresh failed. Showing your last loaded data.')).toBeInTheDocument();
+    expect(screen.getByText('Follow up with Google recruiter')).toBeInTheDocument();
+    expect(screen.getByText('Today at a glance')).toBeInTheDocument();
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('shows inline feedback and restores the previous priority when a priority update fails', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    mockedGetCommandCenterSummary.mockResolvedValue(makeSummary() as never);
+    mockedGetActivityFeed.mockResolvedValue({ items: [], total: 0 } as never);
+    mockedGetActionItems.mockResolvedValue([makeActionItem({ priority: 'high' })] as never);
+    mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 5 } as never);
+    mockedUpdateActionItem.mockRejectedValueOnce(new Error('priority failed'));
+
+    renderPage();
+
+    const priorityButton = await screen.findByRole('button', { name: 'Cycle priority from high' });
+
+    await user.click(priorityButton);
+
+    expect(await screen.findByText('Could not update priority for "Follow up with Google recruiter". Restored the previous priority.')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Cycle priority from high' })).toBeInTheDocument();
+    });
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('keeps the due-date editor open and shows inline feedback when saving the due date fails', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    mockedGetCommandCenterSummary.mockResolvedValue(makeSummary() as never);
+    mockedGetActivityFeed.mockResolvedValue({ items: [], total: 0 } as never);
+    mockedGetActionItems.mockResolvedValue([
+      makeActionItem({
+        title: 'Review Acme lead',
+        lead_id: 'lead-42',
+        lead: { title: 'Acme Staff Engineer' },
+        due_at: null,
+      }),
+    ] as never);
+    mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 5 } as never);
+    mockedUpdateActionItem.mockRejectedValueOnce(new Error('save failed'));
+
+    renderPage();
+
+    expect(await screen.findByText('Review Acme lead')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Set due date for "Review Acme lead"' }));
+
+    const dueDateInput = screen.getByLabelText('Due date');
+    await user.clear(dueDateInput);
+    await user.type(dueDateInput, '2026-04-12');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Could not save the due date for "Review Acme lead". Please try again.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Due date')).toHaveValue('2026-04-12');
     expect(consoleErrorSpy).toHaveBeenCalled();
 
     consoleErrorSpy.mockRestore();

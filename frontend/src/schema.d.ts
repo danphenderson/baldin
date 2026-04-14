@@ -5,6 +5,14 @@
 
 
 export interface paths {
+  "/health": {
+    /** Healthcheck */
+    get: operations["healthcheck_health_get"];
+  };
+  "/ready": {
+    /** Readinesscheck */
+    get: operations["readinesscheck_ready_get"];
+  };
   "/api/v1/auth/jwt/login": {
     /**
      * Login
@@ -800,6 +808,10 @@ export interface paths {
   "/api/v1/crawlers/runs": {
     /** List Crawler Runs */
     get: operations["list_crawler_runs_api_v1_crawlers_runs_get"];
+  };
+  "/api/v1/crawlers/runtime-status": {
+    /** Get Crawler Runtime Status */
+    get: operations["get_crawler_runtime_status_api_v1_crawlers_runtime_status_get"];
   };
   "/api/v1/crawlers/runs/prune": {
     /**
@@ -3007,6 +3019,17 @@ export interface components {
        * @description Description of the company
        */
       description?: string | null;
+      /**
+       * Creator User Id
+       * @description User who created this company record, if known
+       */
+      creator_user_id?: string | null;
+      /**
+       * Can Manage
+       * @description Whether the current user can edit or delete this company
+       * @default false
+       */
+      can_manage?: boolean;
     };
     /** CompanySummarizeRequest */
     CompanySummarizeRequest: {
@@ -3439,6 +3462,30 @@ export interface components {
      * @enum {string}
      */
     ConversationType: "direct" | "group";
+    /** CrawlerEnqueueFailureSampleRead */
+    CrawlerEnqueueFailureSampleRead: {
+      /**
+       * Run Id
+       * @description Crawler run ID when known
+       */
+      run_id?: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       * @description When the failure was recorded
+       */
+      created_at: string;
+      /**
+       * Fallback Mode
+       * @description How execution recovered after enqueue failure
+       */
+      fallback_mode: string;
+      /**
+       * Error Summary
+       * @description Short enqueue failure summary
+       */
+      error_summary: string;
+    };
     /** CrawlerPipelineCreate */
     CrawlerPipelineCreate: {
       /**
@@ -3776,6 +3823,72 @@ export interface components {
      * @enum {string}
      */
     CrawlerRunStatus: "pending" | "running" | "success" | "failed" | "cancelled" | "paused" | "pending_review";
+    /** CrawlerRuntimeDependencyRead */
+    CrawlerRuntimeDependencyRead: {
+      /**
+       * Configured
+       * @description Whether the dependency is configured
+       */
+      configured: boolean;
+      /**
+       * Reachable
+       * @description Whether the dependency is reachable now
+       */
+      reachable: boolean;
+      /**
+       * Detail
+       * @description Optional diagnostic detail
+       */
+      detail?: string | null;
+    };
+    /** CrawlerRuntimeStatusRead */
+    CrawlerRuntimeStatusRead: {
+      /**
+       * Execution Mode
+       * @description Current crawler execution mode
+       * @enum {string}
+       */
+      execution_mode: "inline" | "worker";
+      /**
+       * Scheduler Enabled
+       * @description Whether the scheduler loop is enabled
+       */
+      scheduler_enabled: boolean;
+      /**
+       * Reaper Enabled
+       * @description Whether the reaper loop is enabled
+       */
+      reaper_enabled: boolean;
+      /** @description Redis queue health */
+      redis: components["schemas"]["CrawlerRuntimeDependencyRead"];
+      /** @description ETL service health */
+      etl_service: components["schemas"]["CrawlerRuntimeDependencyRead"];
+      /**
+       * Queue Backlog
+       * @description Pending Redis jobs when worker mode is enabled
+       */
+      queue_backlog?: number | null;
+      /**
+       * Stale Run Count
+       * @description Crawler runs older than the stale threshold
+       */
+      stale_run_count: number;
+      /**
+       * Stale Event Count
+       * @description Orchestration events older than the stale threshold
+       */
+      stale_event_count: number;
+      /**
+       * Enqueue Failure Count
+       * @description Recent crawler queue handoff failures captured in orchestration events
+       */
+      enqueue_failure_count: number;
+      /**
+       * Recent Enqueue Failures
+       * @description Most recent enqueue failure samples
+       */
+      recent_enqueue_failures?: components["schemas"]["CrawlerEnqueueFailureSampleRead"][];
+    };
     /**
      * CrawlerSourceType
      * @enum {string}
@@ -8400,6 +8513,30 @@ export type external = Record<string, never>;
 
 export interface operations {
 
+  /** Healthcheck */
+  healthcheck_health_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: string;
+          };
+        };
+      };
+    };
+  };
+  /** Readinesscheck */
+  readinesscheck_ready_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
   /**
    * Login
    * @description Authenticate with email + password.
@@ -12875,6 +13012,17 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Crawler Runtime Status */
+  get_crawler_runtime_status_api_v1_crawlers_runtime_status_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CrawlerRuntimeStatusRead"];
         };
       };
     };

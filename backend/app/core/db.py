@@ -4,6 +4,7 @@ import asyncio
 import os
 import socket
 import subprocess
+import sys
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -428,7 +429,7 @@ def _create_test_schema(connection: Connection) -> None:
 
 
 async def _terminate_other_test_db_sessions(conn: AsyncSession | Any) -> None:
-    await conn.execute(
+    result = await conn.execute(
         text(
             """
             SELECT pg_terminate_backend(pid)
@@ -438,6 +439,8 @@ async def _terminate_other_test_db_sessions(conn: AsyncSession | Any) -> None:
             """
         )
     )
+    # Drain the result rows before reusing the same asyncpg connection.
+    result.all()
 
 
 def _alembic_working_directory() -> str:
@@ -451,7 +454,7 @@ def _build_alembic_environment() -> dict[str, str]:
 
 
 def _run_alembic_command(*args: str) -> None:
-    command = ["alembic", *args]
+    command = [sys.executable, "-m", "alembic", *args]
     result = subprocess.run(
         command,
         capture_output=True,
@@ -512,10 +515,20 @@ async def _stamp_existing_schema_if_needed() -> None:
     if not await _schema_has_non_alembic_tables():
         return
 
-    console_log.info(
-        "Existing schema detected without alembic_version; stamping baseline revision 0001 before upgrade."
+    environment = conf.settings.ENVIRONMENT
+    if environment in {"DEV", "PYTEST"}:
+        raise RuntimeError(
+            "Existing schema detected without alembic_version. Automatic baseline "
+            "stamping is disabled because it is unsafe for pre-Alembic databases. "
+            "For local recovery, either reset the disposable database or rerun with "
+            "LEGACY_BOOTSTRAP=1."
+        )
+
+    raise RuntimeError(
+        "Existing schema detected without alembic_version. Automatic baseline "
+        "stamping is disabled because it is unsafe for pre-Alembic databases. "
+        "Manually baseline the database before running Alembic migrations."
     )
-    await asyncio.to_thread(_run_alembic_command, "stamp", "0001")
 
 
 def run_alembic_migrations() -> None:
@@ -531,6 +544,19 @@ def run_alembic_migrations() -> None:
     console_log.info("Alembic migrations applied successfully.")
 
 
+def _legacy_bootstrap_requested() -> bool:
+    requested = os.environ.get("LEGACY_BOOTSTRAP", "") == "1"
+    if not requested:
+        return False
+    if conf.settings.ENVIRONMENT in {"DEV", "PYTEST"}:
+        return True
+    console_log.warning(
+        "Ignoring LEGACY_BOOTSTRAP=1 outside DEV/PYTEST; Alembic remains the only bootstrap path in %s.",
+        conf.settings.ENVIRONMENT,
+    )
+    return False
+
+
 async def create_db_and_tables() -> None:
     """Bootstrap the database schema at application startup.
 
@@ -542,7 +568,7 @@ async def create_db_and_tables() -> None:
         * **Test path** — direct callers in ``ENVIRONMENT=PYTEST`` still target the
             dedicated test database and keep the same timeout semantics.
     """
-    use_legacy = os.environ.get("LEGACY_BOOTSTRAP", "") == "1"
+    use_legacy = _legacy_bootstrap_requested()
 
     if use_legacy:
         console_log.warning(
@@ -586,9 +612,16 @@ async def drop_and_create_db_and_tables() -> None:
 
     Uses ``metadata.create_all`` for speed since test databases are disposable
     and do not need the full Alembic migration history.
+
+    In ``ENVIRONMENT=PYTEST`` we also dispose the engine before and after the
+    reset. The reset path terminates other backend sessions in the test
+    database; without a post-reset dispose, SQLAlchemy can keep dead pooled
+    connections around and hand them to the next test module.
     """
 
     async def _reset_schema() -> None:
+        if conf.settings.ENVIRONMENT == "PYTEST":
+            await async_engine.dispose()
         async with async_engine.begin() as conn:
             if conf.settings.ENVIRONMENT == "PYTEST":
                 await _terminate_other_test_db_sessions(conn)
@@ -603,6 +636,7 @@ async def drop_and_create_db_and_tables() -> None:
             await asyncio.wait_for(
                 _reset_schema(), timeout=PYTEST_DB_OPERATION_TIMEOUT_SECONDS
             )
+            await async_engine.dispose()
         else:
             await _reset_schema()
     except (asyncio.TimeoutError, asyncio.CancelledError) as exc:

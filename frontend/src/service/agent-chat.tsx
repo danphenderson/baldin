@@ -1,21 +1,38 @@
 import { API_URL } from '../config/env';
 import { components } from '../schema';
 import { createApiClient } from './api-client';
-import { normalizePaginatedResponse, type PaginatedResponse } from './pagination';
+import {
+  fetchAllPages,
+  FULL_LIST_PAGE_SIZE,
+  normalizePaginatedResponse,
+  type PaginatedResponse,
+} from './pagination';
 
-export type AgentChatSessionCreate = components['schemas']['AgentChatSessionCreate'];
-export type AgentChatSessionRead = components['schemas']['AgentChatSessionRead'];
-export type AgentChatSessionSummaryRead = components['schemas']['AgentChatSessionSummaryRead'];
-export type AgentChatSessionUpdate = components['schemas']['AgentChatSessionUpdate'];
-export type AgentChatMessageCreate = components['schemas']['AgentChatMessageCreate'];
-export type AgentChatMessageRead = components['schemas']['AgentChatMessageRead'];
-export type AgentChatMessageRole = components['schemas']['AgentChatMessageRole'];
-export type AgentChatRetrievalRequest = components['schemas']['AgentChatRetrievalRequest'];
-export type AgentChatSessionStatus = components['schemas']['AgentChatSessionStatus'];
+export type AgentChatSessionCreate =
+  components['schemas']['AgentChatSessionCreate'];
+export type AgentChatSessionRead =
+  components['schemas']['AgentChatSessionRead'];
+export type AgentChatSessionSummaryRead =
+  components['schemas']['AgentChatSessionSummaryRead'];
+export type AgentChatSessionUpdate =
+  components['schemas']['AgentChatSessionUpdate'];
+export type AgentChatMessageCreate =
+  components['schemas']['AgentChatMessageCreate'];
+export type AgentChatMessageRead =
+  components['schemas']['AgentChatMessageRead'];
+export type AgentChatMessageRole =
+  components['schemas']['AgentChatMessageRole'];
+export type AgentChatRetrievalRequest =
+  components['schemas']['AgentChatRetrievalRequest'];
+export type AgentChatSessionStatus =
+  components['schemas']['AgentChatSessionStatus'];
 export type AgentModelListRead = components['schemas']['AgentModelListRead'];
-export type AgentModelOptionRead = components['schemas']['AgentModelOptionRead'];
-export type AgentChatSaveToDocumentRequest = components['schemas']['AgentChatSaveToDocumentRequest'];
-export type AgentChatSaveToDocumentRead = components['schemas']['AgentChatSaveToDocumentRead'];
+export type AgentModelOptionRead =
+  components['schemas']['AgentModelOptionRead'];
+export type AgentChatSaveToDocumentRequest =
+  components['schemas']['AgentChatSaveToDocumentRequest'];
+export type AgentChatSaveToDocumentRead =
+  components['schemas']['AgentChatSaveToDocumentRead'];
 export interface AgentChatMessageHistoryRead {
   has_more_before: boolean;
   next_before: string | null;
@@ -26,10 +43,13 @@ export interface AgentChatHistoryPageRead {
   next_before: string | null;
 }
 
-type RawAgentChatSessionsPaginatedRead = components['schemas']['PaginatedResponse_AgentChatSessionSummaryRead_'];
-type RawAgentChatHistoryPageRead = components['schemas']['AgentChatHistoryPageRead'];
+type RawAgentChatSessionsPaginatedRead =
+  components['schemas']['PaginatedResponse_AgentChatSessionSummaryRead_'];
+type RawAgentChatHistoryPageRead =
+  components['schemas']['AgentChatHistoryPageRead'];
 
-export type AgentChatSessionsPaginatedRead = PaginatedResponse<AgentChatSessionSummaryRead>;
+export type AgentChatSessionsPaginatedRead =
+  PaginatedResponse<AgentChatSessionSummaryRead>;
 
 export interface AgentChatSessionsPagination {
   page?: number;
@@ -49,43 +69,50 @@ const DEFAULT_SESSIONS_PAGE = 1;
 const DEFAULT_SESSIONS_PAGE_SIZE = 20;
 const DEFAULT_SESSION_LIMIT = 50;
 
-const unwrap = <T,>(
-  result: { data?: T; error?: unknown; response: Response },
-): T => {
+const unwrap = <T,>(result: {
+  data?: T;
+  error?: unknown;
+  response: Response;
+}): T => {
   if (result.error !== undefined) {
     const detail = result.error as { detail?: unknown };
     let message = 'API request failed';
     if (detail?.detail) {
-      message = typeof detail.detail === 'string' ? detail.detail : JSON.stringify(detail.detail);
+      message =
+        typeof detail.detail === 'string'
+          ? detail.detail
+          : JSON.stringify(detail.detail);
     }
     throw new Error(message);
   }
   return result.data as T;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> => (
-  typeof value === 'object' && value !== null
-);
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
 
-const isAgentChatMessageRole = (value: unknown): value is AgentChatMessageRole => (
-  value === 'system' || value === 'user' || value === 'assistant'
-);
+const isAgentChatMessageRole = (
+  value: unknown,
+): value is AgentChatMessageRole =>
+  value === 'system' || value === 'user' || value === 'assistant';
 
-const isAgentChatMessageRead = (value: unknown): value is AgentChatMessageRead => (
-  isRecord(value)
-  && typeof value.id === 'string'
-  && isAgentChatMessageRole(value.role)
-  && typeof value.content === 'string'
-  && typeof value.created_at === 'string'
-);
+const isAgentChatMessageRead = (
+  value: unknown,
+): value is AgentChatMessageRead =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  isAgentChatMessageRole(value.role) &&
+  typeof value.content === 'string' &&
+  typeof value.created_at === 'string';
 
-const isAbortError = (error: unknown): boolean => (
+const isAbortError = (error: unknown): boolean =>
   error instanceof DOMException
-  ? error.name === 'AbortError'
-  : error instanceof Error && error.name === 'AbortError'
-);
+    ? error.name === 'AbortError'
+    : error instanceof Error && error.name === 'AbortError';
 
-const extractStreamErrorDetail = async (response: Response): Promise<string> => {
+const extractStreamErrorDetail = async (
+  response: Response,
+): Promise<string> => {
   try {
     const text = await response.text();
     if (!text) {
@@ -107,7 +134,9 @@ const extractStreamErrorDetail = async (response: Response): Promise<string> => 
   return 'API request failed';
 };
 
-const parseEventPayload = (eventBlock: string): { eventName: string | null; data: string | null } => {
+const parseEventPayload = (
+  eventBlock: string,
+): { eventName: string | null; data: string | null } => {
   let eventName: string | null = null;
   const dataLines: string[] = [];
 
@@ -201,10 +230,12 @@ export const createChatSession = async (
   payload: AgentChatSessionCreate,
 ): Promise<AgentChatSessionRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/api/v1/agents/{id}/chat', {
-    params: { path: { id: agentId } },
-    body: payload,
-  }));
+  return unwrap(
+    await client.POST('/api/v1/agents/{id}/chat', {
+      params: { path: { id: agentId } },
+      body: payload,
+    }),
+  );
 };
 
 export const getChatSessions = async (
@@ -215,18 +246,33 @@ export const getChatSessions = async (
   const page = pagination?.page ?? DEFAULT_SESSIONS_PAGE;
   const pageSize = pagination?.page_size ?? DEFAULT_SESSIONS_PAGE_SIZE;
   const client = createApiClient(token);
-  const response = unwrap<RawAgentChatSessionsPaginatedRead>(await client.GET('/api/v1/agents/{id}/chat', {
-    params: {
-      path: { id: agentId },
-      query: {
-        page,
-        page_size: pageSize,
+  const response = unwrap<RawAgentChatSessionsPaginatedRead>(
+    await client.GET('/api/v1/agents/{id}/chat', {
+      params: {
+        path: { id: agentId },
+        query: {
+          page,
+          page_size: pageSize,
+        },
       },
-    },
-  }));
+    }),
+  );
 
   return normalizePaginatedResponse(response, { page, page_size: pageSize });
 };
+
+export const getAllChatSessions = async (
+  token: string,
+  agentId: string,
+): Promise<AgentChatSessionSummaryRead[]> =>
+  fetchAllPages<AgentChatSessionSummaryRead>(
+    (page, pageSize) =>
+      getChatSessions(token, agentId, {
+        page,
+        page_size: pageSize,
+      }),
+    FULL_LIST_PAGE_SIZE,
+  );
 
 export const getChatSession = async (
   token: string,
@@ -234,14 +280,16 @@ export const getChatSession = async (
   limit?: number,
 ): Promise<AgentChatSessionRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/agents/chat/{session_id}', {
-    params: {
-      path: { session_id: sessionId },
-      query: {
-        limit: limit ?? DEFAULT_SESSION_LIMIT,
+  return unwrap(
+    await client.GET('/api/v1/agents/chat/{session_id}', {
+      params: {
+        path: { session_id: sessionId },
+        query: {
+          limit: limit ?? DEFAULT_SESSION_LIMIT,
+        },
       },
-    },
-  }));
+    }),
+  );
 };
 
 export const getChatHistory = async (
@@ -250,15 +298,17 @@ export const getChatHistory = async (
   pagination?: AgentChatHistoryPagination,
 ): Promise<AgentChatHistoryPageRead> => {
   const client = createApiClient(token);
-  const response = unwrap<RawAgentChatHistoryPageRead>(await client.GET('/api/v1/agents/chat/{session_id}/history', {
-    params: {
-      path: { session_id: sessionId },
-      query: {
-        before: pagination?.before,
-        limit: pagination?.limit ?? DEFAULT_SESSION_LIMIT,
+  const response = unwrap<RawAgentChatHistoryPageRead>(
+    await client.GET('/api/v1/agents/chat/{session_id}/history', {
+      params: {
+        path: { session_id: sessionId },
+        query: {
+          before: pagination?.before,
+          limit: pagination?.limit ?? DEFAULT_SESSION_LIMIT,
+        },
       },
-    },
-  }));
+    }),
+  );
 
   return {
     items: response.items ?? [],
@@ -273,17 +323,24 @@ export const updateChatSession = async (
   payload: AgentChatSessionUpdate,
 ): Promise<AgentChatSessionRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PATCH('/api/v1/agents/chat/{session_id}', {
-    params: { path: { session_id: sessionId } },
-    body: payload,
-  }));
+  return unwrap(
+    await client.PATCH('/api/v1/agents/chat/{session_id}', {
+      params: { path: { session_id: sessionId } },
+      body: payload,
+    }),
+  );
 };
 
-export const deleteChatSession = async (token: string, sessionId: string): Promise<void> => {
+export const deleteChatSession = async (
+  token: string,
+  sessionId: string,
+): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/api/v1/agents/chat/{session_id}', {
-    params: { path: { session_id: sessionId } },
-  }));
+  unwrap(
+    await client.DELETE('/api/v1/agents/chat/{session_id}', {
+      params: { path: { session_id: sessionId } },
+    }),
+  );
 };
 
 export const saveChatToDocument = async (
@@ -292,13 +349,17 @@ export const saveChatToDocument = async (
   payload: AgentChatSaveToDocumentRequest,
 ): Promise<AgentChatSaveToDocumentRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/api/v1/agents/chat/{session_id}/save-to-document', {
-    params: { path: { session_id: sessionId } },
-    body: payload,
-  }));
+  return unwrap(
+    await client.POST('/api/v1/agents/chat/{session_id}/save-to-document', {
+      params: { path: { session_id: sessionId } },
+      body: payload,
+    }),
+  );
 };
 
-export const getAvailableModels = async (token: string): Promise<AgentModelListRead> => {
+export const getAvailableModels = async (
+  token: string,
+): Promise<AgentModelListRead> => {
   const client = createApiClient(token);
   return unwrap(await client.GET('/api/v1/agents/models'));
 };
@@ -315,16 +376,19 @@ export const sendChatMessage = (
 
   void (async () => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/agents/chat/${sessionId}/messages`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          Accept: 'text/event-stream',
+      const response = await fetch(
+        `${API_URL}/api/v1/agents/chat/${sessionId}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            Accept: 'text/event-stream',
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
         },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
+      );
 
       if (controller.signal.aborted) {
         return;
@@ -362,13 +426,18 @@ export const sendChatMessage = (
             const eventBlock = buffer.slice(0, boundary);
             buffer = buffer.slice(boundary + 2);
 
-            const outcome = handleStreamEvent(eventBlock, onDelta, (message) => {
-              isComplete = true;
-              onDone(message);
-            }, (message) => {
-              isTerminated = true;
-              onError(message);
-            });
+            const outcome = handleStreamEvent(
+              eventBlock,
+              onDelta,
+              (message) => {
+                isComplete = true;
+                onDone(message);
+              },
+              (message) => {
+                isTerminated = true;
+                onError(message);
+              },
+            );
 
             if (controller.signal.aborted) {
               return;
@@ -399,7 +468,11 @@ export const sendChatMessage = (
         return;
       }
 
-      onError(error instanceof Error && error.message ? error.message : 'Chat stream failed');
+      onError(
+        error instanceof Error && error.message
+          ? error.message
+          : 'Chat stream failed',
+      );
     }
   })();
 

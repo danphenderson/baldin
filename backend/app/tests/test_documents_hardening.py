@@ -1,46 +1,34 @@
 """Focused backend tests for document sharing, activity, and upload hardening."""
 
 import json
-from contextlib import asynccontextmanager
 from io import BytesIO
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from reportlab.pdfgen import canvas
 from sqlalchemy import select
 
 from app import models
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
+from app.conftest import (
+    async_client_ctx,
+    login_and_get_headers,
+)
+from app.conftest import (
+    create_user as _shared_create_user,
+)
+from app.core.db import session_context
 from app.core.document_storage import resolve_document_source_path
-from app.main import app
 from app.tests import utils
 
-password_helper = PasswordHelper()
-_db_ready = False
 
-
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
+@pytest.fixture(scope="module", autouse=True)
+async def _shared_db_ready(ensure_db: None) -> None:
+    del ensure_db
 
 
 async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
+    return None
 
 
 async def _create_user(
@@ -49,18 +37,17 @@ async def _create_user(
     is_superuser: bool = False,
     **fields,
 ) -> tuple[str, UUID]:
-    email = utils.random_email()
+    email, user_id = await _shared_create_user(
+        password,
+        is_superuser=is_superuser,
+    )
     async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-            is_superuser=is_superuser,
-        )
+        user = await session.get(models.User, user_id)
+        assert user is not None
         for field, value in fields.items():
             setattr(user, field, value)
         await session.commit()
-    return email, user.id
+    return email, user_id
 
 
 async def _auth_headers(
@@ -68,14 +55,10 @@ async def _auth_headers(
     email: str,
     password: str,
 ) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    return await login_and_get_headers(client, email, password)
+
+
+_client = async_client_ctx
 
 
 async def _create_document(

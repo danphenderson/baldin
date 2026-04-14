@@ -98,7 +98,7 @@ const duplicateApplicationMessage = (title: string, statusLabel: string): string
 const CompaniesPage: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { token } = useContext(UserContext);
+  const { token, user } = useContext(UserContext);
 
   // Data
   const [companies, setCompanies] = useState<CompanyRead[]>([]);
@@ -166,7 +166,7 @@ const CompaniesPage: React.FC = () => {
     try {
       await extractCompany(token, extractUrl);
       setExtractUrl('');
-      showSuccess('Company extracted via AI — added to your list.');
+      showSuccess('Company extracted via AI and added to the shared directory.');
       refresh();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Extraction failed');
@@ -299,7 +299,7 @@ const CompaniesPage: React.FC = () => {
     return matchesSearch && matchesIndustry;
   });
 
-  usePageToolbarHeader('Companies', `${companies.length} companies`);
+  usePageToolbarHeader('Companies', `${companies.length} shared companies`);
 
   /* ================================================================ */
   /*  Render                                                          */
@@ -311,6 +311,9 @@ const CompaniesPage: React.FC = () => {
       <Collapse in={!!error}><Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }} role="alert">{error}</Alert></Collapse>
       <Collapse in={!!warning}><Alert severity="warning" onClose={() => setWarning('')} sx={{ mb: 2 }} role="alert">{warning}</Alert></Collapse>
       <Collapse in={!!success}><Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }} role="status" aria-live="polite">{success}</Alert></Collapse>
+      <Alert severity="info" sx={{ mb: 2.5 }}>
+        Shared company directory: everyone can browse these records. Only the creator or an admin can edit or delete a company.
+      </Alert>
 
       {/* -------- AI Extraction Bar -------------------------------- */}
       <Card
@@ -464,7 +467,7 @@ const CompaniesPage: React.FC = () => {
           <EmptyState
             icon={<CompanyIcon />}
             title="No companies discovered"
-            description="Companies are captured automatically when you import leads."
+            description="Companies are shared across the directory and can be added manually or when leads are imported."
             action={{ label: 'Add a Company', onClick: openCreateDialog, icon: <AddIcon /> }}
           />
         ) : (
@@ -479,6 +482,13 @@ const CompaniesPage: React.FC = () => {
         <Grid container spacing={2}>
           {filtered.map(company => {
             const mc = monogramColor(company.name);
+            const managementLabel = company.can_manage
+              ? company.creator_user_id === user?.id
+                ? 'Added by you'
+                : 'Admin access'
+              : company.creator_user_id
+                ? 'Shared directory'
+                : 'Admin-managed';
             const isExpanded = expandedId === company.id;
             const leads = companyLeads[company.id] ?? [];
             const leadsLoading = loadingLeads === company.id;
@@ -527,34 +537,42 @@ const CompaniesPage: React.FC = () => {
                             {company.name || 'Unnamed Company'}
                           </Typography>
 
-                          <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0, ml: 1 }}>
-                            <Tooltip title="Edit company">
-                              <IconButton
-                                size="small"
-                                aria-label={`Edit ${company.name ?? 'company'}`}
-                                onClick={() => openEditDialog(company)}
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete company">
-                              <IconButton
-                                size="small"
-                                aria-label={`Delete ${company.name ?? 'company'}`}
-                                onClick={() => confirmDelete(company)}
-                                sx={{
-                                  color: theme.palette.text.secondary,
-                                  '&:hover': { color: theme.palette.error.main },
-                                }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Stack>
+                          {company.can_manage && (
+                            <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0, ml: 1 }}>
+                              <Tooltip title="Edit company">
+                                <IconButton
+                                  size="small"
+                                  aria-label={`Edit ${company.name ?? 'company'}`}
+                                  onClick={() => openEditDialog(company)}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete company">
+                                <IconButton
+                                  size="small"
+                                  aria-label={`Delete ${company.name ?? 'company'}`}
+                                  onClick={() => confirmDelete(company)}
+                                  sx={{
+                                    color: theme.palette.text.secondary,
+                                    '&:hover': { color: theme.palette.error.main },
+                                  }}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
+                          )}
                         </Stack>
 
                         {/* Metadata chips */}
                         <Stack direction="row" sx={{ mt: 0.75, flexWrap: 'wrap', gap: 0.5 }}>
+                          <Chip
+                            label={managementLabel}
+                            size="small"
+                            color={company.can_manage ? 'primary' : 'default'}
+                            variant={company.can_manage ? 'filled' : 'outlined'}
+                          />
                           {company.industry && (
                             <Chip
                               icon={<IndustryIcon sx={{ fontSize: 14 }} />}
@@ -787,7 +805,7 @@ const CompaniesPage: React.FC = () => {
         <DialogContent>
           <Typography variant="body2" color="text.secondary">
             Are you sure you want to delete <strong>{deleteTarget?.name || 'this company'}</strong>?
-            This action cannot be undone and will remove all associated data.
+            This action cannot be undone and will remove it from the shared directory.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>

@@ -3,28 +3,25 @@ from __future__ import annotations
 import json
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
-from typing import AsyncGenerator
 from uuid import UUID
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from langchain_core.messages import AIMessageChunk, HumanMessage, SystemMessage
 from sqlalchemy import select
 
 from app import models
 from app import schemas as app_schemas
 from app.api.routes import agents as agents_route
+from app.conftest import create_user, login_and_get_headers
 from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
+from app.core.db import session_context
 from app.core.url_safety import UnsafeFetchUrlError
-from app.main import app
 from app.tests import utils
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
-password_helper = PasswordHelper()
-_db_ready = False
+_client = None
 
 
 @pytest.fixture(autouse=True)
@@ -34,52 +31,16 @@ def _configure_openai_for_agent_route_tests(
     monkeypatch.setattr(conf.openai, "API_KEY", "test-openai-key")
 
 
-@asynccontextmanager
-async def _client() -> AsyncGenerator[AsyncClient, None]:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
+@pytest.fixture(autouse=True)
+def _use_shared_client(client: AsyncClient) -> None:
+    """Bridge existing `_client()` call sites onto the shared client fixture."""
+    global _client
+
+    @asynccontextmanager
+    async def _ctx():
         yield client
 
-
-async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(
-    password: str, *, is_superuser: bool = False
-) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-            is_superuser=is_superuser,
-        )
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient, email: str, password: str
-) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200, response.text
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    _client = _ctx
 
 
 def _agent_payload(**overrides: object) -> dict[str, object]:
@@ -447,10 +408,9 @@ async def _seed_agent_run_history(
 
 
 async def test_create_agent_returns_201() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-create-pass")
-        headers = await _auth_headers(client, email, "agent-create-pass")
+        email, user_id = await create_user("agent-create-pass")
+        headers = await login_and_get_headers(client, email, "agent-create-pass")
 
         response = await client.post(
             "/api/v1/agents/",
@@ -468,12 +428,13 @@ async def test_create_agent_returns_201() -> None:
 
 
 async def test_create_agent_rejects_invalid_configuration_model_name() -> None:
-    await _ensure_db_ready()
     invalid_name = f"Invalid Model Agent {utils.random_lower_string(6)}"
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-create-invalid-model-pass")
-        headers = await _auth_headers(client, email, "agent-create-invalid-model-pass")
+        email, user_id = await create_user("agent-create-invalid-model-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-create-invalid-model-pass"
+        )
 
         response = await client.post(
             "/api/v1/agents/",
@@ -498,11 +459,10 @@ async def test_create_agent_rejects_invalid_configuration_model_name() -> None:
 
 
 async def test_list_agents_filters_by_kind_and_owner() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-list-pass")
-        headers = await _auth_headers(client, email, "agent-list-pass")
-        _, other_user_id = await _create_user("agent-list-other-pass")
+        email, user_id = await create_user("agent-list-pass")
+        headers = await login_and_get_headers(client, email, "agent-list-pass")
+        _, other_user_id = await create_user("agent-list-other-pass")
 
         await _create_agent(user_id, name="Cover Agent", kind="cover_letter")
         await _create_agent(user_id, name="Outreach Agent", kind="outreach")
@@ -533,10 +493,9 @@ async def test_list_agents_filters_by_kind_and_owner() -> None:
 
 
 async def test_list_agent_models_returns_supported_models() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, _user_id = await _create_user("agent-models-pass")
-        headers = await _auth_headers(client, email, "agent-models-pass")
+        email, _user_id = await create_user("agent-models-pass")
+        headers = await login_and_get_headers(client, email, "agent-models-pass")
 
         response = await client.get("/api/v1/agents/models", headers=headers)
 
@@ -559,10 +518,9 @@ async def test_list_agent_models_returns_supported_models() -> None:
 
 
 async def test_get_agent_returns_detail_for_owner() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-detail-pass")
-        headers = await _auth_headers(client, email, "agent-detail-pass")
+        email, user_id = await create_user("agent-detail-pass")
+        headers = await login_and_get_headers(client, email, "agent-detail-pass")
         agent_id = await _create_agent(
             user_id,
             name="Detailed Agent",
@@ -583,12 +541,13 @@ async def test_get_agent_returns_detail_for_owner() -> None:
 
 
 async def test_agent_routes_reject_cross_user_access() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        owner_email, owner_id = await _create_user("agent-owner-pass")
-        viewer_email, _ = await _create_user("agent-viewer-pass")
-        await _auth_headers(client, owner_email, "agent-owner-pass")
-        viewer_headers = await _auth_headers(client, viewer_email, "agent-viewer-pass")
+        owner_email, owner_id = await create_user("agent-owner-pass")
+        viewer_email, _ = await create_user("agent-viewer-pass")
+        await login_and_get_headers(client, owner_email, "agent-owner-pass")
+        viewer_headers = await login_and_get_headers(
+            client, viewer_email, "agent-viewer-pass"
+        )
         seeded = await _seed_agent_run_history(owner_id, run_count=1)
         agent_id = seeded["agent_id"]
 
@@ -616,12 +575,11 @@ async def test_agent_routes_reject_cross_user_access() -> None:
 
 
 async def test_create_agent_chat_session_with_application_context_returns_201() -> None:
-    await _ensure_db_ready()
     explicit_model_name = sorted(conf.openai.SUPPORTED_MODELS)[0]
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-create-pass")
-        headers = await _auth_headers(client, email, "agent-chat-create-pass")
+        email, user_id = await create_user("agent-chat-create-pass")
+        headers = await login_and_get_headers(client, email, "agent-chat-create-pass")
         application_context = await _create_application_context(user_id)
         await _seed_user_profile(user_id)
         await _create_pinned_resume(
@@ -666,10 +624,11 @@ async def test_create_agent_chat_session_with_application_context_returns_201() 
 async def test_create_agent_chat_session_without_application_context_returns_201() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-create-no-app-pass")
-        headers = await _auth_headers(client, email, "agent-chat-create-no-app-pass")
+        email, user_id = await create_user("agent-chat-create-no-app-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-chat-create-no-app-pass"
+        )
         agent_id = await _create_agent(
             user_id,
             name="General Chat Coach",
@@ -695,10 +654,9 @@ async def test_create_agent_chat_session_without_application_context_returns_201
 
 
 async def test_list_agent_chat_sessions_orders_by_last_message_at_desc() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-list-pass")
-        headers = await _auth_headers(client, email, "agent-chat-list-pass")
+        email, user_id = await create_user("agent-chat-list-pass")
+        headers = await login_and_get_headers(client, email, "agent-chat-list-pass")
         agent_id = await _create_agent(
             user_id,
             name="Session History Agent",
@@ -750,10 +708,9 @@ async def test_list_agent_chat_sessions_orders_by_last_message_at_desc() -> None
 
 
 async def test_get_agent_chat_session_returns_recent_messages_with_limit() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-detail-pass")
-        headers = await _auth_headers(client, email, "agent-chat-detail-pass")
+        email, user_id = await create_user("agent-chat-detail-pass")
+        headers = await login_and_get_headers(client, email, "agent-chat-detail-pass")
         agent_id = await _create_agent(
             user_id,
             name="Thread Agent",
@@ -791,10 +748,11 @@ async def test_get_agent_chat_session_returns_recent_messages_with_limit() -> No
 
 
 async def test_get_agent_chat_messages_history_route_is_removed() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-messages-removed-pass")
-        headers = await _auth_headers(client, email, "agent-chat-messages-removed-pass")
+        email, user_id = await create_user("agent-chat-messages-removed-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-chat-messages-removed-pass"
+        )
         agent_id = await _create_agent(
             user_id,
             name="Removed History Agent",
@@ -817,10 +775,9 @@ async def test_get_agent_chat_messages_history_route_is_removed() -> None:
 async def test_get_agent_chat_history_returns_cursor_metadata_for_older_messages() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-history-pass")
-        headers = await _auth_headers(client, email, "agent-chat-history-pass")
+        email, user_id = await create_user("agent-chat-history-pass")
+        headers = await login_and_get_headers(client, email, "agent-chat-history-pass")
         agent_id = await _create_agent(
             user_id,
             name="Cursor History Agent",
@@ -861,10 +818,9 @@ async def test_get_agent_chat_history_returns_cursor_metadata_for_older_messages
 async def test_get_agent_chat_history_cursor_paginates_duplicate_timestamps_without_gaps() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-history-duplicate-pass")
-        headers = await _auth_headers(
+        email, user_id = await create_user("agent-chat-history-duplicate-pass")
+        headers = await login_and_get_headers(
             client,
             email,
             "agent-chat-history-duplicate-pass",
@@ -943,10 +899,9 @@ async def test_get_agent_chat_history_cursor_paginates_duplicate_timestamps_with
 async def test_get_agent_chat_history_cursor_is_stable_when_newer_messages_arrive() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-history-concurrent-pass")
-        headers = await _auth_headers(
+        email, user_id = await create_user("agent-chat-history-concurrent-pass")
+        headers = await login_and_get_headers(
             client,
             email,
             "agent-chat-history-concurrent-pass",
@@ -1009,10 +964,11 @@ async def test_get_agent_chat_history_cursor_is_stable_when_newer_messages_arriv
 
 
 async def test_get_agent_chat_history_rejects_malformed_cursor() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-history-invalid-pass")
-        headers = await _auth_headers(client, email, "agent-chat-history-invalid-pass")
+        email, user_id = await create_user("agent-chat-history-invalid-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-chat-history-invalid-pass"
+        )
         agent_id = await _create_agent(
             user_id,
             name="Invalid Cursor Agent",
@@ -1037,7 +993,6 @@ async def test_get_agent_chat_history_rejects_malformed_cursor() -> None:
 async def test_send_agent_chat_message_json_fallback_persists_messages_and_uses_session_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     captured: dict[str, object] = {}
     streaming_model = _StreamingTestModel(
         AIMessageChunk(
@@ -1064,8 +1019,10 @@ async def test_send_agent_chat_message_json_fallback_persists_messages_and_uses_
     monkeypatch.setattr(agents_route, "_get_tiktoken_encoding", lambda _name: None)
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-send-json-pass")
-        headers = await _auth_headers(client, email, "agent-chat-send-json-pass")
+        email, user_id = await create_user("agent-chat-send-json-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-chat-send-json-pass"
+        )
         agent_id = await _create_agent(
             user_id,
             name="Streaming Coach",
@@ -1126,7 +1083,6 @@ async def test_send_agent_chat_message_json_fallback_persists_messages_and_uses_
 async def test_send_agent_chat_message_streams_sse_and_persists_assistant_message(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     streaming_model = _StreamingTestModel(
         AIMessageChunk(content="First "),
         AIMessageChunk(
@@ -1149,8 +1105,8 @@ async def test_send_agent_chat_message_streams_sse_and_persists_assistant_messag
     monkeypatch.setattr(agents_route, "_get_tiktoken_encoding", lambda _name: None)
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-send-sse-pass")
-        headers = await _auth_headers(client, email, "agent-chat-send-sse-pass")
+        email, user_id = await create_user("agent-chat-send-sse-pass")
+        headers = await login_and_get_headers(client, email, "agent-chat-send-sse-pass")
         agent_id = await _create_agent(user_id, name="SSE Coach", kind="custom")
         session_id = await _create_chat_session_with_messages(
             user_id=user_id,
@@ -1201,10 +1157,11 @@ async def test_send_agent_chat_message_streams_sse_and_persists_assistant_messag
 async def test_send_agent_chat_message_rejects_archived_session_without_writing() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-send-archived-pass")
-        headers = await _auth_headers(client, email, "agent-chat-send-archived-pass")
+        email, user_id = await create_user("agent-chat-send-archived-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-chat-send-archived-pass"
+        )
         agent_id = await _create_agent(user_id, name="Archived Coach", kind="custom")
         session_id = await _create_chat_session_with_messages(
             user_id=user_id,
@@ -1244,7 +1201,6 @@ async def test_send_agent_chat_message_rejects_archived_session_without_writing(
 async def test_send_agent_chat_message_stream_emits_error_and_skips_assistant_persist(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     streaming_model = _StreamingTestModel(
         AIMessageChunk(content="Partial"),
         failure=RuntimeError("stream exploded"),
@@ -1265,8 +1221,10 @@ async def test_send_agent_chat_message_stream_emits_error_and_skips_assistant_pe
     monkeypatch.setattr(agents_route, "_get_tiktoken_encoding", lambda _name: None)
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-send-error-pass")
-        headers = await _auth_headers(client, email, "agent-chat-send-error-pass")
+        email, user_id = await create_user("agent-chat-send-error-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-chat-send-error-pass"
+        )
         agent_id = await _create_agent(user_id, name="Error Coach", kind="custom")
         session_id = await _create_chat_session_with_messages(
             user_id=user_id,
@@ -1307,7 +1265,6 @@ async def test_send_agent_chat_message_stream_emits_error_and_skips_assistant_pe
 async def test_send_agent_chat_message_retry_reuses_trailing_user_message(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     first_attempt_model = _StreamingTestModel(
         AIMessageChunk(content="Partial"),
         failure=RuntimeError("stream exploded"),
@@ -1335,8 +1292,8 @@ async def test_send_agent_chat_message_retry_reuses_trailing_user_message(
     monkeypatch.setattr(agents_route, "_get_tiktoken_encoding", lambda _name: None)
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-retry-pass")
-        headers = await _auth_headers(client, email, "agent-chat-retry-pass")
+        email, user_id = await create_user("agent-chat-retry-pass")
+        headers = await login_and_get_headers(client, email, "agent-chat-retry-pass")
         agent_id = await _create_agent(
             user_id,
             name="Retry Coach",
@@ -1411,7 +1368,6 @@ async def test_send_agent_chat_message_retry_reuses_trailing_user_message(
 async def test_send_agent_chat_message_json_retrieval_adds_turn_context_and_persists_compact_metadata(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     _AgentChatRetrievalVectorStore.results = []
     _AgentChatRetrievalVectorStore.captured_queries = []
     streaming_model = _StreamingTestModel(
@@ -1446,8 +1402,8 @@ async def test_send_agent_chat_message_json_retrieval_adds_turn_context_and_pers
     )
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-rag-json-pass")
-        headers = await _auth_headers(client, email, "agent-chat-rag-json-pass")
+        email, user_id = await create_user("agent-chat-rag-json-pass")
+        headers = await login_and_get_headers(client, email, "agent-chat-rag-json-pass")
         agent_id = await _create_agent(user_id, name="RAG Coach", kind="custom")
         session_id = await _create_chat_session_with_messages(
             user_id=user_id,
@@ -1539,7 +1495,6 @@ async def test_send_agent_chat_message_json_retrieval_adds_turn_context_and_pers
 async def test_send_agent_chat_message_retrieval_reembeds_stale_documents_and_soft_warns_on_url_fetch_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
     streaming_model = _StreamingTestModel(
         AIMessageChunk(content="Recovered with documents"),
     )
@@ -1601,8 +1556,10 @@ async def test_send_agent_chat_message_retrieval_reembeds_stale_documents_and_so
     )
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-rag-refresh-pass")
-        headers = await _auth_headers(client, email, "agent-chat-rag-refresh-pass")
+        email, user_id = await create_user("agent-chat-rag-refresh-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-chat-rag-refresh-pass"
+        )
         agent_id = await _create_agent(user_id, name="Refresh Coach", kind="custom")
         session_id = await _create_chat_session_with_messages(
             user_id=user_id,
@@ -1654,7 +1611,6 @@ async def test_send_agent_chat_message_retrieval_reembeds_stale_documents_and_so
 async def test_send_agent_chat_message_rejects_unsafe_lookup_url_request_validation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
 
     def _reject_url(_value: str) -> str:
         raise UnsafeFetchUrlError("Fetch URLs must use http or https")
@@ -1662,8 +1618,10 @@ async def test_send_agent_chat_message_rejects_unsafe_lookup_url_request_validat
     monkeypatch.setattr(app_schemas, "validate_url_safe_for_fetch", _reject_url)
 
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-rag-unsafe-pass")
-        headers = await _auth_headers(client, email, "agent-chat-rag-unsafe-pass")
+        email, user_id = await create_user("agent-chat-rag-unsafe-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-chat-rag-unsafe-pass"
+        )
         agent_id = await _create_agent(
             user_id,
             name="Unsafe URL Coach",
@@ -1699,14 +1657,13 @@ async def test_send_agent_chat_message_rejects_unsafe_lookup_url_request_validat
 
 
 async def test_agent_chat_session_routes_reject_cross_user_access() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        owner_email, owner_id = await _create_user("agent-chat-owner-pass")
-        viewer_email, _viewer_id = await _create_user("agent-chat-viewer-pass")
-        owner_headers = await _auth_headers(
+        owner_email, owner_id = await create_user("agent-chat-owner-pass")
+        viewer_email, _viewer_id = await create_user("agent-chat-viewer-pass")
+        owner_headers = await login_and_get_headers(
             client, owner_email, "agent-chat-owner-pass"
         )
-        viewer_headers = await _auth_headers(
+        viewer_headers = await login_and_get_headers(
             client,
             viewer_email,
             "agent-chat-viewer-pass",
@@ -1772,10 +1729,9 @@ async def test_agent_chat_session_routes_reject_cross_user_access() -> None:
 
 
 async def test_update_and_delete_agent_chat_session() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-update-pass")
-        headers = await _auth_headers(client, email, "agent-chat-update-pass")
+        email, user_id = await create_user("agent-chat-update-pass")
+        headers = await login_and_get_headers(client, email, "agent-chat-update-pass")
         agent_id = await _create_agent(
             user_id,
             name="Mutable Chat Agent",
@@ -1822,10 +1778,9 @@ async def test_update_and_delete_agent_chat_session() -> None:
 
 
 async def test_save_agent_chat_to_document_creates_cell_doc_run_and_link() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-save-pass")
-        headers = await _auth_headers(client, email, "agent-chat-save-pass")
+        email, user_id = await create_user("agent-chat-save-pass")
+        headers = await login_and_get_headers(client, email, "agent-chat-save-pass")
         application_context = await _create_application_context(user_id)
         agent_id = await _create_agent(
             user_id,
@@ -1920,10 +1875,9 @@ async def test_save_agent_chat_to_document_creates_cell_doc_run_and_link() -> No
 async def test_save_agent_chat_to_document_allows_explicit_application_on_unanchored_session() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-save-explicit-app-pass")
-        headers = await _auth_headers(
+        email, user_id = await create_user("agent-chat-save-explicit-app-pass")
+        headers = await login_and_get_headers(
             client,
             email,
             "agent-chat-save-explicit-app-pass",
@@ -1978,10 +1932,11 @@ async def test_save_agent_chat_to_document_allows_explicit_application_on_unanch
 async def test_save_agent_chat_to_document_rejects_mismatched_application_context() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-save-mismatch-pass")
-        headers = await _auth_headers(client, email, "agent-chat-save-mismatch-pass")
+        email, user_id = await create_user("agent-chat-save-mismatch-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-chat-save-mismatch-pass"
+        )
         first_application = await _create_application_context(user_id)
         second_application = await _create_application_context(user_id)
         agent_id = await _create_agent(
@@ -2010,10 +1965,9 @@ async def test_save_agent_chat_to_document_rejects_mismatched_application_contex
 
 
 async def test_save_agent_chat_to_document_rejects_without_assistant_message() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-save-no-assistant-pass")
-        headers = await _auth_headers(
+        email, user_id = await create_user("agent-chat-save-no-assistant-pass")
+        headers = await login_and_get_headers(
             client,
             email,
             "agent-chat-save-no-assistant-pass",
@@ -2043,14 +1997,13 @@ async def test_save_agent_chat_to_document_rejects_without_assistant_message() -
 
 
 async def test_save_agent_chat_to_document_rejects_cross_user_access() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        owner_email, owner_id = await _create_user("agent-chat-save-owner-pass")
-        viewer_email, _viewer_id = await _create_user("agent-chat-save-viewer-pass")
-        owner_headers = await _auth_headers(
+        owner_email, owner_id = await create_user("agent-chat-save-owner-pass")
+        viewer_email, _viewer_id = await create_user("agent-chat-save-viewer-pass")
+        owner_headers = await login_and_get_headers(
             client, owner_email, "agent-chat-save-owner-pass"
         )
-        viewer_headers = await _auth_headers(
+        viewer_headers = await login_and_get_headers(
             client,
             viewer_email,
             "agent-chat-save-viewer-pass",
@@ -2085,10 +2038,11 @@ async def test_save_agent_chat_to_document_rejects_cross_user_access() -> None:
 
 
 async def test_save_agent_chat_to_document_allows_archived_session() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-save-archived-pass")
-        headers = await _auth_headers(client, email, "agent-chat-save-archived-pass")
+        email, user_id = await create_user("agent-chat-save-archived-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-chat-save-archived-pass"
+        )
         agent_id = await _create_agent(
             user_id,
             name="Archived Export Agent",
@@ -2119,10 +2073,11 @@ async def test_save_agent_chat_to_document_allows_archived_session() -> None:
 
 
 async def test_delete_agent_chat_session_rejects_exported_sessions() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-export-delete-pass")
-        headers = await _auth_headers(client, email, "agent-chat-export-delete-pass")
+        email, user_id = await create_user("agent-chat-export-delete-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-chat-export-delete-pass"
+        )
         agent_id = await _create_agent(
             user_id,
             name="Delete Protected Export Agent",
@@ -2153,10 +2108,11 @@ async def test_delete_agent_chat_session_rejects_exported_sessions() -> None:
 
 
 async def test_update_agent_chat_session_rejects_null_status() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-chat-null-status-pass")
-        headers = await _auth_headers(client, email, "agent-chat-null-status-pass")
+        email, user_id = await create_user("agent-chat-null-status-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-chat-null-status-pass"
+        )
         agent_id = await _create_agent(
             user_id,
             name="Null Status Agent",
@@ -2184,10 +2140,9 @@ async def test_update_agent_chat_session_rejects_null_status() -> None:
 
 
 async def test_update_agent_only_mutates_supported_fields() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-update-pass")
-        headers = await _auth_headers(client, email, "agent-update-pass")
+        email, user_id = await create_user("agent-update-pass")
+        headers = await login_and_get_headers(client, email, "agent-update-pass")
         agent_id = await _create_agent(
             user_id,
             name="Update Agent",
@@ -2221,10 +2176,11 @@ async def test_update_agent_only_mutates_supported_fields() -> None:
 
 
 async def test_update_agent_rejects_invalid_configuration_model_name() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-update-invalid-model-pass")
-        headers = await _auth_headers(client, email, "agent-update-invalid-model-pass")
+        email, user_id = await create_user("agent-update-invalid-model-pass")
+        headers = await login_and_get_headers(
+            client, email, "agent-update-invalid-model-pass"
+        )
         agent_id = await _create_agent(
             user_id,
             name="Invalid Update Agent",
@@ -2248,10 +2204,9 @@ async def test_update_agent_rejects_invalid_configuration_model_name() -> None:
 
 
 async def test_delete_agent_hard_deletes_when_no_runs_exist() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-delete-pass")
-        headers = await _auth_headers(client, email, "agent-delete-pass")
+        email, user_id = await create_user("agent-delete-pass")
+        headers = await login_and_get_headers(client, email, "agent-delete-pass")
         agent_id = await _create_agent(user_id, name="Delete Me")
 
         response = await client.delete(f"/api/v1/agents/{agent_id}", headers=headers)
@@ -2265,10 +2220,9 @@ async def test_delete_agent_hard_deletes_when_no_runs_exist() -> None:
 
 
 async def test_delete_agent_with_runs_returns_409() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-delete-runs-pass")
-        headers = await _auth_headers(client, email, "agent-delete-runs-pass")
+        email, user_id = await create_user("agent-delete-runs-pass")
+        headers = await login_and_get_headers(client, email, "agent-delete-runs-pass")
         seeded = await _seed_agent_run_history(user_id, run_count=1)
         agent_id = seeded["agent_id"]
 
@@ -2284,10 +2238,9 @@ async def test_delete_agent_with_runs_returns_409() -> None:
 
 
 async def test_delete_agent_with_chat_sessions_returns_409() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-delete-chat-pass")
-        headers = await _auth_headers(client, email, "agent-delete-chat-pass")
+        email, user_id = await create_user("agent-delete-chat-pass")
+        headers = await login_and_get_headers(client, email, "agent-delete-chat-pass")
         agent_id = await _create_agent(
             user_id,
             name="Delete Chat Agent",
@@ -2311,10 +2264,9 @@ async def test_delete_agent_with_chat_sessions_returns_409() -> None:
 
 
 async def test_get_agent_runs_returns_paginated_history_with_session_metadata() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
-        email, user_id = await _create_user("agent-runs-pass")
-        headers = await _auth_headers(client, email, "agent-runs-pass")
+        email, user_id = await create_user("agent-runs-pass")
+        headers = await login_and_get_headers(client, email, "agent-runs-pass")
         seeded = await _seed_agent_run_history(user_id, run_count=3)
         agent_id = seeded["agent_id"]
         document_id = seeded["document_id"]

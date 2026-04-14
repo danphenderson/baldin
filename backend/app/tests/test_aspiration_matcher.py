@@ -2,25 +2,21 @@ from __future__ import annotations
 
 import asyncio
 import json
-from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from pydantic import ValidationError
 from sqlalchemy import select
 
 from app import models, schemas
+from app.conftest import create_user, login_and_get_headers
 from app.core import conf
 from app.core import orchestration as orchestration_core
-from app.core.db import (
-    async_engine,
-    drop_and_create_db_and_tables,
-    session_context,
-)
+from app.core.db import session_context
 from app.core.rag import shared as rag_shared
 from app.core.rag.match_aspirations import (
     AspirationLeadMatchDraft,
@@ -35,8 +31,6 @@ from app.core.rag.match_aspirations import (
 )
 from app.core.rag.match_aspirations import service as match_service
 from app.core.rag.shared import NO_CONTEXT_DETAIL, active_rag_event_id
-from app.main import app
-from app.tests import utils
 
 
 @pytest.fixture(autouse=True)
@@ -53,57 +47,6 @@ def _stub_lead_requirement_extraction(
         return None
 
     monkeypatch.setattr(match_service, "extract_lead_requirements", _fake_extract)
-
-
-def _valid_password(seed: str) -> str:
-    normalized = "".join(ch for ch in seed if ch.isalnum()) or "testuser"
-    return f"{normalized}Aa1!"
-
-
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
-
-
-async def _register_user(client: AsyncClient, password: str) -> str:
-    email = utils.random_email()
-    response = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": _valid_password(password)},
-    )
-    assert response.status_code in {200, 201}, response.text
-    return email
-
-
-async def _lookup_user_id(email: str):
-    async with session_context() as session:
-        result = await session.execute(
-            select(models.User).where(models.User.email == email)
-        )
-        user = result.scalar_one()
-    return user.id
-
-
-async def _auth_headers(
-    client: AsyncClient,
-    email: str,
-    password: str,
-) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": _valid_password(password)},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200, response.text
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
 
 
 def _request_body(*, aspiration_count: int = 1, verbose: bool = False) -> dict:
@@ -961,6 +904,7 @@ async def test_match_service_persists_generation_failure(
 @pytest.mark.asyncio(loop_scope="module")
 async def test_match_route_single_aspiration_supports_pagination(
     monkeypatch: pytest.MonkeyPatch,
+    fresh_client: AsyncClient,
 ) -> None:
     async def _fake_generator(prompt, variables, schema, *, model_name=None):
         del prompt, variables, schema, model_name
@@ -973,16 +917,15 @@ async def test_match_route_single_aspiration_supports_pagination(
     )
     monkeypatch.setattr(match_service, "ainvoke_structured_prompt", _fake_generator)
 
-    async with _client() as client:
-        email = await _register_user(client, "matcher-paginated-pass")
-        headers = await _auth_headers(client, email, "matcher-paginated-pass")
-        body = _request_body()
-        body.update({"page": 1, "page_size": 1})
-        response = await client.post(
-            "/api/v1/aspirations/match",
-            json=body,
-            headers=headers,
-        )
+    email, _ = await create_user("matcher-paginated-pass")
+    headers = await login_and_get_headers(fresh_client, email, "matcher-paginated-pass")
+    body = _request_body()
+    body.update({"page": 1, "page_size": 1})
+    response = await fresh_client.post(
+        "/api/v1/aspirations/match",
+        json=body,
+        headers=headers,
+    )
 
     assert response.status_code == 200, response.text
     payload = response.json()
@@ -1013,6 +956,7 @@ async def test_match_route_single_aspiration_supports_pagination(
 @pytest.mark.asyncio(loop_scope="module")
 async def test_match_route_multi_aspiration_returns_full_results_without_pagination(
     monkeypatch: pytest.MonkeyPatch,
+    fresh_client: AsyncClient,
 ) -> None:
     async def _fake_generator(prompt, variables, schema, *, model_name=None):
         del prompt, variables, schema, model_name
@@ -1025,14 +969,13 @@ async def test_match_route_multi_aspiration_returns_full_results_without_paginat
     )
     monkeypatch.setattr(match_service, "ainvoke_structured_prompt", _fake_generator)
 
-    async with _client() as client:
-        email = await _register_user(client, "matcher-multi-pass")
-        headers = await _auth_headers(client, email, "matcher-multi-pass")
-        response = await client.post(
-            "/api/v1/aspirations/match",
-            json=_request_body(aspiration_count=2),
-            headers=headers,
-        )
+    email, _ = await create_user("matcher-multi-pass")
+    headers = await login_and_get_headers(fresh_client, email, "matcher-multi-pass")
+    response = await fresh_client.post(
+        "/api/v1/aspirations/match",
+        json=_request_body(aspiration_count=2),
+        headers=headers,
+    )
 
     assert response.status_code == 200, response.text
     results = response.json()["results"]
@@ -1044,17 +987,20 @@ async def test_match_route_multi_aspiration_returns_full_results_without_paginat
 
 
 @pytest.mark.asyncio(loop_scope="module")
-async def test_match_route_rejects_pagination_with_multiple_aspirations() -> None:
-    async with _client() as client:
-        email = await _register_user(client, "matcher-invalid-pagination-pass")
-        headers = await _auth_headers(client, email, "matcher-invalid-pagination-pass")
-        body = _request_body(aspiration_count=2)
-        body.update({"page": 1, "page_size": 1})
-        response = await client.post(
-            "/api/v1/aspirations/match",
-            json=body,
-            headers=headers,
-        )
+async def test_match_route_rejects_pagination_with_multiple_aspirations(
+    fresh_client: AsyncClient,
+) -> None:
+    email, _ = await create_user("matcher-invalid-pagination-pass")
+    headers = await login_and_get_headers(
+        fresh_client, email, "matcher-invalid-pagination-pass"
+    )
+    body = _request_body(aspiration_count=2)
+    body.update({"page": 1, "page_size": 1})
+    response = await fresh_client.post(
+        "/api/v1/aspirations/match",
+        json=body,
+        headers=headers,
+    )
 
     assert response.status_code == 400, response.text
     assert (
@@ -1066,6 +1012,7 @@ async def test_match_route_rejects_pagination_with_multiple_aspirations() -> Non
 @pytest.mark.asyncio(loop_scope="module")
 async def test_match_route_returns_400_when_no_usable_context(
     monkeypatch: pytest.MonkeyPatch,
+    fresh_client: AsyncClient,
 ) -> None:
     monkeypatch.setattr(
         match_service,
@@ -1073,14 +1020,15 @@ async def test_match_route_returns_400_when_no_usable_context(
         lambda db: _FakeStore([_retrieval_result("LOW_CONFIDENCE_CONTEXT", 0.2)]),
     )
 
-    async with _client() as client:
-        email = await _register_user(client, "matcher-no-context-pass")
-        headers = await _auth_headers(client, email, "matcher-no-context-pass")
-        response = await client.post(
-            "/api/v1/aspirations/match",
-            json=_request_body(),
-            headers=headers,
-        )
+    email, _ = await create_user("matcher-no-context-pass")
+    headers = await login_and_get_headers(
+        fresh_client, email, "matcher-no-context-pass"
+    )
+    response = await fresh_client.post(
+        "/api/v1/aspirations/match",
+        json=_request_body(),
+        headers=headers,
+    )
 
     assert response.status_code == 400, response.text
     assert response.json()["detail"] == NO_CONTEXT_DETAIL
@@ -1102,6 +1050,7 @@ async def test_match_route_returns_400_when_no_usable_context(
 @pytest.mark.asyncio(loop_scope="module")
 async def test_match_route_returns_500_when_generation_fails(
     monkeypatch: pytest.MonkeyPatch,
+    fresh_client: AsyncClient,
 ) -> None:
     async def _failing_generator(prompt, variables, schema, *, model_name=None):
         del prompt, variables, schema, model_name
@@ -1114,14 +1063,13 @@ async def test_match_route_returns_500_when_generation_fails(
     )
     monkeypatch.setattr(match_service, "ainvoke_structured_prompt", _failing_generator)
 
-    async with _client() as client:
-        email = await _register_user(client, "matcher-failure-pass")
-        headers = await _auth_headers(client, email, "matcher-failure-pass")
-        response = await client.post(
-            "/api/v1/aspirations/match",
-            json=_request_body(),
-            headers=headers,
-        )
+    email, _ = await create_user("matcher-failure-pass")
+    headers = await login_and_get_headers(fresh_client, email, "matcher-failure-pass")
+    response = await fresh_client.post(
+        "/api/v1/aspirations/match",
+        json=_request_body(),
+        headers=headers,
+    )
 
     assert response.status_code == 500, response.text
     assert response.json()["detail"] == "Failed to match aspirations to leads."
@@ -1143,47 +1091,46 @@ async def test_match_route_returns_500_when_generation_fails(
 @pytest.mark.asyncio(loop_scope="module")
 async def test_match_route_marks_running_event_failed_when_service_crashes(
     monkeypatch: pytest.MonkeyPatch,
+    fresh_client: AsyncClient,
 ) -> None:
-    async with _client() as client:
-        email = await _register_user(client, "matcher-crash-pass")
-        user_id = await _lookup_user_id(email)
+    email, user_id = await create_user("matcher-crash-pass")
 
-        async with session_context() as session:
-            pipeline = models.OrchestrationPipeline(
-                name="rag.match_aspirations",
-                description="Service orchestration pipeline for aspiration matching",
-                definition={
-                    "kind": "service",
-                    "entrypoint": "aspirations.match",
+    async with session_context() as session:
+        pipeline = models.OrchestrationPipeline(
+            name="rag.match_aspirations",
+            description="Service orchestration pipeline for aspiration matching",
+            definition={
+                "kind": "service",
+                "entrypoint": "aspirations.match",
+                "schema_version": 1,
+            },
+            user_id=user_id,
+        )
+        session.add(pipeline)
+        await session.flush()
+        event = await orchestration_core.create_orchestration_event(
+            schemas.OrchestrationEventCreate(
+                message="rag.match_aspirations running: initialized",
+                payload={
+                    "kind": "rag.aspiration_matching.run",
                     "schema_version": 1,
-                },
-                user_id=user_id,
-            )
-            session.add(pipeline)
-            await session.flush()
-            event = await orchestration_core.create_orchestration_event(
-                schemas.OrchestrationEventCreate(
-                    message="rag.match_aspirations running: initialized",
-                    payload={
-                        "kind": "rag.aspiration_matching.run",
-                        "schema_version": 1,
-                        "request": {
-                            "thread_id": "synthetic-thread-id",
-                            "workflow_name": "rag.match_aspirations",
-                            "started_at": datetime(2026, 4, 6, tzinfo=timezone.utc)
-                            .isoformat()
-                            .replace("+00:00", "Z"),
-                        },
-                        "trace": [],
-                        "outcome": {"result": "running"},
+                    "request": {
+                        "thread_id": "synthetic-thread-id",
+                        "workflow_name": "rag.match_aspirations",
+                        "started_at": datetime(2026, 4, 6, tzinfo=timezone.utc)
+                        .isoformat()
+                        .replace("+00:00", "Z"),
                     },
-                    environment="PYTEST",
-                    status=schemas.OrchestrationEventStatusType.RUNNING,
-                    pipeline_id=pipeline.id,
-                ),
-                session,
-            )
-            event_id = event.id
+                    "trace": [],
+                    "outcome": {"result": "running"},
+                },
+                environment="PYTEST",
+                status=schemas.OrchestrationEventStatusType.RUNNING,
+                pipeline_id=pipeline.id,
+            ),
+            session,
+        )
+        event_id = event.id
 
         async def _fake_initialize(*args, **kwargs):
             del args, kwargs
@@ -1211,12 +1158,12 @@ async def test_match_route_marks_running_event_failed_when_service_crashes(
             _recording_mark_failed,
         )
 
-        headers = await _auth_headers(client, email, "matcher-crash-pass")
-        response = await client.post(
-            "/api/v1/aspirations/match",
-            json=_request_body(),
-            headers=headers,
-        )
+    headers = await login_and_get_headers(fresh_client, email, "matcher-crash-pass")
+    response = await fresh_client.post(
+        "/api/v1/aspirations/match",
+        json=_request_body(),
+        headers=headers,
+    )
 
     assert response.status_code == 500
     assert response.json() == {"detail": "Failed to match aspirations to leads."}

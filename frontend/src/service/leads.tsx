@@ -1,6 +1,11 @@
 import { components } from '../schema';
 import { createApiClient } from './api-client';
-import { normalizePaginatedResponse, type PaginatedResponse } from './pagination';
+import {
+  fetchAllPages,
+  FULL_LIST_PAGE_SIZE,
+  normalizePaginatedResponse,
+  type PaginatedResponse,
+} from './pagination';
 
 export type LeadRead = components['schemas']['LeadSummaryRead'];
 export type LeadDetailRead = components['schemas']['LeadDetailRead'];
@@ -11,14 +16,20 @@ export type LeadRankInput = components['schemas']['LeadRankInput'];
 export type LeadRankResponse = components['schemas']['LeadRankResponse'];
 export type LeadRankedEntryRead = components['schemas']['LeadRankedEntryRead'];
 export type LeadExtractResponse = components['schemas']['LeadExtractResponse'];
-export type LeadExtractDisposition = components['schemas']['LeadExtractDisposition'];
-export type LeadRegistrationRead = components['schemas']['LeadRegistrationRead'];
-export type LeadRegistrationUpdate = components['schemas']['LeadRegistrationUpdate'];
-export type LeadViewerPermissionsRead = components['schemas']['LeadViewerPermissionsRead'];
+export type LeadExtractDisposition =
+  components['schemas']['LeadExtractDisposition'];
+export type LeadRegistrationRead =
+  components['schemas']['LeadRegistrationRead'];
+export type LeadRegistrationUpdate =
+  components['schemas']['LeadRegistrationUpdate'];
+export type LeadViewerPermissionsRead =
+  components['schemas']['LeadViewerPermissionsRead'];
 export type LeadCommentRead = components['schemas']['LeadCommentRead'];
 export type LeadCommentCreate = components['schemas']['LeadCommentCreate'];
-export type LeadParticipantSummaryRead = components['schemas']['LeadParticipantSummaryRead'];
-type RawLeadsPaginatedRead = components['schemas']['PaginatedResponse_LeadSummaryRead_'];
+export type LeadParticipantSummaryRead =
+  components['schemas']['LeadParticipantSummaryRead'];
+type RawLeadsPaginatedRead =
+  components['schemas']['PaginatedResponse_LeadSummaryRead_'];
 export type LeadsPaginatedRead = PaginatedResponse<LeadRead>;
 export const MAX_ASPIRATION_MATCH_LEADS = 20;
 export interface Pagination {
@@ -42,9 +53,8 @@ export class LeadServiceError extends Error {
   }
 }
 
-export const isLeadServiceError = (error: unknown): error is LeadServiceError => (
-  error instanceof LeadServiceError
-);
+export const isLeadServiceError = (error: unknown): error is LeadServiceError =>
+  error instanceof LeadServiceError;
 
 const stringifyDetail = (detail: unknown, fallback: string): string => {
   if (typeof detail === 'string' && detail.trim()) {
@@ -59,7 +69,8 @@ const stringifyDetail = (detail: unknown, fallback: string): string => {
   }
 
   if (detail && typeof detail === 'object') {
-    const maybeMessage = (detail as { message?: unknown; detail?: unknown }).message;
+    const maybeMessage = (detail as { message?: unknown; detail?: unknown })
+      .message;
     if (typeof maybeMessage === 'string' && maybeMessage.trim()) {
       return maybeMessage;
     }
@@ -79,71 +90,115 @@ const stringifyDetail = (detail: unknown, fallback: string): string => {
   return fallback;
 };
 
-const toLeadServiceError = (status: number, detail: unknown): LeadServiceError => {
-  const fallback = status === 400
-    ? 'The server rejected that lead request.'
-    : status === 403
-      ? 'You do not have permission to do that on this lead.'
-      : status === 404
-        ? 'That lead or collaboration thread could not be found.'
-        : 'Lead request failed.';
+const toLeadServiceError = (
+  status: number,
+  detail: unknown,
+): LeadServiceError => {
+  const fallback =
+    status === 400
+      ? 'The server rejected that lead request.'
+      : status === 403
+        ? 'You do not have permission to do that on this lead.'
+        : status === 404
+          ? 'That lead or collaboration thread could not be found.'
+          : 'Lead request failed.';
 
-  return new LeadServiceError(stringifyDetail(detail, fallback), status, detail);
+  return new LeadServiceError(
+    stringifyDetail(detail, fallback),
+    status,
+    detail,
+  );
 };
 
-const unwrap = <T,>(
-  result: { data?: T; error?: unknown; response: Response },
-): T => {
+const unwrap = <T,>(result: {
+  data?: T;
+  error?: unknown;
+  response: Response;
+}): T => {
   if (result.error !== undefined) {
     throw toLeadServiceError(result.response.status, result.error);
   }
   return result.data as T;
 };
 
-export const getLeads = async (token: string, pagination: Pagination): Promise<LeadsPaginatedRead> => {
+export const getLeads = async (
+  token: string,
+  pagination: Pagination,
+): Promise<LeadsPaginatedRead> => {
   const client = createApiClient(token);
-  const page = unwrap<RawLeadsPaginatedRead>(await client.GET('/api/v1/leads/', {
-    params: {
-      query: {
-        page: pagination.page,
-        page_size: pagination.page_size,
-        request_count: pagination.request_count,
+  const page = unwrap<RawLeadsPaginatedRead>(
+    await client.GET('/api/v1/leads/', {
+      params: {
+        query: {
+          page: pagination.page,
+          page_size: pagination.page_size,
+          request_count: pagination.request_count,
+        },
       },
-    },
-  }));
+    }),
+  );
   return normalizePaginatedResponse(page, {
     page: pagination.page,
     page_size: pagination.page_size,
   });
 };
 
-export const getLead = async (token: string, id: string): Promise<LeadDetailRead> => {
+export const getAllLeads = async (token: string): Promise<LeadRead[]> =>
+  fetchAllPages<LeadRead>(
+    (page, pageSize) =>
+      getLeads(token, {
+        page,
+        page_size: pageSize,
+        request_count: false,
+      }),
+    FULL_LIST_PAGE_SIZE,
+  );
+
+export const getLead = async (
+  token: string,
+  id: string,
+): Promise<LeadDetailRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/leads/{id}', {
-    params: { path: { id } },
-  }));
+  return unwrap(
+    await client.GET('/api/v1/leads/{id}', {
+      params: { path: { id } },
+    }),
+  );
 };
 
-export const createLead = async (token: string, lead: LeadCreate): Promise<LeadRead> => {
+export const createLead = async (
+  token: string,
+  lead: LeadCreate,
+): Promise<LeadRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/api/v1/leads/', {
-    body: lead,
-  }));
+  return unwrap(
+    await client.POST('/api/v1/leads/', {
+      body: lead,
+    }),
+  );
 };
 
-export const updateLead = async (token: string, id: string, lead: LeadSharedUpdate): Promise<LeadRead> => {
+export const updateLead = async (
+  token: string,
+  id: string,
+  lead: LeadSharedUpdate,
+): Promise<LeadRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PATCH('/api/v1/leads/{id}', {
-    params: { path: { id } },
-    body: lead,
-  }));
+  return unwrap(
+    await client.PATCH('/api/v1/leads/{id}', {
+      params: { path: { id } },
+      body: lead,
+    }),
+  );
 };
 
 export const deleteLead = async (token: string, id: string): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/api/v1/leads/{id}', {
-    params: { path: { id } },
-  }));
+  unwrap(
+    await client.DELETE('/api/v1/leads/{id}', {
+      params: { path: { id } },
+    }),
+  );
 };
 
 export const seedLeads = async (token: string): Promise<void> => {
@@ -151,11 +206,16 @@ export const seedLeads = async (token: string): Promise<void> => {
   unwrap(await client.POST('/api/v1/leads/seed'));
 };
 
-export const extractLead = async (token: string, extractionUrl: string): Promise<LeadExtractResponse> => {
+export const extractLead = async (
+  token: string,
+  extractionUrl: string,
+): Promise<LeadExtractResponse> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/api/v1/leads/extract', {
-    params: { query: { extraction_url: extractionUrl } },
-  }));
+  return unwrap(
+    await client.POST('/api/v1/leads/extract', {
+      params: { query: { extraction_url: extractionUrl } },
+    }),
+  );
 };
 
 export const rankLeads = async (
@@ -169,16 +229,23 @@ export const rankLeads = async (
     );
   }
   const client = createApiClient(token);
-  return unwrap(await client.POST('/api/v1/documents/rag/rank-leads', {
-    body: { leads, k },
-  }));
+  return unwrap(
+    await client.POST('/api/v1/documents/rag/rank-leads', {
+      body: { leads, k },
+    }),
+  );
 };
 
-export const createLeadRegistration = async (token: string, leadId: string): Promise<LeadRegistrationRead> => {
+export const createLeadRegistration = async (
+  token: string,
+  leadId: string,
+): Promise<LeadRegistrationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/api/v1/leads/{id}/registration', {
-    params: { path: { id: leadId } },
-  }));
+  return unwrap(
+    await client.POST('/api/v1/leads/{id}/registration', {
+      params: { path: { id: leadId } },
+    }),
+  );
 };
 
 export const updateLeadRegistration = async (
@@ -187,24 +254,36 @@ export const updateLeadRegistration = async (
   registration: LeadRegistrationUpdate,
 ): Promise<LeadRegistrationRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.PATCH('/api/v1/leads/{id}/registration', {
-    params: { path: { id: leadId } },
-    body: registration,
-  }));
+  return unwrap(
+    await client.PATCH('/api/v1/leads/{id}/registration', {
+      params: { path: { id: leadId } },
+      body: registration,
+    }),
+  );
 };
 
-export const deleteLeadRegistration = async (token: string, leadId: string): Promise<void> => {
+export const deleteLeadRegistration = async (
+  token: string,
+  leadId: string,
+): Promise<void> => {
   const client = createApiClient(token);
-  unwrap(await client.DELETE('/api/v1/leads/{id}/registration', {
-    params: { path: { id: leadId } },
-  }));
+  unwrap(
+    await client.DELETE('/api/v1/leads/{id}/registration', {
+      params: { path: { id: leadId } },
+    }),
+  );
 };
 
-export const getLeadComments = async (token: string, leadId: string): Promise<LeadCommentRead[]> => {
+export const getLeadComments = async (
+  token: string,
+  leadId: string,
+): Promise<LeadCommentRead[]> => {
   const client = createApiClient(token);
-  return unwrap(await client.GET('/api/v1/leads/{id}/comments', {
-    params: { path: { id: leadId } },
-  }));
+  return unwrap(
+    await client.GET('/api/v1/leads/{id}/comments', {
+      params: { path: { id: leadId } },
+    }),
+  );
 };
 
 export const createLeadComment = async (
@@ -213,10 +292,12 @@ export const createLeadComment = async (
   comment: LeadCommentCreate,
 ): Promise<LeadCommentRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/api/v1/leads/{id}/comments', {
-    params: { path: { id: leadId } },
-    body: comment,
-  }));
+  return unwrap(
+    await client.POST('/api/v1/leads/{id}/comments', {
+      params: { path: { id: leadId } },
+      body: comment,
+    }),
+  );
 };
 
 export const createLeadCommentReply = async (
@@ -226,8 +307,10 @@ export const createLeadCommentReply = async (
   comment: LeadCommentCreate,
 ): Promise<LeadCommentRead> => {
   const client = createApiClient(token);
-  return unwrap(await client.POST('/api/v1/leads/{id}/comments/{comment_id}/replies', {
-    params: { path: { id: leadId, comment_id: commentId } },
-    body: comment,
-  }));
+  return unwrap(
+    await client.POST('/api/v1/leads/{id}/comments/{comment_id}/replies', {
+      params: { path: { id: leadId, comment_id: commentId } },
+      body: comment,
+    }),
+  );
 };

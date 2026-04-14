@@ -58,6 +58,7 @@ Precedence order:
 | `MAX_CHUNKS` | `-1` | Maximum extraction chunks (-1 = unlimited) |
 | `LOGGING_LEVEL` | `DEBUG` | Python logging level |
 | `PUBLIC_ASSETS_DIR` | `public` | Root directory for uploads, `var/logs`, seeds, and other local persisted assets |
+| `ALLOW_KMP_DUPLICATE_LIB_OK` | `False` | DEV/PYTEST-only escape hatch that sets `KMP_DUPLICATE_LIB_OK=TRUE` when explicitly enabled |
 
 ### AI / Extraction
 
@@ -113,6 +114,12 @@ Related runtime toggles exposed through settings:
 |----------|--------------|---------|
 | `CRAWLER_SCHEDULER_ENABLED` | `True` | Enables the crawler scheduler outside `PYTEST` |
 | `RUN_REAPER_ENABLED` | `True` | Enables the background reaper outside `PYTEST` |
+
+Related bootstrap escape hatch:
+
+| Variable | Purpose |
+|----------|---------|
+| `LEGACY_BOOTSTRAP` | When set to `1`, re-enables the legacy metadata bootstrap path in `DEV` and `PYTEST` only. Ignored in `STAGE` and `PROD`. |
 
 ## Frontend
 

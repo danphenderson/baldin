@@ -88,6 +88,42 @@ This catalog describes the shared frontend UI surface that ships in the repo tod
 | `SectionCard` | `frontend/src/design-system/patterns/sections/section-card.tsx` | Thin `CardShell` composition for section layouts with shared header framing | Profile sections, conversations |
 | `AuthPanel` | `frontend/src/design-system/patterns/auth/auth-panel.tsx` | Shared centered auth shell with icon, title, description, content, and footer slots | Login, registration, MFA verification flows |
 
+## Figma Mapping Inventory
+
+These files are optional repo-local metadata, but they are the practical verification fallback when workspace Code Connect reads are seat-blocked. The canonical library target for all eight mappings is [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library).
+
+| Surface | Local mapping file | Library node |
+| --- | --- | --- |
+| `CollectionToolbar` | `frontend/src/design-system/patterns/collections/CollectionToolbar.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=8-23 |
+| `MetricStrip` | `frontend/src/design-system/patterns/metrics/MetricStrip.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=7-31 |
+| `SectionCard` | `frontend/src/design-system/patterns/sections/SectionCard.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=7-5 |
+| `InlineFeedback` | `frontend/src/design-system/primitives/feedback/InlineFeedback.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=30-62 |
+| `StatusChip` | `frontend/src/design-system/primitives/status/StatusChip.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=5-34 |
+| `CardShell` | `frontend/src/design-system/primitives/surfaces/CardShell.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=7-2 |
+| `FormDialogShell` | `frontend/src/design-system/primitives/surfaces/FormDialogShell.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=8-24 |
+| `SectionHeader` | `frontend/src/design-system/primitives/surfaces/SectionHeader.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=6-24 |
+
+## Reviewed Make Sandbox
+
+The current [Figma Make sandbox](https://www.figma.com/make/pXpkeOKYnA3gvhHPIjbJDo/Untitled?t=bM22KU0ea6ttyIQ5-20&fullscreen=1) was reviewed on `2026-04-13` as a salvage candidate, but it is not a canonical design-system source.
+
+Authoritative reviewed sources:
+
+- `src/app/App.tsx`
+- `src/styles/theme.css`
+- `src/app/components/ui/button.tsx`
+- `src/app/components/ui/card.tsx`
+- `src/app/components/ui/badge.tsx`
+- `guidelines/Guidelines.md`
+
+Review outcome:
+
+- `App.tsx` is an empty app shell, so there is no meaningful screen buildout to port.
+- `Guidelines.md` is untouched template content, so there are no Baldin-specific Make rules to preserve.
+- `theme.css` is a generic Tailwind token sheet and does not define Baldin's canonical token contract.
+- `button.tsx`, `card.tsx`, and `badge.tsx` are generic shadcn-style wrappers and are not eligible for direct migration into the MUI-based Baldin design system.
+- Typography overlap does not require a Make-specific migration because Baldin already ships the same `Source Sans 3` plus `Space Grotesk` direction in the canonical theme and browser harness.
+
 ## Compatibility Inventory
 
 These files still exist, but they are not the canonical place for new shared UI.

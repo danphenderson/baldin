@@ -23,7 +23,7 @@ If you use Baldin's workspace skills, `/baldin-local-stack-doctor` helps triage 
 4. If backend API routes or schemas changed before you staged files, run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh`.
 5. Use broader validation only when the touched surface needs it or the branch is ready for handoff or push.
 
-Host-side backend tests should use `127.0.0.1:5431` for `test_db`. Compose service-to-service traffic uses `test_db` as the hostname.
+Host-side backend tests should use `./scripts/run_backend_pytest.sh` so `PIPENV_DONT_LOAD_ENV=1` and the documented `127.0.0.1:5431` `test_db` path stay aligned. Compose service-to-service traffic still uses `test_db` as the hostname.
 
 ## Services
 
@@ -55,6 +55,8 @@ Use [Boot The Stack](../getting-started/quickstart.md) for first boot. This page
 ## Figma Browser-Harness Loop
 
 For Figma capture and browser-driven design review, Baldin's repo-standard browser automation surface is `webdev`.
+
+The canonical Figma surfaces for this repo are [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library) for reusable components and [Baldin-App-Screens](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy/Baldin-App-Screens) for product-flow state inventory. The current [Figma Make file](https://www.figma.com/make/pXpkeOKYnA3gvhHPIjbJDo/Untitled?t=bM22KU0ea6ttyIQ5-20&fullscreen=1) has been reviewed and should be treated as an archived sandbox, not an active delivery surface.
 
 1. Start or keep the local stack running with `docker-compose up --build`.
 2. Use the frontend dev server at `http://127.0.0.1:5173`.
@@ -100,7 +102,10 @@ Baldin's supported Figma workflow assumes a Professional-plan workspace and does
 - Use the local harness plus `webdev` to put the product into the exact state you need.
 - Use Figma MCP read or write tools when your seat and auth allow it.
 - If your seat only allows basic inspection, keep the same harness flow and use screenshots or inspection instead of blocking on Dev Mode-specific UX.
-- Treat `frontend/figma.config.json` and `frontend/src/design-system/**/*.figma.ts` as optional local metadata. They can help future Code Connect or design-system work, but publish is not required for normal Baldin delivery.
+- Use MCP for structure, component, and screenshot inspection even when Dev Mode is unavailable. Full version-history review still requires browser or web access to the Figma UI.
+- Code Connect workspace reads and publish flows require a Developer seat on an Organization or Enterprise plan. On the current Professional-plan expert seat, treat `frontend/figma.config.json` and `frontend/src/design-system/**/*.figma.ts` as repo-local metadata rather than an active workspace dependency.
+- The reviewed Make sources (`App.tsx`, `theme.css`, `button.tsx`, `card.tsx`, `badge.tsx`, and `Guidelines.md`) did not contain a meaningful direct port candidate. Do not promote generic Tailwind or shadcn scaffolding into the canonical Baldin system.
+- If browser-driven Figma inspection is blocked by stale Playwright Chrome locks, stop lingering `playwright-mcp` or `@playwright/mcp` processes and remove `~/Library/Caches/ms-playwright/mcp-chrome-*/SingletonLock`, `SingletonCookie`, and `SingletonSocket` before restarting the browser automation session.
 
 ## Resetting Databases
 
@@ -195,6 +200,8 @@ npm --prefix docs run start
 | http://127.0.0.1:5173/browser-harness/figma-wave1.html | Figma browser harness |
 | http://localhost:3001/baldin/docs | Product docs |
 | http://localhost:8004 | API root |
+| http://localhost:8004/health | API liveness |
+| http://localhost:8004/ready | API readiness |
 | http://localhost:8004/docs | Swagger UI |
 | http://localhost:8004/redoc | ReDoc |
 | http://localhost:8004/admin | Starlette Admin |

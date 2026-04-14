@@ -1,72 +1,26 @@
 """Tests for the /activity-feed endpoints (feed, summary)."""
 
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
 
 from app import models
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.main import app
-from app.tests import utils
+from app.conftest import (
+    async_client_ctx as _client,
+)
+from app.conftest import (
+    create_user as _create_user,
+)
+from app.conftest import (
+    login_and_get_headers as _auth_headers,
+)
+from app.core.db import session_context
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
-
-password_helper = PasswordHelper()
-_db_ready = False
-
-
-@asynccontextmanager
-async def _client() -> AsyncIterator[AsyncClient]:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
-
-
-async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(
-    password: str, *, is_superuser: bool = False
-) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-            is_superuser=is_superuser,
-        )
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient, email: str, password: str
-) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+pytestmark = [
+    pytest.mark.asyncio(loop_scope="module"),
+    pytest.mark.usefixtures("fresh_db"),
+]
 
 
 def _action_payload(**overrides) -> dict:
@@ -142,7 +96,6 @@ async def _create_application_with_history(
 
 async def test_activity_feed_empty() -> None:
     """New user with no data gets an empty feed."""
-    await _ensure_db_ready()
     async with _client() as client:
         email, uid = await _create_user("feed-empty-pass")
         headers = await _auth_headers(client, email, "feed-empty-pass")
@@ -157,7 +110,6 @@ async def test_activity_feed_empty() -> None:
 
 async def test_activity_feed_returns_action_completions() -> None:
     """Completing an ActionItem surfaces an 'action_completed' event in the feed."""
-    await _ensure_db_ready()
     async with _client() as client:
         email, uid = await _create_user("feed-action-pass")
         headers = await _auth_headers(client, email, "feed-action-pass")
@@ -190,7 +142,6 @@ async def test_activity_feed_returns_action_completions() -> None:
 
 async def test_activity_feed_pagination() -> None:
     """Feed respects page and page_size parameters."""
-    await _ensure_db_ready()
     async with _client() as client:
         email, uid = await _create_user("feed-page-pass")
         headers = await _auth_headers(client, email, "feed-page-pass")
@@ -232,7 +183,6 @@ async def test_activity_feed_pagination() -> None:
 
 async def test_activity_feed_since_filter() -> None:
     """Feed 'since' param excludes action items completed before that date."""
-    await _ensure_db_ready()
     async with _client() as client:
         email, uid = await _create_user("feed-since-pass")
         headers = await _auth_headers(client, email, "feed-since-pass")
@@ -280,7 +230,6 @@ async def test_activity_feed_since_filter() -> None:
 
 async def test_activity_feed_user_isolation() -> None:
     """User B sees an empty feed even when user A has activity."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("feed-iso-a-pass")
         email_b, uid_b = await _create_user("feed-iso-b-pass")
@@ -312,7 +261,6 @@ async def test_activity_feed_user_isolation() -> None:
 
 async def test_summary_endpoint() -> None:
     """GET /activity-feed/summary returns expected CommandCenterSummary fields."""
-    await _ensure_db_ready()
     async with _client() as client:
         email, uid = await _create_user("feed-summary-pass")
         headers = await _auth_headers(client, email, "feed-summary-pass")
@@ -362,7 +310,6 @@ async def test_summary_endpoint() -> None:
 
 async def test_summary_endpoint_returns_stage_velocity_and_offer_conversion() -> None:
     """Dashboard summary exposes dwell-time and monotonic offer-funnel analytics."""
-    await _ensure_db_ready()
     async with _client() as client:
         email, uid = await _create_user("feed-summary-analytics-pass")
         headers = await _auth_headers(client, email, "feed-summary-analytics-pass")
@@ -432,7 +379,6 @@ async def test_summary_endpoint_returns_stage_velocity_and_offer_conversion() ->
 
 async def test_summary_empty_user() -> None:
     """GET /activity-feed/summary for a new user returns all zeros."""
-    await _ensure_db_ready()
     async with _client() as client:
         email, uid = await _create_user("feed-summary-empty-pass")
         headers = await _auth_headers(client, email, "feed-summary-empty-pass")

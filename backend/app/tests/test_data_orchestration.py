@@ -1,11 +1,13 @@
-from contextlib import asynccontextmanager
-
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables
-from app.main import app
+from app.conftest import (
+    async_client_ctx,
+    login_and_get_headers,
+)
+from app.conftest import (
+    create_user as _shared_create_user,
+)
 from app.tests import utils
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
@@ -16,39 +18,24 @@ def _valid_password(seed: str) -> str:
     return f"{normalized}Aa1!"
 
 
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
+@pytest.fixture(autouse=True)
+async def _shared_db_ready(fresh_db: None) -> None:
+    del fresh_db
 
 
 async def _register_user(client: AsyncClient, password: str) -> str:
-    email = utils.random_email()
-    response = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": _valid_password(password)},
-    )
-    assert response.status_code in {200, 201}
+    del client
+    email, _ = await _shared_create_user(_valid_password(password))
     return email
 
 
 async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": _valid_password(password)},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    return await login_and_get_headers(client, email, _valid_password(password))
+
+
+_client = async_client_ctx
 
 
 async def _create_pipeline(

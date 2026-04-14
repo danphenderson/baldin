@@ -34,7 +34,7 @@ async def read_current_user_certificates(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
     base = select(models.Certificate).where(models.Certificate.user_id == user.id)
     count_result = await db.execute(select(func.count()).select_from(base.subquery()))
@@ -62,7 +62,7 @@ async def create_user_certificate(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    certificate = models.Certificate(**payload.dict(), user_id=user.id)
+    certificate = models.Certificate(**payload.model_dump(), user_id=user.id)
     db.add(certificate)
     await db.commit()
     await db.refresh(certificate)

@@ -66,7 +66,7 @@ async def extract_user_skills(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    log.info(f"Skills run extraction request: {payload.dict()}")
+    log.info(f"Skills run extraction request: {payload.model_dump()}")
 
     try:
         extractor = await get_extractor_by_name("skills", db)
@@ -97,7 +97,7 @@ async def get_current_user_skills(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
     base = select(models.Skill).where(models.Skill.user_id == user.id)
     count_result = await db.execute(select(func.count()).select_from(base.subquery()))
@@ -118,7 +118,7 @@ async def create_user_skill(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    skill = models.Skill(**payload.dict(), user_id=user.id)
+    skill = models.Skill(**payload.model_dump(), user_id=user.id)
     db.add(skill)
     await db.commit()
     await db.refresh(skill)
@@ -138,7 +138,7 @@ async def update_user_skill(
     skill: schemas.SkillRead = Depends(get_skill),
     db: AsyncSession = Depends(get_async_session),
 ):
-    skill_data = payload.dict(exclude_unset=True)
+    skill_data = payload.model_dump(exclude_unset=True)
     for field in skill_data:
         setattr(skill, field, skill_data[field])
     await db.commit()

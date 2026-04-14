@@ -19,9 +19,13 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces.
 ## Figma Workflow
 
 - Baldin's supported Figma workflow assumes a Professional-plan workspace and does not depend on a Dev seat.
-- For agentic Figma work, prefer the local browser harness plus Figma MCP read or write tools when available.
+- Treat `Baldin-Library` as the canonical reusable-component source and `Baldin-App-Screens` as the canonical product-flow source of truth.
+- Treat the current Figma Make file as a reviewed archived sandbox. The 2026-04-13 salvage review found an empty app shell, stock guidelines, and generic Tailwind or shadcn scaffolding rather than a canonical Baldin buildout.
+- For agentic Figma work, prefer the local browser harness plus Figma MCP read or write tools when available. Structure and component inspection can proceed through MCP without a Developer seat.
 - Treat basic inspection, screenshots, and harness-driven capture as sufficient when seat limits block Dev Mode-specific UX.
-- Do not make Code Connect publish, Dev Mode-only setup, or organization-only Figma features a required step for completing repo work.
+- Version-history review still depends on browser or web access to the Figma UI. If browser automation is unavailable, fall back to direct web review instead of making Dev Mode a prerequisite.
+- Do not make Code Connect publish, Code Connect workspace reads, Dev Mode-only setup, or organization-only Figma features a required step for completing repo work. Current workspace reads and publish flows are seat-blocked without a Developer seat on an Organization or Enterprise plan.
+- Do not port Tailwind token names, `cva` variant contracts, shadcn wrapper APIs, or other Make scaffolding directly into Baldin's canonical MUI design system. At most, salvage layout or state-story ideas and rewrite them through the existing Baldin tokens, primitives, and patterns.
 - Keep `frontend/figma.config.json` and `frontend/src/design-system/**/*.figma.ts` as optional local metadata and future-proofing, not as a blocking delivery dependency.
 
 ## Owner Model

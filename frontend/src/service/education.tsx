@@ -2,7 +2,7 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
-import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
+import { fetchAllPages, FULL_LIST_PAGE_SIZE } from './pagination';
 
 export type EducationRead = components['schemas']['EducationRead'];
 export type EducationCreate = components['schemas']['EducationCreate'];
@@ -25,15 +25,14 @@ const unwrap = <T,>(
 
 export const getEducations = async (token: string): Promise<EducationRead[]> => {
   const client = createApiClient(token);
-  const page = unwrap<EducationListPage>(await client.GET('/api/v1/education/', {
+  return fetchAllPages<EducationRead>(async (page, pageSize) => unwrap<EducationListPage>(await client.GET('/api/v1/education/', {
     params: {
       query: {
-        page: 1,
-        page_size: FULL_LIST_PAGE_SIZE,
+        page,
+        page_size: pageSize,
       },
     },
-  }));
-  return normalizePaginatedResponse(page, { page: 1, page_size: FULL_LIST_PAGE_SIZE }).items;
+  })), FULL_LIST_PAGE_SIZE);
 };
 
 export const getEducation = async (token: string, id: string): Promise<EducationRead> => {

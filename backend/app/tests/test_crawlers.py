@@ -13,75 +13,49 @@ from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
 from app import crawler_scheduler, models, schemas
 from app.api import deps as api_deps
+from app.api.routes import crawlers as crawler_routes
+from app.conftest import (
+    async_client_ctx,
+    login_and_get_headers,
+)
+from app.conftest import (
+    create_user as _shared_create_user,
+)
 from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.main import app
+from app.core.db import session_context
+from app.run_reaper import STALE_TIMEOUT_MINUTES
 from app.tests import utils
 from etl.base import CrawlerResult
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
-password_helper = PasswordHelper()
-_db_ready = False
+
+@pytest.fixture(scope="module", autouse=True)
+async def _shared_db_ready(ensure_db: None) -> None:
+    del ensure_db
 
 
-# ---------------------------------------------------------------------------
-# Helpers — mirrors existing test patterns (test_leads.py, test_db_management.py)
-# ---------------------------------------------------------------------------
-
-
-@asynccontextmanager
-async def _client():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
-
-
-async def _ensure_db_ready():
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
+async def _ensure_db_ready() -> None:
+    return None
 
 
 async def _create_user(
     password: str, *, is_superuser: bool = False
 ) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-            is_superuser=is_superuser,
-        )
-        await session.commit()
-    return email, user.id
+    return await _shared_create_user(password, is_superuser=is_superuser)
 
 
 async def _auth_headers(
     client: AsyncClient, email: str, password: str
 ) -> dict[str, str]:
-    app.state.limiter.reset()
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    return await login_and_get_headers(client, email, password)
+
+
+_client = async_client_ctx
 
 
 def _pipeline_payload(**overrides) -> dict:
@@ -293,6 +267,133 @@ async def test_superuser_lists_pipelines():
         names = [p["name"] for p in pipelines]
         assert "Pipeline A" in names
         assert "Pipeline B" in names
+
+
+async def test_superuser_rejects_pipeline_page_size_over_cap():
+    await _ensure_db_ready()
+    async with _client() as client:
+        email, _ = await _create_user("super-page-cap", is_superuser=True)
+        headers = await _auth_headers(client, email, "super-page-cap")
+
+        resp = await client.get(
+            "/api/v1/crawlers/pipelines",
+            params={"page_size": 101},
+            headers=headers,
+        )
+
+    assert resp.status_code == 422
+
+
+async def test_superuser_gets_crawler_runtime_status(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    await _ensure_db_ready()
+    queue_health_mock = AsyncMock(return_value=(True, True, None))
+    queue_backlog_mock = AsyncMock(return_value=7)
+    etl_health_mock = AsyncMock(return_value=(False, "etl down"))
+
+    monkeypatch.setattr(crawler_routes, "get_queue_health", queue_health_mock)
+    monkeypatch.setattr(crawler_routes, "get_queue_backlog", queue_backlog_mock)
+    monkeypatch.setattr(crawler_routes, "_get_etl_service_health", etl_health_mock)
+    monkeypatch.setattr(conf.settings, "CRAWLER_EXECUTION_MODE", "worker")
+    monkeypatch.setattr(conf.settings, "CRAWLER_SCHEDULER_ENABLED", True)
+    monkeypatch.setattr(conf.settings, "RUN_REAPER_ENABLED", True)
+
+    email, user_id = await _create_user("runtime-status", is_superuser=True)
+
+    async with session_context() as session:
+        pipeline = models.CrawlerPipeline(
+            name="Runtime status pipeline",
+            source="linkedin",
+            query_definition={"keywords": ["python"]},
+            created_by_user_id=user_id,
+        )
+        session.add(pipeline)
+        await session.flush()
+
+        stale_created_at = (
+            datetime.now(timezone.utc) - timedelta(minutes=STALE_TIMEOUT_MINUTES + 5)
+        ).replace(tzinfo=None)
+        run_id = uuid4()
+        session.add(
+            models.CrawlerRun(
+                id=run_id,
+                crawler_pipeline_id=pipeline.id,
+                trigger_type="manual",
+                status=models.CrawlerRunStatus.PENDING,
+                created_at=stale_created_at,
+            )
+        )
+        session.add(
+            models.OrchestrationEvent(
+                status="pending",
+                message="Crawler run queue handoff failed; falling back via inline",
+                payload={
+                    "crawler_run_id": str(run_id),
+                    "enqueue_failure_count": 1,
+                    "enqueue_failures": [
+                        {
+                            "recorded_at": stale_created_at.isoformat(),
+                            "fallback_mode": "inline",
+                            "error_summary": "Redis enqueue failed",
+                        }
+                    ],
+                },
+                environment="PYTEST",
+                created_at=stale_created_at,
+            )
+        )
+        await session.commit()
+
+    async with _client() as client:
+        headers = await _auth_headers(client, email, "runtime-status")
+        resp = await client.get("/api/v1/crawlers/runtime-status", headers=headers)
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["execution_mode"] == "worker"
+    assert body["redis"]["reachable"] is True
+    assert body["redis"]["detail"] is None
+    assert body["etl_service"]["reachable"] is False
+    assert body["etl_service"]["detail"] == "etl down"
+    assert body["queue_backlog"] == 7
+    assert body["stale_run_count"] >= 1
+    assert body["stale_event_count"] >= 1
+    assert body["enqueue_failure_count"] >= 1
+    assert body["recent_enqueue_failures"][0]["fallback_mode"] == "inline"
+
+
+async def test_superuser_gets_crawler_runtime_status_when_redis_is_down(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    await _ensure_db_ready()
+    queue_health_mock = AsyncMock(return_value=(True, False, "redis down"))
+    queue_backlog_mock = AsyncMock(
+        side_effect=RuntimeError("backlog should be skipped")
+    )
+    etl_health_mock = AsyncMock(return_value=(True, None))
+
+    monkeypatch.setattr(crawler_routes, "get_queue_health", queue_health_mock)
+    monkeypatch.setattr(crawler_routes, "get_queue_backlog", queue_backlog_mock)
+    monkeypatch.setattr(crawler_routes, "_get_etl_service_health", etl_health_mock)
+    monkeypatch.setattr(conf.settings, "CRAWLER_EXECUTION_MODE", "worker")
+    monkeypatch.setattr(conf.settings, "CRAWLER_SCHEDULER_ENABLED", True)
+    monkeypatch.setattr(conf.settings, "RUN_REAPER_ENABLED", True)
+
+    email, _user_id = await _create_user("runtime-status-down", is_superuser=True)
+
+    async with _client() as client:
+        headers = await _auth_headers(client, email, "runtime-status-down")
+        resp = await client.get("/api/v1/crawlers/runtime-status", headers=headers)
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["redis"]["reachable"] is False
+    assert body["redis"]["detail"] == "redis down"
+    assert body["etl_service"]["reachable"] is True
+    assert body["etl_service"]["detail"] is None
+    assert body["queue_backlog"] is None
+    queue_backlog_mock.assert_not_awaited()
 
 
 async def test_superuser_gets_single_pipeline():

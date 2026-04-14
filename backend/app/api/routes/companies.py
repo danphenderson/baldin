@@ -1,4 +1,6 @@
-# Path: app/api/routes/companies.py
+from datetime import UTC, datetime
+from uuid import uuid4
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
@@ -22,13 +24,54 @@ router: APIRouter = APIRouter()
 logger = logging.get_logger(__name__)
 
 
+def _can_manage_company(
+    company: models.Company,
+    user: schemas.UserRead,
+) -> bool:
+    return bool(
+        getattr(user, "is_superuser", False)
+        or company.creator_user_id == user.id
+        or company.creator_user_id is None
+    )
+
+
+def _company_read(
+    company: models.Company,
+    user: schemas.UserRead,
+) -> schemas.CompanyRead:
+    now = datetime.now(UTC)
+    return schemas.CompanyRead(
+        id=getattr(company, "id", None) or uuid4(),
+        created_at=getattr(company, "created_at", None) or now,
+        updated_at=getattr(company, "updated_at", None) or now,
+        name=company.name,
+        industry=company.industry,
+        size=company.size,
+        location=company.location,
+        description=company.description,
+        creator_user_id=company.creator_user_id,
+        can_manage=_can_manage_company(company, user),
+    )
+
+
+def _require_company_manager(
+    company: models.Company,
+    user: schemas.UserRead,
+) -> None:
+    if _can_manage_company(company, user):
+        return
+    raise HTTPException(
+        status_code=403,
+        detail="You do not have permission to modify this company.",
+    )
+
+
 @router.get("/{id}", response_model=schemas.CompanyRead)
 async def get_company(
-    company: schemas.CompanyRead = Depends(get_company_by_id),
-    db: AsyncSession = Depends(get_async_session),
+    company: models.Company = Depends(get_company_by_id),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    return company
+    return _company_read(company, user)
 
 
 @router.get("/", response_model=schemas.PaginatedResponse[schemas.CompanyRead])
@@ -36,15 +79,20 @@ async def get_companies(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
     count_result = await db.execute(select(func.count()).select_from(models.Company))
     total = count_result.scalar_one()
 
     offset = (page - 1) * page_size
-    companies = await db.execute(select(models.Company).offset(offset).limit(page_size))
+    companies = await db.execute(
+        select(models.Company)
+        .order_by(func.lower(models.Company.name), models.Company.id)
+        .offset(offset)
+        .limit(page_size)
+    )
     return schemas.PaginatedResponse[schemas.CompanyRead](
-        items=companies.scalars().all(),
+        items=[_company_read(company, user) for company in companies.scalars().all()],
         total=total,
         page=page,
         page_size=page_size,
@@ -57,11 +105,11 @@ async def create_company(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    company = models.Company(**payload.dict())
+    company = models.Company(**payload.model_dump(), creator_user_id=user.id)
     db.add(company)
     await db.commit()
     await db.refresh(company)
-    return company
+    return _company_read(company, user)
 
 
 @router.patch("/{id}", response_model=schemas.CompanyRead)
@@ -71,22 +119,24 @@ async def update_company(
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
-    for key, value in payload.dict(exclude_unset=True).items():
+    _require_company_manager(company, user)
+    for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(company, key, value)
     await db.commit()
     await db.refresh(company)
-    return company
+    return _company_read(company, user)
 
 
 @router.delete("/{id}", status_code=204)
 async def delete_company(
-    company: schemas.CompanyRead = Depends(get_company_by_id),
+    company: models.Company = Depends(get_company_by_id),
     db: AsyncSession = Depends(get_async_session),
     user: schemas.UserRead = Depends(get_current_user),
 ):
+    _require_company_manager(company, user)
     await db.delete(company)
     await db.commit()
-    return {"message": "Company deleted successfully"}
+    return None
 
 
 @router.get("/{id}/leads", response_model=list[schemas.LeadRead])
@@ -163,7 +213,10 @@ async def extract_company(
     logger.info(f"Successful Extraction, result: {res}")
 
     try:
-        company = models.Company(**res.data[0])  # TODO: Handle multiple results
+        company = models.Company(
+            **res.data[0],
+            creator_user_id=user.id,
+        )  # TODO: Handle multiple results
         db.add(company)
         await db.commit()
         await db.refresh(company)
@@ -172,4 +225,4 @@ async def extract_company(
         logger.error(e)
         raise HTTPException(status_code=500, detail="Error saving company to database")
 
-    return company
+    return _company_read(company, user)

@@ -5,8 +5,8 @@ Tiers
 -----
 Global default  – 200/minute per IP (applied automatically to every endpoint).
 Strict          – Auth-sensitive endpoints: 10/minute (login, MFA verify),
-                  5/minute (register, password reset — via fastapi-users; requires
-                  wrapper routes to decorate, tracked as a follow-up).
+                  5/minute (register, password reset, email verification, and
+                  related public fastapi-users auth surfaces).
 Moderate        – Expensive operations: 5/minute (extractor run/suggest),
                   10/minute (crawler pipeline create), 3/minute (crawler trigger).
 Relaxed         – Standard CRUD endpoints rely on the global default only.

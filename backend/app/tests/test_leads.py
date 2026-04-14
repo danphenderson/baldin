@@ -1,74 +1,30 @@
-from contextlib import asynccontextmanager
 from datetime import datetime
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.api.routes import leads as lead_routes
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.main import app
+from app.conftest import (
+    async_client_ctx as _client,
+)
+from app.conftest import (
+    create_user as _create_user,
+)
+from app.conftest import (
+    login_and_get_headers as _auth_headers,
+)
+from app.core.db import session_context
 from app.tests import utils
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
-
-password_helper = PasswordHelper()
-_db_ready = False
-
-
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
-
-
-async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(
-    password: str, *, is_superuser: bool = False
-) -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-            is_superuser=is_superuser,
-        )
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient, email: str, password: str
-) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+pytestmark = [
+    pytest.mark.asyncio(loop_scope="module"),
+    pytest.mark.usefixtures("fresh_db"),
+]
 
 
 async def _set_user_profile(user_id: UUID, **values: str | None) -> None:
@@ -130,7 +86,6 @@ def _extractor_stub() -> SimpleNamespace:
 
 
 async def test_create_lead_uses_canonical_dedupe_and_registration_counts() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, owner_id = await _create_user("lead-owner-pass")
         other_email, other_id = await _create_user("lead-other-pass")
@@ -175,8 +130,6 @@ async def test_create_lead_uses_canonical_dedupe_and_registration_counts() -> No
 async def test_extract_lead_returns_created_joined_and_already_registered_dispositions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _ensure_db_ready()
-
     async def _get_extractor_by_name(*args, **kwargs):
         raise HTTPException(status_code=404, detail="not found")
 
@@ -256,7 +209,6 @@ async def test_extract_lead_rejects_unsafe_url_before_extractor_lookup() -> None
 
 
 async def test_lead_detail_scopes_registration_notes_and_exposed_participants() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, owner_id = await _create_user("detail-owner-pass")
         viewer_email, viewer_id = await _create_user("detail-viewer-pass")
@@ -344,7 +296,6 @@ async def test_lead_detail_scopes_registration_notes_and_exposed_participants() 
 
 
 async def test_registration_join_and_leave_updates_viewer_state() -> None:
-    await _ensure_db_ready()
     async with _client() as client:
         owner_email, _ = await _create_user("leave-owner-pass")
         viewer_email, viewer_id = await _create_user("leave-viewer-pass")
@@ -383,7 +334,6 @@ async def test_registration_join_and_leave_updates_viewer_state() -> None:
 async def test_registered_viewers_can_post_anonymous_comments_and_single_level_replies() -> (
     None
 ):
-    await _ensure_db_ready()
     async with _client() as client:
         author_email, author_id = await _create_user("comment-author-pass")
         replier_email, replier_id = await _create_user("comment-replier-pass")

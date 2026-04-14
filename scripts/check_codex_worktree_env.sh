@@ -93,7 +93,12 @@ printf 'figma_harness_file: %s\n' "${figma_harness_path}"
 printf 'frontend_base_url: %s\n' "${frontend_base_url}"
 printf 'figma_harness_url: %s\n' "${figma_harness_url}"
 printf 'figma_account_baseline: professional-plan without Dev-seat dependency\n'
+printf 'figma_canonical_files: Baldin-Library + Baldin-App-Screens\n'
+printf 'figma_make_surface: reviewed_archived_sandbox\n'
 printf 'figma_workflow: harness + MCP/basic inspection; Code Connect publish optional\n'
+printf 'figma_history_review: browser_or_web_UI_required; MCP_focuses_on_structure_and_screenshots\n'
+printf 'figma_code_connect_access: developer_seat_required_for_workspace_reads_or_publish; repo_metadata_optional\n'
+printf 'figma_make_review: empty_app_shell + default_guidelines + generic_tailwind_shadcn_scaffold\n'
 printf 'figma_config_file: %s\n' "$([[ -f "${figma_config_path}" ]] && printf '%s' "${figma_config_path}" || printf 'absent')"
 printf 'figma_mapping_files: %s\n' "${figma_mapping_count}"
 printf 'OPENAI_API_KEY: %s\n' "$(presence OPENAI_API_KEY)"

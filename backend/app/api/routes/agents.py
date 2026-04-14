@@ -2225,7 +2225,7 @@ async def _record_surface_run_document_activity(
 async def list_agents(
     kind: schemas.AgentKind | None = None,
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -2322,7 +2322,7 @@ async def list_runs_by_session(
         description="Filter runs by their apply state",
     ),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -2448,7 +2448,7 @@ async def list_agent_chat_sessions(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
     base = select(models.AgentChatSession).where(
         models.AgentChatSession.agent_id == agent.id,
@@ -3299,7 +3299,7 @@ async def get_agent_runs(
     agent: models.Agent = Depends(get_agent),
     db: AsyncSession = Depends(get_async_session),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
     base = (
         select(models.AgentRun)

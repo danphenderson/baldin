@@ -2,7 +2,7 @@
 
 import { components } from '../schema';
 import { createApiClient } from './api-client';
-import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
+import { fetchAllPages, FULL_LIST_PAGE_SIZE } from './pagination';
 
 export type ApplicationRead = components['schemas']['ApplicationSummaryRead'];
 export type ApplicationDetailRead = components['schemas']['ApplicationRead'];
@@ -29,15 +29,14 @@ const unwrap = <T,>(
 
 export const getApplications = async (token: string): Promise<ApplicationRead[]> => {
   const client = createApiClient(token);
-  const page = unwrap<ApplicationListPage>(await client.GET('/api/v1/applications/', {
+  return fetchAllPages<ApplicationRead>(async (page, pageSize) => unwrap<ApplicationListPage>(await client.GET('/api/v1/applications/', {
     params: {
       query: {
-        page: 1,
-        page_size: FULL_LIST_PAGE_SIZE,
+        page,
+        page_size: pageSize,
       },
     },
-  }));
-  return normalizePaginatedResponse(page, { page: 1, page_size: FULL_LIST_PAGE_SIZE }).items;
+  })), FULL_LIST_PAGE_SIZE);
 };
 
 export const findExistingApplicationForLead = async (token: string, leadId: string): Promise<ApplicationRead | null> => {

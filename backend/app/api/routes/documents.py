@@ -1865,7 +1865,7 @@ async def list_documents(
     is_pinned: bool | None = Query(None, description="Filter by pinned state"),
     search: str | None = Query(None, description="Search by title (case-insensitive)"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):

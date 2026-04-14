@@ -53,7 +53,7 @@ Those artifact boundaries should remain stable unless the release topology itsel
 
 ### Phase 2: CI as an integration gate
 
-The repository side of this phase is in place: `.github/workflows/ci.yml` already defines six CI jobs, including the backend coverage gate and API contract freshness check. The remaining gap is to apply the documented branch-protection settings in GitHub so reviews and required checks actually block merges on `main`.
+The repository side of this phase is in place: `.github/workflows/ci.yml` already defines seven CI jobs, including the backend coverage gate, the frontend theme drift guard, and the API contract freshness check. The remaining gap is to apply the documented branch-protection settings in GitHub so reviews and required checks actually block merges on `main`.
 
 ### Phase 3: Minimal production topology
 

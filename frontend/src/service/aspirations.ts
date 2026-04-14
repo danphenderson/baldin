@@ -1,6 +1,6 @@
 import { components } from '../schema';
 import { createApiClient } from './api-client';
-import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
+import { fetchAllPages, FULL_LIST_PAGE_SIZE, normalizePaginatedResponse } from './pagination';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -141,21 +141,10 @@ export const getAspirations = async (
   token: string,
   kind?: AspirationKind,
 ): Promise<AspirationItem[]> => {
-  let page = 1;
-  let total = 0;
-  const items: AspirationItem[] = [];
-
-  do {
-    const nextPage = await listAspirationsPage(token, kind, page);
-    total = nextPage.total;
-    items.push(...nextPage.items);
-    if (nextPage.items.length === 0) {
-      break;
-    }
-    page += 1;
-  } while (items.length < total);
-
-  return items;
+  return fetchAllPages<AspirationItem>(
+    (page) => listAspirationsPage(token, kind, page),
+    FULL_LIST_PAGE_SIZE,
+  );
 };
 
 export const getAspirationSuggestions = async (token: string): Promise<AspirationSuggestionDraft[]> => {

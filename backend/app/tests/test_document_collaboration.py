@@ -2,20 +2,24 @@
 
 import asyncio
 import json
-from contextlib import asynccontextmanager
 from uuid import UUID
 
 import pytest
 import y_py as Y
 from fastapi.testclient import TestClient
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from starlette.websockets import WebSocketDisconnect
 
 from app import models
 from app.api.routes.collaboration import COLLABORATION_WEBSOCKET_PROTOCOL
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
+from app.conftest import (
+    async_client_ctx,
+    login_and_get_headers,
+)
+from app.conftest import (
+    create_user as _shared_create_user,
+)
+from app.core.db import session_context
 from app.core.document_collaboration import (
     DocumentCollaborationBootstrapClaimStatus,
     DocumentYStore,
@@ -24,47 +28,28 @@ from app.core.document_collaboration import (
     stop_document_collaboration_server,
 )
 from app.main import app
-from app.tests import utils
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
-password_helper = PasswordHelper()
-_db_ready = False
+
+@pytest.fixture(scope="module", autouse=True)
+async def _shared_db_ready(ensure_db: None) -> None:
+    del ensure_db
 
 
 async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
+    return None
 
 
 async def _create_user(password: str, **fields) -> tuple[str, UUID]:
-    email = utils.random_email()
+    email, user_id = await _shared_create_user(password)
     async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-        )
+        user = await session.get(models.User, user_id)
+        assert user is not None
         for field, value in fields.items():
             setattr(user, field, value)
         await session.commit()
-    return email, user.id
+    return email, user_id
 
 
 async def _auth_headers(
@@ -72,14 +57,10 @@ async def _auth_headers(
     email: str,
     password: str,
 ) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    return await login_and_get_headers(client, email, password)
+
+
+_client = async_client_ctx
 
 
 async def _request_collaboration_token(

@@ -451,11 +451,18 @@ class Company(Base):
             unique=True,
         ),
     )
+    creator_user_id = Column(
+        UUID,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     name = Column(String, nullable=False)
     industry = Column(String)
     size = Column(String)
     location = Column(String)
     description = Column(Text)
+    creator = relationship("User", back_populates="companies_created")
 
     leads = relationship(
         "Lead", secondary="leads_x_companies", back_populates="companies"
@@ -1531,6 +1538,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):  # type: ignore
     experiences = relationship("Experience", back_populates="user")
     education = relationship("Education", back_populates="user")
     certificates = relationship("Certificate", back_populates="user")
+    companies_created = relationship("Company", back_populates="creator")
     aspirations = relationship(
         "Aspiration",
         back_populates="user",

@@ -34,7 +34,7 @@ async def get_current_user_contacts(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500),
+    page_size: int = Query(20, ge=1, le=schemas.PAGINATION_MAX_PAGE_SIZE),
 ):
     base = select(models.Contact).where(models.Contact.user_id == user.id)
     count_result = await db.execute(select(func.count()).select_from(base.subquery()))
@@ -55,7 +55,7 @@ async def create_user_contact(
     user: schemas.UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    contact = models.Contact(**payload.dict(), user_id=user.id)
+    contact = models.Contact(**payload.model_dump(), user_id=user.id)
     db.add(contact)
     await db.commit()
     await db.refresh(contact)
@@ -75,7 +75,7 @@ async def update_user_contact(
     contact: schemas.ContactRead = Depends(get_contact),
     db: AsyncSession = Depends(get_async_session),
 ):
-    contact_data = payload.dict(exclude_unset=True)
+    contact_data = payload.model_dump(exclude_unset=True)
     for field in contact_data:
         setattr(contact, field, contact_data[field])
     await db.commit()

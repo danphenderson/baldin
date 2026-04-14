@@ -33,7 +33,10 @@ describe('createInMemoryAdapter', () => {
     setup();
     await adapter.create('role', { label: 'Frontend Engineer' });
     await adapter.create('company', { label: 'Acme Corp' });
-    await adapter.create('role', { label: 'Staff Engineer', reason: 'Growth path' });
+    await adapter.create('role', {
+      label: 'Staff Engineer',
+      reason: 'Growth path',
+    });
 
     const roles = await adapter.list('role');
     expect(roles).toHaveLength(2);
@@ -73,7 +76,10 @@ describe('createInMemoryAdapter', () => {
     const created = await adapter.create('role', { label: 'Engineer' });
     // Small delay so timestamps differ
     await new Promise((r) => setTimeout(r, 5));
-    const updated = await adapter.update(created.id, { label: 'Senior Engineer', reason: 'Promotion target' });
+    const updated = await adapter.update(created.id, {
+      label: 'Senior Engineer',
+      reason: 'Promotion target',
+    });
 
     expect(updated.id).toBe(created.id);
     expect(updated.label).toBe('Senior Engineer');
@@ -85,7 +91,9 @@ describe('createInMemoryAdapter', () => {
 
   it('throws on update for a non-existent ID', async () => {
     setup();
-    await expect(adapter.update('non-existent', { label: 'Foo' })).rejects.toThrow('not found');
+    await expect(
+      adapter.update('non-existent', { label: 'Foo' }),
+    ).rejects.toThrow('not found');
   });
 
   it('removes an existing item', async () => {
@@ -116,15 +124,27 @@ describe('createInMemoryAdapter', () => {
   it('returns seeded suggestions filtered by kind', async () => {
     adapter = createInMemoryAdapter({
       suggestions: [
-        { kind: 'role', label: 'Staff Product Designer', reason: 'Profile title alignment' },
-        { kind: 'company', label: 'Northstar', reason: 'Recent employer overlap' },
+        {
+          kind: 'role',
+          label: 'Staff Product Designer',
+          reason: 'Profile title alignment',
+        },
+        {
+          kind: 'company',
+          label: 'Northstar',
+          reason: 'Recent employer overlap',
+        },
       ],
     });
 
     const suggestions = await adapter.suggest('role');
 
     expect(suggestions).toEqual([
-      { kind: 'role', label: 'Staff Product Designer', reason: 'Profile title alignment' },
+      {
+        kind: 'role',
+        label: 'Staff Product Designer',
+        reason: 'Profile title alignment',
+      },
     ]);
   });
 
@@ -145,19 +165,35 @@ describe('createApiAdapter', () => {
       .fn()
       .mockResolvedValueOnce({
         data: {
-          items: [{ id: 'a-1', kind: 'role', label: 'Staff Engineer', created_at: '2026-04-01T00:00:00Z', updated_at: '2026-04-01T00:00:00Z' }],
+          items: [
+            {
+              id: 'a-1',
+              kind: 'role',
+              label: 'Staff Engineer',
+              created_at: '2026-04-01T00:00:00Z',
+              updated_at: '2026-04-01T00:00:00Z',
+            },
+          ],
           total: 2,
           page: 1,
-          page_size: 500,
+          page_size: 100,
         },
         response: new Response(),
       })
       .mockResolvedValueOnce({
         data: {
-          items: [{ id: 'a-2', kind: 'role', label: 'Platform Engineer', created_at: '2026-04-02T00:00:00Z', updated_at: '2026-04-02T00:00:00Z' }],
+          items: [
+            {
+              id: 'a-2',
+              kind: 'role',
+              label: 'Platform Engineer',
+              created_at: '2026-04-02T00:00:00Z',
+              updated_at: '2026-04-02T00:00:00Z',
+            },
+          ],
           total: 2,
           page: 2,
-          page_size: 500,
+          page_size: 100,
         },
         response: new Response(),
       });
@@ -165,31 +201,53 @@ describe('createApiAdapter', () => {
 
     const items = await getAspirations('test-token', 'role');
 
-    expect(items.map((item) => item.label)).toEqual(['Staff Engineer', 'Platform Engineer']);
+    expect(items.map((item) => item.label)).toEqual([
+      'Staff Engineer',
+      'Platform Engineer',
+    ]);
     expect(GET).toHaveBeenNthCalledWith(1, '/api/v1/aspirations', {
-      params: { query: { kind: 'role', page: 1, page_size: 500 } },
+      params: { query: { kind: 'role', page: 1, page_size: 100 } },
     });
     expect(GET).toHaveBeenNthCalledWith(2, '/api/v1/aspirations', {
-      params: { query: { kind: 'role', page: 2, page_size: 500 } },
+      params: { query: { kind: 'role', page: 2, page_size: 100 } },
     });
   });
 
   it('creates, updates, and removes aspirations through the API adapter', async () => {
     const GET = vi.fn();
     const POST = vi.fn().mockResolvedValue({
-      data: { id: 'a-1', kind: 'role', label: 'Staff Engineer', created_at: '2026-04-01T00:00:00Z', updated_at: '2026-04-01T00:00:00Z' },
+      data: {
+        id: 'a-1',
+        kind: 'role',
+        label: 'Staff Engineer',
+        created_at: '2026-04-01T00:00:00Z',
+        updated_at: '2026-04-01T00:00:00Z',
+      },
       response: new Response(),
     });
     const PATCH = vi.fn().mockResolvedValue({
-      data: { id: 'a-1', kind: 'role', label: 'Principal Engineer', created_at: '2026-04-01T00:00:00Z', updated_at: '2026-04-02T00:00:00Z' },
+      data: {
+        id: 'a-1',
+        kind: 'role',
+        label: 'Principal Engineer',
+        created_at: '2026-04-01T00:00:00Z',
+        updated_at: '2026-04-02T00:00:00Z',
+      },
       response: new Response(),
     });
     const DELETE = vi.fn().mockResolvedValue({ response: new Response() });
-    mockedCreateApiClient.mockReturnValue({ GET, POST, PATCH, DELETE } as never);
+    mockedCreateApiClient.mockReturnValue({
+      GET,
+      POST,
+      PATCH,
+      DELETE,
+    } as never);
 
     const adapter = createApiAdapter('test-token');
     const created = await adapter.create('role', { label: 'Staff Engineer' });
-    const updated = await adapter.update('a-1', { label: 'Principal Engineer' });
+    const updated = await adapter.update('a-1', {
+      label: 'Principal Engineer',
+    });
     await adapter.remove('a-1');
 
     expect(created.label).toBe('Staff Engineer');
@@ -208,8 +266,16 @@ describe('createApiAdapter', () => {
 
   it('loads suggestion drafts and filters them by kind in the API adapter', async () => {
     const suggestions: AspirationSuggestionDraft[] = [
-      { kind: 'role', label: 'Staff Product Designer', reason: 'Matches the current profile focus' },
-      { kind: 'company', label: 'Northstar', reason: 'Recent shared lead activity' },
+      {
+        kind: 'role',
+        label: 'Staff Product Designer',
+        reason: 'Matches the current profile focus',
+      },
+      {
+        kind: 'company',
+        label: 'Northstar',
+        reason: 'Recent shared lead activity',
+      },
     ];
     const POST = vi.fn().mockResolvedValue({
       data: { suggestions },
@@ -221,7 +287,11 @@ describe('createApiAdapter', () => {
     const result = await adapter.suggest('role');
 
     expect(result).toEqual([
-      { kind: 'role', label: 'Staff Product Designer', reason: 'Matches the current profile focus' },
+      {
+        kind: 'role',
+        label: 'Staff Product Designer',
+        reason: 'Matches the current profile focus',
+      },
     ]);
     expect(POST).toHaveBeenCalledWith('/api/v1/aspirations/suggest');
   });
@@ -245,9 +315,7 @@ describe('getAspirationSuggestions', () => {
   it('returns suggestion drafts from the suggest endpoint', async () => {
     const POST = vi.fn().mockResolvedValue({
       data: {
-        suggestions: [
-          { kind: 'role', label: 'Principal Product Designer' },
-        ],
+        suggestions: [{ kind: 'role', label: 'Principal Product Designer' }],
       },
       response: new Response(),
     });
@@ -260,12 +328,16 @@ describe('getAspirationSuggestions', () => {
 
   it('classifies a 400 with no-usable-profile detail as no_signal', async () => {
     const POST = vi.fn().mockResolvedValue({
-      error: { detail: 'No usable profile data found for suggestion generation.' },
+      error: {
+        detail: 'No usable profile data found for suggestion generation.',
+      },
       response: new Response(null, { status: 400 }),
     });
     mockedCreateApiClient.mockReturnValue({ POST } as never);
 
-    await expect(getAspirationSuggestions('test-token')).rejects.toThrow(AspirationServiceError);
+    await expect(getAspirationSuggestions('test-token')).rejects.toThrow(
+      AspirationServiceError,
+    );
     try {
       await getAspirationSuggestions('test-token');
     } catch (e) {

@@ -17,7 +17,7 @@ From `backend/`:
 
 ```bash
 pipenv sync --dev
-pipenv run pytest --cov=app --cov=etl --cov-report=term-missing --cov-fail-under=60
+../scripts/run_backend_pytest.sh --cov=app --cov=etl --cov-report=term-missing --cov-fail-under=60
 ```
 
 From the repo root:
@@ -30,4 +30,4 @@ docker-compose up --build
 ## Notes
 
 - API and schema changes should regenerate `openapi.json` and `frontend/src/schema.d.ts` through `./scripts/update_frontend_schemas.sh`.
-- The repo does not currently use Alembic as its active schema-management path; see [Release Roadmap](../docs/docs/engineering/release-roadmap.md) for the current posture.
+- Alembic is the default schema-management path during startup. `LEGACY_BOOTSTRAP=1` remains a temporary DEV/PYTEST-only escape hatch for local recovery.

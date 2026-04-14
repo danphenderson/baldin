@@ -1,6 +1,7 @@
 # app/api/api.py
 
 from fastapi import APIRouter
+from fastapi.routing import APIRoute
 
 from app.api.deps import fastapi_users, schemas
 from app.api.routes import (
@@ -30,8 +31,59 @@ from app.api.routes import (
     skills,
     users,
 )
+from app.core.rate_limit import limiter
 
 api_router: APIRouter = APIRouter(prefix="/api/v1")
+
+
+def _build_rate_limited_router(source_router: APIRouter, limit: str) -> APIRouter:
+    """Clone a generated router and add a SlowAPI limit to every HTTP route."""
+    limited_router = APIRouter()
+
+    for route in source_router.routes:
+        if not isinstance(route, APIRoute):
+            continue
+
+        limited_router.add_api_route(
+            route.path,
+            limiter.limit(limit)(route.endpoint),
+            methods=list(route.methods or []),
+            response_model=route.response_model,
+            status_code=route.status_code,
+            tags=route.tags,
+            dependencies=route.dependencies,
+            summary=route.summary,
+            description=route.description,
+            response_description=route.response_description,
+            responses=route.responses,
+            deprecated=route.deprecated,
+            operation_id=route.operation_id,
+            response_model_include=route.response_model_include,
+            response_model_exclude=route.response_model_exclude,
+            response_model_by_alias=route.response_model_by_alias,
+            response_model_exclude_unset=route.response_model_exclude_unset,
+            response_model_exclude_defaults=route.response_model_exclude_defaults,
+            response_model_exclude_none=route.response_model_exclude_none,
+            include_in_schema=route.include_in_schema,
+            name=route.name,
+            openapi_extra=route.openapi_extra,
+        )
+
+    return limited_router
+
+
+public_register_router = _build_rate_limited_router(
+    fastapi_users.get_register_router(schemas.UserRead, schemas.UserCreate),
+    "5/minute",
+)
+public_reset_password_router = _build_rate_limited_router(
+    fastapi_users.get_reset_password_router(),
+    "5/minute",
+)
+public_verify_router = _build_rate_limited_router(
+    fastapi_users.get_verify_router(schemas.UserRead),
+    "5/minute",
+)
 
 api_router.include_router(
     auth.router,
@@ -39,17 +91,17 @@ api_router.include_router(
     tags=["auth"],
 )
 api_router.include_router(
-    fastapi_users.get_register_router(schemas.UserRead, schemas.UserCreate),
+    public_register_router,
     prefix="/auth",
     tags=["auth"],
 )
 api_router.include_router(
-    fastapi_users.get_reset_password_router(),
+    public_reset_password_router,
     prefix="/auth",
     tags=["auth"],
 )
 api_router.include_router(
-    fastapi_users.get_verify_router(schemas.UserRead),
+    public_verify_router,
     prefix="/auth",
     tags=["auth"],
 )

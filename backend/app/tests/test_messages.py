@@ -1,68 +1,24 @@
 """Tests for /conversations endpoints (DM, group, messages, unread tracking)."""
 
-from contextlib import asynccontextmanager
 from uuid import UUID
 
 import pytest
-from fastapi_users.password import PasswordHelper
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
-from app.core import conf
-from app.core.db import async_engine, drop_and_create_db_and_tables, session_context
-from app.main import app
-from app.tests import utils
+from app.conftest import (
+    async_client_ctx as _client,
+)
+from app.conftest import (
+    create_user as _create_user,
+)
+from app.conftest import (
+    login_and_get_headers as _auth_headers,
+)
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
-
-password_helper = PasswordHelper()
-_db_ready = False
-
-
-@asynccontextmanager
-async def _client() -> AsyncClient:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url=str(conf.settings.BACKEND_CORS_ORIGINS[-1]),
-    ) as client:
-        yield client
-
-
-async def _ensure_db_ready() -> None:
-    global _db_ready
-    if _db_ready:
-        return
-    await async_engine.dispose()
-    await drop_and_create_db_and_tables()
-    app.state.bootstrap_completed = True
-    _db_ready = True
-
-
-async def _create_user(password: str, *, tier: str = "free") -> tuple[str, UUID]:
-    email = utils.random_email()
-    async with session_context() as session:
-        user = await utils.create_db_user(
-            email,
-            password_helper.hash(password),
-            session,
-        )
-        if tier != "free":
-            user.subscription_tier = tier
-        await session.commit()
-    return email, user.id
-
-
-async def _auth_headers(
-    client: AsyncClient, email: str, password: str
-) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/jwt/login",
-        data={"username": email, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+pytestmark = [
+    pytest.mark.asyncio(loop_scope="module"),
+    pytest.mark.usefixtures("fresh_db"),
+]
 
 
 async def _create_accepted_connection(
@@ -93,7 +49,6 @@ async def _create_accepted_connection(
 
 async def test_create_dm_conversation() -> None:
     """POST /conversations/ creates a DM between connected starter+ users."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-dm-a", tier="starter")
         email_b, uid_b = await _create_user("msg-dm-b", tier="starter")
@@ -119,7 +74,6 @@ async def test_create_dm_conversation() -> None:
 
 async def test_create_group_conversation_pro_only() -> None:
     """POST /conversations/ with type=group requires pro tier."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-grp-a", tier="pro")
         email_b, uid_b = await _create_user("msg-grp-b", tier="pro")
@@ -165,7 +119,6 @@ async def test_create_group_conversation_pro_only() -> None:
 
 async def test_free_tier_cannot_create_conversation() -> None:
     """Free-tier users get 403 when creating conversations."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_f, uid_f = await _create_user("msg-free-pass", tier="free")
         email_t, uid_t = await _create_user("msg-free-target")
@@ -185,7 +138,6 @@ async def test_free_tier_cannot_create_conversation() -> None:
 
 async def test_dm_without_accepted_connection_fails() -> None:
     """DM creation requires an accepted connection between the users."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-noconn-a", tier="starter")
         email_b, uid_b = await _create_user("msg-noconn-b", tier="starter")
@@ -206,7 +158,6 @@ async def test_dm_without_accepted_connection_fails() -> None:
 
 async def test_dm_deduplication() -> None:
     """Creating a DM between the same two users returns the existing conversation."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-dedup-a", tier="starter")
         email_b, uid_b = await _create_user("msg-dedup-b", tier="starter")
@@ -233,7 +184,6 @@ async def test_dm_deduplication() -> None:
 
 async def test_list_conversations() -> None:
     """GET /conversations/ lists the user's conversations."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-list-a", tier="starter")
         email_b, uid_b = await _create_user("msg-list-b", tier="starter")
@@ -258,7 +208,6 @@ async def test_list_conversations() -> None:
 
 async def test_conversation_detail_with_messages_marks_read() -> None:
     """GET /conversations/{id} returns messages and auto-marks as read."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-det-a", tier="starter")
         email_b, uid_b = await _create_user("msg-det-b", tier="starter")
@@ -294,7 +243,6 @@ async def test_conversation_detail_with_messages_marks_read() -> None:
 
 async def test_send_message() -> None:
     """POST /conversations/{id}/messages sends a message."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-send-a", tier="starter")
         email_b, uid_b = await _create_user("msg-send-b", tier="starter")
@@ -324,7 +272,6 @@ async def test_send_message() -> None:
 
 async def test_edit_own_message() -> None:
     """PATCH /conversations/{id}/messages/{msg_id} edits your own message."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-edit-a", tier="starter")
         email_b, uid_b = await _create_user("msg-edit-b", tier="starter")
@@ -368,7 +315,6 @@ async def test_edit_own_message() -> None:
 
 async def test_delete_own_message() -> None:
     """DELETE /conversations/{id}/messages/{msg_id} deletes your own message."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-del-a", tier="starter")
         email_b, uid_b = await _create_user("msg-del-b", tier="starter")
@@ -409,7 +355,6 @@ async def test_delete_own_message() -> None:
 
 async def test_unread_count() -> None:
     """GET /conversations/unread returns total unread message count."""
-    await _ensure_db_ready()
     async with _client() as client:
         email_a, uid_a = await _create_user("msg-unread-a", tier="starter")
         email_b, uid_b = await _create_user("msg-unread-b", tier="starter")

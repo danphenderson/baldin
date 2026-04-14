@@ -130,7 +130,7 @@ async def _index_names(table_name: str) -> set[str]:
         return {row[0] for row in result.all()}
 
 
-async def test_create_db_and_tables_stamps_baseline_before_upgrade(
+async def test_create_db_and_tables_rejects_existing_schema_without_alembic_version(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     await async_engine.dispose()
@@ -145,15 +145,12 @@ async def test_create_db_and_tables_stamps_baseline_before_upgrade(
     monkeypatch.delenv("LEGACY_BOOTSTRAP", raising=False)
     monkeypatch.setattr(db_module.subprocess, "run", fake_subprocess_run)
 
-    await create_db_and_tables()
+    with pytest.raises(
+        RuntimeError, match="Existing schema detected without alembic_version"
+    ):
+        await create_db_and_tables()
 
-    assert [command for command, _db_url in commands] == [
-        ["alembic", "stamp", "0001"],
-        ["alembic", "upgrade", "head"],
-    ]
-    assert all(
-        db_url == db_module.sqlalchemy_database_uri for _command, db_url in commands
-    )
+    assert commands == []
 
 
 async def test_drop_and_create_db_and_tables_bootstraps_cell_doc_schema() -> None:
@@ -197,9 +194,7 @@ async def test_drop_and_create_db_and_tables_bootstraps_cell_doc_schema() -> Non
         "ck_agent_runs_status",
         "ck_agent_runs_source_surface_kind",
         "ck_agent_runs_apply_status",
-    }.issubset(
-        await _check_constraint_names("agent_runs")
-    )
+    }.issubset(await _check_constraint_names("agent_runs"))
     assert {"ck_agent_chat_sessions_status"}.issubset(
         await _check_constraint_names("agent_chat_sessions")
     )
@@ -295,9 +290,7 @@ async def test_create_db_and_tables_applies_head_without_document_activity_block
         "ck_agent_runs_status",
         "ck_agent_runs_source_surface_kind",
         "ck_agent_runs_apply_status",
-    }.issubset(
-        await _check_constraint_names("agent_runs")
-    )
+    }.issubset(await _check_constraint_names("agent_runs"))
     assert {"ck_agent_chat_sessions_status"}.issubset(
         await _check_constraint_names("agent_chat_sessions")
     )
@@ -342,6 +335,38 @@ async def test_create_db_and_tables_uses_legacy_bootstrap_when_flag_enabled(
     await create_db_and_tables()
 
     assert run_sync_calls == [db_module._create_and_sync_schema]
+
+
+async def test_create_db_and_tables_ignores_legacy_bootstrap_outside_local_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stamp_mock = AsyncMock(return_value=None)
+    migrate_mock = AsyncMock(return_value=None)
+
+    @asynccontextmanager
+    async def fail_begin():
+        pytest.fail("Legacy bootstrap path should not run outside DEV/PYTEST")
+        yield
+
+    async def fake_to_thread(fn, *args, **kwargs):
+        del args, kwargs
+        await migrate_mock()
+        return fn()
+
+    def run_alembic_mock() -> None:
+        pass
+
+    monkeypatch.setenv("LEGACY_BOOTSTRAP", "1")
+    monkeypatch.setattr(db_module.conf.settings, "ENVIRONMENT", "PROD")
+    monkeypatch.setattr(db_module, "_stamp_existing_schema_if_needed", stamp_mock)
+    monkeypatch.setattr(db_module.asyncio, "to_thread", fake_to_thread)
+    monkeypatch.setattr(db_module, "run_alembic_migrations", run_alembic_mock)
+    monkeypatch.setattr(db_module, "async_engine", SimpleNamespace(begin=fail_begin))
+
+    await create_db_and_tables()
+
+    stamp_mock.assert_awaited_once()
+    migrate_mock.assert_awaited_once()
 
 
 async def test_create_db_and_tables_repairs_string_backed_enum_columns_with_legacy_bootstrap(

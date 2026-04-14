@@ -1,6 +1,6 @@
 import { components } from '../schema';
 import { createApiClient } from './api-client';
-import { FULL_LIST_PAGE_SIZE, normalizePaginatedResponse, type PaginatedResponse } from './pagination';
+import { fetchAllPages, FULL_LIST_PAGE_SIZE, normalizePaginatedResponse, type PaginatedResponse } from './pagination';
 
 export type AgentKind = components['schemas']['AgentKind'];
 export type AgentSummaryRead = components['schemas']['AgentSummaryRead'];
@@ -63,17 +63,15 @@ const unwrap = <T,>(
 
 export const getAgents = async (token: string, filters?: AgentListFilters): Promise<AgentSummaryRead[]> => {
   const client = createApiClient(token);
-  const page = unwrap<AgentListPage>(await client.GET('/api/v1/agents/', {
+  return fetchAllPages<AgentSummaryRead>(async (page, pageSize) => unwrap<AgentListPage>(await client.GET('/api/v1/agents/', {
     params: {
       query: {
         kind: filters?.kind,
-        page: 1,
-        page_size: FULL_LIST_PAGE_SIZE,
+        page,
+        page_size: pageSize,
       },
     },
-  }));
-
-  return normalizePaginatedResponse(page, { page: 1, page_size: FULL_LIST_PAGE_SIZE }).items;
+  })), FULL_LIST_PAGE_SIZE);
 };
 
 export const getAgent = async (token: string, id: string): Promise<AgentRead> => {

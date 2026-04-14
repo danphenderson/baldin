@@ -11,7 +11,7 @@ import { ToolbarHeaderContext } from '@/layout/toolbar-header-context';
 
 vi.mock('@/service/leads', () => ({
   MAX_ASPIRATION_MATCH_LEADS: 20,
-  getLeads: vi.fn(),
+  getAllLeads: vi.fn(),
   createLead: vi.fn(),
   updateLead: vi.fn(),
   deleteLead: vi.fn(),
@@ -23,9 +23,10 @@ vi.mock('@/service/applications', () => ({
   createApplication: vi.fn(),
   getApplications: vi.fn(),
   findExistingApplicationForLead: vi.fn(),
-  getApplicationStateLabel: vi.fn((application: { outcome?: string | null; stage?: string | null }) => (
-    application.outcome ?? application.stage ?? 'tracked'
-  )),
+  getApplicationStateLabel: vi.fn(
+    (application: { outcome?: string | null; stage?: string | null }) =>
+      application.outcome ?? application.stage ?? 'tracked',
+  ),
 }));
 
 vi.mock('@/service/companies', () => ({
@@ -55,7 +56,10 @@ vi.mock('@/component/lead-card', () => ({
       applicationLabel?: string;
       ctaLabel?: string;
     } | null;
-    onApply: (lead: Record<string, unknown>, intent: 'registered' | 'applied') => void;
+    onApply: (
+      lead: Record<string, unknown>,
+      intent: 'registered' | 'applied',
+    ) => void;
   }) => (
     <div data-testid="lead-card">
       <span>{lead.title ?? 'Untitled'}</span>
@@ -63,7 +67,9 @@ vi.mock('@/component/lead-card', () => ({
       {applicationHandoff && (
         <>
           <span>{applicationHandoff.message}</span>
-          {applicationHandoff.applicationLabel && <span>{`Existing application: ${applicationHandoff.applicationLabel}`}</span>}
+          {applicationHandoff.applicationLabel && (
+            <span>{`Existing application: ${applicationHandoff.applicationLabel}`}</span>
+          )}
         </>
       )}
       <button
@@ -93,17 +99,24 @@ vi.mock('@/component/lead-modal', () => ({
     leadId: string | null;
     hasExistingApplication?: boolean;
     applicationCtaLabel?: string;
-  }) => (open ? (
-    <div data-testid="lead-modal">
-      <span>{leadId}</span>
-      <span>{hasExistingApplication ? 'existing-application' : 'new-application'}</span>
-      <span>{applicationCtaLabel ?? 'Create Application'}</span>
-    </div>
-  ) : null),
+  }) =>
+    open ? (
+      <div data-testid="lead-modal">
+        <span>{leadId}</span>
+        <span>
+          {hasExistingApplication ? 'existing-application' : 'new-application'}
+        </span>
+        <span>{applicationCtaLabel ?? 'Create Application'}</span>
+      </div>
+    ) : null,
 }));
 
 vi.mock('@/component/lead-extraction-bar', () => ({
-  default: ({ url, onUrlChange, onExtract }: {
+  default: ({
+    url,
+    onUrlChange,
+    onExtract,
+  }: {
     url: string;
     onUrlChange: (v: string) => void;
     onExtract: () => void;
@@ -120,7 +133,15 @@ vi.mock('@/component/lead-extraction-bar', () => ({
 }));
 
 vi.mock('@/component/lead-search-bar', () => ({
-  default: ({ search, rankingActive, rankingPending, rankingDisabledReason, onSearchChange, onRank, onClearRanking }: {
+  default: ({
+    search,
+    rankingActive,
+    rankingPending,
+    rankingDisabledReason,
+    onSearchChange,
+    onRank,
+    onClearRanking,
+  }: {
     search: string;
     rankingActive?: boolean;
     rankingPending?: boolean;
@@ -135,13 +156,14 @@ vi.mock('@/component/lead-search-bar', () => ({
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
       />
-      <button onClick={onRank} disabled={Boolean(rankingDisabledReason) || rankingPending}>
+      <button
+        onClick={onRank}
+        disabled={Boolean(rankingDisabledReason) || rankingPending}
+      >
         Rank with aspirations
       </button>
       {rankingDisabledReason && <span>{rankingDisabledReason}</span>}
-      {rankingActive && (
-        <button onClick={onClearRanking}>Clear ranking</button>
-      )}
+      {rankingActive && <button onClick={onClearRanking}>Clear ranking</button>}
     </div>
   ),
 }));
@@ -152,13 +174,17 @@ import * as companiesService from '@/service/companies';
 import * as aspirationsService from '@/service/aspirations';
 import LeadsPage from '@/page/leads';
 
-const mockedGetLeads = vi.mocked(leadsService.getLeads);
+const mockedGetAllLeads = vi.mocked(leadsService.getAllLeads);
 const mockedRankLeads = vi.mocked(leadsService.rankLeads);
 const mockedGetCompanies = vi.mocked(companiesService.getCompanies);
 const mockedGetAspirations = vi.mocked(aspirationsService.getAspirations);
-const mockedCreateApplication = vi.mocked(applicationsService.createApplication);
+const mockedCreateApplication = vi.mocked(
+  applicationsService.createApplication,
+);
 const mockedGetApplications = vi.mocked(applicationsService.getApplications);
-const mockedFindExistingApplicationForLead = vi.mocked(applicationsService.findExistingApplicationForLead);
+const mockedFindExistingApplicationForLead = vi.mocked(
+  applicationsService.findExistingApplicationForLead,
+);
 
 /* ── Test data ────────────────────────────────────────────────────── */
 
@@ -183,7 +209,12 @@ function makeLead(overrides: Partial<Record<string, unknown>> = {}) {
 /* ── Helpers ──────────────────────────────────────────────────────── */
 
 const userContextValue = {
-  user: { id: 'u1', first_name: 'Jane', last_name: 'Doe', email: 'jane@test.com' } as never,
+  user: {
+    id: 'u1',
+    first_name: 'Jane',
+    last_name: 'Doe',
+    email: 'jane@test.com',
+  } as never,
   setUser: vi.fn(),
   token: 'test-token',
   setToken: vi.fn(),
@@ -209,7 +240,7 @@ function renderPage(initialEntries: string[] = ['/']) {
 
 describe('LeadsPage', () => {
   beforeEach(() => {
-    mockedGetLeads.mockReset();
+    mockedGetAllLeads.mockReset();
     mockedRankLeads.mockReset();
     mockedGetCompanies.mockReset();
     mockedGetAspirations.mockReset();
@@ -225,7 +256,7 @@ describe('LeadsPage', () => {
   });
 
   it('renders loading skeletons while data is being fetched', () => {
-    mockedGetLeads.mockReturnValue(new Promise(() => {}));
+    mockedGetAllLeads.mockReturnValue(new Promise(() => {}));
     mockedGetCompanies.mockReturnValue(new Promise(() => {}));
 
     renderPage();
@@ -236,28 +267,29 @@ describe('LeadsPage', () => {
   });
 
   it('renders lead list when data loads', async () => {
-    mockedGetLeads.mockResolvedValue({
-      items: [
-        makeLead(),
-        makeLead({ id: 'lead-2', title: 'Backend Engineer', location: 'NYC' }),
-      ],
-      total: 2,
-      page: 1,
-      page_size: 500,
-    } as never);
+    mockedGetAllLeads.mockResolvedValue([
+      makeLead(),
+      makeLead({ id: 'lead-2', title: 'Backend Engineer', location: 'NYC' }),
+    ] as never);
     mockedGetCompanies.mockResolvedValue([] as never);
-    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+    mockedGetAspirations.mockResolvedValue([
+      { id: 'asp-1', kind: 'role', label: 'Staff Engineer' },
+    ] as never);
 
     renderPage();
 
-    expect(await screen.findByText('Senior Frontend Engineer')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Senior Frontend Engineer'),
+    ).toBeInTheDocument();
     expect(screen.getByText('Backend Engineer')).toBeInTheDocument();
   });
 
   it('renders the extraction bar', async () => {
-    mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
+    mockedGetAllLeads.mockResolvedValue([makeLead()] as never);
     mockedGetCompanies.mockResolvedValue([] as never);
-    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+    mockedGetAspirations.mockResolvedValue([
+      { id: 'asp-1', kind: 'role', label: 'Staff Engineer' },
+    ] as never);
 
     renderPage();
 
@@ -267,34 +299,37 @@ describe('LeadsPage', () => {
   });
 
   it('renders empty state when there are no leads', async () => {
-    mockedGetLeads.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 500 } as never);
+    mockedGetAllLeads.mockResolvedValue([] as never);
     mockedGetCompanies.mockResolvedValue([] as never);
-    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+    mockedGetAspirations.mockResolvedValue([
+      { id: 'asp-1', kind: 'role', label: 'Staff Engineer' },
+    ] as never);
 
     renderPage();
 
-    expect(await screen.findByText('No leads imported yet')).toBeInTheDocument();
+    expect(
+      await screen.findByText('No leads imported yet'),
+    ).toBeInTheDocument();
   });
 
   it('filters leads with the search bar', async () => {
     const user = userEvent.setup();
 
-    mockedGetLeads.mockResolvedValue({
-      items: [
-        makeLead(),
-        makeLead({ id: 'lead-2', title: 'Data Scientist', location: 'London' }),
-      ],
-      total: 2,
-      page: 1,
-      page_size: 500,
-    } as never);
+    mockedGetAllLeads.mockResolvedValue([
+      makeLead(),
+      makeLead({ id: 'lead-2', title: 'Data Scientist', location: 'London' }),
+    ] as never);
     mockedGetCompanies.mockResolvedValue([] as never);
-    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+    mockedGetAspirations.mockResolvedValue([
+      { id: 'asp-1', kind: 'role', label: 'Staff Engineer' },
+    ] as never);
 
     renderPage();
 
     // Wait for cards to appear
-    expect(await screen.findByText('Senior Frontend Engineer')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Senior Frontend Engineer'),
+    ).toBeInTheDocument();
     expect(screen.getByText('Data Scientist')).toBeInTheDocument();
 
     // Type in search
@@ -303,7 +338,9 @@ describe('LeadsPage', () => {
 
     // The non-matching lead should disappear
     await waitFor(() => {
-      expect(screen.queryByText('Senior Frontend Engineer')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Senior Frontend Engineer'),
+      ).not.toBeInTheDocument();
     });
     expect(screen.getByText('Data Scientist')).toBeInTheDocument();
   });
@@ -311,9 +348,11 @@ describe('LeadsPage', () => {
   it('creates a registered application when register interest is selected', async () => {
     const user = userEvent.setup();
 
-    mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
+    mockedGetAllLeads.mockResolvedValue([makeLead()] as never);
     mockedGetCompanies.mockResolvedValue([] as never);
-    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+    mockedGetAspirations.mockResolvedValue([
+      { id: 'asp-1', kind: 'role', label: 'Staff Engineer' },
+    ] as never);
     mockedCreateApplication.mockResolvedValue({
       id: 'app-1',
       lead_id: 'lead-1',
@@ -324,7 +363,11 @@ describe('LeadsPage', () => {
     renderPage();
 
     await screen.findByText('Senior Frontend Engineer');
-    await user.click(screen.getByRole('button', { name: 'Register interest for Senior Frontend Engineer' }));
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Register interest for Senior Frontend Engineer',
+      }),
+    );
 
     await waitFor(() => {
       expect(mockedGetApplications).toHaveBeenCalledWith('test-token');
@@ -337,34 +380,52 @@ describe('LeadsPage', () => {
   });
 
   it('renders duplicate handoff state from the preloaded application index', async () => {
-    mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
+    mockedGetAllLeads.mockResolvedValue([makeLead()] as never);
     mockedGetCompanies.mockResolvedValue([] as never);
-    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
-    mockedGetApplications.mockResolvedValue([{
-      id: 'app-1',
-      lead_id: 'lead-1',
-      status: 'applied',
-      stage: 'applied',
-      outcome: null,
-    }] as never);
+    mockedGetAspirations.mockResolvedValue([
+      { id: 'asp-1', kind: 'role', label: 'Staff Engineer' },
+    ] as never);
+    mockedGetApplications.mockResolvedValue([
+      {
+        id: 'app-1',
+        lead_id: 'lead-1',
+        status: 'applied',
+        stage: 'applied',
+        outcome: null,
+      },
+    ] as never);
 
     renderPage();
 
     await screen.findByText('Senior Frontend Engineer');
 
-    expect(await screen.findByText('An existing application is already in the pipeline for this lead.')).toBeInTheDocument();
-    expect(screen.getByText('Existing application: Applied')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Apply now for Senior Frontend Engineer' })).toBeDisabled();
+    expect(
+      await screen.findByText(
+        'An existing application is already in the pipeline for this lead.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Existing application: Applied'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: 'Apply now for Senior Frontend Engineer',
+      }),
+    ).toBeDisabled();
     expect(mockedFindExistingApplicationForLead).not.toHaveBeenCalled();
   });
 
   it('falls back to per-click duplicate lookup when applications fail to preload', async () => {
     const user = userEvent.setup();
 
-    mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
+    mockedGetAllLeads.mockResolvedValue([makeLead()] as never);
     mockedGetCompanies.mockResolvedValue([] as never);
-    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
-    mockedGetApplications.mockRejectedValue(new Error('applications unavailable'));
+    mockedGetAspirations.mockResolvedValue([
+      { id: 'asp-1', kind: 'role', label: 'Staff Engineer' },
+    ] as never);
+    mockedGetApplications.mockRejectedValue(
+      new Error('applications unavailable'),
+    );
     mockedFindExistingApplicationForLead.mockResolvedValue({
       id: 'app-1',
       lead_id: 'lead-1',
@@ -376,22 +437,37 @@ describe('LeadsPage', () => {
     renderPage();
 
     await screen.findByText('Senior Frontend Engineer');
-    await user.click(screen.getByRole('button', { name: 'Apply now for Senior Frontend Engineer' }));
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Apply now for Senior Frontend Engineer',
+      }),
+    );
 
     await waitFor(() => {
-      expect(mockedFindExistingApplicationForLead).toHaveBeenCalledWith('test-token', 'lead-1');
+      expect(mockedFindExistingApplicationForLead).toHaveBeenCalledWith(
+        'test-token',
+        'lead-1',
+      );
     });
     expect(mockedCreateApplication).not.toHaveBeenCalled();
-    expect(await screen.findByText('"Senior Frontend Engineer" already exists in your applications as applied.')).toBeInTheDocument();
-    expect(await screen.findByText('Existing application: Applied')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        '"Senior Frontend Engineer" already exists in your applications as applied.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText('Existing application: Applied'),
+    ).toBeInTheDocument();
   });
 
   it('adds newly created applications into page-local duplicate state', async () => {
     const user = userEvent.setup();
 
-    mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
+    mockedGetAllLeads.mockResolvedValue([makeLead()] as never);
     mockedGetCompanies.mockResolvedValue([] as never);
-    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+    mockedGetAspirations.mockResolvedValue([
+      { id: 'asp-1', kind: 'role', label: 'Staff Engineer' },
+    ] as never);
     mockedCreateApplication.mockResolvedValue({
       id: 'app-1',
       lead_id: 'lead-1',
@@ -402,67 +478,94 @@ describe('LeadsPage', () => {
     renderPage();
 
     await screen.findByText('Senior Frontend Engineer');
-    await user.click(screen.getByRole('button', { name: 'Apply now for Senior Frontend Engineer' }));
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Apply now for Senior Frontend Engineer',
+      }),
+    );
 
     await waitFor(() => {
-      expect(screen.getByText('Existing application: Applied')).toBeInTheDocument();
+      expect(
+        screen.getByText('Existing application: Applied'),
+      ).toBeInTheDocument();
     });
-    expect(screen.getByRole('button', { name: 'Apply now for Senior Frontend Engineer' })).toBeDisabled();
+    expect(
+      screen.getByRole('button', {
+        name: 'Apply now for Senior Frontend Engineer',
+      }),
+    ).toBeDisabled();
     expect(mockedCreateApplication).toHaveBeenCalledTimes(1);
   });
 
   it('opens the lead modal from the leadId query param and carries duplicate CTA state', async () => {
-    mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
+    mockedGetAllLeads.mockResolvedValue([makeLead()] as never);
     mockedGetCompanies.mockResolvedValue([] as never);
-    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
-    mockedGetApplications.mockResolvedValue([{
-      id: 'app-1',
-      lead_id: 'lead-1',
-      status: 'applied',
-      stage: 'applied',
-      outcome: null,
-    }] as never);
+    mockedGetAspirations.mockResolvedValue([
+      { id: 'asp-1', kind: 'role', label: 'Staff Engineer' },
+    ] as never);
+    mockedGetApplications.mockResolvedValue([
+      {
+        id: 'app-1',
+        lead_id: 'lead-1',
+        status: 'applied',
+        stage: 'applied',
+        outcome: null,
+      },
+    ] as never);
 
     renderPage(['/leads?leadId=lead-1']);
 
-    expect(await screen.findByText('Senior Frontend Engineer')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Senior Frontend Engineer'),
+    ).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByTestId('lead-modal')).toHaveTextContent('lead-1');
     });
-    expect(screen.getByTestId('lead-modal')).toHaveTextContent('existing-application');
-    expect(screen.getByTestId('lead-modal')).toHaveTextContent('Application exists');
+    expect(screen.getByTestId('lead-modal')).toHaveTextContent(
+      'existing-application',
+    );
+    expect(screen.getByTestId('lead-modal')).toHaveTextContent(
+      'Application exists',
+    );
   });
 
   it('disables ranking when the user has no aspirations', async () => {
-    mockedGetLeads.mockResolvedValue({ items: [makeLead()], total: 1, page: 1, page_size: 500 } as never);
+    mockedGetAllLeads.mockResolvedValue([makeLead()] as never);
     mockedGetCompanies.mockResolvedValue([] as never);
     mockedGetAspirations.mockResolvedValue([] as never);
 
     renderPage();
 
     await screen.findByText('Senior Frontend Engineer');
-    expect(screen.getByRole('button', { name: 'Rank with aspirations' })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Rank with aspirations' }),
+    ).toBeDisabled();
   });
 
   it('disables ranking when more than 20 filtered leads are in view', async () => {
-    mockedGetLeads.mockResolvedValue({
-      items: Array.from({ length: 21 }, (_, index) => makeLead({
-        id: `lead-${index + 1}`,
-        title: `Lead ${index + 1}`,
-      })),
-      total: 21,
-      page: 1,
-      page_size: 500,
-    } as never);
+    mockedGetAllLeads.mockResolvedValue(
+      Array.from({ length: 21 }, (_, index) =>
+        makeLead({
+          id: `lead-${index + 1}`,
+          title: `Lead ${index + 1}`,
+        }),
+      ) as never,
+    );
     mockedGetCompanies.mockResolvedValue([] as never);
-    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+    mockedGetAspirations.mockResolvedValue([
+      { id: 'asp-1', kind: 'role', label: 'Staff Engineer' },
+    ] as never);
 
     renderPage();
 
     await screen.findByText('Lead 1');
-    expect(screen.getByRole('button', { name: 'Rank with aspirations' })).toBeDisabled();
     expect(
-      screen.getByText('Aspiration matching is limited to 20 leads at a time. Narrow your search or filters to continue.'),
+      screen.getByRole('button', { name: 'Rank with aspirations' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(
+        'Aspiration matching is limited to 20 leads at a time. Narrow your search or filters to continue.',
+      ),
     ).toBeInTheDocument();
     expect(mockedRankLeads).not.toHaveBeenCalled();
   });
@@ -470,17 +573,14 @@ describe('LeadsPage', () => {
   it('reorders leads and decorates ranked cards after aspiration-aware ranking', async () => {
     const user = userEvent.setup();
 
-    mockedGetLeads.mockResolvedValue({
-      items: [
-        makeLead(),
-        makeLead({ id: 'lead-2', title: 'Backend Engineer', location: 'NYC' }),
-      ],
-      total: 2,
-      page: 1,
-      page_size: 500,
-    } as never);
+    mockedGetAllLeads.mockResolvedValue([
+      makeLead(),
+      makeLead({ id: 'lead-2', title: 'Backend Engineer', location: 'NYC' }),
+    ] as never);
     mockedGetCompanies.mockResolvedValue([] as never);
-    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+    mockedGetAspirations.mockResolvedValue([
+      { id: 'asp-1', kind: 'role', label: 'Staff Engineer' },
+    ] as never);
     mockedRankLeads.mockResolvedValue({
       ranking: 'Lead Rankings',
       ranked_leads: [
@@ -506,7 +606,9 @@ describe('LeadsPage', () => {
     renderPage();
 
     await screen.findByText('Senior Frontend Engineer');
-    await user.click(screen.getByRole('button', { name: 'Rank with aspirations' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Rank with aspirations' }),
+    );
 
     await waitFor(() => {
       expect(mockedRankLeads).toHaveBeenCalledWith('test-token', [
@@ -526,23 +628,22 @@ describe('LeadsPage', () => {
     const cards = screen.getAllByTestId('lead-card');
     expect(cards[0]).toHaveTextContent('Backend Engineer');
     expect(cards[0]).toHaveTextContent('Aspiration fit 9/10');
-    expect(screen.getByRole('button', { name: 'Clear ranking' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Clear ranking' }),
+    ).toBeInTheDocument();
   });
 
   it('clears active ranking when the search query changes', async () => {
     const user = userEvent.setup();
 
-    mockedGetLeads.mockResolvedValue({
-      items: [
-        makeLead(),
-        makeLead({ id: 'lead-2', title: 'Backend Engineer', location: 'NYC' }),
-      ],
-      total: 2,
-      page: 1,
-      page_size: 500,
-    } as never);
+    mockedGetAllLeads.mockResolvedValue([
+      makeLead(),
+      makeLead({ id: 'lead-2', title: 'Backend Engineer', location: 'NYC' }),
+    ] as never);
     mockedGetCompanies.mockResolvedValue([] as never);
-    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
+    mockedGetAspirations.mockResolvedValue([
+      { id: 'asp-1', kind: 'role', label: 'Staff Engineer' },
+    ] as never);
     mockedRankLeads.mockResolvedValue({
       ranking: 'Lead Rankings',
       ranked_leads: [
@@ -560,13 +661,19 @@ describe('LeadsPage', () => {
     renderPage();
 
     await screen.findByText('Senior Frontend Engineer');
-    await user.click(screen.getByRole('button', { name: 'Rank with aspirations' }));
-    expect(await screen.findByRole('button', { name: 'Clear ranking' })).toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: 'Rank with aspirations' }),
+    );
+    expect(
+      await screen.findByRole('button', { name: 'Clear ranking' }),
+    ).toBeInTheDocument();
 
     await user.type(screen.getByLabelText('Search leads'), 'Backend');
 
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'Clear ranking' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Clear ranking' }),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -574,29 +681,32 @@ describe('LeadsPage', () => {
     const user = userEvent.setup();
     let resolveRanking: ((value: unknown) => void) | undefined;
 
-    mockedGetLeads.mockResolvedValue({
-      items: [
-        makeLead(),
-        makeLead({ id: 'lead-2', title: 'Backend Engineer', location: 'NYC' }),
-      ],
-      total: 2,
-      page: 1,
-      page_size: 500,
-    } as never);
+    mockedGetAllLeads.mockResolvedValue([
+      makeLead(),
+      makeLead({ id: 'lead-2', title: 'Backend Engineer', location: 'NYC' }),
+    ] as never);
     mockedGetCompanies.mockResolvedValue([] as never);
-    mockedGetAspirations.mockResolvedValue([{ id: 'asp-1', kind: 'role', label: 'Staff Engineer' }] as never);
-    mockedRankLeads.mockReturnValue(new Promise((resolve) => {
-      resolveRanking = resolve;
-    }) as never);
+    mockedGetAspirations.mockResolvedValue([
+      { id: 'asp-1', kind: 'role', label: 'Staff Engineer' },
+    ] as never);
+    mockedRankLeads.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRanking = resolve;
+      }) as never,
+    );
 
     renderPage();
 
     await screen.findByText('Senior Frontend Engineer');
-    await user.click(screen.getByRole('button', { name: 'Rank with aspirations' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Rank with aspirations' }),
+    );
 
     await user.type(screen.getByLabelText('Search leads'), 'Backend');
     await waitFor(() => {
-      expect(screen.queryByText('Senior Frontend Engineer')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Senior Frontend Engineer'),
+      ).not.toBeInTheDocument();
     });
 
     await act(async () => {
@@ -617,7 +727,9 @@ describe('LeadsPage', () => {
     });
 
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'Clear ranking' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Clear ranking' }),
+      ).not.toBeInTheDocument();
     });
 
     const cards = screen.getAllByTestId('lead-card');

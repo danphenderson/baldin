@@ -1,18 +1,29 @@
-import React, { useContext, useEffect, useState, useCallback, useMemo, useDeferredValue, useRef } from 'react';
+import React, {
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useDeferredValue,
+  useRef,
+} from 'react';
 import {
-  Box, Typography,
+  Box,
+  Typography,
   Pagination as MuiPagination,
   Stack,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
-  Bolt as BoltIcon, Search as SearchIcon, Add as AddIcon,
+  Bolt as BoltIcon,
+  Search as SearchIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
 import { useSearchParams } from 'react-router-dom';
 import { UserContext } from '../context/user-context';
 import { usePageToolbarHeader } from '../layout/toolbar-header-context';
 import {
-  getLeads,
+  getAllLeads,
   createLead,
   updateLead,
   deleteLead,
@@ -43,7 +54,12 @@ import LeadCard from '../component/lead-card';
 import LeadModal, { type LeadModalTab } from '../component/lead-modal';
 import LeadExtractionBar from '../component/lead-extraction-bar';
 import LeadSearchBar from '../component/lead-search-bar';
-import { ConfirmDialog, EmptyState, LoadingState, MetricStrip } from '../design-system';
+import {
+  ConfirmDialog,
+  EmptyState,
+  LoadingState,
+  MetricStrip,
+} from '../design-system';
 import { useNotification } from '../context/notification-context';
 
 function isValidUrl(str: string): boolean {
@@ -57,7 +73,11 @@ function isValidUrl(str: string): boolean {
 
 const PAGE_SIZE = 12;
 
-const filterLeadIntoList = (items: LeadRead[], nextLead: LeadRead, moveToFront = false): LeadRead[] => {
+const filterLeadIntoList = (
+  items: LeadRead[],
+  nextLead: LeadRead,
+  moveToFront = false,
+): LeadRead[] => {
   const nextItems = items.filter((item) => item.id !== nextLead.id);
   if (moveToFront) {
     return [nextLead, ...nextItems];
@@ -83,25 +103,33 @@ const extractMessage = (response: LeadExtractResponse): string => {
   }
 };
 
-const creationSuccessMessage = (intent: ApplicationCreationIntent, title: string): string => (
+const creationSuccessMessage = (
+  intent: ApplicationCreationIntent,
+  title: string,
+): string =>
   intent === 'registered'
     ? `Registered interest for "${title}"`
-    : `Application created for "${title}"`
-);
+    : `Application created for "${title}"`;
 
-const duplicateApplicationMessage = (title: string, statusLabel: string): string => (
-  `"${title}" already exists in your applications as ${statusLabel}.`
-);
+const duplicateApplicationMessage = (
+  title: string,
+  statusLabel: string,
+): string =>
+  `"${title}" already exists in your applications as ${statusLabel}.`;
 
-const formatApplicationLabel = (statusLabel: string): string => (
-  statusLabel ? `${statusLabel.charAt(0).toUpperCase()}${statusLabel.slice(1)}` : 'Tracked'
-);
+const formatApplicationLabel = (statusLabel: string): string =>
+  statusLabel
+    ? `${statusLabel.charAt(0).toUpperCase()}${statusLabel.slice(1)}`
+    : 'Tracked';
 
-const buildExistingApplicationHandoff = (application: Pick<ApplicationRead, 'outcome' | 'stage'>) => {
+const buildExistingApplicationHandoff = (
+  application: Pick<ApplicationRead, 'outcome' | 'stage'>,
+) => {
   const statusLabel = getApplicationStateLabel(application);
   return {
     state: 'already-applied' as const,
-    message: 'An existing application is already in the pipeline for this lead.',
+    message:
+      'An existing application is already in the pipeline for this lead.',
     applicationLabel: formatApplicationLabel(statusLabel),
     ctaLabel: 'Application exists',
   };
@@ -109,11 +137,12 @@ const buildExistingApplicationHandoff = (application: Pick<ApplicationRead, 'out
 
 const buildReadyHandoff = (relevanceScore: number) => ({
   state: 'ready' as const,
-  message: relevanceScore >= 7
-    ? 'High aspiration fit — ready to apply?'
-    : relevanceScore >= 4
-      ? 'Moderate aspiration fit — consider applying.'
-      : 'Low aspiration fit — review alignment before applying.',
+  message:
+    relevanceScore >= 7
+      ? 'High aspiration fit — ready to apply?'
+      : relevanceScore >= 4
+        ? 'Moderate aspiration fit — consider applying.'
+        : 'Low aspiration fit — review alignment before applying.',
 });
 
 /* ------------------------------------------------------------------ */
@@ -131,7 +160,9 @@ const LeadsPage: React.FC = () => {
   const [applicationsPreloaded, setApplicationsPreloaded] = useState(false);
   const [aspirationCount, setAspirationCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [rankingResult, setRankingResult] = useState<LeadRankResponse | null>(null);
+  const [rankingResult, setRankingResult] = useState<LeadRankResponse | null>(
+    null,
+  );
   const [rankingPending, setRankingPending] = useState(false);
 
   // Search / filter / pagination (client-side)
@@ -146,8 +177,10 @@ const LeadsPage: React.FC = () => {
 
   // Lead detail modal
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-  const [selectedLeadTab, setSelectedLeadTab] = useState<LeadModalTab>('overview');
-  const [extractContext, setExtractContext] = useState<LeadExtractResponse | null>(null);
+  const [selectedLeadTab, setSelectedLeadTab] =
+    useState<LeadModalTab>('overview');
+  const [extractContext, setExtractContext] =
+    useState<LeadExtractResponse | null>(null);
 
   // Form dialog (create / edit)
   const [formOpen, setFormOpen] = useState(false);
@@ -175,12 +208,13 @@ const LeadsPage: React.FC = () => {
     if (!token) return;
     setLoading(true);
     try {
-      const [leadResult, companyResult, applicationResult, aspirationResult] = await Promise.allSettled([
-        getLeads(token, { page: 1, page_size: 500, request_count: false }),
-        getCompanies(token),
-        getApplications(token),
-        getAspirations(token),
-      ]);
+      const [leadResult, companyResult, applicationResult, aspirationResult] =
+        await Promise.allSettled([
+          getAllLeads(token),
+          getCompanies(token),
+          getApplications(token),
+          getAspirations(token),
+        ]);
 
       if (leadResult.status !== 'fulfilled') {
         throw leadResult.reason;
@@ -189,7 +223,7 @@ const LeadsPage: React.FC = () => {
         throw companyResult.reason;
       }
 
-      setLeads(leadResult.value.items ?? []);
+      setLeads(leadResult.value ?? []);
       setCompanies(companyResult.value ?? []);
       if (applicationResult.status === 'fulfilled') {
         setApplications(applicationResult.value ?? []);
@@ -216,7 +250,9 @@ const LeadsPage: React.FC = () => {
     setLoading(false);
   }, [token, notify, clearRanking]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   /* ---- Filtering + pagination ---- */
 
@@ -224,14 +260,23 @@ const LeadsPage: React.FC = () => {
     return leads.filter((lead) => {
       const q = deferredSearch.toLowerCase().trim();
       const interestCount = lead.interest_count ?? 0;
-      const matchesSearch = !q || [lead.title, lead.description, lead.location, lead.companies?.[0]?.name]
-        .some((f) => f?.toLowerCase().includes(q));
+      const matchesSearch =
+        !q ||
+        [
+          lead.title,
+          lead.description,
+          lead.location,
+          lead.companies?.[0]?.name,
+        ].some((f) => f?.toLowerCase().includes(q));
       const matchesFilter =
         filter === 'all' ||
         (filter === 'registered' && Boolean(lead.viewer_is_registered)) ||
-        (filter === 'active' && (interestCount > 1 || (lead.comment_count ?? 0) > 0)) ||
-        (filter === 'remote' && lead.location?.toLowerCase().includes('remote')) ||
-        (filter === 'fulltime' && lead.employment_type?.toLowerCase().includes('full'));
+        (filter === 'active' &&
+          (interestCount > 1 || (lead.comment_count ?? 0) > 0)) ||
+        (filter === 'remote' &&
+          lead.location?.toLowerCase().includes('remote')) ||
+        (filter === 'fulltime' &&
+          lead.employment_type?.toLowerCase().includes('full'));
       return matchesSearch && matchesFilter;
     });
   }, [deferredSearch, filter, leads]);
@@ -256,7 +301,10 @@ const LeadsPage: React.FC = () => {
     return entries;
   }, [applications]);
   const selectedLeadApplication = useMemo(
-    () => (selectedLeadId ? applicationsByLeadId.get(selectedLeadId) ?? null : null),
+    () =>
+      selectedLeadId
+        ? (applicationsByLeadId.get(selectedLeadId) ?? null)
+        : null,
     [applicationsByLeadId, selectedLeadId],
   );
 
@@ -293,10 +341,26 @@ const LeadsPage: React.FC = () => {
 
   const pageCount = Math.max(1, Math.ceil(rankedFiltered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
-  const paged = rankedFiltered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const joinedCount = useMemo(() => leads.filter((lead) => lead.viewer_is_registered).length, [leads]);
-  const activeCount = useMemo(() => leads.filter((lead) => (lead.interest_count ?? 0) > 1 || (lead.comment_count ?? 0) > 0).length, [leads]);
-  const discussionCount = useMemo(() => leads.filter((lead) => (lead.comment_count ?? 0) > 0).length, [leads]);
+  const paged = rankedFiltered.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
+  const joinedCount = useMemo(
+    () => leads.filter((lead) => lead.viewer_is_registered).length,
+    [leads],
+  );
+  const activeCount = useMemo(
+    () =>
+      leads.filter(
+        (lead) =>
+          (lead.interest_count ?? 0) > 1 || (lead.comment_count ?? 0) > 0,
+      ).length,
+    [leads],
+  );
+  const discussionCount = useMemo(
+    () => leads.filter((lead) => (lead.comment_count ?? 0) > 0).length,
+    [leads],
+  );
   const leadIdParam = searchParams.get('leadId');
 
   useEffect(() => {
@@ -308,11 +372,18 @@ const LeadsPage: React.FC = () => {
 
   /* ---- Actions ---- */
 
-  const openLead = useCallback((lead: LeadRead, nextTab: LeadModalTab = 'overview', nextExtractContext: LeadExtractResponse | null = null) => {
-    setSelectedLeadId(lead.id);
-    setSelectedLeadTab(nextTab);
-    setExtractContext(nextExtractContext);
-  }, []);
+  const openLead = useCallback(
+    (
+      lead: LeadRead,
+      nextTab: LeadModalTab = 'overview',
+      nextExtractContext: LeadExtractResponse | null = null,
+    ) => {
+      setSelectedLeadId(lead.id);
+      setSelectedLeadTab(nextTab);
+      setExtractContext(nextExtractContext);
+    },
+    [],
+  );
 
   const closeLead = useCallback(() => {
     setSelectedLeadId(null);
@@ -339,7 +410,10 @@ const LeadsPage: React.FC = () => {
   const handleExtract = async () => {
     if (!token || !extractUrl.trim()) return;
     if (!isValidUrl(extractUrl.trim())) {
-      notify('Please enter a valid URL starting with http:// or https://', 'error');
+      notify(
+        'Please enter a valid URL starting with http:// or https://',
+        'error',
+      );
       return;
     }
     setExtracting(true);
@@ -362,7 +436,9 @@ const LeadsPage: React.FC = () => {
     setDeleting(true);
     try {
       await deleteLead(token, deleteTarget.id);
-      setLeads((current) => current.filter((lead) => lead.id !== deleteTarget.id));
+      setLeads((current) =>
+        current.filter((lead) => lead.id !== deleteTarget.id),
+      );
       clearRanking();
       setDeleteTarget(null);
       notify('Lead deleted');
@@ -379,7 +455,11 @@ const LeadsPage: React.FC = () => {
     if (!token) return;
     try {
       if (formLead?.id) {
-        const updated = await updateLead(token, formLead.id, data as LeadSharedUpdate);
+        const updated = await updateLead(
+          token,
+          formLead.id,
+          data as LeadSharedUpdate,
+        );
         setLeads((current) => filterLeadIntoList(current, updated));
         clearRanking();
         notify('Lead updated');
@@ -397,52 +477,81 @@ const LeadsPage: React.FC = () => {
     }
   };
 
-  const handleApply = async (lead: LeadRead, intent: ApplicationCreationIntent) => {
+  const handleApply = async (
+    lead: LeadRead,
+    intent: ApplicationCreationIntent,
+  ) => {
     if (!token) return;
     setApplyingId(lead.id);
     try {
       const title = lead.title || 'Untitled';
       const preloadedApplication = applicationsByLeadId.get(lead.id) ?? null;
-      const existingApp = preloadedApplication ?? (
-        applicationsPreloaded
+      const existingApp =
+        preloadedApplication ??
+        (applicationsPreloaded
           ? null
-          : await findExistingApplicationForLead(token, lead.id)
-      );
+          : await findExistingApplicationForLead(token, lead.id));
       if (existingApp) {
         if (!preloadedApplication) {
-          setApplications((current) => (
+          setApplications((current) =>
             current.some((application) => application.id === existingApp.id)
               ? current
-              : [existingApp, ...current]
-          ));
+              : [existingApp, ...current],
+          );
         }
-        notify(duplicateApplicationMessage(title, getApplicationStateLabel(existingApp)), 'warning');
+        notify(
+          duplicateApplicationMessage(
+            title,
+            getApplicationStateLabel(existingApp),
+          ),
+          'warning',
+        );
         return;
       }
-      const createdApplication = await createApplication(token, { lead_id: lead.id, stage: intent });
-      setApplications((current) => [createdApplication, ...current.filter((application) => application.id !== createdApplication.id)]);
+      const createdApplication = await createApplication(token, {
+        lead_id: lead.id,
+        stage: intent,
+      });
+      setApplications((current) => [
+        createdApplication,
+        ...current.filter(
+          (application) => application.id !== createdApplication.id,
+        ),
+      ]);
       notify(creationSuccessMessage(intent, title));
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to create application', 'error');
+      notify(
+        e instanceof Error ? e.message : 'Failed to create application',
+        'error',
+      );
     } finally {
       setApplyingId(null);
     }
   };
 
-  const openCreate = () => { setFormLead(null); setFormOpen(true); };
+  const openCreate = () => {
+    setFormLead(null);
+    setFormOpen(true);
+  };
 
-  const handleLeadChange = useCallback((lead: LeadRead) => {
-    clearRanking();
-    setLeads((current) => filterLeadIntoList(current, lead));
-  }, [clearRanking]);
+  const handleLeadChange = useCallback(
+    (lead: LeadRead) => {
+      clearRanking();
+      setLeads((current) => filterLeadIntoList(current, lead));
+    },
+    [clearRanking],
+  );
 
-  const handleLeadDeleted = useCallback((leadId: string) => {
-    clearRanking();
-    setLeads((current) => current.filter((lead) => lead.id !== leadId));
-    if (selectedLeadId === leadId) {
-      closeLead();
-    }
-  }, [clearRanking, closeLead, selectedLeadId]);
+  const handleLeadDeleted = useCallback(
+    (leadId: string) => {
+      clearRanking();
+      setLeads((current) => current.filter((lead) => lead.id !== leadId));
+      if (selectedLeadId === leadId) {
+        closeLead();
+      }
+    },
+    [clearRanking, closeLead, selectedLeadId],
+  );
 
   const handleRank = useCallback(async () => {
     if (!token || filtered.length === 0 || aspirationCount === 0) {
@@ -495,9 +604,9 @@ const LeadsPage: React.FC = () => {
       ? 'No leads match the current filters.'
       : filtered.length > MAX_ASPIRATION_MATCH_LEADS
         ? `Aspiration matching is limited to ${MAX_ASPIRATION_MATCH_LEADS} leads at a time. Narrow your search or filters to continue.`
-      : aspirationCount === 0
-        ? 'Add role or company aspirations on the Aspirations pages to rank leads against them.'
-        : undefined;
+        : aspirationCount === 0
+          ? 'Add role or company aspirations on the Aspirations pages to rank leads against them.'
+          : undefined;
 
   /* ================================================================ */
   /*  JSX                                                              */
@@ -554,7 +663,11 @@ const LeadsPage: React.FC = () => {
             icon={<BoltIcon />}
             title="No leads imported yet"
             description="Import a job lead from LinkedIn, Glassdoor, or paste a URL to get started."
-            action={{ label: 'Import a Lead', onClick: openCreate, icon: <AddIcon /> }}
+            action={{
+              label: 'Import a Lead',
+              onClick: openCreate,
+              icon: <AddIcon />,
+            }}
           />
         ) : (
           <EmptyState
@@ -570,17 +683,29 @@ const LeadsPage: React.FC = () => {
               <LeadCard
                 lead={lead}
                 applying={applyingId === lead.id}
-                ranking={rankingByLeadId.has(lead.id) ? {
-                  relevanceScore: rankingByLeadId.get(lead.id)?.relevance_score ?? 0,
-                  message: rankingByLeadId.get(lead.id)?.aspiration_alignment
-                    ?? rankingByLeadId.get(lead.id)?.explanation
-                    ?? '',
-                } : null}
-                applicationHandoff={applicationsByLeadId.has(lead.id)
-                  ? buildExistingApplicationHandoff(applicationsByLeadId.get(lead.id) as ApplicationRead)
-                  : rankingByLeadId.has(lead.id)
-                    ? buildReadyHandoff(rankingByLeadId.get(lead.id)?.relevance_score ?? 0)
-                    : null}
+                ranking={
+                  rankingByLeadId.has(lead.id)
+                    ? {
+                        relevanceScore:
+                          rankingByLeadId.get(lead.id)?.relevance_score ?? 0,
+                        message:
+                          rankingByLeadId.get(lead.id)?.aspiration_alignment ??
+                          rankingByLeadId.get(lead.id)?.explanation ??
+                          '',
+                      }
+                    : null
+                }
+                applicationHandoff={
+                  applicationsByLeadId.has(lead.id)
+                    ? buildExistingApplicationHandoff(
+                        applicationsByLeadId.get(lead.id) as ApplicationRead,
+                      )
+                    : rankingByLeadId.has(lead.id)
+                      ? buildReadyHandoff(
+                          rankingByLeadId.get(lead.id)?.relevance_score ?? 0,
+                        )
+                      : null
+                }
                 onOpen={(l) => openLead(l)}
                 onEdit={(l) => openLead(l, 'edit')}
                 onDelete={setDeleteTarget}
@@ -607,7 +732,10 @@ const LeadsPage: React.FC = () => {
       {/* ── Form Dialog (create / edit) ── */}
       <LeadFormDialog
         open={formOpen}
-        onClose={() => { setFormOpen(false); setFormLead(null); }}
+        onClose={() => {
+          setFormOpen(false);
+          setFormLead(null);
+        }}
         onSave={handleSaveForm}
         lead={formLead}
         companies={companies}
@@ -620,7 +748,11 @@ const LeadsPage: React.FC = () => {
         companies={companies}
         applying={Boolean(selectedLeadId && applyingId === selectedLeadId)}
         hasExistingApplication={Boolean(selectedLeadApplication)}
-        applicationCtaLabel={selectedLeadApplication ? buildExistingApplicationHandoff(selectedLeadApplication).ctaLabel : undefined}
+        applicationCtaLabel={
+          selectedLeadApplication
+            ? buildExistingApplicationHandoff(selectedLeadApplication).ctaLabel
+            : undefined
+        }
         extractContext={extractContext}
         initialTab={selectedLeadTab}
         onClose={closeLead}

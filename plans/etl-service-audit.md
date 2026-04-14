@@ -1,89 +1,200 @@
+I shared your responses with the auditor, here is the final report that he returned:
 
-# Reverse-Proxy Backend ETL Service
+```md
+Independent Audit of the ETL Service Design
 
-## Summary
-- Introduce a new internal-only `etl-service` container, built from the existing backend image, as the main crawler execution boundary.
-- Keep `web` responsible for `CrawlerPipeline` and `CrawlerRun` creation, scheduler leadership, `OrchestrationEvent`, lead dedupe/create, and review-state transitions.
-- Keep `crawler-worker` as the Redis consumer, but reduce it to a thin dispatcher that loads the run context, calls `etl-service`, and applies returned normalized results.
-- Leave user-triggered `/extractors/*` on the current inline path. This slice changes crawler execution only.
+Executive Summary
 
-## Key Changes
-- `docker-compose.yml`: add `etl-service` on the internal Compose network with no public port, using the same env baseline and a healthcheck.
-- Add a small internal app surface under the backend codebase for ETL execution. It owns Playwright lifecycle, reverse-proxy transport, crawler adapters, retries, output validation, and normalized result serialization.
-- Refactor the crawler execution path in `backend/app/crawler_worker.py` and `backend/app/api/deps.py` so in-process adapter execution becomes one internal HTTP call to `etl-service`.
-- Keep `CrawlerRun`, `CrawlerPipeline`, and `OrchestrationEvent` as the system of record. Do not add a raw staging table in v1.
-- Update local-development and system-overview docs to show the new service boundary and runtime responsibilities.
+The proposed ETL split is directionally sound. Moving browser execution, proxy handling, adapter behavior, and normalization into a separate etl-service is a sensible step for Baldin, and keeping the backend as the system of record is the right instinct.
 
-## API / Interface Changes
-- No public frontend-facing API or OpenAPI change in v1. `openapi.json` and `frontend/src/schema.d.ts` should remain unchanged unless a user-facing route is intentionally added.
-- Add one internal-only ETL endpoint, e.g. `POST /internal/crawl-runs/execute`, consumed only by `crawler-worker`.
-- Request fields: `run_id`, `source`, `query_definition`, `execution_policy`, and optional schedule/correlation metadata.
-- Response fields: `terminal_status`, `results[]`, `stats`, `error_summary`, and `warnings[]`.
-- `results[]` reuse the existing normalized crawler shape: `url`, `title`, `description`, `location`, `salary`, `job_function`, `employment_type`, `seniority_level`, `education_level`, `company_name`.
-- Keep proxy configuration inside `execution_policy` for v1 instead of adding a new DB column. Default shape: `proxy: { mode: "managed" | "direct", upstream_base_url?: str, auth_header_env?: str }`.
-- Default local-dev behavior is `direct` mode when proxy credentials are absent, but the service boundary is always exercised.
+That said, this design is not ready to ship to production in its current form.
 
-## Test Plan
-- Unit: ETL service request/response validation, proxy transport selection, crawler adapter normalization, retry behavior, and terminal-status mapping.
-- Backend unit: `crawler-worker` delegation success/failure, timeout/error propagation from `etl-service`, and unchanged enqueue/fallback behavior.
-- Backend integration: manual run, scheduled run, cancelled run, paused/resumed run, failed run, and `requires_approval -> pending_review`.
-- Compose smoke: `web`, `crawler-worker`, `etl-service`, and `redis` boot together; a triggered crawler run reaches `etl-service`, returns normalized results, and persists leads/events correctly.
-- Regression: existing extractor route tests stay green to prove `/extractors/*` remained out of scope.
+The main blockers are not cosmetic. They are structural: ETL is not yet genuinely least-privileged, the internal service boundary is not strongly authenticated, proxy configuration is overly permissive, the queue and execution model can lose work, there is no durable handoff between ETL completion and backend apply, cancellation and resume are only partial, and the internal contract is under-specified for mixed-version and failure-heavy production conditions.
 
-## Assumptions
-- Chosen defaults: `New ETL entry`, `Separate container`, `Keep review path`, `Worker delegates`, and `Normalized results`.
-- `crawler-worker` stays in v1 because it already owns Redis consumption and keeps the new service isolated from database writes.
-- Scheduler stays in `web`; the ETL service does not create runs or own scheduling.
-- The ETL service is internal-only on the Compose network and is not exposed as a public Baldin API surface.
-- Generated frontend artifacts are intentionally unchanged for this slice unless implementation expands into a public API addition.
+This assessment reflects the corrected implementation details as provided:
+	•	/extractors/* is a separate extraction surface, not the crawler path.
+	•	Baldin currently uses a Redis RPUSH / BLPOP queue, not an ack-based at-least-once broker.
+	•	Baldin already has some observability and test coverage; the issue is not absence, but insufficiency for production.
+
+Overall conclusion: this is a reasonable local-first architecture step, but still production-fragile.
+
+What the design gets right
+
+The design does several things well.
+
+It introduces a clearer execution boundary for Playwright and proxy activity. It preserves CrawlerRun, CrawlerPipeline, and OrchestrationEvent as backend-owned records. It keeps the public API stable. It also avoids over-expanding scope by not trying to redesign extractor routes, frontend schemas, and storage shape all at once.
+
+Those are good constraints. The problem is that the current boundary is only partial and not yet durable enough for production reliability.
+
+Findings
+
+1. The least-privilege boundary is still too weak
+
+Severity: High
+
+etl-service is built from the existing backend image and loads the same repo-tracked environment baseline. In practice, that means ETL inherits credentials and configuration it does not need for browser execution: database access, Redis settings, app secrets, and other backend values.
+
+If ETL is compromised through browser execution, malicious content, SSRF, or a library flaw, the blast radius remains much larger than it should be. The earlier claim that /extractors/* keeps crawler logic inline in web was too strong, but the higher-order concern remains valid: the ETL split is only partial, and the privileged web process is not fully isolated from adjacent extraction behavior.
+
+Recommended action: run ETL with its own reduced image or reduced secret set, strip unnecessary credentials, isolate service accounts, restrict outbound network access, and treat browser execution as hostile by default.
+
+2. “Internal-only on the Compose network” is not a production security boundary
+
+Severity: High
+
+No public host port and a Compose-local network are acceptable for local topology. They are not sufficient production controls. The ETL endpoint currently lacks service-to-service authentication, and the ETL app still exposes its own docs surface.
+
+That means a routing mistake, reverse-proxy misconfiguration, or unintended ingress exposure could make an internal execution endpoint reachable without meaningful protection.
+
+Recommended action: require explicit service authentication on POST /internal/crawl-runs/execute, disable or hide ETL docs in production, and make accidental public exposure difficult through deployment and network policy, not just convention.
+
+3. execution_policy is too permissive
+
+Severity: High
+
+This is a real security concern in the current implementation. ETL accepts proxy.upstream_base_url and auth_header_env, dynamically reads the named environment variable, and routes outbound navigation through the selected upstream target.
+
+One nuance matters: this is not an arbitrary public caller selecting secrets at request time. These values come from a persisted, superuser-managed crawler pipeline policy. That narrows the threat model, but it does not remove the risk. The design still creates an SSRF and secret-selection footgun.
+
+Recommended action: replace free-form proxy config with an allowlisted proxy_profile_id resolved inside ETL. Keep direct mode for local development, but fail closed in production when required proxy configuration is absent.
+
+4. The queue and execution model can lose work
+
+Severity: High
+
+The worker performs a blocking HTTP call to ETL with a fixed timeout, and the queue is a simple Redis RPUSH / BLPOP list. There are no attempt IDs, leases, heartbeats, or duplicate-suppression semantics.
+
+The most immediate risk is not broker redelivery. It is worse in a different way: the worker can pop work, crash, and the job can simply disappear. If ETL finishes but the response is lost or the worker dies before apply completes, the system has no durable way to determine what happened.
+
+Recommended action: introduce explicit attempt semantics, job leasing or visibility semantics, heartbeats, and idempotent apply behavior. Whether that is done with a stronger queue pattern or a different broker is less important than making execution recoverable.
+
+5. terminal_status is the wrong responsibility for ETL
+
+Severity: Medium-High
+
+ETL can accurately report its own execution outcome. It cannot accurately declare the final state of the run, because the backend still owns persistence, dedupe, orchestration events, review transitions, and final run status.
+
+In Baldin today, ETL returns terminal_status, but the backend still decides whether the run ends as success, failed, pending_review, cancelled, or paused. That is a responsibility mismatch.
+
+Recommended action: rename and narrow this field to something like execution_outcome, and keep final run-state ownership entirely in the backend.
+
+6. There is no durable handoff between ETL completion and backend apply
+
+Severity: Critical
+
+This is one of the strongest reasons not to ship the design unchanged. ETL returns normalized results inline over HTTP and the worker immediately applies them. There is no staging artifact, no durable blob, and no recoverable handoff.
+
+If ETL succeeds and the response is dropped, or if the worker crashes after ETL succeeds but before persistence finishes, the work is lost and must be rerun. A database table is not the only possible solution, but some durable intermediate boundary is needed.
+
+Recommended action: persist ETL output as a durable artifact before apply. That could be a staging table, an object-store blob, or another append-only result boundary.
+
+7. Returning full results[] inline does not scale well
+
+Severity: High
+
+The ETL contract returns the full normalized result set inline, and ETL accumulates that response in memory before returning it. That couples crawl size to memory pressure, serialization time, HTTP timeout behavior, and retry cost.
+
+This may be tolerable for small crawls. It is fragile for larger ones.
+
+Recommended action: add hard payload limits and a path to artifact references, batching, or chunked apply rather than assuming a single in-memory response is always safe.
+
+8. Cancellation, pause, and resume are only partially implemented
+
+Severity: Medium-High
+
+Baldin does have some guardrails already. Cancel, pause, and resume endpoints exist, and the worker re-checks run status before applying results. That helps prevent a cancelled run from persisting after ETL returns.
+
+But ETL itself has no cancel token, no deadline propagation, and no cooperative cancellation checks. Resume also does not actually resume from a checkpoint; it requeues the run from the beginning. The checkpoint field exists in the model but is not used for real resumability.
+
+Recommended action: propagate deadlines and cancel signals into ETL, add cooperative checks during execution, and either implement true checkpoint semantics or describe resume honestly as restart-from-beginning.
+
+9. State ownership is spread across too many actors
+
+Severity: Medium-High
+
+web and the scheduler create runs and orchestration events. The worker loads context and applies results. ETL owns browser execution, validation, proxy behavior, and adapter retries. Review and reaping introduce additional actors.
+
+That can work, but only if transitions are explicit and strongly idempotent. Today, the arrangement remains race-prone under cancellation, retry, failure, and review edge cases.
+
+Recommended action: define a clear state machine, assign authoritative ownership for each transition, and use versioned or compare-and-swap style updates on critical state changes.
+
+10. Retry policy is under-specified
+
+Severity: Medium
+
+The original “retry storm” framing was too strong for current Baldin. Most retries today live inside browser actions and adapter navigation. Upper layers mostly rely on queue fallback and explicit manual retry.
+
+Still, the core concern remains. ETL reports free-form error_summary, and there is no machine-readable error classification for routing retry policy. That becomes dangerous as more retry layers are inevitably added.
+
+Recommended action: introduce structured error classes such as retriable, permanent, validation_failed, auth_failed, rate_limited, cancelled, and deadline_exceeded, and make one layer the clear owner of retry policy.
+
+11. Observability exists, but it is not production-grade for this workflow
+
+Severity: Medium
+
+Baldin is not operating blind. It already has Sentry bootstrap, structured logging, ETL warning logging, and a runtime-status endpoint exposing queue and ETL reachability.
+
+The gap is at the next level: there are no ETL attempt IDs, no trace stitching across web -> worker -> ETL, no strong correlation ID usage, no per-source success metrics, no proxy-specific telemetry, and no browser memory or timing visibility. Production incidents will still collapse too easily into “timeout” or “unknown ETL error.”
+
+Recommended action: add traceable attempt identifiers, cross-service correlation, queue latency metrics, browser lifecycle timing, per-source success/failure dashboards, and proxy failure metrics.
+
+12. The internal contract is not versioned and has a dual source of truth
+
+Severity: Medium-High
+
+The ETL request includes run_id, but it also includes mutable execution inputs such as source, query_definition, execution_policy, and optional metadata. That means ETL is executing a backend-assembled snapshot rather than resolving from one authoritative record, and there is no schema version protecting mixed-version deploys.
+
+That is survivable in development. It becomes brittle in production rollouts.
+
+Recommended action: either make the ETL request an explicitly versioned immutable execution snapshot, or make ETL resolve from a backend-owned authoritative execution record.
+
+13. Scraped fields are still treated too casually as trusted text
+
+Severity: Medium
+
+Some hygiene already exists. URLs are validated, and lead text is normalized before persistence. But the design still lacks explicit field-length caps, ETL-side sanitization rules, and a clear contract statement that crawler result text is untrusted until rendered safely.
+
+That leaves room for oversized payloads, malformed Unicode, HTML-bearing text, and downstream rendering problems.
+
+Recommended action: define strict field-size caps, normalization rules, text-safety expectations, and safe-rendering requirements as part of the ETL contract.
+
+14. The deployment story is not yet production-ready
+
+Severity: Medium
+
+This is not a contradiction of the repo posture. Baldin is explicitly local-first and Compose-oriented. The issue is not that the design fails its own stated goals. The issue is that it is still missing the operational controls expected of a production service boundary.
+
+There is no clear story yet for resource limits, concurrency caps, autoscaling, rollout sequencing, rollback safety, or browser-process failure isolation.
+
+Recommended action: produce a production deployment plan before promoting this boundary beyond local or preview use.
+
+15. The test plan is meaningful, but it misses the most important architectural failures
+
+Severity: Medium-High
+
+The current test posture is better than a thin reading would suggest. Baldin already covers ETL warnings, failure mapping, queue fallback behavior, pending-review transitions, cancel-before-persist behavior, and cancel/pause/resume route transitions.
+
+The missing tests are the ones most likely to break this architecture in production: worker crash after ETL success but before apply, HTTP timeout while ETL continues running, lost work after queue pop, oversized ETL payloads, mixed-version worker/ETL compatibility, and replay or recovery behavior around durable handoff.
+
+Recommended action: add failure-mode integration tests and chaos-style scenarios before treating this as production-grade.
+
+Pre-Ship Bar
+
+Before this design should be considered production-ready, the following items should be in place:
+	1.	A genuinely least-privileged ETL runtime with stripped secrets and restricted network access.
+	2.	An authenticated internal ETL surface with docs disabled or hidden in production.
+	3.	Allowlisted proxy profiles instead of free-form upstream URL and env-variable selection.
+	4.	Explicit attempt semantics with recoverable execution, heartbeats, and idempotent apply behavior.
+	5.	A durable ETL output boundary so completed work is not lost between execution and persistence.
+	6.	A versioned internal contract with machine-readable error classes and clear final-state ownership.
+	7.	Cooperative cancellation and deadline propagation across worker and ETL.
+	8.	Production-grade observability and failure-mode testing across the full web -> worker -> ETL path.
+
+Final Recommendation
+
+Do not ship this design to production as currently specified.
+
+It is a reasonable and useful local-first step. It improves separation of concerns and creates a better place to evolve crawler execution. But without stronger privilege isolation, safer proxy configuration, durable execution semantics, and better operational controls, it remains too fragile for production use.
 ```
 
-
-## Indpendent Audit of the ETL Service Design
-Overall, the direction is sound: pulling Playwright/proxy execution out of the component that owns writes is the right architectural move. But I would not ship this unchanged. The biggest concerns I see are these.
-	1.	The isolation boundary is weaker than the doc implies.
-etl-service is built from the existing backend image and uses the same env baseline. In practice that usually means it inherits DB credentials, app secrets, Redis access, and other privileges it does not need. If a browser exploit, malicious page, or SSRF lands in ETL, the blast radius is still basically “the backend.”
-This is even more important because /extractors/* stays on the inline path. So the privileged web service still executes crawler logic for at least one path. That makes the new boundary only partial.
-	2.	“Internal-only on the Compose network” is not a production security control.
-No public port and an internal Docker network are fine for local topology, but they are not enough for a production trust boundary. I do not see service-to-service authentication, ingress denial, or network policy in the design.
-I would want explicit auth on POST /internal/crawl-runs/execute, and I would want that route excluded from public docs and impossible to reach from normal ingress even if routing is misconfigured.
-	3.	execution_policy is too permissive and creates security footguns.
-Letting the request carry proxy.upstream_base_url and especially auth_header_env is risky. A runtime payload should not be able to choose arbitrary upstream URLs or choose which environment variable the service reads. Combined with “same env baseline,” that is a serious secret-selection and SSRF problem.
-I would replace this with an allowlisted proxy_profile_id resolved inside ETL. Also, direct mode should fail closed in production rather than silently falling back if credentials are absent.
-	4.	A synchronous HTTP execute call is brittle for long-running crawls.
-Redis consumers are typically at-least-once. If the worker calls ETL, the crawl runs for minutes, and the worker times out or crashes, you now have ambiguity: ETL may still be running, may have finished, or may have never started. That ambiguity causes duplicate execution on retry unless you define idempotency very carefully.
-I do not see attempt_id, execution leases, heartbeats, or duplicate suppression in the doc. Without them, shipping this to production will create duplicate crawls and inconsistent run state under normal failure modes.
-	5.	terminal_status is the wrong thing for ETL to return.
-ETL can report its own execution outcome. It cannot truthfully declare the final terminal state of the run, because persistence, dedupe, event creation, and review-state transitions happen afterward in the worker/web path.
-Example: ETL returns terminal_status: succeeded, but the worker dies halfway through applying results. The run did not actually succeed. I would split this into execution_outcome from ETL and final CrawlerRun state owned by the write/orchestration path.
-	6.	There is no durable handoff between “crawl finished” and “results applied.”
-“No raw staging table in v1” is not itself the problem. The problem is the absence of any durable intermediate artifact. If ETL finishes and the HTTP response is dropped, or the worker dies before applying, the work is lost and must be redone.
-This is exactly where a staging store, object-storage artifact, or compressed normalized blob helps. You do not necessarily need a table, but you do need a recoverable handoff.
-	7.	Returning full results[] inline will become a scaling issue fast.
-A single large JSON response couples crawl size to memory pressure, request timeouts, serialization cost, and retry pain. It also means there is no notion of partial progress.
-For small runs this is fine, but production crawls tend not to stay small. I would want hard limits on result count and payload size, and a path to batched apply or artifact references instead of always returning the full normalized payload inline.
-	8.	Cancellation, pause, and resume are listed in tests but not really designed.
-The doc says these flows will be tested, but the interface shown is still a single execute request that returns terminal output. That is not enough to make mid-flight cancellation robust.
-To make cancel/pause/resume correct, ETL needs a deadline or cancel token, periodic cooperative checks during execution, and the worker needs a final compare-and-swap style guard before persisting so cancelled runs do not commit after completion.
-	9.	State ownership is still spread across too many places.
-web owns scheduler leadership, dedupe/create, events, and review transitions. crawler-worker loads context and applies results. ETL owns retries, validation, proxy transport, and execution. That is three different actors making decisions about one run.
-This is workable only if the state machine is explicit and the apply path is strongly idempotent. The doc does not spell that out. Without versioned state transitions and transactional apply semantics, race conditions around cancel/retry/review are very likely.
-	10.	Retry policy is underspecified and likely duplicated across layers.
-The ETL service “owns retries,” but in production the worker, HTTP client, Redis delivery, and scheduler often retry too. If all of them retry independently, one transient proxy failure turns into a storm of duplicate work.
-error_summary as a free-form string is also too weak for policy. I would want machine-readable error classes such as retriable, permanent, validation_failed, auth_failed, rate_limited, cancelled, and deadline_exceeded.
-	11.	Observability is too thin for a Playwright + proxy service.
-Healthchecks and a returned stats object are not enough to operate this in production. You need correlation IDs, attempt IDs, queue latency, browser launch time, navigation/proxy failure rates, per-source success metrics, memory/CPU telemetry, and traces across web -> worker -> etl-service.
-Without that, most incidents will collapse into “timeout” or “unknown ETL error,” which is brutal to debug in crawler systems.
-	12.	The contract is not versioned, and there is a dual source-of-truth problem.
-The request carries run_id and also carries mutable execution inputs like source, query_definition, and execution_policy. That creates room for mismatch: which one is authoritative if they disagree?
-I would either treat the request as a fully immutable execution snapshot, or make ETL resolve everything from the run record. Also add an internal schema version so mixed-version worker/ETL deploys do not break each other.
-	13.	The scraped fields are untrusted input and need explicit hygiene rules.
-title, description, company_name, and the rest come from arbitrary pages. They can include HTML, scripts, malformed Unicode, huge strings, and odd encodings.
-“Output validation” is good, but for production I would want field length caps, normalization rules, sanitization/escaping requirements, and a clear statement that these values are unsafe until rendered safely.
-	14.	The production deployment story is underdeveloped.
-The doc is very Compose-centric: add a service, add a healthcheck, internal network, boot all containers together. That is enough for local smoke testing, not enough for production readiness.
-I would want explicit answers for resource limits, concurrency caps, autoscaling behavior, rollout order, rollback safety, and what happens when browser processes start OOM-killing the host.
-	15.	The test plan misses some of the failures that matter most.
-The current plan is good on happy-path orchestration coverage, but I would not ship without tests for: worker crash after ETL success but before apply, HTTP timeout while ETL continues running, duplicate delivery of the same run, cancel arriving mid-crawl, oversized result payloads, proxy auth failure, and mixed-version worker/ETL deploys.
-
-The short version of my pre-ship bar would be this: make ETL truly least-privileged, replace free-form proxy config with allowlisted profiles, add idempotent attempt semantics plus cancellation/heartbeat behavior, introduce a durable ETL output handoff, and tighten observability and load testing. Until those are in place, this feels production-fragile even though the high-level direction is good.
+Please validate the final report above.

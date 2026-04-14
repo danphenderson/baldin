@@ -3,6 +3,7 @@ import { Button, CssBaseline, ThemeProvider as MuiThemeProvider } from '@mui/mat
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import {
+  CollectionToolbar,
   ReadonlyField,
   SearchField,
   SurfaceCard,
@@ -82,5 +83,27 @@ describe('field and surface primitives', () => {
     expect(screen.getByText('Shared title')).toBeInTheDocument();
     expect(screen.getByText('Shared subtitle')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
+  });
+
+  it('keeps CollectionToolbar search, controls, actions, and secondary content in stable shared slots', () => {
+    const { container } = renderWithTheme(
+      <CollectionToolbar
+        search={<SearchField placeholder="Search applications" />}
+        controls={<Button type="button">Filters</Button>}
+        actions={<Button type="button">New application</Button>}
+        secondary={<span>Secondary filters</span>}
+      />,
+    );
+
+    const searchSlot = container.querySelector('[data-collection-toolbar-slot="search"]');
+    const controlsSlot = container.querySelector('[data-collection-toolbar-slot="controls"]');
+    const actionsSlot = container.querySelector('[data-collection-toolbar-slot="actions"]');
+    const secondarySlot = container.querySelector('[data-collection-toolbar-slot="secondary"]');
+
+    expect(searchSlot).not.toBeNull();
+    expect(searchSlot).toContainElement(screen.getByPlaceholderText('Search applications'));
+    expect(controlsSlot).toContainElement(screen.getByRole('button', { name: 'Filters' }));
+    expect(actionsSlot).toContainElement(screen.getByRole('button', { name: 'New application' }));
+    expect(secondarySlot).toContainElement(screen.getByText('Secondary filters'));
   });
 });

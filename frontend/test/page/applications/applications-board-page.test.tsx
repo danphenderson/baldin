@@ -232,11 +232,19 @@ describe('ApplicationsBoardPage', () => {
     const user = userEvent.setup();
     const application = makeApplication();
     const confirmDelete = vi.fn();
+    const handleDelete = vi.fn();
     mockUseApplications.mockImplementation(() => {
       const [deleteTarget, setDeleteTarget] = React.useState<typeof application | null>(null);
       return makeHookReturn({
         applications: [application],
-        confirmDelete,
+        handleDelete: (target: typeof application) => {
+          handleDelete(target);
+          setDeleteTarget(target);
+        },
+        confirmDelete: async () => {
+          confirmDelete();
+          setDeleteTarget(null);
+        },
         deleteTarget,
         setDeleteTarget,
         buckets: new Map([
@@ -254,11 +262,15 @@ describe('ApplicationsBoardPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Delete application' }));
 
+    expect(handleDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 'app-1' }));
     expect(screen.getByText('Delete Application')).toBeInTheDocument();
     expect(screen.getByText(/Remove/)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Delete' }));
 
-    expect(confirmDelete).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(confirmDelete).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText('Delete Application')).not.toBeInTheDocument();
+    });
   });
 });

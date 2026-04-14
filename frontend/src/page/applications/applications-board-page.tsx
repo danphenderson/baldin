@@ -732,6 +732,7 @@ const ApplicationsBoardPage: React.FC = () => {
     handleAdvance,
     handleClose,
     handleReminderUpdate,
+    handleDelete,
     confirmDelete,
     deleteTarget,
     setDeleteTarget,
@@ -768,10 +769,6 @@ const ApplicationsBoardPage: React.FC = () => {
 
   const viewApplication = (app: ApplicationRead) => {
     navigate(`/applications/${app.id}`);
-  };
-
-  const requestDeleteApplication = (app: ApplicationRead) => {
-    setDeleteTarget(app);
   };
 
   const moveApplication = (app: ApplicationRead, targetStatus: BoardStatus) => {
@@ -892,7 +889,7 @@ const ApplicationsBoardPage: React.FC = () => {
                       onView={viewApplication}
                       onAdvance={handleAdvance}
                       onClose={handleClose}
-                      onDelete={requestDeleteApplication}
+                      onDelete={handleDelete}
                       onMove={moveApplication}
                       onReminderSave={(application, reminder) => handleReminderUpdate(application.id, reminder)}
                     />

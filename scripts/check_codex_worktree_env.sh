@@ -4,6 +4,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 require_openai="${BALDIN_REQUIRE_OPENAI_API_KEY:-1}"
+workspace_mcp_path="${repo_root}/.vscode/mcp.json"
 codex_config_path="${repo_root}/.codex/config.toml"
 figma_harness_path="${repo_root}/frontend/browser-harness/figma-wave1.html"
 figma_config_path="${repo_root}/frontend/figma.config.json"
@@ -36,39 +37,112 @@ if [[ ! -f "${figma_harness_path}" ]]; then
   exit 1
 fi
 
-if ! python3 - "${codex_config_path}" <<'PY'
+if ! python3 - "${workspace_mcp_path}" "${codex_config_path}" <<'PY'
 from __future__ import annotations
 
+import json
 import sys
 import tomllib
 from pathlib import Path
 
-config_path = Path(sys.argv[1])
+EXPECTED_FIGMA_URL = "https://mcp.figma.com/mcp"
+EXPECTED_PLAYWRIGHT_PACKAGE = "@playwright/mcp@0.0.70"
+EXPECTED_WORKSPACE_CWD = "${workspaceFolder}"
+EXPECTED_CODEX_CWD = "."
+EXPECTED_SERVER_NAMES = {"figma", "webdev"}
+EXPECTED_CODEX_MCP_SERVER_NAMES = {"webdev"}
+
+
+def fail(message: str) -> None:
+    print(message, file=sys.stderr)
+    raise SystemExit(1)
+
+
+def require_playwright_args(args: object, context: str) -> None:
+    if not isinstance(args, list):
+        fail(f"{context} must configure args as a list")
+
+    normalized_args = [str(item) for item in args]
+    if "-y" not in normalized_args or EXPECTED_PLAYWRIGHT_PACKAGE not in normalized_args:
+        fail(
+            f"{context} must configure args with -y and {EXPECTED_PLAYWRIGHT_PACKAGE}"
+        )
+
+
+workspace_mcp_path = Path(sys.argv[1])
+config_path = Path(sys.argv[2])
+
+try:
+    workspace_data = json.loads(workspace_mcp_path.read_text(encoding="utf-8"))
+except FileNotFoundError:
+    fail("Missing workspace MCP contract: .vscode/mcp.json")
+except json.JSONDecodeError as exc:
+    fail(f"Unable to parse {workspace_mcp_path}: {exc}")
+
+servers = workspace_data.get("servers")
+if not isinstance(servers, dict):
+    fail(".vscode/mcp.json is missing a top-level servers object")
+
+if set(servers) != EXPECTED_SERVER_NAMES:
+    fail(".vscode/mcp.json must declare exactly servers.figma and servers.webdev")
+
+figma = servers.get("figma")
+if not isinstance(figma, dict):
+    fail(".vscode/mcp.json is missing servers.figma")
+
+if figma.get("type") != "http":
+    fail('.vscode/mcp.json must configure servers.figma.type = "http"')
+
+if figma.get("url") != EXPECTED_FIGMA_URL:
+    fail(
+        '.vscode/mcp.json must configure '
+        f'servers.figma.url = "{EXPECTED_FIGMA_URL}"'
+    )
+
+workspace_webdev = servers.get("webdev")
+if not isinstance(workspace_webdev, dict):
+    fail(".vscode/mcp.json is missing servers.webdev")
+
+if workspace_webdev.get("type") != "stdio":
+    fail('.vscode/mcp.json must configure servers.webdev.type = "stdio"')
+
+if workspace_webdev.get("command") != "npx":
+    fail('.vscode/mcp.json must configure servers.webdev.command = "npx"')
+
+require_playwright_args(
+    workspace_webdev.get("args"),
+    ".vscode/mcp.json servers.webdev.args",
+)
+
+if workspace_webdev.get("cwd") != EXPECTED_WORKSPACE_CWD:
+    fail(
+        '.vscode/mcp.json must configure '
+        f'servers.webdev.cwd = "{EXPECTED_WORKSPACE_CWD}"'
+    )
 
 try:
     data = tomllib.loads(config_path.read_text(encoding="utf-8"))
 except Exception as exc:  # pragma: no cover - shell script handles user output
-    print(f"Unable to parse {config_path}: {exc}", file=sys.stderr)
-    raise SystemExit(1)
+    fail(f"Unable to parse {config_path}: {exc}")
 
 mcp_servers = data.get("mcp_servers")
 if not isinstance(mcp_servers, dict):
-    print(".codex/config.toml is missing [mcp_servers.webdev]", file=sys.stderr)
-    raise SystemExit(1)
+    fail(".codex/config.toml is missing [mcp_servers.webdev]")
+
+if set(mcp_servers) != EXPECTED_CODEX_MCP_SERVER_NAMES:
+    fail(".codex/config.toml must declare only [mcp_servers.webdev] in this patch")
 
 webdev = mcp_servers.get("webdev")
 if not isinstance(webdev, dict):
-    print(".codex/config.toml is missing [mcp_servers.webdev]", file=sys.stderr)
-    raise SystemExit(1)
+    fail(".codex/config.toml is missing [mcp_servers.webdev]")
 
 if webdev.get("command") != "npx":
-    print(".codex/config.toml must configure mcp_servers.webdev.command = \"npx\"", file=sys.stderr)
-    raise SystemExit(1)
+    fail('.codex/config.toml must configure mcp_servers.webdev.command = "npx"')
 
-args = webdev.get("args")
-if not isinstance(args, list) or not any("@playwright/mcp" in str(item) for item in args):
-    print(".codex/config.toml must configure mcp_servers.webdev.args with @playwright/mcp", file=sys.stderr)
-    raise SystemExit(1)
+require_playwright_args(webdev.get("args"), ".codex/config.toml mcp_servers.webdev.args")
+
+if webdev.get("cwd") != EXPECTED_CODEX_CWD:
+    fail('.codex/config.toml must configure mcp_servers.webdev.cwd = "."')
 PY
 then
   exit 1
@@ -85,10 +159,12 @@ presence() {
 
 printf 'Baldin Codex worktree env preflight\n'
 printf 'tracked env files: present\n'
+printf 'workspace_mcp_contract: %s\n' "${workspace_mcp_path}"
 printf 'backend/.env.local: %s\n' "$([[ -f "${repo_root}/backend/.env.local" ]] && printf 'present' || printf 'absent')"
 printf 'frontend/.env.local: %s\n' "$([[ -f "${repo_root}/frontend/.env.local" ]] && printf 'present' || printf 'absent')"
 printf 'npx: %s\n' "$(command -v npx)"
-printf 'webdev_mcp: configured\n'
+printf 'workspace_mcp_servers: figma + webdev\n'
+printf 'codex_webdev_mcp: configured (repo-local mirror only)\n'
 printf 'figma_harness_file: %s\n' "${figma_harness_path}"
 printf 'frontend_base_url: %s\n' "${frontend_base_url}"
 printf 'figma_harness_url: %s\n' "${figma_harness_url}"

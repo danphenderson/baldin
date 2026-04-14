@@ -5,7 +5,7 @@ title: Work Locally
 description: Work locally with Docker Compose first, then use the shortest smoke-check loop that proves the change.
 ---
 
-<!-- last-verified: 2026-04-13 -->
+<!-- last-verified: 2026-04-14 -->
 
 # Work Locally
 
@@ -54,9 +54,16 @@ Use [Boot The Stack](../getting-started/quickstart.md) for first boot. This page
 
 ## Figma Browser-Harness Loop
 
-For Figma capture and browser-driven design review, Baldin's repo-standard browser automation surface is `webdev`.
+For Figma capture and browser-driven design review, Baldin's primary repo-owned workspace MCP contract lives in `.vscode/mcp.json`.
+
+- `figma` is the workspace HTTP MCP endpoint for Figma design context, screenshots, and Figma-side tools when user auth is present.
+- `webdev` is the workspace stdio Playwright MCP server for browser automation and harness-driven review.
+- Codex does not consume `.vscode/mcp.json` directly in this patch. `.codex/config.toml` mirrors only `mcp_servers.webdev`, using the same `npx -y @playwright/mcp@0.0.70` launch contract with Codex's repo-local `cwd = "."` in place of VS Code's `${workspaceFolder}` interpolation.
+- This repo patch does not manage a Codex-side `figma` entry. User-scoped or globally configured Codex MCP servers can still appear separately on a developer machine.
 
 The canonical Figma surfaces for this repo are [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library) for reusable components and [Baldin-App-Screens](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy/Baldin-App-Screens) for product-flow state inventory. The current [Figma Make file](https://www.figma.com/make/pXpkeOKYnA3gvhHPIjbJDo/Untitled?t=bM22KU0ea6ttyIQ5-20&fullscreen=1) has been reviewed and should be treated as an archived sandbox, not an active delivery surface.
+
+Track active screen and state coverage in [Baldin App Screens Inventory](../reference/baldin-app-screens-inventory.md). Keep [Baldin Library Buildout Ledger](../reference/baldin-library-buildout-ledger.md) limited to reusable-component and library-only exploration.
 
 1. Start or keep the local stack running with `docker-compose up --build`.
 2. Use the frontend dev server at `http://127.0.0.1:5173`.
@@ -67,7 +74,7 @@ The canonical harness supports these query parameters:
 
 - `screen=applications|profile|messages|aspirations-roles|aspirations-companies|leads|apply`
 - `mode=dark|light`
-- `state=empty|seeded|suggested|no-signal|rate-limited` when `screen=aspirations-roles|aspirations-companies`
+- `state=empty|seeded|loading|suggested|no-signal|rate-limited` when `screen=aspirations-roles|aspirations-companies`
 - `state=unranked|ranked|disabled|error` when `screen=leads`
 - `state=ready|already-applied` when `screen=apply`
 
@@ -188,6 +195,8 @@ npm --prefix docs run start
 ## Related Docs
 
 - [Boot The Stack](../getting-started/quickstart.md)
+- [Baldin App Screens Inventory](../reference/baldin-app-screens-inventory.md)
+- [Baldin Library Buildout Ledger](../reference/baldin-library-buildout-ledger.md)
 - [Run The Right Checks](./testing.md)
 - [Regenerate API Contracts](./contract-management.md)
 - [Look Up Settings](../reference/environment-variables.md)

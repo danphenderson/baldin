@@ -31,6 +31,11 @@ Use `AGENTS.md` as the shared repo baseline. This file preserves the same expect
 - Contract regeneration imports the backend app. Use the tracked `backend/.env` baseline and supply a non-empty `OPENAI_API_KEY` through process env or `backend/.env.local`; a dummy local value is acceptable when real API access is not needed.
 - For Figma work, assume the supported path is a Professional-plan workflow without requiring a Dev seat: use the local browser harness plus Figma MCP or basic inspection, and do not block on Code Connect publish.
 
+## Response Formatting
+
+- Use standard Markdown conventions in agent responses. Inline code with backticks is allowed and preferred for commands, file paths, environment variables, identifiers, and literal values when it improves readability.
+- Do not add blanket bans on backticks to repo-managed instructions. Prefer concise, readable Markdown unless a higher-priority execution surface requires something narrower.
+
 ## Copilot-Specific Surfaces
 
 - `.github/prompts/*.prompt.md` for Copilot slash-command entry points.

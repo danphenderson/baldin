@@ -10,7 +10,8 @@ This document inventories Baldin's shared agentic customization surface across C
 | 2. Copilot compatibility baseline | `.github/copilot-instructions.md` | Copilot-specific always-on wrapper around the shared baseline |
 | 3. Scoped instructions | `.github/instructions/*.instructions.md` | Edit-time rules and agentic-surface alignment |
 | 4. Copilot execution layer | `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md`, `.github/skills/*/SKILL.md` | Copilot specialist owners, slash prompts, and repeatable workflows |
-| 5. Codex execution layer | `.codex/config.toml`, `.codex/agents/*.toml` | Codex custom-agent defaults and project-scoped specialist agents |
+| 5. Workspace MCP contract | `.vscode/mcp.json` | Primary repo-owned workspace MCP definition for `figma` and `webdev` |
+| 6. Codex execution layer | `.codex/config.toml`, `.codex/agents/*.toml` | Codex custom-agent defaults, project-scoped specialist agents, and the repo-local `webdev` mirror |
 
 ## Inventory
 
@@ -24,8 +25,11 @@ This document inventories Baldin's shared agentic customization surface across C
 - `backend/.env` and `frontend/.env` are repo-tracked safe local defaults so fresh Codex worktrees can boot without copying ignored files.
 - Real secrets belong in Codex UI environment variables or ignored `backend/.env.local` / `frontend/.env.local` overrides.
 - `scripts/check_codex_worktree_env.sh` is the supported Codex setup hook for validating env readiness inside a new worktree.
-- Baldin standardizes the Playwright MCP server as `webdev` for repo-level browser automation and Figma capture work. The repo-owned contract lives in `.codex/config.toml` as `mcp_servers.webdev`, and the setup hook validates that it still points at `@playwright/mcp`.
-- Baldin's repo baseline assumes a Professional-plan Figma workflow without a Dev-seat dependency. The supported path is `webdev` plus the local browser harness, then Figma MCP or basic inspection as seat access allows.
+- `.vscode/mcp.json` is the primary repo-owned workspace MCP contract. This slice tracks exactly two workspace-managed servers there: `figma` as the HTTP MCP endpoint and `webdev` as the stdio Playwright MCP server.
+- `.codex/config.toml` is a Codex-specific mirror for `mcp_servers.webdev` only. It mirrors the same `npx -y @playwright/mcp@0.0.70` launch contract but uses Codex's repo-local `cwd = "."` instead of VS Code's `${workspaceFolder}` interpolation. Codex does not consume `.vscode/mcp.json` directly in this patch, and this repo contract does not manage a Codex-side `figma` entry.
+- User-scoped or globally configured Codex MCP servers can still appear alongside the repo-local mirror on an individual machine. They are outside this repo-owned contract.
+- Baldin's repo baseline assumes a Professional-plan Figma workflow without a Dev-seat dependency. Use `figma` for Figma MCP design context and Figma-side tools when user auth is available, and use `webdev` plus the local browser harness for Playwright automation and harness-driven review.
+- Figma auth, account linkage, and desktop enablement remain user-scoped prerequisites rather than repo-managed setup logic.
 - `frontend/figma.config.json` and `frontend/src/design-system/**/*.figma.ts` are optional local Figma metadata for future reuse. They must not become a required Code Connect publish gate for routine repo work.
 
 ### Instructions (2)

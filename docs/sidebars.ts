@@ -44,6 +44,8 @@ const sidebars: SidebarsConfig = {
       items: [
         'architecture/frontend-design-system',
         'reference/design-system-catalog',
+        'reference/baldin-app-screens-inventory',
+        'reference/baldin-library-buildout-ledger',
         'engineering/design-system-governance',
         'engineering/design-system-workflow',
         'engineering/design-system-migration-guide',

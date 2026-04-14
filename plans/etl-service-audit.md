@@ -1,8 +1,4 @@
-## Decision: Implement ETL Service for Crawler Execution
 
-Audit the following system design doc and highlight any concerns that you may have shipping it to production.
-
-```md
 # Reverse-Proxy Backend ETL Service
 
 ## Summary

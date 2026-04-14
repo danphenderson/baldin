@@ -96,7 +96,7 @@ This catalog describes the shared frontend UI surface that ships in the repo tod
 
 ## Figma Mapping Inventory
 
-These files are optional repo-local metadata, but they are the practical verification fallback when workspace Code Connect reads are seat-blocked. The canonical library target for all thirteen mappings is [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library).
+These files are optional repo-local metadata, but they are the practical verification fallback when workspace Code Connect reads are seat-blocked. The canonical library target for all sixteen mappings is [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library).
 
 This table is intentionally code-backed rather than exhaustive. Baldin-Library can grow beyond these entries before new surfaces are promoted into `frontend/src/design-system/*`. Figma-first work that is ahead of, or intentionally outside of, the code-backed catalog belongs in [Baldin Library Buildout Ledger](./baldin-library-buildout-ledger.md).
 
@@ -110,8 +110,11 @@ This table is intentionally code-backed rather than exhaustive. Baldin-Library c
 | `InlineFeedback` | `frontend/src/design-system/primitives/feedback/InlineFeedback.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=30-62 |
 | `LoadingState` | `frontend/src/design-system/primitives/feedback/LoadingState.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=202-83 |
 | `SearchField` | `frontend/src/design-system/primitives/fields/SearchField.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=40-48 |
+| `ReadonlyField` | `frontend/src/design-system/primitives/fields/ReadonlyField.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=218-127 |
 | `StatusChip` | `frontend/src/design-system/primitives/status/StatusChip.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=5-34 |
 | `CardShell` | `frontend/src/design-system/primitives/surfaces/CardShell.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=7-2 |
+| `SurfaceCard` | `frontend/src/design-system/primitives/surfaces/SurfaceCard.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=42-35 |
+| `ConfirmDialog` | `frontend/src/design-system/primitives/surfaces/ConfirmDialog.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=46-135 |
 | `FormDialogShell` | `frontend/src/design-system/primitives/surfaces/FormDialogShell.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=8-24 |
 | `SurfaceDialog` | `frontend/src/design-system/primitives/surfaces/SurfaceDialog.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=45-33 |
 | `SectionHeader` | `frontend/src/design-system/primitives/surfaces/SectionHeader.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=6-24 |

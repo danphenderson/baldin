@@ -4,4 +4,5 @@ max_depth = 1
 
 [mcp_servers.webdev]
 command = "npx"
-args = ["@playwright/mcp@latest"]
+args = ["-y", "@playwright/mcp@0.0.70"]
+cwd = "."

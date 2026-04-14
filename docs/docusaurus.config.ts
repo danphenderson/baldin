@@ -42,7 +42,24 @@ const config: Config = {
     },
   },
 
-  themes: ['@docusaurus/theme-mermaid'],
+  themes: [
+    '@docusaurus/theme-mermaid',
+    [
+      '@easyops-cn/docusaurus-search-local',
+      {
+        hashed: true,
+        indexDocs: true,
+        indexBlog: false,
+        indexPages: false,
+        docsRouteBasePath: '/docs',
+        explicitSearchResultPath: true,
+        searchResultLimits: 10,
+        searchBarPosition: 'right',
+        searchBarShortcut: false,
+        searchBarShortcutHint: false,
+      },
+    ],
+  ],
 
   plugins: [
     [
@@ -140,6 +157,10 @@ const config: Config = {
         {
           to: '/docs/engineering/release-roadmap',
           label: 'Release Readiness',
+          position: 'right',
+        },
+        {
+          type: 'search',
           position: 'right',
         },
       ],

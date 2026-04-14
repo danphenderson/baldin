@@ -51,4 +51,5 @@ backend/public/datalake/
 
 public/*
 **.coverage
-.vscode/*
+/.vscode/*
+!/.vscode/mcp.json

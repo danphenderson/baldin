@@ -9,8 +9,9 @@ Checks:
   4. Local markdown links in agentic markdown files resolve to existing files
   5. .github/AGENTIC_SURFACE.md inventory matches actual Copilot and Codex files
   6. Root AGENTS.md exists and is non-empty
-  7. .codex/config.toml exists and is parseable
-  8. .codex/agents/*.toml files exist, are parseable, and include required keys
+  7. .vscode/mcp.json exists, is parseable, and matches the repo-owned workspace MCP contract
+  8. .codex/config.toml exists, is parseable, and mirrors the repo-owned webdev contract
+  9. .codex/agents/*.toml files exist, are parseable, and include required keys
 
 Requires: Python 3.11+ (stdlib only, uses tomllib).
 Exit 0 on pass, exit 1 with diagnostics on failure.
@@ -21,11 +22,19 @@ from __future__ import annotations
 import re
 import sys
 import tomllib
+import json
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GITHUB_DIR = REPO_ROOT / ".github"
 CODEX_DIR = REPO_ROOT / ".codex"
+WORKSPACE_MCP_PATH = REPO_ROOT / ".vscode" / "mcp.json"
+EXPECTED_WORKSPACE_MCP_SERVERS = {"figma", "webdev"}
+EXPECTED_FIGMA_URL = "https://mcp.figma.com/mcp"
+EXPECTED_PLAYWRIGHT_PACKAGE = "@playwright/mcp@0.0.70"
+EXPECTED_WORKSPACE_WEBDEV_CWD = "${workspaceFolder}"
+EXPECTED_CODEX_WEBDEV_CWD = "."
+EXPECTED_CODEX_MCP_SERVERS = {"webdev"}
 
 ERRORS: list[str] = []
 WARNINGS: list[str] = []
@@ -37,6 +46,18 @@ def error(msg: str) -> None:
 
 def warn(msg: str) -> None:
     WARNINGS.append(msg)
+
+
+def check_playwright_args(args: object, path_label: str) -> None:
+    if not isinstance(args, list):
+        error(f"{path_label}: args must be a list")
+        return
+
+    normalized_args = [str(arg) for arg in args]
+    if "-y" not in normalized_args or EXPECTED_PLAYWRIGHT_PACKAGE not in normalized_args:
+        error(
+            f"{path_label}: args must include -y and {EXPECTED_PLAYWRIGHT_PACKAGE}"
+        )
 
 
 def parse_frontmatter(path: Path) -> tuple[dict[str, str | list[str]], str]:
@@ -212,6 +233,9 @@ def check_agentic_surface_inventory(all_fm: dict[Path, dict[str, str | list[str]
     if ".codex/config.toml" not in surface_text:
         error(".github/AGENTIC_SURFACE.md: missing reference to .codex/config.toml")
 
+    if ".vscode/mcp.json" not in surface_text:
+        error(".github/AGENTIC_SURFACE.md: missing reference to .vscode/mcp.json")
+
     agent_files = sorted(GITHUB_DIR.glob("agents/*.agent.md"))
     for agent_file in agent_files:
         fm = all_fm.get(agent_file, {})
@@ -287,6 +311,61 @@ def check_agents_md() -> None:
         error("AGENTS.md exists but is empty")
 
 
+def check_workspace_mcp_contract() -> None:
+    if not WORKSPACE_MCP_PATH.exists():
+        error(".vscode/mcp.json does not exist")
+        return
+
+    try:
+        data = json.loads(WORKSPACE_MCP_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        error(f".vscode/mcp.json: parse error: {exc}")
+        return
+
+    servers = data.get("servers")
+    if not isinstance(servers, dict):
+        error(".vscode/mcp.json: missing top-level 'servers' object")
+        return
+
+    if set(servers) != EXPECTED_WORKSPACE_MCP_SERVERS:
+        server_names = ", ".join(sorted(str(name) for name in servers))
+        error(
+            ".vscode/mcp.json: must declare exactly servers.figma and servers.webdev "
+            f"(found: {server_names})"
+        )
+
+    figma = servers.get("figma")
+    if not isinstance(figma, dict):
+        error(".vscode/mcp.json: missing 'servers.figma' object")
+    else:
+        if figma.get("type") != "http":
+            error('.vscode/mcp.json: servers.figma.type must be "http"')
+        if figma.get("url") != EXPECTED_FIGMA_URL:
+            error(
+                ".vscode/mcp.json: servers.figma.url must be "
+                f'"{EXPECTED_FIGMA_URL}"'
+            )
+
+    webdev = servers.get("webdev")
+    if not isinstance(webdev, dict):
+        error(".vscode/mcp.json: missing 'servers.webdev' object")
+        return
+
+    if webdev.get("type") != "stdio":
+        error('.vscode/mcp.json: servers.webdev.type must be "stdio"')
+
+    if webdev.get("command") != "npx":
+        error('.vscode/mcp.json: servers.webdev.command must be "npx"')
+
+    check_playwright_args(webdev.get("args"), ".vscode/mcp.json: servers.webdev")
+
+    if webdev.get("cwd") != EXPECTED_WORKSPACE_WEBDEV_CWD:
+        error(
+            ".vscode/mcp.json: servers.webdev.cwd must be "
+            f'"{EXPECTED_WORKSPACE_WEBDEV_CWD}"'
+        )
+
+
 def check_codex_config() -> None:
     config_path = CODEX_DIR / "config.toml"
     if not config_path.exists():
@@ -315,6 +394,13 @@ def check_codex_config() -> None:
         error(".codex/config.toml: missing [mcp_servers.webdev] table")
         return
 
+    if set(mcp_servers) != EXPECTED_CODEX_MCP_SERVERS:
+        server_names = ", ".join(sorted(str(name) for name in mcp_servers))
+        error(
+            ".codex/config.toml: must declare only [mcp_servers.webdev] in this patch "
+            f"(found: {server_names})"
+        )
+
     webdev = mcp_servers.get("webdev")
     if not isinstance(webdev, dict):
         error(".codex/config.toml: missing [mcp_servers.webdev] table")
@@ -324,9 +410,10 @@ def check_codex_config() -> None:
     if command != "npx":
         error('.codex/config.toml: mcp_servers.webdev.command must be "npx"')
 
-    args = webdev.get("args")
-    if not isinstance(args, list) or not any("@playwright/mcp" in str(arg) for arg in args):
-        error(".codex/config.toml: mcp_servers.webdev.args must include @playwright/mcp")
+    check_playwright_args(webdev.get("args"), ".codex/config.toml: mcp_servers.webdev")
+
+    if webdev.get("cwd") != EXPECTED_CODEX_WEBDEV_CWD:
+        error('.codex/config.toml: mcp_servers.webdev.cwd must be "."')
 
 
 def check_codex_agents() -> None:
@@ -370,6 +457,7 @@ def main() -> int:
     check_local_links()
     check_agentic_surface_inventory(all_fm)
     check_agents_md()
+    check_workspace_mcp_contract()
     check_codex_config()
     check_codex_agents()
 

@@ -217,7 +217,7 @@ test('renders the aspirations harness across flagship capture states', async ({ 
   await expect(page.getByText('Profile-derived role suggestions are ready for review before you save them as aspirations.')).toBeVisible();
 
   await page.goto('/browser-harness/figma-wave1.html?screen=aspirations-companies&state=no-signal');
-  await expect(page.getByText('No strong company signals were found in the current profile, so manual aspirations stay primary in this capture state.')).toBeVisible();
+  await expect(page.getByText('No strong company signals were found in the current profile. Add more detail to your resume, headline, or work history and try again.')).toBeVisible();
 
   await page.goto('/browser-harness/figma-wave1.html?screen=aspirations-companies&state=rate-limited');
   await expect(page.getByText('Northstar')).toBeVisible();

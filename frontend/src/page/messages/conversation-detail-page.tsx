@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
 import {
-  Alert,
   Avatar,
   Box,
   Button,
@@ -14,6 +13,8 @@ import {
   Typography,
 } from '@mui/material';
 import {
+  EmptyState,
+  InlineFeedback,
   LoadingState,
   SurfaceCard as Card,
   SurfaceCardContent as CardContent,
@@ -29,6 +30,7 @@ import {
   Edit as EditIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
+  ForumOutlined as ForumOutlinedIcon,
   Group as GroupIcon,
   Send as SendIcon,
 } from '@mui/icons-material';
@@ -195,7 +197,7 @@ const ConversationDetailPage: React.FC = () => {
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/network/messages')} sx={{ mb: 2 }}>
           Back to Messages
         </Button>
-        <Alert severity="error">{error ?? 'Conversation not found.'}</Alert>
+        <InlineFeedback tone="error">{error ?? 'Conversation not found.'}</InlineFeedback>
       </Box>
     );
   }
@@ -263,9 +265,13 @@ const ConversationDetailPage: React.FC = () => {
       {/* Messages list */}
       <Box sx={{ flex: 1, overflow: 'auto', mb: 2, px: 1 }}>
         {messages.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 6 }}>
-            <Typography color="text.secondary">No messages yet. Send the first one!</Typography>
-          </Box>
+          <EmptyState
+            icon={<ForumOutlinedIcon />}
+            layout="section"
+            compact
+            title="No messages yet"
+            description="Send the first one to start the conversation."
+          />
         ) : (
           <Stack spacing={1.5}>
             {messages.map((msg) => {

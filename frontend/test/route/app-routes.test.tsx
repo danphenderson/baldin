@@ -106,6 +106,9 @@ vi.mock('@/page/login', () => ({
 vi.mock('@/page/register', () => ({
   default: () => <div data-testid="page-register">Register</div>,
 }));
+vi.mock('@/page/landing-page', () => ({
+  default: () => <div data-testid="page-landing">Landing</div>,
+}));
 vi.mock('@/page/user-terms', () => ({
   default: () => <div data-testid="page-user-terms">UserTerms</div>,
 }));
@@ -240,9 +243,9 @@ describe('AppRoutes', () => {
 
   /* ── Protected routes redirect unauthenticated users ── */
 
-  it('redirects to /login when visiting / without auth', async () => {
+  it('renders landing page for / without auth', async () => {
     renderRoutes('/', { token: null, loading: false });
-    expect(await screen.findByTestId('page-login')).toBeInTheDocument();
+    expect(await screen.findByTestId('page-landing')).toBeInTheDocument();
   });
 
   it('redirects to /login when visiting /leads without auth', async () => {
@@ -257,8 +260,18 @@ describe('AppRoutes', () => {
 
   /* ── Authenticated user sees protected routes ── */
 
-  it('renders dashboard for / when authenticated', async () => {
+  it('renders landing page for / when authenticated', async () => {
     renderRoutes('/');
+    expect(await screen.findByTestId('page-landing')).toBeInTheDocument();
+  });
+
+  it('redirects to /login when visiting /dashboard without auth', async () => {
+    renderRoutes('/dashboard', { token: null, loading: false });
+    expect(await screen.findByTestId('page-login')).toBeInTheDocument();
+  });
+
+  it('renders dashboard for /dashboard when authenticated', async () => {
+    renderRoutes('/dashboard');
     expect(await screen.findByTestId('page-dashboard')).toBeInTheDocument();
   });
 

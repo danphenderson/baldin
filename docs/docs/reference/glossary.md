@@ -5,7 +5,7 @@ title: Decode Baldin Terms
 description: Decode Baldin-specific terms that recur across architecture and engineering docs.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-15 -->
 
 # Decode Baldin Terms
 
@@ -21,7 +21,7 @@ Short-lived lease used by the collaboration backend to ensure only one client se
 
 ## Dashboard
 
-The frontend dashboard at `/` backed by the activity-feed summary endpoint.
+The authenticated frontend dashboard at `/dashboard` backed by the activity-feed summary endpoint. The public marketing home now lives at `/`.
 
 ## Content format
 

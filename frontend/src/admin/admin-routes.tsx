@@ -51,14 +51,14 @@ const AdminAccessDeniedState: React.FC = () => (
         This account is not a superuser. The admin session has been cleared.
       </Alert>
       <Typography color="text.secondary">
-        Sign in again with a superuser account to continue, or return to the main product app.
+        Sign in again with a superuser account to continue, or sign in to the main product app.
       </Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
         <Button href={ADMIN_LOGIN_PATH} variant="contained">
           Sign in again
         </Button>
-        <Button href="/" variant="outlined">
-          Open product app
+        <Button href="/login" variant="outlined">
+          Sign in to product app
         </Button>
       </Stack>
     </Stack>
@@ -66,14 +66,18 @@ const AdminAccessDeniedState: React.FC = () => (
 );
 
 const AdminLoginRoute: React.FC = () => {
+  const { token } = useContext(UserContext);
+  const productAppPath = token ? '/dashboard' : '/login';
+  const productAppLabel = token ? 'Open the product app' : 'Sign in to the product app';
+
   const footer = useMemo(() => (
     <Typography color="text.secondary" sx={{ typography: 'body2' }}>
       Use a superuser account to access local admin workflows.{' '}
-      <Link href="/" color="inherit">
-        Open the product app
+      <Link href={productAppPath} color="inherit">
+        {productAppLabel}
       </Link>
     </Typography>
-  ), []);
+  ), [productAppLabel, productAppPath]);
 
   return (
     <LoginPage

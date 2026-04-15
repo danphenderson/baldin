@@ -66,12 +66,12 @@ Library baseline: 16 mapped surfaces in the [Design System Catalog](./design-sys
 | Conversation detail | ⚠️ Raw `CircularProgress` | ❌ No empty-thread frame | ⚠️ Inline state + local Snackbar | **High gap.** Add an empty-thread `EmptyState` frame and replace loading with `LoadingState`. |
 | Aspirations roles | ✅ `loading` state in harness | ✅ `empty` state in harness | ⚠️ `no-signal` and `rate-limited` exist but not fully backed | Ensure `no-signal` and `rate-limited` frames in Figma show InlineFeedback with appropriate tone and copy. |
 | Aspirations companies | ✅ `loading` state in harness | ✅ `empty` state in harness | ⚠️ Same as roles | Same recommendation as aspirations roles. |
-| Login baseline | ✅ Button loading spinner | ❌ N/A | ✅ `InlineFeedback` | The button-level loading spinner is appropriate for auth forms. Ensure Figma shows the disabled-button-with-spinner state explicitly. |
-| Register baseline | ✅ Button loading + `LinearProgress` for password strength | ❌ N/A | ✅ `InlineFeedback` | Verify the password strength `LinearProgress` bar and the password rules checklist are present as distinct Figma elements. |
-| Login MFA challenge | ✅ Button loading spinner | ❌ N/A | ✅ `InlineFeedback` | Ensure the MFA challenge frame shows the "Back to login" link and the 6-digit code field clearly. |
+| Login baseline | ⚠️ Bitmap-only matrix | ❌ N/A | ⚠️ Broken error row | The large login matrix was moved to Wave 3 as `[Needs Recapture] Login States`. `Login · Error · dark` is blank; baseline and loading rows are bitmap-only evidence, not canonical editable design layers. |
+| Register baseline | ⚠️ Bitmap-only matrix | ❌ N/A | ⚠️ Bitmap-only evidence | The large register matrix was moved to Wave 3 as `[Needs Recapture] Register States`. Existing rows show baseline, password rules, validation error, and loading as bitmap-only captures that need review-ready recapture. |
+| Login MFA challenge | ⚠️ Bitmap-only matrix | ❌ N/A | ⚠️ Bitmap-only evidence | The large MFA matrix was moved to Wave 3 as `[Needs Recapture] Login MFA Challenge States`. Existing challenge, error, and loading rows are bitmap-only captures that need review-ready recapture. |
 | Admin login states | ✅ Session-resolving spinner | ❌ N/A | ⚠️ Unclear | **Medium gap.** Add a dedicated "resolving authenticated session" frame showing the full-page centered spinner, distinct from the normal login form. |
 | Admin access denied | ❌ N/A | ❌ N/A | ✅ Dedicated access-denied state | The access-denied frame should clearly show both exit CTAs: "Sign in again" and "Open product app." |
-| Extractor workflow | ✅ Per-section spinners | ✅ `EmptyState` (no extractors) | ✅ Snackbar | Verify version-history expand/collapse animation doesn't need a loading sub-state frame in Figma. |
+| Extractor workflow | ⚠️ Bitmap-only matrix | ✅ `EmptyState` (no extractors) | ✅ Snackbar | The large extractor matrix was moved to Wave 3 as `[Needs Recapture] Extractor Workflow States`. `Extractor Workflow · Create Extractor Dialog · dark` is blank; remaining rows are bitmap-only captures. Extractors remain a product-app workflow at `/workflows/extractors`, not an Admin SPA route. |
 | DB management | ✅ Per-section loading | ✅ `EmptyState` (no users matching filter) | ✅ Per-section `Alert` | Ensure the destructive-action confirmation path (preview → confirm) has distinct Figma frames for each step. |
 | Review queue | ✅ Implied | ✅ `EmptyState` ("Review queue is clear") | ✅ Snackbar | Confirmed via Figma MCP: empty state is present (node `192:4929`). Batch-action loading state should be explicit. |
 | Crawlers | ✅ `MetricStrip` loading + skeleton cards | ✅ Implied (no pipelines) | ✅ Color-coded failed-run indicator | Verify the empty-pipelines state has a dedicated EmptyState frame, not just an absent card list. |
@@ -149,6 +149,17 @@ None. Every screen has at least one finding. The cleanest screen is **Leads** (a
 
 ## Figma Frame Coverage Confirmation
 
+### Cleanup update (2026-04-15)
+
+The large auth and extractor state matrices were removed from `Flagship Flow Screens` because they are not part of the flagship aspirations → ranked leads → apply-handoff story and are not review-ready. They now live on `Wave 3 · Auth & Workflow Screens` with `[Needs Recapture]` prefixes:
+
+| Matrix | Node ID | Current status |
+| --- | --- | --- |
+| `[Needs Recapture] Login States` | `131:6090` | Partial. `Login · Error · dark` is blank; other rows are bitmap-only captures. |
+| `[Needs Recapture] Login MFA Challenge States` | `131:6098` | Partial. Rows are bitmap-only captures. |
+| `[Needs Recapture] Register States` | `131:6106` | Partial. Rows are bitmap-only captures. |
+| `[Needs Recapture] Extractor Workflow States` | `131:6116` | Partial. `Extractor Workflow · Create Extractor Dialog · dark` is blank; other rows are bitmap-only captures. |
+
 ### Pre-existing frames (confirmed via MCP metadata reads)
 
 | Screen | Node ID | Page | Frame name | Notes |
@@ -191,6 +202,8 @@ All 13 previously unconfirmed frames were verified MISSING from the Figma file o
 | Admin access denied | `232:1192` | Admin · Access Denied | MED: CTA hierarchy: primary "Sign in again", secondary "Open product app" |
 | Extractor workflow | `232:1202` | Extractor Workflow · Baseline | MED: Two-column layout with StatusChip library instance, SurfaceDialog annotation |
 
+The single baseline frames above remain useful reference sketches. They do not replace the moved `[Needs Recapture]` matrices, which still need nonblank, review-ready state coverage.
+
 **Page: Admin · Privileged Workflows** (page ID `221:1170`)
 
 | Screen | Node ID | Frame name | Findings addressed |
@@ -217,7 +230,8 @@ All 13 previously unconfirmed frames were verified MISSING from the Figma file o
 
 | Owner | Responsibility | Exit condition |
 | --- | --- | --- |
-| Baldin Design Lead Agent | ✅ **Completed 2026-04-15.** Created 23 frames covering all High-severity and qualifying Medium-severity Figma findings. All 13 previously unconfirmed frames now exist. | Every High finding has a corresponding Figma frame. |
+| Baldin Design Lead Agent | ✅ **Completed 2026-04-15.** Created 23 frames covering the original High-severity and qualifying Medium-severity Figma findings. | Single-frame references exist for the original findings, but the moved auth/extractor matrices still require recapture. |
+| `baldin_frontend` | Recapture the moved `[Needs Recapture]` Wave 3 auth and extractor matrices. | `Login · Error · dark` and `Extractor Workflow · Create Extractor Dialog · dark` are no longer blank, and all auth/extractor rows are review-ready captures or editable compositions. |
 | Baldin Frontend Agent | Review Medium-severity code consistency findings (InlineFeedback vs Alert, LoadingState vs CircularProgress, SurfaceDialog vs raw Dialog, StatusChip vs local chip wrappers) and decide which to fix in code vs. accept as feature-owned patterns. | Each Medium finding is either resolved in code or documented as intentional in the design-system catalog. |
 | Baldin Lead Full-Stack Architect | Review the cross-screen summary for any pattern decisions that should be formalized in design-system governance docs. | Collection-page heading pattern, error feedback surface, and dialog surface decisions are documented. |
 | Baldin Design Lead Agent | Publish remaining library components (InlineFeedback, LoadingState, EmptyState, AuthPanel, ConfirmDialog, SurfaceDialog, SurfaceCard, CardShell) to the team library so future App-Screens frames can import them directly instead of using visual representations. | All 8 unpublished components are published and importable cross-file. |

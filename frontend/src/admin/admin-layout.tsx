@@ -123,7 +123,7 @@ const AdminLayout: React.FC = () => {
 
       <Box sx={{ mt: 'auto', px: 2.5, py: 2.5 }}>
         <Stack spacing={1.25}>
-          <Button href="/" variant="outlined">
+          <Button href="/dashboard" variant="outlined">
             Open Product App
           </Button>
           <Button

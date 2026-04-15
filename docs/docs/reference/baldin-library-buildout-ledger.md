@@ -45,3 +45,50 @@ The current shipped shared-surface mapping set is complete. Future follow-on wor
 `CardShell` was promoted from a single COMPONENT (`7:2`) to a COMPONENT_SET (`291:35`) with 12 variants on `Tone` (6) × `Density` (2). The code contract also exposes a `surface` prop (`base` | `raised` | `inset`) and an `interactive` boolean, but the Figma component set does not include a Surface variant axis. The `.figma.ts` mapping intentionally hardcodes `surface="raised"` (the code default) and maps `interactive` as a boolean rather than leaving the gap undocumented. Future Figma work may promote `Surface` to a variant axis, at which point the mapping should be updated to use `instance.getEnum`.
 
 `SecondaryNavBar` remains `library-only for now` in this slice. Product-flow coverage for `/applications`, `/applications/board`, `/leads`, `/workflows`, and related shell stories belongs in [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) until a closeout promotion review proves otherwise.
+
+## Brand Foundation — Career Control Plane
+
+A new `Brand — Career Control Plane` page was added to `Baldin-Library` on `2026-04-14` to define the Figma-first marketing brand direction. This is a library-level brand foundation, not a code-backed design-system surface.
+
+### Brand Direction Summary
+
+| Attribute | Value | Token alias |
+| --- | --- | --- |
+| Direction name | Career Control Plane | — |
+| Primary tagline | "Run your job search like a system." | — |
+| Core message | Private, intelligent, under-your-control job-search workspace | — |
+| Deep Slate | `#07111D` | `background/default` (dark) |
+| Raised Navy | `#132235` | `surface/raised` (dark) |
+| Cyan | `#06B6D4` | `brand/primary` (dark) |
+| Cobalt | `#5B7CFA` | `brand/secondary` (dark) |
+| Mist | `#E7EEF8` | `text/primary` (dark) |
+| Slate Gray | `#93A5BD` | `text/secondary` (dark) |
+| Display font | Space Grotesk Bold | `fontFamilies.display` |
+| Body font | Source Sans 3 Regular | `fontFamilies.body` |
+| Technical font | JetBrains Mono Regular | `fontFamilies.mono` |
+
+All palette values map 1:1 to existing `Baldin Colors` variable collection entries. No new tokens were created.
+
+### Library Page Contents
+
+| Section | Library node | Description |
+| --- | --- | --- |
+| Brand Foundation Header | [node 321:3](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh?node-id=321-3) | Page header with direction name and core message |
+| Marketing Palette | [node 321:7](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh?node-id=321-7) | Six-swatch palette with hex, token alias, and role annotations |
+| Typography Treatment | [node 322:2](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh?node-id=322-2) | Display (Space Grotesk), body (Source Sans 3), and technical (JetBrains Mono) type samples |
+| Hero Treatment | [node 323:3](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh?node-id=323-3) | Marketing hero with tagline, eyebrow, subline, gradient CTAs, and system glow accent |
+| Product Surface Cards | [node 324:2](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh?node-id=324-2) | Four feature cards: Applications Pipeline, Lead Extraction, Document Workspace, Agent Workflows |
+| Workflow Pipeline Motif | [node 324:29](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh?node-id=324-29) | Five-stage pipeline node strip: Discover → Extract → Rank → Apply → Track |
+| Tagline Lockup | [node 325:2](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh?node-id=325-2) | Wordmark + primary tagline + supporting line + technical slug |
+| Implementation Notes | [node 325:8](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh?node-id=325-8) | Annotations explaining library-level vs app-screen vs frontend follow-up scope |
+
+### Visual Language Rules
+
+- Product UI crops, structured grids, node links, workflow panels, application pipeline cards, document workspace panels, subtle system glow.
+- Gradient CTA buttons: `#06B6D4` → `#5B7CFA` (matches the existing `MuiButton` `brand` variant in the theme).
+- Avoid: stock-photo people, handshake imagery, recruiter clichés, generic SaaS gradients, "AI magic" vapor.
+- Do not port Tailwind token names, `cva` contracts, shadcn wrapper APIs, or Make scaffolding into this brand direction.
+
+### Handoff
+
+This brand foundation is Figma-only and library-level. The composed marketing landing page frames that consume this foundation live in [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) under the `Marketing · Landing` section. React implementation of the landing page is a separate slice owned by the Baldin Frontend Agent.

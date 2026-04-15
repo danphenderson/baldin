@@ -9,6 +9,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@fontsource/source-sans-3": "^5.2.8",
     "@fontsource/space-grotesk": "^5.2.8",
     "@mui/icons-material": "^7.3.2",

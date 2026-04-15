@@ -21,7 +21,7 @@ const LoginPage: React.FC<LoginPageProps> = ({
   description = 'Sign in to your employment autopilot',
   footer,
   icon = <LogoIcon />,
-  postLoginPath = '/',
+  postLoginPath = '/dashboard',
   title = 'Welcome back',
 }) => {
   const theme = useTheme();

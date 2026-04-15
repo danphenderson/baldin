@@ -63,7 +63,7 @@ vi.mock('@/component/lead-card', () => ({
   }) => (
     <div data-testid="lead-card">
       <span>{lead.title ?? 'Untitled'}</span>
-      {ranking && <span>{`Aspiration fit ${ranking.relevanceScore}/10`}</span>}
+      {ranking && <span>{`Rank score ${ranking.relevanceScore}/10`}</span>}
       {applicationHandoff && (
         <>
           <span>{applicationHandoff.message}</span>
@@ -627,7 +627,7 @@ describe('LeadsPage', () => {
 
     const cards = screen.getAllByTestId('lead-card');
     expect(cards[0]).toHaveTextContent('Backend Engineer');
-    expect(cards[0]).toHaveTextContent('Aspiration fit 9/10');
+    expect(cards[0]).toHaveTextContent('Rank score 9/10');
     expect(
       screen.getByRole('button', { name: 'Clear ranking' }),
     ).toBeInTheDocument();
@@ -735,6 +735,6 @@ describe('LeadsPage', () => {
     const cards = screen.getAllByTestId('lead-card');
     expect(cards).toHaveLength(1);
     expect(cards[0]).toHaveTextContent('Backend Engineer');
-    expect(cards[0]).not.toHaveTextContent('Aspiration fit 9/10');
+    expect(cards[0]).not.toHaveTextContent('Rank score 9/10');
   });
 });

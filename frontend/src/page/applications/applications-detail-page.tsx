@@ -12,8 +12,6 @@ import {
   InputLabel,
   IconButton,
   Tooltip,
-  Skeleton,
-  Alert,
   LinearProgress,
   Divider,
   useMediaQuery,
@@ -54,6 +52,7 @@ import { useStageColumns,
   relativeDate,
   type Column } from './use-applications';
 import { InlineFeedback,
+  LoadingState,
   PageTitle,
   StatusChip as Chip,
   SurfaceDialog as Dialog,
@@ -276,6 +275,10 @@ const ApplicationDetailPage: React.FC = () => {
     return () => clearTimeout(id);
   }, []);
 
+  const renderDocumentLoadingState = () => (
+    <LoadingState kind="list" count={2} itemHeight={40} />
+  );
+
   /* status change */
   const handleStatusChange = async (newStatus: string) => {
     if (!token || !app) return;
@@ -492,12 +495,7 @@ const ApplicationDetailPage: React.FC = () => {
         <Button startIcon={<BackIcon />} onClick={() => navigate('/applications')} sx={{ mb: 3, textTransform: 'none' }}>
           Back to Applications
         </Button>
-        <Stack spacing={2}>
-          <Skeleton variant="rounded" height={40} width="60%" />
-          <Skeleton variant="rounded" height={24} width="40%" />
-          <Skeleton variant="rounded" height={200} />
-          <Skeleton variant="rounded" height={200} />
-        </Stack>
+        <LoadingState kind="section" />
       </Box>
     );
   }
@@ -549,8 +547,8 @@ const ApplicationDetailPage: React.FC = () => {
       </Box>
 
       {/* Alerts */}
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
+      {error && <InlineFeedback tone="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</InlineFeedback>}
+      {success && <InlineFeedback tone="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</InlineFeedback>}
 
       {/* Main content */}
       <Stack spacing={0} divider={<Divider />} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: toRadiusPx(radiusTokens.lg), overflow: 'hidden', bgcolor: theme.palette.background.paper }}>
@@ -834,9 +832,7 @@ const ApplicationDetailPage: React.FC = () => {
             </Button>
           </Stack>
 
-          {loadingDocs ? (
-            <Stack spacing={1}>{[0, 1].map((i) => <Skeleton key={i} variant="rounded" height={40} />)}</Stack>
-          ) : appDocuments.length === 0 ? (
+          {loadingDocs ? renderDocumentLoadingState() : appDocuments.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.6 }}>
               No documents attached yet
             </Typography>
@@ -894,9 +890,7 @@ const ApplicationDetailPage: React.FC = () => {
             Resumes
           </Typography>
 
-          {loadingDocs ? (
-            <Stack spacing={1}>{[0, 1].map((i) => <Skeleton key={i} variant="rounded" height={40} />)}</Stack>
-          ) : appResumes.length === 0 ? (
+          {loadingDocs ? renderDocumentLoadingState() : appResumes.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.6 }}>
               No resumes attached yet
             </Typography>
@@ -948,9 +942,7 @@ const ApplicationDetailPage: React.FC = () => {
             Cover Letters
           </Typography>
 
-          {loadingDocs ? (
-            <Stack spacing={1}>{[0, 1].map((i) => <Skeleton key={i} variant="rounded" height={40} />)}</Stack>
-          ) : appCoverLetters.length === 0 ? (
+          {loadingDocs ? renderDocumentLoadingState() : appCoverLetters.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.6 }}>
               No cover letters attached yet
             </Typography>

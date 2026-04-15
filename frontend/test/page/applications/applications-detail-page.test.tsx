@@ -7,6 +7,26 @@ import { NotificationProvider } from '@/context/notification-context';
 import { UserContext } from '@/context/user-context';
 import { ToolbarHeaderContext } from '@/layout/toolbar-header-context';
 
+vi.mock('@/design-system', async () => {
+  const React = await import('react');
+  const actual = await vi.importActual<typeof import('@/design-system')>('@/design-system');
+  return {
+    ...actual,
+    LoadingState: ({ kind, count, itemHeight }: { kind: string; count?: number; itemHeight?: number }) => React.createElement('div', {
+      'data-testid': 'loading-state',
+      'data-kind': kind,
+      'data-count': count,
+      'data-item-height': itemHeight,
+    }),
+    InlineFeedback: ({ children, tone, onClose, ...props }: React.ComponentProps<'div'> & { tone?: string; onClose?: () => void }) => React.createElement(
+      'div',
+      { 'data-testid': 'inline-feedback', 'data-tone': tone, ...props },
+      children,
+      onClose ? React.createElement('button', { type: 'button', onClick: onClose }, 'Dismiss feedback') : null,
+    ),
+  };
+});
+
 vi.mock('@/component/create-action-item-dialog', () => ({
   default: () => null,
 }));
@@ -81,6 +101,16 @@ function renderPage(applicationId = 'app-123') {
   );
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 describe('ApplicationDetailPage', () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -114,13 +144,77 @@ describe('ApplicationDetailPage', () => {
     expect(await screen.findByRole('button', { name: 'Chat with Agent' })).toBeInTheDocument();
   });
 
+  it('renders the top-level loading state with back navigation while the application request is pending', async () => {
+    const pending = deferred<applicationService.ApplicationDetailRead>();
+    vi.mocked(applicationService.getApplication).mockReturnValue(pending.promise);
+
+    renderPage('app-123');
+
+    expect(screen.getByRole('button', { name: 'Back to Applications' })).toBeInTheDocument();
+    expect(screen.getByTestId('loading-state')).toHaveAttribute('data-kind', 'section');
+    expect(applicationService.getApplicationDocuments).not.toHaveBeenCalled();
+
+    pending.resolve(makeApplication());
+    vi.mocked(applicationService.getApplicationDocuments).mockResolvedValue([]);
+    vi.mocked(documentService.getDocuments).mockResolvedValue([]);
+
+    expect(await screen.findByText('Senior Frontend Engineer')).toBeInTheDocument();
+  });
+
   it('shows an error state when the direct application fetch fails', async () => {
     vi.mocked(applicationService.getApplication).mockRejectedValue(new Error('Application not found'));
 
     renderPage('missing-app');
 
     expect(await screen.findByText('Application not found')).toBeInTheDocument();
+    expect(screen.getByTestId('inline-feedback')).toHaveAttribute('data-tone', 'error');
+    expect(screen.getByRole('button', { name: 'Back to Applications' })).toBeInTheDocument();
     expect(applicationService.getApplication).toHaveBeenCalledWith('test-token', 'missing-app');
+  });
+
+  it('renders list loading states for each document subsection while documents are loading', async () => {
+    const pendingAppDocs = deferred<Awaited<ReturnType<typeof applicationService.getApplicationDocuments>>>();
+    const pendingAllDocs = deferred<Awaited<ReturnType<typeof documentService.getDocuments>>>();
+
+    vi.mocked(applicationService.getApplication).mockResolvedValue(makeApplication());
+    vi.mocked(applicationService.getApplicationDocuments).mockReturnValue(pendingAppDocs.promise);
+    vi.mocked(documentService.getDocuments).mockReturnValue(pendingAllDocs.promise);
+
+    renderPage('app-123');
+
+    expect(await screen.findByText('Senior Frontend Engineer')).toBeInTheDocument();
+
+    const listLoadingStates = await waitFor(() => {
+      const states = screen.getAllByTestId('loading-state').filter((node) => node.getAttribute('data-kind') === 'list');
+      expect(states).toHaveLength(3);
+      return states;
+    });
+
+    listLoadingStates.forEach((state) => {
+      expect(state).toHaveAttribute('data-count', '2');
+      expect(state).toHaveAttribute('data-item-height', '40');
+    });
+  });
+
+  it('renders dismissible inline feedback when document loading fails after the application loads', async () => {
+    const user = userEvent.setup();
+    vi.mocked(applicationService.getApplication).mockResolvedValue(makeApplication());
+    vi.mocked(applicationService.getApplicationDocuments).mockRejectedValue(new Error('Failed to load documents'));
+    vi.mocked(documentService.getDocuments).mockResolvedValue([]);
+
+    renderPage('app-123');
+
+    const message = await screen.findByText('Failed to load documents');
+    expect(await screen.findByText('Senior Frontend Engineer')).toBeInTheDocument();
+
+    const feedback = message.closest('[data-testid="inline-feedback"]');
+    expect(feedback).toHaveAttribute('data-tone', 'error');
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss feedback' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Failed to load documents')).not.toBeInTheDocument();
+    });
   });
 
   it('renders a duration-based status timeline for application history', async () => {

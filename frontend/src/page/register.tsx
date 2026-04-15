@@ -63,7 +63,7 @@ const RegisterPage: React.FC = () => {
           navigate('/login');
         } else if (result.access_token) {
           setToken(result.access_token);
-          navigate('/');
+          navigate('/dashboard');
         } else {
           navigate('/login');
         }

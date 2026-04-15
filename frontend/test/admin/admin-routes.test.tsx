@@ -6,7 +6,12 @@ import { UserContext } from '@/context/user-context';
 import AdminRoutes from '@/admin/admin-routes';
 
 vi.mock('@/page/login', () => ({
-  default: () => <div data-testid="page-login">Admin Login</div>,
+  default: ({ footer }: { footer?: React.ReactNode }) => (
+    <div data-testid="page-login">
+      Admin Login
+      {footer ? <div data-testid="page-login-footer">{footer}</div> : null}
+    </div>
+  ),
 }));
 
 vi.mock('@/page/db-management', () => ({
@@ -66,6 +71,7 @@ describe('AdminRoutes', () => {
     renderAdminRoutes({ initialPath: '/db-management', token: null });
 
     expect(await screen.findByTestId('page-login')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in to the product app' })).toHaveAttribute('href', '/login');
   });
 
   it('keeps the admin root in a loading state while the authenticated user profile is still resolving', () => {
@@ -104,6 +110,7 @@ describe('AdminRoutes', () => {
     const { setToken, setUser } = renderAdminRoutes({ initialPath: '/review', isSuperuser: false });
 
     expect(await screen.findByText('Admin access denied')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in to product app' })).toHaveAttribute('href', '/login');
     await waitFor(() => {
       expect(setToken).toHaveBeenCalledWith(null);
       expect(setUser).toHaveBeenCalledWith(null);

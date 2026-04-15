@@ -127,7 +127,7 @@ export const drawerSections: DrawerSection[] = [
     key: 'top',
     label: null,
     items: [
-      { kind: 'link', id: 'dashboard', label: 'Dashboard', path: '/', icon: 'dashboard' },
+      { kind: 'link', id: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
     ],
   },
   {

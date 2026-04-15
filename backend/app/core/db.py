@@ -56,6 +56,10 @@ OBSOLETE_TABLES = (
     "resumes",
     "cover_letters",
 )
+# Baldin's crawler scheduler (`app.crawler_scheduler._SCHEDULER_ADVISORY_LOCK_ID`)
+# already uses advisory lock 64127831, so Alembic startup takes the adjacent
+# 64127832 key to keep those two coordination locks predictable and collision-free.
+ALEMBIC_MIGRATION_ADVISORY_LOCK_ID = 64127832
 
 # Determine the appropriate SQLAlchemy database URI based on the environment
 if conf.settings.ENVIRONMENT == "PYTEST":
@@ -544,6 +548,21 @@ def run_alembic_migrations() -> None:
     console_log.info("Alembic migrations applied successfully.")
 
 
+async def _run_alembic_migrations_with_advisory_lock() -> None:
+    async with async_engine.connect() as conn:
+        await conn.execute(
+            text("SELECT pg_advisory_lock(:lock_id)"),
+            {"lock_id": ALEMBIC_MIGRATION_ADVISORY_LOCK_ID},
+        )
+        try:
+            await asyncio.to_thread(run_alembic_migrations)
+        finally:
+            await conn.execute(
+                text("SELECT pg_advisory_unlock(:lock_id)"),
+                {"lock_id": ALEMBIC_MIGRATION_ADVISORY_LOCK_ID},
+            )
+
+
 def _legacy_bootstrap_requested() -> bool:
     requested = os.environ.get("LEGACY_BOOTSTRAP", "") == "1"
     if not requested:
@@ -588,7 +607,7 @@ async def create_db_and_tables() -> None:
 
     async def _migrate_schema() -> None:
         await _stamp_existing_schema_if_needed()
-        await asyncio.to_thread(run_alembic_migrations)
+        await _run_alembic_migrations_with_advisory_lock()
 
     try:
         if conf.settings.ENVIRONMENT == "PYTEST":

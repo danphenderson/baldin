@@ -4,7 +4,8 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from typing import Any
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from fastapi_users.password import PasswordHelper
@@ -128,6 +129,32 @@ async def _index_names(table_name: str) -> set[str]:
             {"table_name": table_name},
         )
         return {row[0] for row in result.all()}
+
+
+class _LockRecordingConnection:
+    def __init__(self, executed: list[tuple[str, dict[str, Any] | None]]) -> None:
+        self._executed = executed
+
+    async def execute(self, statement, params: dict[str, Any] | None = None) -> None:
+        """Record the advisory-lock SQL text and params instead of hitting a DB."""
+        self._executed.append((getattr(statement, "text", str(statement)), params))
+
+
+def _fake_connect_factory(
+    executed: list[tuple[str, dict[str, Any] | None]],
+) -> Callable[[], Any]:
+    """Build an async connect() stand-in that yields a recording connection."""
+
+    @asynccontextmanager
+    async def fake_connect():
+        yield _LockRecordingConnection(executed)
+
+    return fake_connect
+
+
+async def _run_sync_in_fake_to_thread(fn, *args: object, **kwargs: object) -> Any:
+    """Test helper that runs a to_thread target inline and returns its result."""
+    return fn(*args, **kwargs)
 
 
 async def test_create_db_and_tables_rejects_existing_schema_without_alembic_version(
@@ -367,6 +394,80 @@ async def test_create_db_and_tables_ignores_legacy_bootstrap_outside_local_env(
 
     stamp_mock.assert_awaited_once()
     migrate_mock.assert_awaited_once()
+
+
+async def test_create_db_and_tables_serializes_alembic_migrations_with_advisory_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stamp_mock = AsyncMock(return_value=None)
+    executed: list[tuple[str, dict[str, Any] | None]] = []
+
+    run_alembic_mock = Mock()
+
+    def run_alembic() -> None:
+        run_alembic_mock()
+
+    monkeypatch.delenv("LEGACY_BOOTSTRAP", raising=False)
+    monkeypatch.setattr(db_module.conf.settings, "ENVIRONMENT", "PROD")
+    monkeypatch.setattr(db_module, "_stamp_existing_schema_if_needed", stamp_mock)
+    monkeypatch.setattr(db_module.asyncio, "to_thread", _run_sync_in_fake_to_thread)
+    monkeypatch.setattr(db_module, "run_alembic_migrations", run_alembic)
+    monkeypatch.setattr(
+        db_module,
+        "async_engine",
+        SimpleNamespace(connect=_fake_connect_factory(executed)),
+    )
+
+    await create_db_and_tables()
+
+    stamp_mock.assert_awaited_once()
+    run_alembic_mock.assert_called_once_with()
+    assert executed == [
+        (
+            "SELECT pg_advisory_lock(:lock_id)",
+            {"lock_id": db_module.ALEMBIC_MIGRATION_ADVISORY_LOCK_ID},
+        ),
+        (
+            "SELECT pg_advisory_unlock(:lock_id)",
+            {"lock_id": db_module.ALEMBIC_MIGRATION_ADVISORY_LOCK_ID},
+        ),
+    ]
+
+
+async def test_create_db_and_tables_releases_advisory_lock_on_migration_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stamp_mock = AsyncMock(return_value=None)
+    executed: list[tuple[str, dict[str, Any] | None]] = []
+
+    def run_alembic() -> None:
+        raise RuntimeError("boom")
+
+    monkeypatch.delenv("LEGACY_BOOTSTRAP", raising=False)
+    monkeypatch.setattr(db_module.conf.settings, "ENVIRONMENT", "PROD")
+    monkeypatch.setattr(db_module, "_stamp_existing_schema_if_needed", stamp_mock)
+    monkeypatch.setattr(db_module.asyncio, "to_thread", _run_sync_in_fake_to_thread)
+    monkeypatch.setattr(db_module, "run_alembic_migrations", run_alembic)
+    monkeypatch.setattr(
+        db_module,
+        "async_engine",
+        SimpleNamespace(connect=_fake_connect_factory(executed)),
+    )
+
+    with pytest.raises(RuntimeError, match="boom"):
+        await create_db_and_tables()
+
+    stamp_mock.assert_awaited_once()
+    assert executed == [
+        (
+            "SELECT pg_advisory_lock(:lock_id)",
+            {"lock_id": db_module.ALEMBIC_MIGRATION_ADVISORY_LOCK_ID},
+        ),
+        (
+            "SELECT pg_advisory_unlock(:lock_id)",
+            {"lock_id": db_module.ALEMBIC_MIGRATION_ADVISORY_LOCK_ID},
+        ),
+    ]
 
 
 async def test_create_db_and_tables_repairs_string_backed_enum_columns_with_legacy_bootstrap(

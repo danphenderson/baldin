@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import String, and_, func, or_, select
+from sqlalchemy import String, and_, cast, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app import models, schemas
@@ -407,7 +407,7 @@ async def get_command_center_summary(
     # Status breakdown by stage + outcome
     stage_breakdown_q = (
         select(
-            func.lower(func.cast(models.Application.stage, String)),
+            func.lower(cast(models.Application.stage, String)),
             func.count(),
         )
         .where(models.Application.user_id == user.id)
@@ -420,7 +420,7 @@ async def get_command_center_summary(
     # Add outcome counts
     outcome_breakdown_q = (
         select(
-            func.lower(func.cast(models.Application.outcome, String)),
+            func.lower(cast(models.Application.outcome, String)),
             func.count(),
         )
         .where(

@@ -83,7 +83,9 @@ def upgrade() -> None:
     )
     op.add_column(
         "agent_runs",
-        sa.Column("suggested_edit", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column(
+            "suggested_edit", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
     )
 
     op.create_check_constraint(

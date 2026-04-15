@@ -20,15 +20,15 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 | `POST /api/v1/aspirations/match` | Complete — RAG-backed, lead-requirement extraction, 20+ tests |
 | Aspiration-aware lead ranking | Complete — `aspiration_alignment` on `RankedLeadEntry` |
 
-### Frontend — stabilization slice landed; flagship UI still pending
+### Frontend — flagship connected flow landed
 
 | Surface | Status |
 |---------|--------|
 | Aspirations pages (Roles, Companies tabs) | Complete — cards, form dialog, search |
-| Aspirations service adapter | Partial — CRUD plus typed suggest seam (`getAspirationSuggestions(token)`, `AspirationAdapter.suggest(kind)`); no UI wiring or explicit error-category normalization yet |
+| Aspirations service adapter | Complete — CRUD, typed suggest seam (`getAspirationSuggestions(token)`, `AspirationAdapter.suggest(kind)`), and explicit error-category normalization (D8) with `AspirationServiceError` |
 | Generated types for suggest + match | Complete in `schema.d.ts` |
-| Leads ranking | Partial — ranking works, alignment tooltip, 20-lead cap; flagship visual redesign still pending |
-| Application creation | Partial — intent button and duplicate guard exist; leads page now preloads applications and renders inline already-applied handoff, but ranking-context ready-state copy is still pending in the real page |
+| Leads ranking | Complete — redesigned ranking trigger, aspiration-fit copy, ranked state treatment, and aspiration gate behavior all ship in the real page |
+| Application creation | Complete — intent button, duplicate-safe preload, inline already-applied state, and ranking-context ready-state copy ship in the real leads page |
 
 ### Design System & Harness
 
@@ -43,21 +43,27 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 
 | Surface | Status |
 |---------|--------|
-| Aspirations in architecture docs | Partial — design-system and local-development docs updated for the stabilization slice; full flagship architecture writeup still pending |
-| API surface docs listing aspirations | Missing |
+| Aspirations in architecture docs | Complete — flagship flow, frontend boundaries, and service ownership are documented |
+| API surface docs listing aspirations | Complete — CRUD, suggest, and match routes are listed with their contract intent |
 
-## Progress Snapshot (2026-04-13)
+## Progress Snapshot (2026-04-14)
 
 | Story | Status | Notes |
 |-------|--------|-------|
+| S1 — Stabilize schema-v2 as the flagship branch | Complete | Aspirations + matcher pytest slices green, contract regeneration rerun, regenerated frontend `tsc --noEmit` and production build green, and `schema-v2` remains the declared flagship branch |
 | S2 — Fix design-system lint gate | Complete | `lint:theme` green; `chat-markdown` and `StatusChip.figma.ts` fixed; shared `primary` status tone added |
-| S5 — Wire suggest service method into the frontend | Partial | Typed suggest seam landed in `aspirations.ts`; explicit error-category normalization remains open |
+| S3 — Create the quarter plan document | Partial | Plan file is tracked, listed in `plans/README.md`, and cross-referenced to `plans/aspirations.md`; the remaining unchecked criterion is commit-level closeout |
+| S4 — Update docs to reflect aspirations as a real surface | Complete | Architecture, API, frontend-boundary docs, and docs sidebar all reflect aspirations as a shipped surface; docs build green |
+| S5 — Wire suggest service method into the frontend | Complete | Suggest seam, error-category normalization (D8), and full service test coverage landed |
+| S6 — Build suggestion-review UI on aspirations pages | Complete | `SuggestionReviewPanel` with accept-one, accept-all (D9), discard, error-category UX (D8), wired into roles and companies pages via `showSuggestions`; component tests cover all acceptance criteria |
 | S7 — Expand browser harness for aspirations captures | Complete | `figma-wave1` now covers aspirations `empty|loading|suggested|no-signal|rate-limited` across the supported roles and companies screens |
+| S8 — Redesign leads ranking presentation | Complete | CardShell tone shifts to `warning` for ranked leads; ranking context strip groups score chip + alignment text (D3); component tests cover ranked/unranked states and alignment rendering |
 | S9 — Expand browser harness for leads ranking captures | Complete | `figma-wave1` supports `unranked|ranked|disabled|error` leads captures |
-| S10 — Strengthen application-start handoff from leads | Partial | Preloaded applications map, duplicate-safe inline state, fallback backstop, and post-create map update landed; real-page ready-state copy still open |
-| S12 — Design three linked Figma flow moments | Complete | `Baldin-App-Screens` now has a dedicated `Flagship Flow Screens` page for aspirations, ranked leads, and apply-handoff state inventory; older captures remain isolated on `Baseline Captured Screens` |
+| S10 — Strengthen application-start handoff from leads | Complete | Preloaded applications map, duplicate-safe inline state, fallback backstop, post-create map update, and ranking-context-aware ready-state handoff copy (`buildReadyHandoff` with score-tiered messages) |
 | S11 — Expand browser harness for application-start captures | Complete | `figma-wave1` supports `ready|already-applied` apply captures |
-| S13 — Backfill docs, harness, and Figma references | Partial | Local-development, AGENTS, design-system catalog, plan references, and mapping inventory updated; broader flagship architecture/API docs still open |
+| S12 — Design three linked Figma flow moments | Complete | `Baldin-App-Screens` now has a dedicated `Flagship Flow Screens` page for aspirations, ranked leads, and apply-handoff state inventory; older captures remain isolated on `Baseline Captured Screens` |
+| S13 — Backfill docs, harness, and Figma references | Complete | Architecture, API, harness, access-model, and mapping-inventory references are all tracked in repo docs; docs build green |
+| S14 — Polish pass on flagship connected surfaces | Complete | All 7 lint:theme violations fixed; 377 tests pass; `tsc --noEmit` clean; production build green; no regressions |
 
 ## Decisions Log
 
@@ -89,10 +95,10 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** developer, **I want** the schema-v2 branch validated and declared as the active flagship working branch, **so that** all downstream work builds on a stable, reviewed foundation.
 
 **Acceptance criteria:**
-- [ ] Backend pytest aspirations + matcher slices green
-- [ ] `openapi.json` and `schema.d.ts` fresh via `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh`
-- [ ] `tsc --noEmit` and `npm run build` pass against regenerated types
-- [ ] Branch declared as the flagship working branch (merge to `main` deferred)
+- [x] Backend pytest aspirations + matcher slices green
+- [x] `openapi.json` and `schema.d.ts` fresh via `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh`
+- [x] `tsc --noEmit` and `npm run build` pass against regenerated types
+- [x] Branch declared as the flagship working branch (merge to `main` deferred)
 
 **Surfaces:** backend, contracts, frontend (type check only)
 **Dependencies:** none
@@ -121,8 +127,8 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 
 **Acceptance criteria:**
 - [ ] `plans/flagship-aspirations-to-apply.md` committed (this file)
-- [ ] `plans/README.md` updated to list it as active
-- [ ] `plans/aspirations.md` cross-referenced as prior art
+- [x] `plans/README.md` updated to list it as active
+- [x] `plans/aspirations.md` cross-referenced as prior art
 
 **Surfaces:** plans
 **Dependencies:** Story 1 (confirms baseline)
@@ -135,10 +141,10 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** developer or agent, **I want** architecture and API docs that describe aspirations CRUD, suggest, match, and ranking integration.
 
 **Acceptance criteria:**
-- [ ] New or expanded architecture doc under `docs/docs/` describes aspirations model, endpoints, and ranking integration
-- [ ] `docs/sidebars.ts` surfaces the new page
-- [ ] Frontend architecture doc expands beyond routing-table mention
-- [ ] `docs build` passes
+- [x] New or expanded architecture doc under `docs/docs/` describes aspirations model, endpoints, and ranking integration
+- [x] `docs/sidebars.ts` surfaces the new page
+- [x] Frontend architecture doc expands beyond routing-table mention
+- [x] `docs build` passes
 
 **Surfaces:** docs
 **Dependencies:** Story 1
@@ -153,10 +159,10 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **Acceptance criteria:**
 - [x] `getAspirationSuggestions(token)` added to `aspirations.ts` returning `AspirationSuggestionDraft[]`
 - [x] `AspirationAdapter.suggest(kind)` added and filters drafts client-side to the active kind
-- [ ] Service layer normalizes suggest failures into explicit frontend categories per D8: `no_signal`, `rate_limited`, `ai_disabled`, `network`, `unknown`
-- [ ] `400` from `/aspirations/suggest` maps to `no_signal` only when the backend detail is the existing no-usable-profile message; other `400` responses fall back to `unknown`
+- [x] Service layer normalizes suggest failures into explicit frontend categories per D8: `no_signal`, `rate_limited`, `ai_disabled`, `network`, `unknown`
+- [x] `400` from `/aspirations/suggest` maps to `no_signal` only when the backend detail is the existing no-usable-profile message; other `400` responses fall back to `unknown`
 - [x] Service tests cover success with drafts, in-memory default empty suggestions, and adapter kind filtering
-- [ ] Service tests cover `400` no-signal, `429`, `503`, and network failure
+- [x] Service tests cover `400` no-signal, `429`, `503`, and network failure
 - [x] No UI wiring — service layer only
 
 **Surfaces:** frontend
@@ -170,28 +176,28 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** job seeker on the aspirations tab, **I want** to trigger profile-based suggestions, review them, and accept or discard each one.
 
 **Acceptance criteria:**
-- [ ] "Suggest from profile" button; fetch is user-triggered, not automatic
-- [ ] Drafts render as reviewable cards filtered to active tab kind
-- [ ] "Accept all" accepts all suggestions of the active kind (per-tab bulk accept — D2)
-- [ ] Accept-one persists through the existing create-aspiration route
-- [ ] Discarded suggestions removed from local draft list only
-- [ ] No-signal response shows actionable guidance to improve profile data
-- [ ] Loading state visible during suggestion fetch
-- [ ] Fetch error handling is explicit and stable:
+- [x] "Suggest from profile" button; fetch is user-triggered, not automatic
+- [x] Drafts render as reviewable cards filtered to active tab kind
+- [x] "Accept all" accepts all suggestions of the active kind (per-tab bulk accept — D2)
+- [x] Accept-one persists through the existing create-aspiration route
+- [x] Discarded suggestions removed from local draft list only
+- [x] No-signal response shows actionable guidance to improve profile data
+- [x] Loading state visible during suggestion fetch
+- [x] Fetch error handling is explicit and stable:
   - `400 no_signal` clears any stale draft list for the active kind and renders inline profile-improvement guidance
   - `429 rate_limited` keeps existing drafts intact, renders retryable inline feedback, and does not start any create calls
   - `503 ai_disabled` keeps existing drafts intact and renders "AI suggestions unavailable" guidance without implying profile edits will help
   - `network` and `unknown` errors keep existing drafts intact and render a generic retryable failure state
-- [ ] Accept-one semantics are explicit:
+- [x] Accept-one semantics are explicit:
   - `201` removes the accepted draft and refreshes persisted aspirations
   - `409 duplicate` removes the draft as already satisfied, refreshes persisted aspirations, and shows non-destructive feedback
   - `429`, `503`, `network`, and unknown errors keep the draft in place and show retryable feedback
-- [ ] Accept-all semantics follow D9 exactly:
+- [x] Accept-all semantics follow D9 exactly:
   - process active-kind drafts sequentially in rendered order
   - remove successes and `409` duplicates from the draft list as they complete
   - stop on the first retryable failure and leave the failed draft plus all remaining active-kind drafts visible and unchanged
   - show a completion summary with counts for created, already-existing, and remaining drafts
-- [ ] Component tests: accept-one success, accept-one duplicate, accept-all all-success, accept-all partial failure stop, discard, no-signal, rate-limited, AI-disabled, loading
+- [x] Component tests: accept-one success, accept-one duplicate, accept-all all-success, accept-all partial failure stop, discard, no-signal, rate-limited, AI-disabled, loading
 
 **Surfaces:** frontend
 **Dependencies:** Story 5
@@ -220,13 +226,13 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** job seeker on the leads page, **I want** ranking results to surface aspiration-alignment as first-class context.
 
 **Acceptance criteria:**
-- [ ] Ranking action is an explicit trigger (clear button/control)
-- [ ] Ranked state visually distinct from unranked on lead cards
-- [ ] `aspiration_alignment` displayed alongside relevance score as a secondary line (D3)
-- [ ] Relevance score and aspiration fit presented together coherently
-- [ ] Current aspiration gate remains in place per D11: users without aspirations still see the disabled ranking state and a clearer prompt to add aspirations first
-- [ ] Ranking redesign does not introduce generic relevance-only ranking for non-aspirated users this quarter
-- [ ] Component tests: ranked/unranked states, alignment rendering
+- [x] Ranking action is an explicit trigger (clear button/control)
+- [x] Ranked state visually distinct from unranked on lead cards
+- [x] `aspiration_alignment` displayed alongside relevance score as a secondary line (D3)
+- [x] Relevance score and aspiration fit presented together coherently
+- [x] Current aspiration gate remains in place per D11: users without aspirations still see the disabled ranking state and a clearer prompt to add aspirations first
+- [x] Ranking redesign does not introduce generic relevance-only ranking for non-aspirated users this quarter
+- [x] Component tests: ranked/unranked states, alignment rendering
 
 **Surfaces:** frontend
 **Dependencies:** Stories 1, 12
@@ -259,7 +265,7 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 - [x] Inline already-applied state is computed from the derived applications map, not from a new backend field
 - [x] Existing duplicate guard remains as a runtime backstop on click; the preloaded map is the primary render path and is refreshed or updated after successful application creation
 - [x] Inline state shows the existing application stage/outcome label for matching leads and disables the creation CTA when an application already exists
-- [ ] Handoff copy references ranking context (e.g., "High aspiration fit — ready to apply?") in the real leads page
+- [x] Handoff copy references ranking context (e.g., "High aspiration fit — ready to apply?") in the real leads page
 - [x] No application route contract changes (backend untouched)
 - [x] Component tests: inline existing-application state from preloaded map, duplicate guard UX, and post-create map update
 
@@ -310,7 +316,7 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** maintainer, **I want** docs and harness backfilled for the shipped flow.
 
 **Acceptance criteria:**
-- [ ] Architecture docs updated for the full flagship flow
+- [x] Architecture docs updated for the full flagship flow
 - [x] Design-system docs updated only where flagship changed the shared inventory
 - [x] Harness query states documented in `local-development.md` and covered in browser verification smoke tests
 - [x] Repo docs record the current Figma access model, including the browser-history-review requirement and Code Connect seat limits
@@ -329,10 +335,10 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** user, **I want** the three flow moments to feel polished and cohesive.
 
 **Acceptance criteria:**
-- [ ] Visual consistency (spacing, typography, chips, empty states)
-- [ ] Responsive behavior at common breakpoints
-- [ ] All gates green: `lint:theme`, `test`, `tsc --noEmit`, `build`
-- [ ] No regressions in non-flagship pages
+- [x] Visual consistency (spacing, typography, chips, empty states)
+- [x] Responsive behavior at common breakpoints
+- [x] All gates green: `lint:theme`, `test`, `tsc --noEmit`, `build`
+- [x] No regressions in non-flagship pages
 
 **Surfaces:** frontend
 **Dependencies:** Stories 6, 8, 10

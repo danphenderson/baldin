@@ -45,6 +45,7 @@ import {
   StatusChip,
   SurfaceCard as Card,
   SurfaceCardContent as CardContent,
+  monoFontFamily,
 } from '../design-system';
 import {
   DB_MANAGEMENT_PURGE_DOMAINS,
@@ -508,7 +509,7 @@ const DbManagementPage: React.FC = () => {
                                 },
                               }}
                             >
-                              <TableCell sx={{ fontFamily: 'monospace' }}>{table.table_name}</TableCell>
+                              <TableCell sx={{ fontFamily: monoFontFamily }}>{table.table_name}</TableCell>
                               <TableCell align="right">{table.column_count}</TableCell>
                               <TableCell align="right">{table.row_count.toLocaleString()}</TableCell>
                             </TableRow>
@@ -530,7 +531,7 @@ const DbManagementPage: React.FC = () => {
                         ) : tableDetail ? (
                           <>
                             <Stack direction="row" spacing={1} alignItems="center">
-                              <Typography variant="body1" fontWeight={700} sx={{ fontFamily: 'monospace' }}>
+                              <Typography variant="body1" fontWeight={700} sx={{ fontFamily: monoFontFamily }}>
                                 {tableDetail.table_name}
                               </Typography>
                               <StatusChip label={`${tableDetail.row_count.toLocaleString()} rows`} color="info" />
@@ -547,7 +548,7 @@ const DbManagementPage: React.FC = () => {
                               <TableBody>
                                 {tableDetail.columns?.map((column) => (
                                   <TableRow key={column.name}>
-                                    <TableCell sx={{ fontFamily: 'monospace' }}>{column.name}</TableCell>
+                                    <TableCell sx={{ fontFamily: monoFontFamily }}>{column.name}</TableCell>
                                     <TableCell>{column.data_type}</TableCell>
                                     <TableCell>{column.is_nullable ? 'Yes' : 'No'}</TableCell>
                                   </TableRow>

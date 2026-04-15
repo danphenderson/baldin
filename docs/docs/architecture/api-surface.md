@@ -5,7 +5,7 @@ title: Browse API Routes
 description: Browse FastAPI route groups, access rules, and contract boundaries.
 ---
 
-<!-- last-verified: 2026-04-12 -->
+<!-- last-verified: 2026-04-14 -->
 
 # Browse API Routes
 

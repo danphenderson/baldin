@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
 import {
+  Alert,
   Avatar,
   Box,
   Button,
@@ -7,14 +8,13 @@ import {
   Collapse,
   DialogContentText,
   IconButton,
-  Snackbar,
-  Alert,
   Stack,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
 import {
+  LoadingState,
   SurfaceCard as Card,
   SurfaceCardContent as CardContent,
   StatusChip as Chip,
@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
+import { useNotification } from '../../context/notification-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import { avatarUrl } from '../../service/users';
 import {
@@ -81,13 +82,7 @@ const ConversationDetailPage: React.FC = () => {
 
   const [showParticipants, setShowParticipants] = useState(false);
 
-  const [snack, setSnack] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success',
-  });
-
-  const notify = useCallback((message: string, severity: 'success' | 'error' = 'success') => {
-    setSnack({ open: true, message, severity });
-  }, []);
+  const notify = useNotification();
 
   const currentUserId = user?.id;
 
@@ -136,7 +131,7 @@ const ConversationDetailPage: React.FC = () => {
       });
       setNewMessage('');
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to send message', 'error');
+      notify.error(e instanceof Error ? e.message : 'Failed to send message');
     }
     setSending(false);
   };
@@ -162,7 +157,7 @@ const ConversationDetailPage: React.FC = () => {
       setEditingId(null);
       setEditContent('');
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to edit message', 'error');
+      notify.error(e instanceof Error ? e.message : 'Failed to edit message');
     }
   };
 
@@ -179,9 +174,9 @@ const ConversationDetailPage: React.FC = () => {
         };
       });
       setDeleteTarget(null);
-      notify('Message deleted');
+      notify.success('Message deleted');
     } catch (e: unknown) {
-      notify(e instanceof Error ? e.message : 'Failed to delete message', 'error');
+      notify.error(e instanceof Error ? e.message : 'Failed to delete message');
     }
     setDeleting(false);
   };
@@ -189,7 +184,7 @@ const ConversationDetailPage: React.FC = () => {
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-        <CircularProgress />
+        <LoadingState kind="list" />
       </Box>
     );
   }
@@ -435,22 +430,6 @@ const ConversationDetailPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={4000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnack((s) => ({ ...s, open: false }))}
-          severity={snack.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snack.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

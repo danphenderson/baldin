@@ -68,7 +68,8 @@ import {
 /* ------------------------------------------------------------------ */
 
 type BoardStatus = string;
-type SurfaceTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
+
+import { stageTone } from './stage-tone';
 
 const BOARD_EMPTY_HINTS: Record<string, string> = {
   registered: 'Registered applications stay here until you are ready to work them in the pipeline.',
@@ -88,25 +89,6 @@ function laneId(status: BoardStatus): string {
 function statusFromLaneId(id: string | null | undefined): BoardStatus | null {
   if (!id || !id.startsWith('lane:')) return null;
   return id.slice('lane:'.length) as BoardStatus;
-}
-
-function stageTone(status: BoardStatus): SurfaceTone {
-  switch (status) {
-    case 'applied':
-      return 'primary';
-    case 'screening':
-      return 'info';
-    case 'interview':
-      return 'warning';
-    case 'offer':
-      return 'success';
-    case 'rejected':
-      return 'danger';
-    case 'registered':
-    case 'withdrawn':
-    default:
-      return 'neutral';
-  }
 }
 
 interface AppCardProps {

@@ -53,7 +53,8 @@ import {
 import { useStageColumns,
   relativeDate,
   type Column } from './use-applications';
-import { PageTitle,
+import { InlineFeedback,
+  PageTitle,
   StatusChip as Chip,
   SurfaceDialog as Dialog,
   SurfaceDialogTitle as DialogTitle,
@@ -508,7 +509,7 @@ const ApplicationDetailPage: React.FC = () => {
   if (error && !app) {
     return (
       <Box sx={{ py: 2 }}>
-        <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+        <InlineFeedback tone="error" sx={{ mb: 3 }}>{error}</InlineFeedback>
         <Button variant="outlined" startIcon={<BackIcon />} onClick={() => navigate('/applications')}>
           Back to Applications
         </Button>

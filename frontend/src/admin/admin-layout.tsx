@@ -105,7 +105,7 @@ const AdminLayout: React.FC = () => {
               sx={{
                 mb: 0.75,
                 alignItems: 'flex-start',
-                borderRadius: 2,
+                borderRadius: '8px',
                 border: `1px solid ${active ? alpha(theme.palette.primary.main, 0.28) : 'transparent'}`,
                 backgroundColor: active ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
               }}

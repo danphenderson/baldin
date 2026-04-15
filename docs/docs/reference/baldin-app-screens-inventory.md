@@ -33,6 +33,57 @@ Use [Baldin Library Buildout Ledger](./baldin-library-buildout-ledger.md) only f
 - `2026-04-14`: admin login and access-denied states were added to the active app-screen inventory from repo-truth review. The login flow reuses the shipped auth shell, while the access-denied state remains feature-owned inside the dedicated admin app, so this pass still does not open a new shared-surface migration lane.
 - `2026-04-14`: a live superuser browser session was attached to the dedicated Admin SPA, and the canonical privileged-route baselines were captured into `Baldin-App-Screens` at [node 184:4929](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=184-4929), [node 192:4929](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=192-4929), and [node 201:4929](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=201-4929) for `DB management workflow`, `Review queue workflow`, and `Crawlers workflow`.
 - Privileged workflow routes remain in scope, and this pass now anchors them with live superuser capture rather than leaving them tooling blocked.
+- `2026-04-14`: Figma-first cleanup pass on Wave 2 and Wave 3 pages. Wave 2 was already clean (12 canonical frames, no duplicates). Wave 3 had 3 duplicate auth frames (Login · Baseline at 231:1167, Login · MFA Challenge at 231:1185, Register · Baseline at 231:1202) that were exact copies of the canonical 229:xxxx versions. The duplicates were renamed with a `[Retired]` prefix and moved to a new `Retired Screens` page. No canonical frames were deleted or modified.
+- `2026-04-15`: S8 (Redesign leads ranking presentation for aspiration fit) design target created on the `Flagship Flow Screens` page at [node 257:6090](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=257-6090). Two design changes use existing Baldin Library components: CardShell tone shift (primary → warning) for ranked cards and a ranking context strip that groups score + alignment text (D3).
+
+## S8: Ranking Redesign Target
+
+Story 8 redesigns the leads ranking presentation to surface aspiration-alignment as first-class context on lead cards, per the flagship quarter roadmap. The target state lives on the [Flagship Flow Screens](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=257-6090) page with annotated side-by-side unranked vs ranked card comparison.
+
+### Gap Analysis
+
+| Acceptance criterion | Current state | Gap | Resolution |
+| --- | --- | --- | --- |
+| Ranking action is an explicit trigger | `LeadSearchBar` "Rank with aspirations" button + "Clear ranking" | None | Unchanged |
+| Ranked state visually distinct from unranked | All cards use `CardShell tone="primary"` | **GAP**: No card-level visual difference | CardShell `tone="warning"` for ranked cards (amber left-border accent) |
+| `aspiration_alignment` alongside score as a secondary line (D3) | Score in chip row (`Aspiration fit 9/10`), alignment as separate italic body2 below title | **GAP**: Score and alignment are in different visual zones | Ranking context strip groups both in a single visual unit |
+| Score and fit presented coherently | Same as D3 gap — separated | **GAP** | Same as D3 resolution |
+| Aspiration gate per D11 | Disabled state + guidance tooltip when no aspirations | None | Unchanged |
+| No generic ranking for non-aspirated users | `aspirationCount === 0` check gates ranking | None | Unchanged |
+| Component tests | Tests exist for card rendering | Frontend Agent scope | See handoff |
+
+### Design Changes
+
+**Change 1 — CardShell tone shift for ranked cards**
+
+- **From**: `<CardShell tone="primary">` for all leads
+- **To**: `<CardShell tone="warning">` for ranked leads, `tone="primary"` for unranked leads
+- **Visual effect**: Amber 3px left-border accent (warning at 0.52 alpha) vs cyan left-border (primary at 0.52 alpha)
+- **Library anchor**: CardShell COMPONENT_SET at [node 291:35](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh?node-id=291-35), Warning×Comfortable variant
+
+**Change 2 — Ranking context strip (D3 resolution)**
+
+Replace the separated "Aspiration fit X/10" chip from the top chip row and the italic alignment text from below the title with a single ranking context strip.
+
+**Strip layout** (between title and company/location metadata):
+
+```
+┌─ Ranking context strip ─────────────────────────────────────────────┐
+│  [★ 9/10]  Strong aspiration fit for leadership-focused product...  │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+- **Left**: StatusChip `tone="warning"` `emphasis="solid"` `size="small"` with Stars icon and `label="9/10"` — compact numeric score with star icon
+- **Right**: Body2 text, `color="text.secondary"`, italic, line-clamped to 2 lines — the `aspiration_alignment` message
+- **Container**: Stack `direction="row"` `spacing=1` `alignItems="flex-start"`, with `backgroundColor: alpha(theme.palette.warning.main, 0.06)`, `borderRadius: theme.baldin.radius.sm`, `px: 1.25, py: 1`
+- **Library anchor**: StatusChip COMPONENT_SET at [node 5:34](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh?node-id=5-34), Warning×Solid×Small variant
+
+**What is removed**:
+
+- The ranking StatusChip (`Aspiration fit X/10`) from the chip row in `lead-card.tsx` (lines ~112-119)
+- The ranking message Typography (italic body2 paragraph below the title) in `lead-card.tsx` (lines ~127-139)
+
+**What is unchanged**: Ranking trigger button/clear button, aspiration gate (D11), application handoff section, Following/Active/Joinable chips.
 
 ## Wave 1: Mandatory Harness-Backed Inventory
 
@@ -43,7 +94,7 @@ Use [Baldin Library Buildout Ledger](./baldin-library-buildout-ledger.md) only f
 | `Messages baseline` | `/network/messages` via `screen=messages` | `App-screen inventory` | Existing harness URL in `figma-wave1.tsx`; live browser review on `2026-04-14`; repo tie-back through `conversations-page.tsx` | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | Conversation-list baseline is live in the harness. Conversation detail remains Wave 2 inventory. |
 | `Aspirations roles matrix` | `/me/aspirations/roles`: `empty`, `seeded`, `loading`, `suggested`, `no-signal`, `rate-limited` | `App-screen inventory` | Harness state definitions in `figma-flagship-capture.tsx`; targeted Playwright smoke covers `empty`, `seeded`, and `suggested`; repo review confirms the full accepted state list | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | Matrix remains partially automated. `loading`, `no-signal`, and `rate-limited` are still direct-review states, not fully smoke-backed. |
 | `Aspirations companies matrix` | `/me/aspirations/companies`: `empty`, `seeded`, `loading`, `suggested`, `no-signal`, `rate-limited` | `App-screen inventory` | Harness state definitions in `figma-flagship-capture.tsx`; targeted Playwright smoke now covers `no-signal` and `rate-limited`; live browser review confirmed `no-signal` copy on `2026-04-14` | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | Matrix remains partially automated. `empty`, `seeded`, `loading`, and `suggested` are still direct-review states, not fully smoke-backed. |
-| `Leads matrix` | `/leads`: `unranked`, `ranked`, `disabled`, `error` | `App-screen inventory` | Existing harness URL plus targeted Playwright smoke coverage for all four states on `2026-04-14` | `Baldin-App-Screens` | `verified` | `screen-inventory only` | This is the strongest current harness-backed state set and remains the Wave 1 evidence anchor. |
+| `Leads matrix` | `/leads`: `unranked`, `ranked`, `disabled`, `error` | `App-screen inventory` | Existing harness URL plus targeted Playwright smoke coverage for all four states on `2026-04-14`; S8 redesign target frames at [node 257:6090](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=257-6090) | `Baldin-App-Screens` | `verified` | `screen-inventory only` | Wave 1 evidence anchor. S8 redesign target adds CardShell tone shift and ranking context strip for ranked cards. See [S8: Ranking Redesign Target](#s8-ranking-redesign-target). |
 | `Apply matrix` | `/apply`: `ready`, `already-applied` | `App-screen inventory` | Existing harness URL plus targeted Playwright smoke coverage for both states on `2026-04-14` | `Baldin-App-Screens` | `verified` | `screen-inventory only` | Ranked-lead to application handoff baseline is verified. |
 
 ## Wave 2: Adjacent Shipped-Flow Direct Review
@@ -119,6 +170,8 @@ Use exactly one closeout bucket per item:
 
 | Owner | Immediate responsibility | Exit condition |
 | --- | --- | --- |
+| `baldin_frontend` | Implement S8 ranking redesign in `lead-card.tsx` and `leads.tsx` per the [S8: Ranking Redesign Target](#s8-ranking-redesign-target) spec: (1) CardShell tone shift to `warning` for ranked cards, (2) ranking context strip replacing the separated chip + italic text, and (3) component tests for ranked/unranked states and alignment rendering. | S8 acceptance criteria pass: ranked cards have amber tone, score and alignment text are grouped in a single strip, chip row no longer has "Aspiration fit X/10", and component tests cover ranked/unranked states. |
+| `baldin_frontend` | After S8 implementation, update `figma-flagship-capture.tsx` harness to match the new ranking visual treatment so post-implementation captures reflect the redesign. | Harness ranked state renders the new CardShell tone and ranking context strip layout. |
 | `baldin_frontend` | Port the reviewed product flows into `Baldin-App-Screens`, starting with all Wave 1 surfaces, then Wave 2 direct-review surfaces, then the admin login and access states, then the non-blocked Wave 3 auth and extractor surfaces. | Every `screen-inventory only` item, including the admin SPA entry states, has current Figma coverage with evidence tied back to this ledger. |
 | `baldin_full_stack_architect` | Review completed Figma surfaces against [Design System Catalog](./design-system-catalog.md) and [Design System Governance](../engineering/design-system-governance.md), then decide which surfaces stay feature-owned and which become closeout promotion candidates. | The closeout list cleanly separates `ready for repo promotion`, `library-only for now`, `screen-inventory only`, and `tooling blocked but design-valid`. |
 | `baldin_frontend` | Build or refine `Baldin-Library` only from promoted shared surfaces with clear cross-route evidence. | Every promoted Figma surface has a neutral component contract, stable semantics, and more than one shipped consumer. |
@@ -137,6 +190,7 @@ Use exactly one closeout bucket per item:
 
 4. Run a UX polish pass after the Figma port and the initial library buildout are coherent.
    Focus on consistency, hierarchy, empty/loading/error behavior, auth friction, message and application detail clarity, and privileged admin workflow usability. Treat polish as a Figma-first pass before code integration.
+   The initial polish findings are now tracked in [Baldin App Screens Polish Ledger](./baldin-app-screens-polish-ledger.md).
 
 5. Integrate the promoted design system into the repo as React TypeScript code.
    Implement only the surfaces that passed promotion review in `frontend/src/design-system/*`, update the catalog and governance docs in the same PR, add the smallest useful tests, then migrate the consuming route families.

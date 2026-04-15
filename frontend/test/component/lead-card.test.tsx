@@ -127,7 +127,7 @@ describe('LeadCard', () => {
     expect(screen.getByText('Joinable')).toBeInTheDocument();
   });
 
-  it('renders aspiration fit score and alignment as inline text', () => {
+  it('renders ranking context strip with score chip and alignment text', () => {
     renderLeadCard({
       ranking: {
         relevanceScore: 8,
@@ -135,10 +135,33 @@ describe('LeadCard', () => {
       },
     });
 
-    expect(screen.getByText('Aspiration fit 8/10')).toBeInTheDocument();
+    const strip = screen.getByTestId('lead-card-ranking-strip');
+    expect(strip).toBeInTheDocument();
+    expect(screen.getByText('8/10')).toBeInTheDocument();
     expect(
       screen.getByText("Strong match for the user's aspiration to move into senior design leadership roles."),
     ).toBeInTheDocument();
+    // The old "Aspiration fit X/10" chip in the chip row should not exist
+    expect(screen.queryByText('Aspiration fit 8/10')).not.toBeInTheDocument();
+  });
+
+  it('does not render ranking strip when ranking is absent', () => {
+    renderLeadCard({ ranking: null });
+
+    expect(screen.queryByTestId('lead-card-ranking-strip')).not.toBeInTheDocument();
+  });
+
+  it('renders score-only ranking strip when alignment message is empty', () => {
+    renderLeadCard({
+      ranking: {
+        relevanceScore: 5,
+        message: '',
+      },
+    });
+
+    const strip = screen.getByTestId('lead-card-ranking-strip');
+    expect(strip).toBeInTheDocument();
+    expect(screen.getByText('5/10')).toBeInTheDocument();
   });
 
   it('renders ready-to-apply handoff copy and keeps the create action enabled', () => {

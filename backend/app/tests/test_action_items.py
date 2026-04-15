@@ -45,6 +45,41 @@ async def _create_lead_and_application(
         return application.id
 
 
+async def _create_conversation_for_user(user_id: UUID) -> UUID:
+    """Create a direct conversation with one unread peer message."""
+    _, peer_id = await _create_user("ai-conversation-peer-pass")
+
+    async with session_context() as session:
+        conversation = models.Conversation(
+            type="direct",
+            created_by_user_id=user_id,
+        )
+        session.add(conversation)
+        await session.flush()
+
+        session.add_all(
+            [
+                models.ConversationParticipant(
+                    conversation_id=conversation.id,
+                    user_id=user_id,
+                    role="member",
+                ),
+                models.ConversationParticipant(
+                    conversation_id=conversation.id,
+                    user_id=peer_id,
+                    role="member",
+                ),
+                models.Message(
+                    conversation_id=conversation.id,
+                    author_user_id=peer_id,
+                    content="Checking in from the hiring team.",
+                ),
+            ]
+        )
+        await session.commit()
+        return conversation.id
+
+
 def _action_payload(**overrides) -> dict:
     base = {
         "title": "Follow up with recruiter",
@@ -138,6 +173,74 @@ async def test_list_action_items() -> None:
     assert body["total"] == 3
     assert body["page"] == 1
     assert body["page_size"] == 50
+
+
+async def test_list_action_items_includes_application_details_without_lazy_load_errors() -> (
+    None
+):
+    """GET /action-items/ serializes linked application details for dashboard cards."""
+    async with _client() as client:
+        email, uid = await _create_user("ai-list-linked-pass")
+        headers = await _auth_headers(client, email, "ai-list-linked-pass")
+        app_id = await _create_lead_and_application(uid)
+
+        create_resp = await client.post(
+            "/api/v1/action-items/",
+            json=_action_payload(
+                title="Review active application",
+                application_id=str(app_id),
+            ),
+            headers=headers,
+        )
+        assert create_resp.status_code == 201
+
+        response = await client.get("/api/v1/action-items/", headers=headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    linked_item = next(
+        item for item in body["items"] if item["application_id"] == str(app_id)
+    )
+    assert linked_item["application"]["id"] == str(app_id)
+    assert (
+        linked_item["application"]["lead"]["id"]
+        == linked_item["application"]["lead_id"]
+    )
+    assert linked_item["application"]["user"]["id"] == str(uid)
+    assert isinstance(linked_item["application"]["status_history"], list)
+
+
+async def test_get_action_item_includes_linked_conversation_details() -> None:
+    """GET /action-items/{id} includes route-shaped linked conversation data."""
+    async with _client() as client:
+        email, uid = await _create_user("ai-conversation-detail-pass")
+        headers = await _auth_headers(client, email, "ai-conversation-detail-pass")
+        conversation_id = await _create_conversation_for_user(uid)
+
+        create_resp = await client.post(
+            "/api/v1/action-items/",
+            json=_action_payload(
+                title="Reply to recruiter",
+                kind="send_message",
+                conversation_id=str(conversation_id),
+            ),
+            headers=headers,
+        )
+        assert create_resp.status_code == 201
+        item_id = create_resp.json()["id"]
+
+        response = await client.get(f"/api/v1/action-items/{item_id}", headers=headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["conversation_id"] == str(conversation_id)
+    assert body["conversation"]["id"] == str(conversation_id)
+    assert body["conversation"]["participants"][0]["display_name"]
+    assert (
+        body["conversation"]["last_message"]["content"]
+        == "Checking in from the hiring team."
+    )
+    assert body["conversation"]["unread_count"] == 1
 
 
 async def test_list_action_items_filter_by_status() -> None:

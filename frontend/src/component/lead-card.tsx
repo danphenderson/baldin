@@ -98,27 +98,20 @@ const LeadCard: React.FC<LeadCardProps> = ({
     ? `Existing application for ${lead.title || 'this lead'}`
     : `Create application for ${lead.title || 'this lead'}`;
 
+  const cardTone = ranking ? 'warning' : 'primary';
+
   return (
     <CardShell
       aria-label={`Open lead ${lead.title || 'Untitled Position'}`}
       onClick={() => onOpen(lead)}
       interactive
-      tone="primary"
+      tone={cardTone}
     >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
           <Box sx={{ minWidth: 0, flexGrow: 1 }}>
             <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
               {lead.viewer_is_registered && <StatusChip size="small" tone="success" label="Following" />}
               {isActive && <StatusChip size="small" tone="info" label="Active" />}
-              {ranking && (
-                <StatusChip
-                  size="small"
-                  emphasis="outline"
-                  tone="warning"
-                  icon={<AspirationIcon sx={{ fontSize: 14 }} />}
-                  label={`Aspiration fit ${ranking.relevanceScore}/10`}
-                />
-              )}
               {!lead.viewer_is_registered && lead.viewer_permissions?.can_register && (
                 <StatusChip
                   size="small"
@@ -143,22 +136,45 @@ const LeadCard: React.FC<LeadCardProps> = ({
             >
               {lead.title || 'Untitled Position'}
             </Typography>
-            {ranking?.message && (
-              <Typography
-                variant="body2"
-                color="text.secondary"
+            {ranking && (
+              <Stack
+                data-testid="lead-card-ranking-strip"
+                direction="row"
+                spacing={1}
+                alignItems="flex-start"
                 sx={{
-                  mt: 0.5,
-                  lineHeight: 1.45,
-                  fontStyle: 'italic',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
+                  mt: 1,
+                  px: 1.25,
+                  py: 1,
+                  borderRadius: toRadiusPx(theme.baldin?.radius.sm ?? radiusTokens.sm),
+                  backgroundColor: alpha(theme.palette.warning.main, theme.palette.mode === 'dark' ? 0.12 : 0.06),
                 }}
               >
-                {ranking.message}
-              </Typography>
+                <StatusChip
+                  size="small"
+                  emphasis="solid"
+                  tone="warning"
+                  icon={<AspirationIcon sx={{ fontSize: 14 }} />}
+                  label={`${ranking.relevanceScore}/10`}
+                />
+                {ranking.message && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      lineHeight: 1.45,
+                      fontStyle: 'italic',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      pt: 0.25,
+                    }}
+                  >
+                    {ranking.message}
+                  </Typography>
+                )}
+              </Stack>
             )}
           </Box>
           <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0, ml: 0.5 }} onClick={stopCardClick}>

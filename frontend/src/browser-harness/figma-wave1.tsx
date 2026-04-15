@@ -6,7 +6,7 @@ import '@fontsource/space-grotesk/500.css';
 import '@fontsource/space-grotesk/600.css';
 import '@fontsource/space-grotesk/700.css';
 
-import { Box, Chip, Container, Paper, Stack, Typography } from '@mui/material';
+import { Box, Container, Paper, Stack, Typography } from '@mui/material';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -14,6 +14,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { NotificationProvider } from '../context/notification-context';
 import { UserContext } from '../context/user-context';
 import { THEME_STORAGE_KEY, type ThemeMode } from '../design-system/theme';
+import { StatusChip } from '../design-system';
 import AppLayout from '../layout/app-layout';
 import ApplicationsQueuePage from '../page/applications/applications-queue-page';
 import ConversationsPage from '../page/messages/conversations-page';
@@ -265,7 +266,7 @@ function UnsupportedHarnessPage({
                   {config.states.length > 0 ? (
                     <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                       {config.states.map((state) => (
-                        <Chip key={`${config.screen}-${state}`} label={state} size="small" variant="outlined" />
+                        <StatusChip key={`${config.screen}-${state}`} label={state} size="small" emphasis="outline" />
                       ))}
                     </Stack>
                   ) : (

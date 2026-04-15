@@ -5,7 +5,7 @@ title: Aspirations to Apply Flow
 description: Architecture of the flagship aspirations → ranked leads → application-start flow.
 ---
 
-<!-- last-verified: 2026-04-13 -->
+<!-- last-verified: 2026-04-14 -->
 
 # Aspirations to Apply Flow
 

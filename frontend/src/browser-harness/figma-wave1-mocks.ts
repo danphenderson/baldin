@@ -409,10 +409,10 @@ const routeHandlers: Array<[(url: URL, method: string) => boolean, MockRouteHand
       return new Response(null, { status: 204 });
     },
   ],
-  [(url, method) => method === 'GET' && url.pathname === '/conversations/', () => jsonResponse(paginated(conversationsState))],
-  [(url, method) => method === 'GET' && url.pathname === '/conversations/unread', () => jsonResponse({ total_unread: 4 })],
+  [(url, method) => method === 'GET' && url.pathname === '/api/v1/conversations/', () => jsonResponse(paginated(conversationsState))],
+  [(url, method) => method === 'GET' && url.pathname === '/api/v1/conversations/unread', () => jsonResponse({ total_unread: 4 })],
   [
-    (url, method) => method === 'POST' && url.pathname === '/conversations/',
+    (url, method) => method === 'POST' && url.pathname === '/api/v1/conversations/',
     async (request: Request) => {
       const payload = await request.json().catch(() => ({}));
       const nextConversation = {

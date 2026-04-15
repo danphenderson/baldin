@@ -108,6 +108,37 @@ For the primitive and pattern inventory tables below, `Current known consumers` 
 | `SectionCard` | `frontend/src/design-system/patterns/sections/section-card.tsx` | Thin `CardShell` composition for section layouts with shared header framing | `page/dashboard.tsx`<br />`page/profile/components/ProfileSection.tsx` |
 | `AuthPanel` | `frontend/src/design-system/patterns/auth/auth-panel.tsx` | Shared centered auth shell with icon, title, description, content, and footer slots | `page/login.tsx`<br />`page/register.tsx` |
 
+## Patterns & Conventions
+
+Cross-page conventions that govern how primitives and patterns are chosen. New pages must follow these; legacy pages should migrate when touched.
+
+### Page Heading Convention
+
+| Level | Mechanism | When to use |
+| --- | --- | --- |
+| App-bar title | `usePageToolbarHeader()` from `toolbar-header-context.ts` | Top-level collection pages (applications queue, board, leads, messages, settings). No in-content heading. |
+| In-content heading | `PageTitle` | Detail and landing pages (application detail, dashboard). |
+| Sub-section heading | `SectionHeader` | Subsections within a page (e.g., conversations list sub-heading below toolbar header). |
+
+These three treatments are not interchangeable. Pick the correct level for new pages.
+
+### Error & Notification Feedback
+
+| Situation | Use | Source |
+| --- | --- | --- |
+| Transient action feedback (save succeeded, delete confirmed) | `useNotification()` | `@/context/notification-context` |
+| Persistent inline feedback (validation errors, API failures, info banners) | `InlineFeedback` | `@/design-system` |
+| Raw MUI `<Alert>` | **Legacy.** Migrate to `InlineFeedback` when the file is touched. | ~80+ usages remain across ~15 pages. |
+
+### Dialog Convention
+
+| Surface | Role |
+| --- | --- |
+| `SurfaceDialog` (+ `SurfaceDialogTitle`, `SurfaceDialogContent`, `SurfaceDialogActions`) | Canonical dialog shell for all new dialogs. |
+| `FormDialogShell` | Canonical form-specific dialog wrapper. |
+| `ConfirmDialog` | Canonical destructive-action confirmation dialog. |
+| Raw MUI `<Dialog>` | **Legacy.** Migrate to `SurfaceDialog` when the file is touched. ~10 pages remain. |
+
 ## Figma Mapping Inventory
 
 These files are optional repo-local metadata, but they are the practical verification fallback when workspace Code Connect reads are seat-blocked. The canonical library target for all sixteen mappings is [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library).
@@ -128,7 +159,7 @@ Each mapped surface now also has a colocated Storybook story under `frontend/src
 | `SearchField` | `frontend/src/design-system/primitives/fields/SearchField.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=40-48 |
 | `ReadonlyField` | `frontend/src/design-system/primitives/fields/ReadonlyField.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=218-127 |
 | `StatusChip` | `frontend/src/design-system/primitives/status/StatusChip.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=5-34 |
-| `CardShell` | `frontend/src/design-system/primitives/surfaces/CardShell.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=7-2 |
+| `CardShell` | `frontend/src/design-system/primitives/surfaces/CardShell.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=291-35 |
 | `SurfaceCard` | `frontend/src/design-system/primitives/surfaces/SurfaceCard.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=42-35 |
 | `ConfirmDialog` | `frontend/src/design-system/primitives/surfaces/ConfirmDialog.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=46-135 |
 | `FormDialogShell` | `frontend/src/design-system/primitives/surfaces/FormDialogShell.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=8-24 |

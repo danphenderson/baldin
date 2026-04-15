@@ -163,24 +163,14 @@ const EMPTY_RUNS_PAGE: CrawlerRunsPaginatedRead = {
 
 const MotionCard = motion.create(Card);
 
-const RunStatusChip: React.FC<{ status: CrawlerRunStatus }> = ({ status }) => {
-  const theme = useTheme();
-  const STATUS_CONFIG = getCrawlerStatusConfig(theme);
-  const cfg = STATUS_CONFIG[status];
-  return (
-    <Chip
-      icon={cfg.icon}
-      label={cfg.label}
-      size="small"
-      sx={{
-        backgroundColor: alpha(cfg.color, 0.12),
-        color: cfg.color,
-        fontWeight: 600,
-        fontSize: '0.7rem',
-        '& .MuiChip-icon': { color: 'inherit' },
-      }}
-    />
-  );
+const CRAWLER_STATUS_TONE: Record<CrawlerRunStatus, string> = {
+  success: 'success',
+  failed: 'danger',
+  pending: 'info',
+  running: 'info',
+  cancelled: 'warning',
+  paused: 'warning',
+  pending_review: 'info',
 };
 
 // ---------------------------------------------------------------------------
@@ -443,7 +433,7 @@ const CrawlerPipelineCard: React.FC<{
                       border: `1px solid ${theme.palette.divider}`,
                     }}
                   >
-                    <RunStatusChip status={run.status} />
+                    <Chip label={STATUS_CONFIG[run.status].label} tone={CRAWLER_STATUS_TONE[run.status] as any} size="small" />
                     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <ScheduleIcon sx={{ fontSize: 11 }} />

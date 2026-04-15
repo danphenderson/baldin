@@ -17,7 +17,7 @@ export type UnreadCountRead = components['schemas']['UnreadCountRead'];
 
 type MessagingErrorDetail = unknown;
 
-const BASE_URL = `${API_URL}/conversations`;
+const BASE_URL = `${API_URL}/api/v1/conversations`;
 
 export class MessagingServiceError extends Error {
   status: number;

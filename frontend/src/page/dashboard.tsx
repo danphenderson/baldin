@@ -91,6 +91,7 @@ import {
   getStatusColors,
   progressGradient,
   StatusChip as Chip,
+  softBrandGradient,
 } from '../design-system';
 import { radiusTokens, toRadiusPx } from '../design-system/tokens/radius';
 
@@ -872,7 +873,7 @@ const DashboardPage: React.FC = () => {
         surface="raised"
         contentSx={{
           mb: 3,
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.18 : 0.09)} 0%, ${alpha(theme.palette.secondary.main, theme.palette.mode === 'dark' ? 0.1 : 0.05)} 100%)`,
+          background: softBrandGradient(theme),
         }}
       >
         <Stack spacing={2}>

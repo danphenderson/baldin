@@ -42,4 +42,6 @@ The current shipped shared-surface mapping set is complete. Future follow-on wor
 
 `StatusChip` now reflects the shipped shared contract in the live library: `Tone` supports `Neutral`, `Primary`, `Secondary`, `Success`, `Warning`, `Danger`, and `Info`, and `Variant` supports `Soft`, `Outline`, and `Solid` while preserving the existing canonical node URL in the repo mapping catalog.
 
+`CardShell` was promoted from a single COMPONENT (`7:2`) to a COMPONENT_SET (`291:35`) with 12 variants on `Tone` (6) × `Density` (2). The code contract also exposes a `surface` prop (`base` | `raised` | `inset`) and an `interactive` boolean, but the Figma component set does not include a Surface variant axis. The `.figma.ts` mapping intentionally hardcodes `surface="raised"` (the code default) and maps `interactive` as a boolean rather than leaving the gap undocumented. Future Figma work may promote `Surface` to a variant axis, at which point the mapping should be updated to use `instance.getEnum`.
+
 `SecondaryNavBar` remains `library-only for now` in this slice. Product-flow coverage for `/applications`, `/applications/board`, `/leads`, `/workflows`, and related shell stories belongs in [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) until a closeout promotion review proves otherwise.

@@ -1,12 +1,10 @@
 import React, { useContext, useState } from 'react';
 import {
-  Alert,
   Box,
   Button,
   DialogContentText,
   FormControlLabel,
   Paper,
-  Snackbar,
   Stack,
   Switch,
   Table,
@@ -20,6 +18,7 @@ import {
   alpha,
 } from '@mui/material';
 import {
+  InlineFeedback,
   SurfaceCard as Card,
   SurfaceCardContent as CardContent,
   StatusChip as Chip,
@@ -34,13 +33,13 @@ import {
   Celebration as CelebrationIcon,
   CheckCircle as CheckIcon,
   EmojiEvents as TrophyIcon,
-  InfoOutlined as InfoOutlinedIcon,
   SchoolOutlined as AlumniIcon,
   Star as StarIcon,
   TravelExplore as TravelExploreIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/user-context';
+import { useNotification } from '../../context/notification-context';
 import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
 import { updateUser, updatePlacement } from '../../service/users';
 
@@ -115,10 +114,7 @@ const AccountPage: React.FC = () => {
   const [placementConfirmOpen, setPlacementConfirmOpen] = useState(false);
   const [placementActing, setPlacementActing] = useState(false);
 
-  /* ── Shared snackbar ── */
-  const [snack, setSnack] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success',
-  });
+  const notify = useNotification();
 
   /* ── Handlers ── */
   const handleDiscoverabilityToggle = async (_event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
@@ -127,17 +123,9 @@ const AccountPage: React.FC = () => {
     try {
       const updated = await updateUser(token, { is_discoverable: checked });
       setUser(updated);
-      setSnack({
-        open: true,
-        message: checked ? 'Your profile is now visible in Discover.' : 'Your profile is now hidden from Discover.',
-        severity: 'success',
-      });
+      notify.success(checked ? 'Your profile is now visible in Discover.' : 'Your profile is now hidden from Discover.');
     } catch (error: unknown) {
-      setSnack({
-        open: true,
-        message: error instanceof Error ? error.message : 'Failed to update discoverability.',
-        severity: 'error',
-      });
+      notify.error(error instanceof Error ? error.message : 'Failed to update discoverability.');
     } finally {
       setDiscoverActing(false);
     }
@@ -149,9 +137,9 @@ const AccountPage: React.FC = () => {
     try {
       const updated = await updatePlacement(token, { placement_status: targetStatus });
       setUser(updated);
-      setSnack({ open: true, message: `Status updated to ${targetStatus}`, severity: 'success' });
+      notify.success(`Status updated to ${targetStatus}`);
     } catch (e: unknown) {
-      setSnack({ open: true, message: e instanceof Error ? e.message : 'Update failed', severity: 'error' });
+      notify.error(e instanceof Error ? e.message : 'Update failed');
     }
     setPlacementActing(false);
     setPlacementConfirmOpen(false);
@@ -173,14 +161,9 @@ const AccountPage: React.FC = () => {
       {/* ═══════════════════════════════════════════════════════════════ */}
       <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Subscription</Typography>
 
-      <Alert
-        severity="info"
-        variant="outlined"
-        icon={<InfoOutlinedIcon />}
-        sx={{ mb: 2 }}
-      >
+      <InlineFeedback tone="info" sx={{ mb: 2 }}>
         Developer Preview — All features are unlocked during the preview period. Subscription tiers shown below reflect planned pricing.
-      </Alert>
+      </InlineFeedback>
 
       <Card sx={{ mb: 2 }}>
         <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
@@ -433,23 +416,6 @@ const AccountPage: React.FC = () => {
           <Button onClick={() => setUpgradeDialog(null)}>Close</Button>
         </DialogActions>
       </Dialog>
-
-      {/* ── Shared snackbar ── */}
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={4000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnack((s) => ({ ...s, open: false }))}
-          severity={snack.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snack.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

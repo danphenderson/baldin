@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Link, Stack, Typography } from '@mui/material';
 import { LockOutlined as LockIcon } from '@mui/icons-material';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { UserContext } from '../context/user-context';
@@ -69,9 +69,9 @@ const AdminLoginRoute: React.FC = () => {
   const footer = useMemo(() => (
     <Typography color="text.secondary" sx={{ typography: 'body2' }}>
       Use a superuser account to access local admin workflows.{' '}
-      <a href="/" style={{ color: 'inherit' }}>
+      <Link href="/" color="inherit">
         Open the product app
-      </a>
+      </Link>
     </Typography>
   ), []);
 

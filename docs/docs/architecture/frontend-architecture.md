@@ -5,7 +5,7 @@ title: See Frontend Boundaries
 description: See route groups, page modules, service boundaries, and contract consumption in the frontend.
 ---
 
-<!-- last-verified: 2026-04-12 -->
+<!-- last-verified: 2026-04-14 -->
 
 # See Frontend Boundaries
 
@@ -101,6 +101,44 @@ frontend/src/
 | `service/*.tsx` | Fetch wrappers grouped by backend route family |
 
 The service layer is the only place that should know backend URL details. Page and component code should call service modules rather than issuing ad hoc fetch requests.
+
+## Flagship Flow Boundaries
+
+The current flagship flow spans three frontend moments that are intentionally connected but still live behind clear service and component boundaries.
+
+### Aspirations Pages And Service Layer
+
+- `/me/aspirations/roles` and `/me/aspirations/companies` are thin route pages that configure the shared `AspirationsCollection` shell for each aspiration kind.
+- `service/aspirations.ts` owns the CRUD contract, the typed suggest seam, and explicit frontend error normalization through `AspirationServiceError`.
+- `AspirationsCollection` owns tab-aware list loading, local search, create or edit dialog state, delete confirmation, and the optional suggestion-review surface.
+- `SuggestionReviewPanel` is the stateful review layer for profile-based drafts. It handles fetch, draft filtering by aspiration kind, accept-one, accept-all, discard, and inline error feedback keyed to the normalized categories.
+
+### Leads Ranking Flow
+
+- `page/leads.tsx` is the orchestration boundary for the flagship ranking moment. It loads leads, companies, applications, and aspirations together, then coordinates ranking and application-start state from one route-level controller.
+- `service/leads.tsx` owns the `/api/v1/aspirations/match` integration through `rankLeads()`.
+- `LeadSearchBar` exposes the explicit ranking trigger and aspiration-gated disabled state.
+- `LeadCard` is the primary presentation surface for ranked versus unranked leads, aspiration-alignment copy, and the inline application handoff state.
+- Ranking remains route-owned state rather than a shared global store. Search or filter changes clear ranking results to avoid stale ordering.
+
+### Application Handoff
+
+- The flagship apply step stays inline on `/leads`; it does not redirect users into the applications route family just to start tracking a lead.
+- `service/applications.tsx` provides the existing list and create surfaces used for duplicate-safe handoff. The leads page preloads the application list once, derives a local `lead_id -> application` map, and updates that map after successful creation.
+- `page/leads.tsx` owns the ready-state messaging (`buildReadyHandoff`) and existing-application messaging (`buildExistingApplicationHandoff`) so the ranking context and duplicate-safe state stay consistent.
+- The applications route family remains the deeper workflow surface after creation. Queue, board, and detail pages consume the application entity after the lead-page handoff is complete.
+
+### Shared Components And Design-System Boundaries
+
+- The flagship flow is built on the existing design-system inventory rather than feature-local abstractions.
+- `CardShell` provides the main container surface for ranked leads and related summary cards.
+- `StatusChip`, `InlineFeedback`, `EmptyState`, `LoadingState`, and `ConfirmDialog` are the shared feedback and state primitives reused across aspirations, leads, and applications.
+- Feature components such as `SuggestionReviewPanel`, `LeadCard`, and `AspirationsCollection` may compose these primitives, but they do not redefine token, tone, or state semantics locally.
+
+### Harness And Figma References
+
+- `frontend/src/browser-harness/figma-wave1.tsx` is the offline verification surface for flagship states across aspirations, ranked leads, and apply handoff.
+- Figma remains upstream for flow sequencing and layout grouping. The harness mirrors approved states for implementation verification and capture, not for inventing new product behavior.
 
 ## Contract Management
 

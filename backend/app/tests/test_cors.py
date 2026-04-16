@@ -43,6 +43,27 @@ async def test_preflight_allows_configured_frontend_origin() -> None:
     assert response.headers["access-control-allow-origin"] == origin
 
 
+async def test_preflight_allows_loopback_alias_for_configured_frontend_origin() -> None:
+    transport = ASGITransport(app=app)
+    origin = "http://127.0.0.1:5173"
+
+    async with AsyncClient(
+        transport=transport,
+        base_url=origin,
+    ) as client:
+        response = await client.options(
+            "/api/v1/auth/register",
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "content-type",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == origin
+
+
 async def test_internal_errors_keep_cors_headers_for_allowed_origin() -> None:
     transport = ASGITransport(app=app, raise_app_exceptions=False)
     origin = str(conf.settings.BACKEND_CORS_ORIGINS[0]).rstrip("/")

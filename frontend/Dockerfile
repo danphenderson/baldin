@@ -7,8 +7,8 @@ WORKDIR /usr/src/app
 # Copy the package.json and package-lock.json files
 COPY package*.json ./
 
-# Install npm dependencies
-RUN npm install
+# Install npm dependencies reproducibly from the committed lockfile
+RUN npm ci
 
 # Copy the frontend source code into the container
 COPY . .

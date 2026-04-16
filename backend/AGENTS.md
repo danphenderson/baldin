@@ -12,6 +12,7 @@
 
 - Preserve FastAPI, SQLAlchemy, Alembic, and OpenAPI correctness.
 - Use `127.0.0.1:5431` for host-run backend tests and `test_db` inside Compose.
+- Prefer `./scripts/run_backend_pytest.sh` for backend validation. If you intentionally run from the host, use `./scripts/run_backend_pytest_host.sh` or `cd backend && pipenv run pytest ...`.
 - Regenerate frontend contracts when backend API routes or schemas change.
 
 ## Do Not
@@ -23,6 +24,7 @@
 ## Validation
 
 - Prefer the narrowest relevant pytest scope.
+- Do not probe bare `pytest` on the host shell path; use the repo wrapper or `pipenv run pytest`.
 - Report when schema regeneration is required, run, deferred, or unchanged.
 
 ## Handback Notes

@@ -5,7 +5,7 @@ title: Run The Right Checks
 description: Run the smallest effective smoke check first, then widen validation only when the change actually needs it.
 ---
 
-<!-- last-verified: 2026-04-14 -->
+<!-- last-verified: 2026-04-15 -->
 
 # Run The Right Checks
 
@@ -47,6 +47,7 @@ Start with the narrowest test file or `-k` selection that exercises the edited r
 The wrapper is now Compose-native: it starts or reuses `test_db`, waits for readiness, and runs pytest inside the on-demand `backend-test` service. This keeps agent and human DB-backed verification aligned with the local stack instead of relying on host localhost access.
 
 Use `./scripts/run_backend_pytest_host.sh` only when you intentionally want a host `.venv` flow. That helper overrides the test DB path to `127.0.0.1:5431`.
+If you skip the helper, run `cd backend && pipenv run pytest ...`. Do not rely on bare `pytest` being present on the host shell `PATH`.
 
 ### Coverage gate
 

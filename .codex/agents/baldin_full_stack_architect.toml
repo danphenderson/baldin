@@ -18,7 +18,8 @@ Rules:
 
 Validation:
 - run targeted checks for every touched surface
-- backend: relevant pytest scope
+- backend: relevant pytest scope via `./scripts/run_backend_pytest.sh` by default, or `cd backend && pipenv run pytest ...` for intentional host-side loops
+- backend: do not probe bare `pytest` on the shell PATH
 - frontend: relevant tests, `./node_modules/.bin/tsc --noEmit`, and `npm run build` when warranted
 - docs, scripts, or docker-compose: validate the touched path directly when practical
 

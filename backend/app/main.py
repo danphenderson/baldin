@@ -9,6 +9,7 @@ import logging
 import tracemalloc
 from contextlib import asynccontextmanager
 from time import time
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 import sentry_sdk
@@ -50,6 +51,34 @@ logger = get_async_logger(__name__)
 
 def _normalize_cors_origin(origin: object) -> str:
     return str(origin).rstrip("/")
+
+
+def _expand_loopback_cors_origins(origins: list[object]) -> list[str]:
+    expanded: list[str] = []
+    seen: set[str] = set()
+
+    for origin in origins:
+        normalized_origin = _normalize_cors_origin(origin)
+        parsed_origin = urlsplit(normalized_origin)
+        hostname = parsed_origin.hostname
+
+        candidates = [normalized_origin]
+        if hostname in {"localhost", "127.0.0.1"}:
+            for alias in ("localhost", "127.0.0.1"):
+                netloc = alias
+                if parsed_origin.port is not None:
+                    netloc = f"{netloc}:{parsed_origin.port}"
+                candidates.append(
+                    urlunsplit((parsed_origin.scheme, netloc, "", "", ""))
+                )
+
+        for candidate in candidates:
+            if candidate in seen:
+                continue
+            seen.add(candidate)
+            expanded.append(candidate)
+
+    return expanded
 
 
 class _OuterCORSMiddlewareApp:
@@ -375,8 +404,5 @@ async def root():
 if conf.settings.BACKEND_CORS_ORIGINS:
     app = _OuterCORSMiddlewareApp(
         app,
-        allow_origins=[
-            _normalize_cors_origin(origin)
-            for origin in conf.settings.BACKEND_CORS_ORIGINS
-        ],
+        allow_origins=_expand_loopback_cors_origins(conf.settings.BACKEND_CORS_ORIGINS),
     )

@@ -28,6 +28,7 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 - Admin templates: `./backend/app/admin_templates`.
 - Config: `./backend/pyproject.toml`, `./backend/Pipfile`.
 - Local default path: keep `docker-compose up --build` running and use the mounted `web` container for hot reload while you iterate.
+- Backend pytest should use `./scripts/run_backend_pytest.sh` by default. For intentional host-side loops, use `./scripts/run_backend_pytest_host.sh` or `cd backend && pipenv run pytest ...` instead of probing bare `pytest`.
 
 ## Scope
 - Default to backend-only changes within ./backend/app, ./backend/etl, and ./backend/app/tests.
@@ -67,6 +68,7 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 
 ## Validation
 - Run the most relevant targeted backend tests available for the scope.
+- Prefer `./scripts/run_backend_pytest.sh` for DB-backed backend pytest. If you intentionally validate from the host, use `pipenv run pytest` or the host wrapper rather than assuming bare `pytest` is on `PATH`.
 - Treat full backend coverage runs as pre-push confidence checks, not the default first step for routine local fixes.
 - Preserve FastAPI and OpenAPI correctness.
 - Keep the change consistent with backend formatting and lint expectations.

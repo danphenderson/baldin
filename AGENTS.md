@@ -14,6 +14,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces. 
 - Keep the stack warm while you work. The normal loop is inspect -> patch -> smoke-check, not restart-everything.
 - Repo-tracked `backend/.env` and `frontend/.env` provide safe local defaults for every worktree. Put real secrets in Codex UI env vars or ignored `backend/.env.local` / `frontend/.env.local`.
 - Running services outside Compose is a secondary path. If you run backend tests from the host, use `127.0.0.1:5431` for `test_db`; inside Compose the hostname is `test_db`.
+- For host-side backend pytest, prefer `./scripts/run_backend_pytest_host.sh` or `cd backend && pipenv run pytest ...`. Do not assume bare `pytest` is available on the shell `PATH`.
 - If local schema drift blocks work and local data is disposable, use `./scripts/reset_local_db.sh`. Use `./scripts/repair_local_db_collation.sh` only for collation mismatch recovery when local data must survive.
 
 ## Figma Workflow
@@ -52,7 +53,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces. 
 ## Validation Expectations
 
 - Start with the smallest relevant smoke check for the touched surface.
-- Backend: prefer the narrowest useful pytest scope first.
+- Backend: prefer the narrowest useful pytest scope first, using `./scripts/run_backend_pytest.sh` by default and `pipenv run pytest` only for intentional host-side loops.
 - Frontend: prefer the smallest relevant test first, then `./node_modules/.bin/tsc --noEmit` and `npm run build` when the changed surface warrants it.
 - Docs and navigation changes: run the docs build when routes, sidebars, redirects, or published pages changed.
 - Treat full-suite or CI-style validation as a follow-up unless the task or changed surface clearly requires it.

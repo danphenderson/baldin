@@ -5,7 +5,7 @@ title: Work Locally
 description: Work locally with Docker Compose first, then use the shortest smoke-check loop that proves the change.
 ---
 
-<!-- last-verified: 2026-04-14 -->
+<!-- last-verified: 2026-04-15 -->
 
 # Work Locally
 
@@ -23,7 +23,7 @@ If you use Baldin's workspace skills, `/baldin-local-stack-doctor` helps triage 
 4. If backend API routes or schemas changed before you staged files, run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh`.
 5. Use broader validation only when the touched surface needs it or the branch is ready for handoff or push.
 
-Backend tests should use `./scripts/run_backend_pytest.sh`, which keeps DB-backed pytest inside Compose networking and targets `test_db:5432`. If you explicitly need a host `.venv` loop, use `./scripts/run_backend_pytest_host.sh`, which overrides the test DB path to `127.0.0.1:5431`.
+Backend tests should use `./scripts/run_backend_pytest.sh`, which keeps DB-backed pytest inside Compose networking and targets `test_db:5432`. If you explicitly need a host `.venv` loop, use `./scripts/run_backend_pytest_host.sh`, which overrides the test DB path to `127.0.0.1:5431`. If you run directly from `backend/`, use `pipenv run pytest ...` rather than assuming bare `pytest` is on the shell `PATH`.
 
 ## Services
 
@@ -172,6 +172,14 @@ For an optional host-side backend test loop:
 cd backend
 pipenv install --dev
 ../scripts/run_backend_pytest_host.sh app/tests/test_target.py -q
+```
+
+Equivalent direct host invocation:
+
+```bash
+cd backend
+pipenv install --dev
+TEST_DATABASE_HOSTNAME=127.0.0.1 TEST_DATABASE_PORT=5431 pipenv run pytest app/tests/test_target.py -q
 ```
 
 If you want worker-mode background execution outside Docker, run Redis separately and start the ETL service and worker in separate shells:

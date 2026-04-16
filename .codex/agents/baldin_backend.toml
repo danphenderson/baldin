@@ -20,6 +20,8 @@ Rules:
 
 Validation:
 - run the smallest relevant pytest scope first
+- prefer `./scripts/run_backend_pytest.sh` from the repo root; for intentional host-side loops use `cd backend && pipenv run pytest ...` or `./scripts/run_backend_pytest_host.sh ...`
+- do not probe bare `pytest` on the shell PATH
 - preserve FastAPI and OpenAPI correctness
 
 Return the Standard Handback schema from AGENTS.md.

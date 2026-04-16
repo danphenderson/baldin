@@ -54,7 +54,7 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 
 ## Validation
 - Run targeted checks for every touched surface when feasible.
-- Backend: prefer the relevant pytest scope and any needed Python environment validation.
+- Backend: prefer the relevant pytest scope via `./scripts/run_backend_pytest.sh`. For intentional host-side loops, use `cd backend && pipenv run pytest ...` or `./scripts/run_backend_pytest_host.sh ...`, not bare `pytest`.
 - Frontend: use the smallest relevant test first, then ./node_modules/.bin/tsc --noEmit and npm run build when the touched surface warrants it.
 - Cross-stack or API work: run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` during active local development when backend API or schema changes are in scope, and report whether generated contracts actually changed.
 - Local platform changes: validate through docker-compose or the affected build or run path when practical.

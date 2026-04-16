@@ -3,7 +3,9 @@ services:
     image: pgvector/pgvector:pg15
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      # Keep database access local-only; inter-service traffic stays on the
+      # Compose network.
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_DB: db
       POSTGRES_USER: postgres
@@ -20,7 +22,7 @@ services:
     image: pgvector/pgvector:pg15
     restart: unless-stopped
     ports:
-      - "5431:5432"
+      - "127.0.0.1:5431:5432"
     environment:
       POSTGRES_DB: test_db
       POSTGRES_USER: postgres
@@ -37,7 +39,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -95,7 +97,7 @@ services:
     volumes:
       - ./backend:/usr/src/app
     ports:
-      - 8004:8000
+      - "127.0.0.1:8004:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready').read()"]
       interval: 10s
@@ -103,8 +105,6 @@ services:
       retries: 5
     depends_on:
       db:
-        condition: service_healthy
-      test_db:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -166,15 +166,8 @@ services:
     build:
       context: ./frontend
       dockerfile: ./Dockerfile
-    env_file:
-      - ./frontend/.env
-    environment:
-      # Keep fixed defaults while allowing frontend/.env.local to override
-      # optional Vite values when the host shell leaves them unset.
-      - VITE_API_URL=${VITE_API_URL:-http://localhost:8004}
-      - VITE_SENTRY_DSN
-      - VITE_SENTRY_ENVIRONMENT
-      - VITE_SENTRY_TRACES_SAMPLE_RATE
+    # Let Vite read the mounted frontend/.env and frontend/.env.local files
+    # directly so local overrides keep their documented precedence.
     command: npm run dev
     stdin_open: true
     tty: true
@@ -182,7 +175,7 @@ services:
       - ./frontend:/usr/src/app
       - /usr/src/app/node_modules
     ports:
-      - 5173:5173
+      - "127.0.0.1:5173:5173"
     depends_on:
       - web
 
@@ -201,4 +194,4 @@ services:
       - /usr/src/app/node_modules
       - /usr/src/app/.docusaurus
     ports:
-      - 3001:3000
+      - "127.0.0.1:3001:3000"

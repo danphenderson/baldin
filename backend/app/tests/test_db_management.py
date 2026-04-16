@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
@@ -268,7 +268,7 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
             title="Target session",
             model_name="gpt-5.4-mini",
             message_count=1,
-            last_message_at=datetime.now(),
+            last_message_at=datetime.now(UTC),
         )
         chat_session.messages.append(
             models.AgentChatMessage(
@@ -326,7 +326,7 @@ async def _seed_user_data(user_id: UUID) -> dict[str, UUID]:
             input_context={"application_id": str(application.id)},
             session_document_id=document.id,
             session_version_id=document_version.id,
-            completed_at=datetime.now(),
+            completed_at=datetime.now(UTC),
         )
 
         session.add_all(

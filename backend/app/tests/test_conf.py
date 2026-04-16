@@ -5,7 +5,12 @@ import os
 import pytest
 
 from app.core import conf
-from app.core.conf import apply_process_environment_hacks, openai, settings
+from app.core.conf import (
+    OpenAIFeatureDisabled,
+    apply_process_environment_hacks,
+    openai,
+    settings,
+)
 
 # ---------------------------------------------------------------------------
 # Settings properties
@@ -85,7 +90,7 @@ def test_require_enabled_raises_503_when_api_key_missing(
 ):
     monkeypatch.setattr(openai, "API_KEY", "")
 
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(OpenAIFeatureDisabled) as exc_info:
         openai.require_enabled("Document generation")
 
     exc = exc_info.value

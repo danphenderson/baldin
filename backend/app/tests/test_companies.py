@@ -25,6 +25,14 @@ async def _create_company_record(
         return company
 
 
+def test_company_read_requires_persisted_fields() -> None:
+    company = models.Company(name="Draft Corp")
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+
+    with pytest.raises(ValueError, match="persisted"):
+        company_routes._company_read(company, user)
+
+
 @pytest.mark.asyncio
 async def test_extract_company_rejects_unsafe_url() -> None:
     with pytest.raises(HTTPException) as exc_info:
@@ -172,7 +180,7 @@ async def test_companies_reads_are_shared_but_permissions_are_owner_scoped(
     assert items["Owned Corp"]["creator_user_id"] == str(user_id)
     assert items["Shared Corp"]["can_manage"] is False
     assert items["Shared Corp"]["creator_user_id"] == str(other_user_id)
-    assert items["Legacy Corp"]["can_manage"] is True
+    assert items["Legacy Corp"]["can_manage"] is False
     assert items["Legacy Corp"]["creator_user_id"] is None
 
     detail_response = await client.get(
@@ -188,7 +196,7 @@ async def test_companies_reads_are_shared_but_permissions_are_owner_scoped(
     )
     assert legacy_detail.status_code == 200, legacy_detail.text
     assert legacy_detail.json()["creator_user_id"] is None
-    assert legacy_detail.json()["can_manage"] is True
+    assert legacy_detail.json()["can_manage"] is False
 
 
 @pytest.mark.asyncio
@@ -231,9 +239,7 @@ async def test_companies_only_creator_or_superuser_can_mutate_or_delete(
         json={"description": "Legacy edit"},
         headers=viewer_headers,
     )
-    assert viewer_legacy_patch.status_code == 200, viewer_legacy_patch.text
-    assert viewer_legacy_patch.json()["description"] == "Legacy edit"
-    assert viewer_legacy_patch.json()["can_manage"] is True
+    assert viewer_legacy_patch.status_code == 403, viewer_legacy_patch.text
 
     admin_patch = await client.patch(
         f"/api/v1/companies/{legacy_company.id}",
@@ -260,4 +266,10 @@ async def test_companies_only_creator_or_superuser_can_mutate_or_delete(
         f"/api/v1/companies/{legacy_company.id}",
         headers=viewer_headers,
     )
-    assert legacy_delete.status_code == 204, legacy_delete.text
+    assert legacy_delete.status_code == 403, legacy_delete.text
+
+    admin_delete = await client.delete(
+        f"/api/v1/companies/{legacy_company.id}",
+        headers=admin_headers,
+    )
+    assert admin_delete.status_code == 204, admin_delete.text

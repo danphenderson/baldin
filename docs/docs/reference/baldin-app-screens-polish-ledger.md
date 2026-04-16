@@ -3,7 +3,7 @@ title: Baldin App Screens Polish Ledger
 description: Per-screen UX polish findings from a Figma-first audit of Baldin-App-Screens against Baldin-Library shared surfaces.
 ---
 
-<!-- last-verified: 2026-04-15 -->
+<!-- last-verified: 2026-04-16 -->
 
 # Baldin App Screens Polish Ledger
 
@@ -17,6 +17,14 @@ Figma-first UX polish audit of all 20 reviewed screens in [Baldin-App-Screens](h
 - **High** — Missing states or broken hierarchy in core flows. Directly impacts the user's understanding of what the app does in a given state.
 - **Medium** — Inconsistent library surface or token usage. Does not break comprehension but erodes visual trust.
 - **Low** — Minor spacing, alignment, icon, or typographic polish. Noticeable on close inspection only.
+
+## Cleanup Notes
+
+- Live route captures win over hand-built reference frames for shipped UI.
+- `07 · Reference · Admin Studies` at page `221:1170` is reference-only composed admin evidence; live captures `184:4929`, `192:4929`, and `201:4929` now live on `06 · Workflows & Admin Live Evidence` and remain canonical for shipped admin route visuals.
+- Live auth and admin-access evidence sits on `05 · Auth & Access Live Evidence` ([page 353:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=353-1167)) with [node 370:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=370-2), [node 371:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=371-2), [node 373:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=373-2), [node 374:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=374-2), [node 375:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=375-2), and [node 376:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=376-2). Extractor evidence [node 369:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=369-2) now lives on `06 · Workflows & Admin Live Evidence`. The stale `221:1169`, `131:*`, `229:*`, and `232:*` refs remain docs history only and must not be reused.
+- Marketing keeps [node 299:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=299-1167) as the canonical full-page composition.
+- This cleanup does not open new promotion work, `.figma.ts` mappings, or shared React abstractions.
 
 ## Focus 1: Consistency with Baldin-Library Shared Surfaces
 
@@ -66,12 +74,12 @@ Library baseline: 16 mapped surfaces in the [Design System Catalog](./design-sys
 | Conversation detail | ⚠️ Raw `CircularProgress` | ❌ No empty-thread frame | ⚠️ Inline state + local Snackbar | **High gap.** Add an empty-thread `EmptyState` frame and replace loading with `LoadingState`. |
 | Aspirations roles | ✅ `loading` state in harness | ✅ `empty` state in harness | ⚠️ `no-signal` and `rate-limited` exist but not fully backed | Ensure `no-signal` and `rate-limited` frames in Figma show InlineFeedback with appropriate tone and copy. |
 | Aspirations companies | ✅ `loading` state in harness | ✅ `empty` state in harness | ⚠️ Same as roles | Same recommendation as aspirations roles. |
-| Login baseline | ⚠️ Bitmap-only matrix | ❌ N/A | ⚠️ Broken error row | The large login matrix was moved to Wave 3 as `[Needs Recapture] Login States`. `Login · Error · dark` is blank; baseline and loading rows are bitmap-only evidence, not canonical editable design layers. |
-| Register baseline | ⚠️ Bitmap-only matrix | ❌ N/A | ⚠️ Bitmap-only evidence | The large register matrix was moved to Wave 3 as `[Needs Recapture] Register States`. Existing rows show baseline, password rules, validation error, and loading as bitmap-only captures that need review-ready recapture. |
-| Login MFA challenge | ⚠️ Bitmap-only matrix | ❌ N/A | ⚠️ Bitmap-only evidence | The large MFA matrix was moved to Wave 3 as `[Needs Recapture] Login MFA Challenge States`. Existing challenge, error, and loading rows are bitmap-only captures that need review-ready recapture. |
-| Admin login states | ✅ Session-resolving spinner | ❌ N/A | ⚠️ Unclear | **Medium gap.** Add a dedicated "resolving authenticated session" frame showing the full-page centered spinner, distinct from the normal login form. |
-| Admin access denied | ❌ N/A | ❌ N/A | ✅ Dedicated access-denied state | The access-denied frame should clearly show both exit CTAs: "Sign in again" and "Open product app." |
-| Extractor workflow | ⚠️ Bitmap-only matrix | ✅ `EmptyState` (no extractors) | ✅ Snackbar | The large extractor matrix was moved to Wave 3 as `[Needs Recapture] Extractor Workflow States`. `Extractor Workflow · Create Extractor Dialog · dark` is blank; remaining rows are bitmap-only captures. Extractors remain a product-app workflow at `/workflows/extractors`, not an Admin SPA route. |
+| Login baseline | ❌ N/A | ❌ N/A | ⚠️ Inline auth failure states not separately captured | Live baseline now resolves at [node 370:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=370-2). Keep it distinct from the MFA challenge at [node 373:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=373-2). |
+| Register baseline | ❌ N/A | ❌ N/A | ⚠️ Inline validation and duplicate-account states not separately captured | Live baseline now resolves at [node 371:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=371-2). Capture additional auth-error variants only if they become stable, reproducible shipped states. |
+| Login MFA challenge | ❌ N/A | ❌ N/A | ⚠️ Invalid-code and retry states not separately captured | Live MFA challenge now resolves at [node 373:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=373-2). Keep it separate from the baseline login shell at [node 370:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=370-2). |
+| Admin login states | ✅ Session-resolving frame at [node 375:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=375-2) | ❌ N/A | ❌ Baseline login is not an error state | Live admin login baseline now resolves at [node 374:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=374-2). The already-authenticated superuser redirect remains route logic, not a separate frame. |
+| Admin access denied | ❌ N/A | ❌ N/A | ✅ Dedicated access-denied frame at [node 376:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=376-2) | Live access-denied capture now resolves at [node 376:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=376-2). Both exit CTAs are visible in the route-backed frame. |
+| Extractor workflow | ⚠️ Route-level loading not separately captured | ⚠️ Empty and success variants not separately captured | ⚠️ Snackbar/error variants not separately captured | Live route baseline now resolves at [node 369:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=369-2). Extractors remain a product-app workflow at `/workflows/extractors`, not an Admin SPA route. |
 | DB management | ✅ Per-section loading | ✅ `EmptyState` (no users matching filter) | ✅ Per-section `Alert` | Ensure the destructive-action confirmation path (preview → confirm) has distinct Figma frames for each step. |
 | Review queue | ✅ Implied | ✅ `EmptyState` ("Review queue is clear") | ✅ Snackbar | Confirmed via Figma MCP: empty state is present (node `192:4929`). Batch-action loading state should be explicit. |
 | Crawlers | ✅ `MetricStrip` loading + skeleton cards | ✅ Implied (no pipelines) | ✅ Color-coded failed-run indicator | Verify the empty-pipelines state has a dedicated EmptyState frame, not just an absent card list. |
@@ -84,19 +92,18 @@ Library baseline: 16 mapped surfaces in the [Design System Catalog](./design-sys
 | Application detail | **High** | Loading state uses per-field Skeleton rather than the canonical LoadingState. If this is intentional (denser skeleton layout), document it. If not, the frame should show LoadingState. | Add a loading state frame. If using field-level skeletons, annotate the frame as "feature-owned skeleton layout" to distinguish from the library pattern. | LoadingState `202-83` |
 | Conversation detail | **High** | No empty-thread frame. When a new conversation is started with no messages, the screen shows nothing. | Add an EmptyState frame for "No messages yet — start the conversation" with a message-input focus CTA. | EmptyState `47-65` |
 | Conversation detail | **High** | Loading state uses raw CircularProgress. | Replace with a LoadingState frame showing kind="detail" or kind="list" to match message-stream layout. | LoadingState `202-83` |
-| Admin login states | **Medium** | The "resolving authenticated session" intermediate state (full-page centered spinner) needs its own frame to distinguish from the login form and the redirect state. | Add a distinct "Session resolving" frame showing a centered LoadingState or spinner with explanatory copy (e.g., "Checking authentication..."). | LoadingState `202-83` |
 | Crawlers | **Medium** | No explicit empty-pipeline EmptyState frame verified via MCP. The code implies one exists, but the Figma coverage should show it explicitly. | Add or verify an EmptyState frame for "No crawler pipelines configured" with a "Create pipeline" CTA. | EmptyState `47-65` |
 
 ## Focus 4: Auth Friction
 
 | Screen | Severity | Finding | Recommended Figma edit |
 | --- | --- | --- | --- |
-| Login → MFA challenge | **High** | The transition from the baseline login form to the MFA challenge step is a conditional render replacement in code — the entire form swaps. In Figma, these should be two clearly distinct frames (not just a text change within one frame) to show the user that MFA is a separate auth step. The MFA step uses "Two-Factor Authentication" as its title, a 6-digit code field, a "Verify" button, and a "Back to login" link. | Ensure two separate Figma frames exist: (1) Login baseline with email + password + "Sign In" CTA, (2) MFA challenge with title "Two-Factor Authentication," the 6-digit code input, "Verify" CTA, and "Back to login" link. Both frames should use AuthPanel as the container. |
+| Login → MFA challenge | **Medium** | Live route-backed frames now exist for the baseline login form at [node 370:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=370-2) and the MFA challenge at [node 373:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=373-2). The guardrail for this flow remains keeping MFA as a separate auth step rather than collapsing it into the baseline frame. | Keep the two live frames distinct if auth copy or MFA affordances change. |
 | Register | **Medium** | The password-rules checklist (4 rules with check/close icons) and the `LinearProgress` strength bar are important onboarding signals that must be visible in the Figma frame. If the register frame only shows the form fields without the rules list, the design will underweight the password guidance UX. | Ensure the register frame includes: (1) the strength bar (LinearProgress with error → warning → success color transitions), (2) the four password rules with checkbox icons (at least 8 chars, one uppercase, one lowercase, one digit), (3) the "Already have an account? Sign in" footer link. |
 | Register | **Low** | The registration form auto-logs-in on success and redirects. If MFA is required post-registration, it falls back to `/login`. This flow branch isn't visually represented. | Add a brief annotation noting the post-registration flow: success → auto-login → redirect, or if MFA is required → redirect to login with MFA prompt. No separate Figma frame needed for this edge case. |
 | Admin login | **Medium** | The admin login reuses `LoginPage` with custom props (title, description, icon, footer). The Figma frame must show these admin-specific overrides clearly: different title ("Admin Console" or similar), different description, and a different footer ("Back to product app" instead of "Register"). | Verify the admin login frame uses AuthPanel but with admin-specific title, description, and footer text. If the frame currently shows generic login copy, update it to match the admin variant. |
 | Admin access denied | **Medium** | The access-denied state clears the unauthorized session and shows two exit CTAs. The "Sign in again" button should be primary and "Open product app" should be secondary/text, to guide the user toward the expected recovery path. | Verify the CTA hierarchy in the Figma frame: "Sign in again" as the primary contained button, "Open product app" as a secondary or text button. Ensure the error copy is clear (e.g., "You don't have admin access" not just a generic 403). |
-| Admin session-resolving | **Medium** | The intermediate state between opening `/admin/*` with a valid token and completing the superuser check shows a full-page CircularProgress. This transient state exists in code but may not have a dedicated Figma frame. | Add a "Resolving session" frame if missing, showing a centered spinner with "Verifying admin access..." copy. This prevents the user from seeing an unexplained blank screen during auth resolution. |
+| Admin session-resolving | **Low** | Live route-backed evidence now exists at [node 375:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=375-2). This transient step should stay distinct from both the admin login form and the access-denied state during future recaptures. | Keep the resolving-state frame route-backed and refresh it only if the admin auth resolver copy or loading treatment changes. |
 
 ## Focus 5: Message and Application Detail Clarity
 
@@ -115,7 +122,7 @@ Library baseline: 16 mapped surfaces in the [Design System Catalog](./design-sys
 
 ## Focus 6: Privileged Admin Workflow Usability
 
-Admin frames confirmed via Figma MCP: DB management (`184:4929`), Review queue (`192:4929`), Crawlers (`201:4929`).
+Admin frames confirmed via Figma MCP: legacy live captures DB management (`184:4929`), Review queue (`192:4929`), Crawlers (`201:4929`), plus reference-only composed admin page `221:1170` with frames `234:1167`, `234:1198`, `234:1215`, and `234:1239`.
 
 | Screen | Severity | Finding | Recommended Figma edit |
 | --- | --- | --- | --- |
@@ -149,89 +156,38 @@ None. Every screen has at least one finding. The cleanest screen is **Leads** (a
 
 ## Figma Frame Coverage Confirmation
 
-### Cleanup update (2026-04-15)
+### Evidence reconciliation update (2026-04-16)
 
-The large auth and extractor state matrices were removed from `Flagship Flow Screens` because they are not part of the flagship aspirations → ranked leads → apply-handoff story and are not review-ready. They now live on `Wave 3 · Auth & Workflow Screens` with `[Needs Recapture]` prefixes:
-
-| Matrix | Node ID | Current status |
-| --- | --- | --- |
-| `[Needs Recapture] Login States` | `131:6090` | Partial. `Login · Error · dark` is blank; other rows are bitmap-only captures. |
-| `[Needs Recapture] Login MFA Challenge States` | `131:6098` | Partial. Rows are bitmap-only captures. |
-| `[Needs Recapture] Register States` | `131:6106` | Partial. Rows are bitmap-only captures. |
-| `[Needs Recapture] Extractor Workflow States` | `131:6116` | Partial. `Extractor Workflow · Create Extractor Dialog · dark` is blank; other rows are bitmap-only captures. |
+| Surface | Live page or node | Current rule | Notes |
+| --- | --- | --- | --- |
+| Admin and extractor live captures | Extractor `369:2`; admin `184:4929`, `192:4929`, and `201:4929` on `06 · Workflows & Admin Live Evidence` | Canonical live capture evidence | Keep as the shipped workflow/admin-route anchor. |
+| `07 · Reference · Admin Studies` | Page `221:1170` with `234:1167`, `234:1198`, `234:1215`, and `234:1239` | Reference-only composed admin evidence | Useful for cleanup notes, but not canonical shipped UI proof. |
+| `05 · Auth & Access Live Evidence` | Page `353:1167` with `370:2`, `371:2`, `373:2`, `374:2`, `375:2`, and `376:2` | Canonical live capture evidence | Keep as the live auth/admin-access anchor. |
+| Stale Wave 3 auth/admin/extractor refs | `221:1169`, `131:*`, `229:*`, and `232:*` | Stale docs history only | These refs do not resolve in the live file and should never be reused as active evidence. |
+| Marketing full-page composition | `299:1167` on `08 · Marketing · Landing` page `297:1167` | Canonical composed marketing evidence | Keep as the only canonical full-page composition. |
 
 ### Pre-existing frames (confirmed via MCP metadata reads)
 
 | Screen | Node ID | Page | Frame name | Notes |
 | --- | --- | --- | --- | --- |
-| Messages baseline | `1:2` | Baseline Captured Screens | Baldin Wave 1 Harness · messages · dark | Full harness capture with SectionHeader, conversation rows |
-| Profile baseline | `2:2` | Baseline Captured Screens | Baldin Wave 1 Harness · profile · light | Full harness capture with hero, completion card, and 7 profile sections |
-| Applications queue | `5:2` | Baseline Captured Screens | Baldin Wave 1 Harness · applications · dark | Full harness capture with MetricStrip, toolbar, and application cards |
-| Leads ranked | `46:1167` | Baseline Captured Screens | Baldin Wave 1 Harness · leads · ranked · dark | Full harness capture with ranked lead cards |
+| Messages baseline | `1:2` | `01 · Harness Baselines · Product App` | Baldin Wave 1 Harness · messages · dark | Full harness capture with SectionHeader, conversation rows |
+| Profile baseline | `2:2` | `01 · Harness Baselines · Product App` | Baldin Wave 1 Harness · profile · light | Full harness capture with hero, completion card, and 7 profile sections |
+| Applications queue | `5:2` | `01 · Harness Baselines · Product App` | Baldin Wave 1 Harness · applications · dark | Full harness capture with MetricStrip, toolbar, and application cards |
+| Leads ranked | `46:1167` | `01 · Harness Baselines · Product App` | Baldin Wave 1 Harness · leads · ranked · dark | Full harness capture with ranked lead cards |
 
-### Frames created in polish implementation pass (2026-04-15)
+### Live reference anchors after reconciliation
 
-All 13 previously unconfirmed frames were verified MISSING from the Figma file on 2026-04-15. The 3 admin-capture frames listed in the original audit (184:4929, 192:4929, 201:4929) were also absent. 23 new frames were created across 4 new pages.
-
-**Page: Wave 2 · Detail & State Screens** (page ID `221:1168`)
-
-| Screen | Node ID | Frame name | Findings addressed |
-| --- | --- | --- | --- |
-| Application detail error | `227:1167` | Application Detail · Error | HIGH: InlineFeedback error state replacing raw MUI Alert |
-| Application detail loading | `227:1179` | Application Detail · Loading | HIGH: LoadingState detail skeleton replacing per-field Skeleton |
-| Application detail overview | `227:1203` | Application Detail · Overview | HIGH: Tab navigation (overview/timeline/docs), StatusChip from library |
-| Conversation detail loading | `228:1168` | Conversation Detail · Loading | HIGH: LoadingState list skeleton replacing CircularProgress |
-| Conversation detail empty | `228:1203` | Conversation Detail · Empty Thread | HIGH: EmptyState with message-input CTA |
-| Conversation detail baseline | `228:1217` | Conversation Detail · Baseline | HIGH: Sent vs received message hierarchy, sender names, timestamps |
-| Profile MFA disabled | `235:1168` | Profile · MFA Disabled | MED: Section framing, security tab, Enable 2FA CTA |
-| Profile MFA setup QR | `235:1191` | Profile · MFA Setup QR | MED: QR code + manual entry + verification input |
-| Profile MFA enabled | `235:1207` | Profile · MFA Enabled | MED: Active state with recovery codes, Disable 2FA with ConfirmDialog annotation |
-| Profile MFA recovery | `235:1229` | Profile · MFA Recovery Notice | MED: Recovery codes grid, warning InlineFeedback, Copy All CTA |
-| Applications board loading | `237:1168` | Applications Board · Loading | MED: Skeleton columns replacing generic loading |
-| Applications board empty | `237:1192` | Applications Board · Empty | MED: EmptyState with Add Application CTA + secondary link |
-
-**Page: Wave 3 · Auth & Workflow Screens** (page ID `221:1169`)
-
-| Screen | Node ID | Frame name | Findings addressed |
-| --- | --- | --- | --- |
-| Login baseline | `229:1167` | Login · Baseline | HIGH: AuthPanel with email + password + Sign In CTA |
-| Login MFA challenge | `229:1185` | Login · MFA Challenge | HIGH: Distinct auth step with 6-digit code, Verify CTA, Back to login |
-| Register baseline | `229:1202` | Register · Baseline | MED: Password rules checklist, LinearProgress strength bar, 4 validation rules |
-| Admin login baseline | `232:1167` | Admin Login · Baseline | MED: AuthPanel with admin-specific title/description/footer |
-| Admin session resolving | `232:1185` | Admin Login · Session Resolving | MED: Centered spinner with "Verifying admin access..." copy |
-| Admin access denied | `232:1192` | Admin · Access Denied | MED: CTA hierarchy: primary "Sign in again", secondary "Open product app" |
-| Extractor workflow | `232:1202` | Extractor Workflow · Baseline | MED: Two-column layout with StatusChip library instance, SurfaceDialog annotation |
-
-The single baseline frames above remain useful reference sketches. They do not replace the moved `[Needs Recapture]` matrices, which still need nonblank, review-ready state coverage.
-
-**Page: Admin · Privileged Workflows** (page ID `221:1170`)
-
-| Screen | Node ID | Frame name | Findings addressed |
-| --- | --- | --- | --- |
-| DB management baseline | `234:1167` | DB Management · Baseline | HIGH: Destructive actions in danger zone, ConfirmDialog annotation |
-| DB management confirm | `234:1198` | DB Management · Confirm Dialog | HIGH: Type-to-confirm pattern, disabled button until match |
-| Review queue baseline | `234:1215` | Review Queue · Baseline | MED: CollectionToolbar visual ref, StatusChip tone consistency |
-| Crawlers baseline | `234:1239` | Crawlers · Baseline | MED: StatusChip library instances (Success, Danger), schedule section |
-
-**Page: Wave 1 · Aspirations & Apply** (page ID `221:1167`)
-
-| Screen | Node ID | Frame name | Findings addressed |
-| --- | --- | --- | --- |
-| Aspirations roles matrix | `236:1167` | Aspirations · Roles Matrix | MED: SectionCard pattern, role cards with skills, match percentages |
-| Aspirations companies matrix | `236:1216` | Aspirations · Companies Matrix | MED: Company cards with logo, industry, open role count |
-| Apply matrix | `236:1253` | Apply · Matrix | MED: Kanban board with 4 columns, StatusChip per stage |
-
-### Library component usage in new frames
-
-- **StatusChip** (imported from library): Used in Application Detail Overview, DB Management Baseline, Extractor Workflow, Crawlers (Success + Danger variants)
-- **Visual representations** (built faithfully, annotated with library node refs): InlineFeedback, LoadingState, EmptyState, AuthPanel, ConfirmDialog, CollectionToolbar, SurfaceDialog — these components are not published to the team library and cannot be imported cross-file
+- `03 · Applications · Queue Board Detail` page `221:1168` remains live as the applications composed detail/state page.
+- `04 · Network & Profile States` page `26:108` now carries conversation detail and profile MFA/security frames.
+- `05 · Auth & Access Live Evidence` page `353:1167` now anchors live auth, admin-login/access-denied, and access-state evidence with frames `370:2`, `371:2`, `373:2`, `374:2`, `375:2`, and `376:2`.
+- `06 · Workflows & Admin Live Evidence` page `394:1167` now anchors extractor `369:2` plus admin live captures `184:4929`, `192:4929`, and `201:4929`.
+- `07 · Reference · Admin Studies` page `221:1170` remains live as reference-only composed admin evidence with frames `234:1167`, `234:1198`, `234:1215`, and `234:1239`.
+- `08 · Marketing · Landing` page `297:1167` keeps `297:1168`, `298:1167`, and canonical full composition `299:1167`.
+- The previously documented `Wave 3 · Auth & Workflow Screens` page `221:1169` and nodes `131:*`, `229:*`, and `232:*` do not resolve in the live file and now remain audit history only.
 
 ## Next Owners
 
 | Owner | Responsibility | Exit condition |
 | --- | --- | --- |
-| Baldin Design Lead Agent | ✅ **Completed 2026-04-15.** Created 23 frames covering the original High-severity and qualifying Medium-severity Figma findings. | Single-frame references exist for the original findings, but the moved auth/extractor matrices still require recapture. |
-| `baldin_frontend` | Recapture the moved `[Needs Recapture]` Wave 3 auth and extractor matrices. | `Login · Error · dark` and `Extractor Workflow · Create Extractor Dialog · dark` are no longer blank, and all auth/extractor rows are review-ready captures or editable compositions. |
-| Baldin Frontend Agent | Review Medium-severity code consistency findings (InlineFeedback vs Alert, LoadingState vs CircularProgress, SurfaceDialog vs raw Dialog, StatusChip vs local chip wrappers) and decide which to fix in code vs. accept as feature-owned patterns. | Each Medium finding is either resolved in code or documented as intentional in the design-system catalog. |
-| Baldin Lead Full-Stack Architect | Review the cross-screen summary for any pattern decisions that should be formalized in design-system governance docs. | Collection-page heading pattern, error feedback surface, and dialog surface decisions are documented. |
-| Baldin Design Lead Agent | Publish remaining library components (InlineFeedback, LoadingState, EmptyState, AuthPanel, ConfirmDialog, SurfaceDialog, SurfaceCard, CardShell) to the team library so future App-Screens frames can import them directly instead of using visual representations. | All 8 unpublished components are published and importable cross-file. |
+| `baldin_design_lead` | Keep `05 · Auth & Access Live Evidence`, `06 · Workflows & Admin Live Evidence`, and the stale-ref guardrail aligned in the inventory and polish ledger during future App-Screens edits. | The docs stay aligned with live Figma and no stale node references return. |
+| `baldin_full_stack_architect` | Review whether any cross-screen heading, feedback, or dialog decisions from this audit should move into governance docs after recapture. | Governance docs change only if the decisions become stable across shipped consumers. |

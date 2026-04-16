@@ -1,6 +1,3 @@
-from datetime import UTC, datetime
-from uuid import uuid4
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
@@ -29,9 +26,7 @@ def _can_manage_company(
     user: schemas.UserRead,
 ) -> bool:
     return bool(
-        getattr(user, "is_superuser", False)
-        or company.creator_user_id == user.id
-        or company.creator_user_id is None
+        getattr(user, "is_superuser", False) or company.creator_user_id == user.id
     )
 
 
@@ -39,11 +34,12 @@ def _company_read(
     company: models.Company,
     user: schemas.UserRead,
 ) -> schemas.CompanyRead:
-    now = datetime.now(UTC)
+    if company.id is None or company.created_at is None or company.updated_at is None:
+        raise ValueError("Company must be persisted before serialization.")
     return schemas.CompanyRead(
-        id=getattr(company, "id", None) or uuid4(),
-        created_at=getattr(company, "created_at", None) or now,
-        updated_at=getattr(company, "updated_at", None) or now,
+        id=company.id,
+        created_at=company.created_at,
+        updated_at=company.updated_at,
         name=company.name,
         industry=company.industry,
         size=company.size,

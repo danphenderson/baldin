@@ -42,7 +42,9 @@ async def _get_duplicate_aspiration(
     return result.scalars().first()
 
 
-@router.get("", response_model=schemas.PaginatedResponse[schemas.AspirationSummaryRead])
+@router.get(
+    "/", response_model=schemas.PaginatedResponse[schemas.AspirationSummaryRead]
+)
 async def list_aspirations(
     kind: schemas.AspirationKind | None = None,
     page: int = Query(1, ge=1),
@@ -70,7 +72,7 @@ async def list_aspirations(
     )
 
 
-@router.post("", status_code=201, response_model=schemas.AspirationRead)
+@router.post("/", status_code=201, response_model=schemas.AspirationRead)
 async def create_aspiration(
     payload: schemas.AspirationCreate,
     user: schemas.UserRead = Depends(get_current_user),

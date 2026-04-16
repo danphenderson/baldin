@@ -439,7 +439,7 @@ const routeHandlers: Array<[(url: URL, method: string) => boolean, MockRouteHand
   ],
   [(url, method) => method === 'GET' && url.pathname === '/api/v1/skills/', () => jsonResponse(paginated(SKILLS))],
   [
-    (url, method) => method === 'GET' && url.pathname === '/api/v1/aspirations',
+    (url, method) => method === 'GET' && url.pathname === '/api/v1/aspirations/',
     (request) => {
       const url = new URL(request.url);
       return jsonResponse(paginated(aspirationsForState(url.searchParams.get('kind'))));

@@ -56,8 +56,8 @@ Prompts are classified as **core** (9), **advanced** (4), or **maintenance** (1)
 ### Skills (5)
 `baldin-agent-prompt-tuner` · `baldin-backend-test-gap-planner` · `baldin-contract-regen-resolver` · `baldin-docs-drift-auditor` · `baldin-local-stack-doctor`
 
-### Codex Custom Agents (4)
-`baldin_project_manager` · `baldin_backend` · `baldin_frontend` · `baldin_full_stack_architect`
+### Codex Custom Agents (5)
+`baldin_project_manager` · `baldin_backend` · `baldin_frontend` · `baldin_design_lead` · `baldin_full_stack_architect`
 
 Codex uses `AGENTS.md` plus `.codex/agents/*.toml` rather than a mirrored prompt-file catalog. Do not force a one-to-one Codex equivalent for every Copilot slash prompt.
 

@@ -29,13 +29,17 @@ _FUNNEL_STAGE_ORDER = [
 _FUNNEL_STAGE_INDEX = {stage: index for index, stage in enumerate(_FUNNEL_STAGE_ORDER)}
 
 
+def _status_value(value: object) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, (models.ApplicationStage, models.ApplicationOutcome)):
+        return value.value
+    return str(value).lower()
+
+
 def _stage_value(stage) -> str | None:
     """Normalize an ApplicationStage (or raw string) to its string value."""
-    if stage is None:
-        return None
-    if isinstance(stage, models.ApplicationStage):
-        return stage.value
-    return str(stage).lower()
+    return _status_value(stage)
 
 
 def _build_history_entries_from_table(
@@ -51,11 +55,7 @@ def _build_history_entries_from_table(
     entries: list[tuple[str, datetime]] = []
     for row in history_rows:
         if row.outcome is not None:
-            label = (
-                row.outcome.value
-                if isinstance(row.outcome, models.ApplicationOutcome)
-                else str(row.outcome).lower()
-            )
+            label = _status_value(row.outcome)
         else:
             label = _stage_value(row.stage)
         if label is None:
@@ -216,9 +216,7 @@ async def get_activity_feed(
             )
         )
         for application_id, stage, outcome, changed_at, lead_title in result.all():
-            display_value = (
-                outcome.value if outcome else stage.value if stage else "unknown"
-            )
+            display_value = _status_value(outcome) or _status_value(stage) or "unknown"
             items.append(
                 schemas.ActivityFeedItem(
                     type="status_change",

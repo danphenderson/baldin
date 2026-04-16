@@ -205,10 +205,10 @@ describe('createApiAdapter', () => {
       'Staff Engineer',
       'Platform Engineer',
     ]);
-    expect(GET).toHaveBeenNthCalledWith(1, '/api/v1/aspirations', {
+    expect(GET).toHaveBeenNthCalledWith(1, '/api/v1/aspirations/', {
       params: { query: { kind: 'role', page: 1, page_size: 100 } },
     });
-    expect(GET).toHaveBeenNthCalledWith(2, '/api/v1/aspirations', {
+    expect(GET).toHaveBeenNthCalledWith(2, '/api/v1/aspirations/', {
       params: { query: { kind: 'role', page: 2, page_size: 100 } },
     });
   });
@@ -252,7 +252,7 @@ describe('createApiAdapter', () => {
 
     expect(created.label).toBe('Staff Engineer');
     expect(updated.label).toBe('Principal Engineer');
-    expect(POST).toHaveBeenCalledWith('/api/v1/aspirations', {
+    expect(POST).toHaveBeenCalledWith('/api/v1/aspirations/', {
       body: { kind: 'role', label: 'Staff Engineer' },
     });
     expect(PATCH).toHaveBeenCalledWith('/api/v1/aspirations/{id}', {

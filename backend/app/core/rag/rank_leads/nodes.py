@@ -61,7 +61,9 @@ def _build_ranking_prompt(
             "For each lead, provide a relevance score (1-10) and a brief explanation "
             "grounded in the context. When aspirations are provided, also explain "
             "how each lead aligns or conflicts with them. Return concise structured "
-            "output that matches the required schema exactly.",
+            "output that matches the required schema exactly. Return one ranked "
+            "entry for every input lead exactly once, and make lead_index a "
+            "complete 1..N permutation of the input order.",
         ),
     ]
     if aspirations_text:
@@ -81,7 +83,9 @@ def _build_ranking_prompt(
                 "Repair the previous attempt. Requirements: each lead needs "
                 "lead_index (1-based int), title (1-200 chars), relevance_score "
                 "(1-10), explanation (20-400 chars), and optional aspiration_alignment "
-                "(5-240 chars). All entries must have unique lead_index values. "
+                "(5-240 chars). All entries must have unique lead_index values "
+                "that form a complete 1..N permutation covering every input lead "
+                "exactly once. "
                 f"Prior failure: {repair_note}",
             )
         )

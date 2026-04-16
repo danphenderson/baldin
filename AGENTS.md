@@ -33,7 +33,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces.
 
 - Backend-only routes, models, auth, ETL, extraction, or backend tests: use `baldin_backend` in Codex or Baldin Backend Agent in Copilot.
 - Frontend-only UI, UX, accessibility, routing, state handling, or typed service consumption: use `baldin_frontend` in Codex or Baldin Frontend Agent in Copilot.
-- Figma-first design work, `Baldin-Library` or `Baldin-App-Screens` updates, browser-harness capture, repo-backed `.figma.ts` mapping, or design-to-code handoff: use Baldin Design Lead Agent in Copilot. In Codex, route repo-backed implementation through `baldin_frontend` or use `baldin_project_manager` when the slice is still design-only and needs routing.
+- Figma-first design work, `Baldin-Library` or `Baldin-App-Screens` updates, browser-harness capture, repo-backed `.figma.ts` mapping, or design-to-code handoff: use `baldin_design_lead` in Codex or Baldin Design Lead Agent in Copilot.
 - Cross-stack contracts, schema generation, docs, CI, scripts, docker-compose, or release-path work: use `baldin_full_stack_architect` in Codex or Baldin Lead Full-Stack Architect in Copilot.
 - Unclear ownership, sequencing, or multi-stream planning: use `baldin_project_manager` in Codex or Baldin Project Manager in Copilot.
 - Read-only scouting: use Codex's built-in `explorer` agent or Copilot's Explore agent. Do not treat a scout as the implementation owner.
@@ -57,7 +57,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces.
 
 - Project-scoped Codex custom agents live under `.codex/agents/`.
 - Copilot-specific prompts, agents, skills, and scoped instructions live under `.github/`.
-- Baldin's Figma-first design owner currently exists as Copilot's Baldin Design Lead Agent only; in Codex, route equivalent work through `baldin_frontend` when repo-backed UI implementation is in scope or `baldin_project_manager` when the slice still needs owner selection.
+- Baldin's Figma-first design owner exists as `baldin_design_lead` in Codex and Baldin Design Lead Agent in Copilot. Route broad React implementation through `baldin_frontend` and cross-stack or contract work through `baldin_full_stack_architect`.
 - Do not force a one-to-one Codex equivalent for every Copilot prompt file. Use the same owner model, but let Codex rely on `AGENTS.md`, `/plan`, and named custom agents where that is cleaner.
 
 ## Standard Handback

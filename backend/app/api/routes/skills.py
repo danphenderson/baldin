@@ -103,7 +103,8 @@ async def get_current_user_skills(
     count_result = await db.execute(select(func.count()).select_from(base.subquery()))
     total = count_result.scalar_one()
     offset = (page - 1) * page_size
-    result = await db.execute(base.offset(offset).limit(page_size))
+    ordered_base = base.order_by(models.Skill.created_at.asc(), models.Skill.id.asc())
+    result = await db.execute(ordered_base.offset(offset).limit(page_size))
     return schemas.PaginatedResponse[schemas.SkillRead](
         items=result.scalars().all(),
         total=total,

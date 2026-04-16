@@ -27,6 +27,21 @@ class StructuredJSONFormatter(logging.Formatter):
     string when logged outside a request context).
     """
 
+    @staticmethod
+    def _coerce_json_safe(value):
+        if value is None or isinstance(value, (str, int, float, bool)):
+            return value
+        if isinstance(value, Mapping):
+            return {
+                str(key): StructuredJSONFormatter._coerce_json_safe(item)
+                for key, item in value.items()
+            }
+        if isinstance(value, (list, tuple, set, frozenset)):
+            return [StructuredJSONFormatter._coerce_json_safe(item) for item in value]
+        if isinstance(value, datetime):
+            return value.isoformat()
+        return str(value)
+
     def format(self, record: logging.LogRecord) -> str:
         log_entry: dict = {
             "timestamp": datetime.fromtimestamp(
@@ -42,12 +57,13 @@ class StructuredJSONFormatter(logging.Formatter):
         structured_data = getattr(record, "structured_data", None)
         if isinstance(structured_data, Mapping):
             for key, value in structured_data.items():
+                safe_value = self._coerce_json_safe(value)
                 if key in log_entry:
-                    log_entry[f"structured_{key}"] = value
+                    log_entry[f"structured_{key}"] = safe_value
                 else:
-                    log_entry[key] = value
+                    log_entry[key] = safe_value
         elif structured_data is not None:
-            log_entry["structured_data"] = structured_data
+            log_entry["structured_data"] = self._coerce_json_safe(structured_data)
         if record.exc_info and record.exc_info[1] is not None:
             log_entry["exception"] = self.formatException(record.exc_info)
         return json.dumps(log_entry)

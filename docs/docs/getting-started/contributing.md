@@ -5,7 +5,7 @@ title: Contribute Safely
 description: Choose the right workflow, validation, and ownership rules before opening a pull request.
 ---
 
-<!-- last-verified: 2026-04-06 -->
+<!-- last-verified: 2026-04-16 -->
 
 # Contribute Safely
 
@@ -34,9 +34,10 @@ If you use Baldin's Copilot or Codex setup, prefer this sequence:
 2. Use the smallest correct owner.
 	- Baldin Backend Agent for backend-only work.
 	- Baldin Frontend Agent for frontend-only work.
+	- Baldin Design Lead Agent for Figma-first design work, browser-harness capture, and design-to-code handoff preparation.
 	- Baldin Lead Full-Stack Architect for cross-stack, contract, or release-boundary work; it should still delegate isolated backend-only or frontend-only slices by default.
 	- Baldin Project Manager when ownership is unclear.
-	- In Codex, the matching custom-agent names are `baldin_backend`, `baldin_frontend`, `baldin_full_stack_architect`, and `baldin_project_manager`.
+	- In Codex, the matching custom-agent names are `baldin_backend`, `baldin_frontend`, `baldin_design_lead`, `baldin_full_stack_architect`, and `baldin_project_manager`.
 3. Ask for the standard handback on non-trivial work: status, summary, files touched or reviewed, commands run and result summary, API or schema status, generated-artifact status, risks or assumptions, and recommended next owner.
 4. Review the diff before pushing.
 5. Open the pull request and, if useful, request Copilot review or Codex review as a secondary reviewer.

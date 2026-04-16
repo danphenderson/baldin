@@ -140,6 +140,7 @@ async def get_applications(
     base = (
         select(models.Application)
         .where(models.Application.user_id == user.id)
+        .order_by(models.Application.created_at.desc(), models.Application.id.desc())
         .options(
             joinedload(models.Application.lead).options(
                 joinedload(models.Lead.companies)

@@ -206,6 +206,19 @@ def test_build_ranking_prompt_omits_aspirations_when_absent() -> None:
     )
     rendered = "\n".join(str(message.content) for message in messages)
     assert "career aspirations" not in rendered
+    assert "complete 1..N permutation" in rendered
+
+
+def test_build_ranking_prompt_repair_requires_complete_permutation() -> None:
+    prompt = nodes._build_ranking_prompt(repair_note="missing 2")
+    messages = prompt.format_messages(
+        context="PROFILE CONTEXT",
+        leads_text="1. Staff Engineer: Platform and backend scope.",
+    )
+    rendered = "\n".join(str(message.content) for message in messages)
+
+    assert "covering every input lead exactly once" in rendered
+    assert "Prior failure: missing 2" in rendered
 
 
 @pytest.mark.asyncio

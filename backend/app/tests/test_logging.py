@@ -5,7 +5,9 @@ Tests for structured JSON logging and correlation ID middleware.
 import json
 import logging
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -161,6 +163,32 @@ def test_structured_json_formatter_merges_structured_data():
     assert parsed["event"] == "db_management_admin_operation"
     assert parsed["operation"] == "purge_user_data"
     assert parsed["deleted_records"] == {"documents": 2}
+
+
+def test_structured_json_formatter_coerces_non_json_native_structured_data():
+    formatter = StructuredJSONFormatter()
+    record = logging.LogRecord(
+        name="audit_logger",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="audit event",
+        args=(),
+        exc_info=None,
+    )
+    event_id = uuid4()
+    happened_at = datetime(2026, 4, 15, 12, 30, tzinfo=timezone.utc)
+    record.structured_data = {
+        "event_id": event_id,
+        "happened_at": happened_at,
+        "nested": {"retry_at": happened_at},
+    }
+
+    parsed = json.loads(formatter.format(record))
+
+    assert parsed["event_id"] == str(event_id)
+    assert parsed["happened_at"] == happened_at.isoformat()
+    assert parsed["nested"]["retry_at"] == happened_at.isoformat()
 
 
 def test_logs_path_uses_public_var_logs():

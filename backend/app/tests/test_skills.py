@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from types import SimpleNamespace
@@ -18,7 +19,7 @@ pytestmark = pytest.mark.asyncio(loop_scope="module")
 
 
 @asynccontextmanager
-async def _client() -> AsyncClient:
+async def _client() -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=app)
     async with AsyncClient(
         transport=transport,
@@ -73,6 +74,7 @@ class _ExecuteResult:
 class _FakeSkillSession:
     def __init__(self, skills=None) -> None:
         self.skills = {skill.id: skill for skill in skills or []}
+        self.executed_statements: list[str] = []
 
     def add(self, skill: models.Skill) -> None:
         now = datetime.now(UTC)
@@ -97,6 +99,7 @@ class _FakeSkillSession:
         self.skills.pop(skill.id, None)
 
     async def execute(self, stmt):
+        self.executed_statements.append(str(stmt))
         params = stmt.compile().params
         user_id = params.get("user_id_1")
         items = [
@@ -104,7 +107,7 @@ class _FakeSkillSession:
             for skill in self.skills.values()
             if user_id is None or skill.user_id == user_id
         ]
-        items.sort(key=lambda skill: skill.created_at)
+        items.sort(key=lambda skill: (skill.created_at, str(skill.id)))
         if "count(*)" in str(stmt):
             return _ExecuteResult(count=len(items))
         limit = params.get("param_1")
@@ -170,6 +173,12 @@ async def test_skills_crud_list_and_scoping() -> None:
         page=1,
         page_size=1,
     )
+    listed_page_two = await skills_route.get_current_user_skills(
+        user=owner,
+        db=db,
+        page=2,
+        page_size=1,
+    )
     fetched = await deps.get_skill(created_one.id, db=db, user=owner)
 
     with pytest.raises(HTTPException) as exc_info:
@@ -182,6 +191,9 @@ async def test_skills_crud_list_and_scoping() -> None:
     assert listed.page_size == 1
     assert len(listed.items) == 1
     assert listed.items[0].name == "Python"
+    assert len(listed_page_two.items) == 1
+    assert listed_page_two.items[0].name == "SQL"
+    assert any("ORDER BY" in stmt.upper() for stmt in db.executed_statements)
     assert fetched.id == created_one.id
     assert exc_info.value.status_code == 403
 

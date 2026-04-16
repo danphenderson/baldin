@@ -8,6 +8,7 @@ A single user session is shared across most tests to stay under the
 10/minute auth rate-limit configured for ``/auth/jwt/login``.
 """
 
+import asyncio
 from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
@@ -271,6 +272,26 @@ async def test_list_applications() -> None:
     assert "stage" in body["items"][0]
     assert "user_id" in body["items"][0]
     assert "document_metadata" in body["items"][0]
+
+
+async def test_list_applications_orders_newest_first() -> None:
+    async with _client() as client:
+        _, headers = await _get_auth(client)
+        first_lead_id = await _create_lead()
+        first_app = await _create_application_via_api(client, headers, first_lead_id)
+        await asyncio.sleep(0.01)
+        second_lead_id = await _create_lead()
+        second_app = await _create_application_via_api(client, headers, second_lead_id)
+
+        response = await client.get(
+            "/api/v1/applications/",
+            params={"page": 1, "page_size": 100},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    ids = [item["id"] for item in response.json()["items"]]
+    assert ids.index(second_app["id"]) < ids.index(first_app["id"])
 
 
 async def test_application_responses_include_accessible_document_metadata() -> None:

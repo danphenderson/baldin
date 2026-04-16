@@ -110,6 +110,7 @@ class BaseRead(BaseSchema):
 
 
 PAGINATION_MAX_PAGE_SIZE = 100
+LEAD_RANK_MAX_LEADS = 20
 MATCH_ASPIRATIONS_MAX_LEADS = 20
 
 
@@ -1493,7 +1494,10 @@ class LeadRankedEntryRead(BaseSchema):
 
 class LeadRankRequest(BaseSchema):
     leads: list[LeadRankInput] = Field(
-        ..., min_length=1, description="List of typed leads to rank"
+        ...,
+        min_length=1,
+        max_length=LEAD_RANK_MAX_LEADS,
+        description="List of typed leads to rank",
     )
     k: int = Field(5, ge=1, le=20, description="Context chunks per lead")
 

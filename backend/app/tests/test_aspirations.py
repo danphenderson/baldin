@@ -9,8 +9,11 @@ from app.conftest import create_user, login_and_get_headers
 from app.core import conf
 from app.core.db import session_context
 from app.core.rag.match_aspirations import suggest as suggest_service
+from app.main import app
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
+
+ASPIRATIONS_COLLECTION_PATH = "/api/v1/aspirations/"
 
 
 async def _seed_profile(
@@ -68,7 +71,7 @@ async def _create_aspiration(
     extracted_attributes: dict | None = None,
 ):
     response = await client.post(
-        "/api/v1/aspirations",
+        ASPIRATIONS_COLLECTION_PATH,
         json={
             "kind": kind,
             "label": label,
@@ -83,6 +86,21 @@ async def _create_aspiration(
     return response.json()
 
 
+async def test_aspirations_collection_routes_are_registered_on_app() -> None:
+    collection_routes = [
+        route
+        for route in app.routes
+        if getattr(route, "path", None) == ASPIRATIONS_COLLECTION_PATH
+    ]
+    methods = {
+        method
+        for route in collection_routes
+        for method in getattr(route, "methods", set())
+    }
+
+    assert {"GET", "POST"} <= methods
+
+
 async def test_create_aspiration_round_trip(
     client: AsyncClient, ensure_db: None
 ) -> None:
@@ -91,7 +109,7 @@ async def test_create_aspiration_round_trip(
     headers = await login_and_get_headers(client, email, "aspiration-create-pass")
 
     response = await client.post(
-        "/api/v1/aspirations",
+        ASPIRATIONS_COLLECTION_PATH,
         json={
             "kind": "role",
             "label": "  Staff Engineer  ",
@@ -140,7 +158,7 @@ async def test_list_aspirations_only_returns_current_users_records(
         label="Other User Role",
     )
 
-    response = await client.get("/api/v1/aspirations", headers=owner_headers)
+    response = await client.get(ASPIRATIONS_COLLECTION_PATH, headers=owner_headers)
 
     assert response.status_code == 200
     items = response.json()["items"]
@@ -163,7 +181,7 @@ async def test_list_aspirations_filters_by_kind(
     )
 
     response = await client.get(
-        "/api/v1/aspirations",
+        ASPIRATIONS_COLLECTION_PATH,
         params={"kind": "company"},
         headers=headers,
     )
@@ -187,7 +205,7 @@ async def test_list_aspirations_orders_newest_first(
     await asyncio.sleep(0.01)
     await _create_aspiration(client, headers, label="Second Aspiration")
 
-    response = await client.get("/api/v1/aspirations", headers=headers)
+    response = await client.get(ASPIRATIONS_COLLECTION_PATH, headers=headers)
 
     assert response.status_code == 200
     labels = [item["label"] for item in response.json()["items"]]
@@ -336,12 +354,12 @@ async def test_duplicate_aspiration_same_user_kind_returns_409(
     headers = await login_and_get_headers(client, email, "aspiration-duplicate-pass")
 
     first_response = await client.post(
-        "/api/v1/aspirations",
+        ASPIRATIONS_COLLECTION_PATH,
         json={"kind": "role", "label": "Staff Engineer"},
         headers=headers,
     )
     second_response = await client.post(
-        "/api/v1/aspirations",
+        ASPIRATIONS_COLLECTION_PATH,
         json={"kind": "role", "label": "  Staff Engineer  "},
         headers=headers,
     )
@@ -398,17 +416,17 @@ async def test_same_label_allowed_for_different_users_and_kinds(
     )
 
     first_response = await client.post(
-        "/api/v1/aspirations",
+        ASPIRATIONS_COLLECTION_PATH,
         json={"kind": "role", "label": "Staff Engineer"},
         headers=first_headers,
     )
     second_user_response = await client.post(
-        "/api/v1/aspirations",
+        ASPIRATIONS_COLLECTION_PATH,
         json={"kind": "role", "label": "Staff Engineer"},
         headers=second_headers,
     )
     second_kind_response = await client.post(
-        "/api/v1/aspirations",
+        ASPIRATIONS_COLLECTION_PATH,
         json={"kind": "company", "label": "Staff Engineer"},
         headers=first_headers,
     )

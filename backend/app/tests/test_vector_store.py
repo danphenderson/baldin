@@ -148,6 +148,19 @@ class TestLeadRankSchemas:
         with pytest.raises(ValidationError):
             LeadRankRequest(leads=[])
 
+    def test_too_many_leads_rejected(self):
+        with pytest.raises(ValidationError):
+            LeadRankRequest(
+                leads=[
+                    {
+                        "id": str(uuid4()),
+                        "title": f"Lead {index}",
+                        "description": "Backend developer",
+                    }
+                    for index in range(21)
+                ]
+            )
+
     def test_response(self):
         response = LeadRankResponse(
             ranking="Lead Rankings",

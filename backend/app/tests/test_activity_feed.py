@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from app import models
+from app.api.routes import activity_feed as activity_feed_route
 from app.conftest import (
     async_client_ctx as _client,
 )
@@ -92,6 +93,17 @@ async def _create_application_with_history(
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
+
+async def test_activity_feed_status_value_normalizes_strings_and_enums() -> None:
+    assert (
+        activity_feed_route._status_value(models.ApplicationStage.APPLIED) == "applied"
+    )
+    assert (
+        activity_feed_route._status_value(models.ApplicationOutcome.REJECTED)
+        == "rejected"
+    )
+    assert activity_feed_route._status_value("WiThDrAwN") == "withdrawn"
 
 
 async def test_activity_feed_empty() -> None:

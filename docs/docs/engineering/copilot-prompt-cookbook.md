@@ -5,7 +5,7 @@ title: Prompt The Right Agent
 description: Choose the right Baldin agent surface, scope prompts cleanly, and require consistent handbacks.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-16 -->
 
 # Prompt The Right Agent
 
@@ -41,7 +41,7 @@ Use the same owner model in both. Copilot prompt files are convenience entry poi
 |------|--------------|------------|
 | Backend-only implementation | `Backend Runtime Slice` or Baldin Backend Agent | Ask Codex to use `baldin_backend` |
 | Frontend-only implementation | `Frontend Product Slice` or Baldin Frontend Agent | Ask Codex to use `baldin_frontend` |
-| Figma-first design work | Baldin Design Lead Agent | Ask Codex to use `baldin_frontend` for repo-backed shared UI sync, or start with `/plan` when the slice is still design-only |
+| Figma-first design work | Baldin Design Lead Agent | Ask Codex to use `baldin_design_lead` |
 | Cross-stack implementation | `Local Preview Integration Fix`, `API Contract Change Orchestrator`, or Baldin Lead Full-Stack Architect | Ask Codex to use `baldin_full_stack_architect` |
 | Unclear ownership or sequencing | `Issue Dispatch Kickoff`, `Plan Slice Kickoff`, or Baldin Project Manager | Start with `/plan` or ask Codex to use `baldin_project_manager` |
 | Read-only scouting | Explore | Use the built-in `explorer` agent or ask for read-only scouting |

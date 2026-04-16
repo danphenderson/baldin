@@ -125,7 +125,7 @@ const listAspirationsPage = async (
   page: number,
 ): Promise<ReturnType<typeof normalizePaginatedResponse<AspirationItem>>> => {
   const client = createApiClient(token);
-  const response = unwrap<AspirationPage>(await client.GET('/api/v1/aspirations', {
+  const response = unwrap<AspirationPage>(await client.GET('/api/v1/aspirations/', {
     params: {
       query: {
         kind,
@@ -190,7 +190,7 @@ export function createApiAdapter(token: string): AspirationAdapter {
       const client = createApiClient(token);
       let result;
       try {
-        result = await client.POST('/api/v1/aspirations', {
+        result = await client.POST('/api/v1/aspirations/', {
           body: { ...data, kind },
         });
       } catch {

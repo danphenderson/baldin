@@ -480,11 +480,11 @@ export interface paths {
     /** Detach Document From Application */
     delete: operations["detach_document_from_application_api_v1_applications__id__documents__document_id__delete"];
   };
-  "/api/v1/aspirations": {
+  "/api/v1/aspirations/": {
     /** List Aspirations */
-    get: operations["list_aspirations_api_v1_aspirations_get"];
+    get: operations["list_aspirations_api_v1_aspirations__get"];
     /** Create Aspiration */
-    post: operations["create_aspiration_api_v1_aspirations_post"];
+    post: operations["create_aspiration_api_v1_aspirations__post"];
   };
   "/api/v1/aspirations/match": {
     /** Match Aspirations */
@@ -11171,7 +11171,7 @@ export interface operations {
     };
   };
   /** List Aspirations */
-  list_aspirations_api_v1_aspirations_get: {
+  list_aspirations_api_v1_aspirations__get: {
     parameters: {
       query?: {
         kind?: components["schemas"]["AspirationKind"] | null;
@@ -11195,7 +11195,7 @@ export interface operations {
     };
   };
   /** Create Aspiration */
-  create_aspiration_api_v1_aspirations_post: {
+  create_aspiration_api_v1_aspirations__post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["AspirationCreate"];

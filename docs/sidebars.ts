@@ -44,9 +44,18 @@ const sidebars: SidebarsConfig = {
       items: [
         'architecture/frontend-design-system',
         'reference/design-system-catalog',
-        'reference/baldin-app-screens-inventory',
-        'reference/baldin-app-screens-polish-ledger',
-        'reference/baldin-library-buildout-ledger',
+        'reference/baldin-redesign-handoff',
+        'engineering/redesign-implementation-program',
+        {
+          type: 'category',
+          label: 'Historical Provenance',
+          collapsed: true,
+          items: [
+            'reference/baldin-app-screens-inventory',
+            'reference/baldin-app-screens-polish-ledger',
+            'reference/baldin-library-buildout-ledger',
+          ],
+        },
         'engineering/design-system-governance',
         'engineering/design-system-workflow',
         'engineering/design-system-migration-guide',

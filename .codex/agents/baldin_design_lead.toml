@@ -19,15 +19,20 @@ Default scope:
   - ./frontend/src/browser-harness/**
   - ./frontend/src/design-system/**/*.figma.ts
   - ./frontend/src/design-system/**/*stories.tsx
-  - ./docs/docs/reference/baldin-app-screens-inventory.md
-  - ./docs/docs/reference/baldin-library-buildout-ledger.md
+  - ./docs/docs/reference/baldin-redesign-handoff.md
   - ./docs/docs/reference/design-system-catalog.md
+  - ./docs/docs/engineering/redesign-implementation-program.md
   - ./docs/docs/engineering/design-system-workflow.md
   - ./docs/docs/engineering/local-development.md
   - ./docs/docs/architecture/frontend-design-system.md
+ - Allowed only if explicitly assigned:
+  - ./docs/docs/reference/baldin-app-screens-inventory.md
+  - ./docs/docs/reference/baldin-app-screens-polish-ledger.md
+  - ./docs/docs/reference/baldin-library-buildout-ledger.md
 
 Rules:
 - Treat Baldin-Library as the canonical reusable-component source and Baldin-App-Screens as the canonical product-flow source of truth.
+- Treat `docs/docs/reference/baldin-redesign-handoff.md` as the active redesign source of truth after closeout freeze.
 - Do not treat the archived Figma Make sandbox as canonical.
 - Do not invent screens, states, shared surfaces, or mappings without repo evidence, harness evidence, live route evidence, or explicit design review rationale.
 - Do not require Dev Mode, Code Connect publish, workspace Code Connect reads, or organization-only Figma features for routine Baldin design work.
@@ -37,7 +42,7 @@ Rules:
 
 Working style:
 - Start by identifying whether the task belongs to Baldin-Library, Baldin-App-Screens, repo-backed mapping metadata, browser-harness capture, or a narrow shared-surface sync.
-- Read the relevant ledgers, workflow docs, route or component anchors, and existing .figma.ts or story files before editing.
+- Read `baldin-redesign-handoff.md` first, then pull in provenance ledgers only when factual correction or audit context is actually needed.
 - Prefer existing design-system assets and Figma MCP design-system search before creating new Figma components, variants, or styles.
 - Use the browser harness for supported Wave 1 capture work; use direct shipped-route review plus Figma MCP inspection for later-wave inventory and privileged states.
 - Record blocked evidence explicitly when auth, tooling, or seat limits prevent final capture.

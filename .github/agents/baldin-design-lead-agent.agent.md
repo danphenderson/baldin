@@ -24,7 +24,9 @@ Inherits repo posture, Figma workflow defaults, generated-artifact rules, and va
 - Archived sandbox only: the current Figma Make file is not a canonical delivery source.
 - Repo-backed Figma metadata lives primarily in `frontend/figma.config.json` and `frontend/src/design-system/**/*.figma.ts`.
 - Wave 1 capture path: `frontend/browser-harness/figma-wave1.html` and `frontend/src/browser-harness/**`.
-- Design evidence and promotion ledgers live in `docs/docs/reference/baldin-app-screens-inventory.md`, `docs/docs/reference/baldin-library-buildout-ledger.md`, and `docs/docs/reference/design-system-catalog.md`.
+- Active redesign source of truth: `docs/docs/reference/baldin-redesign-handoff.md`.
+- Provenance ledgers remain historical context in `docs/docs/reference/baldin-app-screens-inventory.md`, `docs/docs/reference/baldin-app-screens-polish-ledger.md`, and `docs/docs/reference/baldin-library-buildout-ledger.md`.
+- Current code-backed shared inventory lives in `docs/docs/reference/design-system-catalog.md`.
 - Workflow source docs live in `docs/docs/engineering/local-development.md` and `docs/docs/engineering/design-system-workflow.md`.
 - Local default path: keep `docker-compose up --build` running, use the mounted frontend container and browser harness for fast capture or review loops, and use Figma MCP read or write tools when seat and auth allow it.
 
@@ -42,13 +44,16 @@ Inherits repo posture, Figma workflow defaults, generated-artifact rules, and va
   - ./frontend/src/browser-harness/**
   - ./frontend/src/design-system/**/*.figma.ts
   - ./frontend/src/design-system/**/*stories.tsx
-  - ./docs/docs/reference/baldin-app-screens-inventory.md
-  - ./docs/docs/reference/baldin-library-buildout-ledger.md
+  - ./docs/docs/reference/baldin-redesign-handoff.md
   - ./docs/docs/reference/design-system-catalog.md
+  - ./docs/docs/engineering/redesign-implementation-program.md
   - ./docs/docs/engineering/design-system-workflow.md
   - ./docs/docs/engineering/local-development.md
   - ./docs/docs/architecture/frontend-design-system.md
 - Allowed only if explicitly assigned:
+  - ./docs/docs/reference/baldin-app-screens-inventory.md
+  - ./docs/docs/reference/baldin-app-screens-polish-ledger.md
+  - ./docs/docs/reference/baldin-library-buildout-ledger.md
   - ./frontend/src/design-system/**
   - ./frontend/src/page/**
   - ./frontend/src/layout/**
@@ -68,7 +73,7 @@ Inherits repo posture, Figma workflow defaults, generated-artifact rules, and va
 
 ## Working Style
 1. Start by identifying whether the task belongs to `Baldin-Library`, `Baldin-App-Screens`, repo-backed mapping metadata, or a narrow shared-surface sync.
-2. Read the relevant ledgers, workflow docs, route or component anchors, and existing `.figma.ts` or story files before editing.
+2. Read `baldin-redesign-handoff.md` first, then pull in provenance ledgers only when factual correction or audit context is actually needed.
 3. Prefer existing design-system assets and search the design system before creating new Figma components, variants, or styles.
 4. Use the browser harness for supported Wave 1 capture work; use direct shipped-route review plus MCP inspection for later-wave inventory and privileged states.
 5. When a mapping changes, keep the `.figma.ts` file, Storybook `parameters.design`, and design-system catalog aligned in the same slice.

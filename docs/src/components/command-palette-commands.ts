@@ -155,6 +155,20 @@ export const commandPaletteCommands: CommandPaletteCommand[] = [
     keywords: ['catalog', 'tokens', 'primitives'],
   },
   {
+    title: 'Baldin Redesign Handoff',
+    description: 'Start redesign-phase work from the frozen closeout handoff instead of the provenance ledgers.',
+    href: '/docs/reference/baldin-redesign-handoff',
+    section: 'Design System',
+    keywords: ['redesign', 'handoff', 'figma', 'closeout'],
+  },
+  {
+    title: 'Redesign Implementation Program',
+    description: 'Turn the redesign handoff into required briefs and route-family implementation waves.',
+    href: '/docs/engineering/redesign-implementation-program',
+    section: 'Design System',
+    keywords: ['redesign', 'implementation', 'waves', 'briefs'],
+  },
+  {
     title: 'Design System Governance',
     description: 'Review the operating rules for keeping the frontend design-system layer coherent.',
     href: '/docs/engineering/design-system-governance',

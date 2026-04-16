@@ -5,7 +5,7 @@ title: Prompt The Right Agent
 description: Choose the right Baldin agent surface, scope prompts cleanly, and require consistent handbacks.
 ---
 
-<!-- last-verified: 2026-04-16 -->
+<!-- last-verified: 2026-04-15 -->
 
 # Prompt The Right Agent
 
@@ -353,10 +353,13 @@ Use when the task is Figma-first: `Baldin-Library` work, `Baldin-App-Screens` ca
 Lead this as Figma-first design work.
 
 Objective:
-[Figma, design-system, or capture outcome]
+[approved redesign or Figma handoff outcome]
 
 Context:
-[screen, library surface, design review reason, or handoff need]
+[route family, library surface, approved redesign reason, or handoff need]
+
+Start from `docs/docs/reference/baldin-redesign-handoff.md`.
+Treat the old ledgers as provenance only unless a factual correction is explicitly in scope.
 
 Allowed paths:
 - ./frontend/figma.config.json
@@ -364,9 +367,9 @@ Allowed paths:
 - ./frontend/src/browser-harness/**
 - ./frontend/src/design-system/**/*.figma.ts
 - ./frontend/src/design-system/**/*stories.tsx
-- ./docs/docs/reference/baldin-app-screens-inventory.md
-- ./docs/docs/reference/baldin-library-buildout-ledger.md
+- ./docs/docs/reference/baldin-redesign-handoff.md
 - ./docs/docs/reference/design-system-catalog.md
+- ./docs/docs/engineering/redesign-implementation-program.md
 
 Out of scope:
 - backend API design
@@ -517,15 +520,16 @@ Start with Baldin Design Lead Agent.
 Lead this as Figma-first design work.
 
 Objective:
-Capture and align the next shared auth surface in Baldin-Library and keep the repo-backed mapping metadata current.
+Finalize the next approved route-family redesign in Figma and prepare the handoff details the frontend wave will need.
 
 Context:
-The surface is already evidenced by shipped auth flows, but the Figma library and the local mapping or story links need a clean sync before any broader React implementation work.
+Use `docs/docs/reference/baldin-redesign-handoff.md` as the active source of truth. The provenance ledgers are historical only. The approved redesign must be ready for the frontend implementation brief without reopening capture.
 
 Allowed paths:
+- ./docs/docs/reference/baldin-redesign-handoff.md
+- ./docs/docs/engineering/redesign-implementation-program.md
 - ./frontend/src/design-system/**/*.figma.ts
 - ./frontend/src/design-system/**/*stories.tsx
-- ./docs/docs/reference/baldin-library-buildout-ledger.md
 - ./docs/docs/reference/design-system-catalog.md
 
 Validation:

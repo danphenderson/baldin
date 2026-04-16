@@ -66,13 +66,13 @@ For Figma capture and browser-driven design review, Baldin's repo-owned MCP cont
 
 The canonical Figma surfaces for this repo are [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library) for reusable components and [Baldin-App-Screens](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy/Baldin-App-Screens) for product-flow state inventory. The current [Figma Make file](https://www.figma.com/make/pXpkeOKYnA3gvhHPIjbJDo/Untitled?t=bM22KU0ea6ttyIQ5-20&fullscreen=1) has been reviewed and should be treated as an archived sandbox, not an active delivery surface.
 
-Track active screen and state coverage in [Baldin App Screens Inventory](../reference/baldin-app-screens-inventory.md). Keep [Baldin Library Buildout Ledger](../reference/baldin-library-buildout-ledger.md) limited to reusable-component and library-only exploration.
+Track active redesign work from [Baldin Redesign Handoff](../reference/baldin-redesign-handoff.md). Use the old app-screen and library ledgers only as provenance, not as active checklists. Once implementation planning starts, use [Redesign Implementation Program](./redesign-implementation-program.md) plus the route-family packet files under `plans/redesign/`.
 
 1. Start or keep the local stack running with `docker-compose up --build`.
 2. Use the frontend dev server at `http://127.0.0.1:5173`.
 3. Open the supported Wave 1 Figma harness at `http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=...` for harness-backed product screens.
 4. For privileged admin capture, start from `http://127.0.0.1:5173/browser-harness/admin-session.html?next=/admin/db-management` or another `/admin/...` target so the browser session receives the configured local superuser token before opening the Admin SPA.
-5. Use the frontend Playwright runtime or configured host browser tooling to drive the Wave 1 harness or the bootstrapped admin route into the state you want to capture or inspect in Figma. For Wave 2 and Wave 3 closeout, use direct shipped-route review plus MCP structure or screenshot inspection instead of expanding the harness.
+5. Use the frontend Playwright runtime or configured host browser tooling to drive the Wave 1 harness or the bootstrapped admin route into the state you want to capture or inspect in Figma. For later redesign-finalization work beyond the Wave 1 harness, use direct shipped-route review plus MCP structure or screenshot inspection instead of expanding the harness.
 
 The canonical harness supports these query parameters:
 
@@ -105,7 +105,7 @@ http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=leads&state=ranked
 http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=apply&state=already-applied&mode=light
 ```
 
-The harness is the supported local capture surface for the Wave 1 screens it already backs. Keep the frontend stack warm and switch harness states instead of wiring a live backend for Wave 1 design review. For Wave 2 and Wave 3 closeout, follow the app-screens inventory ledger and use direct shipped-route review plus MCP structure or screenshot inspection rather than harness expansion.
+The harness is the supported local capture surface for the Wave 1 screens it already backs. Keep the frontend stack warm and switch harness states instead of wiring a live backend for Wave 1 design review. For later redesign work, start from Baldin Redesign Handoff and use direct shipped-route review plus MCP structure or screenshot inspection rather than harness expansion.
 
 For privileged admin routes, the supported preflight is the repo-owned admin session bootstrap page rather than a manual login step:
 
@@ -120,7 +120,7 @@ The bootstrap page calls the DEV-only backend route `POST /api/v1/auth/jwt/dev-b
 Baldin's supported Figma workflow assumes a Professional-plan workspace and does not require a Dev seat.
 
 - Use the local harness plus the repo-local frontend Playwright runtime or configured host browser tooling to put Wave 1 screens into the exact state you need.
-- For Wave 2 and Wave 3 closeout, treat the app-screens inventory ledger as the active policy source and use direct shipped-route review plus MCP structure or screenshot inspection.
+- For redesign finalization and implementation prep beyond the Wave 1 harness, treat Baldin Redesign Handoff as the active redesign source and open the route-family packets only through the Redesign Implementation Program.
 - Use Figma MCP read or write tools when your seat and auth allow it.
 - If your seat only allows basic inspection, keep the same evidence order and use screenshots or inspection instead of blocking on Dev Mode-specific UX.
 - Use MCP for structure, component, and screenshot inspection even when Dev Mode is unavailable. Full version-history review still requires browser or web access to the Figma UI.
@@ -227,8 +227,8 @@ npm --prefix docs run start
 ## Related Docs
 
 - [Boot The Stack](../getting-started/quickstart.md)
-- [Baldin App Screens Inventory](../reference/baldin-app-screens-inventory.md)
-- [Baldin Library Buildout Ledger](../reference/baldin-library-buildout-ledger.md)
+- [Baldin Redesign Handoff](../reference/baldin-redesign-handoff.md)
+- [Redesign Implementation Program](./redesign-implementation-program.md)
 - [Run The Right Checks](./testing.md)
 - [Regenerate API Contracts](./contract-management.md)
 - [Look Up Settings](../reference/environment-variables.md)

@@ -5,7 +5,7 @@ title: Rewrite Weak Prompts
 description: Turn vague prompts into scoped requests with validation and handback rules across Copilot and Codex.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-15 -->
 
 # Rewrite Weak Prompts
 
@@ -176,15 +176,16 @@ Good prompt:
 Lead this as Figma-first design work.
 
 Objective:
-Capture the shared auth surface in Baldin-Library and keep the repo-backed mapping metadata aligned.
+Finalize the next approved route-family redesign and prepare a clean design-to-code handoff.
 
 Context:
-The auth shell is already evidenced by shipped login and register flows, but the design library, mapping file, and Storybook design link need a clean sync before broader implementation work.
+Use `docs/docs/reference/baldin-redesign-handoff.md` as the active redesign source of truth. The provenance ledgers are historical only. The output should be ready for the required implementation brief without reopening capture work.
 
 Allowed paths:
+- ./docs/docs/reference/baldin-redesign-handoff.md
+- ./docs/docs/engineering/redesign-implementation-program.md
 - ./frontend/src/design-system/**/*.figma.ts
 - ./frontend/src/design-system/**/*stories.tsx
-- ./docs/docs/reference/baldin-library-buildout-ledger.md
 - ./docs/docs/reference/design-system-catalog.md
 
 Validation:

@@ -7,6 +7,8 @@ description: Figma-first working ledger for Baldin-Library surfaces that are ahe
 
 # Baldin Library Buildout Ledger
 
+> Closed-state notice: redesign-phase work should now start from [Baldin Redesign Handoff](./baldin-redesign-handoff.md). This page remains provenance for reusable-library studies and closeout-era library decisions.
+
 Use this ledger for Figma-first work that is ahead of the repo-backed `frontend/src/design-system/*` catalog, or intentionally remains outside `src/design-system/**/*.figma.ts` for the current slice.
 
 Use [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) for product-flow, screen-state, auth-only, or superuser-only inventory work in `Baldin-App-Screens`. Keep this ledger limited to `Baldin-Library` studies and reusable-surface exploration.
@@ -49,6 +51,8 @@ The current shipped shared-surface mapping set is complete. Future follow-on wor
 The repo-backed Figma metadata set currently includes 16 `.figma.ts` mappings through `frontend/figma.config.json`. Code Connect publish/read remains optional local metadata and future-proofing, not a blocking delivery dependency.
 
 `SecondaryNavBar` remains `library-only for now` in this slice. Product-flow coverage for `/applications`, `/applications/board`, `/leads`, `/workflows`, `/admin/*`, and related shell stories belongs in [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) until a closeout promotion review proves otherwise.
+
+The closeout promotion decision is now frozen: `Promotion candidate` remains empty, no `.figma.ts` expansion is required, and Code Connect work remains optional future-proofing rather than redesign-phase scope.
 
 ## Brand Foundation — Career Control Plane
 

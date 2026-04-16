@@ -33,9 +33,9 @@ Assume the local `docker-compose.yml` stack is the default development environme
 Baldin currently supports two repo-scoped agentic surfaces:
 
 - **Copilot in VS Code** uses `.github/copilot-instructions.md`, `.github/prompts/*.prompt.md`, `.github/agents/*.agent.md`, and `.github/skills/*/SKILL.md`.
-- **Codex** uses `AGENTS.md`, `.codex/config.toml`, and `.codex/agents/*.toml`.
+- **Codex** uses root/scoped `AGENTS.md`, `.codex/config.toml`, and `.codex/agents/*.toml`.
 
-Use the same owner model in both. Copilot prompt files are convenience entry points, not the canonical repo rules.
+Use the same owner model in both. Root/scoped `AGENTS.md` files are the canonical shared instruction tree. Copilot prompt files are convenience entry points, not the canonical repo rules.
 
 | Need | Copilot path | Codex path |
 |------|--------------|------------|
@@ -52,12 +52,15 @@ Keep Baldin's shared guidance layered so repo policy does not get duplicated acr
 
 | Layer | File | Purpose |
 |-------|------|---------|
-| Shared baseline | `AGENTS.md` | Repo posture, boundaries, generated artifacts, default validation expectations, and the common owner model |
-| Copilot compatibility baseline | `.github/copilot-instructions.md` | Copilot-specific always-on wrapper around the shared baseline |
+| Root shared baseline | `AGENTS.md` | Repo posture, directory instruction map, generated artifacts, default validation expectations, and the common owner model |
+| Scoped shared instructions | `**/AGENTS.md` | Local-delta rules for the nearest owning directory; unlisted children inherit the nearest scoped file |
+| Copilot compatibility baseline | `.github/copilot-instructions.md` | Copilot-specific always-on wrapper around root `AGENTS.md`, the applicable scoped `AGENTS.md` chain, and matching `.github/instructions/**` files |
 | Product and delivery edits | `.github/instructions/baldin-project.instructions.md` | Edit-time guardrails for backend, frontend, docs, scripts, workflows, contracts, and deployment files |
-| Agentic asset edits | `.github/instructions/baldin-agent-customization.instructions.md` | Rules for prompts, agents, skills, instructions, `AGENTS.md`, Codex custom agents, and workflow docs |
+| Agentic asset edits | `.github/instructions/baldin-agent-customization.instructions.md` | Rules for prompts, agents, skills, instructions, root/scoped `AGENTS.md`, Codex custom agents, and workflow docs |
 
 Prompts and agents should link back to these layers and to the docs below instead of re-embedding the same repo policy in every file.
+
+For Codex and compatible tooling, apply root `AGENTS.md` plus the relevant scoped chain for the current working path or target files. Do not load every scoped `AGENTS.md` file globally for every task. Tracked `AGENTS.override.md` files are outside Baldin's current instruction model and should be rejected unless a future override policy is explicitly documented and validated.
 
 | Workflow | When to prefer it | Baldin guidance |
 |----------|-------------------|-----------------|

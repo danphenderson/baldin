@@ -1,6 +1,6 @@
 # Baldin Agent Working Agreement
 
-Use this file as the shared repo baseline for Baldin's agentic coding surfaces.
+Use this file as the shared repo baseline for Baldin's agentic coding surfaces. Scoped `AGENTS.md` files add local rules only where directory behavior differs meaningfully.
 
 ## Repo Posture
 
@@ -38,6 +38,9 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces.
 - Cross-stack contracts, schema generation, docs, CI, scripts, docker-compose, or release-path work: use `baldin_full_stack_architect` in Codex or Baldin Lead Full-Stack Architect in Copilot.
 - Unclear ownership, sequencing, or multi-stream planning: use `baldin_project_manager` in Codex or Baldin Project Manager in Copilot.
 - Read-only scouting: use Codex's built-in `explorer` agent or Copilot's Explore agent. Do not treat a scout as the implementation owner.
+- Project-scoped Codex custom agents live under `.codex/agents/`.
+- Copilot-specific prompts, agents, skills, and scoped instructions live under `.github/`.
+- Do not force a one-to-one Codex equivalent for every Copilot prompt file. Use the same owner model, but let Codex rely on `AGENTS.md`, `/plan`, and named custom agents where that is cleaner.
 
 ## Generated Artifacts And Docs
 
@@ -54,12 +57,70 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces.
 - Docs and navigation changes: run the docs build when routes, sidebars, redirects, or published pages changed.
 - Treat full-suite or CI-style validation as a follow-up unless the task or changed surface clearly requires it.
 
-## Custom Agent Notes
+## Directory Instruction Map
 
-- Project-scoped Codex custom agents live under `.codex/agents/`.
-- Copilot-specific prompts, agents, skills, and scoped instructions live under `.github/`.
-- Baldin's Figma-first design owner exists as `baldin_design_lead` in Codex and Baldin Design Lead Agent in Copilot. Route broad React implementation through `baldin_frontend` and cross-stack or contract work through `baldin_full_stack_architect`.
-- Do not force a one-to-one Codex equivalent for every Copilot prompt file. Use the same owner model, but let Codex rely on `AGENTS.md`, `/plan`, and named custom agents where that is cleaner.
+Codex and compatible tooling should apply this root file plus the relevant scoped `AGENTS.md` chain for the current working path or target files. Do not load every scoped file globally for every task. Unlisted child directories inherit the nearest parent scoped file.
+
+Do not add tracked `AGENTS.override.md` files. If a future workflow needs one, first document the precedence rationale and add validator coverage.
+
+Expected scoped instruction files:
+
+```text
+backend/AGENTS.md
+backend/app/AGENTS.md
+backend/app/admin_templates/AGENTS.md
+backend/app/api/AGENTS.md
+backend/app/api/routes/AGENTS.md
+backend/app/core/AGENTS.md
+backend/app/core/extractor/AGENTS.md
+backend/app/core/rag/AGENTS.md
+backend/app/extractor/AGENTS.md
+backend/app/etl_service/AGENTS.md
+backend/app/evals/AGENTS.md
+backend/app/tests/AGENTS.md
+backend/etl/AGENTS.md
+backend/etl/tests/AGENTS.md
+backend/alembic/AGENTS.md
+backend/public/AGENTS.md
+backend/public/seeds/AGENTS.md
+frontend/AGENTS.md
+frontend/admin/AGENTS.md
+frontend/browser-harness/AGENTS.md
+frontend/e2e/AGENTS.md
+frontend/.storybook/AGENTS.md
+frontend/scripts/AGENTS.md
+frontend/src/AGENTS.md
+frontend/src/admin/AGENTS.md
+frontend/src/browser-harness/AGENTS.md
+frontend/src/component/AGENTS.md
+frontend/src/design-system/AGENTS.md
+frontend/src/layout/AGENTS.md
+frontend/src/page/AGENTS.md
+frontend/src/route/AGENTS.md
+frontend/src/service/AGENTS.md
+frontend/test/AGENTS.md
+docs/AGENTS.md
+docs/docs/AGENTS.md
+docs/src/AGENTS.md
+docs/static/AGENTS.md
+docs/i18n/AGENTS.md
+scripts/AGENTS.md
+cdk/AGENTS.md
+cdk/cdk/AGENTS.md
+cdk/tests/AGENTS.md
+plans/AGENTS.md
+.codex/AGENTS.md
+.codex/agents/AGENTS.md
+.codex/environments/AGENTS.md
+.github/AGENTS.md
+.github/agents/AGENTS.md
+.github/instructions/AGENTS.md
+.github/prompts/AGENTS.md
+.github/skills/AGENTS.md
+.github/workflows/AGENTS.md
+```
+
+Do not add scoped `AGENTS.md` files under `frontend/src/config`, `frontend/src/context`, `frontend/src/theme`, `frontend/src/util`, `frontend/src/bootstrap`, component/page/design-system leaf directories, `.github/ISSUE_TEMPLATE`, `.vscode`, root `public`, or generated/dependency/cache/runtime directories.
 
 ## Standard Handback
 

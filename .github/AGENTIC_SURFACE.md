@@ -6,19 +6,24 @@ This document inventories Baldin's shared agentic customization surface across C
 
 | Layer | Path | Scope |
 |-------|------|-------|
-| 1. Shared baseline | `AGENTS.md` | Canonical repo posture, owner model, and validation expectations |
-| 2. Copilot compatibility baseline | `.github/copilot-instructions.md` | Copilot-specific always-on wrapper around the shared baseline |
-| 3. Scoped instructions | `.github/instructions/*.instructions.md` | Edit-time rules and agentic-surface alignment |
+| 1. Shared canonical instruction tree | root/scoped `AGENTS.md` | Canonical repo posture, owner model, scoped local rules, and validation expectations |
+| 2. Copilot compatibility baseline | `.github/copilot-instructions.md` | Thin Copilot-specific always-on wrapper around the shared canonical instruction tree; not the canonical policy source |
+| 3. Copilot scoped instructions | `.github/instructions/*.instructions.md` | Copilot edit-time mechanics and agentic-surface alignment |
 | 4. Copilot execution layer | `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md`, `.github/skills/*/SKILL.md` | Copilot specialist owners, slash prompts, and repeatable workflows |
 | 5. Workspace MCP contract | `.vscode/mcp.json` | Repo-owned workspace MCP definition for `figma` |
 | 6. Codex execution layer | `.codex/config.toml`, `.codex/agents/*.toml` | Codex custom-agent defaults and project-scoped specialist agents |
 
 ## Inventory
 
-### Shared Baseline (1)
+### Shared Canonical Instruction Tree (1)
 | File | Purpose |
 |------|---------|
-| `AGENTS.md` | Provider-neutral repo baseline consumed directly by Codex and mirrored by Copilot assets |
+| `AGENTS.md` | Repo-wide baseline, directory instruction map, and durable policy source consumed by Codex and mirrored by Copilot assets |
+| `**/AGENTS.md` | Scoped local-delta instructions for the nearest owning directory listed in root `AGENTS.md` |
+
+Codex and compatible tooling should apply root `AGENTS.md` plus the applicable scoped chain for the target files. Do not load every scoped `AGENTS.md` file globally. Tracked `AGENTS.override.md` files are not part of Baldin's current instruction model.
+
+`.github/copilot-instructions.md` is intentionally a thin compatibility layer rather than a second canonical policy file. Keep it at or below 3,900 characters so GitHub Copilot code review remains below its 4,000-character repository custom-instruction read limit.
 
 ## Worktree Env Contract
 
@@ -33,7 +38,7 @@ This document inventories Baldin's shared agentic customization surface across C
 - Privileged admin app capture auth is repo-managed through `/browser-harness/admin-session.html?next=/admin/...`, which attaches the configured local superuser session before `/admin/*` review.
 - `frontend/figma.config.json` and `frontend/src/design-system/**/*.figma.ts` are optional local Figma metadata for future reuse. They must not become a required Code Connect publish gate for routine repo work.
 
-### Instructions (2)
+### Copilot Instructions (3)
 | File | Scope |
 |------|-------|
 | `baldin-project.instructions.md` | Runtime, delivery, docs, contracts, release-path |
@@ -59,11 +64,12 @@ Prompts are classified as **core** (9), **advanced** (4), or **maintenance** (1)
 ### Codex Custom Agents (5)
 `baldin_project_manager` · `baldin_backend` · `baldin_frontend` · `baldin_design_lead` · `baldin_full_stack_architect`
 
-Codex uses `AGENTS.md` plus `.codex/agents/*.toml` rather than a mirrored prompt-file catalog. Do not force a one-to-one Codex equivalent for every Copilot slash prompt.
+Codex uses root/scoped `AGENTS.md` plus `.codex/agents/*.toml` rather than a mirrored prompt-file catalog. Do not force a one-to-one Codex equivalent for every Copilot slash prompt.
 
 ## How To Add
 
-- **Shared rule**: prefer `AGENTS.md` for durable repo-wide guidance that both Copilot and Codex should follow.
+- **Shared rule**: prefer root `AGENTS.md` for durable repo-wide guidance that both Copilot and Codex should follow; prefer scoped `AGENTS.md` only for meaningful local deltas.
+- **New scoped AGENTS file**: add it only if root inheritance is insufficient, update root `AGENTS.md`, and update `scripts/validate_agentic_assets.py` inventory in the same patch.
 - **New Copilot prompt**: create under `prompts/`, keep it single-purpose, and add a cookbook entry in `docs/docs/engineering/copilot-prompt-cookbook.md`.
 - **New Copilot agent**: only if the current owner split cannot own the work cleanly. Requires CODEOWNERS review.
 - **New Codex custom agent**: create under `.codex/agents/` only when the current owner model cannot be expressed cleanly through the existing custom agents plus Codex planning.
@@ -72,13 +78,13 @@ Codex uses `AGENTS.md` plus `.codex/agents/*.toml` rather than a mirrored prompt
 
 ## Ownership
 
-Changes to agentic files require review per CODEOWNERS.
+Changes to agentic files require review per CODEOWNERS. Required review enforcement also depends on repository branch protection requiring code owner review.
 
 ## Enforcement Controls
 
 ### Active
-- `CODEOWNERS` gates review on `AGENTS.md`, `.codex/**`, `.github/**`, generated artifacts, CI, and scripts.
-- `scripts/validate_agentic_assets.py` validates Copilot asset frontmatter, inventory, links, and the Codex surface. `.github/workflows/copilot-assets.yml` runs it in CI.
+- `CODEOWNERS` gates review on root/scoped `AGENTS.md`, `.codex/**`, `.vscode/mcp.json`, `.github/**`, generated artifacts, CI, and scripts when branch protection requires code owner review.
+- `scripts/validate_agentic_assets.py` validates Copilot asset frontmatter, inventory, links, root/scoped `AGENTS.md`, forbidden instruction locations, no tracked `AGENTS.override.md`, the 3,900-character cap for `.github/copilot-instructions.md`, and the Codex surface. `.github/workflows/copilot-assets.yml` runs it in CI.
 - `scripts/validate_copilot_assets.py` and `scripts/validate_copilot_assets.sh` remain thin compatibility wrappers for one transition cycle.
 
 ### Desired-State

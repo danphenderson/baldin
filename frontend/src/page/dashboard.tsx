@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import {
-  useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { timeAgo as relativeDate,
   timeAgoShort,
   statusLabel } from '../util/format';

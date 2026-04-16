@@ -11,6 +11,7 @@ on:
     paths:
       - "AGENTS.md"
       - ".codex/**"
+      - ".vscode/mcp.json"
       - ".github/AGENTIC_SURFACE.md"
       - ".github/copilot-instructions.md"
       - ".github/agents/**"
@@ -31,6 +32,7 @@ on:
     paths:
       - "AGENTS.md"
       - ".codex/**"
+      - ".vscode/mcp.json"
       - ".github/AGENTIC_SURFACE.md"
       - ".github/copilot-instructions.md"
       - ".github/agents/**"

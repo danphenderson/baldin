@@ -1,11 +1,3 @@
 [agents]
 max_threads = 6
 max_depth = 1
-
-[mcp_servers.webdev]
-command = "npx"
-args = ["-y", "@playwright/mcp@0.0.70"]
-cwd = "."
-
-[mcp_servers.webdev.tools.browser_navigate]
-approval_mode = "approve"

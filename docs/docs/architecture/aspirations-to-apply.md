@@ -5,7 +5,7 @@ title: Aspirations to Apply Flow
 description: Architecture of the flagship aspirations → ranked leads → application-start flow.
 ---
 
-<!-- last-verified: 2026-04-14 -->
+<!-- last-verified: 2026-04-16 -->
 
 # Aspirations to Apply Flow
 
@@ -66,7 +66,7 @@ graph LR
 | Moment | Route | Page | Key Components |
 |--------|-------|------|----------------|
 | Aspirations | `/me/aspirations/roles`, `/me/aspirations/companies` | `AspirationRolesPage`, `AspirationCompaniesPage` | `AspirationsCollection`, `SuggestionReviewPanel`, `AspirationCard`, `AspirationFormDialog` |
-| Ranked Leads | `/leads` | `LeadsPage` | `LeadCard` (with inline ranking display), `LeadSearchBar` (ranking controls), `LeadModal` |
+| Ranked Leads | `/leads` | `LeadsPage` | `LeadCard` (with S8 warning-tone ranking strip), `LeadSearchBar` (ranking controls), `LeadModal` |
 | Apply Handoff | `/leads` (inline) | `LeadsPage` | `LeadCard` (with application handoff state), `ApplicationIntentButton` |
 
 ### Suggestion Review Flow
@@ -81,7 +81,7 @@ graph LR
 
 1. User clicks "Rank with aspirations" on leads page.
 2. `rankLeads()` sends filtered leads to `/api/v1/aspirations/match`.
-3. Response reorders leads by relevance and decorates cards with score + alignment text.
+3. Response reorders leads by relevance and decorates cards with a score chip plus the S8 aspiration-alignment strip.
 4. Ranking is aspiration-gated: users without aspirations see disabled state with guidance to add aspirations first.
 5. Ranking clears on search/filter change to avoid stale results.
 
@@ -95,10 +95,14 @@ graph LR
 
 ## Design System Integration
 
-- `StatusChip` renders ranking score and application state.
+- `StatusChip` renders ranking score, stage, and application state.
 - `InlineFeedback` renders error/warning/success states for suggestions and ranking.
-- `CardShell` provides the consistent card container.
+- `CardShell` provides the consistent card container; ranked leads use the warning tone to make S8 ranking context visually explicit.
 - `SuggestionReviewPanel` handles the full suggest→review→accept lifecycle.
+
+## S8 Implementation Status
+
+S8 ranking redesign is implemented in the frontend. `LeadCard` applies the ranked-card `CardShell` treatment, renders the ranking score, and exposes the aspiration-alignment strip for tests and route capture. `Baldin-App-Screens` now carries route-backed ranked and unranked harness evidence at nodes `446:2` and `447:2`, while node `257:6090` remains the design rationale frame.
 
 ## Harness Coverage
 

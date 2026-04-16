@@ -57,11 +57,11 @@ Use [Boot The Stack](../getting-started/quickstart.md) for first boot. This page
 
 ## Figma Browser-Harness Loop
 
-For Figma capture and browser-driven design review, Baldin's primary repo-owned workspace MCP contract lives in `.vscode/mcp.json`.
+For Figma capture and browser-driven design review, Baldin's repo-owned MCP contract lives in `.vscode/mcp.json`.
 
 - `figma` is the workspace HTTP MCP endpoint for Figma design context, screenshots, and Figma-side tools when user auth is present.
-- `webdev` is the workspace stdio Playwright MCP server for browser automation and harness-driven review.
-- Codex does not consume `.vscode/mcp.json` directly in this patch. `.codex/config.toml` mirrors only `mcp_servers.webdev`, using the same `npx -y @playwright/mcp@0.0.70` launch contract with Codex's repo-local `cwd = "."` in place of VS Code's `${workspaceFolder}` interpolation.
+- Browser automation is not repo-managed through `webdev`. Use the repo-local frontend Playwright runtime, configured host browser tooling, or direct Figma MCP inspection for harness and route review.
+- Codex does not consume `.vscode/mcp.json` directly in this patch. `.codex/config.toml` contains Codex custom-agent defaults only and no repo-owned MCP server mirrors.
 - This repo patch does not manage a Codex-side `figma` entry. User-scoped or globally configured Codex MCP servers can still appear separately on a developer machine.
 
 The canonical Figma surfaces for this repo are [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library) for reusable components and [Baldin-App-Screens](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy/Baldin-App-Screens) for product-flow state inventory. The current [Figma Make file](https://www.figma.com/make/pXpkeOKYnA3gvhHPIjbJDo/Untitled?t=bM22KU0ea6ttyIQ5-20&fullscreen=1) has been reviewed and should be treated as an archived sandbox, not an active delivery surface.
@@ -72,7 +72,7 @@ Track active screen and state coverage in [Baldin App Screens Inventory](../refe
 2. Use the frontend dev server at `http://127.0.0.1:5173`.
 3. Open the supported Wave 1 Figma harness at `http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=...` for harness-backed product screens.
 4. For privileged admin capture, start from `http://127.0.0.1:5173/browser-harness/admin-session.html?next=/admin/db-management` or another `/admin/...` target so the browser session receives the configured local superuser token before opening the Admin SPA.
-5. Use `webdev` Playwright MCP tools to drive the Wave 1 harness or the bootstrapped admin route into the state you want to capture or inspect in Figma. For Wave 2 and Wave 3 closeout, use direct shipped-route review plus MCP structure or screenshot inspection instead of expanding the harness.
+5. Use the frontend Playwright runtime or configured host browser tooling to drive the Wave 1 harness or the bootstrapped admin route into the state you want to capture or inspect in Figma. For Wave 2 and Wave 3 closeout, use direct shipped-route review plus MCP structure or screenshot inspection instead of expanding the harness.
 
 The canonical harness supports these query parameters:
 
@@ -119,14 +119,14 @@ The bootstrap page calls the DEV-only backend route `POST /api/v1/auth/jwt/dev-b
 
 Baldin's supported Figma workflow assumes a Professional-plan workspace and does not require a Dev seat.
 
-- Use the local harness plus `webdev` to put Wave 1 screens into the exact state you need.
+- Use the local harness plus the repo-local frontend Playwright runtime or configured host browser tooling to put Wave 1 screens into the exact state you need.
 - For Wave 2 and Wave 3 closeout, treat the app-screens inventory ledger as the active policy source and use direct shipped-route review plus MCP structure or screenshot inspection.
 - Use Figma MCP read or write tools when your seat and auth allow it.
 - If your seat only allows basic inspection, keep the same evidence order and use screenshots or inspection instead of blocking on Dev Mode-specific UX.
 - Use MCP for structure, component, and screenshot inspection even when Dev Mode is unavailable. Full version-history review still requires browser or web access to the Figma UI.
 - Code Connect workspace reads and publish flows require a Developer seat on an Organization or Enterprise plan. On the current Professional-plan expert seat, treat `frontend/figma.config.json` and `frontend/src/design-system/**/*.figma.ts` as repo-local metadata rather than an active workspace dependency.
 - The reviewed Make sources (`App.tsx`, `theme.css`, `button.tsx`, `card.tsx`, `badge.tsx`, and `Guidelines.md`) did not contain a meaningful direct port candidate. Do not promote generic Tailwind or shadcn scaffolding into the canonical Baldin system.
-- If browser-driven Figma inspection is blocked by stale Playwright Chrome locks, stop lingering `playwright-mcp` or `@playwright/mcp` processes and remove `~/Library/Caches/ms-playwright/mcp-chrome-*/SingletonLock`, `SingletonCookie`, and `SingletonSocket` before restarting the browser automation session.
+- If browser-driven Figma inspection is blocked by stale browser locks, stop the lingering browser automation process and restart the browser automation session. Do not switch to `webdev` as a fallback.
 
 ## Resetting Databases
 

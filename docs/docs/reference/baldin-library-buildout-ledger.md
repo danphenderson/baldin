@@ -3,13 +3,15 @@ title: Baldin Library Buildout Ledger
 description: Figma-first working ledger for Baldin-Library surfaces that are ahead of, or intentionally outside, the repo-backed mapping catalog.
 ---
 
-<!-- last-verified: 2026-04-14 -->
+<!-- last-verified: 2026-04-16 -->
 
 # Baldin Library Buildout Ledger
 
 Use this ledger for Figma-first work that is ahead of the repo-backed `frontend/src/design-system/*` catalog, or intentionally remains outside `src/design-system/**/*.figma.ts` for the current slice.
 
 Use [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) for product-flow, screen-state, auth-only, or superuser-only inventory work in `Baldin-App-Screens`. Keep this ledger limited to `Baldin-Library` studies and reusable-surface exploration.
+
+Historical route-evidence notes below preserve the `2026-04-13` screenshot/capture provenance for the library buildout slice. Later live app-screen captures in `Baldin-App-Screens` supersede those notes for product-flow truth, especially admin, auth, extractor, and marketing screens.
 
 ## Immediate Slice
 
@@ -28,9 +30,9 @@ Use [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) for produc
 
 | Surface | Status | Library node | Screenshot evidence | Route evidence | Repo anchors | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| `SecondaryNavBar` | `study-built` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=226-12 | MCP screenshot captured from page node `226:12` on `2026-04-13` | `/applications`, `/applications/board`, `/leads`, `/leads/companies`, `/workflows`, `/workflows/extractors`; `/workflows/db-management` was deferred because a superuser live session was not available after browser automation failed to recover from a Playwright MCP transport close | `frontend/src/component/common/secondary-nav-bar.tsx`, `frontend/src/route/navigation.ts`, `frontend/src/layout/app-layout.tsx` | Keep it out of the code-backed catalog and `src/design-system/**/*.figma.ts`. The page is a Figma-first shell study with a separate narrow-viewport workflows overflow reconstruction based on repo truth. |
+| `SecondaryNavBar` | `study-built` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=226-12 | MCP screenshot captured from page node `226:12` on `2026-04-13` | `/applications`, `/applications/board`, `/leads`, `/leads/companies`, `/workflows`, `/workflows/extractors`; the earlier `/workflows/db-management` capture deferral is historical because shipped privileged admin evidence now belongs in `Baldin-App-Screens` under `/admin/*` live captures | `frontend/src/component/common/secondary-nav-bar.tsx`, `frontend/src/route/navigation.ts`, `frontend/src/layout/app-layout.tsx` | Keep it out of the code-backed catalog and `src/design-system/**/*.figma.ts`. The page is a Figma-first shell study with a separate narrow-viewport workflows overflow reconstruction based on repo truth. |
 
-`/workflows/db-management` remains a valid evidence route only when superuser access is available. When it is being reviewed as part of a sprint capture, track the screen inventory work in [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) and keep this ledger limited to the reusable-shell study itself.
+Legacy `/workflows/db-management` evidence should be treated as browser-handoff history, not the canonical privileged screen. Current admin evidence for DB management, review queue, and crawlers is tracked in [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) through the dedicated `/admin/*` live captures; this ledger keeps only the reusable shell/nav study.
 
 `ReadonlyField` is being advanced here as a narrow code-backed completion pass even though it currently has one visible repo consumer. This slice does not reprioritize it above broader unmapped shared surfaces.
 
@@ -44,7 +46,9 @@ The current shipped shared-surface mapping set is complete. Future follow-on wor
 
 `CardShell` was promoted from a single COMPONENT (`7:2`) to a COMPONENT_SET (`291:35`) with 12 variants on `Tone` (6) × `Density` (2). The code contract also exposes a `surface` prop (`base` | `raised` | `inset`) and an `interactive` boolean, but the Figma component set does not include a Surface variant axis. The `.figma.ts` mapping intentionally hardcodes `surface="raised"` (the code default) and maps `interactive` as a boolean rather than leaving the gap undocumented. Future Figma work may promote `Surface` to a variant axis, at which point the mapping should be updated to use `instance.getEnum`.
 
-`SecondaryNavBar` remains `library-only for now` in this slice. Product-flow coverage for `/applications`, `/applications/board`, `/leads`, `/workflows`, and related shell stories belongs in [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) until a closeout promotion review proves otherwise.
+The repo-backed Figma metadata set currently includes 16 `.figma.ts` mappings through `frontend/figma.config.json`. Code Connect publish/read remains optional local metadata and future-proofing, not a blocking delivery dependency.
+
+`SecondaryNavBar` remains `library-only for now` in this slice. Product-flow coverage for `/applications`, `/applications/board`, `/leads`, `/workflows`, `/admin/*`, and related shell stories belongs in [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) until a closeout promotion review proves otherwise.
 
 ## Brand Foundation — Career Control Plane
 
@@ -91,4 +95,4 @@ All palette values map 1:1 to existing `Baldin Colors` variable collection entri
 
 ### Handoff
 
-This brand foundation is Figma-only and library-level. The composed marketing landing page frames that consume this foundation live in [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) under the `Marketing · Landing` section. React implementation of the landing page is a separate slice owned by the Baldin Frontend Agent.
+This brand foundation is Figma-only and library-level. The composed marketing landing page frames that consume this foundation live in [Baldin App Screens Inventory](./baldin-app-screens-inventory.md) under the `Marketing · Landing` section. The React landing page now exists in the frontend, and the current route-backed marketing evidence lives in `Baldin-App-Screens`; future library work should stay limited to reusable brand/surface exploration.

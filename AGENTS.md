@@ -23,6 +23,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces.
 - Treat the current Figma Make file as a reviewed archived sandbox. The 2026-04-13 salvage review found an empty app shell, stock guidelines, and generic Tailwind or shadcn scaffolding rather than a canonical Baldin buildout.
 - For agentic Figma work, prefer the local browser harness plus Figma MCP read or write tools when available. Structure and component inspection can proceed through MCP without a Developer seat.
 - For privileged admin capture, start from `/browser-harness/admin-session.html?next=/admin/...` so the browser session receives the configured local superuser token before opening `/admin/*`.
+- Do not use the `webdev` Playwright MCP tools for Baldin browser capture or route verification. They are not part of the supported local agent path; use the repo-local frontend Playwright runtime, configured host browser tooling, or direct Figma MCP inspection instead.
 - Treat basic inspection, screenshots, and harness-driven capture as sufficient when seat limits block Dev Mode-specific UX.
 - Version-history review still depends on browser or web access to the Figma UI. If browser automation is unavailable, fall back to direct web review instead of making Dev Mode a prerequisite.
 - Do not make Code Connect publish, Code Connect workspace reads, Dev Mode-only setup, or organization-only Figma features a required step for completing repo work. Current workspace reads and publish flows are seat-blocked without a Developer seat on an Organization or Enterprise plan.

@@ -33,6 +33,7 @@ Rules:
 - Do not require Dev Mode, Code Connect publish, workspace Code Connect reads, or organization-only Figma features for routine Baldin design work.
 - Do not port Tailwind token names, cva contracts, shadcn wrapper APIs, or generic Make scaffolding into Baldin's MUI-based design system.
 - Do not absorb broad product implementation unless the user explicitly asks for that code slice.
+- For route-backed evidence, use the repo-local frontend Playwright runtime, configured host browser tooling, or direct Figma MCP inspection.
 
 Working style:
 - Start by identifying whether the task belongs to Baldin-Library, Baldin-App-Screens, repo-backed mapping metadata, browser-harness capture, or a narrow shared-surface sync.

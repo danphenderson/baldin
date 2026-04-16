@@ -26,12 +26,6 @@ if (( missing_files )); then
   exit 1
 fi
 
-if ! command -v npx >/dev/null 2>&1; then
-  printf 'Missing required command: npx\n' >&2
-  printf 'Install Node.js/npm so Baldin can start the repo-standard webdev MCP server.\n' >&2
-  exit 1
-fi
-
 if [[ ! -f "${figma_harness_path}" ]]; then
   printf 'Missing supported Figma browser harness: frontend/browser-harness/figma-wave1.html\n' >&2
   exit 1
@@ -46,27 +40,12 @@ import tomllib
 from pathlib import Path
 
 EXPECTED_FIGMA_URL = "https://mcp.figma.com/mcp"
-EXPECTED_PLAYWRIGHT_PACKAGE = "@playwright/mcp@0.0.70"
-EXPECTED_WORKSPACE_CWD = "${workspaceFolder}"
-EXPECTED_CODEX_CWD = "."
-EXPECTED_SERVER_NAMES = {"figma", "webdev"}
-EXPECTED_CODEX_MCP_SERVER_NAMES = {"webdev"}
+EXPECTED_SERVER_NAMES = {"figma"}
 
 
 def fail(message: str) -> None:
     print(message, file=sys.stderr)
     raise SystemExit(1)
-
-
-def require_playwright_args(args: object, context: str) -> None:
-    if not isinstance(args, list):
-        fail(f"{context} must configure args as a list")
-
-    normalized_args = [str(item) for item in args]
-    if "-y" not in normalized_args or EXPECTED_PLAYWRIGHT_PACKAGE not in normalized_args:
-        fail(
-            f"{context} must configure args with -y and {EXPECTED_PLAYWRIGHT_PACKAGE}"
-        )
 
 
 workspace_mcp_path = Path(sys.argv[1])
@@ -84,7 +63,7 @@ if not isinstance(servers, dict):
     fail(".vscode/mcp.json is missing a top-level servers object")
 
 if set(servers) != EXPECTED_SERVER_NAMES:
-    fail(".vscode/mcp.json must declare exactly servers.figma and servers.webdev")
+    fail(".vscode/mcp.json must declare exactly servers.figma")
 
 figma = servers.get("figma")
 if not isinstance(figma, dict):
@@ -99,50 +78,19 @@ if figma.get("url") != EXPECTED_FIGMA_URL:
         f'servers.figma.url = "{EXPECTED_FIGMA_URL}"'
     )
 
-workspace_webdev = servers.get("webdev")
-if not isinstance(workspace_webdev, dict):
-    fail(".vscode/mcp.json is missing servers.webdev")
-
-if workspace_webdev.get("type") != "stdio":
-    fail('.vscode/mcp.json must configure servers.webdev.type = "stdio"')
-
-if workspace_webdev.get("command") != "npx":
-    fail('.vscode/mcp.json must configure servers.webdev.command = "npx"')
-
-require_playwright_args(
-    workspace_webdev.get("args"),
-    ".vscode/mcp.json servers.webdev.args",
-)
-
-if workspace_webdev.get("cwd") != EXPECTED_WORKSPACE_CWD:
-    fail(
-        '.vscode/mcp.json must configure '
-        f'servers.webdev.cwd = "{EXPECTED_WORKSPACE_CWD}"'
-    )
-
 try:
     data = tomllib.loads(config_path.read_text(encoding="utf-8"))
 except Exception as exc:  # pragma: no cover - shell script handles user output
     fail(f"Unable to parse {config_path}: {exc}")
 
-mcp_servers = data.get("mcp_servers")
-if not isinstance(mcp_servers, dict):
-    fail(".codex/config.toml is missing [mcp_servers.webdev]")
-
-if set(mcp_servers) != EXPECTED_CODEX_MCP_SERVER_NAMES:
-    fail(".codex/config.toml must declare only [mcp_servers.webdev] in this patch")
-
-webdev = mcp_servers.get("webdev")
-if not isinstance(webdev, dict):
-    fail(".codex/config.toml is missing [mcp_servers.webdev]")
-
-if webdev.get("command") != "npx":
-    fail('.codex/config.toml must configure mcp_servers.webdev.command = "npx"')
-
-require_playwright_args(webdev.get("args"), ".codex/config.toml mcp_servers.webdev.args")
-
-if webdev.get("cwd") != EXPECTED_CODEX_CWD:
-    fail('.codex/config.toml must configure mcp_servers.webdev.cwd = "."')
+mcp_servers = data.get("mcp_servers", {})
+if isinstance(mcp_servers, dict) and "webdev" in mcp_servers:
+    fail(
+        ".codex/config.toml must not configure mcp_servers.webdev; "
+        "use the frontend Playwright runtime or host browser tooling instead"
+    )
+if mcp_servers not in ({}, None):
+    fail(".codex/config.toml must not declare repo-owned MCP servers in this patch")
 PY
 then
   exit 1
@@ -162,9 +110,9 @@ printf 'tracked env files: present\n'
 printf 'workspace_mcp_contract: %s\n' "${workspace_mcp_path}"
 printf 'backend/.env.local: %s\n' "$([[ -f "${repo_root}/backend/.env.local" ]] && printf 'present' || printf 'absent')"
 printf 'frontend/.env.local: %s\n' "$([[ -f "${repo_root}/frontend/.env.local" ]] && printf 'present' || printf 'absent')"
-printf 'npx: %s\n' "$(command -v npx)"
-printf 'workspace_mcp_servers: figma + webdev\n'
-printf 'codex_webdev_mcp: configured (repo-local mirror only)\n'
+printf 'workspace_mcp_servers: figma\n'
+printf 'codex_mcp_servers: none repo-owned\n'
+printf 'browser_capture_path: frontend Playwright runtime or host browser tooling; webdev MCP unsupported\n'
 printf 'figma_harness_file: %s\n' "${figma_harness_path}"
 printf 'frontend_base_url: %s\n' "${frontend_base_url}"
 printf 'figma_harness_url: %s\n' "${figma_harness_url}"

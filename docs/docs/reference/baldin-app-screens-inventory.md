@@ -37,10 +37,12 @@ Use [Baldin Library Buildout Ledger](./baldin-library-buildout-ledger.md) only f
 - `2026-04-15`: live recapture closed the missing auth, admin-login/access-denied, and extractor evidence gap on [page 353:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=353-1167), with baseline extractor [node 369:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=369-2), login [node 370:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=370-2), register [node 371:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=371-2), login MFA [node 373:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=373-2), admin login [node 374:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=374-2), admin session resolving [node 375:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=375-2), and admin access denied [node 376:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=376-2). Only shipped route-backed states were added in this slice; no reference-only replacement frame was created.
 - `2026-04-15`: S8 (Redesign leads ranking presentation for aspiration fit) design target created at [node 257:6090](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=257-6090). Two design changes use existing Baldin Library components: CardShell tone shift (primary → warning) for ranked cards and a ranking context strip that groups score + alignment text (D3).
 - `2026-04-15`: admin evidence was split into two documented layers: legacy live captures `184:4929`, `192:4929`, and `201:4929` remain canonical shipped-route evidence, while page `221:1170` is retained only as reference-only composed admin evidence unless later proof reclassifies it.
-- `2026-04-15`: the marketing page was reconciled to one canonical full-page composition. Desktop Landing Hero at [node 297:1168](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=297-1168), Mobile Landing Hero at [node 298:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=298-1167), and Full Landing Page Composition at [node 299:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=299-1167) remain canonical marketing evidence.
+- `2026-04-15`: the marketing page was reconciled to one canonical full-page composition. Desktop Landing Hero at [node 297:1168](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=297-1168), Mobile Landing Hero at [node 298:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=298-1167), and `Full Landing Page Composition — 1440×2500` at [node 299:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=299-1167) remain canonical marketing evidence.
 - `2026-04-16`: the live Figma file was restructured into numbered pages: `00 · Index & Evidence Rules`, `01 · Harness Baselines · Product App`, `02 · Flagship Flow · Aspirations to Apply`, `03 · Applications · Queue Board Detail`, `04 · Network & Profile States`, `05 · Auth & Access Live Evidence`, `06 · Workflows & Admin Live Evidence`, `07 · Reference · Admin Studies`, `08 · Marketing · Landing`, and `99 · Archive · Retired & Stale History`. Canonical frame node IDs were preserved by moving frames rather than recreating them. Figma's Plugin API rejected the attempted version-history checkpoint because `saveVersionHistoryAsync` is not supported.
 - `2026-04-16`: extractor live evidence [node 369:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=369-2) moved from page `353:1167` to `06 · Workflows & Admin Live Evidence`; auth/access live evidence remains on page `353:1167`, now named `05 · Auth & Access Live Evidence`.
 - `2026-04-16`: legacy admin live captures [node 184:4929](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=184-4929), [node 192:4929](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=192-4929), and [node 201:4929](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=201-4929) moved from the former flagship page to `06 · Workflows & Admin Live Evidence` and were renamed as canonical DB management, review queue, and crawlers captures.
+- `2026-04-16`: repo reconciliation confirmed the S8 ranking redesign is implemented in `frontend/src/component/lead-card.tsx` and covered by component/page tests. Route-backed evidence was recaptured on `02 · Flagship Flow · Aspirations to Apply` as S8 ranked [node 446:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=446-2) and S8 unranked [node 447:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=447-2), while preserving [node 257:6090](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=257-6090) as design rationale.
+- `2026-04-16`: shipped landing route `/` was recaptured on `08 · Marketing · Landing` as desktop viewport [node 448:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=448-2), mobile viewport [node 449:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=449-2), and desktop full-page [node 450:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=450-2). Canonical composed marketing specs [node 297:1168](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=297-1168), [node 298:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=298-1167), and [node 299:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=299-1167) remain in place.
 
 ## Live Evidence Rules
 
@@ -57,31 +59,40 @@ Use [Baldin Library Buildout Ledger](./baldin-library-buildout-ledger.md) only f
 | --- | --- | --- | --- | --- | --- |
 | `00 · Index & Evidence Rules` | Page `34:1167` | `File navigation and policy` | Index text only; not product evidence | Use as the file map and stale-ref guardrail | None |
 | `01 · Harness Baselines · Product App` | Page `0:1` with harness-backed baseline frames | `Baseline captured screen` | Canonical live or harness-backed capture | Keep current harness-backed inventory references | None |
-| `02 · Flagship Flow · Aspirations to Apply` | Page `221:1167` with Wave 1 frames plus S8 target `257:6090` | `Canonical composed design` | Canonical composed design tied to shipped or harness-backed product evidence | Keep flagship-only aspirations, ranked leads, and apply-handoff material here | None |
+| `02 · Flagship Flow · Aspirations to Apply` | Page `221:1167` with Wave 1 frames, S8 target `257:6090`, and S8 route captures `446:2` / `447:2` | `Canonical composed design + route evidence` | Canonical composed design tied to shipped or harness-backed product evidence | Keep flagship-only aspirations, ranked leads, apply-handoff material, and S8 route evidence here | None |
 | `03 · Applications · Queue Board Detail` | Page `221:1168` with applications board/detail frames | `Canonical composed design` | Canonical composed design tied to shipped route review | Keep application queue, board, detail, and application-dialog states here | None |
 | `04 · Network & Profile States` | Page `26:108` with conversation detail and profile MFA frames | `Canonical composed design` | Canonical composed design tied to shipped route review | Keep network/message detail and profile/security states here | None |
 | `05 · Auth & Access Live Evidence` | Page `353:1167` with `370:2`, `371:2`, `373:2`, `374:2`, `375:2`, and `376:2` | `Canonical live capture evidence` | Shipped-route live capture beats synthetic composition | Keep auth, MFA, admin login, session resolving, and denied states here | None |
 | `06 · Workflows & Admin Live Evidence` | Page `394:1167` with extractor `369:2` and admin live captures `184:4929`, `192:4929`, and `201:4929` | `Canonical live capture evidence` | Live route captures win over hand-built reference frames for shipped workflow/admin UI | Keep extractor and privileged admin-route live evidence here | None |
 | `07 · Reference · Admin Studies` | Page `221:1170` with `234:1167`, `234:1198`, `234:1215`, and `234:1239` | `Synthetic reference only` | Composed admin reference frames may stay only if labeled `Reference`; they do not replace canonical live captures | Keep as reference-only admin evidence | None |
 | Stale Wave 3 auth/admin/extractor refs | Page `221:1169` and nodes `131:*`, `229:*`, and `232:*` | `Stale docs history only` | Missing evidence must never invent replacement node IDs | Keep only as stale history; never cite as live evidence again | None |
-| `08 · Marketing · Landing` | Page `297:1167` with `297:1168`, `298:1167`, and `299:1167` | `Canonical composed marketing evidence` | Marketing keeps one canonical full-page composition | Keep desktop, mobile, and canonical full composition references | None |
+| `08 · Marketing · Landing` | Page `297:1167` with `297:1168`, `298:1167`, `299:1167`, and route captures `448:2`, `449:2`, `450:2` | `Canonical composed marketing evidence + route evidence` | Marketing keeps one canonical full-page composition and adjacent route-backed proof | Keep desktop, mobile, canonical full composition, and shipped-route captures together | None |
 | `99 · Archive · Retired & Stale History` | Page `32:1557` | `Retired or archive` | Retired surfaces may stay only as archive evidence | Keep retired, duplicate, hidden, sandbox, and stale-history material here | None |
 
-## S8: Ranking Redesign Target
+## Capture Status
 
-Story 8 redesigns the leads ranking presentation to surface aspiration-alignment as first-class context on lead cards, per the flagship quarter roadmap. The target state lives on `02 · Flagship Flow · Aspirations to Apply` at [node 257:6090](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=257-6090), with annotated side-by-side unranked vs ranked card comparison. This page is scoped to the flagship aspirations, leads ranking, and apply handoff story; auth, extractor, admin, and adjacent product workflow inventory belongs on pages `03` through `07` rather than on the flagship page.
+`2026-04-16` Figma MCP inspection of pages `01` through `08` found two active capture gaps, and the same pass closed them with route-backed evidence. Supporting frames on pages `03`, `04`, and `06` are already labeled as reference, supporting, or context material rather than canonical live evidence, so they need no page-level cleanup in this pass.
+
+| Surface | Classification | Evidence | Status |
+| --- | --- | --- | --- |
+| S8 ranked leads implementation | `browser-harness evidence captured` | Page `02 · Flagship Flow · Aspirations to Apply` (`221:1167`), target [node 257:6090](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=257-6090), ranked route evidence [node 446:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=446-2), unranked route evidence [node 447:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=447-2), current repo implementation in `lead-card.tsx`, and harness routes `/browser-harness/figma-wave1.html?screen=leads&state=ranked&mode=dark` plus `/browser-harness/figma-wave1.html?screen=leads&state=unranked&mode=dark` | Closed. Keep `257:6090` as the design rationale; use `446:2` and `447:2` as non-collapsed implementation-backed evidence. |
+| Marketing landing route `/` | `live route evidence captured` | Page `08 · Marketing · Landing` (`297:1167`) with [node 297:1168](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=297-1168), [node 298:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=298-1167), [node 299:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=299-1167), desktop route evidence [node 448:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=448-2), mobile route evidence [node 449:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=449-2), and desktop full-page route evidence [node 450:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=450-2); shipped route `/` renders `frontend/src/page/landing-page.tsx` via `frontend/src/route/app-routes.tsx` | Closed. Preserve `299:1167` as the composed spec; keep route-backed responsive evidence alongside it. |
+
+## S8: Ranking Redesign Status
+
+Story 8 redesigned the leads ranking presentation to surface aspiration-alignment as first-class context on lead cards, per the flagship quarter roadmap. The target state lives on `02 · Flagship Flow · Aspirations to Apply` at [node 257:6090](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=257-6090), with annotated side-by-side unranked vs ranked card comparison. Repo reconciliation on `2026-04-16` confirmed the code now implements the target: ranked cards use `CardShell tone="warning"` and render score plus `aspiration_alignment` inside `data-testid="lead-card-ranking-strip"`. This page is scoped to the flagship aspirations, leads ranking, and apply handoff story; auth, extractor, admin, and adjacent product workflow inventory belongs on pages `03` through `07` rather than on the flagship page.
 
 ### Gap Analysis
 
 | Acceptance criterion | Current state | Gap | Resolution |
 | --- | --- | --- | --- |
 | Ranking action is an explicit trigger | `LeadSearchBar` "Rank with aspirations" button + "Clear ranking" | None | Unchanged |
-| Ranked state visually distinct from unranked | All cards use `CardShell tone="primary"` | **GAP**: No card-level visual difference | CardShell `tone="warning"` for ranked cards (amber left-border accent) |
-| `aspiration_alignment` alongside score as a secondary line (D3) | Score in chip row (`Aspiration fit 9/10`), alignment as separate italic body2 below title | **GAP**: Score and alignment are in different visual zones | Ranking context strip groups both in a single visual unit |
-| Score and fit presented coherently | Same as D3 gap — separated | **GAP** | Same as D3 resolution |
+| Ranked state visually distinct from unranked | Implemented: ranked cards use `CardShell tone="warning"`; unranked cards use `tone="primary"` | None | Route evidence captured at `446:2` and `447:2` |
+| `aspiration_alignment` alongside score as a secondary line (D3) | Implemented: score chip and alignment text are grouped in `lead-card-ranking-strip` | None | Ranked route evidence captured at `446:2` |
+| Score and fit presented coherently | Implemented in the same ranking context strip | None | Ranked route evidence captured at `446:2` |
 | Aspiration gate per D11 | Disabled state + guidance tooltip when no aspirations | None | Unchanged |
 | No generic ranking for non-aspirated users | `aspirationCount === 0` check gates ranking | None | Unchanged |
-| Component tests | Tests exist for card rendering | Frontend Agent scope | See handoff |
+| Component tests | Implemented: component tests cover ranked, unranked, score-only, and apply handoff states; page tests cover ranking gate/reorder/clear flows | None | Keep tests current when recapturing or changing copy |
 
 ### Design Changes
 
@@ -116,6 +127,16 @@ Replace the separated "Aspiration fit X/10" chip from the top chip row and the i
 
 **What is unchanged**: Ranking trigger button/clear button, aspiration gate (D11), application handoff section, Following/Active/Joinable chips.
 
+### Repo Implementation Status
+
+Current repo status: `implemented`. `frontend/src/component/lead-card.tsx` sets `cardTone = ranking ? 'warning' : 'primary'`, renders the ranking context strip with `data-testid="lead-card-ranking-strip"`, and no longer renders the old `Aspiration fit X/10` chip in the general chip row. `frontend/test/component/lead-card.test.tsx` covers the ranking strip and the absence of the old chip, and `frontend/test/page/leads.test.tsx` covers ranking gate/reorder/clear behavior.
+
+### Capture-Gap Review
+
+`2026-04-16` Figma MCP review confirms `257:6090` still resolves on page `02 · Flagship Flow · Aspirations to Apply` (`221:1167`) and carries the right S8 implementation notes: ranked cards use `CardShell tone="warning"` and move score plus `aspiration_alignment` into a single ranking context strip. The target is now design rationale rather than an implementation handoff. Its child frames `257:6111` and `257:6132` remain collapsed target-state visuals, so route-backed implementation evidence was added separately.
+
+Classification: `browser-harness evidence captured`. Ranked evidence is [node 446:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=446-2), captured from `/browser-harness/figma-wave1.html?screen=leads&state=ranked&mode=dark` at `1440 × 900`; unranked evidence is [node 447:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=447-2), captured from `/browser-harness/figma-wave1.html?screen=leads&state=unranked&mode=dark` at `1440 × 900`.
+
 ## Wave 1: Mandatory Harness-Backed Inventory
 
 | Surface | Route/state | Lane | Evidence source | Figma target | Status | Handoff bucket | Notes |
@@ -125,7 +146,7 @@ Replace the separated "Aspiration fit X/10" chip from the top chip row and the i
 | `Messages baseline` | `/network/messages` via `screen=messages` | `App-screen inventory` | Existing harness URL in `figma-wave1.tsx`; live browser review on `2026-04-14`; repo tie-back through `conversations-page.tsx` | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | Conversation-list baseline is live in the harness. Conversation detail remains Wave 2 inventory. |
 | `Aspirations roles matrix` | `/me/aspirations/roles`: `empty`, `seeded`, `loading`, `suggested`, `no-signal`, `rate-limited` | `App-screen inventory` | Harness state definitions in `figma-flagship-capture.tsx`; targeted Playwright smoke covers `empty`, `seeded`, and `suggested`; repo review confirms the full accepted state list | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | Matrix remains partially automated. `loading`, `no-signal`, and `rate-limited` are still direct-review states, not fully smoke-backed. |
 | `Aspirations companies matrix` | `/me/aspirations/companies`: `empty`, `seeded`, `loading`, `suggested`, `no-signal`, `rate-limited` | `App-screen inventory` | Harness state definitions in `figma-flagship-capture.tsx`; targeted Playwright smoke now covers `no-signal` and `rate-limited`; live browser review confirmed `no-signal` copy on `2026-04-14` | `Baldin-App-Screens` | `reviewed` | `screen-inventory only` | Matrix remains partially automated. `empty`, `seeded`, `loading`, and `suggested` are still direct-review states, not fully smoke-backed. |
-| `Leads matrix` | `/leads`: `unranked`, `ranked`, `disabled`, `error` | `App-screen inventory` | Existing harness URL plus targeted Playwright smoke coverage for all four states on `2026-04-14`; S8 redesign target frames at [node 257:6090](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=257-6090) | `Baldin-App-Screens` | `verified` | `screen-inventory only` | Wave 1 evidence anchor. S8 redesign target adds CardShell tone shift and ranking context strip for ranked cards. See [S8: Ranking Redesign Target](#s8-ranking-redesign-target). |
+| `Leads matrix` | `/leads`: `unranked`, `ranked`, `disabled`, `error` | `App-screen inventory` | Existing harness URL plus targeted Playwright smoke coverage for all four states on `2026-04-14`; S8 redesign rationale at [node 257:6090](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=257-6090); current repo implementation and S8 ranked/unranked route captures [node 446:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=446-2) / [node 447:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=447-2) confirmed on `2026-04-16` | `Baldin-App-Screens` | `verified` | `screen-inventory only` | Wave 1 evidence anchor. S8 code and route-backed evidence are implemented; preserve `257:6090` as rationale. See [S8: Ranking Redesign Status](#s8-ranking-redesign-status). |
 | `Apply matrix` | `/apply`: `ready`, `already-applied` | `App-screen inventory` | Existing harness URL plus targeted Playwright smoke coverage for both states on `2026-04-14` | `Baldin-App-Screens` | `verified` | `screen-inventory only` | Ranked-lead to application handoff baseline is verified. |
 
 ## Wave 2: Adjacent Shipped-Flow Direct Review
@@ -209,60 +230,60 @@ The `08 · Marketing · Landing` page in [Baldin-App-Screens](https://www.figma.
 | --- | --- | --- | --- |
 | Desktop Landing Hero | 1440 × 900 | [node 297:1168](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=297-1168) | Full-width hero with nav bar, eyebrow, headline, subline, gradient CTA pair, glow accent, and 5-item feature strip |
 | Mobile Landing Hero | 390 × 844 | [node 298:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=298-1167) | Mobile-responsive hero with hamburger nav, stacked CTAs, and stacked feature cards |
-| Full Landing Page Composition | 1440 × 2500 | [node 299:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=299-1167) | Complete one-page marketing composition: hero section, 6-card features grid, pipeline visualization (Discover → Extract → Rank → Apply → Track), local-first privacy section, CTA footer block, and footer bar |
+| Full Landing Page Composition — 1440×2500 | 1440 × 2500 | [node 299:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=299-1167) | Complete one-page marketing composition: hero section, 6-card features grid, pipeline visualization (Discover → Extract → Rank → Apply → Track), local-first privacy section, CTA footer block, and footer bar |
+| Route evidence - landing `/` desktop viewport | 1440 × 900 | [node 448:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=448-2) | Shipped route evidence captured from `/` at desktop viewport |
+| Route evidence - landing `/` mobile viewport | 390 × 844 | [node 449:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=449-2) | Shipped route evidence captured from `/` at mobile viewport |
+| Route evidence - landing `/` desktop full page | 1440 × 3968 | [node 450:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=450-2) | Shipped route evidence captured from `/` as desktop full-page composition |
 Canonical rule: [node 299:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=299-1167) is the only canonical full-page marketing composition.
 
 ### Token Alignment
 
 All colors map 1:1 to existing `Baldin Colors` variable collection entries — no new tokens were created. Typography uses the canonical font stack: Space Grotesk (display), Source Sans 3 (body), JetBrains Mono (technical eyebrows).
 
-### Handoff
+### Route Evidence Status
 
-| Owner | Responsibility | Exit condition |
+| Owner | Responsibility | Status |
 | --- | --- | --- |
-| `baldin_frontend` | Implement the marketing landing page in `home-layout.tsx` (or a new `landing-page.tsx` route) using the Figma frames as visual spec | Shipped landing page matches the Figma compositions with responsive breakpoints, uses existing Baldin tokens, and passes `tsc --noEmit` + `npm run build` |
-| `baldin_frontend` | Add Storybook stories for any reusable marketing-specific components extracted during implementation | Stories render, `storybook:build` passes |
-| `baldin_design_lead` | Post-implementation capture of the shipped landing page back into `Baldin-App-Screens` for evidence alignment | Shipped-route screenshot matches or improves on the Figma spec |
+| `baldin_design_lead` | Recapture the shipped landing route `/` back into `Baldin-App-Screens` at desktop and mobile widths after implementation polish | Complete: desktop `448:2`, mobile `449:2`, and desktop full-page `450:2` sit alongside the composed desktop and mobile marketing specs. |
+| `baldin_design_lead` | Compare route-backed captures against `297:1168`, `298:1167`, and `299:1167` without replacing the canonical composition | Complete for this pass. Future intentional route/spec differences should be recorded as design follow-up rather than silent drift. |
 
-### Implementation Prerequisites
+### Capture-Gap Review
 
-Rebrand drift verification (2026-04-14) confirmed no token, theme, or shared-component changes are needed. The following items should be addressed during the landing page implementation slice:
+`2026-04-16` Figma MCP review confirms page `08 · Marketing · Landing` (`297:1167`) contains desktop hero `297:1168`, mobile hero `298:1167`, and the canonical full desktop composition `Full Landing Page Composition — 1440×2500` at `299:1167`. The current repo renders `/` through `frontend/src/page/landing-page.tsx`, so the stale implementation gap is closed. Route-backed evidence now exists alongside the composed specs: desktop viewport `448:2`, mobile viewport `449:2`, and desktop full-page `450:2`.
+
+Classification: `live route evidence captured` for `/` at desktop `1440 × 900`, mobile `390 × 844`, and desktop full-page `1440 × 3968`; no Figma page reorganization or synthetic replacement frame is needed.
+
+### Implementation Status
+
+Rebrand drift verification (2026-04-14) confirmed no token, theme, or shared-component changes are needed. Current repo review confirms the implementation prerequisites are now complete and only route capture remains:
 
 - **Palette**: All six brand palette values map 1:1 to existing dark-mode color tokens. No new tokens needed.
-- **Typography tokens**: All three brand font families (`Space Grotesk`, `Source Sans 3`, `JetBrains Mono`) exist in `fontFamilies`. Space Grotesk and Source Sans 3 are bundled via `@fontsource` in `app-providers.tsx`. **JetBrains Mono is not yet bundled** — add `@fontsource/jetbrains-mono` and import the 400 weight before using technical eyebrow text.
-- **Gradient CTA**: Use `MuiButton variant="brand"` which calls `brandGradient()` (primary → secondary endpoints). The Figma hero uses a horizontal (90°) gradient; the repo default is 135°. Adjust the angle at the call site if needed, or use `brandGradient(theme, 90)` directly.
-- **Splash color**: `frontend/index.html` uses `#0a0e1a` for body background and `theme-color` meta. The canonical dark canvas token is `#07111d` (`surface.canvas`). Align both values during implementation.
-- **Route target**: `home-layout.tsx` is the unauthenticated shell wrapper with `<Outlet />`. Prefer a dedicated `landing-page.tsx` route component rendered inside the outlet rather than inlining the full marketing composition into the layout.
+- **Typography tokens**: All three brand font families (`Space Grotesk`, `Source Sans 3`, `JetBrains Mono`) exist in `fontFamilies`, and the current frontend includes `@fontsource/jetbrains-mono` with the 400 weight import in `app-providers.tsx`.
+- **Gradient CTA**: The route implementation uses `brandGradient(theme, 90)` for horizontal brand CTA treatment.
+- **Splash color**: `frontend/index.html` already uses `#07111d` for body background and `theme-color` meta, matching the canonical dark canvas token (`surface.canvas`).
+- **Route target**: the repo has a dedicated `landing-page.tsx` rendered as the `HomeLayout` index route; route capture alignment is complete for this pass.
 - **No token, theme, or shared-component changes needed** from the rebrand drift verification.
+- **Evidence status**: live route recapture for desktop, mobile, and desktop full-page evidence is complete on page `08`.
 
-## Next Owners
+## Active Follow-Up Owners
 
 | Owner | Immediate responsibility | Exit condition |
 | --- | --- | --- |
-| `baldin_frontend` | Implement S8 ranking redesign in `lead-card.tsx` and `leads.tsx` per the [S8: Ranking Redesign Target](#s8-ranking-redesign-target) spec: (1) CardShell tone shift to `warning` for ranked cards, (2) ranking context strip replacing the separated chip + italic text, and (3) component tests for ranked/unranked states and alignment rendering. | S8 acceptance criteria pass: ranked cards have amber tone, score and alignment text are grouped in a single strip, chip row no longer has "Aspiration fit X/10", and component tests cover ranked/unranked states. |
-| `baldin_frontend` | After S8 implementation, update `figma-flagship-capture.tsx` harness to match the new ranking visual treatment so post-implementation captures reflect the redesign. | Harness ranked state renders the new CardShell tone and ranking context strip layout. |
 | `baldin_design_lead` | Keep `05 · Auth & Access Live Evidence`, `06 · Workflows & Admin Live Evidence`, and the stale-ref guardrail aligned in the inventory if a later App-Screens slice refreshes auth, admin, or extractor evidence. | Future App-Screens updates continue to cite only live nodes for this slice and never reuse `221:1169`, `131:*`, `229:*`, or `232:*`. |
-| `baldin_full_stack_architect` | Review completed Figma surfaces against [Design System Catalog](./design-system-catalog.md) and [Design System Governance](../engineering/design-system-governance.md), then decide which surfaces stay feature-owned and which become closeout promotion candidates. | The closeout list cleanly separates `ready for repo promotion`, `library-only for now`, `screen-inventory only`, and `tooling blocked but design-valid`. |
-| `baldin_frontend` | Build or refine `Baldin-Library` only from promoted shared surfaces with clear cross-route evidence. | Every promoted Figma surface has a neutral component contract, stable semantics, and more than one shipped consumer. |
-| `baldin_frontend` | Integrate promoted design-system surfaces into `frontend/src/design-system/*` as React TypeScript code, then migrate the relevant route families onto those shared primitives or patterns. | The promoted surfaces ship in code with docs, tests, and route adoption updates. |
+
+No frontend implementation owner is active from this reconciliation. S8 and the marketing landing route are implemented in the repo, and this pass closed the active evidence-capture gap.
 
 ## Next Steps
 
 1. Keep `05 · Auth & Access Live Evidence` as the canonical auth/access page and `06 · Workflows & Admin Live Evidence` as the canonical extractor/admin live-capture page.
    Re-read both pages before the next App-Screens slice, and do not reuse the stale `221:1169`, `131:*`, `229:*`, or `232:*` references.
 
-2. Run a Figma-only shared-surface review after the app-screen port is current.
-   Compare repeated structures across `applications`, `messages`, `profile`, `auth`, and admin or workflow screens. Move a surface toward `Baldin-Library` only if it is domain-neutral, stable, and justified by multiple shipped consumers.
+2. Keep the new S8 and marketing route-evidence frames alongside their preserved rationale/spec frames.
+   S8 route evidence lives at `446:2` and `447:2` while `257:6090` remains rationale; landing route evidence lives at `448:2`, `449:2`, and `450:2` while `299:1167` remains the canonical composed full-page spec.
 
-3. Build out the production-grade Figma design system from proven shared surfaces, not from speculative abstractions.
-   Expand `Baldin-Library` around tokens, primitives, and patterns that are already evidenced by the ported app screens. Keep `SecondaryNavBar` and similar shell studies library-only until promotion review proves otherwise.
+3. Defer shared-surface promotion and code integration until after the capture backlog closes.
+   A later `baldin_full_stack_architect` review can compare completed Figma surfaces against [Design System Catalog](./design-system-catalog.md) and [Design System Governance](../engineering/design-system-governance.md), but no new `.figma.ts` mapping or shared React abstraction is required for this reconciliation.
 
-4. Run a UX polish pass after the Figma port and the initial library buildout are coherent.
-   Focus on consistency, hierarchy, empty/loading/error behavior, auth friction, message and application detail clarity, and privileged admin workflow usability. Treat polish as a Figma-first pass before code integration.
+4. Run any future UX polish pass as a Figma-first follow-up after this evidence closeout.
+   Focus on consistency, hierarchy, empty/loading/error behavior, auth friction, message and application detail clarity, and privileged admin workflow usability.
    The initial polish findings are now tracked in [Baldin App Screens Polish Ledger](./baldin-app-screens-polish-ledger.md).
-
-5. Integrate the promoted design system into the repo as React TypeScript code.
-   Implement only the surfaces that passed promotion review in `frontend/src/design-system/*`, update the catalog and governance docs in the same PR, add the smallest useful tests, then migrate the consuming route families.
-
-6. Keep the final code integration gated by real consumption proof.
-   Do not add new `.figma.ts` mappings or shared React abstractions until the Figma surface is validated in `Baldin-App-Screens`, promoted through `Baldin-Library`, and justified by shipped repo consumers.

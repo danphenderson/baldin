@@ -26,23 +26,27 @@ Figma-first UX polish audit of all 20 reviewed screens in [Baldin-App-Screens](h
 - Marketing keeps [node 299:1167](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=299-1167) as the canonical full-page composition.
 - This cleanup does not open new promotion work, `.figma.ts` mappings, or shared React abstractions.
 
+## Repo Reconciliation Notes
+
+The implementation review on `2026-04-16` retired several earlier code-gap findings. Current repo truth shows `Application detail`, `Conversation detail`, `Account settings`, and extractor modals already using the shared feedback/dialog/loading surfaces where this ledger previously described raw MUI usage as active work. Those historical findings remain useful provenance, but they should not be treated as implementation backlog.
+
+Active polish backlog in this ledger is now limited to Figma capture/state coverage, route-backed evidence refresh, and cross-screen governance decisions unless a row explicitly names a current code gap.
+
 ## Focus 1: Consistency with Baldin-Library Shared Surfaces
 
 Library baseline: 16 mapped surfaces in the [Design System Catalog](./design-system-catalog.md).
 
 | Screen | Severity | Finding | Recommended Figma edit | Library surface reference |
 | --- | --- | --- | --- | --- |
-| Application detail | **High** | Code uses raw MUI `<Alert severity="error">` for API errors instead of `InlineFeedback`. The Figma frame should show the canonical InlineFeedback treatment, not a generic alert box. | Replace any raw alert-style error region with an InlineFeedback (tone="error") instance from Baldin-Library. | InlineFeedback `30-62` |
-| Application detail | **Medium** | Code renders field-level loading with raw `<Skeleton>` components rather than the canonical `LoadingState`. The Figma frame should clarify whether individual field skeletons or a section-level LoadingState is the intended loading treatment. | Add a dedicated "loading" state frame showing `LoadingState` with section-appropriate `kind` and `itemHeight`, or document the per-field skeleton intent if that is the chosen pattern. | LoadingState `202-83` |
-| Conversation detail | **High** | Code uses raw `<CircularProgress>` instead of the canonical `LoadingState` component for the page-level loading state. The Figma frame for conversation detail loading should show `LoadingState`, not an improvised spinner. | Replace any centered-spinner loading frame with a `LoadingState` instance (kind="list" or "detail"). | LoadingState `202-83` |
-| Conversation detail | **Medium** | Code uses a local `<Snackbar>` instead of the app-level notification pattern. The Figma frame for transient action feedback (message sent, deleted, etc.) should show the canonical snackbar overlay from the notification system. | Add a snackbar overlay annotation or frame showing the canonical app-wide notification pattern for transient action feedback. | *(app-level pattern, not a single library surface)* |
+| Application detail | **Low** | **Retired code gap.** Current repo uses `InlineFeedback`, `LoadingState`, and `SurfaceDialog` in `applications-detail-page.tsx`. Earlier raw Alert/Skeleton findings are historical evidence only. | During the next App-Screens refresh, verify the route-backed detail, loading, and error frames still match the current shared-surface implementation. | InlineFeedback `30-62`, LoadingState `202-83`, SurfaceDialog `45-33` |
+| Conversation detail | **Low** | **Retired code gap.** Current repo uses `InlineFeedback`, page-level `LoadingState`, and `SurfaceDialog` in `conversation-detail-page.tsx`. Remaining raw `CircularProgress` usage is limited to the send-button progress affordance. | Keep route-backed loading/error/dialog captures aligned with the current implementation. Capture transient snackbar/send-button states only when they become stable design evidence. | LoadingState `202-83`, InlineFeedback `30-62`, SurfaceDialog `45-33` |
 | Applications queue | **Medium** | Stage-tone color mapping function (`stageTone()`) is defined locally; the same logic is duplicated in the board page. Figma frames for both queue and board should use identical tone-to-color mappings for status chips. | Ensure the stage StatusChip instances in the queue frame use the same Figma styles (color fills, text colors) as the board's lane headers and card chips. | StatusChip `5-34` |
 | Applications board | **Medium** | Duplicates the stage-tone color mapping from the queue. The board lane headers and card status chips should use the same canonical StatusChip variant and color binding as the queue view. | Cross-check lane header colors and card StatusChip fills against the queue's StatusChip instances for exact match. | StatusChip `5-34` |
 | Profile baseline | **Medium** | Profile uses a custom `ProfileHero` and `ProfileSection` component pattern not backed by any Baldin-Library surface. The Figma frames for profile section headers use a unique layout (icon + title + count chip + action button + divider). | Document the profile section header as a "feature-owned" pattern in the Figma frame annotations. Do not force it into a library surface, but ensure its spacing, typography scale, and chip treatment match the closest library equivalents (SectionHeader `6-24`, StatusChip `5-34`). | SectionHeader `6-24`, StatusChip `5-34` |
-| Account settings | **Medium** | Code uses raw MUI `<Alert>` instead of `InlineFeedback` for subscription tier feedback. The Figma frame should show InlineFeedback. | Replace any raw Alert treatment with an InlineFeedback instance. | InlineFeedback `30-62` |
-| Extractor workflow | **Medium** | Code uses raw MUI `<Dialog>` components instead of `SurfaceDialog` or `FormDialogShell` for the create/run extractor modals. The Figma frames for extractor dialogs should show the canonical SurfaceDialog shell. | Replace any generic dialog frames with SurfaceDialog instances, using SurfaceDialogTitle, SurfaceDialogContent, and SurfaceDialogActions slots. | SurfaceDialog `45-33`, FormDialogShell `8-24` |
-| Crawlers | **Medium** | Code uses a local `RunStatusChip` wrapper around MUI `<Chip>` instead of the canonical `StatusChip`. The Figma frames for run status indicators should use StatusChip instances with the correct tone mapping. | Replace any local chip styling in crawler run-status indicators with StatusChip instances from Baldin-Library. Map status → tone: success → success, failed → danger, pending/running → info, cancelled/paused → warning. | StatusChip `5-34` |
-| Review queue | **Medium** | Code renders review item type as an inline badge, not using the canonical StatusChip. The Figma frame for type indicators should use StatusChip instances. | Replace inline type badges with StatusChip instances. | StatusChip `5-34` |
+| Account settings | **Low** | **Retired code gap.** Current repo uses `InlineFeedback` and `SurfaceDialog` in `account-page.tsx`; the earlier raw Alert finding is historical evidence only. | Verify the account settings frame shows the current InlineFeedback treatment during the next route-backed capture refresh. | InlineFeedback `30-62`, SurfaceDialog `45-33` |
+| Extractor workflow | **Low** | **Retired dialog gap.** Current extractor modals use `SurfaceDialog`. Active checks are limited to page-level Alert/CircularProgress/snackbar treatment and capture completeness. | Keep extractor dialog frames on the SurfaceDialog slot structure; separately decide whether route-level feedback/loading should be promoted or left feature-owned. | SurfaceDialog `45-33`, FormDialogShell `8-24` |
+| Crawlers | **Low** | **Retired code gap.** Current repo imports shared `StatusChip` for crawler run status. The active Figma task is verifying tone mapping and expanded/collapsed state coverage. | Verify run-status instances map status → tone consistently: success → success, failed → danger, pending/running → info, cancelled/paused → warning. | StatusChip `5-34` |
+| Review queue | **Low** | **Retired code gap.** Current repo imports shared `StatusChip` for review item type/status indicators. The active Figma gap is populated and batch-action state coverage. | Keep populated review-queue captures aligned with StatusChip tone/variant usage and batch-toolbar behavior. | StatusChip `5-34` |
 
 ## Focus 2: Visual Hierarchy
 
@@ -65,13 +69,13 @@ Library baseline: 16 mapped surfaces in the [Design System Catalog](./design-sys
 | --- | --- | --- | --- | --- |
 | Applications queue | ✅ `LoadingState` | ✅ `EmptyState` | ⚠️ Mixed (`InlineFeedback` + notifications) | Error frame should standardize on InlineFeedback for inline errors and snackbar for transient actions. |
 | Applications board | ✅ `LoadingState` | ✅ Per-column `EmptyState` with board-specific hints | ⚠️ Mixed (`InlineFeedback` + `ConfirmDialog` + Snackbar) | Verify the per-column empty hints are present in Figma; they add useful onboarding context. |
-| Application detail | ⚠️ `Skeleton` only | ❌ None (assumes entity exists) | ⚠️ Raw `Alert` | **High gap.** Add an error frame showing InlineFeedback for "application not found" and a loading frame showing the section-skeleton layout. |
+| Application detail | ✅ `LoadingState` / reference frame | ❌ None (assumes entity exists) | ✅ `InlineFeedback` / reference frame | Code gap retired. During recapture, verify current route-backed loading and error frames match the shared-surface implementation. |
 | Leads | ✅ `LoadingState` | ✅ `EmptyState` | ✅ Notification toast | Strongest current state coverage. Reference pattern. |
 | Apply | ✅ Implied | ✅ Implied (`already-applied`) | ⚠️ Unclear | Verify the "already-applied" empty state and any error path (e.g., missing ranked lead) have distinct Figma frames. |
 | Profile baseline | ✅ Custom 3-section `LoadingState` | ⚠️ Builder panel (auto-opens when completion is 0%) | ✅ `InlineFeedback` | The builder-panel-as-empty-state is a valid product decision. Add a Figma annotation noting this intent. |
 | Profile MFA states | ⚠️ Included in parent loading | ❌ N/A (MFA always has a state) | ✅ `InlineFeedback` | Add explicit MFA loading frame if the QR setup step has an async delay visible to the user. |
 | Messages baseline | ✅ `LoadingState` (kind="list") | ✅ `EmptyState` | ✅ Notification toast | Good coverage. |
-| Conversation detail | ⚠️ Raw `CircularProgress` | ❌ No empty-thread frame | ⚠️ Inline state + local Snackbar | **High gap.** Add an empty-thread `EmptyState` frame and replace loading with `LoadingState`. |
+| Conversation detail | ✅ `LoadingState` / reference frame | ✅ Empty thread / reference frame | ✅ `InlineFeedback` / transient Snackbar | Code gap retired. Keep loading, empty-thread, and error captures aligned with the current route implementation. |
 | Aspirations roles | ✅ `loading` state in harness | ✅ `empty` state in harness | ⚠️ `no-signal` and `rate-limited` exist but not fully backed | Ensure `no-signal` and `rate-limited` frames in Figma show InlineFeedback with appropriate tone and copy. |
 | Aspirations companies | ✅ `loading` state in harness | ✅ `empty` state in harness | ⚠️ Same as roles | Same recommendation as aspirations roles. |
 | Login baseline | ❌ N/A | ❌ N/A | ⚠️ Inline auth failure states not separately captured | Live baseline now resolves at [node 370:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=370-2). Keep it distinct from the MFA challenge at [node 373:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=373-2). |
@@ -88,10 +92,8 @@ Library baseline: 16 mapped surfaces in the [Design System Catalog](./design-sys
 
 | Screen | Severity | Finding | Recommended Figma edit | Library surface reference |
 | --- | --- | --- | --- | --- |
-| Application detail | **High** | No error state frame exists. Code renders a raw MUI Alert for "not found" or API failure. | Add an error state frame showing InlineFeedback tone="error" with "Application not found" or "Failed to load application" copy and a "Back to applications" CTA. | InlineFeedback `30-62` |
-| Application detail | **High** | Loading state uses per-field Skeleton rather than the canonical LoadingState. If this is intentional (denser skeleton layout), document it. If not, the frame should show LoadingState. | Add a loading state frame. If using field-level skeletons, annotate the frame as "feature-owned skeleton layout" to distinguish from the library pattern. | LoadingState `202-83` |
-| Conversation detail | **High** | No empty-thread frame. When a new conversation is started with no messages, the screen shows nothing. | Add an EmptyState frame for "No messages yet — start the conversation" with a message-input focus CTA. | EmptyState `47-65` |
-| Conversation detail | **High** | Loading state uses raw CircularProgress. | Replace with a LoadingState frame showing kind="detail" or kind="list" to match message-stream layout. | LoadingState `202-83` |
+| Application detail | **Low** | **Retired after repo/Figma reconciliation.** Current repo uses `InlineFeedback`, `LoadingState`, and `SurfaceDialog`; App-Screens carries application detail state/reference coverage. | Keep as historical evidence only. Reopen only if a future route-backed capture diverges from the current implementation. | InlineFeedback `30-62`, LoadingState `202-83` |
+| Conversation detail | **Low** | **Retired after repo/Figma reconciliation.** Current repo uses page-level `LoadingState`, `InlineFeedback`, and `SurfaceDialog`; App-Screens carries conversation detail empty/loading/reference coverage. | Keep as historical evidence only. Reopen only if a future route-backed capture diverges from the current implementation. | EmptyState `47-65`, LoadingState `202-83` |
 | Crawlers | **Medium** | No explicit empty-pipeline EmptyState frame verified via MCP. The code implies one exists, but the Figma coverage should show it explicitly. | Add or verify an EmptyState frame for "No crawler pipelines configured" with a "Create pipeline" CTA. | EmptyState `47-65` |
 
 ## Focus 4: Auth Friction
@@ -142,17 +144,17 @@ Admin frames confirmed via Figma MCP: legacy live captures DB management (`184:4
 
 1. **Collection page heading pattern:** Applications queue, Applications board, Leads, Messages, and Settings all use the toolbar-header-only pattern (title + subtitle in the sticky AppBar). Application detail and Dashboard use in-content `PageTitle`. Conversations list uniquely uses both toolbar-header and `SectionHeader`. Recommend standardizing: toolbar-header-only for collection pages, in-content PageTitle for detail/landing pages.
 
-2. **Error feedback surface:** InlineFeedback is canonical. Application detail, Account settings, and DB management still show raw MUI `Alert` in code. Crawlers and Review queue use Snackbar. Figma frames should standardize on InlineFeedback for inline errors and snackbar overlays for transient action feedback.
+2. **Error feedback surface:** InlineFeedback is canonical for inline errors. Earlier Application detail and Account settings raw-Alert findings are retired. Active checks are DB management/admin access-denied/extractor page-level Alerts and snackbar overlays where they remain intentional transient feedback.
 
-3. **Loading surface:** LoadingState is canonical. Conversation detail using raw CircularProgress and Application detail using raw Skeleton are the main gaps. Figma frames should show LoadingState except where feature-owned skeleton layouts are documented.
+3. **Loading surface:** LoadingState is canonical. Earlier Conversation detail and Application detail loading findings are retired. Active checks are extractor/admin/loading route variants and any documented feature-owned loading exceptions.
 
-4. **Dialog surface:** SurfaceDialog is canonical. Extractor workflow still uses raw MUI Dialog in code. Figma frames for all dialogs should use the SurfaceDialog slot structure unless a documented exception exists.
+4. **Dialog surface:** SurfaceDialog is canonical. The extractor modal gap is retired because current extractor modals use SurfaceDialog. Future frames for dialogs should keep the SurfaceDialog slot structure unless a documented exception exists.
 
-5. **Status indicator surface:** StatusChip is canonical. Crawlers' RunStatusChip and Review queue's inline type badges are the main gaps. Figma frames should use StatusChip instances for all status indicators.
+5. **Status indicator surface:** StatusChip is canonical. Crawlers and Review queue now import the shared StatusChip in code; active work is verifying Figma instance usage, tone mapping, and populated-state captures.
 
 ### Screens with no polish findings
 
-None. Every screen has at least one finding. The cleanest screen is **Leads** (all Low severity — it is the strongest current reference pattern).
+None. Every screen has at least one active or historical finding. The cleanest screen is **Leads** (all Low severity, with S8 implementation and route-backed recapture complete).
 
 ## Figma Frame Coverage Confirmation
 
@@ -164,7 +166,9 @@ None. Every screen has at least one finding. The cleanest screen is **Leads** (a
 | `07 · Reference · Admin Studies` | Page `221:1170` with `234:1167`, `234:1198`, `234:1215`, and `234:1239` | Reference-only composed admin evidence | Useful for cleanup notes, but not canonical shipped UI proof. |
 | `05 · Auth & Access Live Evidence` | Page `353:1167` with `370:2`, `371:2`, `373:2`, `374:2`, `375:2`, and `376:2` | Canonical live capture evidence | Keep as the live auth/admin-access anchor. |
 | Stale Wave 3 auth/admin/extractor refs | `221:1169`, `131:*`, `229:*`, and `232:*` | Stale docs history only | These refs do not resolve in the live file and should never be reused as active evidence. |
-| Marketing full-page composition | `299:1167` on `08 · Marketing · Landing` page `297:1167` | Canonical composed marketing evidence | Keep as the only canonical full-page composition. |
+| S8 ranked/unranked route evidence | Ranked [node 446:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=446-2) and unranked [node 447:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=447-2) on `02 · Flagship Flow · Aspirations to Apply` page `221:1167` | Canonical browser-harness evidence | Keep alongside S8 rationale `257:6090`; route evidence supersedes the collapsed rationale visuals as implementation proof. |
+| Marketing full-page composition | `Full Landing Page Composition — 1440×2500` at `299:1167` on `08 · Marketing · Landing` page `297:1167` | Canonical composed marketing evidence | Keep as the only canonical full-page composition. |
+| Marketing route evidence | Desktop [node 448:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=448-2), mobile [node 449:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=449-2), and desktop full-page [node 450:2](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy?node-id=450-2) on `08 · Marketing · Landing` page `297:1167` | Canonical shipped-route evidence | Keep alongside composed specs `297:1168`, `298:1167`, and `299:1167`; do not replace the canonical composition. |
 
 ### Pre-existing frames (confirmed via MCP metadata reads)
 
@@ -182,12 +186,14 @@ None. Every screen has at least one finding. The cleanest screen is **Leads** (a
 - `05 · Auth & Access Live Evidence` page `353:1167` now anchors live auth, admin-login/access-denied, and access-state evidence with frames `370:2`, `371:2`, `373:2`, `374:2`, `375:2`, and `376:2`.
 - `06 · Workflows & Admin Live Evidence` page `394:1167` now anchors extractor `369:2` plus admin live captures `184:4929`, `192:4929`, and `201:4929`.
 - `07 · Reference · Admin Studies` page `221:1170` remains live as reference-only composed admin evidence with frames `234:1167`, `234:1198`, `234:1215`, and `234:1239`.
-- `08 · Marketing · Landing` page `297:1167` keeps `297:1168`, `298:1167`, and canonical full composition `299:1167`.
+- `02 · Flagship Flow · Aspirations to Apply` page `221:1167` keeps S8 rationale `257:6090` and now adds route-backed S8 ranked/unranked captures `446:2` and `447:2`.
+- `08 · Marketing · Landing` page `297:1167` keeps `297:1168`, `298:1167`, canonical full composition `299:1167`, and route-backed landing captures `448:2`, `449:2`, and `450:2`.
 - The previously documented `Wave 3 · Auth & Workflow Screens` page `221:1169` and nodes `131:*`, `229:*`, and `232:*` do not resolve in the live file and now remain audit history only.
 
-## Next Owners
+## Active Follow-Up Owner
 
 | Owner | Responsibility | Exit condition |
 | --- | --- | --- |
 | `baldin_design_lead` | Keep `05 · Auth & Access Live Evidence`, `06 · Workflows & Admin Live Evidence`, and the stale-ref guardrail aligned in the inventory and polish ledger during future App-Screens edits. | The docs stay aligned with live Figma and no stale node references return. |
-| `baldin_full_stack_architect` | Review whether any cross-screen heading, feedback, or dialog decisions from this audit should move into governance docs after recapture. | Governance docs change only if the decisions become stable across shipped consumers. |
+
+Governance updates remain deferred until a future UX polish pass proves the decisions are stable across shipped consumers. No frontend implementation owner is active from this polish reconciliation.

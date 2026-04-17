@@ -19,7 +19,7 @@ This guide describes the migration that exists in the repo today. It tracks the 
 | Shared patterns | Complete for the current implemented code scope | `CollectionToolbar`, `MetricStrip`, `SectionCard`, and `AuthPanel` are shipped |
 | Storybook verification lane | Seeded and already landed | `frontend/.storybook/*` plus colocated stories now cover the current code-backed Figma mapping set |
 | Compatibility wrappers | Narrow transitional layer | Only documented re-export shims and feature-local adapters remain |
-| Route-family adoption | Broadly complete | See the [Route-Family Adoption Ledger](../reference/design-system-catalog.md#route-family-adoption-ledger) |
+| Route-family adoption | Broadly complete | See the [Route-Family Adoption Table](../reference/design-system-catalog.md#route-family-adoption-table) |
 
 Figma can lead code. Baldin-Library may define broader library inventory ahead of what is promoted into `frontend/src/design-system/*`.
 

@@ -3,15 +3,15 @@ services:
     image: pgvector/pgvector:pg15
     restart: unless-stopped
     ports:
-      # Keep database access local-only; inter-service traffic stays on the
-      # Compose network.
-      - "127.0.0.1:5432:5432"
+      # Publish locally by default. Set DOCKER_PUBLISH_HOST=0.0.0.0 before
+      # `docker-compose up` when another device needs LAN access.
+      - "${DOCKER_PUBLISH_HOST:-127.0.0.1}:5432:5432"
     environment:
       POSTGRES_DB: db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - ./backend/public/db:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d db"]
       interval: 10s
@@ -22,13 +22,13 @@ services:
     image: pgvector/pgvector:pg15
     restart: unless-stopped
     ports:
-      - "127.0.0.1:5431:5432"
+      - "${DOCKER_PUBLISH_HOST:-127.0.0.1}:5431:5432"
     environment:
       POSTGRES_DB: test_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - ./backend/public/test_db:/var/lib/postgresql/data
+      - test-db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d test_db"]
       interval: 10s
@@ -39,7 +39,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "127.0.0.1:6379:6379"
+      - "${DOCKER_PUBLISH_HOST:-127.0.0.1}:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -52,10 +52,29 @@ services:
       dockerfile: ./Dockerfile
       target: dev
     working_dir: /usr/src/app
-    command: uvicorn --app-dir /usr/src/app app.etl_service_main:app --reload --workers 1 --host 0.0.0.0 --port 8010
+    command:
+      - uvicorn
+      - --app-dir
+      - /usr/src/app
+      - app.etl_service_main:app
+      - --reload
+      # Restrict reload watching to importable source trees so mounted caches,
+      # virtualenvs, and egg metadata do not exhaust file descriptors.
+      - --reload-dir
+      - /usr/src/app/app
+      - --reload-dir
+      - /usr/src/app/etl
+      - --workers
+      - "1"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8010"
     env_file:
       - ./backend/.env
     environment:
+      # Pass through optional secrets only when present so blank compose env
+      # vars do not mask backend/.env.local overrides inside the container.
       - OPENAI_API_KEY
       - LINKEDIN_USERNAME
       - LINKEDIN_PASSWORD
@@ -63,13 +82,34 @@ services:
       - GLASSDOOR_PASSWORD
       - SENTRY_DSN
       - SENTRY_TRACES_SAMPLE_RATE
-    volumes:
-      - ./backend:/usr/src/app
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health').read()"]
       interval: 10s
       timeout: 5s
       retries: 5
+    develop:
+      watch:
+        - action: sync
+          path: ./backend/app
+          target: /usr/src/app/app
+          initial_sync: true
+        - action: sync
+          path: ./backend/etl
+          target: /usr/src/app/etl
+          initial_sync: true
+        - action: sync+restart
+          path: ./backend
+          target: /usr/src/app
+          include:
+            - .env
+            - .env.local
+          initial_sync: true
+        - action: rebuild
+          path: ./backend/Pipfile
+        - action: rebuild
+          path: ./backend/Pipfile.lock
+        - action: rebuild
+          path: ./backend/Dockerfile
 
   web:
     build:
@@ -77,7 +117,24 @@ services:
       dockerfile: ./Dockerfile
       target: dev
     working_dir: /usr/src/app
-    command: uvicorn --app-dir /usr/src/app app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000
+    command:
+      - uvicorn
+      - --app-dir
+      - /usr/src/app
+      - app.main:app
+      - --reload
+      # Keep the Compose-first dev loop on source changes without recursively
+      # watching the full bind mount under /usr/src/app.
+      - --reload-dir
+      - /usr/src/app/app
+      - --reload-dir
+      - /usr/src/app/etl
+      - --workers
+      - "1"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
     env_file:
       - ./backend/.env
     environment:
@@ -94,10 +151,8 @@ services:
       - CRAWLER_QUEUE_NAME=crawler_jobs
       - CRAWLER_EXECUTION_MODE=worker
       - ETL_SERVICE_URL=http://etl-service:8010
-    volumes:
-      - ./backend:/usr/src/app
     ports:
-      - "127.0.0.1:8004:8000"
+      - "${DOCKER_PUBLISH_HOST:-127.0.0.1}:8004:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready').read()"]
       interval: 10s
@@ -110,6 +165,29 @@ services:
         condition: service_healthy
       etl-service:
         condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./backend/app
+          target: /usr/src/app/app
+          initial_sync: true
+        - action: sync
+          path: ./backend/etl
+          target: /usr/src/app/etl
+          initial_sync: true
+        - action: sync+restart
+          path: ./backend
+          target: /usr/src/app
+          include:
+            - .env
+            - .env.local
+          initial_sync: true
+        - action: rebuild
+          path: ./backend/Pipfile
+        - action: rebuild
+          path: ./backend/Pipfile.lock
+        - action: rebuild
+          path: ./backend/Dockerfile
 
   crawler-worker:
     build:
@@ -132,8 +210,6 @@ services:
       - CRAWLER_QUEUE_NAME=crawler_jobs
       - CRAWLER_EXECUTION_MODE=worker
       - ETL_SERVICE_URL=http://etl-service:8010
-    volumes:
-      - ./backend:/usr/src/app
     depends_on:
       db:
         condition: service_healthy
@@ -141,6 +217,31 @@ services:
         condition: service_healthy
       etl-service:
         condition: service_healthy
+    develop:
+      watch:
+        # The worker process does not run Uvicorn reload, so restart it when
+        # backend source changes land.
+        - action: sync+restart
+          path: ./backend/app
+          target: /usr/src/app/app
+          initial_sync: true
+        - action: sync+restart
+          path: ./backend/etl
+          target: /usr/src/app/etl
+          initial_sync: true
+        - action: sync+restart
+          path: ./backend
+          target: /usr/src/app
+          include:
+            - .env
+            - .env.local
+          initial_sync: true
+        - action: rebuild
+          path: ./backend/Pipfile
+        - action: rebuild
+          path: ./backend/Pipfile.lock
+        - action: rebuild
+          path: ./backend/Dockerfile
 
   backend-test:
     profiles: ["test"]
@@ -156,8 +257,6 @@ services:
       - TEST_DATABASE_HOSTNAME=test_db
       - TEST_DATABASE_PORT=5432
       - OPENAI_API_KEY
-    volumes:
-      - ./backend:/usr/src/app
     depends_on:
       test_db:
         condition: service_healthy
@@ -166,18 +265,51 @@ services:
     build:
       context: ./frontend
       dockerfile: ./Dockerfile
-    # Let Vite read the mounted frontend/.env and frontend/.env.local files
-    # directly so local overrides keep their documented precedence.
+    env_file:
+      - path: ./frontend/.env
+        required: true
+      - path: ./frontend/.env.local
+        required: false
+    # Docker Desktop now exhausts file descriptors even on targeted bind
+    # mounts here, so run the frontend from image contents and rebuild when
+    # dependency changes land. Use Compose Watch for live source sync.
     command: npm run dev
     stdin_open: true
     tty: true
-    volumes:
-      - ./frontend:/usr/src/app
-      - /usr/src/app/node_modules
     ports:
-      - "127.0.0.1:5173:5173"
+      - "${DOCKER_PUBLISH_HOST:-127.0.0.1}:5173:5173"
     depends_on:
       - web
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend/src
+          target: /usr/src/app/src
+          initial_sync: true
+        - action: sync
+          path: ./frontend/admin
+          target: /usr/src/app/admin
+          initial_sync: true
+        - action: sync
+          path: ./frontend/browser-harness
+          target: /usr/src/app/browser-harness
+          initial_sync: true
+        - action: sync+restart
+          path: ./frontend
+          target: /usr/src/app
+          include:
+            - index.html
+            - vite.config.ts
+            - tsconfig.json
+            - .env
+            - .env.local
+          initial_sync: true
+        - action: rebuild
+          path: ./frontend/package.json
+        - action: rebuild
+          path: ./frontend/package-lock.json
+        - action: rebuild
+          path: ./frontend/Dockerfile
 
   docs:
     build:
@@ -189,9 +321,41 @@ services:
       WATCHPACK_POLLING: "true"
     stdin_open: true
     tty: true
-    volumes:
-      - ./docs:/usr/src/app
-      - /usr/src/app/node_modules
-      - /usr/src/app/.docusaurus
     ports:
-      - "127.0.0.1:3001:3000"
+      - "${DOCKER_PUBLISH_HOST:-127.0.0.1}:3001:3000"
+    develop:
+      watch:
+        - action: sync
+          path: ./docs/docs
+          target: /usr/src/app/docs
+          initial_sync: true
+        - action: sync
+          path: ./docs/src
+          target: /usr/src/app/src
+          initial_sync: true
+        - action: sync
+          path: ./docs/static
+          target: /usr/src/app/static
+          initial_sync: true
+        - action: sync
+          path: ./docs/i18n
+          target: /usr/src/app/i18n
+          initial_sync: true
+        - action: sync+restart
+          path: ./docs
+          target: /usr/src/app
+          include:
+            - docusaurus.config.ts
+            - sidebars.ts
+            - tsconfig.json
+          initial_sync: true
+        - action: rebuild
+          path: ./docs/package.json
+        - action: rebuild
+          path: ./docs/package-lock.json
+        - action: rebuild
+          path: ./docs/Dockerfile
+
+volumes:
+  db-data:
+  test-db-data:

@@ -5,7 +5,7 @@ title: Planned Deployment
 description: Current deployment posture, planned production topology, and what is supported today.
 ---
 
-<!-- last-verified: 2026-04-13 -->
+<!-- last-verified: 2026-04-16 -->
 
 # Planned Deployment
 
@@ -17,7 +17,7 @@ This page explains what works today, what is planned, and what constraints shape
 
 ### Local Docker Compose
 
-The local stack is the supported development surface. It runs eight services:
+The local stack is the supported development surface. Compose Watch is the supported live-edit loop, and it runs eight services:
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
@@ -25,15 +25,15 @@ The local stack is the supported development surface. It runs eight services:
 | **test_db** | pgvector/pgvector:pg15 | 5431 | Isolated test database |
 | **redis** | redis:7-alpine | 6379 | Background job queue and crawler dispatch |
 | **etl-service** | `backend/Dockerfile` (target: dev) | 8010 (internal) | Internal crawler execution boundary |
-| **web** | `backend/Dockerfile` (target: dev) | 8004 → 8000 | FastAPI/Uvicorn backend with hot reload |
+| **web** | `backend/Dockerfile` (target: dev) | 8004 → 8000 | FastAPI/Uvicorn dev server with Compose Watch sync |
 | **crawler-worker** | `backend/Dockerfile` | — | Background crawler worker consuming Redis jobs |
-| **frontend** | `frontend/Dockerfile` | 5173 | React/Vite dev server with HMR |
+| **frontend** | `frontend/Dockerfile` | 5173 | React/Vite dev server |
 | **docs** | `docs/Dockerfile` | 3001 → 3000 | Docusaurus dev server |
 
 Start the stack:
 
 ```bash
-docker-compose up --build
+docker-compose up --build --watch
 ```
 
 See [Boot The Stack](./quickstart.md) for full setup instructions.
@@ -97,9 +97,9 @@ Superusers can inspect crawler runtime health through `GET /api/v1/crawlers/runt
 ```mermaid
 flowchart TD
     accTitle: Deployment Decision Tree
-    accDescr: Decision tree starting at Want to run Baldin — if local development choose docker-compose up --build; if production deployment that path is not yet supported and links to the release roadmap.
+    accDescr: Decision tree starting at Want to run Baldin — if local development choose docker-compose up --build --watch; if production deployment that path is not yet supported and links to the release roadmap.
     A[Want to run Baldin?] --> B{Local development?}
-    B -- Yes --> C[docker-compose up --build]
+    B -- Yes --> C[docker-compose up --build --watch]
     B -- No --> D{Production deployment?}
     D -- Yes --> E[Not yet supported]
     E --> F[Follow the release roadmap]

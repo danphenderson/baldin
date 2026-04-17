@@ -6,7 +6,7 @@ Use root/scoped `AGENTS.md` as the canonical shared baseline. Copilot should app
 
 - Baldin is a local-first developer-preview monorepo. Prefer the smallest complete change that improves local correctness, reproducibility, or launch-path readiness.
 - Do not introduce mature-SaaS, cloud-scale, or enterprise-compliance architecture unless the task explicitly requires it.
-- Default to `docker-compose up --build` from the repo root and keep the stack warm while iterating. The normal loop is inspect -> patch -> smoke-check.
+- Default to `docker-compose up --build --watch` from the repo root, keep the stack warm while iterating, and use Compose Watch as the supported live-edit loop. The normal loop is inspect -> patch -> smoke-check.
 - Repo-tracked `backend/.env` and `frontend/.env` are safe worktree defaults. Put real secrets in Copilot or Codex env vars, or ignored `.env.local` overrides.
 - If you run backend tests from the host, use `127.0.0.1:5431` for `test_db`; inside Compose, use `test_db`.
 - If local schema drift blocks work and local data is disposable, use `./scripts/reset_local_db.sh`. Use `./scripts/repair_local_db_collation.sh` only for collation mismatch recovery when local data must survive.
@@ -19,7 +19,7 @@ Use root/scoped `AGENTS.md` as the canonical shared baseline. Copilot should app
 - Do not hand-edit `openapi.json`, `frontend/src/schema.d.ts`, or `docs/build/**`.
 - If backend routes or schemas change, prefer `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh` during active local iteration and report whether generated artifacts actually changed.
 - Contract regeneration imports the backend app. Use the tracked `backend/.env` baseline and supply a non-empty `OPENAI_API_KEY` through process env or `backend/.env.local`; a dummy local value is acceptable when real API access is not needed.
-- For Figma work, assume a Professional-plan workflow without a Dev seat: use the local browser harness plus Figma MCP or basic inspection, and do not make Code Connect publish a prerequisite.
+- For Figma work, assume a Professional-plan workflow without a Dev seat: treat `Baldin Product Redesign — Command Center` as the active working file, `docs/docs/reference/baldin-redesign-handoff.md` as the authoritative redesign source, use `Baldin-Library` for reusable components, and rely on the local browser harness plus Figma MCP or basic inspection instead of making Code Connect publish a prerequisite.
 - Do not add tracked `AGENTS.override.md` files unless the repo documents an override policy and validator allowlist first.
 
 ## Reference Docs

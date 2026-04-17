@@ -4,7 +4,13 @@
 > Default implementation owner: `baldin_frontend`
 > Program owner: `baldin_full_stack_architect`
 
-## Scope
+## Canonical Inputs
+
+- Read `docs/docs/reference/baldin-redesign-handoff.md` first.
+- Use `docs/docs/engineering/redesign-implementation-program.md` for phase gates, PR slicing, and validation defaults.
+- Do not start implementation until the completed brief cites the exact approved Figma node IDs for this wave.
+
+## Routes In Scope
 
 - Routes:
   - `/workflows`
@@ -18,32 +24,22 @@
   - `/workflows/review`
   - `/workflows/crawlers`
   - `/workflows/admin`
+- **Explicitly deferred to Wave 05:**
+  - `/workspace`, `/workspace/*` — workspace documents
+  - `/automation/agents`, `/automation/agents/*` — automation agents
 
-## Required Brief Gate
-
-- Create the wave brief from `plans/redesign/implementation-brief-template.md`.
-- Do not start implementation until the brief lists the exact approved redesign node IDs for this route family.
-- Do not treat closeout evidence nodes as approval for implementation.
-
-## Handoff Evidence To Preserve
-
-- Workflow and admin live anchors: `369:2`, `184:4929`, `192:4929`, `201:4929`
-- Extractor supporting group: `463:5`
-- Review queue supporting group: `463:26`
-- Crawlers supporting group: `463:46`
-- DB management destructive-flow group: `463:67`
-
-## Route-Family Rules
+## Implementation Constraints
 
 - Implement extractor, review queue, DB management, and crawlers against redesign-approved states.
 - Preserve destructive preview, confirm, and safety flows.
-- Preserve populated, filtered, expanded-detail, and empty variants from the handoff.
+- Preserve populated, filtered, expanded-detail, and empty variants required by the approved redesign.
 - Do not collapse these power-user flows back into baseline-only screens.
 
-## Shared-Surface Gate
+## API Surfaces Consumed
 
-- Promote only neutral admin or workflow chrome that is proven across multiple approved route families.
-- Keep workflow logic, destructive semantics, and feature-specific rendering local to this route family unless reuse is already proven.
+- `workflowService` — extractors listing, workflow state, detail.
+- `adminService` — DB management, review queue, crawler management.
+- Known API gaps: none expected unless the approved redesign introduces new workflow summary or aggregation views.
 
 ## Backend Default
 

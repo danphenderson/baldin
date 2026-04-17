@@ -5,7 +5,7 @@ title: Boot The Stack
 description: Boot the local stack quickly, then jump to workflow, API access, and configuration details.
 ---
 
-<!-- last-verified: 2026-04-12 -->
+<!-- last-verified: 2026-04-16 -->
 
 # Boot The Stack
 
@@ -52,8 +52,10 @@ Optional local toolchain if you want to work outside containers:
 4. **Start the local stack** from the repository root:
 
    ```bash
-   docker-compose up --build
+   docker-compose up --build --watch
    ```
+
+   By default, the published ports bind to `localhost` only. If another device on your LAN needs access, start the stack with `DOCKER_PUBLISH_HOST=0.0.0.0 docker-compose up --build --watch` instead.
 
 5. **Open the local services:**
 
@@ -77,7 +79,7 @@ If you hit schema drift after pulling breaking model changes, reset the develope
 ./scripts/reset_local_db.sh
 ```
 
-This stops Docker Compose, clears the `backend/public/db` and `backend/public/test_db` volumes, and restarts the stack with fresh databases.
+This stops Docker Compose, removes the Compose-managed `db-data` and `test-db-data` volumes, clears any legacy `backend/public/db` / `backend/public/test_db` bind-mount directories left by older setups, and restarts the stack with fresh databases in the standard Compose Watch loop. If you intentionally want a one-shot detached restart instead, run `BALDIN_RESET_DB_MODE=detached ./scripts/reset_local_db.sh`.
 
 If you instead see a PostgreSQL `collation version mismatch` warning and want to preserve local data, use `./scripts/repair_local_db_collation.sh` from the repo root.
 

@@ -143,7 +143,7 @@ These three treatments are not interchangeable. Pick the correct level for new p
 
 These files are optional repo-local metadata, but they are the practical verification fallback when workspace Code Connect reads are seat-blocked. The canonical library target for all sixteen mappings is [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library).
 
-This table is intentionally code-backed rather than exhaustive. Baldin-Library can grow beyond these entries before new surfaces are promoted into `frontend/src/design-system/*`. Figma-first work that is ahead of, or intentionally outside of, the code-backed catalog belongs in [Baldin Library Buildout Ledger](./baldin-library-buildout-ledger.md).
+This table is intentionally code-backed rather than exhaustive. Baldin-Library can grow beyond these entries before new surfaces are promoted into `frontend/src/design-system/*`. Figma-first work that is ahead of, or intentionally outside of, the code-backed catalog should be reviewed against the active redesign handoff and design-system governance before promotion.
 
 Each mapped surface now also has a colocated Storybook story under `frontend/src/design-system/**/*stories.tsx`. The story reads its `parameters.design` URL from the same `.figma.ts` file via raw import, so the local mapping metadata stays the single repo-backed source of truth for the Figma node link. Chromatic publishes those stories when `CHROMATIC_PROJECT_TOKEN` is available.
 
@@ -221,7 +221,7 @@ These files still exist, but they are not the canonical place for new shared UI.
 
 ## Migration State Definitions
 
-Every route family in the ledger below uses one of these states:
+Every route family in the table below uses one of these states:
 
 | State | Meaning | Entry criteria | Exit criteria |
 | --- | --- | --- | --- |
@@ -229,7 +229,7 @@ Every route family in the ledger below uses one of these states:
 | `adopting` | Active migration in progress. Some surfaces already consume the shared layer; others still use local or legacy implementations. | At least one page or component in the family imports from `frontend/src/design-system`. | All shared-eligible surfaces migrated → `adopted`. |
 | `not-started` | The family has not begun consuming the shared layer beyond the token and theme foundation. | Default state. | First shared-layer import merged → `adopting`. |
 
-### Route-Family Adoption Ledger
+### Route-Family Adoption Table
 
 | Route family | State | Shared pieces in use | Notes |
 | --- | --- | --- | --- |

@@ -97,7 +97,7 @@ function Features() {
 
 const steps = [
   {step: '1', title: 'Use an approved checkout', code: 'git clone <approved-baldin-remote>'},
-  {step: '2', title: 'Start the stack', code: 'docker-compose up --build'},
+  {step: '2', title: 'Start the stack', code: 'docker-compose up --build --watch'},
   {step: '3', title: 'Open Baldin', code: 'open http://localhost:5173'},
 ];
 
@@ -108,7 +108,8 @@ function HowItWorks() {
         <h2 className={styles.sectionTitle}>Up and running in minutes</h2>
         <p className={styles.sectionSub}>
           Baldin runs locally with Docker Compose. Use an approved repository
-          checkout and bring up the full preview stack on your machine.
+          checkout and keep Compose Watch running as the supported live-edit
+          loop.
         </p>
         <div className={styles.stepsGrid}>
           {steps.map((s) => (

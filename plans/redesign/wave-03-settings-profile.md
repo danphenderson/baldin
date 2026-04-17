@@ -1,41 +1,48 @@
-# Wave 03: Settings And Profile Framing Cleanup
+# Wave 03: Settings Framing Cleanup
 
 > Status: `blocked pending approved redesign nodes`
 > Default implementation owner: `baldin_frontend`
 > Program owner: `baldin_full_stack_architect`
 
-## Scope
+## Canonical Inputs
+
+- Read `docs/docs/reference/baldin-redesign-handoff.md` first.
+- Use `docs/docs/engineering/redesign-implementation-program.md` for phase gates, PR slicing, and validation defaults.
+- Do not start implementation until the completed brief cites the exact approved Figma node IDs for this wave.
+
+## Routes In Scope
 
 - Routes:
-  - `/me`
   - `/settings`
   - `/settings/subscription`
   - `/settings/discoverability`
   - `/settings/graduation`
 - Shared layouts or chrome that may move with this wave:
-  - section framing and heading hierarchy only if the approved redesign proves reuse elsewhere
+  - Section framing and heading hierarchy only if the approved redesign proves reuse elsewhere
 
-## Required Brief Gate
+> **Note:** `/me` and aspirations routes (`/me/aspirations/*`) were moved to Wave 01 (Flagship Journey) because they define the user's direction rather than account settings. This wave covers account settings and related configuration surfaces only.
 
-- Create the wave brief from `plans/redesign/implementation-brief-template.md`.
-- Do not start implementation until the brief lists the exact approved redesign node IDs for this route family.
-- Do not treat closeout evidence nodes as approval for implementation.
+## Explicit Out Of Scope
 
-## Handoff Evidence To Preserve
+- `/me`
+- `/me/aspirations/*`
+- `/applications/*`
+- `/leads/*`
+- `/network/*`
+- `/workflows/*`
+- `/admin/*`
+- `/workspace/*`
+- `/automation/agents/*`
 
-- The redesign handoff freezes the profile and settings family at the route level, but implementation must wait for approved redesign nodes named in the brief.
-- Preserve the existing split between profile-specific behavior and settings framing unless approved redesign evidence proves a neutral shared need.
+## API Surfaces Consumed
 
-## Route-Family Rules
+- `settingsService` — subscription, discoverability, graduation preferences.
+- Known API gaps: none expected unless the approved redesign introduces new settings categories.
 
-- Apply the chosen section-framing rules consistently across the approved profile and settings screens.
-- Keep profile-specific hero, builder, and identity semantics feature-owned unless the redesign proves a reusable shell.
+## Implementation Constraints
+
+- Apply the chosen section-framing rules consistently across the approved settings screens.
 - Keep settings-specific copy, gating, and workflow behavior local unless reuse is proven.
-
-## Shared-Surface Gate
-
-- Promote only neutral section framing or heading structure that is already approved in at least one other route family.
-- Do not promote profile-specific or settings-specific semantics into shared surfaces.
 
 ## Backend Default
 
@@ -45,12 +52,12 @@
 ## PR Slicing
 
 1. Shared-foundation PR only if cross-family framing reuse is already proven.
-2. One route-family PR for profile and settings framing cleanup.
+2. One route-family PR for settings framing cleanup.
 3. One cleanup PR only if wrapper deletion or docs follow-up should stay separate.
 
 ## Validation
 
-- Route-level behavior checks for profile and settings screens in scope.
+- Route-level behavior checks for the settings screens in scope.
 - Focused component tests if shared framing changes materially.
 - `cd frontend && ./node_modules/.bin/tsc --noEmit`
 - `cd frontend && npm run build`

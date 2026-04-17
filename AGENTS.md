@@ -10,7 +10,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces. 
 
 ## Default Workflow
 
-- Default to the local `docker-compose.yml` stack from the repo root with `docker-compose up --build`.
+- Default to the local `docker-compose.yml` stack from the repo root with `docker-compose up --build --watch`.
 - Keep the stack warm while you work. The normal loop is inspect -> patch -> smoke-check, not restart-everything.
 - Repo-tracked `backend/.env` and `frontend/.env` provide safe local defaults for every worktree. Put real secrets in Codex UI env vars or ignored `backend/.env.local` / `frontend/.env.local`.
 - Running services outside Compose is a secondary path. If you run backend tests from the host, use `127.0.0.1:5431` for `test_db`; inside Compose the hostname is `test_db`.
@@ -20,7 +20,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces. 
 ## Figma Workflow
 
 - Baldin's supported Figma workflow assumes a Professional-plan workspace and does not depend on a Dev seat.
-- Treat `Baldin-Library` as the canonical reusable-component source and `Baldin-App-Screens` as the canonical product-flow source of truth.
+- Treat `Baldin-Library` as the canonical reusable-component source, `Baldin Product Redesign — Command Center` as the active product redesign working file, and `docs/docs/reference/baldin-redesign-handoff.md` as the authoritative redesign source.
 - Treat the current Figma Make file as a reviewed archived sandbox. The 2026-04-13 salvage review found an empty app shell, stock guidelines, and generic Tailwind or shadcn scaffolding rather than a canonical Baldin buildout.
 - For agentic Figma work, prefer the local browser harness plus Figma MCP read or write tools when available. Structure and component inspection can proceed through MCP without a Developer seat.
 - For privileged admin capture, start from `/browser-harness/admin-session.html?next=/admin/...` so the browser session receives the configured local superuser token before opening `/admin/*`.
@@ -35,7 +35,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces. 
 
 - Backend-only routes, models, auth, ETL, extraction, or backend tests: use `baldin_backend` in Codex or Baldin Backend Agent in Copilot.
 - Frontend-only UI, UX, accessibility, routing, state handling, or typed service consumption: use `baldin_frontend` in Codex or Baldin Frontend Agent in Copilot.
-- Figma-first design work, `Baldin-Library` or `Baldin-App-Screens` updates, browser-harness capture, repo-backed `.figma.ts` mapping, or design-to-code handoff: use `baldin_design_lead` in Codex or Baldin Design Lead Agent in Copilot.
+- Figma-first design work, `Baldin-Library` or `Baldin Product Redesign — Command Center` updates, browser-harness capture, repo-backed `.figma.ts` mapping, or design-to-code handoff: use `baldin_design_lead` in Codex or Baldin Design Lead Agent in Copilot.
 - Cross-stack contracts, schema generation, docs, CI, scripts, docker-compose, or release-path work: use `baldin_full_stack_architect` in Codex or Baldin Lead Full-Stack Architect in Copilot.
 - Unclear ownership, sequencing, or multi-stream planning: use `baldin_project_manager` in Codex or Baldin Project Manager in Copilot.
 - Read-only scouting: use Codex's built-in `explorer` agent or Copilot's Explore agent. Do not treat a scout as the implementation owner.

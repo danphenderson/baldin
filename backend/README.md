@@ -16,7 +16,7 @@ The canonical backend documentation now lives in the Docusaurus docs:
 From the repo root:
 
 ```bash
-docker-compose up --build
+docker-compose up --build --watch
 ./scripts/run_backend_pytest.sh --cov=app --cov=etl --cov-report=term-missing --cov-fail-under=60
 ```
 
@@ -29,6 +29,7 @@ pipenv sync --dev
 
 ## Notes
 
+- The repo-standard local iteration loop is `docker-compose up --build --watch`. Keep Compose Watch running and use targeted backend validation while the stack stays warm.
 - The repo-standard backend verification path is the Compose-native `./scripts/run_backend_pytest.sh` wrapper. Use the host helper only when you intentionally need local Python tooling outside Compose networking.
 - API and schema changes should regenerate `openapi.json` and `frontend/src/schema.d.ts` through `./scripts/update_frontend_schemas.sh`.
 - Alembic is the default schema-management path during startup. `LEGACY_BOOTSTRAP=1` remains a temporary DEV/PYTEST-only escape hatch for local recovery.

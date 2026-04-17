@@ -48,7 +48,7 @@ Treat Storybook and Chromatic as existing repo infrastructure for the current co
 4. Set Storybook `parameters.design` from the colocated `*.figma.ts` metadata so the Figma link stays in sync with the code-backed mapping.
 5. Publish Storybook to Chromatic when credentials are available, then use Storybook Connect for the Figma-side link back to the live story.
 
-`Baldin-App-Screens` remains the composed-screen file. It should consume published library components and variables, not invent new shared primitives inside the screens file.
+During the redesign reset, `Baldin Product Redesign — Command Center` is the active composed-screen working file and the current `Baldin-App-Screens` file is reference-only archival evidence. The composed-screen file should consume published library components and variables, not invent new shared primitives inside the screens file.
 
 ## Theme Rules
 

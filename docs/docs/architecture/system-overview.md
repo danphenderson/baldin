@@ -9,7 +9,7 @@ description: See the service topology, runtime boundaries, and main product doma
 
 # See System Boundaries
 
-Baldin is a full-stack local-first workspace for job-search automation. The system is developed primarily through Docker Compose, with the frontend, backend, internal ETL service, main Postgres database, separate test database, Redis, a background crawler worker, and a Docusaurus docs site forming the local topology.
+Baldin is a full-stack local-first workspace for job-search automation. The system is developed primarily through `docker-compose up --build --watch`, with the frontend, backend, internal ETL service, main Postgres database, separate test database, Redis, a background crawler worker, and a Docusaurus docs site forming the local topology.
 
 ## Service Topology
 
@@ -52,7 +52,7 @@ graph LR
 | `test_db` | `pgvector/pgvector:pg15` | 5431 | Isolated test database |
 | `redis` | `redis:7-alpine` | 6379 | Background job queue and crawler dispatch |
 | `etl-service` | `backend/Dockerfile` (target: dev) | internal only | Internal crawler execution boundary |
-| `web` | `backend/Dockerfile` (target: dev) | 8004→8000 | FastAPI backend with Uvicorn (hot reload) |
+| `web` | `backend/Dockerfile` (target: dev) | 8004→8000 | FastAPI backend with the Uvicorn dev server and Compose Watch sync |
 | `crawler-worker` | `backend/Dockerfile` | — | Background crawler worker consuming Redis jobs |
 | `frontend` | `frontend/Dockerfile` | 5173 | React/Vite dev server |
 | `docs` | `docs/Dockerfile` | 3001→3000 | Docusaurus dev server |

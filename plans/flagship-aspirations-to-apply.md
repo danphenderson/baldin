@@ -37,7 +37,7 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 | Token inventory + primitives + Figma metadata | Complete — 8 `.figma.ts` mappings aligned to `Baldin-Library`; shared `primary` status tone for `StatusChip`; workspace Code Connect reads remain seat-blocked and non-gating |
 | `lint:theme` gate | Complete — green as of 2026-04-13 |
 | Browser harness | Complete — canonical `figma-wave1` supports aspirations `empty|loading|suggested|no-signal|rate-limited`, leads `unranked|ranked|disabled|error`, and apply `ready|already-applied` |
-| Figma workspace | Complete — `Baldin-Library` is the reusable source, `Baldin-App-Screens` is the product-flow source of truth, `Baseline Captured Screens` remains separate for older captures, and the reviewed Make file is treated as an archived sandbox with no meaningful direct port candidate |
+| Figma workspace | Complete — `Baldin-Library` is the reusable source, `Baldin Product Redesign — Command Center` is the active product-flow working file, `Baldin-App-Screens` remains a behavioral archive for older captures, and the reviewed Make file is treated as an archived sandbox with no meaningful direct port candidate |
 
 ### Docs
 
@@ -61,7 +61,7 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 | S9 — Expand browser harness for leads ranking captures | Complete | `figma-wave1` supports `unranked|ranked|disabled|error` leads captures |
 | S10 — Strengthen application-start handoff from leads | Complete | Preloaded applications map, duplicate-safe inline state, fallback backstop, post-create map update, and ranking-context-aware ready-state handoff copy (`buildReadyHandoff` with score-tiered messages) |
 | S11 — Expand browser harness for application-start captures | Complete | `figma-wave1` supports `ready|already-applied` apply captures |
-| S12 — Design three linked Figma flow moments | Complete | `Baldin-App-Screens` now has a dedicated `Flagship Flow Screens` page for aspirations, ranked leads, and apply-handoff state inventory; older captures remain isolated on `Baseline Captured Screens` |
+| S12 — Design three linked Figma flow moments | Complete | `Baldin Product Redesign — Command Center` now has a dedicated `Flagship Flow Screens` page for aspirations, ranked leads, and apply-handoff state inventory; older captures remain isolated in the `Baldin-App-Screens` behavioral archive |
 | S13 — Backfill docs, harness, and Figma references | Complete | Architecture, API, harness, access-model, and mapping-inventory references are all tracked in repo docs; docs build green |
 | S14 — Polish pass on flagship connected surfaces | Complete | All 7 lint:theme violations fixed; 377 tests pass; `tsc --noEmit` clean; production build green; no regressions |
 
@@ -84,8 +84,8 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 | D13 | Validation commands in this epic use repo-aligned working-directory forms. Host-side backend pytest must set `TEST_DATABASE_HOSTNAME=127.0.0.1` and `TEST_DATABASE_PORT=5431` explicitly to avoid the tracked `backend/.env` Compose hostname mismatch | 2026-04-13 |
 | D14 | Frontend stabilization slice landed on 2026-04-13: `lint:theme` is green, `StatusChip` has a shared `primary` tone, the leads page preloads applications for duplicate-safe inline state, and `figma-wave1` now covers aspirations/leads/apply capture routes | 2026-04-13 |
 | D15 | The shipped suggest seam is `getAspirationSuggestions(token)` plus `AspirationAdapter.suggest(kind)` returning draft suggestions filtered client-side by active kind. Explicit error-category normalization remains part of the UI implementation slice, not the stabilization slice | 2026-04-13 |
-| D16 | `Baldin-Library` and `Baldin-App-Screens` are the canonical Figma files. The reviewed Make file is treated as an archived sandbox and not part of the default delivery path | 2026-04-13 |
-| D17 | `Baldin-App-Screens` keeps `Baseline Captured Screens` separate from the new `Flagship Flow Screens` page so older captures remain available without implying flagship completeness | 2026-04-13 |
+| D16 | `Baldin-Library` is the canonical reusable-component file and `Baldin Product Redesign — Command Center` is the active working file. `Baldin-App-Screens` remains an archive-only behavioral reference, and the reviewed Make file is not part of the default delivery path | 2026-04-13 |
+| D17 | The `Baldin-App-Screens` archive keeps older capture evidence separate from the `Flagship Flow Screens` page in `Baldin Product Redesign — Command Center` so archive references remain available without implying active-source status | 2026-04-13 |
 | D18 | Full Figma version-history review depends on browser or web access. MCP remains the supported path for structure, screenshots, and component inspection without a Developer seat | 2026-04-13 |
 | D19 | The authoritative Make review (`App.tsx`, `theme.css`, `button.tsx`, `card.tsx`, `badge.tsx`, and `Guidelines.md`) found an empty app shell, stock guidelines, and generic Tailwind or shadcn scaffolding, so no Make-derived primitive or token surface is approved for direct migration | 2026-04-13 |
 
@@ -295,13 +295,13 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 **As a** designer, **I want** a connected Figma flow showing aspirations → ranked leads → apply.
 
 **Acceptance criteria:**
-- [x] `Baldin-App-Screens` now has a dedicated `Flagship Flow Screens` page covering aspirations with suggest, ranked leads, and apply handoff
+- [x] `Baldin Product Redesign — Command Center` now has a dedicated `Flagship Flow Screens` page covering aspirations with suggest, ranked leads, and apply handoff
 - [x] Figma remains the source of truth for flagship flow ordering, layout grouping, and state inventory; the harness is a downstream capture and verification artifact
 - [x] The flagship page captures these states:
   - aspirations: empty, loading, suggestions returned, no-signal, and rate-limited
   - leads: unranked, ranked with aspiration alignment, ranking disabled because no aspirations, and ranking unavailable or error
   - apply handoff: ready to apply and already-applied inline state
-- [x] `Baldin-App-Screens` keeps older messages, profile, and applications captures on a separate `Baseline Captured Screens` page
+- [x] The archived `Baldin-App-Screens` file keeps older messages, profile, and applications captures on a separate `Baseline Captured Screens` page
 - [x] Uses the existing Baldin library as the reusable-component source; no new shared abstractions were introduced for this workflow pass
 - [x] Figma inspection is available through MCP plus browser or web review; Code Connect publish and workspace reads remain non-gating because of the current seat constraints (D6, D18)
 

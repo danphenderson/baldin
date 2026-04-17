@@ -156,7 +156,7 @@ export const commandPaletteCommands: CommandPaletteCommand[] = [
   },
   {
     title: 'Baldin Redesign Handoff',
-    description: 'Start redesign-phase work from the frozen closeout handoff instead of the provenance ledgers.',
+    description: 'Start redesign-phase work from the authoritative redesign handoff.',
     href: '/docs/reference/baldin-redesign-handoff',
     section: 'Design System',
     keywords: ['redesign', 'handoff', 'figma', 'closeout'],

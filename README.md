@@ -54,10 +54,10 @@ The tracked `.env` files are safe local defaults for every worktree. Keep real s
 4. Start the local stack from the repository root:
 
 ```bash
-docker-compose up --build
+docker-compose up --build --watch
 ```
 
-Keep the stack running while you iterate. The backend reloads through Uvicorn and the frontend uses Vite HMR, so the fast path is inspect -> patch -> smoke-check instead of restarting services.
+Keep the stack running while you iterate. Compose Watch is the supported live-edit loop, so the fast path is inspect -> patch -> smoke-check instead of restarting services.
 
 For routine local work, start with the smallest check that proves the change:
 

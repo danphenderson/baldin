@@ -15,7 +15,7 @@ Repository file paths below refer to private-repo locations and require approved
 
 ## Local Interfaces (requires running stack)
 
-These links work when the local Docker Compose stack is running (`docker-compose up --build`):
+These links work when the local Docker Compose stack is running (`docker-compose up --build --watch`):
 
 | Resource | URL | Description |
 |----------|-----|-------------|

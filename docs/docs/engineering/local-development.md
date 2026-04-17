@@ -5,11 +5,11 @@ title: Work Locally
 description: Work locally with Docker Compose first, then use the shortest smoke-check loop that proves the change.
 ---
 
-<!-- last-verified: 2026-04-15 -->
+<!-- last-verified: 2026-04-16 -->
 
 # Work Locally
 
-Baldin uses Docker Compose as the local-first entry point. The default `docker-compose up --build` stack brings up eight long-running services, and an on-demand `backend-test` runner is available for DB-backed pytest.
+Baldin uses Docker Compose as the local-first entry point. The default `docker-compose up --build --watch` stack brings up eight long-running services, and an on-demand `backend-test` runner is available for DB-backed pytest.
 
 Repo-tracked `backend/.env` and `frontend/.env` provide safe local defaults in every worktree. Put real secrets such as `OPENAI_API_KEY` in process env or ignored `backend/.env.local` / `frontend/.env.local` overrides.
 
@@ -17,8 +17,8 @@ If you use Baldin's workspace skills, `/baldin-local-stack-doctor` helps triage 
 
 ## Fastest Iteration Loop
 
-1. Start the stack once from the repo root with `docker-compose up --build`.
-2. Keep it running while you work. Backend edits reload through Uvicorn and frontend edits reload through Vite HMR.
+1. Start the stack once from the repo root with `docker-compose up --build --watch`.
+2. Keep it running while you work. Compose Watch syncs source changes into the running containers for the supported dev services, and rebuild rules cover dependency or Dockerfile changes.
 3. Use the smallest smoke check that proves the current slice instead of starting with full suites.
 4. If backend API routes or schemas changed before you staged files, run `SCHEMA_UPDATE_FORCE=1 ./scripts/update_frontend_schemas.sh`.
 5. Use broader validation only when the touched surface needs it or the branch is ready for handoff or push.
@@ -29,29 +29,29 @@ Backend tests should use `./scripts/run_backend_pytest.sh`, which keeps DB-backe
 
 | Service | Container | Port | Volume |
 |---------|-----------|------|--------|
-| `db` | PostgreSQL 15 | 5432 | `./backend/public/db` |
-| `test_db` | PostgreSQL 15 | 5431 | `./backend/public/test_db` |
+| `db` | PostgreSQL 15 | 5432 | Compose volume `db-data` |
+| `test_db` | PostgreSQL 15 | 5431 | Compose volume `test-db-data` |
 | `redis` | Redis 7 | 6379 | none |
-| `etl-service` | Internal FastAPI ETL executor | 8010 (internal only) | `./backend` mounted |
-| `web` | FastAPI (Uvicorn, hot-reload) | 8004→8000 | `./backend` mounted |
-| `crawler-worker` | Python background worker | none | `./backend` mounted |
-| `backend-test` | On-demand pytest runner (`test` profile) | none | `./backend` mounted |
-| `frontend` | Vite dev server | 5173 | `./frontend` mounted |
-| `docs` | Docusaurus dev server | 3001→3000 | `./docs` mounted |
+| `etl-service` | Internal FastAPI ETL executor | 8010 (internal only) | image contents from `./backend` build context |
+| `web` | FastAPI / Uvicorn dev server | 8004→8000 | image contents from `./backend` build context + Compose Watch sync |
+| `crawler-worker` | Python background worker | none | image contents from `./backend` build context |
+| `backend-test` | On-demand pytest runner (`test` profile) | none | image contents from `./backend` build context |
+| `frontend` | Vite dev server | 5173 | image contents from `./frontend` build context + Compose Watch sync |
+| `docs` | Docusaurus dev server | 3001→3000 | image contents from `./docs` build context + Compose Watch sync |
 
 ## Starting the Stack
 
 ```bash
-docker-compose up --build
+docker-compose up --build --watch
 ```
 
-The backend mounts `./backend` as a volume and runs Uvicorn with `--reload`, so Python changes take effect immediately. The frontend mounts `./frontend` and uses Vite's HMR. The docs service mounts `./docs` and serves the Docusaurus site through the same stack at `http://localhost:3001/baldin/docs`.
+The backend, frontend, and docs dev services now run from image contents built from their respective repo directories instead of bind-mounting the local worktree into the containers. On local Docker Desktop, the bind-mounted trees were exhausting file descriptors with `EMFILE` / `OSError: [Errno 24] Too many open files` before the browser-facing services could even finish booting. Compose Watch now provides the live-edit loop: source files sync into the running containers, config changes use `sync+restart`, and dependency or Dockerfile changes trigger rebuilds. If you only need a one-shot boot without file watching, `docker-compose up --build` still works. Compose preserves the repo-tracked blank `OPENAI_API_KEY` default unless you export a real key, so the stack and DB-backed pytest can boot without real API access while OpenAI-gated routes stay in their documented disabled state. Published ports stay local-only by default; set `DOCKER_PUBLISH_HOST=0.0.0.0` before `docker-compose up --build --watch` when another device on your LAN needs to reach the stack.
 
 Leave the stack running across multiple edits. Rebuild only when Docker image inputs changed, such as dependencies or Dockerfiles.
 
 Redis backs the local background-job queue, `crawler-worker` consumes crawler and seed jobs from that queue, and `etl-service` performs the crawler browser work behind an internal-only HTTP boundary while the API stays responsive.
 
-The `backend-test` service is profile-gated and is not started by the default `docker-compose up --build` stack. `./scripts/run_backend_pytest.sh` enables it on demand.
+The `backend-test` service is profile-gated and is not started by the default `docker-compose up --build --watch` stack. `./scripts/run_backend_pytest.sh` enables it on demand.
 
 Use [Boot The Stack](../getting-started/quickstart.md) for first boot. This page is the day-two reference once the stack already makes sense to you.
 
@@ -64,15 +64,15 @@ For Figma capture and browser-driven design review, Baldin's repo-owned MCP cont
 - Codex does not consume `.vscode/mcp.json` directly in this patch. `.codex/config.toml` contains Codex custom-agent defaults only and no repo-owned MCP server mirrors.
 - This repo patch does not manage a Codex-side `figma` entry. User-scoped or globally configured Codex MCP servers can still appear separately on a developer machine.
 
-The canonical Figma surfaces for this repo are [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library) for reusable components and [Baldin-App-Screens](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy/Baldin-App-Screens) for product-flow state inventory. The current [Figma Make file](https://www.figma.com/make/pXpkeOKYnA3gvhHPIjbJDo/Untitled?t=bM22KU0ea6ttyIQ5-20&fullscreen=1) has been reviewed and should be treated as an archived sandbox, not an active delivery surface.
+The canonical Figma surfaces for this repo are [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library) for reusable components and [Baldin Product Redesign — Command Center](https://www.figma.com/design/dVbBAwOLtz0Walj0oSP4x1) for the active composed-screen redesign work. The current [Baldin-App-Screens](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy/Baldin-App-Screens) file is a reference-only behavioral archive. The current [Figma Make file](https://www.figma.com/make/pXpkeOKYnA3gvhHPIjbJDo/Untitled?t=bM22KU0ea6ttyIQ5-20&fullscreen=1) has been reviewed and should be treated as an archived sandbox, not an active delivery surface.
 
-Track active redesign work from [Baldin Redesign Handoff](../reference/baldin-redesign-handoff.md). Use the old app-screen and library ledgers only as provenance, not as active checklists. Once implementation planning starts, use [Redesign Implementation Program](./redesign-implementation-program.md) plus the route-family packet files under `plans/redesign/`.
+Track active redesign work from [Baldin Redesign Handoff](../reference/baldin-redesign-handoff.md). Treat it as authoritative. Use [Redesign Implementation Program](./redesign-implementation-program.md) plus the route-family packet files under `plans/redesign/` only as derived execution docs. Do not resume implementation work until the handoff's full-product Figma approval gate is satisfied.
 
-1. Start or keep the local stack running with `docker-compose up --build`.
+1. Start or keep the local stack running with `docker-compose up --build --watch`.
 2. Use the frontend dev server at `http://127.0.0.1:5173`.
 3. Open the supported Wave 1 Figma harness at `http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=...` for harness-backed product screens.
 4. For privileged admin capture, start from `http://127.0.0.1:5173/browser-harness/admin-session.html?next=/admin/db-management` or another `/admin/...` target so the browser session receives the configured local superuser token before opening the Admin SPA.
-5. Use the frontend Playwright runtime or configured host browser tooling to drive the Wave 1 harness or the bootstrapped admin route into the state you want to capture or inspect in Figma. For later redesign-finalization work beyond the Wave 1 harness, use direct shipped-route review plus MCP structure or screenshot inspection instead of expanding the harness.
+5. Use the frontend Playwright runtime or configured host browser tooling to drive the Wave 1 harness or the bootstrapped admin route into the state you want to capture or inspect in Figma. For the full-product redesign reset beyond the Wave 1 harness, use direct shipped-route review plus MCP structure or screenshot inspection instead of expanding the harness.
 
 The canonical harness supports these query parameters:
 
@@ -105,7 +105,7 @@ http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=leads&state=ranked
 http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=apply&state=already-applied&mode=light
 ```
 
-The harness is the supported local capture surface for the Wave 1 screens it already backs. Keep the frontend stack warm and switch harness states instead of wiring a live backend for Wave 1 design review. For later redesign work, start from Baldin Redesign Handoff and use direct shipped-route review plus MCP structure or screenshot inspection rather than harness expansion.
+The harness is the supported local capture surface for the Wave 1 screens it already backs. Keep the frontend stack warm and switch harness states instead of wiring a live backend for Wave 1 design review. For the broader command-center redesign, start from Baldin Redesign Handoff and use direct shipped-route review plus MCP structure or screenshot inspection rather than harness expansion.
 
 For privileged admin routes, the supported preflight is the repo-owned admin session bootstrap page rather than a manual login step:
 
@@ -120,7 +120,7 @@ The bootstrap page calls the DEV-only backend route `POST /api/v1/auth/jwt/dev-b
 Baldin's supported Figma workflow assumes a Professional-plan workspace and does not require a Dev seat.
 
 - Use the local harness plus the repo-local frontend Playwright runtime or configured host browser tooling to put Wave 1 screens into the exact state you need.
-- For redesign finalization and implementation prep beyond the Wave 1 harness, treat Baldin Redesign Handoff as the active redesign source and open the route-family packets only through the Redesign Implementation Program.
+- For redesign finalization and implementation prep beyond the Wave 1 harness, treat Baldin Redesign Handoff as the active redesign source and do not reopen code implementation until the full-product Figma approval gate is complete.
 - Use Figma MCP read or write tools when your seat and auth allow it.
 - If your seat only allows basic inspection, keep the same evidence order and use screenshots or inspection instead of blocking on Dev Mode-specific UX.
 - Use MCP for structure, component, and screenshot inspection even when Dev Mode is unavailable. Full version-history review still requires browser or web access to the Figma UI.
@@ -138,8 +138,11 @@ When schema changes cause drift, reset both developer databases:
 
 This script:
 1. Stops Docker Compose and removes orphan containers.
-2. Clears `backend/public/db` and `backend/public/test_db`.
-3. Restarts the stack with fresh databases.
+2. Removes the Compose-managed `db-data` and `test-db-data` volumes.
+3. Clears any legacy `backend/public/db` and `backend/public/test_db` bind-mount directories left by older local setups.
+4. Restarts the stack with fresh databases in the standard Compose Watch loop.
+
+If you intentionally want a one-shot detached restart instead, run `BALDIN_RESET_DB_MODE=detached ./scripts/reset_local_db.sh`.
 
 If startup logs show a PostgreSQL `collation version mismatch` warning after a Docker image or base-OS change and you want to keep local data, repair the local clusters in place:
 

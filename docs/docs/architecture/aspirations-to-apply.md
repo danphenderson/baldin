@@ -102,7 +102,7 @@ graph LR
 
 ## S8 Implementation Status
 
-S8 ranking redesign is implemented in the frontend. `LeadCard` applies the ranked-card `CardShell` treatment, renders the ranking score, and exposes the aspiration-alignment strip for tests and route capture. `Baldin-App-Screens` now carries route-backed ranked and unranked harness evidence at nodes `446:2` and `447:2`, while node `257:6090` remains the design rationale frame.
+S8 ranking redesign is implemented in the frontend. `LeadCard` applies the ranked-card `CardShell` treatment, renders the ranking score, and exposes the aspiration-alignment strip for tests and route capture. The active redesign authority is `Baldin Product Redesign — Command Center` plus [Baldin Redesign Handoff](../reference/baldin-redesign-handoff.md). Historical ranked and unranked harness evidence remains available in the archived `Baldin-App-Screens` file at nodes `446:2` and `447:2`, while node `257:6090` remains the archived design-rationale frame.
 
 ## Harness Coverage
 

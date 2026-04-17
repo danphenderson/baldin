@@ -5,7 +5,7 @@ title: Rewrite Weak Prompts
 description: Turn vague prompts into scoped requests with validation and handback rules across Copilot and Codex.
 ---
 
-<!-- last-verified: 2026-04-15 -->
+<!-- last-verified: 2026-04-16 -->
 
 # Rewrite Weak Prompts
 
@@ -167,7 +167,7 @@ Update the design system in Figma and wire up the code too.
 Why it is weak:
 
 - It mixes Figma-first design work with code implementation in one sentence.
-- It does not say whether the output is a library study, app-screen capture, or repo-backed mapping change.
+- It does not say whether the output is a library study, a command-center redesign step, or a repo-backed mapping change.
 - It does not ask for design evidence or a handoff when implementation should move to another owner.
 
 Good prompt:
@@ -179,7 +179,7 @@ Objective:
 Finalize the next approved route-family redesign and prepare a clean design-to-code handoff.
 
 Context:
-Use `docs/docs/reference/baldin-redesign-handoff.md` as the active redesign source of truth. The provenance ledgers are historical only. The output should be ready for the required implementation brief without reopening capture work.
+Use `docs/docs/reference/baldin-redesign-handoff.md` as the active redesign source of truth. The output should be ready for the required implementation brief without reopening capture work.
 
 Allowed paths:
 - ./docs/docs/reference/baldin-redesign-handoff.md

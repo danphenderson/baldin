@@ -5,7 +5,7 @@ title: Prompt The Right Agent
 description: Choose the right Baldin agent surface, scope prompts cleanly, and require consistent handbacks.
 ---
 
-<!-- last-verified: 2026-04-15 -->
+<!-- last-verified: 2026-04-16 -->
 
 # Prompt The Right Agent
 
@@ -23,7 +23,7 @@ Assume the local `docker-compose.yml` stack is the default development environme
 
 - Backend-only and already clear: start with `Backend Runtime Slice`.
 - Frontend-only and already clear: start with `Frontend Product Slice`.
-- Figma-first design work, browser-harness capture, or `Baldin-Library` and `Baldin-App-Screens` updates: start with Baldin Design Lead Agent directly.
+- Figma-first design work, browser-harness capture, or `Baldin-Library` and `Baldin Product Redesign — Command Center` updates: start with Baldin Design Lead Agent directly.
 - Small cross-stack, contract, compose, or local integration fix: start with `Local Preview Integration Fix` or the Baldin Lead Full-Stack Architect directly.
 - Use `Issue Dispatch Kickoff`, `Plan Slice Kickoff`, or Baldin Project Manager only when the owner, scope, or sequencing is not already obvious.
 - Ask for the lightest useful smoke check first. Add broader type, build, docs, or full-suite validation only when the touched surface or handoff needs it.
@@ -85,7 +85,7 @@ For Codex and compatible tooling, apply root `AGENTS.md` plus the relevant scope
 |------|---------------------|
 | Backend-only routes, models, auth, ETL, or tests | Baldin Backend Agent |
 | Frontend-only UI, accessibility, routing, state handling, or typed service consumption | Baldin Frontend Agent |
-| Figma-first design work, design-system mapping, browser-harness capture, or app-screen inventory | Baldin Design Lead Agent |
+| Figma-first design work, command-center redesign updates, design-system mapping, or browser-harness capture | Baldin Design Lead Agent |
 | Backend and frontend together, API contracts, schema regeneration, scripts, CI, docs, or docker-compose | Baldin Lead Full-Stack Architect |
 | Unclear ownership, multi-stream work, or sequencing and handoffs | Baldin Project Manager |
 | Read-only scouting before assigning a real owner | Explore |
@@ -347,7 +347,7 @@ Best for:
 
 ## Baldin Design Lead Agent
 
-Use when the task is Figma-first: `Baldin-Library` work, `Baldin-App-Screens` capture, browser-harness review, repo-backed `.figma.ts` mapping, Storybook design-link alignment, or design-to-code handoff preparation.
+Use when the task is Figma-first: `Baldin-Library` work, `Baldin Product Redesign — Command Center` redesign work, browser-harness review, repo-backed `.figma.ts` mapping, Storybook design-link alignment, or design-to-code handoff preparation.
 
 ```text
 Lead this as Figma-first design work.
@@ -359,7 +359,7 @@ Context:
 [route family, library surface, approved redesign reason, or handoff need]
 
 Start from `docs/docs/reference/baldin-redesign-handoff.md`.
-Treat the old ledgers as provenance only unless a factual correction is explicitly in scope.
+Treat it as authoritative when a derived packet says something different.
 
 Allowed paths:
 - ./frontend/figma.config.json
@@ -391,7 +391,7 @@ Stop and hand off if the task becomes general frontend implementation or cross-s
 Best for:
 
 - `Baldin-Library` buildout
-- `Baldin-App-Screens` inventory and capture
+- `Baldin Product Redesign — Command Center` redesign flow and route-family capture
 - Figma MCP inspection or write work
 - `.figma.ts` mapping and Storybook design-link alignment
 - shared-surface promotion review before code implementation
@@ -523,7 +523,7 @@ Objective:
 Finalize the next approved route-family redesign in Figma and prepare the handoff details the frontend wave will need.
 
 Context:
-Use `docs/docs/reference/baldin-redesign-handoff.md` as the active source of truth. The provenance ledgers are historical only. The approved redesign must be ready for the frontend implementation brief without reopening capture.
+Use `docs/docs/reference/baldin-redesign-handoff.md` as the active source of truth. The approved redesign must be ready for the frontend implementation brief without reopening capture.
 
 Allowed paths:
 - ./docs/docs/reference/baldin-redesign-handoff.md

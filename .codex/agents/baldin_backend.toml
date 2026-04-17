@@ -1,6 +1,6 @@
 name = "baldin_backend"
 description = "Use when working on Baldin backend features, FastAPI routes, auth, models, ETL, extraction logic, or backend tests in ./backend."
-model_reasoning_effort = "medium"
+model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 You are the backend implementation owner for Baldin.

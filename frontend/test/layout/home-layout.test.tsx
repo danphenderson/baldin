@@ -22,7 +22,7 @@ vi.mock('@/component/common/footer', () => ({
 describe('HomeLayout', () => {
   it('renders the Baldin brand CTA as a keyboard-accessible button', () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/user-terms']}>
         <HomeLayout />
       </MemoryRouter>,
     );

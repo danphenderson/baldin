@@ -1,42 +1,51 @@
-# Wave 02: Messages And Conversation Detail
+# Wave 02: Network — Discover, Connections, And Messages
 
 > Status: `blocked pending approved redesign nodes`
 > Default implementation owner: `baldin_frontend`
 > Program owner: `baldin_full_stack_architect`
 
-## Scope
+## Canonical Inputs
+
+- Read `docs/docs/reference/baldin-redesign-handoff.md` first.
+- Use `docs/docs/engineering/redesign-implementation-program.md` for phase gates, PR slicing, and validation defaults.
+- Do not start implementation until the completed brief cites the exact approved Figma node IDs for this wave.
+
+## Routes In Scope
 
 - Routes:
   - `/network/messages`
   - `/network/messages/:conversationId`
+  - `/network/connections`
+  - `/network/discover`
+  - `/network/discover/:userId`
 - Shared layouts or chrome that may move with this wave:
-  - list and detail framing only if the approved redesign proves reuse outside this route family
+  - `NetworkGroupLayout`
+  - List and detail framing only if reuse is proven across another route family
 
-## Required Brief Gate
+## Explicit Out Of Scope
 
-- Create the wave brief from `plans/redesign/implementation-brief-template.md`.
-- Do not start implementation until the brief lists the exact approved redesign node IDs for this route family.
-- Do not treat closeout evidence nodes as approval for implementation.
+- `/me`
+- `/applications/*`
+- `/leads/*`
+- `/settings/*`
+- `/workflows/*`
+- `/admin/*`
+- `/workspace/*`
+- `/automation/agents/*`
 
-## Handoff Evidence To Preserve
-
-- Direct thread with explicit hierarchy: `109:4207`
-- Group thread with participant sidebar: `109:4401`
-- Empty state: `109:4612`
-- Loading state: `109:4792`
-- Error state: `109:4959`
-
-## Route-Family Rules
+## Implementation Constraints
 
 - Preserve explicit message hierarchy.
 - Preserve edit and delete affordances in the approved redesign.
 - Preserve the participant-sidebar group-thread variant.
+- Connections and discover surfaces follow the cross-screen interaction contract defined in the redesign handoff.
 - Keep transient send-progress behavior feature-owned unless reuse is clearly proven across another approved route family.
 
-## Shared-Surface Gate
+## API Surfaces Consumed
 
-- Do not promote message-specific hierarchy, conversation actions, or participant semantics into shared surfaces.
-- Promote only neutral framing or chrome, and only after reuse is proven outside this route family.
+- `messageService` — conversations listing, message CRUD, thread state.
+- `networkService` — connections listing, discover search, connection requests.
+- Known API gaps: discover search and user detail may need new backend endpoints depending on the approved redesign.
 
 ## Backend Default
 
@@ -46,12 +55,12 @@
 ## PR Slicing
 
 1. Shared-foundation PR only if the same framing or chrome is already approved for another route family.
-2. One route-family PR for messages and conversation detail.
+2. One route-family PR for messages, conversation detail, discover, and connections.
 3. One cleanup PR only if wrapper deletion or docs follow-up should stay separate.
 
 ## Validation
 
-- Route-level behavior checks for conversations list and conversation detail.
+- Route-level behavior checks for conversations list, conversation detail, connections list, discover list, and user detail.
 - Focused component tests if shared framing or list chrome changes materially.
 - `cd frontend && ./node_modules/.bin/tsc --noEmit`
 - `cd frontend && npm run build`

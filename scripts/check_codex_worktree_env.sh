@@ -117,10 +117,11 @@ printf 'figma_harness_file: %s\n' "${figma_harness_path}"
 printf 'frontend_base_url: %s\n' "${frontend_base_url}"
 printf 'figma_harness_url: %s\n' "${figma_harness_url}"
 printf 'figma_account_baseline: professional-plan without Dev-seat dependency\n'
-printf 'figma_canonical_files: Baldin-Library + Baldin-App-Screens\n'
+printf 'figma_canonical_files: Baldin-Library + Baldin Product Redesign — Command Center\n'
 printf 'figma_make_surface: reviewed_archived_sandbox\n'
 printf 'figma_policy_source: docs/docs/reference/baldin-redesign-handoff.md\n'
-printf 'figma_workflow: Wave1 harness; post-closeout handoff + route-family packets; direct-route review + MCP/basic inspection; Code Connect publish optional\n'
+printf 'figma_workflow: Wave1 harness; authoritative redesign handoff + route-family packets; direct-route review + MCP/basic inspection; Code Connect publish optional\n'
+printf 'compose_live_edit_loop: docker-compose up --build --watch\n'
 printf 'figma_history_review: browser_or_web_UI_required; MCP_focuses_on_structure_and_screenshots\n'
 printf 'figma_code_connect_access: developer_seat_required_for_workspace_reads_or_publish; repo_metadata_optional\n'
 printf 'figma_make_review: empty_app_shell + default_guidelines + generic_tailwind_shadcn_scaffold\n'

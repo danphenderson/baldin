@@ -27,7 +27,7 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 - Startup: `./backend/app/main.py`.
 - Admin templates: `./backend/app/admin_templates`.
 - Config: `./backend/pyproject.toml`, `./backend/Pipfile`.
-- Local default path: keep `docker-compose up --build` running and use the mounted `web` container for hot reload while you iterate.
+- Local default path: keep `docker-compose up --build --watch` running and use Compose Watch as the supported live-edit loop while you iterate.
 - Backend pytest should use `./scripts/run_backend_pytest.sh` by default. For intentional host-side loops, use `./scripts/run_backend_pytest_host.sh` or `cd backend && pipenv run pytest ...` instead of probing bare `pytest`.
 
 ## Scope

@@ -1,125 +1,275 @@
 ---
 title: Baldin Redesign Handoff
-description: Redesign-ready closeout handoff for Baldin App Screens and Baldin Library provenance.
+description: Canonical redesign specification for Baldin's post-closeout implementation waves.
 ---
 
-<!-- last-verified: 2026-04-15 -->
+<!-- last-verified: 2026-04-16 -->
 
 # Baldin Redesign Handoff
 
-This page is the only active entry point for the next redesign phase. It consolidates the closeout decisions that were previously spread across the app-screens inventory, polish ledger, and library buildout ledger.
+This page is the only active redesign source of truth for Baldin.
 
-Use the provenance ledgers only for audit trail and historical rationale:
+Use it to answer four questions:
 
-- [Baldin App Screens Inventory](./baldin-app-screens-inventory.md)
-- [Baldin App Screens Polish Ledger](./baldin-app-screens-polish-ledger.md)
-- [Baldin Library Buildout Ledger](./baldin-library-buildout-ledger.md)
+- what Baldin is
+- how the redesign should feel across route families
+- which Figma file, pages, and nodes are authoritative
+- which implementation rules are fixed before code work starts
 
-## Implementation Program
+## Active Figma Contract
 
-Use [Redesign Implementation Program](../engineering/redesign-implementation-program.md) for the developer-only execution path after closeout freeze.
+During redesign production, the active composed-screen working file is [Baldin Product Redesign — Command Center](https://www.figma.com/design/dVbBAwOLtz0Walj0oSP4x1).
 
-- Every implementation wave must start from the required brief template at `plans/redesign/implementation-brief-template.md`.
-- Route-family packets live under `plans/redesign/wave-0*.md`.
-- Do not reopen capture work unless a design review proves this handoff is factually wrong.
+Use these defaults:
 
-## Phase Boundary
+- `Baldin Product Redesign — Command Center` is the active redesign working file.
+- `Baldin-App-Screens` stays open as a reference-only behavioral archive.
+- `Baldin-Library` remains the canonical reusable-component source.
+- Do not copy archived capture, evidence, or baseline frames into the active working file. Reference the old file side by side instead.
 
-This closeout ends at `redesign-ready`.
+The active working file must use this page order exactly:
 
-Explicit non-goals for the next phase:
+1. `00 · Vision & Route Map`
+2. `01 · Command Center System`
+3. `02 · Dashboard`
+4. `10 · Flagship · Profile & Aspirations`
+5. `11 · Flagship · Leads`
+6. `12 · Flagship · Applications`
+7. `20 · Network · Discover & Connections`
+8. `21 · Network · Messages`
+9. `30 · Settings`
+10. `40 · Workflows`
+11. `41 · Admin`
+12. `50 · Workspace`
+13. `51 · Automation Agents`
+14. `60 · Auth`
+15. `70 · Marketing`
 
-- No promotion into shared repo surfaces.
-- No `.figma.ts` expansion.
-- No Code Connect follow-up.
-- No React or frontend implementation.
+`00 · Vision & Route Map` must contain:
 
-Frozen closeout decisions:
+- the product-direction summary
+- the in-scope route inventory from `frontend/src/route/app-routes.tsx`
+- the redesign approval checklist
+- the final route-to-page-to-node mapping table
+- compact notes for any preserved behavior that still needs the archived file as a reference
 
-- Canonical page roles remain frozen on `02`, `05`, `06`, and `08`.
-- Stale refs remain banned.
-- `490:2` and `491:2` remain non-canonical troubleshooting artifacts.
-- Application-detail tabs remain out of scope because the shipped route is section-based.
-- `SecondaryNavBar` remains `library-only for now`.
-- `Promotion candidate` remains empty.
+`01 · Command Center System` must define:
 
-## Canonical Rules
+- global navigation behavior
+- app shell and command bar behavior
+- collection versus detail layout rules
+- heading hierarchy
+- metric framing
+- status tone mapping
+- dialog and destructive-flow conventions
+- responsive rules
+- density rules
 
-| Surface | Canonical anchors | Rule |
-| --- | --- | --- |
-| `02 · Flagship Flow · Aspirations to Apply` | `492:2`, `494:2`, `496:2`, `446:2`, `447:2`, `257:6090` | Use `492:2`, `494:2`, and `496:2` as the canonical closeout anchors for apply duplicate guard and role degraded states. Keep `446:2` / `447:2` as route-backed S8 evidence and `257:6090` as design rationale. |
-| `05 · Auth & Access Live Evidence` | `370:2`, `371:2`, `373:2`, `374:2`, `375:2`, `376:2`, `462:2` | Live auth/access captures remain canonical. `462:2` is supporting annotation-only auth detail, not a replacement for the route-backed anchors. |
-| `06 · Workflows & Admin Live Evidence` | `369:2`, `184:4929`, `192:4929`, `201:4929`, `463:5`, `463:26`, `463:46`, `463:67` | Live workflow/admin captures remain canonical. The `463:*` groups carry the redesign-ready interactive detail that the single-state live captures cannot show simultaneously. |
-| `08 · Marketing · Landing` | `297:1168`, `298:1167`, `299:1167`, `448:2`, `449:2`, `450:2` | Keep `299:1167` as the only canonical full-page marketing composition and keep the route-backed captures adjacent to it. |
+## Product Direction
 
-Supporting but non-canonical redesign evidence that remains valid:
+Baldin is the command and control plane for the user's journey to employment.
 
-- `03 · Applications · Queue Board Detail`: supporting group `487:86`, board drag `487:89`, board drop-target `487:110`, canonical action-item dialog `108:4348`.
-- `04 · Network & Profile States`: direct thread `109:4207`, group thread + participants `109:4401`, empty thread `109:4612`, loading `109:4792`, error `109:4959`, with reference snapshots `228:1168`, `228:1203`, and `228:1217`.
-- `07 · Reference · Admin Studies`: `234:1167`, `234:1198`, `234:1215`, `234:1239` remain reference-only and must not replace page `06`.
+The redesign must make that identity unmistakable. Every route family should feel like one instrument on a shared control surface, not a separate app that happens to share a sidebar. The user should always be able to answer the same three questions at a glance:
 
-Banned or retired evidence:
+1. Where am I trying to go?
+2. What deserves attention now?
+3. What is the next highest-value action?
 
-- Stale auth/admin/extractor refs `221:1169`, `131:*`, `229:*`, and `232:*`.
-- Troubleshooting artifacts `490:2` and `491:2`.
-- Retired application-detail tab history `227:1203`, with explanatory text updates `227:1204` and `227:1235`.
+These principles govern every implementation wave:
 
-## Closed Capture Summary
+1. **Direction before tracking.** Aspirations and profile define the user's intent. Leads and applications serve that intent. Collection views lead with ranked metrics and relevant status, not raw lists.
+2. **Consistent situation awareness.** Every collection surface uses the same heading hierarchy, metric summary framing, and collection-to-detail drill pattern. The user should be able to navigate to any route family and immediately understand volume, status distribution, and urgency without relearning the page layout.
+3. **One product, not twelve screens.** Cross-route consistency (heading hierarchy, feedback tone, status chip semantics, dialog conventions) is a first-class deliverable, not an afterthought discovered when two separately-approved waves ship different chrome.
 
-### Page 02
+## Command-Center Direction
 
-- Canonical captured nodes are `492:2`, `494:2`, and `496:2`.
-- `487:2` is `annotation-only by convention` for already-applied/transient failure detail and must not be treated as the canonical anchor.
-- `44:1377`, `44:1401`, `44:1237`, and `44:1259` remain valid reference-only harness study cards.
-- `490:2` and `491:2` remain explicitly non-canonical troubleshooting artifacts.
+The redesign should read like an employment operations room:
 
-### Pages 03 and 04
+1. **Direction is always visible.** The current goal state, target role or company, or active workflow context must stay legible in the shell or situation header.
+2. **Priorities are obvious.** Metric framing, ranking, urgency, and status tone must make the next area of attention clear before the user reads dense content.
+3. **Next action is explicit.** The primary action hierarchy should leave little doubt about the most valuable next move on each route.
+4. **One coordinated control surface.** Collections, detail pages, messaging, workflows, and documents must feel like one operating system, not a set of unrelated feature pages.
 
-- Board drag is `487:89` and board drop-target is `487:110`, both inside supporting group `487:86`.
-- Application-detail dialog remains `108:4348`.
-- Application-detail reminder treatment is `annotation-only by convention` through the existing section-based Next Step treatment inside `108:4348`; no separate reminder-state frame is required.
-- Conversation-detail message hierarchy is explicit in `109:4207`.
-- Edit/delete affordance is visible in `109:4207` and `109:4401`.
-- Participant sidebar and group thread treatment are explicit in `109:4401`.
-- Empty, loading, and error conversation states are `109:4612`, `109:4792`, and `109:4959`.
-- The old tabbed snapshot is retired non-canonical history at `227:1203` with supporting text updates `227:1204` and `227:1235`.
+Visually, Baldin should be dense and operational without drifting into generic enterprise heaviness, card soup, or Tailwind or shadcn dark-mode sameness.
 
-### Page 06
+## Cross-Screen Interaction Contract
 
-- Page `06 · Workflows & Admin Live Evidence` (`394:1167`) is redesign-ready.
-- Live anchors remain `369:2`, `184:4929`, `192:4929`, and `201:4929`.
-- Supporting evidence groups are:
-  - `463:5` for extractor loading/empty/success/error-snackbar
-  - `463:26` for review queue populated/batch/filter-count/expanded JSON
-  - `463:46` for crawlers empty CTA/expanded/dialog
-  - `463:67` for DB destructive preview/confirm/safety
+These conventions are binding across all redesign work:
 
-## Cross-Screen UX Conventions
+1. **Collection-to-detail drill.** Entity surfaces follow collection -> item -> action. Collection pages summarize state and momentum. Detail pages carry full context and actions. Dialogs handle mutations.
+2. **Heading hierarchy.** Collection pages use one heading strategy, detail pages use one heading strategy, and routes do not invent local variants that break the shared reading order.
+3. **Metric-first framing.** Collection surfaces lead with a `MetricStrip` or equivalent status summary that makes volume, distribution, and urgency legible before the user scans rows or cards.
+4. **Feedback model.** Persistent inline issues stay inline, transient acknowledgements stay transient, and destructive actions use explicit confirmation. Do not invent route-specific feedback semantics.
+5. **Status semantics.** Shared status tone mapping stays consistent across route families. Do not introduce local status-color rules that mean something different on different screens.
+6. **Feature ownership.** Shared framing may be unified, but route-specific copy, entity logic, workflow behavior, and page-specific rendering remain local unless reuse is proven and promoted intentionally.
 
-These decisions are now resolved enough to support redesign without reopening the capture phase:
+## Shared-System Build Order
 
-- Live route-backed evidence wins over hand-built or study frames for shipped UI.
-- Supporting groups are valid when they clarify interaction detail or transient states, but they stay subordinate to the canonical anchors.
-- Application detail stays section-based. Do not recreate or imply tabbed detail states.
-- Conversation detail should preserve explicit message hierarchy, visible edit/delete affordances, and a distinct participant-sidebar group-thread variant.
-- Auth and access remain separate explicit steps: login, register, MFA challenge, admin login, session resolving, and access denied.
-- Workflow/admin redesign should preserve explicit destructive preview/confirm/safety handling and explicit populated/filter/detail states rather than collapsing them back into single baseline screens.
-- Marketing keeps one canonical full-page composition at `299:1167`.
+Before route-family pages, establish or revise the command-center language in `Baldin-Library` for:
 
-## Deferred Backlog
+- app shell and left navigation
+- top command bar and page toolbar
+- situation header for collection and detail pages
+- metric deck and summary strip variants
+- collection framing and inspector split patterns
+- list-row and card base patterns
+- section framing and dense detail blocks
+- thread and conversation shell
+- admin and workbench panel shells
+- auth shell v2
+- marketing hero and feature-band system
 
-No unresolved interactive capture backlog remains from this closeout.
+Keep these surfaces screen-owned until reuse is proven:
 
-Every formerly open item now has exactly one final state:
+- lead-ranking modules
+- application stage-lane specifics
+- aspiration editing flows
+- crawler, review, and admin domain actions
+- document compare layouts
+- agent orchestration and chat-specific behavior
 
-- `captured with canonical node`
-- `annotation-only by convention`
-- `deferred to redesign backlog`
+## Required Route Coverage
 
-This closeout leaves no item in an unowned `verify later` state.
+The redesign must cover the real product surface in `frontend/src/route/app-routes.tsx`.
 
-## Provenance Notes
+In scope:
 
-- Use page `02` reference-only cards `44:1377`, `44:1401`, `44:1237`, and `44:1259` only as supporting study context.
-- Keep page `07` admin studies and page `04` reference snapshots as reference/support material only.
-- Do not promote any stale, retired, or troubleshooting node into active redesign evidence.
+- `02 · Dashboard`
+  - `/dashboard`
+- `10 · Flagship · Profile & Aspirations`
+  - `/me`
+  - `/me/aspirations/roles`
+  - `/me/aspirations/companies`
+- `11 · Flagship · Leads`
+  - `/leads`
+  - `/leads/companies`
+- `12 · Flagship · Applications`
+  - `/applications`
+  - `/applications/board`
+  - `/applications/:applicationId`
+- `20 · Network · Discover & Connections`
+  - `/network/discover`
+  - `/network/discover/:userId`
+  - `/network/connections`
+- `21 · Network · Messages`
+  - `/network/messages`
+  - `/network/messages/:conversationId`
+- `30 · Settings`
+  - `/settings`
+  - `/settings/subscription`
+  - `/settings/discoverability`
+  - `/settings/graduation`
+- `40 · Workflows`
+  - `/workflows`
+  - `/workflows/extractors`
+- `41 · Admin`
+  - `/admin/`
+  - `/admin/db-management`
+  - `/admin/review`
+  - `/admin/crawlers`
+- `50 · Workspace`
+  - `/workspace`
+  - `/workspace/new`
+  - `/workspace/:id`
+  - `/workspace/:id/edit`
+  - `/workspace/:id/compare`
+- `51 · Automation Agents`
+  - `/automation/agents`
+  - `/automation/agents/:agentId`
+  - `/automation/agents/:agentId/chat/:sessionId`
+- `60 · Auth`
+  - `/login`
+  - `/register`
+  - MFA challenge plus failure and retry states that live inside auth flows
+- `70 · Marketing`
+  - `/`
+
+Non-blocking follow-up only after the core redesign is approved:
+
+- `/user-terms`
+- catch-all error handling
+
+## Implementation Gates
+
+Every in-scope route page in the active working file must include:
+
+- one canonical desktop composition at `1440` width
+- the primary populated state
+- the primary empty state
+- the primary inline error or warning state
+- the main modal, drawer, or destructive-confirm state used by that surface
+- annotations explaining behavior and layout intent rather than evidence provenance
+
+Responsive requirements:
+
+- required `390`-wide mobile compositions for Dashboard, Auth, Marketing, and the flagship journey pages
+- required tablet or condensed behavior notes for Network
+- desktop-primary only for Workflows, Admin, Workspace, and Automation Agents unless review expands them
+
+Do not resume code implementation until all of these are true:
+
+- `01 · Command Center System` exists and is approved
+- every required page listed above exists in `Baldin Product Redesign — Command Center`
+- every in-scope route maps to one approved node on `00 · Vision & Route Map`
+- the route-to-page-to-node table on `00 · Vision & Route Map` is complete
+- the implementation brief for the next slice cites the `Baldin Product Redesign — Command Center` file key and exact approved node IDs from that file only
+- `npm --prefix docs run build` passes for the repo-side handoff updates
+
+Approval order:
+
+1. `01 · Command Center System`
+2. `02 · Dashboard`, `10 · Flagship · Profile & Aspirations`, `11 · Flagship · Leads`, `12 · Flagship · Applications`
+3. `20 · Network · Discover & Connections`, `21 · Network · Messages`, `30 · Settings`
+4. `40 · Workflows`, `41 · Admin`, `50 · Workspace`, `51 · Automation Agents`, `60 · Auth`, `70 · Marketing`
+
+## Fixed Implementation Rules
+
+These rules are fixed before UI implementation begins:
+
+- no ad hoc MUI shell sprawl outside `frontend/src/design-system/*`
+- no new wrapper growth under legacy component folders
+- no route-specific semantics promoted into shared surfaces
+- no backend changes unless an approved UI need cannot be met with the current contract
+- no speculative shared-foundation work before reuse is proven across approved route families, except for the cross-screen consistency rules already defined in this handoff
+- application detail remains section-based; do not reintroduce tab assumptions
+- applications board keeps drag and drop behavior
+- messages keep edit and delete affordances plus group-thread handling
+- workflow and admin surfaces keep explicit destructive, preview, confirm, and safety flows
+- workspace and automation keep their feature-owned editing and monitoring semantics
+
+Use the archived `Baldin-App-Screens` file only as behavioral reference for:
+
+- real route states
+- proven edge cases
+- destructive and safety flows
+- board, message, workflow, and admin behavior that cannot be flattened during redesign
+
+Do not use the archived file to decide page layout direction, typography hierarchy, or visual styling quality.
+
+## Derived Execution Artifacts
+
+Use these documents as derived execution aids, not as competing redesign sources:
+
+- [Redesign Implementation Program](../engineering/redesign-implementation-program.md)
+- `plans/redesign/implementation-brief-template.md`
+- `plans/redesign/wave-01-flagship-journey.md`
+- `plans/redesign/wave-02-network.md`
+- `plans/redesign/wave-03-settings-profile.md`
+- `plans/redesign/wave-04-workflows-admin.md`
+- `plans/redesign/wave-05-workspace-automation.md`
+
+Dashboard, Auth, and Marketing require their own implementation briefs once the active working file is approved. The existing wave packets do not replace the route-to-node table on `00 · Vision & Route Map`.
+
+If a derived packet conflicts with this handoff, the handoff wins.
+
+## Non-Goals
+
+This redesign phase does not exist to:
+
+- reopen evidence capture as an ongoing planning loop
+- turn every repeated visual choice into a shared abstraction
+- invent backend work before an approved UI need proves it
+- treat route families as disconnected screen buckets
+- rebuild Baldin around generic Tailwind, shadcn, or Make scaffolding
+
+Use the implementation program and route-family packets to execute this redesign only after the full-product Figma approval gate is satisfied. Do not treat them as a second place to redefine what Baldin is or how the redesign should work.

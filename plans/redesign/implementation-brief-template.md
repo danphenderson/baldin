@@ -1,6 +1,6 @@
 # Baldin Redesign Implementation Brief Template
 
-> Required entry artifact for every post-closeout redesign wave.
+> Required entry artifact for every post-closeout redesign implementation slice.
 > Active redesign source: `docs/docs/reference/baldin-redesign-handoff.md`
 > Program rules: `docs/docs/engineering/redesign-implementation-program.md`
 
@@ -8,7 +8,7 @@ Do not start implementation until this brief is filled with exact approved redes
 
 ## Brief Header
 
-- Route family:
+- Route family or slice:
 - Brief owner:
 - Program owner:
 - Status: `draft | approved | in implementation | blocked`
@@ -17,12 +17,25 @@ Do not start implementation until this brief is filled with exact approved redes
 - Frontend implementation owner:
 - Backend dependency owner: `not required` or `baldin_backend`
 
+## Canonical Inputs
+
+- Handoff sections applied:
+- Route-family packet or supporting brief:
+- Dashboard aggregation impact: `none | updates metrics | changes summary framing`
+
+## API Surfaces Consumed
+
+- Service modules this route family calls:
+- Known API gaps that could block the redesign:
+
 ## Approved Design Inputs
 
 - Figma file:
+- Figma file key:
+- Approved page name or names:
+- `00 · Vision & Route Map` rows referenced:
 - Exact approved node IDs:
-- Supporting handoff evidence:
-- Notes about what changed relative to closeout evidence:
+- Approval notes:
 
 ## Routes In Scope
 

@@ -164,7 +164,7 @@ The current shared APIs are now used across the route families that own shared-e
 - Conversations and agent chat: collection chrome, section framing, chips, and supporting dialogs use canonical shared surfaces.
 - Dashboard, documents/editor, product-app workflows, the dedicated Admin SPA, settings, network/discovery, and company surfaces now import overlapping shell UI through `frontend/src/design-system/*` instead of local wrappers or theme shims.
 
-See the [Route-Family Adoption Ledger](../reference/design-system-catalog.md#route-family-adoption-ledger) for the current status table.
+See the [Route-Family Adoption Table](../reference/design-system-catalog.md#route-family-adoption-table) for the current status table.
 
 ## Deferred Architecture Decisions
 

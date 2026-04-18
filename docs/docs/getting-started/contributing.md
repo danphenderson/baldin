@@ -34,7 +34,7 @@ If you use Baldin's Copilot or Codex setup, prefer this sequence:
 2. Use the smallest correct owner.
 	- Baldin Backend Agent for backend-only work.
 	- Baldin Frontend Agent for frontend-only work.
-	- Baldin Design Lead Agent for Figma-first design work, browser-harness capture, and design-to-code handoff preparation.
+	- Baldin Design Lead Agent for archived-design reference work, browser-harness capture, and `.figma.ts` mapping maintenance.
 	- Baldin Lead Full-Stack Architect for cross-stack, contract, or release-boundary work; it should still delegate isolated backend-only or frontend-only slices by default.
 	- Baldin Project Manager when ownership is unclear.
 	- In Codex, the matching custom-agent names are `baldin_backend`, `baldin_frontend`, `baldin_design_lead`, `baldin_full_stack_architect`, and `baldin_project_manager`.
@@ -86,7 +86,7 @@ Automated review can help catch routine issues, but it does not replace human re
 - Backend-only work belongs in `backend/app` or `backend/etl`.
 - Frontend product work belongs in `frontend/src`.
 - Cross-stack contract, docs, CI, and release-boundary work should update all affected surfaces together.
-- Avoid speculative abstractions or parallel systems. Baldin is still local-first and developer-preview.
+- Avoid speculative abstractions or parallel systems. Baldin is still local-first and pre-production.
 
 ## Start Here Next
 

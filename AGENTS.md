@@ -17,12 +17,12 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces. 
 - For host-side backend pytest, prefer `./scripts/run_backend_pytest_host.sh` or `cd backend && pipenv run pytest ...`. Do not assume bare `pytest` is available on the shell `PATH`.
 - If local schema drift blocks work and local data is disposable, use `./scripts/reset_local_db.sh`. Use `./scripts/repair_local_db_collation.sh` only for collation mismatch recovery when local data must survive.
 
-## Figma Workflow
+## Design References
 
-- Baldin's supported Figma workflow assumes a Professional-plan workspace and does not depend on a Dev seat.
-- Treat `Baldin-Library` as the canonical reusable-component source, `Baldin Product Redesign — Command Center` as the active product redesign working file, and `docs/docs/reference/baldin-redesign-handoff.md` as the authoritative redesign source.
+- Active product delivery is code-first. Treat `frontend/src/design-system/*`, `operator-design/`, `plans/v2.1/*`, and the matching `docs/docs/**` pages as the current implementation contract.
+- Treat `Baldin-Library`, `Baldin Product Redesign — Command Center`, and `docs/docs/reference/baldin-redesign-handoff.md` as archived reference material rather than active delivery gates.
 - Treat the current Figma Make file as a reviewed archived sandbox. The 2026-04-13 salvage review found an empty app shell, stock guidelines, and generic Tailwind or shadcn scaffolding rather than a canonical Baldin buildout.
-- For agentic Figma work, prefer the local browser harness plus Figma MCP read or write tools when available. Structure and component inspection can proceed through MCP without a Developer seat.
+- For optional historical Figma review, prefer the local browser harness plus Figma MCP read tools when available. Structure and component inspection can proceed through MCP without a Developer seat, but no repo task should block on new Figma design work.
 - For privileged admin capture, start from `/browser-harness/admin-session.html?next=/admin/...` so the browser session receives the configured local superuser token before opening `/admin/*`.
 - Do not use the `webdev` Playwright MCP tools for Baldin browser capture or route verification. They are not part of the supported local agent path; use the repo-local frontend Playwright runtime, configured host browser tooling, or direct Figma MCP inspection instead.
 - Treat basic inspection, screenshots, and harness-driven capture as sufficient when seat limits block Dev Mode-specific UX.
@@ -35,7 +35,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces. 
 
 - Backend-only routes, models, auth, ETL, extraction, or backend tests: use `baldin_backend` in Codex or Baldin Backend Agent in Copilot.
 - Frontend-only UI, UX, accessibility, routing, state handling, or typed service consumption: use `baldin_frontend` in Codex or Baldin Frontend Agent in Copilot.
-- Figma-first design work, `Baldin-Library` or `Baldin Product Redesign — Command Center` updates, browser-harness capture, repo-backed `.figma.ts` mapping, or design-to-code handoff: use `baldin_design_lead` in Codex or Baldin Design Lead Agent in Copilot.
+- Design-system reference work, `operator-design` maintenance, browser-harness capture, archived Figma review, or repo-backed `.figma.ts` mapping: use `baldin_design_lead` in Codex or Baldin Design Lead Agent in Copilot.
 - Cross-stack contracts, schema generation, docs, CI, scripts, docker-compose, or release-path work: use `baldin_full_stack_architect` in Codex or Baldin Lead Full-Stack Architect in Copilot.
 - Unclear ownership, sequencing, or multi-stream planning: use `baldin_project_manager` in Codex or Baldin Project Manager in Copilot.
 - Read-only scouting: use Codex's built-in `explorer` agent or Copilot's Explore agent. Do not treat a scout as the implementation owner.
@@ -88,7 +88,6 @@ frontend/AGENTS.md
 frontend/admin/AGENTS.md
 frontend/browser-harness/AGENTS.md
 frontend/e2e/AGENTS.md
-frontend/.storybook/AGENTS.md
 frontend/scripts/AGENTS.md
 frontend/src/AGENTS.md
 frontend/src/admin/AGENTS.md

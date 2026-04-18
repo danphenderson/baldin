@@ -1,445 +1,498 @@
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import {
-  Box,
-  Typography,
-  Stack,
-  useTheme,
-  Snackbar,
-  } from '@mui/material';
+import React, { useContext } from 'react';
 import Grid from '@mui/material/Grid';
 import {
-  Code as SkillIcon,
-  Work as WorkIcon,
-  School as SchoolIcon,
-  CardMembership as CertIcon,
-  Contacts as ContactIcon,
-  } from '@mui/icons-material';
-import { AnimatePresence } from 'motion/react';
-import { motion } from 'motion/react';
+  AutoAwesomeOutlined as SignalsIcon,
+  BadgeOutlined as RolesIcon,
+  BusinessOutlined as CompaniesIcon,
+  FlagOutlined as DirectionIcon,
+  LayersOutlined as StoryIcon,
+  LocationOnOutlined as LocationIcon,
+  NorthEastOutlined as RouteIcon,
+  ScheduleOutlined as TimeZoneIcon,
+  WorkOutlineOutlined as WorkflowIcon,
+} from '@mui/icons-material';
+import {
+  Avatar,
+  Box,
+  Button,
+  Divider,
+  Stack,
+  Typography,
+} from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import { useNavigate } from 'react-router-dom';
+
 import { UserContext } from '../../context/user-context';
-import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
-import type { SkillRead } from '../../service/skills';
-import { uploadAvatar } from '../../service/users';
-
-import { useProfileData } from './hooks/useProfileData';
-import { useProfileCompletion } from './hooks/useProfileCompletion';
-import { stagger } from './constants';
-import { ProfileHero } from './components/ProfileHero';
-import { ProfileBuilderPanel } from './components/ProfileBuilderPanel';
-import { ProfileSection } from './components/ProfileSection';
-import { ItemCard } from './components/ItemCard';
-import { EmptyState } from './components/EmptyState';
-import { DateSpan } from './components/DateSpan';
-import { EditDialog } from './components/EditDialog';
-import { DeleteDialog } from './components/DeleteDialog';
-import { DocumentsSummary } from './components/DocumentsSummary';
-import { InlineFeedback,
+import {
+  CardShell,
+  CardTitle,
+  Caption,
+  EmptyState,
   LoadingState,
-  StatusChip as Chip,
+  MetricStrip,
+  Mono,
+  SectionCard,
+  SectionHeader,
+  SituationHeader,
+  StatusChip,
 } from '../../design-system';
-import ProfileImportModal from '../../component/profile-import-modal';
-import MFASetupCard from '../../component/mfa-setup-card';
+import { usePageToolbarHeader } from '../../layout/toolbar-header-context';
+import type { UserRead } from '../../service/users';
 
-const MotionBox = motion.create(Box);
+import { useProfileHubData } from './hooks/useProfileHubData';
+
+const FACT_PILL_SX = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 0.75,
+  px: 1.25,
+  py: 0.75,
+  borderRadius: '999px',
+  border: '1px solid',
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+};
+
+function buildHeroInitials(user: UserRead | null): string {
+  const initials = `${user?.first_name?.[0] ?? ''}${user?.last_name?.[0] ?? ''}`.toUpperCase();
+  return initials || user?.email?.[0]?.toUpperCase() || 'ME';
+}
+
+function FactPill({
+  icon,
+  label,
+}: {
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <Box sx={FACT_PILL_SX}>
+      {icon}
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+    </Box>
+  );
+}
+
+function SignalThemeCard({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <CardShell density="compact" surface="inset">
+      <Stack spacing={1}>
+        <CardTitle>{title}</CardTitle>
+        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+          {description}
+        </Typography>
+      </Stack>
+    </CardShell>
+  );
+}
+
+function StoryBlockCard({
+  title,
+  organization,
+  period,
+  summary,
+}: {
+  title: string;
+  organization: string;
+  period: string;
+  summary: string;
+}) {
+  return (
+    <CardShell density="compact" surface="inset">
+      <Stack spacing={1.25}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          gap={1}
+        >
+          <Box>
+            <CardTitle>{title}</CardTitle>
+            <Caption>{organization}</Caption>
+          </Box>
+          <Mono color="text.secondary">{period}</Mono>
+        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.65 }}>
+          {summary}
+        </Typography>
+      </Stack>
+    </CardShell>
+  );
+}
+
+function AspirationPreviewColumn({
+  title,
+  items,
+  emptyTitle,
+  emptyDescription,
+  buttonLabel,
+  onOpen,
+}: {
+  title: string;
+  items: Array<{ label: string; note: string }>;
+  emptyTitle: string;
+  emptyDescription: string;
+  buttonLabel: string;
+  onOpen: () => void;
+}) {
+  return (
+    <CardShell density="compact" surface="inset">
+      <Stack spacing={2}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          gap={1}
+        >
+          <CardTitle>{title}</CardTitle>
+          <StatusChip
+            label={items.length === 0 ? 'Empty' : `${items.length} saved`}
+            tone={items.length === 0 ? 'neutral' : 'primary'}
+            emphasis="soft"
+            size="small"
+          />
+        </Stack>
+
+        {items.length === 0 ? (
+          <Stack spacing={1}>
+            <Typography variant="body2" fontWeight={700}>
+              {emptyTitle}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+              {emptyDescription}
+            </Typography>
+          </Stack>
+        ) : (
+          <Stack spacing={1.25}>
+            {items.map((item) => (
+              <Box key={item.label}>
+                <Typography variant="body2" fontWeight={700}>
+                  {item.label}
+                </Typography>
+                <Caption sx={{ display: 'block', mt: 0.35 }}>{item.note}</Caption>
+              </Box>
+            ))}
+          </Stack>
+        )}
+
+        <Button
+          variant="outlined"
+          size="small"
+          endIcon={<RouteIcon />}
+          onClick={onOpen}
+          sx={{ alignSelf: 'flex-start' }}
+        >
+          {buttonLabel}
+        </Button>
+      </Stack>
+    </CardShell>
+  );
+}
+
+function WorkflowRouteCard({
+  title,
+  description,
+  tone,
+  buttonLabel,
+  onOpen,
+}: {
+  title: string;
+  description: string;
+  tone: 'primary' | 'info';
+  buttonLabel: string;
+  onOpen: () => void;
+}) {
+  return (
+    <CardShell density="compact" surface="inset">
+      <Stack spacing={1.5}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          gap={1}
+        >
+          <CardTitle>{title}</CardTitle>
+          <StatusChip label="Next route" tone={tone} emphasis="soft" size="small" />
+        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+          {description}
+        </Typography>
+        <Button
+          variant="text"
+          size="small"
+          endIcon={<RouteIcon />}
+          onClick={onOpen}
+          sx={{ alignSelf: 'flex-start' }}
+        >
+          {buttonLabel}
+        </Button>
+      </Stack>
+    </CardShell>
+  );
+}
 
 const ProfilePage: React.FC = () => {
   const theme = useTheme();
-  const { token, setUser } = useContext(UserContext);
+  const navigate = useNavigate();
+  const { user, loading } = useContext(UserContext);
+  const hub = useProfileHubData(user);
 
-  const data = useProfileData(token, setUser);
-
-  const { completionPercent, rankedTasks } = useProfileCompletion(
-    data.profile,
-    data.skills,
-    data.experiences,
-    data.education,
-    data.certificates,
-    data.contacts,
+  usePageToolbarHeader(
+    'Profile & Aspirations',
+    hub.status === 'populated'
+      ? 'Keep direction, proof points, and aspiration handoff aligned before you rank leads.'
+      : 'Set the direction Baldin should optimize toward.',
   );
 
-  const sectionCounts = useMemo(() => ({
-    skills: data.skills.length,
-    experiences: data.experiences.length,
-    education: data.education.length,
-    certificates: data.certificates.length,
-    contacts: data.contacts.length,
-  }), [data.skills, data.experiences, data.education, data.certificates, data.contacts]);
-
-  useEffect(() => { data.refresh(); }, [data.refresh]);
-
-  // Auto-open import modal for first-time users (empty profile)
-  useEffect(() => {
-    if (!data.loading && completionPercent === 0) {
-      data.setShowImportModal(true);
-    }
-  }, [data.loading, completionPercent]);
-
-  // -----------------------------------------------------------------------
-  // Derived
-  // -----------------------------------------------------------------------
-
-  const userInitials = useMemo(() => {
-    if (!data.profile) return '?';
-    return `${data.profile.first_name?.[0] ?? ''}${data.profile.last_name?.[0] ?? ''}`.toUpperCase() || '?';
-  }, [data.profile]);
-
-  const fullName = useMemo(() => {
-    if (!data.profile) return '';
-    const parts = [data.profile.first_name, data.profile.last_name].filter(Boolean);
-    return parts.length ? parts.join(' ') : 'Unnamed User';
-  }, [data.profile]);
-
-  const locationLine = useMemo(() => {
-    if (!data.profile) return '';
-    return [data.profile.city, data.profile.state, data.profile.country].filter(Boolean).join(', ');
-  }, [data.profile]);
-
-  usePageToolbarHeader('Profile', "Your professional identity powering Baldin's AI autopilot");
-
-  // ── Avatar upload ──────────────────────────────────────────────────────
-  const [avatarUploading, setAvatarUploading] = useState(false);
-
-  const handleAvatarSelected = useCallback(async (file: File) => {
-    if (!token) return;
-    setAvatarUploading(true);
-    try {
-      const updated = await uploadAvatar(token, file);
-      setUser(updated);
-      data.refresh();
-      data.setToast('Profile picture updated');
-    } catch (err: unknown) {
-      data.setError(err instanceof Error ? err.message : 'Avatar upload failed');
-    } finally {
-      setAvatarUploading(false);
-    }
-  }, [token, setUser, data]);
-
-  const skillsByCategory = useMemo(() => {
-    const map = new Map<string, SkillRead[]>();
-    for (const skill of data.skills) {
-      const cat = skill.category || 'Uncategorized';
-      if (!map.has(cat)) map.set(cat, []);
-      map.get(cat)!.push(skill);
-    }
-    return map;
-  }, [data.skills]);
-
-  // -----------------------------------------------------------------------
-  // Loading skeleton
-  // -----------------------------------------------------------------------
-
-  if (data.loading) {
+  if (loading) {
     return (
       <Stack spacing={3}>
-        <LoadingState kind="section" count={1} itemHeight={180} />
-        <LoadingState kind="section" count={1} itemHeight={56} />
-        <LoadingState kind="section" count={1} itemHeight={300} />
+        <LoadingState kind="section" count={1} itemHeight={240} />
+        <LoadingState kind="section" count={1} itemHeight={124} />
+        <LoadingState kind="grid" count={4} itemHeight={220} columns={{ xs: 1, md: 2 }} />
       </Stack>
     );
   }
 
-  // -----------------------------------------------------------------------
-  // Render
-  // -----------------------------------------------------------------------
+  const metricItems = [
+    { label: 'Role tracks', value: hub.metrics.roleCount, icon: <RolesIcon fontSize="small" /> },
+    { label: 'Company targets', value: hub.metrics.companyCount, icon: <CompaniesIcon fontSize="small" /> },
+    { label: 'Direction themes', value: hub.metrics.signalCount, icon: <SignalsIcon fontSize="small" /> },
+    { label: 'Story blocks', value: hub.metrics.storyCount, icon: <StoryIcon fontSize="small" /> },
+  ];
 
   return (
-    <Box>
-      {data.error && (
-        <InlineFeedback tone="error" sx={{ mb: 2 }} onClose={() => data.setError('')}>
-          {data.error}
-        </InlineFeedback>
-      )}
-
-      {/* ── Profile Hero ─────────────────────────────────────────────── */}
-      <ProfileHero
-        profile={data.profile}
-        editingProfile={data.editingProfile}
-        profileDraft={data.profileDraft}
-        saving={data.saving}
-        userInitials={userInitials}
-        fullName={fullName}
-        locationLine={locationLine}
-        startEditProfile={data.startEditProfile}
-        cancelEditProfile={data.cancelEditProfile}
-        handleSaveProfile={data.handleSaveProfile}
-        pf={data.pf}
-        sectionCounts={sectionCounts}
-        completionPercent={completionPercent}
-        onAvatarSelected={handleAvatarSelected}
-        avatarUploading={avatarUploading}
-        onImportProfile={() => data.setShowImportModal(true)}
-      />
-
-      {/* ── Profile Builder Panel ──────────────────────────────────── */}
-      <ProfileBuilderPanel
-        completionPercent={completionPercent}
-        rankedTasks={rankedTasks}
-        openCreate={data.openCreate}
-        startEditProfile={data.startEditProfile}
-        onOpenImportModal={() => data.setShowImportModal(true)}
-      />
-
-      {/* ── Profile Sections ────────────────────────────────────────── */}
-      <Stack spacing={3}>
-
-        {/* ── Skills ──────────────────── */}
-        <ProfileSection
-          id="section-skills"
-          icon={<SkillIcon />}
-          title="Skills"
-          count={data.skills.length}
-          onAdd={() => data.openCreate('skills')}
-        >
-          {data.skills.length === 0 ? (
-            <EmptyState icon={<SkillIcon sx={{ fontSize: 32, color: 'primary.main' }} />} section="Skills" onAdd={() => data.openCreate('skills')} />
-          ) : (
-            <AnimatePresence mode="popLayout">
-              <Stack spacing={2.5}>
-                {[...skillsByCategory.entries()].map(([category, categorySkills]) => (
-                  <MotionBox key={category} {...stagger} transition={{ duration: 0.2 }}>
-                    <Typography
-                      variant="subtitle2"
-                      color="text.secondary"
-                      sx={{ mb: 1, pl: 0.5 }}
-                    >
-                      {category}
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {categorySkills.map(skill => (
-                        <Chip
-                          key={skill.id}
-                          label={
-                            <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                              {skill.name}
-                              {skill.yoe ? (
-                                <Box
-                                  component="span"
-                                  sx={{
-                                    fontSize: '0.7rem', fontWeight: 700, opacity: 0.6,
-                                    ml: 0.25,
-                                  }}
-                                >
-                                  {skill.yoe}y
-                                </Box>
-                              ) : null}
-                            </Box>
-                          }
-                          color="primary"
-                          variant="outlined"
-                          onClick={() => data.openEdit('skills', skill)}
-                          onDelete={() => data.confirmDelete(skill.id, 'skills', skill.name ?? 'skill')}
-                          sx={{ '&:hover': { borderColor: theme.palette.primary.main } }}
-                        />
-                      ))}
-                    </Box>
-                  </MotionBox>
-                ))}
-              </Stack>
-            </AnimatePresence>
+    <Stack spacing={3}>
+      <CardShell
+        tone={hub.status === 'populated' ? 'primary' : 'neutral'}
+        contentSx={{ p: 0 }}
+      >
+        <SituationHeader
+          title={hub.hero.title}
+          supportingText={hub.hero.summary}
+          lead={(
+            <Avatar
+              sx={{
+                width: 64,
+                height: 64,
+                bgcolor: hub.status === 'populated' ? 'primary.dark' : 'action.selected',
+                color: hub.status === 'populated' ? 'primary.contrastText' : 'text.primary',
+                fontWeight: 700,
+              }}
+            >
+              {buildHeroInitials(user)}
+            </Avatar>
           )}
-        </ProfileSection>
-
-        {/* ── Experience ──────────────── */}
-        <ProfileSection
-          id="section-experience"
-          icon={<WorkIcon />}
-          title="Experience"
-          count={data.experiences.length}
-          onAdd={() => data.openCreate('experiences')}
-        >
-          {data.experiences.length === 0 ? (
-            <EmptyState icon={<WorkIcon sx={{ fontSize: 32, color: 'primary.main' }} />} section="Experience" onAdd={() => data.openCreate('experiences')} />
-          ) : (
-            <Stack spacing={2}>
-              {data.experiences.map(exp => (
-                <ItemCard
-                  key={exp.id}
-                  onEdit={() => data.openEdit('experiences', exp)}
-                  onDelete={() => data.confirmDelete(exp.id, 'experiences', exp.title ?? 'experience')}
-                  ariaLabel={exp.title ?? 'experience'}
-                >
-                  <Typography variant="body1" fontWeight={700} sx={{ lineHeight: 1.3 }}>
-                    {exp.title || 'Untitled Role'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                    {exp.company}{exp.location ? ` · ${exp.location}` : ''}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    <DateSpan value={exp.start_date} /> — <DateSpan value={exp.end_date} />
-                  </Typography>
-                  {exp.description && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.5 }}>
-                      {exp.description}
-                    </Typography>
-                  )}
-                  {exp.projects?.length ? (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontStyle: 'italic' }}>
-                      Projects: {exp.projects.join(', ')}
-                    </Typography>
-                  ) : null}
-                </ItemCard>
-              ))}
+          context={(
+            <StatusChip
+              label={hub.hero.statusLabel}
+              tone={hub.status === 'populated' ? 'primary' : 'warning'}
+              emphasis="soft"
+              size="small"
+            />
+          )}
+          actions={(
+            <>
+              <Button
+                variant="contained"
+                endIcon={<RouteIcon />}
+                onClick={() => navigate('/me/aspirations/roles')}
+              >
+                {hub.status === 'populated' ? 'Review role aspirations' : 'Start role aspirations'}
+              </Button>
+              <Button
+                variant="outlined"
+                endIcon={<RouteIcon />}
+                onClick={() => navigate('/me/aspirations/companies')}
+              >
+                {hub.status === 'populated' ? 'Review company aspirations' : 'Start company aspirations'}
+              </Button>
+            </>
+          )}
+          footer={(
+            <Stack direction="row" gap={1} flexWrap="wrap">
+              <FactPill
+                icon={<DirectionIcon fontSize="small" color="primary" />}
+                label={hub.hero.focusLabel}
+              />
+              <FactPill
+                icon={<LocationIcon fontSize="small" color="primary" />}
+                label={hub.hero.locationLabel}
+              />
+              <FactPill
+                icon={<TimeZoneIcon fontSize="small" color="primary" />}
+                label={hub.hero.timeZoneLabel}
+              />
             </Stack>
           )}
-        </ProfileSection>
+          divider
+        />
 
-        {/* ── Education ──────────────── */}
-        <ProfileSection
-          id="section-education"
-          icon={<SchoolIcon />}
-          title="Education"
-          count={data.education.length}
-          onAdd={() => data.openCreate('education')}
-        >
-          {data.education.length === 0 ? (
-            <EmptyState icon={<SchoolIcon sx={{ fontSize: 32, color: 'primary.main' }} />} section="Education" onAdd={() => data.openCreate('education')} />
-          ) : (
-            <Stack spacing={2}>
-              {data.education.map(edu => (
-                <ItemCard
-                  key={edu.id}
-                  onEdit={() => data.openEdit('education', edu)}
-                  onDelete={() => data.confirmDelete(edu.id, 'education', edu.degree ?? 'education')}
-                  ariaLabel={edu.degree ?? 'education'}
-                >
-                  <Typography variant="body1" fontWeight={700} sx={{ lineHeight: 1.3 }}>
-                    {edu.degree || 'Untitled Degree'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                    {edu.university}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    <DateSpan value={edu.start_date} /> — <DateSpan value={edu.end_date} />
-                    {edu.grade_point ? ` · GPA: ${edu.grade_point}` : ''}
-                  </Typography>
-                  {edu.activities?.length ? (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                      Activities: {edu.activities.join(', ')}
-                    </Typography>
-                  ) : null}
-                  {edu.achievements?.length ? (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                      Achievements: {edu.achievements.join(', ')}
-                    </Typography>
-                  ) : null}
-                </ItemCard>
-              ))}
-            </Stack>
-          )}
-        </ProfileSection>
+        <Box sx={{ px: { xs: 2, md: 3 }, pt: 2, pb: 3 }}>
+          <MetricStrip
+            items={metricItems}
+            variant="inline"
+            align="start"
+            dividers={false}
+          />
+        </Box>
+      </CardShell>
 
-        {/* ── Certificates ──────────── */}
-        <ProfileSection
-          id="section-certificates"
-          icon={<CertIcon />}
-          title="Certificates"
-          count={data.certificates.length}
-          onAdd={() => data.openCreate('certificates')}
-        >
-          {data.certificates.length === 0 ? (
-            <EmptyState icon={<CertIcon sx={{ fontSize: 32, color: 'primary.main' }} />} section="Certificates" onAdd={() => data.openCreate('certificates')} />
-          ) : (
-            <Stack spacing={2}>
-              {data.certificates.map(cert => (
-                <ItemCard
-                  key={cert.id}
-                  onEdit={() => data.openEdit('certificates', cert)}
-                  onDelete={() => data.confirmDelete(cert.id, 'certificates', cert.title ?? 'certificate')}
-                  ariaLabel={cert.title ?? 'certificate'}
-                >
-                  <Typography variant="body1" fontWeight={700} sx={{ lineHeight: 1.3 }}>
-                    {cert.title || 'Untitled Certificate'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                    {cert.issuer}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {cert.issued_date && <><DateSpan value={cert.issued_date} /></>}
-                    {cert.expiration_date && <> — <DateSpan value={cert.expiration_date} /></>}
-                  </Typography>
-                </ItemCard>
-              ))}
-            </Stack>
-          )}
-        </ProfileSection>
-
-        {/* ── Contacts ──────────────── */}
-        <ProfileSection
-          id="section-contacts"
-          icon={<ContactIcon />}
-          title="Contacts"
-          count={data.contacts.length}
-          onAdd={() => data.openCreate('contacts')}
-        >
-          {data.contacts.length === 0 ? (
-            <EmptyState icon={<ContactIcon sx={{ fontSize: 32, color: 'primary.main' }} />} section="Contacts" onAdd={() => data.openCreate('contacts')} />
-          ) : (
-            <Grid container spacing={2}>
-              {data.contacts.map(contact => (
-                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={contact.id}>
-                  <ItemCard
-                    onEdit={() => data.openEdit('contacts', contact)}
-                    onDelete={() => data.confirmDelete(contact.id, 'contacts', `${contact.first_name ?? ''} ${contact.last_name ?? ''}`.trim() || 'contact')}
-                    ariaLabel={`${contact.first_name ?? ''} ${contact.last_name ?? ''}`.trim() || 'contact'}
-                  >
-                    <Typography variant="body1" fontWeight={700}>
-                      {[contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'Unnamed'}
-                    </Typography>
-                    {contact.email && <Typography variant="body2" color="text.secondary">{contact.email}</Typography>}
-                    {contact.phone_number && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{contact.phone_number}</Typography>}
-                    {contact.time_zone && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>TZ: {contact.time_zone}</Typography>}
-                  </ItemCard>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <Stack spacing={3}>
+            <SectionCard
+              header={(
+                <SectionHeader
+                  icon={<SignalsIcon />}
+                  title="Direction themes"
+                  count={hub.metrics.signalCount}
+                  supportingText="The strongest signal areas that should shape ranking, messaging, and how the rest of the flagship flow describes you."
+                />
+              )}
+            >
+              {hub.signalThemes.length === 0 ? (
+                <EmptyState
+                  layout="section"
+                  compact
+                  icon={<SignalsIcon />}
+                  title="No direction themes yet"
+                  description="Add roles or companies first, then use this hub to keep the narrative aligned before you move into ranking."
+                  primaryAction={{
+                    label: 'Start role aspirations',
+                    onClick: () => navigate('/me/aspirations/roles'),
+                  }}
+                />
+              ) : (
+                <Grid container spacing={2}>
+                  {hub.signalThemes.map((themeItem) => (
+                    <Grid key={themeItem.title} size={{ xs: 12, md: 6 }}>
+                      <SignalThemeCard
+                        title={themeItem.title}
+                        description={themeItem.description}
+                      />
+                    </Grid>
+                  ))}
                 </Grid>
-              ))}
-            </Grid>
-          )}
-        </ProfileSection>
+              )}
+            </SectionCard>
 
-        {/* ── Documents Summary ────────────────────────────────────────── */}
-        <DocumentsSummary token={token} />
+            <SectionCard
+              header={(
+                <SectionHeader
+                  icon={<StoryIcon />}
+                  title="Career story blocks"
+                  count={hub.metrics.storyCount}
+                  supportingText="Portable proof points you can reuse across ranking, tailored applications, and network outreach."
+                />
+              )}
+            >
+              {hub.storyBlocks.length === 0 ? (
+                <EmptyState
+                  layout="section"
+                  compact
+                  icon={<StoryIcon />}
+                  title="No story blocks yet"
+                  description="Once your direction is clear, turn the best supporting work into a few reusable narratives for later route handoff."
+                  primaryAction={{
+                    label: 'Review role aspirations',
+                    onClick: () => navigate('/me/aspirations/roles'),
+                  }}
+                />
+              ) : (
+                <Stack spacing={2}>
+                  {hub.storyBlocks.map((story) => (
+                    <StoryBlockCard
+                      key={`${story.title}-${story.organization}`}
+                      title={story.title}
+                      organization={story.organization}
+                      period={story.period}
+                      summary={story.summary}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </SectionCard>
+          </Stack>
+        </Grid>
 
-        {/* ── Security (MFA) ──────────────────────────────────────────── */}
-        <MFASetupCard />
-      </Stack>
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <Stack spacing={3}>
+            <SectionCard
+              header={(
+                <SectionHeader
+                  icon={<WorkflowIcon />}
+                  title="Aspirations handoff"
+                  supportingText={hub.aspirationPreview.guidance}
+                />
+              )}
+            >
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <AspirationPreviewColumn
+                    title="Roles"
+                    items={hub.aspirationPreview.roles}
+                    emptyTitle="No role direction yet"
+                    emptyDescription="Start with one or two titles that describe the move you want Baldin to optimize toward."
+                    buttonLabel={hub.status === 'populated' ? 'Open role aspirations' : 'Start role aspirations'}
+                    onOpen={() => navigate('/me/aspirations/roles')}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <AspirationPreviewColumn
+                    title="Companies"
+                    items={hub.aspirationPreview.companies}
+                    emptyTitle="No company list yet"
+                    emptyDescription="Add target employers so ranking and apply handoff can stay grounded in the search you actually want."
+                    buttonLabel={hub.status === 'populated' ? 'Open company aspirations' : 'Start company aspirations'}
+                    onOpen={() => navigate('/me/aspirations/companies')}
+                  />
+                </Grid>
+              </Grid>
+            </SectionCard>
 
-      {/* ── Edit / Create Dialog ─────────────────────────────────────── */}
-      <EditDialog
-        open={data.editOpen}
-        editSection={data.editSection}
-        editItem={data.editItem}
-        editSaving={data.editSaving}
-        setEditItem={data.setEditItem}
-        onClose={data.closeEdit}
-        onSave={data.handleSaveItem}
-      />
+            <CardShell>
+              <SectionHeader
+                icon={<RouteIcon />}
+                title="What this drives next"
+                supportingText="This hub is the upstream control surface. Save direction here, then move straight into the operational routes that consume it."
+              />
 
-      {/* ── Delete Confirmation Dialog ────────────────────────────────── */}
-      <DeleteDialog
-        deleteTarget={data.deleteTarget}
-        onCancel={data.cancelDelete}
-        onConfirm={data.handleDelete}
-      />
+              <Stack spacing={2}>
+                <WorkflowRouteCard
+                  title="Leads ranking"
+                  description="Use saved aspirations to prioritize the most aligned roles and companies before you spend effort on detailed review."
+                  tone="primary"
+                  buttonLabel="Open leads"
+                  onOpen={() => navigate('/leads')}
+                />
+                <WorkflowRouteCard
+                  title="Application handoff"
+                  description="Keep your story blocks and target list coherent so application starts inherit the same direction-setting context."
+                  tone="info"
+                  buttonLabel="Open applications"
+                  onOpen={() => navigate('/applications')}
+                />
+              </Stack>
 
-      {/* ── Profile Import Modal ──────────────────────────────────────── */}
-      <ProfileImportModal
-        open={data.showImportModal}
-        onClose={() => data.setShowImportModal(false)}
-        token={token}
-        onSuccess={() => {
-          data.setToast('Profile imported successfully');
-          data.refresh();
-        }}
-      />
+              <Divider sx={{ my: 2.5, borderColor: theme.palette.divider }} />
 
-      {/* ── Success toast ─────────────────────────────────────────────── */}
-      <Snackbar
-        open={!!data.toast}
-        autoHideDuration={3000}
-        onClose={() => data.setToast('')}
-        message={data.toast}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      />
-    </Box>
+              <Caption>
+                The redesigned hub stays frontend-local for now, so the page structure can settle before a summary API contract is wired in.
+              </Caption>
+            </CardShell>
+          </Stack>
+        </Grid>
+      </Grid>
+    </Stack>
   );
 };
 

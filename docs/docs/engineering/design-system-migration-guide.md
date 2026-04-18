@@ -4,11 +4,11 @@ title: Design System Migration Guide
 description: Current implementation adoption status, compatibility strategy, migrated surfaces, and next-step guidance for Baldin's shipped frontend design-system layer.
 ---
 
-<!-- last-verified: 2026-04-14 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Design System Migration Guide
 
-This guide describes the migration that exists in the repo today. It tracks the shipped `frontend/src/design-system/*` layer, not the full future inventory of Baldin-Library in Figma.
+This guide describes the migration that exists in the repo today. It tracks the shipped `frontend/src/design-system/*` layer, not the broader historical inventory preserved in archived design files.
 
 ## Current Rollout Status
 
@@ -17,13 +17,13 @@ This guide describes the migration that exists in the repo today. It tracks the 
 | Token and theme foundation | Complete | `frontend/src/design-system/tokens/*` and `theme/*` are active, and `theme-provider.tsx` consumes them |
 | Shared primitives | Complete for the current implemented code scope | Feedback, typography, surface, and status primitives are shipped |
 | Shared patterns | Complete for the current implemented code scope | `CollectionToolbar`, `MetricStrip`, `SectionCard`, and `AuthPanel` are shipped |
-| Storybook verification lane | Seeded and already landed | `frontend/.storybook/*` plus colocated stories now cover the current code-backed Figma mapping set |
+| Targeted verification lane | Active | Focused Vitest coverage plus `lint:theme`, typecheck, and app-build checks cover the current shared surface set |
 | Compatibility wrappers | Narrow transitional layer | Only documented re-export shims and feature-local adapters remain |
 | Route-family adoption | Broadly complete | See the [Route-Family Adoption Table](../reference/design-system-catalog.md#route-family-adoption-table) |
 
-Figma can lead code. Baldin-Library may define broader library inventory ahead of what is promoted into `frontend/src/design-system/*`.
+Archived Figma material can contain broader library inventory than what is promoted into `frontend/src/design-system/*`, but promotion decisions are now code-first and repo-backed.
 
-Future migration slices should treat Storybook and Chromatic as existing verification infrastructure. Expand the current lane when shared surfaces change instead of reopening them as foundational migration work.
+Future migration slices should extend the current targeted test lane when shared surfaces change instead of reopening separate preview infrastructure as foundational migration work.
 
 ## What Changed In This Enforcement Pass
 
@@ -35,7 +35,7 @@ This migration pass completed the design-system ownership boundary for shared-el
 - `AuthPanel` now owns the centered auth card shell used by login, MFA verification, and registration.
 - `ConfirmDialog`, `SurfaceCard`, and `SurfaceDialog` provide canonical wrappers for feature-owned confirm, card, and dialog shells.
 - `StatusChip` now supports compatibility-style `color` and `variant` handoff so feature code can migrate off raw MUI `Chip` imports without losing shared styling.
-- Storybook now provides the canonical component verification lane for code-backed shared surfaces, with `parameters.design` sourced from each colocated `.figma.ts` mapping.
+- Targeted shared-surface tests now provide the canonical component verification lane for shipped shared surfaces, while `.figma.ts` mappings remain optional historical metadata.
 
 ### Compatibility cleanup
 
@@ -100,7 +100,9 @@ Current rule:
 Current rule:
 
 - A route can keep local search fields, filters, CTA wiring, and pagination controls.
-- The outer toolbar shell should be `CollectionToolbar` once the structure is shared.
+- When a collection surface needs shared title, context, actions, and footer framing, prefer `SituationHeader`.
+- When the shared need is only the search, controls, actions, and secondary bar below that framing, prefer `CollectionToolbar`.
+- Route-specific stats can stay feature-owned, but the stat strip chrome should use `MetricStrip` when the collection surface now shares that framing.
 - Auth pages should use `AuthPanel` once they share the same centered shell.
 
 ## Deferred Work
@@ -116,7 +118,7 @@ These items remain intentionally deferred:
 A migration slice is complete when:
 
 - The shared UI moved to `frontend/src/design-system/*` or an existing shared primitive or pattern was reused.
-- Public shared React surfaces have a colocated Storybook story, and mapped surfaces keep their Figma link sourced from the colocated `.figma.ts` file.
+- Public shared React surfaces that changed reusable behavior have targeted tests, and mapped surfaces keep their Figma link in the colocated `.figma.ts` file only when the historical metadata still adds value.
 - Remaining wrappers are pure re-exports or clearly documented feature-local adapters.
 - Feature-owned logic stayed in the feature folder.
 - The catalog and this migration guide reflect the new state.

@@ -5,7 +5,7 @@ title: Planned Deployment
 description: Current deployment posture, planned production topology, and what is supported today.
 ---
 
-<!-- last-verified: 2026-04-16 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Planned Deployment
 
@@ -17,7 +17,7 @@ This page explains what works today, what is planned, and what constraints shape
 
 ### Local Docker Compose
 
-The local stack is the supported development surface. Compose Watch is the supported live-edit loop, and it runs eight services:
+The local stack is the supported development surface. Compose Watch is the supported live-edit loop, and it runs nine services:
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
@@ -28,6 +28,7 @@ The local stack is the supported development surface. Compose Watch is the suppo
 | **web** | `backend/Dockerfile` (target: dev) | 8004 → 8000 | FastAPI/Uvicorn dev server with Compose Watch sync |
 | **crawler-worker** | `backend/Dockerfile` | — | Background crawler worker consuming Redis jobs |
 | **frontend** | `frontend/Dockerfile` | 5173 | React/Vite dev server |
+| **operator-design** | `operator-design/Dockerfile` | 5174 | Standalone reference-only redesign app |
 | **docs** | `docs/Dockerfile` | 3001 → 3000 | Docusaurus dev server |
 
 Start the stack:

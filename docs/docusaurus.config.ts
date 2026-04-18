@@ -4,7 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'Baldin',
-  tagline: 'AI-Powered Employment Autopilot',
+  tagline: 'Local-First Job Search OS',
   favicon: 'img/favicon.svg',
 
   url: 'https://danphenderson.github.io',
@@ -129,14 +129,14 @@ const config: Config = {
   themeConfig: {
     image: 'img/og-image.svg',
     metadata: [
-      {name: 'description', content: 'Baldin is a local-first, developer-preview job-search automation workspace. Track applications, extract leads, collaborate on documents, and manage your search through a private engineering workflow.'},
-      {name: 'keywords', content: 'job search automation, employment autopilot, job tracking, AI job search, local-first, developer preview, private repo, career tools, application tracker'},
-      {property: 'og:title', content: 'Baldin — AI-Powered Employment Autopilot'},
-      {property: 'og:description', content: 'Take control of your job search with a local-first developer preview for applications, leads, documents, and networking.'},
+      {name: 'description', content: 'Baldin is a private, local-first job-search workspace today. Track applications, extract leads, collaborate on documents, and work from repo-local contributor workflows while the target direction evolves toward applicant-side labor market observability.'},
+      {name: 'keywords', content: 'local-first job search, job search os, application tracker, career control plane, listing observability, private workflow, contributor docs, docker compose'},
+      {property: 'og:title', content: 'Baldin — Local-First Job Search OS'},
+      {property: 'og:description', content: 'Private, local-first job-search workspace today; applicant-side labor market observability is the target direction.'},
     ],
     announcementBar: {
       id: 'developer_preview',
-      content: '🚀 Baldin is in <b>developer preview</b> — <a href="http://localhost:3001/baldin/docs/getting-started/quickstart">try it locally</a> with Docker Compose',
+      content: 'Baldin is <b>local-first today</b> — <a href="/baldin/docs/getting-started/quickstart">boot the Docker Compose stack</a>',
       backgroundColor: '#0e7490',
       textColor: '#f1f5f9',
       isCloseable: true,

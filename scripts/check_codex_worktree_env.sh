@@ -105,11 +105,52 @@ presence() {
   fi
 }
 
+env_file_var_presence() {
+  local env_path="$1"
+  local var_name="$2"
+  python3 - "${env_path}" "${var_name}" <<'PY'
+from pathlib import Path
+import sys
+
+env_path = Path(sys.argv[1])
+var_name = sys.argv[2]
+
+if not env_path.is_file():
+    print("absent")
+    raise SystemExit
+
+for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+    line = raw_line.strip()
+    if not line or line.startswith("#"):
+        continue
+    if line.startswith("export "):
+        line = line[7:].lstrip()
+    if "=" not in line:
+        continue
+    key, value = line.split("=", 1)
+    if key.strip() != var_name:
+        continue
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        value = value[1:-1]
+    print("present" if value else "absent")
+    raise SystemExit
+
+print("absent")
+PY
+}
+
+process_openai_presence="$(presence OPENAI_API_KEY)"
+backend_env_local_openai_presence="$(
+  env_file_var_presence "${repo_root}/backend/.env.local" OPENAI_API_KEY
+)"
+
 printf 'Baldin Codex worktree env preflight\n'
 printf 'tracked env files: present\n'
 printf 'workspace_mcp_contract: %s\n' "${workspace_mcp_path}"
 printf 'backend/.env.local: %s\n' "$([[ -f "${repo_root}/backend/.env.local" ]] && printf 'present' || printf 'absent')"
 printf 'frontend/.env.local: %s\n' "$([[ -f "${repo_root}/frontend/.env.local" ]] && printf 'present' || printf 'absent')"
+printf 'backend_env_precedence: backend/.env -> backend/.env.local -> explicit shell overrides\n'
 printf 'workspace_mcp_servers: figma\n'
 printf 'codex_mcp_servers: none repo-owned\n'
 printf 'browser_capture_path: frontend Playwright runtime or host browser tooling; webdev MCP unsupported\n'
@@ -127,7 +168,8 @@ printf 'figma_code_connect_access: developer_seat_required_for_workspace_reads_o
 printf 'figma_make_review: empty_app_shell + default_guidelines + generic_tailwind_shadcn_scaffold\n'
 printf 'figma_config_file: %s\n' "$([[ -f "${figma_config_path}" ]] && printf '%s' "${figma_config_path}" || printf 'absent')"
 printf 'figma_mapping_files: %s\n' "${figma_mapping_count}"
-printf 'OPENAI_API_KEY: %s\n' "$(presence OPENAI_API_KEY)"
+printf 'OPENAI_API_KEY(process env): %s\n' "${process_openai_presence}"
+printf 'OPENAI_API_KEY(backend/.env.local): %s\n' "${backend_env_local_openai_presence}"
 printf 'LINKEDIN_USERNAME: %s\n' "$(presence LINKEDIN_USERNAME)"
 printf 'LINKEDIN_PASSWORD: %s\n' "$(presence LINKEDIN_PASSWORD)"
 printf 'GLASSDOOR_USERNAME: %s\n' "$(presence GLASSDOOR_USERNAME)"
@@ -141,9 +183,10 @@ else
   printf 'frontend_dev_server: not running (informational)\n'
 fi
 
-if [[ "${require_openai}" != "0" && -z "${OPENAI_API_KEY:-}" ]]; then
-  printf '\nMissing OPENAI_API_KEY in process env.\n' >&2
-  printf 'Set it in Codex UI project env vars or export it before starting the agent.\n' >&2
+if [[ "${require_openai}" != "0" && "${process_openai_presence}" == "absent" && "${backend_env_local_openai_presence}" == "absent" ]]; then
+  printf '\nMissing OPENAI_API_KEY in process env and backend/.env.local.\n' >&2
+  printf 'For persistent Compose-backed work, add it to backend/.env.local.\n' >&2
+  printf 'For one-off launches, set it in Codex UI project env vars or export it in the shell.\n' >&2
   printf 'For non-AI tasks only, rerun with BALDIN_REQUIRE_OPENAI_API_KEY=0.\n' >&2
   exit 1
 fi

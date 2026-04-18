@@ -5,7 +5,7 @@ title: Run The Right Checks
 description: Run the smallest effective smoke check first, then widen validation only when the change actually needs it.
 ---
 
-<!-- last-verified: 2026-04-15 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Run The Right Checks
 
@@ -45,6 +45,18 @@ Backend tests use `pytest` with a dedicated PostgreSQL test database.
 Start with the narrowest test file or `-k` selection that exercises the edited route, model, ETL path, or bug. Only widen to the broader backend suite when the changed surface or missing coverage makes that necessary.
 
 The wrapper is now Compose-native: it starts or reuses `test_db`, waits for readiness, and runs pytest inside the on-demand `backend-test` service. This keeps agent and human DB-backed verification aligned with the local stack instead of relying on host localhost access.
+
+If you intentionally bypass the wrapper, the `backend-test` service also accepts raw pytest arguments directly:
+
+```bash
+docker compose run --rm --no-deps backend-test app/tests/test_target.py -q
+```
+
+Explicit command overrides still work unchanged:
+
+```bash
+docker compose run --rm --no-deps backend-test python -m pytest app/tests/test_target.py -q
+```
 
 Use `./scripts/run_backend_pytest_host.sh` only when you intentionally want a host `.venv` flow. That helper overrides the test DB path to `127.0.0.1:5431`.
 If you skip the helper, run `cd backend && pipenv run pytest ...`. Do not rely on bare `pytest` being present on the host shell `PATH`.

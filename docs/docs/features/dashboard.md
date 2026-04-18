@@ -2,14 +2,14 @@
 sidebar_position: 1
 slug: /features/dashboard
 title: Dashboard
-description: Unified dashboard for action items, application pipeline, metrics, and activity.
+description: Authenticated workspace dashboard for action items, application pipeline, metrics, and personal activity.
 ---
 
-<!-- last-verified: 2026-04-15 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Dashboard
 
-The Dashboard is the authenticated app portal at `/dashboard`. It brings together action items, application status, aggregate metrics, and the activity feed into one surface. The public marketing home lives separately at `/`.
+The Dashboard is the authenticated workspace hub at `/dashboard`. It brings together the operator's next actions, application status, aggregate metrics, and personal activity feed into one current surface. The public marketing home lives separately at `/`.
 
 ## What It Includes
 

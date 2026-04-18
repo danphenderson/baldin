@@ -203,7 +203,9 @@ class OpenAI(_BaseSettings, env_prefix="OPENAI_"):
     See https://openai.com/ for more information.
     """
 
-    API_KEY: str
+    # Local stack boot should not require a configured API key; OpenAI-backed
+    # surfaces already gate themselves through `require_enabled()`.
+    API_KEY: str = ""
     COMPLETION_MODEL: str = "gpt-5.4-nano-2026-03-17"
     DEFAULT_MODEL: str = "gpt-5.4-mini-2026-03-17"
     EMBEDDING_MODEL: str = "text-embedding-3-small"

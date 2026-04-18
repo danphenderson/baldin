@@ -15,13 +15,13 @@ Use this page as the reference source for configuration. If you are setting up t
 
 ## Backend (`backend/.env`)
 
-`backend/.env` is checked into the repo as a safe local-default baseline. Override it with optional `backend/.env.local` values or process env vars when you need real secrets or user-specific local settings.
+`backend/.env` is checked into the repo as a safe local-default baseline. For Compose-backed backend services, add real secrets and user-specific local settings to the optional ignored `backend/.env.local` file; explicitly exported shell variables still override those values when you intentionally launch Compose with them.
 
 Precedence order:
 
 1. `backend/.env`
 2. `backend/.env.local`
-3. process environment variables
+3. explicitly exported process environment variables
 
 ### Required
 

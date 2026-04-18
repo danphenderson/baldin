@@ -75,5 +75,5 @@
 - `cd frontend && ./node_modules/.bin/tsc --noEmit`
 - `cd frontend && npm run build`
 - `cd frontend && npm run lint:theme` when shared surfaces or import boundaries change
-- `cd frontend && npm run storybook:build` when public design-system exports change
+- `cd frontend && npm run test -- <targeted shared-surface test files>` when public shared React behavior changes
 - Manual verification against the exact approved redesign nodes from the completed brief

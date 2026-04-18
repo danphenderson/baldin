@@ -7,7 +7,11 @@ description: Canonical redesign specification for Baldin's post-closeout impleme
 
 # Baldin Redesign Handoff
 
-This page is the only active redesign source of truth for Baldin.
+:::caution Archived
+This Figma-gated redesign contract is historical as of `2026-04-17`. Active implementation now follows [v2.1 Hard Fork](./v2-1-hard-fork.md) and [v2.1 Implementation Program](../engineering/v2-1-implementation-program.md).
+:::
+
+This page records the historical redesign source of truth that existed before the `v2.1` hard fork.
 
 Use it to answer four questions:
 
@@ -64,6 +68,12 @@ The active working file must use this page order exactly:
 - dialog and destructive-flow conventions
 - responsive rules
 - density rules
+- typography contract (three-role split: display, body, mono)
+- human surfaces conventions (candidate profiles, messaging warmth, empty-state empathy)
+- exceptions and anti-patterns guidance
+- theme parity rules (dark and light as first-class variants)
+- responsive behavior rules (mobile navigation, metric collapse, touch targets)
+- interaction patterns (focus, keyboard, loading, transitions, error recovery)
 
 ## Product Direction
 
@@ -92,6 +102,16 @@ The redesign should read like an employment operations room:
 
 Visually, Baldin should be dense and operational without drifting into generic enterprise heaviness, card soup, or Tailwind or shadcn dark-mode sameness.
 
+### Baldin vs. Generic Command Center
+
+Baldin is not a generic operations dashboard that happens to track jobs. Five differentiators make the product unmistakable and cannot be stripped out without losing its identity:
+
+1. **Hiring-intelligence signal ranking.** Leads and applications surface ranked signals — recruiter activity, match strength, response likelihood — not just raw status. The product does the prioritization work, not the user.
+2. **Aspiration-driven direction.** The user's aspirations (target roles, companies, career themes) are a first-class data model that shapes every collection view, metric summary, and recommendation. Remove aspirations and the product becomes a flat tracker.
+3. **Candidate-as-person dignity.** Messaging, profile presentation, and network surfaces treat the user as a whole person with a narrative, not a row in a pipeline. Typography, tone, and layout choices must support readable human content alongside dense operational data.
+4. **Pipeline momentum as primary metric.** The dashboard and collection surfaces frame progress in terms of momentum (velocity, conversion, attention-needed) rather than static counts. The user sees whether things are moving, not just what exists.
+5. **Employment journey as organizing principle.** Route families map to stages of the user's journey — aspiration → discovery → application → interview → offer — not to backend entity types. Navigation, heading hierarchy, and metric framing reinforce this arc.
+
 ## Cross-Screen Interaction Contract
 
 These conventions are binding across all redesign work:
@@ -102,6 +122,31 @@ These conventions are binding across all redesign work:
 4. **Feedback model.** Persistent inline issues stay inline, transient acknowledgements stay transient, and destructive actions use explicit confirmation. Do not invent route-specific feedback semantics.
 5. **Status semantics.** Shared status tone mapping stays consistent across route families. Do not introduce local status-color rules that mean something different on different screens.
 6. **Feature ownership.** Shared framing may be unified, but route-specific copy, entity logic, workflow behavior, and page-specific rendering remain local unless reuse is proven and promoted intentionally.
+7. **Interaction model.** Focus, keyboard navigation, hover/press feedback, loading skeletons, optimistic updates, and error recovery must follow the shared interaction patterns defined in `01 · Command Center System`. Do not invent route-specific interaction models.
+
+### Typography Contract
+
+Three typographic roles govern all redesign surfaces. Do not apply monospace to headings, prose body, or narrative content.
+
+| Role | Typeface | Use |
+|------|----------|-----|
+| **Display** | Space Grotesk | Page titles, section titles, dialog titles — structural headings that establish hierarchy and orientation. |
+| **Body** | Source Sans 3 (upgrade path: Inter) | Prose, descriptions, candidate narratives, message bodies, and any content the user reads for meaning rather than scans for state. |
+| **Mono** | JetBrains Mono | Data chrome — numeric values, IDs, timestamps, status tags, code snippets, metric numbers, and any content the user scans for state rather than reads for meaning. |
+
+The display typeface must be confirmed against the repo's existing `Space Grotesk` display token in `frontend/src/design-system/tokens/typography.ts`. If a future decision replaces the display face, the handoff doc, Command Center specimens, and `Baldin-Library` typography foundation must be updated in the same slice.
+
+### Exceptions and Escape Clause
+
+The conventions in this contract are defaults. A route family may deviate when the deviation is documented in `01 · Command Center System` with rationale and the deviation does not break cross-screen consistency for the user.
+
+Named exceptions:
+
+- **MetricStrip framing.** Default: every collection surface leads with a MetricStrip. Exception: settings, auth, and marketing surfaces do not need metric framing because they are not pipeline or collection surfaces. Anti-pattern: showing a MetricStrip with all-zero or irrelevant counts just to comply with the default.
+- **Heading hierarchy.** Default: collection and detail pages each use one shared heading strategy. Exception: marketing and auth surfaces may use display-weight headings that do not follow the collection/detail split because they serve a different reading intent. Anti-pattern: inventing a unique heading stack for a single route because it "feels different."
+- **Density rules.** Default: density is page-level. Exception: a detail page may mix comfortable and compact zones when the page contains both narrative content (comfortable) and operational data (compact). Anti-pattern: allowing per-card or per-row density overrides that produce visual noise within a single scroll.
+- **Status semantics.** Default: shared status-tone mapping is consistent across route families. Exception: a domain-specific status (e.g., "graduating" in settings) may define a local status only when no shared status already carries that meaning. Anti-pattern: redefining a shared status color for a route-specific meaning.
+- **Dialog conventions.** Default: mutations use dialogs with explicit confirmation for destructive actions. Exception: lightweight inline-edit patterns may skip dialog confirmation when the edit is immediately reversible and the entity is low-risk. Anti-pattern: using a full destructive-confirm dialog for toggling a boolean setting.
 
 ## Shared-System Build Order
 

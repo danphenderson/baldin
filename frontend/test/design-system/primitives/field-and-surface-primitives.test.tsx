@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import {
   CollectionToolbar,
+  MetricStrip,
   ReadonlyField,
   SearchField,
   SurfaceCard,
@@ -105,5 +106,24 @@ describe('field and surface primitives', () => {
     expect(controlsSlot).toContainElement(screen.getByRole('button', { name: 'Filters' }));
     expect(actionsSlot).toContainElement(screen.getByRole('button', { name: 'New application' }));
     expect(secondarySlot).toContainElement(screen.getByText('Secondary filters'));
+  });
+
+  it('supports start-aligned MetricStrip rows without dividers', () => {
+    const { container } = renderWithTheme(
+      <MetricStrip
+        variant="inline"
+        align="start"
+        dividers={false}
+        items={[
+          { label: 'Saved roles', value: 3 },
+          { label: 'Matching search', value: 1 },
+        ]}
+      />,
+    );
+
+    expect(container.querySelectorAll('.MuiDivider-root')).toHaveLength(0);
+    expect(screen.getByText('Saved roles').parentElement).toHaveStyle({
+      textAlign: 'left',
+    });
   });
 });

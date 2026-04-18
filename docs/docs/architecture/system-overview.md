@@ -2,27 +2,30 @@
 sidebar_position: 1
 slug: /architecture/system-overview
 title: See System Boundaries
-description: See the service topology, runtime boundaries, and main product domains.
+description: See the current service topology, runtime boundaries, and main workspace domains.
 ---
 
-<!-- last-verified: 2026-04-13 -->
+<!-- last-verified: 2026-04-17 -->
 
 # See System Boundaries
 
-Baldin is a full-stack local-first workspace for job-search automation. The system is developed primarily through `docker-compose up --build --watch`, with the frontend, backend, internal ETL service, main Postgres database, separate test database, Redis, a background crawler worker, and a Docusaurus docs site forming the local topology.
+Today Baldin runs as a private, local-first job-search workspace. The supported topology is the repo-local `docker-compose up --build --watch` stack: the frontend workspace plus Admin SPA, the standalone operator-design reference app, the backend API, the internal ETL service, the crawler worker, Redis, the docs site, the main Postgres database, and the separate test database.
+
+The target direction is an applicant-side labor market observability platform, but that future shared-signal layer is not a live runtime capability in the running stack. This page describes the current shipped workspace boundaries, not unshipped listing-observability or anonymized market-intelligence features.
 
 ## Service Topology
 
 ```mermaid
 graph LR
     accTitle: Baldin Service Topology
-    accDescr: Shows the Docker Compose stack — Frontend (React/Vite on port 5173), Backend API (FastAPI/Uvicorn on port 8000), internal ETL service, Crawler Worker, Main PostgreSQL DB with pgvector (5432), Test DB (5431), Redis (6379), Docs (3001), and an external OpenAI LLM — and the connection direction between them.
+    accDescr: Shows the Docker Compose stack — Frontend plus Admin SPA (React/Vite on port 5173), Operator Design reference app (React/Vite on port 5174), Backend API (FastAPI/Uvicorn on port 8000), internal ETL service, Crawler Worker, Main PostgreSQL DB with pgvector (5432), Test DB (5431), Redis (6379), Docs (3001), and an external OpenAI LLM — and the connection direction between them.
     Browser["Browser"]
     LLM["OpenAI"]
 
     subgraph dc["Docker Compose"]
         direction TB
-        FE["Frontend<br/>React / Vite<br/>:5173"]
+        FE["Frontend + Admin SPA<br/>React / Vite<br/>:5173"]
+        OD["Operator Design<br/>React / Vite<br/>:5174"]
         API["Backend API<br/>FastAPI / Uvicorn<br/>:8004 → :8000"]
         ETL["ETL Service<br/>FastAPI / Uvicorn<br/>(internal only)"]
         CW["Crawler Worker<br/>Python<br/>(no exposed port)"]
@@ -33,6 +36,7 @@ graph LR
     end
 
     Browser --> FE
+    Browser --> OD
     Browser --> DOCS
     FE -->|VITE_API_URL| API
     API --> DB
@@ -54,7 +58,8 @@ graph LR
 | `etl-service` | `backend/Dockerfile` (target: dev) | internal only | Internal crawler execution boundary |
 | `web` | `backend/Dockerfile` (target: dev) | 8004→8000 | FastAPI backend with the Uvicorn dev server and Compose Watch sync |
 | `crawler-worker` | `backend/Dockerfile` | — | Background crawler worker consuming Redis jobs |
-| `frontend` | `frontend/Dockerfile` | 5173 | React/Vite dev server |
+| `frontend` | `frontend/Dockerfile` | 5173 | React/Vite dev server for the main app plus the dedicated Admin SPA at `/admin/` |
+| `operator-design` | `operator-design/Dockerfile` | 5174 | Standalone reference-only redesign app |
 | `docs` | `docs/Dockerfile` | 3001→3000 | Docusaurus dev server |
 
 ## Technology Stack
@@ -89,11 +94,15 @@ graph LR
 - **Document collaboration** remains a separate realtime transport boundary on `/documents/{id}/collaborate`, where the frontend uses Yjs over WebSocket after the bootstrap claim flow completes.
 - The **ETL layer** is split between the reusable crawler code in `backend/etl/` and the internal `etl-service` runtime that executes crawler requests over an internal HTTP boundary. It is not part of the user-triggered extraction runtime path.
 
-## Main Product Domains
+## Current Workspace Domains
 
 - Profile and job-search records
 - Versioned documents, collaboration, and agent-authored workspaces
 - Extraction, orchestration, crawler automation, and agent execution
-- Networking, messaging, conversational agent chat, activity, and action items
+- Opt-in network context, messaging, conversational agent chat, personal activity, and action items
 
-Those domains are documented in more detail in [Map The Data Model](./data-model.md), [Understand Document Collaboration](./document-collaboration.md), and [Follow Network Flows](./networking-and-messaging.md).
+## Target Direction (Not Yet In The Running Stack)
+
+README posture points toward applicant-side listing observability based on aggregated, anonymized signals and broader trust indicators. Those shared-signal and listing-health surfaces are not yet exposed as live product features in the current local stack.
+
+The current workspace domains are documented in more detail in [Map The Data Model](./data-model.md), [Understand Document Collaboration](./document-collaboration.md), and [Follow Network Flows](./networking-and-messaging.md).

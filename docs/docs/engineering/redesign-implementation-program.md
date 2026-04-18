@@ -8,7 +8,11 @@ description: Post-closeout developer workflow for turning the command-center red
 
 # Redesign Implementation Program
 
-Use this page only for the developer execution flow after the redesign handoff is accepted as the working baseline.
+:::caution Archived
+This program is historical as of `2026-04-17`. Active implementation now follows [v2.1 Hard Fork](../reference/v2-1-hard-fork.md) and [v2.1 Implementation Program](./v2-1-implementation-program.md).
+:::
+
+Use this page only when reviewing the historical developer workflow that depended on the redesign handoff as the working baseline.
 
 [Baldin Redesign Handoff](../reference/baldin-redesign-handoff.md) remains the canonical redesign source. This program does not redefine product direction, route semantics, or shared UX rules.
 
@@ -138,7 +142,7 @@ Validation for this phase:
 - `cd frontend && ./node_modules/.bin/tsc --noEmit`
 - `cd frontend && npm run build`
 - `cd frontend && npm run lint:theme`
-- `cd frontend && npm run storybook:build` when public shared surfaces change
+- `cd frontend && npm run test -- <targeted shared-surface test files>` when public shared React behavior changes
 
 ## Phase 4: Product-App Redesign Slices
 
@@ -189,7 +193,7 @@ Every implementation slice must include:
 - `cd frontend && ./node_modules/.bin/tsc --noEmit`
 - `cd frontend && npm run build`
 - `cd frontend && npm run lint:theme` when shared surfaces or import boundaries changed
-- `cd frontend && npm run storybook:build` when public design-system exports changed
+- `cd frontend && npm run test -- <targeted shared-surface test files>` when public shared React behavior changed
 - visual and manual verification against the approved Figma nodes in the active brief
 
 If backend contracts change, add targeted backend pytest scope, verify schema regeneration output, and rerun frontend typecheck after regenerated artifacts land.

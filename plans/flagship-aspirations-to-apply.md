@@ -1,12 +1,13 @@
-# Quarter Roadmap: Figma-Led Aspirations-to-Apply Flagship
+# Quarter Roadmap: Historical Aspirations-to-Apply Flagship
 
-> Active plan for the current quarter.
-> Working branch: `schema-v2` (continues as the flagship branch).
+> Archived plan kept for historical context after the `v2.1` hard fork.
+> Do not use this file as the active implementation contract. Start from `docs/docs/reference/v2-1-hard-fork.md` and `plans/v2.1/*`.
+> Historical working branch at the time: `schema-v2`.
 > Prior art: [plans/aspirations.md](./aspirations.md) — original 6-phase slice plan for the aspirations backend.
 
 ## Problem Statement
 
-Baldin's job-search automation flow is fragmented: aspirations live under a profile CRUD shell, lead ranking exposes aspiration-alignment data that is not visually prominent, and the transition from a ranked lead into an application happens through a small menu button without contextual guidance. The backend already supports suggestion generation, aspiration-aware ranking, and structured matching — but the frontend does not surface these capabilities as a connected workflow. This quarter delivers the end-to-end **aspirations → ranked leads → application start** experience as the flagship product flow, anchored by Figma design work and the existing design-system foundation.
+Baldin's job-search automation flow was fragmented when this roadmap was written: aspirations lived under a profile CRUD shell, lead ranking exposed aspiration-alignment data that was not visually prominent, and the transition from a ranked lead into an application happened through a small menu button without contextual guidance. The backend already supported suggestion generation, aspiration-aware ranking, and structured matching, but the frontend did not yet surface these capabilities as a connected workflow. This archived roadmap tracked the end-to-end **aspirations → ranked leads → application start** flagship flow before the `v2.1` hard fork moved active implementation to the code-first design-system contract.
 
 ## Current State (schema-v2 baseline)
 
@@ -37,7 +38,7 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 | Token inventory + primitives + Figma metadata | Complete — 8 `.figma.ts` mappings aligned to `Baldin-Library`; shared `primary` status tone for `StatusChip`; workspace Code Connect reads remain seat-blocked and non-gating |
 | `lint:theme` gate | Complete — green as of 2026-04-13 |
 | Browser harness | Complete — canonical `figma-wave1` supports aspirations `empty|loading|suggested|no-signal|rate-limited`, leads `unranked|ranked|disabled|error`, and apply `ready|already-applied` |
-| Figma workspace | Complete — `Baldin-Library` is the reusable source, `Baldin Product Redesign — Command Center` is the active product-flow working file, `Baldin-App-Screens` remains a behavioral archive for older captures, and the reviewed Make file is treated as an archived sandbox with no meaningful direct port candidate |
+| Figma workspace | Historical context only — `Baldin-Library`, `Baldin Product Redesign — Command Center`, and `Baldin-App-Screens` remain archived design references after the `v2.1` hard fork |
 
 ### Docs
 
@@ -80,11 +81,11 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 | D9 | "Accept all" runs sequential creates for the active tab kind only. Successes are persisted and removed from drafts, `409` duplicates are treated as non-fatal already-satisfied items and removed from drafts, and the batch stops on the first retryable failure (`429`, `503`, `network`, or unknown 5xx) with untouched remaining drafts left visible for retry | 2026-04-13 |
 | D10 | Story 10 inline already-applied state is powered by the existing `/api/v1/applications/` list surface. Leads page loads applications once, derives a `lead_id -> application` map locally, passes that state into lead cards, and updates the map after successful application creation; no backend contract changes | 2026-04-13 |
 | D11 | Ranking remains aspiration-gated this quarter. Users without aspirations do not get generic relevance-only ranking; they continue to see the disabled state with clearer guidance to add aspirations first | 2026-04-13 |
-| D12 | Figma is upstream for flow/layout decisions after the lint baseline is fixed. Harness expansion is downstream reference/capture work that reflects the approved Figma direction and implemented UI states | 2026-04-13 |
+| D12 | Before the `v2.1` hard fork, this roadmap treated Figma as upstream for flow and layout decisions after the lint baseline was fixed. That dependency is now historical only | 2026-04-13 |
 | D13 | Validation commands in this epic use repo-aligned working-directory forms. Host-side backend pytest must set `TEST_DATABASE_HOSTNAME=127.0.0.1` and `TEST_DATABASE_PORT=5431` explicitly to avoid the tracked `backend/.env` Compose hostname mismatch | 2026-04-13 |
 | D14 | Frontend stabilization slice landed on 2026-04-13: `lint:theme` is green, `StatusChip` has a shared `primary` tone, the leads page preloads applications for duplicate-safe inline state, and `figma-wave1` now covers aspirations/leads/apply capture routes | 2026-04-13 |
 | D15 | The shipped suggest seam is `getAspirationSuggestions(token)` plus `AspirationAdapter.suggest(kind)` returning draft suggestions filtered client-side by active kind. Explicit error-category normalization remains part of the UI implementation slice, not the stabilization slice | 2026-04-13 |
-| D16 | `Baldin-Library` is the canonical reusable-component file and `Baldin Product Redesign — Command Center` is the active working file. `Baldin-App-Screens` remains an archive-only behavioral reference, and the reviewed Make file is not part of the default delivery path | 2026-04-13 |
+| D16 | Before the `v2.1` hard fork, `Baldin-Library` was treated as the main reusable-component file and `Baldin Product Redesign — Command Center` as the active working file. Those files are now archived references only | 2026-04-13 |
 | D17 | The `Baldin-App-Screens` archive keeps older capture evidence separate from the `Flagship Flow Screens` page in `Baldin Product Redesign — Command Center` so archive references remain available without implying active-source status | 2026-04-13 |
 | D18 | Full Figma version-history review depends on browser or web access. MCP remains the supported path for structure, screenshots, and component inspection without a Developer seat | 2026-04-13 |
 | D19 | The authoritative Make review (`App.tsx`, `theme.css`, `button.tsx`, `card.tsx`, `badge.tsx`, and `Guidelines.md`) found an empty app shell, stock guidelines, and generic Tailwind or shadcn scaffolding, so no Make-derived primitive or token surface is approved for direct migration | 2026-04-13 |
@@ -296,7 +297,7 @@ Baldin's job-search automation flow is fragmented: aspirations live under a prof
 
 **Acceptance criteria:**
 - [x] `Baldin Product Redesign — Command Center` now has a dedicated `Flagship Flow Screens` page covering aspirations with suggest, ranked leads, and apply handoff
-- [x] Figma remains the source of truth for flagship flow ordering, layout grouping, and state inventory; the harness is a downstream capture and verification artifact
+- [x] At the time of this archived plan, Figma drove flagship flow ordering, layout grouping, and state inventory; the harness acted as a downstream capture and verification artifact
 - [x] The flagship page captures these states:
   - aspirations: empty, loading, suggestions returned, no-signal, and rate-limited
   - leads: unranked, ranked with aspiration alignment, ranking disabled because no aspirations, and ranking unavailable or error
@@ -487,5 +488,5 @@ S1 remains the branch-validation foundation; S2 is the design-entry gate.
 |------|---------------|
 | Sequencing and coordination | Baldin Project Manager |
 | Contracts, docs, gates, cross-stack | Baldin Lead Full-Stack Architect |
-| Flagship UX and Figma handoff | Baldin Frontend Agent |
+| Historical flagship UX and archived design comparison | Baldin Design Lead Agent |
 | Backend (only if contract proves insufficient) | Baldin Backend Agent |

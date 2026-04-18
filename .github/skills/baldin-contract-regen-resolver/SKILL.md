@@ -35,7 +35,7 @@ Use this skill to decide whether Baldin's generated API contract needs regenerat
 - `openapi.json` and `frontend/src/schema.d.ts` are generated artifacts. Never hand-edit them.
 - Regeneration is required whenever the public FastAPI request or response surface changes.
 - The checked-in script only auto-runs when staged changes include `backend/app/schemas.py` or `backend/app/api/**/*.py`, unless `SCHEMA_UPDATE_FORCE=1` is set.
-- The script imports `app.main`, so backend env readiness matters during contract generation. Use the tracked `backend/.env` baseline and provide a non-empty `OPENAI_API_KEY` through process env or `backend/.env.local` when app import needs it.
+- The script imports `app.main`, so backend env readiness matters during contract generation. Use the tracked `backend/.env` baseline, add persistent local overrides in `backend/.env.local`, and use process env for one-off launches. A real `OPENAI_API_KEY` is only needed for OpenAI-backed features, not for app import.
 - CI is the final freshness guard, not the first discovery mechanism. Prefer catching stale contract state locally before merge.
 
 ## Procedure
@@ -47,7 +47,7 @@ Use this skill to decide whether Baldin's generated API contract needs regenerat
 2. Run preflight checks.
    - Confirm a usable Python interpreter exists for backend app import.
    - Confirm frontend dependencies are available so `npm exec openapi-typescript` can run.
-   - Confirm backend env values are sufficient for app import, especially `OPENAI_API_KEY` from process env or `backend/.env.local`.
+   - Confirm backend env values are sufficient for app import, using `backend/.env.local` as the normal local override path and process env for one-off launches.
    - If the user is working from unstaged changes or broader validation, decide whether `SCHEMA_UPDATE_FORCE=1` is required.
 3. Execute regeneration through the repo script.
    - Prefer `./scripts/update_frontend_schemas.sh`.
@@ -69,7 +69,7 @@ Use this skill to decide whether Baldin's generated API contract needs regenerat
 `Preflight`
 - Python readiness
 - frontend or npm readiness
-- env readiness, including whether `OPENAI_API_KEY` had to be set
+- env readiness, including whether `backend/.env.local` or process env supplied any needed overrides
 - whether `SCHEMA_UPDATE_FORCE` was needed
 
 `Execution`
@@ -93,7 +93,7 @@ Use this skill to decide whether Baldin's generated API contract needs regenerat
 - The script exits early because no matching staged files are present.
 - A Python interpreter cannot be found for OpenAPI generation.
 - Frontend dependencies are missing, so `npm exec openapi-typescript` fails.
-- Backend app import fails because env setup is incomplete, including a missing `OPENAI_API_KEY`.
+- Backend app import fails because env setup is incomplete or another settings regression is blocking startup.
 - Regeneration succeeds but frontend typing breaks and needs a deliberate follow-on.
 - Backend changes do not actually affect the public API surface, so regeneration is unnecessary and should be explained, not forced blindly.
 

@@ -166,31 +166,30 @@ Update the design system in Figma and wire up the code too.
 
 Why it is weak:
 
-- It mixes Figma-first design work with code implementation in one sentence.
-- It does not say whether the output is a library study, a command-center redesign step, or a repo-backed mapping change.
+- It mixes archived-design reference work with code implementation in one sentence.
+- It does not say whether the output is a historical design review, a repo-backed mapping change, or a code implementation slice.
 - It does not ask for design evidence or a handoff when implementation should move to another owner.
 
 Good prompt:
 
 ```text
-Lead this as Figma-first design work.
+Lead this as archived-design reference work.
 
 Objective:
-Finalize the next approved route-family redesign and prepare a clean design-to-code handoff.
+Inspect the archived design evidence for the next route-family slice and prepare a concise comparison against the current code-backed implementation contract.
 
 Context:
-Use `docs/docs/reference/baldin-redesign-handoff.md` as the active redesign source of truth. The output should be ready for the required implementation brief without reopening capture work.
+Use `docs/docs/reference/v2-1-hard-fork.md` as the active source of truth. Archived redesign material is reference-only and must not become a delivery gate.
 
 Allowed paths:
-- ./docs/docs/reference/baldin-redesign-handoff.md
-- ./docs/docs/engineering/redesign-implementation-program.md
+- ./docs/docs/reference/v2-1-hard-fork.md
+- ./docs/docs/engineering/v2-1-implementation-program.md
 - ./frontend/src/design-system/**/*.figma.ts
-- ./frontend/src/design-system/**/*stories.tsx
 - ./docs/docs/reference/design-system-catalog.md
 
 Validation:
 - capture or inspect the relevant Figma node
-- run `cd frontend && npm run storybook:build` if the code-backed mapping changed
+- run `cd frontend && npm run test -- <targeted shared-surface test files>` only if a shared React primitive or pattern changed
 - run `npm --prefix docs run build` if design docs changed
 
 Return:
@@ -373,7 +372,7 @@ Own cross-stack design, delegation, and integration across backend, frontend, an
 
 - If ownership is unclear, start with Baldin Project Manager.
 - If the task is obviously backend-only or frontend-only, start with that specialist directly instead of routing through issue-dispatch prompts.
-- If the task is primarily Figma-first design work, start with Baldin Design Lead Agent before asking for repo implementation.
+- If the task is primarily archived-design reference work, start with Baldin Design Lead Agent before asking for repo implementation.
 - If the task changes backend responses consumed by the frontend, either start with Baldin Lead Full-Stack Architect or explicitly require a next-owner handoff.
 - Ask for the standard handback fields whenever an agent is expected to implement or validate changes.
 - Ask for generated-artifact status whenever API routes or schemas might move.

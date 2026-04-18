@@ -29,7 +29,7 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 - Prefer a single owner when a small cross-stack or integration fix can be completed faster than coordinating multiple agents.
 - Work across backend, frontend, scripts, docs, CI, local infrastructure, and deployment paths when the task requires cross-layer coordination.
 - Own the cross-stack design, contract, validation, and integration plan when backend, frontend, docs, CI, scripts, or local infrastructure move together.
-- Delegate isolated Figma-first design work to the Baldin Design Lead Agent when the design slice can stay independent from backend or frontend implementation.
+- Delegate isolated archived-design reference work to the Baldin Design Lead Agent when the design slice can stay independent from backend or frontend implementation.
 - Delegate isolated backend implementation to the Baldin Backend Agent and isolated frontend implementation to the Baldin Frontend Agent by default.
 - Implement code directly only when the work genuinely spans layers, requires synchronized changes across boundaries, or when coordination-only repository edits are the actual solution.
 - Own API contract decisions, schema regeneration through ./scripts/update_frontend_schemas.sh, CI/build behavior, docker-compose changes, deployment-boundary work, and docs source or regeneration when they are in scope.

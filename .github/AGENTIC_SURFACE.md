@@ -28,8 +28,9 @@ Codex and compatible tooling should apply root `AGENTS.md` plus the applicable s
 ## Worktree Env Contract
 
 - `backend/.env` and `frontend/.env` are repo-tracked safe local defaults so fresh Codex worktrees can boot without copying ignored files.
-- Real secrets belong in Codex UI environment variables or ignored `backend/.env.local` / `frontend/.env.local` overrides.
+- Real secrets belong in ignored `backend/.env.local` / `frontend/.env.local` overrides for persistent local work, or Codex UI environment variables for one-off launches.
 - `scripts/check_codex_worktree_env.sh` is the supported Codex setup hook for validating env readiness inside a new worktree.
+- Compose-backed backend services load `backend/.env`, then optional `backend/.env.local`, with explicit shell exports reserved for one-off override launches.
 - `.vscode/mcp.json` is the primary repo-owned workspace MCP contract. This slice tracks `figma` as the HTTP MCP endpoint.
 - `.codex/config.toml` contains Codex custom-agent defaults only. It no longer mirrors a repo-owned `webdev` MCP server because browser capture should use the frontend Playwright runtime, configured host browser tooling, or direct Figma MCP inspection.
 - User-scoped or globally configured Codex MCP servers can still appear on an individual machine. They are outside this repo-owned contract.
@@ -50,7 +51,7 @@ Codex and compatible tooling should apply root `AGENTS.md` plus the applicable s
 | Baldin Project Manager | Coordination, delegation, workstream planning |
 | Baldin Backend Agent | Backend implementation in `./backend` |
 | Baldin Frontend Agent | Frontend implementation in `./frontend` |
-| Baldin Design Lead Agent | Figma-first design work, browser-harness capture, and design-to-code handoff |
+| Baldin Design Lead Agent | Archived-design reference work, browser-harness capture, and design-system mapping maintenance |
 | Baldin Lead Full-Stack Architect | Cross-stack architecture and integration |
 
 ### Copilot Prompts (14)

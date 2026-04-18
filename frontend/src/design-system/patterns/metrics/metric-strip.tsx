@@ -15,14 +15,30 @@ export interface MetricStripItem {
 export interface MetricStripProps {
   items: MetricStripItem[];
   variant: 'inline' | 'card';
+  align?: 'center' | 'start';
+  dividers?: boolean;
 }
 
-const MetricStripContent: React.FC<{ items: MetricStripItem[]; focusRing: string }> = ({ items, focusRing }) => (
+const MetricStripContent: React.FC<{
+  items: MetricStripItem[];
+  focusRing: string;
+  align: 'center' | 'start';
+  dividers: boolean;
+}> = ({
+  items,
+  focusRing,
+  align,
+  dividers,
+}) => (
   <Stack
     direction="row"
-    divider={<Divider orientation="vertical" flexItem />}
+    divider={dividers ? <Divider orientation="vertical" flexItem /> : undefined}
     spacing={3}
-    sx={{ justifyContent: 'space-around', flexWrap: { xs: 'wrap', sm: 'nowrap' }, rowGap: 1 }}
+    sx={{
+      justifyContent: align === 'start' ? 'flex-start' : 'space-around',
+      flexWrap: { xs: 'wrap', sm: 'nowrap' },
+      rowGap: 1,
+    }}
   >
     {items.map((item) => {
       const content = (
@@ -59,8 +75,9 @@ const MetricStripContent: React.FC<{ items: MetricStripItem[]; focusRing: string
             sx={{
               display: 'flex',
               flexDirection: 'column',
-              textAlign: 'center',
-              minWidth: 64,
+              alignItems: align === 'start' ? 'flex-start' : 'center',
+              textAlign: align === 'start' ? 'left' : 'center',
+              minWidth: align === 'start' ? 0 : 64,
               flexShrink: 0,
               borderRadius: toRadiusPx(radiusTokens.xs),
               px: 1,
@@ -78,7 +95,14 @@ const MetricStripContent: React.FC<{ items: MetricStripItem[]; focusRing: string
       }
 
       return (
-        <Box key={item.label} sx={{ textAlign: 'center', minWidth: 64, flexShrink: 0 }}>
+        <Box
+          key={item.label}
+          sx={{
+            textAlign: align === 'start' ? 'left' : 'center',
+            minWidth: align === 'start' ? 0 : 64,
+            flexShrink: 0,
+          }}
+        >
           {content}
         </Box>
       );
@@ -86,7 +110,12 @@ const MetricStripContent: React.FC<{ items: MetricStripItem[]; focusRing: string
   </Stack>
 );
 
-export const MetricStrip: React.FC<MetricStripProps> = ({ items, variant }) => {
+export const MetricStrip: React.FC<MetricStripProps> = ({
+  items,
+  variant,
+  align = 'center',
+  dividers = true,
+}) => {
   const theme = useTheme();
   const baldin = (theme as typeof theme & { baldin?: typeof theme.baldin }).baldin;
   const stripRadius = baldin?.radius.lg ?? radiusTokens.lg;
@@ -97,7 +126,12 @@ export const MetricStrip: React.FC<MetricStripProps> = ({ items, variant }) => {
   if (variant === 'card') {
     return (
       <CardShell density="compact" surface="raised" contentSx={{ py: 2, '&:last-child': { pb: 2 } }}>
-        <MetricStripContent items={items} focusRing={focusRing} />
+        <MetricStripContent
+          items={items}
+          focusRing={focusRing}
+          align={align}
+          dividers={dividers}
+        />
       </CardShell>
     );
   }
@@ -113,7 +147,12 @@ export const MetricStrip: React.FC<MetricStripProps> = ({ items, variant }) => {
         overflowX: 'auto',
       }}
     >
-      <MetricStripContent items={items} focusRing={focusRing} />
+      <MetricStripContent
+        items={items}
+        focusRing={focusRing}
+        align={align}
+        dividers={dividers}
+      />
     </Box>
   );
 };

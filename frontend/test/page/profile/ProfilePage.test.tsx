@@ -1,141 +1,83 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+
 import { UserContext } from '@/context/user-context';
 import { ToolbarHeaderContext } from '@/layout/toolbar-header-context';
-
-const mockUseProfileData = vi.fn();
-const mockUseProfileCompletion = vi.fn();
-
-vi.mock('@/page/profile/hooks/useProfileData', () => ({
-  useProfileData: (...args: unknown[]) => mockUseProfileData(...args),
-}));
-
-vi.mock('@/page/profile/hooks/useProfileCompletion', () => ({
-  useProfileCompletion: (...args: unknown[]) => mockUseProfileCompletion(...args),
-}));
-
-vi.mock('@/page/profile/components/ProfileHero', () => ({
-  ProfileHero: () => <div>profile-hero</div>,
-}));
-
-vi.mock('@/page/profile/components/ProfileBuilderPanel', () => ({
-  ProfileBuilderPanel: () => <div>profile-builder</div>,
-}));
-
-vi.mock('@/page/profile/components/DocumentsSummary', () => ({
-  DocumentsSummary: () => <div>documents-summary</div>,
-}));
-
-vi.mock('@/component/profile-import-modal', () => ({
-  default: () => null,
-}));
-
-vi.mock('@/component/mfa-setup-card', () => ({
-  default: () => <div>mfa-card</div>,
-}));
-
 import ProfilePage from '@/page/profile/ProfilePage';
 
-const userContextValue = {
-  user: { id: 'user-1', first_name: 'Jane', last_name: 'Doe', email: 'jane@test.com' } as never,
-  setUser: vi.fn(),
-  token: 'test-token',
-  setToken: vi.fn(),
-  loading: false,
-  canAccessTier: vi.fn(() => true),
-};
+const baseUser = {
+  id: 'user-1',
+  email: 'alex@baldin.dev',
+  first_name: 'Alex',
+  last_name: 'Mercer',
+  city: 'San Francisco',
+  state: 'CA',
+  country: 'United States',
+  time_zone: 'America/Los_Angeles',
+} as never;
 
-function makeProfileData(overrides: Partial<Record<string, unknown>> = {}) {
-  return {
-    loading: false,
-    error: '',
-    toast: '',
-    profile: {
-      first_name: 'Jane',
-      last_name: 'Doe',
-      city: 'San Francisco',
-      state: 'CA',
-      country: 'USA',
-    },
-    skills: [],
-    experiences: [],
-    education: [],
-    certificates: [],
-    contacts: [],
-    refresh: vi.fn(),
-    setShowImportModal: vi.fn(),
-    showImportModal: false,
-    setToast: vi.fn(),
-    setError: vi.fn(),
-    editingProfile: false,
-    profileDraft: null,
-    saving: false,
-    startEditProfile: vi.fn(),
-    cancelEditProfile: vi.fn(),
-    handleSaveProfile: vi.fn(),
-    pf: vi.fn(),
-    openCreate: vi.fn(),
-    openEdit: vi.fn(),
-    confirmDelete: vi.fn(),
-    editOpen: false,
-    editSection: 'skills',
-    editItem: null,
-    editSaving: false,
-    setEditItem: vi.fn(),
-    closeEdit: vi.fn(),
-    handleSaveItem: vi.fn(),
-    deleteTarget: null,
-    cancelDelete: vi.fn(),
-    handleDelete: vi.fn(),
-    ...overrides,
-  };
-}
-
-function renderPage() {
+function renderPage(user: typeof baseUser | null = baseUser, loading = false) {
   return render(
     <ToolbarHeaderContext.Provider value={vi.fn()}>
-      <UserContext.Provider value={userContextValue}>
-        <ProfilePage />
+      <UserContext.Provider
+        value={{
+          user,
+          setUser: vi.fn(),
+          token: 'test-token',
+          setToken: vi.fn(),
+          loading,
+          canAccessTier: vi.fn(() => true),
+        }}
+      >
+        <MemoryRouter initialEntries={['/me']}>
+          <Routes>
+            <Route path="/me" element={<ProfilePage />} />
+            <Route path="/me/aspirations/roles" element={<div>roles-route</div>} />
+            <Route path="/me/aspirations/companies" element={<div>companies-route</div>} />
+            <Route path="/leads" element={<div>leads-route</div>} />
+            <Route path="/applications" element={<div>applications-route</div>} />
+          </Routes>
+        </MemoryRouter>
       </UserContext.Provider>
     </ToolbarHeaderContext.Provider>,
   );
 }
 
 describe('ProfilePage', () => {
-  beforeEach(() => {
-    mockUseProfileData.mockReset();
-    mockUseProfileCompletion.mockReset();
-    mockUseProfileCompletion.mockReturnValue({ completionPercent: 0, rankedTasks: [] });
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('renders loading skeletons while profile data is loading', () => {
-    mockUseProfileData.mockReturnValue(makeProfileData({ loading: true }));
-
+  it('renders the populated hub and routes into role aspirations', async () => {
+    const user = userEvent.setup();
     renderPage();
 
-    expect(document.querySelectorAll('.MuiSkeleton-root').length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'Alex Mercer' })).toBeInTheDocument();
+    expect(screen.getByText('Direction set')).toBeInTheDocument();
+    expect(screen.getByText('Leadership + systems focus')).toBeInTheDocument();
+    expect(screen.getByText('America/Los_Angeles')).toBeInTheDocument();
+    expect(screen.getByText('Aspirations handoff')).toBeInTheDocument();
+    expect(screen.getByText('Systems-led product design')).toBeInTheDocument();
+    expect(screen.getAllByText('Northstar').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Flagship Hub')).not.toBeInTheDocument();
+
+    await user.click(screen.getAllByRole('button', { name: 'Review role aspirations' })[0]);
+
+    expect(screen.getByText('roles-route')).toBeInTheDocument();
   });
 
-  it('renders shared empty states for empty profile sections', () => {
-    mockUseProfileData.mockReturnValue(makeProfileData());
+  it('renders the empty hub state and routes into company aspirations', async () => {
+    const user = userEvent.setup();
+    renderPage(null, false);
 
-    renderPage();
+    expect(screen.getByRole('heading', { name: 'Profile & Aspirations Hub' })).toBeInTheDocument();
+    expect(screen.getByText('Needs direction')).toBeInTheDocument();
+    expect(screen.getByText('No direction selected')).toBeInTheDocument();
+    expect(screen.getByText('Location to be added')).toBeInTheDocument();
+    expect(screen.getByText('No direction themes yet')).toBeInTheDocument();
+    expect(screen.getByText('No role direction yet')).toBeInTheDocument();
 
-    expect(screen.getByText('No skills yet')).toBeInTheDocument();
-    expect(screen.getByText('No experience yet')).toBeInTheDocument();
-    expect(screen.getByText('No education yet')).toBeInTheDocument();
-  });
+    await user.click(screen.getAllByRole('button', { name: 'Start company aspirations' })[0]);
 
-  it('renders inline error feedback when profile loading fails', () => {
-    mockUseProfileData.mockReturnValue(makeProfileData({ error: 'Profile failed to load' }));
-
-    renderPage();
-
-    expect(screen.getByText('Profile failed to load')).toBeInTheDocument();
+    expect(screen.getByText('companies-route')).toBeInTheDocument();
   });
 });

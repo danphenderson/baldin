@@ -138,7 +138,7 @@ The current flagship flow spans three frontend moments that are intentionally co
 ### Harness And Figma References
 
 - `frontend/src/browser-harness/figma-wave1.tsx` is the offline verification surface for flagship states across aspirations, ranked leads, and apply handoff.
-- Figma remains upstream for flow sequencing and layout grouping. The harness mirrors approved states for implementation verification and capture, not for inventing new product behavior.
+- The browser harness is the active verification surface for these flagship states. Archived Figma material can still help with historical comparison, but it does not lead new implementation decisions.
 
 ## Contract Management
 

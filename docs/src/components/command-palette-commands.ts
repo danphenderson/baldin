@@ -9,14 +9,14 @@ export type CommandPaletteCommand = {
 export const commandPaletteCommands: CommandPaletteCommand[] = [
   {
     title: 'Baldin Home',
-    description: 'Return to the developer-preview landing page.',
+    description: 'Return to the local-first Baldin landing page.',
     href: '/',
     section: 'Top Level',
-    keywords: ['home', 'landing', 'developer preview'],
+    keywords: ['home', 'landing', 'local-first', 'observability'],
   },
   {
     title: 'Choose Your Next Step',
-    description: 'Open the docs entry point for setup, architecture, implementation, and reference work.',
+    description: 'Open the docs entry point for current posture, setup, architecture, implementation, and reference work.',
     href: '/docs/',
     section: 'Docs',
     keywords: ['docs home', 'start here', 'overview'],
@@ -30,7 +30,7 @@ export const commandPaletteCommands: CommandPaletteCommand[] = [
   },
   {
     title: 'Orient Yourself',
-    description: 'Start with product scope, repo layout, and the next docs most people need first.',
+    description: 'Start with today\'s product posture, repo layout, and the next docs most people need first.',
     href: '/docs/getting-started/overview',
     section: 'Start Here',
     keywords: ['getting started', 'repo layout', 'introduction'],
@@ -58,14 +58,14 @@ export const commandPaletteCommands: CommandPaletteCommand[] = [
   },
   {
     title: 'Dashboard',
-    description: 'Explore the unified dashboard for action items, pipeline metrics, and activity.',
+    description: 'Explore the authenticated workspace dashboard for action items, pipeline metrics, and personal activity.',
     href: '/docs/features/dashboard',
     section: 'Features',
     keywords: ['dashboard', 'metrics', 'activity'],
   },
   {
     title: 'Job Search Pipeline',
-    description: 'See how Baldin tracks companies, leads, and applications across the full lifecycle.',
+    description: 'See how the current workspace tracks companies, leads, and applications across the full lifecycle.',
     href: '/docs/features/job-search-pipeline',
     section: 'Features',
     keywords: ['applications', 'companies', 'leads', 'pipeline'],
@@ -86,7 +86,7 @@ export const commandPaletteCommands: CommandPaletteCommand[] = [
   },
   {
     title: 'Networking and Messaging',
-    description: 'Follow profiles, peer connections, direct conversations, and activity tracking.',
+    description: 'Follow opt-in profiles, private connections, direct conversations, and personal activity tracking.',
     href: '/docs/features/networking',
     section: 'Features',
     keywords: ['networking', 'messaging', 'connections', 'conversations'],
@@ -135,7 +135,7 @@ export const commandPaletteCommands: CommandPaletteCommand[] = [
   },
   {
     title: 'Follow Network Flows',
-    description: 'Understand directory, conversations, activity, and action-item flows.',
+    description: 'Understand opt-in directory, conversations, personal activity, and action-item flows.',
     href: '/docs/architecture/networking-and-messaging',
     section: 'Architecture',
     keywords: ['network', 'messaging', 'activity', 'flows'],
@@ -155,18 +155,18 @@ export const commandPaletteCommands: CommandPaletteCommand[] = [
     keywords: ['catalog', 'tokens', 'primitives'],
   },
   {
-    title: 'Baldin Redesign Handoff',
-    description: 'Start redesign-phase work from the authoritative redesign handoff.',
-    href: '/docs/reference/baldin-redesign-handoff',
+    title: 'v2.1 Hard Fork',
+    description: 'Open the active code-first direction after deprecating active Figma design work.',
+    href: '/docs/reference/v2-1-hard-fork',
     section: 'Design System',
-    keywords: ['redesign', 'handoff', 'figma', 'closeout'],
+    keywords: ['v2.1', 'hard fork', 'code-first', 'design system'],
   },
   {
-    title: 'Redesign Implementation Program',
-    description: 'Turn the redesign handoff into required briefs and route-family implementation waves.',
-    href: '/docs/engineering/redesign-implementation-program',
+    title: 'v2.1 Implementation Program',
+    description: 'Use the active execution flow for shared-foundation cleanup, legacy-shell migration, and route slices.',
+    href: '/docs/engineering/v2-1-implementation-program',
     section: 'Design System',
-    keywords: ['redesign', 'implementation', 'waves', 'briefs'],
+    keywords: ['v2.1', 'implementation', 'waves', 'briefs'],
   },
   {
     title: 'Design System Governance',

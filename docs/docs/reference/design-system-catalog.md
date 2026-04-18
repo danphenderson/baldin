@@ -2,14 +2,14 @@
 sidebar_position: 2
 slug: /reference/design-system-catalog
 title: Design System Catalog
-description: Canonical inventory of Baldin's shipped frontend design-system implementation, its compatibility shims, current adopters, and its mapping back to Baldin-Library in Figma.
+description: Canonical inventory of Baldin's shipped frontend design-system implementation, its compatibility shims, current adopters, and any optional mapping back to archived Figma references.
 ---
 
-<!-- last-verified: 2026-04-14 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Design System Catalog
 
-This catalog describes the shared frontend UI surface that ships in the repo today. `frontend/src/design-system/*` is the canonical inventory of the implemented code layer, not the exhaustive inventory of Baldin-Library in Figma. Legacy wrappers are documented only so contributors know what still exists and what has already been removed.
+This catalog describes the shared frontend UI surface that ships in the repo today. `frontend/src/design-system/*` is the canonical inventory of the implemented code layer, not the exhaustive inventory of archived Figma libraries. Legacy wrappers are documented only so contributors know what still exists and what has already been removed.
 
 ## Theme Contract
 
@@ -47,7 +47,7 @@ This catalog describes the shared frontend UI surface that ships in the repo tod
 
 ## Primitive Inventory
 
-For the primitive and pattern inventory tables below, `Current known consumers` is an exhaustive runtime import contract for `frontend/src/**`; paths are listed relative to `frontend/src`, and tests, Storybook stories, and `.figma.ts` mapping files are excluded.
+For the primitive and pattern inventory tables below, `Current known consumers` is an exhaustive runtime import contract for `frontend/src/**`; paths are listed relative to `frontend/src`, and tests plus `.figma.ts` mapping files are excluded.
 
 ### Fields
 
@@ -90,6 +90,7 @@ For the primitive and pattern inventory tables below, `Current known consumers` 
 | `ConfirmDialog` | `frontend/src/design-system/primitives/surfaces/confirm-dialog.tsx` | Canonical shared confirm surface for lightweight destructive or informational confirmations | `component/aspirations-collection.tsx`<br />`component/lead-modal.tsx`<br />`page/agent-detail.tsx`<br />`page/agents.tsx`<br />`page/applications/applications-board-page.tsx`<br />`page/applications/applications-queue-page.tsx`<br />`page/crawlers.tsx`<br />`page/db-management.tsx`<br />`page/leads.tsx` |
 | `FormDialogShell` | `frontend/src/design-system/primitives/surfaces/form-dialog-shell.tsx` | Shared dialog chrome for form, create, edit, and delete flows | `component/agent-form-dialog.tsx`<br />`component/aspiration-form-dialog.tsx`<br />`component/lead-form-dialog.tsx`<br />`component/workflow-form-dialog.tsx`<br />`design-system/primitives/surfaces/confirm-dialog.tsx`<br />`page/profile/components/DeleteDialog.tsx`<br />`page/profile/components/EditDialog.tsx` |
 | `SectionHeader` | `frontend/src/design-system/primitives/surfaces/section-header.tsx` | Shared section header with icon, count, supporting text, divider, and action slot | `page/dashboard.tsx`<br />`page/messages/conversations-page.tsx`<br />`page/profile/components/ProfileSection.tsx` |
+| `SituationHeader` | `frontend/src/design-system/primitives/surfaces/situation-header.tsx` | Shared collection or detail situation framing with title, context, action, and footer slots | `component/aspirations-collection.tsx` |
 
 ### Status
 
@@ -104,7 +105,7 @@ For the primitive and pattern inventory tables below, `Current known consumers` 
 | Pattern | Path | Canonical role | Current known consumers |
 | --- | --- | --- | --- |
 | `CollectionToolbar` | `frontend/src/design-system/patterns/collections/collection-toolbar.tsx` | Slot-based collection header with `search`, `controls`, `actions`, and `secondary` regions | `component/lead-search-bar.tsx`<br />`page/applications/applications-queue-page.tsx`<br />`page/documents/document-list.tsx`<br />`page/messages/conversations-page.tsx` |
-| `MetricStrip` | `frontend/src/design-system/patterns/metrics/metric-strip.tsx` | Read-only stat row with `inline` and `card` variants | `browser-harness/figma-flagship-capture.tsx`<br />`page/applications/applications-board-page.tsx`<br />`page/applications/applications-queue-page.tsx`<br />`page/crawlers.tsx`<br />`page/dashboard.tsx`<br />`page/db-management.tsx`<br />`page/leads.tsx`<br />`page/pipelines.tsx` |
+| `MetricStrip` | `frontend/src/design-system/patterns/metrics/metric-strip.tsx` | Read-only stat row with `inline` and `card` variants plus optional start alignment and divider suppression | `browser-harness/figma-flagship-capture.tsx`<br />`component/aspirations-collection.tsx`<br />`page/applications/applications-board-page.tsx`<br />`page/applications/applications-queue-page.tsx`<br />`page/crawlers.tsx`<br />`page/dashboard.tsx`<br />`page/db-management.tsx`<br />`page/leads.tsx`<br />`page/pipelines.tsx` |
 | `SectionCard` | `frontend/src/design-system/patterns/sections/section-card.tsx` | Thin `CardShell` composition for section layouts with shared header framing | `page/dashboard.tsx`<br />`page/profile/components/ProfileSection.tsx` |
 | `AuthPanel` | `frontend/src/design-system/patterns/auth/auth-panel.tsx` | Shared centered auth shell with icon, title, description, content, and footer slots | `page/login.tsx`<br />`page/register.tsx` |
 
@@ -141,11 +142,11 @@ These three treatments are not interchangeable. Pick the correct level for new p
 
 ## Figma Mapping Inventory
 
-These files are optional repo-local metadata, but they are the practical verification fallback when workspace Code Connect reads are seat-blocked. The canonical library target for all sixteen mappings is [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library).
+These files are optional repo-local metadata. They are useful when a shared surface still benefits from a linked historical design reference, but they are not part of the active delivery gate.
 
-This table is intentionally code-backed rather than exhaustive. Baldin-Library can grow beyond these entries before new surfaces are promoted into `frontend/src/design-system/*`. Figma-first work that is ahead of, or intentionally outside of, the code-backed catalog should be reviewed against the active redesign handoff and design-system governance before promotion.
+This table is intentionally code-backed rather than exhaustive. Archived Figma libraries can contain more material than these entries, but they do not lead new shared-surface promotion. Promotion decisions should be made from current code, targeted tests, and design-system governance.
 
-Each mapped surface now also has a colocated Storybook story under `frontend/src/design-system/**/*stories.tsx`. The story reads its `parameters.design` URL from the same `.figma.ts` file via raw import, so the local mapping metadata stays the single repo-backed source of truth for the Figma node link. Chromatic publishes those stories when `CHROMATIC_PROJECT_TOKEN` is available.
+Mapped surfaces can keep a colocated `.figma.ts` file when the historical node link still adds value. The metadata stays repo-local and is not part of the active frontend validation lane.
 
 | Surface | Local mapping file | Library node |
 | --- | --- | --- |
@@ -163,6 +164,7 @@ Each mapped surface now also has a colocated Storybook story under `frontend/src
 | `SurfaceCard` | `frontend/src/design-system/primitives/surfaces/SurfaceCard.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=42-35 |
 | `ConfirmDialog` | `frontend/src/design-system/primitives/surfaces/ConfirmDialog.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=46-135 |
 | `FormDialogShell` | `frontend/src/design-system/primitives/surfaces/FormDialogShell.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=8-24 |
+| `SituationHeader` | `frontend/src/design-system/primitives/surfaces/SituationHeader.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=366-87 |
 | `SurfaceDialog` | `frontend/src/design-system/primitives/surfaces/SurfaceDialog.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=45-33 |
 | `SectionHeader` | `frontend/src/design-system/primitives/surfaces/SectionHeader.figma.ts` | https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library?node-id=6-24 |
 
@@ -236,7 +238,7 @@ Every route family in the table below uses one of these states:
 | Auth | `adopted` | `AuthPanel`, `InlineFeedback`, typography primitives | Login, registration, and MFA verification all use the canonical auth shell |
 | Applications | `adopted` | `CollectionToolbar`, `StatusChip`, `MetricStrip`, `SurfaceDialog`, `ConfirmDialog`, `SurfaceCard` | Queue, board, and detail routes all consume canonical shared surfaces |
 | Leads | `adopted` | `CollectionToolbar` via adapter, `CardShell`, `StatusChip`, `FormDialogShell`, `MetricStrip`, `LoadingState`, `EmptyState` | Lead-specific ranking and extraction behavior remain feature-owned |
-| Profile family | `adopted` | `SectionCard`, `SectionHeader`, `SurfaceCard`, `FormDialogShell`, `InlineFeedback`, adapter-backed `EmptyState` | Builder logic and field schemas remain feature-owned |
+| Profile family | `adopted` | `SituationHeader`, `MetricStrip`, `SectionCard`, `SectionHeader`, `SurfaceCard`, `FormDialogShell`, `InlineFeedback`, adapter-backed `EmptyState` | Builder logic, field schemas, and aspiration item rendering remain feature-owned |
 | Conversations and agent chat | `adopted` | `CollectionToolbar`, `SectionCard`, `SectionHeader`, `StatusChip`, `SurfaceDialog`, `EmptyState`, `LoadingState` | Message workflow remains feature-owned |
 | Agents | `adopted` | `CardShell`, `StatusChip`, `ConfirmDialog`, `FormDialogShell`, shared typography | `kind` mapping and orchestration remain feature-owned |
 | Dashboard | `adopted` | `MetricStrip`, `StatusChip`, `SurfaceCard`, shared typography and status helpers | Dashboard business logic remains feature-owned |
@@ -256,6 +258,6 @@ These are not part of the shipped catalog today:
 ## Catalog Rules
 
 - The canonical catalog lives under `frontend/src/design-system/*`, not under `component/common/*` or `component/auth/*`.
-- Baldin-Library in Figma can expand ahead of this catalog; only code-backed shared surfaces belong here.
+- Archived Figma libraries may preserve broader historical inventory than this catalog, but only code-backed shared surfaces belong here.
 - Do not add a new catalog entry unless it is already implemented in `frontend/src/design-system/*`, domain-neutral, and already justified by multiple route families or app-shell behavior.
 - When a compatibility wrapper survives, document the wrapper and the backing primitive together so contributors know which file is canonical.

@@ -2,11 +2,11 @@
 
 ## Owner
 
-- `baldin_frontend`; use `baldin_design_lead` for Figma-first surfaces and `baldin_full_stack_architect` for contract ownership.
+- `baldin_frontend`; use `baldin_design_lead` for archived-design reference surfaces and `baldin_full_stack_architect` for contract ownership.
 
 ## Scope
 
-- Applies to frontend app code, tests, scripts, Storybook, and browser harness assets.
+- Applies to frontend app code, tests, scripts, and browser harness assets.
 
 ## Do
 

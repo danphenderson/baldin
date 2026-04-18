@@ -2,14 +2,14 @@
 sidebar_position: 9
 slug: /architecture/aspirations-to-apply
 title: Aspirations to Apply Flow
-description: Architecture of the flagship aspirations → ranked leads → application-start flow.
+description: Architecture of one current aspirations → ranked leads → application-start decision-support flow.
 ---
 
-<!-- last-verified: 2026-04-16 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Aspirations to Apply Flow
 
-The **aspirations-to-apply** flow is the flagship product path that connects a user's career aspirations through ranked leads into the application pipeline. It is the primary connected workflow surface in the current developer-preview release.
+The **aspirations-to-apply** flow is one current decision-support workflow. It connects a user's career aspirations through ranked leads into the application pipeline, but it is not the sole product identity or the only supported way users move through Baldin today.
 
 ## Flow Overview
 
@@ -102,7 +102,7 @@ graph LR
 
 ## S8 Implementation Status
 
-S8 ranking redesign is implemented in the frontend. `LeadCard` applies the ranked-card `CardShell` treatment, renders the ranking score, and exposes the aspiration-alignment strip for tests and route capture. The active redesign authority is `Baldin Product Redesign — Command Center` plus [Baldin Redesign Handoff](../reference/baldin-redesign-handoff.md). Historical ranked and unranked harness evidence remains available in the archived `Baldin-App-Screens` file at nodes `446:2` and `447:2`, while node `257:6090` remains the archived design-rationale frame.
+S8 ranking redesign is implemented in the frontend. `LeadCard` applies the ranked-card `CardShell` treatment, renders the ranking score, and exposes the aspiration-alignment strip for tests and route capture. Historical ranked and unranked harness evidence remains available in the archived `Baldin-App-Screens` file at nodes `446:2` and `447:2`, while node `257:6090` remains the archived design-rationale frame.
 
 ## Harness Coverage
 

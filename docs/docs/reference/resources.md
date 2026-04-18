@@ -5,7 +5,7 @@ title: Documentation Resources
 description: Links to all Baldin documentation assets — API docs, admin, repo files, and related guides.
 ---
 
-<!-- last-verified: 2026-04-12 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Documentation Resources
 
@@ -21,6 +21,7 @@ These links work when the local Docker Compose stack is running (`docker-compose
 |----------|-----|-------------|
 | **Frontend** | [http://localhost:5173](http://localhost:5173) | React/Vite application UI |
 | **Admin SPA** | [http://localhost:5173/admin/](http://localhost:5173/admin/) | Dedicated superuser admin app running inside the frontend service |
+| **Operator design reference** | [http://localhost:5174](http://localhost:5174) | Standalone reference-only redesign surface |
 | **Product docs** | [http://localhost:3001/baldin/docs](http://localhost:3001/baldin/docs) | Docusaurus product documentation |
 | **Swagger UI** | [http://localhost:8004/docs](http://localhost:8004/docs) | Interactive API explorer |
 | **ReDoc** | [http://localhost:8004/redoc](http://localhost:8004/redoc) | Readable API reference |
@@ -52,6 +53,7 @@ See [Regenerate API Contracts](../engineering/contract-management.md) for when a
 | **Backend Dockerfile** | `backend/Dockerfile` | Candidate image build |
 | **Backend Dockerfile (dev target)** | `backend/Dockerfile` | Local development image via the `dev` build target |
 | **Frontend Dockerfile** | `frontend/Dockerfile` | Dev server container |
+| **Operator Design Dockerfile** | `operator-design/Dockerfile` | Reference-only redesign container |
 | **Docs Dockerfile** | `docs/Dockerfile` | Docusaurus dev server container |
 | **CDK Stacks** | `cdk/` | Reference only — not production-approved |
 | **Tracked Local Env** | `backend/.env`, `frontend/.env` | Safe local-default worktree baseline |

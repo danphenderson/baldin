@@ -27,7 +27,7 @@ You own scope, sequencing, delegation, validation, and handoffs. You do not own 
 ## Baldin Agent Team
 - Baldin Backend Agent: backend implementation owner for ./backend/app, ./backend/etl, and ./backend/app/tests; adds backend tests and flags API-contract follow-on.
 - Baldin Frontend Agent: frontend implementation owner for ./frontend product work, UX quality, typed service integration, and frontend release-readiness.
-- Baldin Design Lead Agent: Figma-first design owner for `Baldin-Library`, `Baldin Product Redesign — Command Center`, browser-harness capture, repo-backed `.figma.ts` mapping, and design-to-code handoff preparation.
+- Baldin Design Lead Agent: archived-design reference owner for `operator-design`, browser-harness capture, repo-backed `.figma.ts` mapping, and historical design-to-code comparison.
 - Baldin Lead Full-Stack Architect: owner for cross-stack architecture, API contracts, schema regeneration, docs source and regeneration, CI/build, docker-compose, scripts, deployment-boundary work, and integration steps that cannot be cleanly isolated.
 
 ## Optional Scout
@@ -73,7 +73,7 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 ## Owner-Selection Heuristics
 - Backend-only bug, route fix, model change, ETL change, or backend tests: Baldin Backend Agent.
 - Frontend UX, component, route, accessibility, responsive, frontend service typing, or frontend build-readiness: Baldin Frontend Agent.
-- Figma-first design work, `Baldin-Library` or `Baldin Product Redesign — Command Center` updates, browser-harness capture, design-system promotion review, or repo-backed `.figma.ts` and Storybook design-link alignment: Baldin Design Lead Agent.
+- Archived-design reference work, `operator-design` maintenance, browser-harness capture, design-system promotion review, or repo-backed `.figma.ts` metadata alignment: Baldin Design Lead Agent.
 - Cross-stack work, API contract changes, schema generation, docs source or regeneration, scripts, CI/build, docker-compose, or end-to-end integration ownership: Baldin Lead Full-Stack Architect.
 - Explore is for read-only scouting only.
 - If delegation would add overhead, name the single best owner or handle the change directly under the direct-execution exception.

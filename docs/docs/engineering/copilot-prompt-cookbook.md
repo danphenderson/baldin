@@ -23,7 +23,7 @@ Assume the local `docker-compose.yml` stack is the default development environme
 
 - Backend-only and already clear: start with `Backend Runtime Slice`.
 - Frontend-only and already clear: start with `Frontend Product Slice`.
-- Figma-first design work, browser-harness capture, or `Baldin-Library` and `Baldin Product Redesign — Command Center` updates: start with Baldin Design Lead Agent directly.
+- Archived-design reference work, browser-harness capture, or `.figma.ts` mapping maintenance: start with Baldin Design Lead Agent directly.
 - Small cross-stack, contract, compose, or local integration fix: start with `Local Preview Integration Fix` or the Baldin Lead Full-Stack Architect directly.
 - Use `Issue Dispatch Kickoff`, `Plan Slice Kickoff`, or Baldin Project Manager only when the owner, scope, or sequencing is not already obvious.
 - Ask for the lightest useful smoke check first. Add broader type, build, docs, or full-suite validation only when the touched surface or handoff needs it.
@@ -41,7 +41,7 @@ Use the same owner model in both. Root/scoped `AGENTS.md` files are the canonica
 |------|--------------|------------|
 | Backend-only implementation | `Backend Runtime Slice` or Baldin Backend Agent | Ask Codex to use `baldin_backend` |
 | Frontend-only implementation | `Frontend Product Slice` or Baldin Frontend Agent | Ask Codex to use `baldin_frontend` |
-| Figma-first design work | Baldin Design Lead Agent | Ask Codex to use `baldin_design_lead` |
+| Archived-design reference work | Baldin Design Lead Agent | Ask Codex to use `baldin_design_lead` |
 | Cross-stack implementation | `Local Preview Integration Fix`, `API Contract Change Orchestrator`, or Baldin Lead Full-Stack Architect | Ask Codex to use `baldin_full_stack_architect` |
 | Unclear ownership or sequencing | `Issue Dispatch Kickoff`, `Plan Slice Kickoff`, or Baldin Project Manager | Start with `/plan` or ask Codex to use `baldin_project_manager` |
 | Read-only scouting | Explore | Use the built-in `explorer` agent or ask for read-only scouting |
@@ -85,7 +85,7 @@ For Codex and compatible tooling, apply root `AGENTS.md` plus the relevant scope
 |------|---------------------|
 | Backend-only routes, models, auth, ETL, or tests | Baldin Backend Agent |
 | Frontend-only UI, accessibility, routing, state handling, or typed service consumption | Baldin Frontend Agent |
-| Figma-first design work, command-center redesign updates, design-system mapping, or browser-harness capture | Baldin Design Lead Agent |
+| Archived-design reference work, design-system mapping, or browser-harness capture | Baldin Design Lead Agent |
 | Backend and frontend together, API contracts, schema regeneration, scripts, CI, docs, or docker-compose | Baldin Lead Full-Stack Architect |
 | Unclear ownership, multi-stream work, or sequencing and handoffs | Baldin Project Manager |
 | Read-only scouting before assigning a real owner | Explore |
@@ -347,19 +347,18 @@ Best for:
 
 ## Baldin Design Lead Agent
 
-Use when the task is Figma-first: `Baldin-Library` work, `Baldin Product Redesign — Command Center` redesign work, browser-harness review, repo-backed `.figma.ts` mapping, Storybook design-link alignment, or design-to-code handoff preparation.
+Use when the task is archived-design reference work, browser-harness review, repo-backed `.figma.ts` mapping maintenance, design-system catalog alignment, or historical design-to-code comparison.
 
 ```text
-Lead this as Figma-first design work.
+Lead this as archived-design reference work.
 
 Objective:
-[approved redesign or Figma handoff outcome]
+[archived design comparison or mapping outcome]
 
 Context:
-[route family, library surface, approved redesign reason, or handoff need]
+[route family, shared surface, historical evidence need, or mapping goal]
 
-Start from `docs/docs/reference/baldin-redesign-handoff.md`.
-Treat it as authoritative when a derived packet says something different.
+Start from `docs/docs/reference/v2-1-hard-fork.md` and use archived redesign material only if it adds necessary context.
 
 Allowed paths:
 - ./frontend/figma.config.json
@@ -367,9 +366,9 @@ Allowed paths:
 - ./frontend/src/browser-harness/**
 - ./frontend/src/design-system/**/*.figma.ts
 - ./frontend/src/design-system/**/*stories.tsx
-- ./docs/docs/reference/baldin-redesign-handoff.md
+- ./docs/docs/reference/v2-1-hard-fork.md
 - ./docs/docs/reference/design-system-catalog.md
-- ./docs/docs/engineering/redesign-implementation-program.md
+- ./docs/docs/engineering/v2-1-implementation-program.md
 
 Out of scope:
 - backend API design
@@ -377,10 +376,10 @@ Out of scope:
 - invented design states that are not backed by repo or harness evidence
 
 Validation:
-- capture or inspect the relevant Figma node or browser-harness state
+- inspect the relevant archived design evidence or browser-harness state
 - run npm --prefix docs run build when docs changed
-- run cd frontend && npm run storybook:build when a code-backed mapping changed
-- widen to frontend typecheck or build only if shared React implementation changed
+- run the smallest useful frontend test or typecheck only if shared React implementation changed
+- widen to the frontend build only if shipped React behavior changed
 
 Return:
 - use the Standard Handback schema from this cookbook.
@@ -390,11 +389,11 @@ Stop and hand off if the task becomes general frontend implementation or cross-s
 
 Best for:
 
-- `Baldin-Library` buildout
-- `Baldin Product Redesign — Command Center` redesign flow and route-family capture
-- Figma MCP inspection or write work
-- `.figma.ts` mapping and Storybook design-link alignment
+- `operator-design` maintenance
+- browser-harness capture and historical design inspection
+- `.figma.ts` mapping maintenance and design-system catalog alignment
 - shared-surface promotion review before code implementation
+- archived Figma comparison when it adds useful context
 
 ## Baldin Lead Full-Stack Architect
 
@@ -512,29 +511,29 @@ Validation:
 Stop and hand off if the needed state is not available from the current API contract.
 ```
 
-### Figma-first design work
+### Archived design reference work
 
 Start with Baldin Design Lead Agent.
 
 ```text
-Lead this as Figma-first design work.
+Lead this as archived-design reference work.
 
 Objective:
-Finalize the next approved route-family redesign in Figma and prepare the handoff details the frontend wave will need.
+Compare the current route or shared surface against archived design evidence and update any optional mapping metadata the team still wants to keep.
 
 Context:
-Use `docs/docs/reference/baldin-redesign-handoff.md` as the active source of truth. The approved redesign must be ready for the frontend implementation brief without reopening capture.
+Use `docs/docs/reference/v2-1-hard-fork.md` as the active source of truth. Archived redesign material is reference-only and must not block implementation.
 
 Allowed paths:
-- ./docs/docs/reference/baldin-redesign-handoff.md
-- ./docs/docs/engineering/redesign-implementation-program.md
+- ./docs/docs/reference/v2-1-hard-fork.md
+- ./docs/docs/engineering/v2-1-implementation-program.md
 - ./frontend/src/design-system/**/*.figma.ts
 - ./frontend/src/design-system/**/*stories.tsx
 - ./docs/docs/reference/design-system-catalog.md
 
 Validation:
-- capture or inspect the relevant Figma node
-- run `cd frontend && npm run storybook:build` if the code-backed mapping changed
+- inspect the relevant archived design evidence
+- run the smallest useful frontend check only if shared React code changed
 - run `npm --prefix docs run build` if design docs changed
 
 Stop and hand off if the task becomes broad frontend implementation or needs backend or contract work.
@@ -603,7 +602,7 @@ Do not implement yet unless this is obviously a tiny single-owner fix.
 
 - Do not ask Baldin Project Manager to be the default implementation owner for real code changes.
 - Do not ask Baldin Frontend Agent to own backend-driven contract regeneration unless you want a deliberate cross-stack assignment.
-- Do not ask Baldin Frontend Agent to own Figma-first library buildout or app-screen inventory when the task is still primarily design work.
+- Do not ask Baldin Frontend Agent to own archived-design reference work or mapping maintenance when the task is still primarily design review.
 - Do not ask Baldin Backend Agent to patch frontend, docs, or CI as a hidden side quest.
 - Do not use Baldin Lead Full-Stack Architect for a plainly backend-only or frontend-only task when a smaller owner would do.
 - Do not give any agent a fuzzy “just handle everything automatically” prompt without a stop condition, validation expectations, and a named owner.

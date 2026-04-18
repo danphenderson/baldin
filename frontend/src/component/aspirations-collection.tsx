@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState, useDeferredValue } from 'react';
-import { Box, Button, Skeleton, Tab, Tabs, TextField } from '@mui/material';
+import { Box, Button, Skeleton, Tab, Tabs } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 import Grid from '@mui/material/Grid';
 import {
   Add as AddIcon,
-  Search as SearchIcon,
   SearchOff as SearchOffIcon,
   ErrorOutline as ErrorIcon,
   Refresh as RefreshIcon,
@@ -21,6 +21,9 @@ import type {
 import {
   ConfirmDialog,
   EmptyState,
+  MetricStrip,
+  SearchField,
+  SituationHeader,
 } from '../design-system';
 import AspirationCard from './aspiration-card';
 import AspirationFormDialog from './aspiration-form-dialog';
@@ -65,8 +68,11 @@ const AspirationsCollection: React.FC<AspirationsCollectionProps> = ({
   auxiliaryContent,
   showSuggestions = false,
 }) => {
+  const theme = useTheme();
   const { notify } = useNotification();
   const navigate = useNavigate();
+  const singularLabel = kindLabel.toLowerCase();
+  const pluralLabel = kind === 'company' ? 'companies' : 'roles';
 
   /* ---- Data ---- */
   const [items, setItems] = useState<AspirationItem[]>([]);
@@ -88,7 +94,7 @@ const AspirationsCollection: React.FC<AspirationsCollectionProps> = ({
   /* ---- Toolbar header ---- */
   const subtitle = loading
     ? undefined
-    : `${items.length} ${kindLabel.toLowerCase()}${items.length === 1 ? '' : 's'}`;
+    : `${items.length} ${items.length === 1 ? singularLabel : pluralLabel}`;
   usePageToolbarHeader('Aspirations', subtitle);
 
   /* ---- Data fetching ---- */
@@ -100,13 +106,13 @@ const AspirationsCollection: React.FC<AspirationsCollectionProps> = ({
       const result = await adapter.list(kind);
       setItems(result);
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : `Failed to load ${kindLabel.toLowerCase()}s`;
+      const message = e instanceof Error ? e.message : `Failed to load ${pluralLabel}`;
       setLoadError(message);
       notify(message, 'error');
     } finally {
       setLoading(false);
     }
-  }, [adapter, kind, kindLabel, notify]);
+  }, [adapter, kind, notify, pluralLabel]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -121,6 +127,38 @@ const AspirationsCollection: React.FC<AspirationsCollectionProps> = ({
       || (item.notes?.toLowerCase().includes(q) ?? false),
     );
   }, [items, deferredSearch]);
+
+  const hasSearch = deferredSearch.trim() !== '';
+  const metricItems = useMemo(() => {
+    if (items.length === 0) {
+      return [];
+    }
+
+    const withReason = items.filter((item) => item.reason?.trim()).length;
+    const withNotes = items.filter((item) => item.notes?.trim()).length;
+
+    return [
+      {
+        label: `Saved ${pluralLabel}`,
+        value: items.length,
+      },
+      {
+        label: 'With rationale',
+        value: withReason,
+      },
+      {
+        label: 'With notes',
+        value: withNotes,
+      },
+      ...(hasSearch
+        ? [{
+            label: 'Matching search',
+            value: filtered.length,
+            color: 'var(--mui-palette-primary-main)',
+          }]
+        : []),
+    ];
+  }, [filtered.length, hasSearch, items, pluralLabel]);
 
   /* ---- Handlers ---- */
 
@@ -169,58 +207,96 @@ const AspirationsCollection: React.FC<AspirationsCollectionProps> = ({
     setDeleting(false);
   };
 
-  /* ---- Cross-nav tab index ---- */
-  const currentTabIndex = ASPIRATION_TABS.findIndex((t) => t.kind === kind);
-
-  /* ---- Render helpers ---- */
-  const hasSearch = deferredSearch.trim() !== '';
-
   return (
-    <Box sx={{ maxWidth: 900, mx: 'auto' }}>
-      {/* Cross-navigation */}
-      <Tabs
-        value={currentTabIndex}
-        onChange={(_, idx) => navigate(ASPIRATION_TABS[idx].path)}
-        sx={{ mb: 3 }}
-      >
-        {ASPIRATION_TABS.map((tab) => (
-          <Tab key={tab.kind} label={tab.label} />
-        ))}
-      </Tabs>
-
-      {/* Search + Add bar */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: 1.5,
-          alignItems: { sm: 'center' },
-          mb: 3,
-        }}
-      >
-        <TextField
-          size="small"
-          placeholder={`Search ${kindLabel.toLowerCase()}s…`}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          slotProps={{
-            input: {
-              startAdornment: <SearchIcon sx={{ mr: 0.75, color: 'text.secondary', fontSize: 20 }} />,
-            },
-          }}
-          sx={{ flexGrow: 1 }}
-        />
-        {(loading || items.length > 0) && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleCreate}
-            sx={{ whiteSpace: 'nowrap' }}
+    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+      <SituationHeader
+        title="Aspirations"
+        titleVariant="compact"
+        density="compact"
+        context={(
+          <Tabs
+            value={kind}
+            onChange={(_, nextKind: AspirationKind) => {
+              const nextTab = ASPIRATION_TABS.find((tab) => tab.kind === nextKind);
+              if (nextTab) {
+                navigate(nextTab.path);
+              }
+            }}
+            aria-label="Aspiration type"
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              minHeight: 0,
+              '& .MuiTabs-flexContainer': {
+                gap: 1,
+              },
+              '& .MuiTabs-indicator': {
+                display: 'none',
+              },
+              '& .MuiTab-root': {
+                minHeight: 28,
+                minWidth: 'auto',
+                px: 1.5,
+                py: 0.5,
+                borderRadius: '12px',
+                color: 'text.secondary',
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '0.8125rem',
+              },
+              '& .MuiTab-root.Mui-selected': {
+                color: 'text.primary',
+                bgcolor: alpha(
+                  theme.palette.primary.main,
+                  theme.palette.mode === 'dark' ? 0.18 : 0.12,
+                ),
+                fontWeight: 700,
+              },
+            }}
           >
-            Add {kindLabel}
-          </Button>
+            {ASPIRATION_TABS.map((tab) => (
+              <Tab key={tab.kind} value={tab.kind} label={tab.label} />
+            ))}
+          </Tabs>
         )}
-      </Box>
+        actions={(
+          <>
+            {(loading || items.length > 0) && (
+              <SearchField
+                size="small"
+                placeholder={`Search ${pluralLabel}`}
+                fullWidth
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                sx={{
+                  width: { xs: '100%', sm: 240 },
+                  '& .MuiInputBase-root': {
+                    backgroundColor: 'background.paper',
+                  },
+                }}
+              />
+            )}
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleCreate}
+              sx={{ whiteSpace: 'nowrap' }}
+            >
+              Add {kindLabel}
+            </Button>
+          </>
+        )}
+        footer={metricItems.length > 0 ? (
+          <MetricStrip
+            items={metricItems}
+            variant="inline"
+            align="start"
+            dividers={false}
+          />
+        ) : undefined}
+        divider
+        sx={{ mb: 3 }}
+      />
 
       {auxiliaryContent}
 
@@ -245,7 +321,7 @@ const AspirationsCollection: React.FC<AspirationsCollectionProps> = ({
       ) : loadError && items.length === 0 ? (
         <EmptyState
           icon={<ErrorIcon />}
-          title={`Unable to load ${kindLabel.toLowerCase()}s`}
+          title={`Unable to load ${pluralLabel}`}
           description={loadError}
           action={{ label: 'Retry', onClick: refresh, icon: <RefreshIcon /> }}
         />
@@ -253,7 +329,7 @@ const AspirationsCollection: React.FC<AspirationsCollectionProps> = ({
         hasSearch ? (
           <EmptyState
             icon={<SearchOffIcon />}
-            title={`No matching ${kindLabel.toLowerCase()}s`}
+            title={`No matching ${pluralLabel}`}
             description="Try a different search term."
           />
         ) : (
@@ -261,7 +337,6 @@ const AspirationsCollection: React.FC<AspirationsCollectionProps> = ({
             icon={kindIcon}
             title={emptyTitle}
             description={emptyDescription}
-            action={{ label: `Add ${kindLabel}`, onClick: handleCreate, icon: <AddIcon /> }}
           />
         )
       ) : (

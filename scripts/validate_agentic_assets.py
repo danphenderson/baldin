@@ -61,7 +61,6 @@ EXPECTED_SCOPED_AGENTS: tuple[str, ...] = (
     "frontend/admin/AGENTS.md",
     "frontend/browser-harness/AGENTS.md",
     "frontend/e2e/AGENTS.md",
-    "frontend/.storybook/AGENTS.md",
     "frontend/scripts/AGENTS.md",
     "frontend/src/AGENTS.md",
     "frontend/src/admin/AGENTS.md",

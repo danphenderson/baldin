@@ -13,9 +13,11 @@ function Hero() {
         <h1 className={styles.heroTitle}>{siteConfig.title}</h1>
         <p className={styles.heroTagline}>{siteConfig.tagline}</p>
         <p className={styles.heroSub}>
-          Take control of your job search with a local-first workspace in
-          developer preview that tracks applications, extracts leads, and keeps
-          your workflow under your control.
+          Today Baldin is a private, local-first job-search workspace for
+          applications, leads, documents, and agent-assisted workflow. The
+          target direction is applicant-side labor market observability, while
+          this repo stays focused on local development, contributor workflow,
+          architecture review, and release-path planning.
         </p>
         <div className={styles.heroCta}>
           <Link className={clsx('button button--lg', styles.ctaPrimary)} to="/docs/getting-started/quickstart">
@@ -56,19 +58,19 @@ const features = [
     title: 'Dashboard',
     icon: '🎯',
     description:
-      'Action items, pipeline metrics, and an activity feed — everything you need to see what to do next at a glance.',
+      'Action items, pipeline metrics, and a personal activity feed — the current workspace hub for deciding what to do next.',
   },
   {
     title: 'Networking & Messaging',
     icon: '🤝',
     description:
-      'Build and manage professional connections. Direct and group conversations keep your networking organized alongside your search.',
+      'Opt-in discoverability, private connections, and direct or group conversations that stay tied to your own workflow.',
   },
   {
     title: 'Local-First & Private',
     icon: '🔒',
     description:
-      'Runs locally with a private engineering repo, controlled release planning, and data that stays on your machine by default.',
+      'User-owned data stays local by default. Sharing is minimal and opt-in, and future shared signals are intended to use coarse bands and confidence tiers.',
   },
 ];
 
@@ -76,10 +78,10 @@ function Features() {
   return (
     <section className={styles.features}>
       <div className={styles.featuresInner}>
-        <h2 className={styles.sectionTitle}>Everything you need in one workspace</h2>
+        <h2 className={styles.sectionTitle}>Current workspace surfaces</h2>
         <p className={styles.sectionSub}>
-          Stop juggling spreadsheets, email threads, and browser tabs. Baldin
-          brings your entire job search into a single, intelligent workspace.
+          The shipped stack today focuses on private workflow surfaces for
+          tracking, documents, automation, and opt-in network context.
         </p>
         <div className={styles.featureGrid}>
           {features.map((f) => (
@@ -129,24 +131,26 @@ function CurrentPosture() {
   return (
     <section className={styles.posture}>
       <div className={styles.postureInner}>
-        <h2 className={styles.sectionTitle}>Private preview. Local first. Yours.</h2>
+        <h2 className={styles.sectionTitle}>Today vs Target</h2>
         <p className={styles.sectionSub}>
-          Baldin is currently developed in a private engineering repository.
-          Source access is limited to approved collaborators while the product,
-          deployment path, and release controls are still being hardened.
+          Today Baldin is a private, local-first job-search OS. The target
+          direction is an applicant-side labor market observability platform,
+          but this repo currently exists for local development, contributor
+          workflow, architecture review, and release-path planning rather than
+          as a production deployment blueprint.
         </p>
         <div className={styles.trustBadges}>
           <div className={styles.trustItem}>
-            <strong>Private Repo</strong>
-            <span>Source access is limited to approved collaborators</span>
+            <strong>Private by Default</strong>
+            <span>User-owned data comes first and sharing stays minimal</span>
           </div>
           <div className={styles.trustItem}>
-            <strong>Local-First</strong>
-            <span>Data stays on your machine by default</span>
+            <strong>Opt-In Discovery</strong>
+            <span>Profiles and broader visibility must be enabled on purpose</span>
           </div>
           <div className={styles.trustItem}>
-            <strong>Developer Preview</strong>
-            <span>Release posture and deployment flow are still being hardened</span>
+            <strong>Future Signal Guardrails</strong>
+            <span>Coarse bands, time decay, and confidence tiers over exact counts</span>
           </div>
         </div>
       </div>
@@ -160,8 +164,8 @@ function BottomCta() {
       <div className={styles.bottomCtaInner}>
         <h2 className={styles.bottomCtaTitle}>Ready to take control?</h2>
         <p className={styles.bottomCtaSub}>
-          Baldin is in developer preview. Use an approved checkout, spin up the
-          stack, and start organizing your job search locally.
+          Use an approved checkout, spin up the local stack, and work from the
+          current workspace docs.
         </p>
         <div className={styles.heroCta}>
           <Link className={clsx('button button--lg', styles.ctaPrimary)} to="/docs/getting-started/quickstart">

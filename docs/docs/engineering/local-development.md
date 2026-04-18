@@ -5,13 +5,13 @@ title: Work Locally
 description: Work locally with Docker Compose first, then use the shortest smoke-check loop that proves the change.
 ---
 
-<!-- last-verified: 2026-04-16 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Work Locally
 
-Baldin uses Docker Compose as the local-first entry point. The default `docker-compose up --build --watch` stack brings up eight long-running services, and an on-demand `backend-test` runner is available for DB-backed pytest.
+Baldin uses Docker Compose as the local-first entry point. The default `docker-compose up --build --watch` stack brings up nine long-running services, and an on-demand `backend-test` runner is available for DB-backed pytest.
 
-Repo-tracked `backend/.env` and `frontend/.env` provide safe local defaults in every worktree. Put real secrets such as `OPENAI_API_KEY` in process env or ignored `backend/.env.local` / `frontend/.env.local` overrides.
+Repo-tracked `backend/.env` and `frontend/.env` provide safe local defaults in every worktree. For Compose-backed services, `backend/.env.local` and `frontend/.env.local` are the deterministic first-boot override path; explicitly exported shell variables still win when you intentionally want a one-off override.
 
 If you use Baldin's workspace skills, `/baldin-local-stack-doctor` helps triage local Compose failures, `test_db` connectivity problems, schema-drift resets, and PostgreSQL collation-repair decisions.
 
@@ -37,6 +37,7 @@ Backend tests should use `./scripts/run_backend_pytest.sh`, which keeps DB-backe
 | `crawler-worker` | Python background worker | none | image contents from `./backend` build context |
 | `backend-test` | On-demand pytest runner (`test` profile) | none | image contents from `./backend` build context |
 | `frontend` | Vite dev server | 5173 | image contents from `./frontend` build context + Compose Watch sync |
+| `operator-design` | Reference-only Vite `v2.1` design surface | 5174 | image contents from `./operator-design` build context + Compose Watch sync |
 | `docs` | Docusaurus dev server | 3001→3000 | image contents from `./docs` build context + Compose Watch sync |
 
 ## Starting the Stack
@@ -45,7 +46,7 @@ Backend tests should use `./scripts/run_backend_pytest.sh`, which keeps DB-backe
 docker-compose up --build --watch
 ```
 
-The backend, frontend, and docs dev services now run from image contents built from their respective repo directories instead of bind-mounting the local worktree into the containers. On local Docker Desktop, the bind-mounted trees were exhausting file descriptors with `EMFILE` / `OSError: [Errno 24] Too many open files` before the browser-facing services could even finish booting. Compose Watch now provides the live-edit loop: source files sync into the running containers, config changes use `sync+restart`, and dependency or Dockerfile changes trigger rebuilds. If you only need a one-shot boot without file watching, `docker-compose up --build` still works. Compose preserves the repo-tracked blank `OPENAI_API_KEY` default unless you export a real key, so the stack and DB-backed pytest can boot without real API access while OpenAI-gated routes stay in their documented disabled state. Published ports stay local-only by default; set `DOCKER_PUBLISH_HOST=0.0.0.0` before `docker-compose up --build --watch` when another device on your LAN needs to reach the stack.
+The backend, frontend, and docs dev services now run from image contents built from their respective repo directories instead of bind-mounting the local worktree into the containers. On local Docker Desktop, the bind-mounted trees were exhausting file descriptors with `EMFILE` / `OSError: [Errno 24] Too many open files` before the browser-facing services could even finish booting. Compose Watch now provides the live-edit loop: source files sync into the running containers, config changes use `sync+restart`, and dependency or Dockerfile changes trigger rebuilds. If you only need a one-shot boot without file watching, `docker-compose up --build` still works. Backend containers now merge `backend/.env` plus optional `backend/.env.local` before the first process starts, while explicit shell exports still override those files when you intentionally set them for the Compose launch. The stack therefore preserves the repo-tracked blank `OPENAI_API_KEY` default unless you provide a real key, so the stack and DB-backed pytest can boot without real API access while OpenAI-gated routes stay in their documented disabled state. Published ports stay local-only by default; set `DOCKER_PUBLISH_HOST=0.0.0.0` before `docker-compose up --build --watch` when another device on your LAN needs to reach the stack.
 
 Leave the stack running across multiple edits. Rebuild only when Docker image inputs changed, such as dependencies or Dockerfiles.
 
@@ -64,15 +65,13 @@ For Figma capture and browser-driven design review, Baldin's repo-owned MCP cont
 - Codex does not consume `.vscode/mcp.json` directly in this patch. `.codex/config.toml` contains Codex custom-agent defaults only and no repo-owned MCP server mirrors.
 - This repo patch does not manage a Codex-side `figma` entry. User-scoped or globally configured Codex MCP servers can still appear separately on a developer machine.
 
-The canonical Figma surfaces for this repo are [Baldin-Library](https://www.figma.com/design/MbJ133Gwnp1OlkFLrjBLEh/Baldin-Library) for reusable components and [Baldin Product Redesign — Command Center](https://www.figma.com/design/dVbBAwOLtz0Walj0oSP4x1) for the active composed-screen redesign work. The current [Baldin-App-Screens](https://www.figma.com/design/QxOoKWsaPUmjYQZjjEhoiy/Baldin-App-Screens) file is a reference-only behavioral archive. The current [Figma Make file](https://www.figma.com/make/pXpkeOKYnA3gvhHPIjbJDo/Untitled?t=bM22KU0ea6ttyIQ5-20&fullscreen=1) has been reviewed and should be treated as an archived sandbox, not an active delivery surface.
-
-Track active redesign work from [Baldin Redesign Handoff](../reference/baldin-redesign-handoff.md). Treat it as authoritative. Use [Redesign Implementation Program](./redesign-implementation-program.md) plus the route-family packet files under `plans/redesign/` only as derived execution docs. Do not resume implementation work until the handoff's full-product Figma approval gate is satisfied.
+The active implementation contract is code-first: use `frontend/src/design-system/*`, `operator-design/`, [v2.1 Hard Fork](../reference/v2-1-hard-fork.md), and [v2.1 Implementation Program](./v2-1-implementation-program.md). `Baldin-Library`, `Baldin Product Redesign — Command Center`, `Baldin-App-Screens`, and the reviewed Figma Make file are archived reference surfaces only.
 
 1. Start or keep the local stack running with `docker-compose up --build --watch`.
 2. Use the frontend dev server at `http://127.0.0.1:5173`.
 3. Open the supported Wave 1 Figma harness at `http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=...` for harness-backed product screens.
 4. For privileged admin capture, start from `http://127.0.0.1:5173/browser-harness/admin-session.html?next=/admin/db-management` or another `/admin/...` target so the browser session receives the configured local superuser token before opening the Admin SPA.
-5. Use the frontend Playwright runtime or configured host browser tooling to drive the Wave 1 harness or the bootstrapped admin route into the state you want to capture or inspect in Figma. For the full-product redesign reset beyond the Wave 1 harness, use direct shipped-route review plus MCP structure or screenshot inspection instead of expanding the harness.
+5. Use the frontend Playwright runtime or configured host browser tooling to drive the Wave 1 harness or the bootstrapped admin route into the state you want to inspect. Use Figma only for optional historical reference instead of as an active delivery gate.
 
 The canonical harness supports these query parameters:
 
@@ -105,7 +104,7 @@ http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=leads&state=ranked
 http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=apply&state=already-applied&mode=light
 ```
 
-The harness is the supported local capture surface for the Wave 1 screens it already backs. Keep the frontend stack warm and switch harness states instead of wiring a live backend for Wave 1 design review. For the broader command-center redesign, start from Baldin Redesign Handoff and use direct shipped-route review plus MCP structure or screenshot inspection rather than harness expansion.
+The harness is the supported local capture surface for the Wave 1 screens it already backs. Keep the frontend stack warm and switch harness states instead of wiring a live backend for Wave 1 review. For broader `v2.1` work, start from the shipped route code, the shared design-system layer, and `operator-design/` rather than expanding the harness.
 
 For privileged admin routes, the supported preflight is the repo-owned admin session bootstrap page rather than a manual login step:
 
@@ -120,7 +119,7 @@ The bootstrap page calls the DEV-only backend route `POST /api/v1/auth/jwt/dev-b
 Baldin's supported Figma workflow assumes a Professional-plan workspace and does not require a Dev seat.
 
 - Use the local harness plus the repo-local frontend Playwright runtime or configured host browser tooling to put Wave 1 screens into the exact state you need.
-- For redesign finalization and implementation prep beyond the Wave 1 harness, treat Baldin Redesign Handoff as the active redesign source and do not reopen code implementation until the full-product Figma approval gate is complete.
+- For product work beyond the Wave 1 harness, treat `v2.1` docs and plans as active and use archived Figma only when historical comparison is genuinely helpful.
 - Use Figma MCP read or write tools when your seat and auth allow it.
 - If your seat only allows basic inspection, keep the same evidence order and use screenshots or inspection instead of blocking on Dev Mode-specific UX.
 - Use MCP for structure, component, and screenshot inspection even when Dev Mode is unavailable. Full version-history review still requires browser or web access to the Figma UI.
@@ -230,8 +229,8 @@ npm --prefix docs run start
 ## Related Docs
 
 - [Boot The Stack](../getting-started/quickstart.md)
-- [Baldin Redesign Handoff](../reference/baldin-redesign-handoff.md)
-- [Redesign Implementation Program](./redesign-implementation-program.md)
+- [v2.1 Hard Fork](../reference/v2-1-hard-fork.md)
+- [v2.1 Implementation Program](./v2-1-implementation-program.md)
 - [Run The Right Checks](./testing.md)
 - [Regenerate API Contracts](./contract-management.md)
 - [Look Up Settings](../reference/environment-variables.md)

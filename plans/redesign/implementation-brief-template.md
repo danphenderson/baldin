@@ -71,7 +71,7 @@ Do not start implementation until this brief is filled with exact approved redes
 - `cd frontend && ./node_modules/.bin/tsc --noEmit`:
 - `cd frontend && npm run build`:
 - `cd frontend && npm run lint:theme` required: `yes | no`
-- `cd frontend && npm run storybook:build` required: `yes | no`
+- `cd frontend && npm run test -- <targeted files>`:
 - Visual or manual verification plan against the approved nodes:
 
 ## Risks And Open Questions

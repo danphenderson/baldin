@@ -5,11 +5,11 @@ title: Frontend Design System
 description: Shipped frontend design-system architecture, theme contract, ownership boundaries, and compatibility rules.
 ---
 
-<!-- last-verified: 2026-04-14 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Frontend Design System
 
-Baldin's frontend design system spans the comprehensive Baldin-Library target in Figma and the shipped shared UI layer in `frontend/src/design-system/*`. In the repo, `frontend/src/design-system/*` owns the implemented tokens, theme contracts, domain-neutral primitives, and slot-based patterns, while feature folders keep workflow logic, service calls, route copy, and entity rendering.
+Baldin's frontend design system is now code-first. In the repo, `frontend/src/design-system/*` owns the implemented tokens, theme contracts, domain-neutral primitives, and slot-based patterns, while feature folders keep workflow logic, service calls, route copy, and entity rendering. `operator-design/` and archived Figma assets are optional reference surfaces, not the implementation source of truth.
 
 Use this page for structure and ownership. Use [Design System Catalog](../reference/design-system-catalog.md) for the current inventory, [Design System Governance](../engineering/design-system-governance.md) for operating rules, [Design System Workflow](../engineering/design-system-workflow.md) for day-to-day contribution flow, and [Design System Migration Guide](../engineering/design-system-migration-guide.md) for the current rollout ledger.
 
@@ -19,9 +19,6 @@ Representative layout of the shared-UI-relevant frontend sources:
 
 ```text
 frontend/
-├── .storybook/
-│   ├── main.ts
-│   └── preview.tsx
 └── src/
     ├── admin/
     │   ├── admin-layout.tsx
@@ -35,7 +32,6 @@ frontend/
     │   ├── theme/
     │   ├── primitives/
     │   ├── patterns/
-    │   ├── storybook/
     │   └── index.ts
     ├── theme/
     │   └── theme-provider.tsx
@@ -89,29 +85,29 @@ New shared UI under `frontend/src/design-system/*` should use `spacingTokens` an
 
 ## Canonical Shared Surface
 
-The shipped code layer is narrower than the full Baldin-Library target in Figma, but it is the canonical implementation source for the shared frontend UI that already lives in the repo.
+The shipped code layer is narrower than the broader historical design inventory, but it is the canonical implementation source for the shared frontend UI that already lives in the repo.
 
 | Shared area | Shipped exports |
 | --- | --- |
 | Tokens | `color`, `effects`, `elevation`, `motion`, `radius`, `spacing`, `status`, `typography` |
 | Theme | `createBaldinTheme`, palette helpers, typography helpers, shape helpers, MUI overrides, theme-mode helpers, JSON tree adapter |
-| Primitives | `PageTitle`, `SectionTitle`, `CardTitle`, `Label`, `Caption`, `Overline`, `Mono`, `EmptyState`, `InlineFeedback`, `LoadingState`, `SearchField`, `ReadonlyField`, `StatusChip`, `getStatusChipSx`, `getStatusMetaSx`, `CardShell`, `SurfaceCard`, `SurfaceDialog`, `ConfirmDialog`, `FormDialogShell`, `SectionHeader` |
+| Primitives | `PageTitle`, `SectionTitle`, `CardTitle`, `Label`, `Caption`, `Overline`, `Mono`, `EmptyState`, `InlineFeedback`, `LoadingState`, `SearchField`, `ReadonlyField`, `StatusChip`, `getStatusChipSx`, `getStatusMetaSx`, `CardShell`, `SurfaceCard`, `SurfaceDialog`, `ConfirmDialog`, `FormDialogShell`, `SectionHeader`, `SituationHeader` |
 | Patterns | `CollectionToolbar`, `MetricStrip`, `SectionCard`, `AuthPanel` |
 
 Everything is re-exported through `frontend/src/design-system/index.ts`.
 
 ## Verification Surface
 
-The canonical verification surface for code-backed shared UI now lives in Storybook:
+The canonical verification surface for code-backed shared UI now lives in targeted frontend checks:
 
-- `frontend/.storybook/*` owns the Storybook runtime and Baldin theme wrapper.
-- Colocated `*.stories.tsx` files under `frontend/src/design-system/*` are the review surface for shared React exports.
-- Colocated `*.figma.ts` files remain the metadata source for Figma node URLs. Storybook stories read those files and set `parameters.design` from the same source of truth instead of duplicating links manually.
-- Chromatic is the publish lane for branch previews and Storybook Connect links when `CHROMATIC_PROJECT_TOKEN` is available.
+- `frontend/test/design-system/**` owns focused Vitest coverage for shared React exports and theme rules.
+- `cd frontend && npm run lint:theme`, `cd frontend && ./node_modules/typescript/bin/tsc --noEmit`, and `cd frontend && VITE_API_URL=https://api.preview.invalid npm run build` are the widening checks when shared exports, typing, or bundling assumptions change.
+- Colocated `*.figma.ts` files remain optional metadata for historical Figma node URLs. They are not imported by the shipped app or required for the shared-surface validation lane.
+- Use real route consumers or the browser harness only when a manual visual check adds value beyond targeted tests.
 
-Treat Storybook and Chromatic as already-landed infrastructure for the current mapping set. Future migration work should expand this existing review lane instead of re-scoping it as a prerequisite migration stream.
+Treat this test-first lane as the default review surface for shared UI. Do not rebuild a separate component sandbox as a prerequisite for shipping shared React code.
 
-This keeps Baldin Figma-first without treating Dev-seat-only flows as a blocker. The Figma library remains the design origin, the shared React layer remains the implementation origin, and Storybook is the inspection bridge between them.
+This keeps Baldin code-first without turning optional design metadata into a gate. The shared React layer is the implementation origin, targeted tests are the primary inspection bridge, and archived design surfaces remain reference-only.
 
 ## Primitive Vs Pattern Vs Feature-Owned
 
@@ -125,7 +121,7 @@ Examples that remain feature-owned:
 
 - Leads still own extraction flow, ranking behavior, and lead-specific CTA and status semantics.
 - Applications still own stage semantics, row-card content, next-step behavior, and document workflows.
-- Profile still owns builder logic, field schemas, record rendering, and AI-assisted editing behavior.
+- Profile still owns builder logic, field schemas, record rendering, and AI-assisted editing behavior, even though the aspirations collection chrome now reuses the canonical `SituationHeader` primitive and `MetricStrip` pattern.
 - Conversations still own participant display, row layout, and message workflow.
 - Agents still own `kind` mapping, orchestration behavior, and execution state.
 
@@ -160,7 +156,7 @@ The current shared APIs are now used across the route families that own shared-e
 - Auth: login, registration, and MFA flows use `AuthPanel`, `InlineFeedback`, and shared typography.
 - Applications: queue, board, and detail routes use design-system status, surface, and dialog primitives.
 - Leads: cards, dialogs, search shell, and empty/loading states use canonical shared surfaces.
-- Profile: section framing, dialogs, feedback, hero shells, and summary surfaces use canonical shared surfaces plus documented adapters.
+- Profile: section framing, dialogs, feedback, hero shells, summary surfaces, and aspirations collection chrome use canonical shared surfaces plus documented adapters.
 - Conversations and agent chat: collection chrome, section framing, chips, and supporting dialogs use canonical shared surfaces.
 - Dashboard, documents/editor, product-app workflows, the dedicated Admin SPA, settings, network/discovery, and company surfaces now import overlapping shell UI through `frontend/src/design-system/*` instead of local wrappers or theme shims.
 

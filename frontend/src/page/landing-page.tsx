@@ -31,11 +31,15 @@ import {
 import { UserContext } from '../context/user-context';
 import {
   CardShell,
+  authBackgroundGradient,
+  cardSurfaceGradient,
   StatusChip,
   brandGradient,
   brandHoverGradient,
   monoFontFamily,
+  radiusTokens,
   softBrandGradient,
+  toRadiusPx,
   type CardShellTone,
 } from '../design-system';
 
@@ -150,13 +154,11 @@ const LandingPage: React.FC = () => {
   const mobileMenuOpen = Boolean(menuAnchorEl);
   const productAppPath = token ? '/dashboard' : '/login';
   const productAppLabel = token ? 'Open product app' : 'Sign in to product app';
-  const canvas = theme.baldin.surface.canvas;
-  const heroBackground = [
-    `radial-gradient(circle at 10% 10%, ${alpha(theme.palette.primary.main, 0.24)} 0%, transparent 34%)`,
-    `radial-gradient(circle at 88% 16%, ${alpha(theme.palette.secondary.main, 0.22)} 0%, transparent 32%)`,
-    `radial-gradient(circle at 52% 100%, ${alpha(theme.palette.info.main, 0.12)} 0%, transparent 26%)`,
-    canvas,
-  ].join(', ');
+  const heroBackground = authBackgroundGradient(theme);
+  const pillRadius = toRadiusPx(radiusTokens.pill);
+  const cardRadius = toRadiusPx(36);
+  const panelRadius = toRadiusPx(30);
+  const iconRadius = toRadiusPx(24);
   const horizontalBrandButtonSx = {
     background: brandGradient(theme, 90),
     '&:hover': {
@@ -195,7 +197,7 @@ const LandingPage: React.FC = () => {
             spacing={2}
             sx={{
               border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
-              borderRadius: 999,
+              borderRadius: pillRadius,
               px: { xs: 2, md: 2.5 },
               py: 1,
               backgroundColor: alpha(theme.baldin.surface.base, 0.78),
@@ -351,7 +353,7 @@ const LandingPage: React.FC = () => {
                     key={signal.label}
                     sx={{
                       minHeight: 104,
-                      borderRadius: 3,
+                      borderRadius: cardRadius,
                       border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
                       backgroundColor: alpha(theme.baldin.surface.raised, 0.68),
                       px: 2,
@@ -394,7 +396,7 @@ const LandingPage: React.FC = () => {
                 sx={{
                   position: 'relative',
                   height: '100%',
-                  background: `linear-gradient(180deg, ${alpha(theme.baldin.surface.overlay, 0.96)} 0%, ${alpha(theme.baldin.surface.base, 0.98)} 100%)`,
+                  background: cardSurfaceGradient(theme, 180),
                   boxShadow: `0 28px 80px ${alpha(theme.palette.common.black, 0.28)}`,
                 }}
               >
@@ -434,7 +436,7 @@ const LandingPage: React.FC = () => {
                       <Box
                         key={label}
                         sx={{
-                          borderRadius: 2.5,
+                          borderRadius: panelRadius,
                           border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
                           backgroundColor: alpha(theme.baldin.surface.raised, 0.72),
                           px: 1.5,
@@ -462,7 +464,7 @@ const LandingPage: React.FC = () => {
                           alignItems: 'center',
                           px: 1.5,
                           py: 1.4,
-                          borderRadius: 2.5,
+                          borderRadius: panelRadius,
                           border: `1px solid ${alpha(theme.palette.common.white, 0.06)}`,
                           backgroundColor: alpha(theme.baldin.surface.inset, 0.86),
                         }}
@@ -561,7 +563,7 @@ const LandingPage: React.FC = () => {
                             placeItems: 'center',
                             width: 48,
                             height: 48,
-                            borderRadius: 2.5,
+                            borderRadius: panelRadius,
                             backgroundColor: alpha(theme.palette.common.white, 0.06),
                             border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
                           }}
@@ -709,7 +711,7 @@ const LandingPage: React.FC = () => {
                         <Box
                           key={pillar.title}
                           sx={{
-                            borderRadius: 2.5,
+                            borderRadius: panelRadius,
                             border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
                             backgroundColor: alpha(theme.baldin.surface.raised, 0.66),
                             px: 2,
@@ -722,7 +724,7 @@ const LandingPage: React.FC = () => {
                               placeItems: 'center',
                               width: 40,
                               height: 40,
-                              borderRadius: 2,
+                              borderRadius: iconRadius,
                               backgroundColor: alpha(theme.palette.success.main, 0.12),
                               color: theme.palette.success.light,
                               mb: 1.25,
@@ -791,18 +793,52 @@ const LandingPage: React.FC = () => {
             sx={{
               position: 'relative',
               overflow: 'hidden',
-              background: [
-                `radial-gradient(circle at 12% 18%, ${alpha(theme.palette.primary.light, 0.24)} 0%, transparent 32%)`,
-                `radial-gradient(circle at 88% 24%, ${alpha(theme.palette.secondary.light, 0.24)} 0%, transparent 32%)`,
-                `linear-gradient(135deg, ${alpha(theme.baldin.surface.overlay, 0.98)} 0%, ${alpha(theme.baldin.surface.base, 0.98)} 100%)`,
-              ].join(', '),
+              background: cardSurfaceGradient(theme, 135),
             }}
           >
+            <Box
+              aria-hidden="true"
+              sx={{
+                position: 'absolute',
+                left: -72,
+                bottom: -96,
+                width: 240,
+                height: 240,
+                borderRadius: '50%',
+                background: softBrandGradient(theme, {
+                  angle: 135,
+                  startOpacity: 0.34,
+                  endOpacity: 0.12,
+                }),
+                filter: 'blur(84px)',
+                pointerEvents: 'none',
+              }}
+            />
+            <Box
+              aria-hidden="true"
+              sx={{
+                position: 'absolute',
+                top: -88,
+                right: -56,
+                width: 220,
+                height: 220,
+                borderRadius: '50%',
+                background: softBrandGradient(theme, {
+                  angle: 45,
+                  startOpacity: 0.3,
+                  endOpacity: 0.1,
+                  reverse: true,
+                }),
+                filter: 'blur(72px)',
+                pointerEvents: 'none',
+              }}
+            />
             <Stack
               direction={{ xs: 'column', lg: 'row' }}
               justifyContent="space-between"
               spacing={3}
               alignItems={{ xs: 'flex-start', lg: 'center' }}
+              sx={{ position: 'relative', zIndex: 1 }}
             >
               <Box>
                 <Typography

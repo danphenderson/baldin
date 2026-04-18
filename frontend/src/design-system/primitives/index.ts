@@ -8,6 +8,7 @@ export * from './surfaces/card-shell';
 export * from './surfaces/confirm-dialog';
 export * from './surfaces/form-dialog-shell';
 export * from './surfaces/section-header';
+export * from './surfaces/situation-header';
 export * from './surfaces/surface-card';
 export * from './surfaces/surface-dialog';
 export * from './typography';

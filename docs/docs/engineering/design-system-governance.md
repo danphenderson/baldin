@@ -10,7 +10,7 @@ description: Lightweight operating rules for promoting, reviewing, documenting, 
 
 Use this page for the practical operating rules that keep Baldin's design-system layer coherent as adoption expands.
 
-This governance stays intentionally lightweight. Baldin is still a local-first developer-preview repo, so the rules should prevent drift without adding mature-SaaS process overhead.
+This governance stays intentionally lightweight. Baldin is still a local-first repo with a pre-production release path, so the rules should prevent drift without adding mature-SaaS process overhead.
 
 ## Promotion Rules
 
@@ -60,7 +60,7 @@ Shared UI with behavior needs targeted tests.
 - Add Vitest and React Testing Library coverage when shared UI has interaction, accessibility semantics, branching behavior, callback wiring, or wrapper compatibility behavior.
 - Cover the behavior that makes the surface shared: keyboard and focus handling, variant branching, fallback behavior, wrapper passthrough, or slot orchestration.
 - Pure token mapping, static composition, or styling-only changes can rely on the existing validation path unless new logic is introduced.
-- Public shared React exports should have a colocated Storybook story. When the surface also has a colocated `.figma.ts` mapping, the story should source its `parameters.design` URL from that file instead of duplicating the link manually.
+- Public shared React exports should have targeted Vitest coverage when they expose reusable behavior or otherwise lack route-level coverage. Optional `.figma.ts` mappings can stay colocated with the surface when historical design context still adds value.
 - Any new `lint-theme` rule must include a matching test in `frontend/test/design-system/theme/lint-theme.test.ts`.
 
 ## Documentation Requirements
@@ -129,7 +129,7 @@ For design-system PRs, reviewers should check:
 - Does it avoid raw hex, raw gradients, raw font-family overrides, legacy wrapper imports, and direct MUI shell imports outside the allowed paths?
 - Does it keep `style=` limited to runtime-computed escapes or legacy compatibility shims, instead of static object literals?
 - Are compatibility wrappers thinner or fewer after the change, not broader?
-- Does every touched shared React surface still have the expected Storybook coverage, and does any mapped surface still point at the canonical Figma node?
+- Does every touched shared React surface still have the expected targeted test coverage, and does any optional mapping metadata still point at the expected linked Figma node when it remains in use?
 - Are the required docs updated in the same PR?
 - Are the smallest relevant tests and checks present?
 
@@ -147,11 +147,11 @@ Keep enforcement lightweight and practical.
 - `lint:theme` requires shared design-system wrappers to type `sx` as `SxProps<Theme>` instead of `object`.
 - `lint:theme` flags new shared-surface uses of `InputProps` and `PaperProps`; the current `surface-dialog` and `form-dialog-shell` files remain documented exceptions until their slots-based refactor lands.
 - Keep docs build mandatory when design-system docs or sidebar wiring changes.
-- `storybook:build` should be treated as a normal check when a PR changes public shared React surfaces or their Figma-linked story contracts.
+- Targeted frontend tests should be treated as a normal check when a PR changes public shared React surfaces with reusable behavior or slot contracts.
 
 ## Defaults
 
 - Prefer reusing a shipped primitive or pattern before proposing a new one.
-- Prefer promoting the next grounded shared abstraction from the Figma library into code over introducing a broad reusable API with unstable semantics.
+- Prefer promoting the next grounded shared abstraction from current code and reusable repo-backed evidence over introducing a broad reusable API with unstable semantics.
 - Prefer deleting dead wrappers over keeping inert compatibility files around.
-- Prefer real consumption proof before promoting Figma-library surfaces into code, even when the Figma library grows ahead of the repo implementation.
+- Prefer real consumption proof before promoting archived-design ideas into code, even when historical Figma libraries describe broader inventory than the repo currently ships.

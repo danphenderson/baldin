@@ -2,14 +2,14 @@
 sidebar_position: 2
 slug: /features/job-search-pipeline
 title: Job Search Pipeline
-description: Track companies, leads, and applications through the full job-search lifecycle.
+description: Track companies, leads, and applications inside Baldin's current job-search workspace.
 ---
 
-<!-- last-verified: 2026-04-09 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Job Search Pipeline
 
-Baldin's core job-search pipeline connects companies, leads, and applications into a single workflow that moves from discovery through to offer tracking.
+The Job Search Pipeline is a core current workspace surface. It connects companies, leads, and applications into a day-to-day workflow that moves from discovery through to offer tracking.
 
 ## Companies
 

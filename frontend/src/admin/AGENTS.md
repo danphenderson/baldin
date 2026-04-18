@@ -2,7 +2,7 @@
 
 ## Owner
 
-- `baldin_frontend`; use `baldin_design_lead` for Figma-first admin review.
+- `baldin_frontend`; use `baldin_design_lead` for archived-design admin reference work.
 
 ## Scope
 

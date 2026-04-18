@@ -8,7 +8,7 @@ description: Contribution flow, validation path, and practical handoff rules for
 
 # Design System Workflow
 
-Use this workflow when adding, extending, or migrating shared frontend UI. The goal is to build out a comprehensive shared library in Figma while keeping the shipped `frontend/src/design-system/*` layer documented and aligned with the subset that is ready to live in code.
+Use this workflow when adding, extending, or migrating shared frontend UI. The goal is to keep the shipped `frontend/src/design-system/*` layer coherent, well-documented, and ready to carry the active `v2.1` product direction.
 
 Use [Design System Governance](./design-system-governance.md) for durable operating rules, promotion criteria, wrapper lifecycle, reviewer checklist, and anti-drift guidance. Use this page for the day-to-day contribution flow.
 
@@ -36,19 +36,17 @@ Keep code feature-owned when any of these are true:
 - Re-export shared additions through the nearest `index.ts` and through `frontend/src/design-system/index.ts` when they are public.
 - Document the new shared surface in the same change under `docs/docs/`.
 
-## Figma-First Verification Lane
+## Verification And Optional Mapping Lane
 
-For exported shared React surfaces, Baldin now uses a single review loop:
+For exported shared React surfaces, Baldin now uses a single code-first review loop grounded in tests and shipped routes:
 
-Treat Storybook and Chromatic as existing repo infrastructure for the current code-backed mapping set. Expand that lane when shared surfaces change; do not open a separate migration stream just to "add Storybook" or "introduce Chromatic".
+1. Keep the shared React contract in `frontend/src/design-system/*`.
+2. Add or update targeted Vitest coverage when the shared surface has reusable behavior, slot orchestration, branching, or accessibility semantics.
+3. Keep the colocated `*.figma.ts` file only when optional mapping metadata still adds value.
+4. Use real route consumers or the browser harness for manual review only when a visual check is actually needed.
+5. Do not create a separate sandbox or publish lane as a prerequisite for shipping shared UI.
 
-1. Keep the canonical reusable design in `Baldin-Library`, not in route screens.
-2. Keep the code-backed mapping in the colocated `*.figma.ts` file.
-3. Keep a colocated `*.stories.tsx` file for the shared surface.
-4. Set Storybook `parameters.design` from the colocated `*.figma.ts` metadata so the Figma link stays in sync with the code-backed mapping.
-5. Publish Storybook to Chromatic when credentials are available, then use Storybook Connect for the Figma-side link back to the live story.
-
-During the redesign reset, `Baldin Product Redesign — Command Center` is the active composed-screen working file and the current `Baldin-App-Screens` file is reference-only archival evidence. The composed-screen file should consume published library components and variables, not invent new shared primitives inside the screens file.
+Archived Figma files can still provide historical context, but no shared-surface change should block on new Figma screens or node-level approval.
 
 ## Theme Rules
 
@@ -91,7 +89,7 @@ Start with the smallest relevant check, then widen when the change affects publi
 | --- | --- |
 | Docs-only design-system change | `npm --prefix docs run build` |
 | Shared frontend code | `cd frontend && npm run test` when tests exist for the touched surface |
-| Shared frontend React surface with a Figma mapping | `cd frontend && npm run storybook:build` |
+| Shared frontend React surface | `cd frontend && npm run test -- <targeted shared-surface tests>` |
 | Shared frontend typing or exports | `cd frontend && node ./node_modules/typescript/bin/tsc --noEmit` |
 | Shared frontend behavior or bundling assumptions | `cd frontend && VITE_API_URL=https://api.preview.invalid npm run build` |
 | Theme, token, or import-boundary rules | `cd frontend && npm run lint:theme` |
@@ -103,7 +101,7 @@ For this repo, docs build is mandatory when these design-system docs or the side
 When adding or widening shared UI:
 
 - Update the canonical docs in the same change.
-- Add or update the colocated Storybook story when the surface is a public shared React export.
+- Add or update targeted tests when the surface is a public shared React export with reusable behavior.
 - Update [Design System Governance](./design-system-governance.md) when operating rules or reviewer expectations change.
 - Update [Design System Catalog](../reference/design-system-catalog.md) when a shared surface, wrapper, or adopter inventory changes.
 - Update [Design System Migration Guide](./design-system-migration-guide.md) when rollout status or migrated surfaces change.
@@ -119,7 +117,7 @@ When adding or widening shared UI:
 | Leave unstable product behavior in feature code | Abstract a component just because two pages both use a `Card` |
 | Preserve legacy call sites with thin re-export shims only when needed | Let legacy wrappers become the primary implementation surface |
 | Update docs in the same change | Treat migration notes as the only source of truth |
-| Keep Storybook and Figma links sourced from the same `.figma.ts` file | Paste Figma URLs into stories by hand and let them drift |
+| Keep optional `.figma.ts` metadata close to the shared surface when historical design context adds value | Turn mapping metadata into a build or review gate |
 | Delete dead compatibility files promptly | Keep inert shims after in-repo consumers are gone |
 
 ## Current Defaults

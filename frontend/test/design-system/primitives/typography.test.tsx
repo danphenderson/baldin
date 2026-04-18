@@ -2,7 +2,7 @@ import React from 'react';
 import { CssBaseline, ThemeProvider as MuiThemeProvider } from '@mui/material';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { Mono, Overline, PageTitle } from '@/design-system';
+import { Caption, CardTitle, Label, Mono, Overline, PageTitle, SectionTitle } from '@/design-system';
 import { createBaldinTheme } from '@/design-system/theme';
 import { monoFontFamily, typographyRoles } from '@/design-system/tokens/typography';
 
@@ -44,6 +44,36 @@ describe('Typography primitives', () => {
     expect(screen.getByTestId('overline-token')).toHaveStyle({
       letterSpacing: typographyRoles.eyebrow.letterSpacing,
       lineHeight: `${typographyRoles.eyebrow.lineHeight}`,
+    });
+  });
+
+  it('applies shared section, card, label, and caption role defaults', () => {
+    renderTypography(
+      <>
+        <SectionTitle data-testid="section-title">Pipeline summary</SectionTitle>
+        <CardTitle data-testid="card-title">Next action</CardTitle>
+        <Label data-testid="label-token">Status</Label>
+        <Caption data-testid="caption-token">Updated two minutes ago</Caption>
+      </>,
+    );
+
+    expect(screen.getByTestId('section-title')).toHaveClass(`MuiTypography-${typographyRoles.sectionTitle.variant}`);
+    expect(screen.getByTestId('section-title')).toHaveStyle({
+      fontWeight: `${typographyRoles.sectionTitle.fontWeight}`,
+      letterSpacing: typographyRoles.sectionTitle.letterSpacing,
+      lineHeight: `${typographyRoles.sectionTitle.lineHeight}`,
+    });
+    expect(screen.getByTestId('card-title')).toHaveClass(`MuiTypography-${typographyRoles.cardTitle.variant}`);
+    expect(screen.getByTestId('card-title')).toHaveStyle({
+      fontWeight: `${typographyRoles.cardTitle.fontWeight}`,
+    });
+    expect(screen.getByTestId('label-token')).toHaveClass(`MuiTypography-${typographyRoles.label.variant}`);
+    expect(screen.getByTestId('label-token')).toHaveStyle({
+      fontWeight: `${typographyRoles.label.fontWeight}`,
+    });
+    expect(screen.getByTestId('caption-token')).toHaveClass(`MuiTypography-${typographyRoles.caption.variant}`);
+    expect(screen.getByTestId('caption-token')).toHaveStyle({
+      lineHeight: `${typographyRoles.caption.lineHeight}`,
     });
   });
 });

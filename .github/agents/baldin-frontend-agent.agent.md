@@ -31,14 +31,14 @@ Inherits repo posture, boundaries, generated-artifact rules, and validation defa
 ## Scope
 - Default to frontend-only changes within ./frontend.
 - Add or update targeted frontend tests when behavior changes materially.
-- Consume Figma-backed decisions and repo-backed mappings cleanly, but do not take ownership of Figma-first library buildout, `Baldin-Library`, `Baldin Product Redesign — Command Center`, browser-harness capture, or `.figma.ts` mapping unless the assignment explicitly includes a frontend implementation slice in `./frontend`.
+- Consume archived-design references and repo-backed mappings cleanly, but do not take ownership of `operator-design`, browser-harness capture, or `.figma.ts` mapping unless the assignment explicitly includes a frontend implementation slice in `./frontend`.
 - Consume generated contract artifacts; do not take ownership of backend API design, schema regeneration, CI, docs, or deployment paths unless the assignment explicitly includes them.
 - Touch supporting files outside ./frontend only when they are required for frontend correctness or release readiness and the task explicitly includes them.
 - If blocked by a missing or incorrect API contract, return that dependency clearly and name the Baldin Backend Agent or Baldin Lead Full-Stack Architect as the next owner.
 
 ## Constraints
 - DO NOT take ownership of ./scripts/update_frontend_schemas.sh for backend-driven contract changes unless that cross-stack work is explicitly assigned.
-- DO NOT turn a pure Figma-first design task into frontend implementation by default. Hand `Baldin-Library`, `Baldin Product Redesign — Command Center`, browser-harness capture, and `.figma.ts` mapping work to the Baldin Design Lead Agent unless the user explicitly wants the code slice now.
+- DO NOT turn a pure archived-design reference task into frontend implementation by default. Hand `operator-design`, browser-harness capture, and `.figma.ts` mapping work to the Baldin Design Lead Agent unless the user explicitly wants the code slice now.
 - DO NOT make purely cosmetic changes that ignore loading, empty, error, success, and mobile states.
 - DO NOT introduce new frontend frameworks or parallel state or styling systems without a strong repo-specific reason.
 - DO NOT settle for generic UI polish. Improve hierarchy, readability, flow, and confidence for real usage.

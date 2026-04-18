@@ -2,18 +2,18 @@
 sidebar_position: 5
 slug: /features/networking
 title: Networking & Messaging
-description: Discover profiles, peer connections, direct and group conversations, and activity tracking.
+description: Opt-in profiles, private connections, conversations, and personal activity tracking.
 ---
 
-<!-- last-verified: 2026-04-12 -->
+<!-- last-verified: 2026-04-17 -->
 
 # Networking & Messaging
 
-Baldin's network layer connects users through discoverable profiles, peer connections, and real-time messaging — all feeding into the activity feed and action items on the Dashboard.
+Baldin's networking surfaces provide private-by-default context around a job search. Profiles become discoverable only when a user opts in, accepted connections unlock conversations, and the resulting activity rolls into the operator's own dashboard and action-item workflow rather than a public market feed.
 
 ## Discover
 
-The Discover surface at `/network/discover` shows discoverable user profiles. Visibility is governed by subscription tier:
+The Discover surface at `/network/discover` shows only profiles whose owners allow discovery. Regular users default to `is_discoverable=false`; superusers default to `true`, and any user can toggle visibility later. Subscription tier still governs how much of the directory a user can browse:
 
 | Tier | Discover Access |
 |------|-----------------|
@@ -42,7 +42,7 @@ stateDiagram-v2
     Accepted --> Blocked: Block
 ```
 
-Connected users can message each other and see each other's activity in the feed.
+Connected users can message each other and see relevant workflow events in their personal activity feed.
 
 **Frontend:** `/network/connections` — Connection management (`frontend/src/page/connections.tsx`)
 
@@ -66,7 +66,7 @@ Messages support single-level threading for focused discussions within a convers
 
 ## Activity Feed
 
-The activity feed aggregates events from connections, conversations, applications, and documents into a single chronological stream. A summary endpoint groups counts by event type for quick-glance metrics on the Dashboard.
+The activity feed aggregates per-user events from connections, conversations, applications, and documents into a single chronological stream. A summary endpoint groups counts by event type for quick-glance metrics on the Dashboard. It is a personal workflow surface, not a public listing-health feed or broader market-intelligence view.
 
 **API:** `/activity-feed` — Feed list and summary endpoints
 

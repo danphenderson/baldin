@@ -6,10 +6,21 @@ import {
   ScreenCallout,
   ScreenMetric,
   ScreenPanel,
+  ScreenProposal,
   ScreenTag,
 } from "./flagship-primitives";
 
 export type DiscoverabilityScreenState = "visible" | "hidden" | "saving_toggle" | "error_feedback";
+export type DiscoverabilityScreenObservabilityMode = "current" | "proposal";
+
+type DiscoverabilityTone = "accent" | "success" | "warning" | "info" | "neutral" | "skill";
+
+type DiscoverabilityObservabilityBand = {
+  label: string;
+  value: string;
+  tone: DiscoverabilityTone;
+  note: string;
+};
 
 function MobileFrame({
   routeLabel,
@@ -69,7 +80,94 @@ function TogglePreview({
   );
 }
 
-function SettingsDesktopContent({ state }: { state: DiscoverabilityScreenState }) {
+function DiscoverabilityObservabilityModule({
+  state,
+  mobile = false,
+}: {
+  state: DiscoverabilityScreenState;
+  mobile?: boolean;
+}) {
+  const { T } = useTheme();
+  const isVisible = state === "visible" || state === "saving_toggle" || state === "error_feedback";
+  const isSaving = state === "saving_toggle";
+  const isError = state === "error_feedback";
+  const snapshot = isVisible
+    ? {
+        bands: [
+          { label: "Visibility fit", value: isSaving ? "Steady" : "Stronger", tone: isSaving ? "info" as const : "success" as const, note: "Opt-in visibility can read as a broad fit band without leaking who might be looking or how often." },
+          { label: "Inbound climate", value: isError ? "Mixed" : "Responsive", tone: "info" as const, note: "The route can summarize potential responsiveness privately, never as a message-derived public claim." },
+          { label: "Reachability pressure", value: "Medium", tone: "info" as const, note: "The overlay can imply measured discoverability demand without exposing exact request counts." },
+        ] satisfies DiscoverabilityObservabilityBand[],
+        signalQuality: isError ? "Early signal" : "Corroborated",
+        signalTone: isError ? "info" as const : "success" as const,
+        signalNote: isError
+          ? "The read stays provisional while the visibility setting is out of sync."
+          : "Bands can appear only when profile posture and trust settings agree on the same qualitative direction.",
+        decayNote: "If the profile posture or discoverability setting stops being refreshed, stronger bands fall back toward Steady and then Quiet.",
+      }
+    : {
+        bands: [
+          { label: "Visibility fit", value: "Unclear", tone: "neutral" as const, note: "When the profile stays hidden, the route should not imply durable external demand." },
+          { label: "Inbound climate", value: "Quiet", tone: "neutral" as const, note: "Private discoverability stays intentionally quiet until the operator opts into the surface." },
+          { label: "Reachability pressure", value: "Low", tone: "warning" as const, note: "The route can acknowledge a low-intensity posture without exposing exact request history." },
+        ] satisfies DiscoverabilityObservabilityBand[],
+        signalQuality: "Early signal",
+        signalTone: "info" as const,
+        signalNote: "Proposal cues can reflect privacy posture, but they should remain visibly tentative while visibility is off.",
+        decayNote: "Hidden posture keeps the read soft by default, and any older discoverability context decays back toward Quiet instead of hardening.",
+      };
+
+  return (
+    <ScreenPanel
+      kicker="Proposal overlay"
+      title="Private discoverability observability"
+      aside={<ScreenTag label="Opt-in" tone="info" />}
+    >
+      <div style={{ display: "grid", gap: 12 }}>
+        <ScreenProposal
+          title="Discoverability bands stay privacy-bounded"
+          body="This route can preview coarse discoverability cues later, but they must remain proposal-only, opt-in, and separate from any public feed, marketplace, or named-person framing."
+          provenance="Synthesized from discoverability posture, profile readiness, and private trust settings."
+          boundary="Private candidate workflow only. Coarse bands only, no exact counts, and no named contributors."
+        />
+
+        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+          {snapshot.bands.map((band) => (
+            <div key={band.label} style={{ padding: "12px 14px", background: T.base, border: `1px solid ${T.s1}`, borderRadius: T.r2, display: "grid", gap: 8 }}>
+              <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>{band.label}</p>
+              <div>
+                <ScreenTag label={band.value} tone={band.tone === "accent" ? "info" : band.tone} />
+              </div>
+              <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{band.note}</p>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "minmax(220px, 0.7fr) minmax(0, 1fr)", gap: 10 }}>
+          <div style={{ padding: "12px 14px", background: T.base, border: `1px solid ${T.s1}`, borderRadius: T.r2, display: "grid", gap: 8 }}>
+            <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Signal quality</p>
+            <div>
+              <ScreenTag label={snapshot.signalQuality} tone={snapshot.signalTone} />
+            </div>
+            <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{snapshot.signalNote}</p>
+          </div>
+          <div style={{ padding: "12px 14px", background: T.base, border: `1px solid ${T.s1}`, borderRadius: T.r2, display: "grid", gap: 8 }}>
+            <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Time decay</p>
+            <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{snapshot.decayNote}</p>
+          </div>
+        </div>
+      </div>
+    </ScreenPanel>
+  );
+}
+
+function SettingsDesktopContent({
+  state,
+  observabilityMode,
+}: {
+  state: DiscoverabilityScreenState;
+  observabilityMode: DiscoverabilityScreenObservabilityMode;
+}) {
   const { T } = useTheme();
   const isVisible = state === "visible" || state === "saving_toggle" || state === "error_feedback";
   const isSaving = state === "saving_toggle";
@@ -111,6 +209,8 @@ function SettingsDesktopContent({ state }: { state: DiscoverabilityScreenState }
         <ScreenMetric label="Superuser path" value="Limited" tone="warning" note="Reachable without becoming broadly public" />
         <ScreenMetric label="Trust cues" value="Private" tone="skill" note="No public observability bands or exact counts" />
       </div>
+
+      {observabilityMode === "proposal" && <DiscoverabilityObservabilityModule state={state} />}
 
       <div style={{ display: "grid", gridTemplateColumns: "1.05fr 0.95fr", gap: 16, alignItems: "start" }}>
         <ScreenPanel kicker="Primary control" title="Show me in discover">
@@ -203,7 +303,13 @@ function SettingsDesktopContent({ state }: { state: DiscoverabilityScreenState }
   );
 }
 
-function SettingsMobileContent({ state }: { state: DiscoverabilityScreenState }) {
+function SettingsMobileContent({
+  state,
+  observabilityMode,
+}: {
+  state: DiscoverabilityScreenState;
+  observabilityMode: DiscoverabilityScreenObservabilityMode;
+}) {
   const { T } = useTheme();
   const isVisible = state === "visible" || state === "saving_toggle" || state === "error_feedback";
   const isSaving = state === "saving_toggle";
@@ -224,6 +330,8 @@ function SettingsMobileContent({ state }: { state: DiscoverabilityScreenState })
         <ScreenMetric label="Trust" value="Private" tone="skill" />
       </div>
 
+      {observabilityMode === "proposal" && <DiscoverabilityObservabilityModule state={state} mobile />}
+
       <ScreenPanel kicker="Toggle" title="Show me in discover">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "14px 16px", background: T.base, border: `1px solid ${isVisible ? T.aStroke : T.s1}`, borderRadius: T.r2 }}>
           <div>
@@ -241,13 +349,15 @@ function SettingsMobileContent({ state }: { state: DiscoverabilityScreenState })
 export function DiscoverabilityScreen({
   state = "hidden",
   mobile = false,
+  observabilityMode = "current",
 }: {
   state?: DiscoverabilityScreenState;
   mobile?: boolean;
+  observabilityMode?: DiscoverabilityScreenObservabilityMode;
 }) {
   if (mobile) {
-    return <SettingsMobileContent state={state} />;
+    return <SettingsMobileContent state={state} observabilityMode={observabilityMode} />;
   }
 
-  return <SettingsDesktopContent state={state} />;
+  return <SettingsDesktopContent state={state} observabilityMode={observabilityMode} />;
 }

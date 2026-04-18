@@ -1,7 +1,7 @@
 # Quarter Roadmap: Historical Aspirations-to-Apply Flagship
 
 > Archived plan kept for historical context after the `v2.1` hard fork.
-> Do not use this file as the active implementation contract. Start from `docs/docs/reference/v2-1-hard-fork.md` and `plans/v2.1/*`.
+> Do not use this file as the active implementation contract. Start from `docs/docs/reference/operator-design-forward-path.md`, `plans/v2.1/*`, and `operator-design/`.
 > Historical working branch at the time: `schema-v2`.
 > Prior art: [plans/aspirations.md](./aspirations.md) — original 6-phase slice plan for the aspirations backend.
 

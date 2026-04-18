@@ -8,11 +8,13 @@ import {
   ScreenField,
   ScreenMetric,
   ScreenPanel,
+  ScreenProposal,
   ScreenTag,
 } from "./flagship-primitives";
 
 export type LeadsScreenState = "ranked" | "no_leads_imported" | "filter_empty" | "modal";
 export type LeadsScreenModalMode = "lead-review" | "apply-handoff";
+export type LeadsScreenObservabilityMode = "current" | "proposal";
 
 type Tone = "accent" | "success" | "warning" | "info" | "neutral" | "skill";
 
@@ -37,6 +39,13 @@ type LeadCardSpec = {
     tone: Tone;
     body: string;
   };
+};
+
+type LeadsObservabilityBand = {
+  label: string;
+  value: string;
+  tone: Tone;
+  note: string;
 };
 
 const RANKED_LEADS: LeadCardSpec[] = [
@@ -114,6 +123,95 @@ function resolveTone(tone: Tone, T: ReturnType<typeof useTheme>["T"]) {
     default:
       return { color: T.t1, dim: T.s0, border: T.s1 };
   }
+}
+
+function LeadsObservabilityModule({
+  state,
+  mobile = false,
+}: {
+  state: LeadsScreenState;
+  mobile?: boolean;
+}) {
+  const { T } = useTheme();
+  const contentState = state === "modal" ? "ranked" : state;
+  const snapshot = contentState === "no_leads_imported"
+    ? {
+        bands: [
+          { label: "Lead freshness", value: "Fresh", tone: "info" as const, note: "The overlay can acknowledge a clean slate without pretending that ranked momentum already exists." },
+          { label: "Fit read", value: "Unclear", tone: "neutral" as const, note: "Private observability stays broad until at least one lead has enough context to anchor the route." },
+          { label: "Route climate", value: "Quiet", tone: "neutral" as const, note: "No contact or collaboration pattern should surface while the collection is still empty." },
+        ] satisfies LeadsObservabilityBand[],
+        signalQuality: "Low confidence",
+        signalTone: "warning" as const,
+        signalNote: "Proposal cues remain tentative when they rely on default posture instead of corroborated lead evidence.",
+        decayNote: "If no lead enters the loop, any early read drops back toward Quiet rather than hardening into a standing claim.",
+      }
+    : contentState === "filter_empty"
+      ? {
+          bands: [
+            { label: "Lead freshness", value: "Aging", tone: "warning" as const, note: "The route can imply that useful context exists, but hidden cards should not read as fresh confirmation." },
+            { label: "Fit read", value: "Steady", tone: "info" as const, note: "Saved lead context can stay directionally useful even when the current query hides the ranked set." },
+            { label: "Route climate", value: "Quiet", tone: "neutral" as const, note: "Filtered emptiness should not be mistaken for a responsive or public-facing market signal." },
+          ] satisfies LeadsObservabilityBand[],
+          signalQuality: "Early signal",
+          signalTone: "info" as const,
+          signalNote: "The route can show a soft read, but it should remain visibly provisional until the operator reopens matching lead cards.",
+          decayNote: "When corroborating cards are out of view, stronger bands soften before they ever imply certainty.",
+        }
+      : {
+          bands: [
+            { label: "Lead freshness", value: "Fresh", tone: "accent" as const, note: "Future-facing lead cues can stay current while still hiding exact volume and private contributor detail." },
+            { label: "Fit read", value: "Stronger", tone: "success" as const, note: "The overlay can reflect durable candidate-side fit without drifting into marketplace-style proof." },
+            { label: "Route climate", value: "Mixed", tone: "info" as const, note: "Private context may be active, but the read stays qualitative and never implies guaranteed reach." },
+          ] satisfies LeadsObservabilityBand[],
+          signalQuality: "Corroborated",
+          signalTone: "success" as const,
+          signalNote: "Bands can surface only when ranking, route-local notes, and private context point in the same broad direction.",
+          decayNote: "Fresh lead cues soften toward Aging as ranking notes or route-local context stop being refreshed.",
+        };
+
+  return (
+    <ScreenPanel
+      kicker="Proposal overlay"
+      title="Private lead observability"
+      aside={<ScreenTag label="Opt-in" tone="info" />}
+    >
+      <div style={{ display: "grid", gap: 12 }}>
+        <ScreenProposal
+          title="Leverage hints stay qualitative"
+          body="This route can preview coarse private lead bands, but the cues stay clearly proposal-labeled and separate from any public or recruiter-marketplace framing."
+          provenance="Derived from ranked lead context, saved private notes, and route-local decision activity."
+          boundary="Private candidate workflow only. Coarse bands only, no exact counts, and no named contributors."
+        />
+
+        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+          {snapshot.bands.map((band) => (
+            <div key={band.label} style={{ padding: "12px 14px", background: T.base, border: `1px solid ${T.s1}`, borderRadius: T.r2, display: "grid", gap: 8 }}>
+              <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>{band.label}</p>
+              <div>
+                <ScreenTag label={band.value} tone={band.tone === "accent" ? "info" : band.tone} />
+              </div>
+              <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{band.note}</p>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "minmax(220px, 0.7fr) minmax(0, 1fr)", gap: 10 }}>
+          <div style={{ padding: "12px 14px", background: T.base, border: `1px solid ${T.s1}`, borderRadius: T.r2, display: "grid", gap: 8 }}>
+            <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Signal quality</p>
+            <div>
+              <ScreenTag label={snapshot.signalQuality} tone={snapshot.signalTone} />
+            </div>
+            <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{snapshot.signalNote}</p>
+          </div>
+          <div style={{ padding: "12px 14px", background: T.base, border: `1px solid ${T.s1}`, borderRadius: T.r2, display: "grid", gap: 8 }}>
+            <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Time decay</p>
+            <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{snapshot.decayNote}</p>
+          </div>
+        </div>
+      </div>
+    </ScreenPanel>
+  );
 }
 
 function LeadsPhoneFrame({
@@ -504,9 +602,11 @@ function ModalOverlay({
 function LeadsDesktopContent({
   state,
   modalMode,
+  observabilityMode,
 }: {
   state: LeadsScreenState;
   modalMode: LeadsScreenModalMode;
+  observabilityMode: LeadsScreenObservabilityMode;
 }) {
   const { T } = useTheme();
   const isModal = state === "modal";
@@ -518,6 +618,7 @@ function LeadsDesktopContent({
         <ExtractionPanel state={state} />
         <Toolbar state={state} />
         <MetricStrip state={state} />
+        {observabilityMode === "proposal" && <LeadsObservabilityModule state={state} />}
         {state === "filter_empty" && (
           <ScreenCallout
             title="No results match the current filters"
@@ -549,9 +650,11 @@ function LeadsDesktopContent({
 function LeadsMobileContent({
   state,
   modalMode,
+  observabilityMode,
 }: {
   state: LeadsScreenState;
   modalMode: LeadsScreenModalMode;
+  observabilityMode: LeadsScreenObservabilityMode;
 }) {
   const { T } = useTheme();
   const isModal = state === "modal";
@@ -564,6 +667,7 @@ function LeadsMobileContent({
           <ExtractionPanel state={state} />
           <Toolbar state={state} mobile />
           <MetricStrip state={state} mobile />
+          {observabilityMode === "proposal" && <LeadsObservabilityModule state={state} mobile />}
           {state === "filter_empty" && (
             <ScreenCallout
               title="No results match"
@@ -595,10 +699,14 @@ export function LeadsScreen({
   state = "ranked",
   modalMode = "lead-review",
   mobile = false,
+  observabilityMode = "current",
 }: {
   state?: LeadsScreenState;
   modalMode?: LeadsScreenModalMode;
   mobile?: boolean;
+  observabilityMode?: LeadsScreenObservabilityMode;
 }) {
-  return mobile ? <LeadsMobileContent state={state} modalMode={modalMode} /> : <LeadsDesktopContent state={state} modalMode={modalMode} />;
+  return mobile
+    ? <LeadsMobileContent state={state} modalMode={modalMode} observabilityMode={observabilityMode} />
+    : <LeadsDesktopContent state={state} modalMode={modalMode} observabilityMode={observabilityMode} />;
 }

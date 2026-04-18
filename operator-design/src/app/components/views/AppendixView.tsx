@@ -161,8 +161,8 @@ function RouteMap() {
     ["Network discover",         "/network/discover",                      "Network · opt-in people discovery · state-complete specimen" ],
     ["Network profile",          "/network/discover/:userId",              "Network · discoverable profile detail · state-complete specimen" ],
     ["Connections",              "/network/connections",                   "Network · pending and accepted connections · state-complete specimen" ],
-    ["Messages",                 "/network/messages",                      "Network · private conversation inbox"                      ],
-    ["Message detail",           "/network/messages/:conversationId",      "Network · single conversation thread"                      ],
+    ["Messages inbox",           "/network/messages",                      "Network · shipped private messaging inbox · canonical route-family entry" ],
+    ["Message thread",           "/network/messages/:conversationId",      "Network · shipped private one-to-one thread · canonical route-family entry" ],
     ["Settings",                 "/settings",                              "User rail · account settings"                              ],
     ["Subscription",             "/settings/subscription",                 "User rail · billing and plan state"                        ],
     ["Discoverability",          "/settings/discoverability",              "User rail · visibility controls · state-complete specimen" ],
@@ -177,7 +177,7 @@ function RouteMap() {
   return (
     <div>
       <H>Route coverage</H>
-      <Note>Routes sourced from <Code>frontend/src/route/app-routes.tsx</Code>. `operator-design` now carries state-complete coverage for identity, decision-loop, network-trust, workspace-evidence, and automation families while keeping the rest of the route map reference-only.</Note>
+      <Note>Routes sourced from <Code>frontend/src/route/app-routes.tsx</Code>. `operator-design` now carries state-complete coverage for identity, decision-loop, network-trust, private messaging as the shipped human loop, workspace-evidence, and automation families while keeping the rest of the route map reference-only. The legacy combined `MessagesScreen` is now a demoted fallback; the canonical contract is `/network/messages` plus `/network/messages/:conversationId`.</Note>
       <MapTable rows={rows} />
     </div>
   );

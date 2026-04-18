@@ -43,13 +43,7 @@ const sidebars: SidebarsConfig = {
       label: 'Frontend UI System',
       items: [
         'architecture/frontend-design-system',
-        'reference/design-system-catalog',
-        'reference/baldin-redesign-handoff',
-        'engineering/redesign-implementation-program',
-        'engineering/design-system-governance',
-        'engineering/design-system-workflow',
-        'engineering/design-system-migration-guide',
-        'engineering/phase-2-design-system-closeout',
+        'reference/operator-design-forward-path',
       ],
     },
     {

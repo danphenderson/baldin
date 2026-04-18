@@ -8,6 +8,7 @@ import {
   ScreenField,
   ScreenMetric,
   ScreenPanel,
+  ScreenProposal,
   ScreenTag,
 } from "./flagship-primitives";
 
@@ -17,8 +18,16 @@ export type DetailScreenState =
   | "missing_artifact_warning"
   | "create_action_item"
   | "delete_confirm";
+export type DetailScreenObservabilityMode = "current" | "proposal";
 
 type Tone = "accent" | "success" | "warning" | "error" | "info" | "skill" | "neutral";
+
+type DetailObservabilityBand = {
+  label: string;
+  value: string;
+  tone: Tone;
+  note: string;
+};
 
 interface TimelineEntry {
   label: string;
@@ -123,6 +132,94 @@ function resolveTone(tone: Tone, T: ReturnType<typeof useTheme>["T"]) {
     default:
       return { color: T.t1, dim: T.s0, border: T.s1 };
   }
+}
+
+function DetailObservabilityModule({
+  state,
+  mobile = false,
+}: {
+  state: DetailScreenState;
+  mobile?: boolean;
+}) {
+  const { T } = useTheme();
+  const snapshot = state === "missing_artifact_warning"
+    ? {
+        bands: [
+          { label: "Follow-up freshness", value: "Aging", tone: "warning" as const, note: "The route can warn that momentum is softening without exposing exact elapsed time or named operators." },
+          { label: "Stage posture", value: "Unclear", tone: "neutral" as const, note: "Missing evidence keeps any forward-looking read visibly tentative rather than overstating application strength." },
+          { label: "Evidence weight", value: "Low", tone: "warning" as const, note: "The overlay can only show a low coarse band while a key artifact is absent from the route." },
+        ] satisfies DetailObservabilityBand[],
+        signalQuality: "Low confidence",
+        signalTone: "warning" as const,
+        signalNote: "Proposal bands stay weak when the application lacks the supporting artifact needed to corroborate the read.",
+        decayNote: "If the missing artifact remains unresolved, stronger bands step down before the route suggests any durable advantage.",
+      }
+    : state === "overdue_warning"
+      ? {
+          bands: [
+            { label: "Follow-up freshness", value: "Stale-risk", tone: "warning" as const, note: "The application detail can flag a cooling next step without turning delay into a precise public claim." },
+            { label: "Stage posture", value: "Steady", tone: "info" as const, note: "Underlying fit can remain intact even while the recency band warns that action is slipping." },
+            { label: "Evidence weight", value: "Medium", tone: "info" as const, note: "The route still has enough private evidence to support a qualitative read, but not to imply certainty." },
+          ] satisfies DetailObservabilityBand[],
+          signalQuality: "Corroborated",
+          signalTone: "success" as const,
+          signalNote: "Multiple route-local cues agree on the same broad risk posture, so the module can show a stronger qualitative warning.",
+          decayNote: "Fresh follow-up cues degrade into Aging and then Stale-risk when the next action is not refreshed in time.",
+        }
+      : {
+          bands: [
+            { label: "Follow-up freshness", value: "Fresh", tone: "accent" as const, note: "The module can summarize current application momentum without ever exposing exact counts or named contributors." },
+            { label: "Stage posture", value: "Steady", tone: "info" as const, note: "The route can suggest durable application footing while keeping the read qualitative and private." },
+            { label: "Evidence weight", value: "Medium", tone: "info" as const, note: "Attached documents and route-local notes support a measured band instead of a stronger public-style claim." },
+          ] satisfies DetailObservabilityBand[],
+          signalQuality: "Corroborated",
+          signalTone: "success" as const,
+          signalNote: "Bands can appear only after the application route has enough aligned private evidence to justify a coarse summary.",
+          decayNote: "If the next-step and document context stop moving together, Fresh softens toward Aging before the route suggests any stronger conclusion.",
+        };
+
+  return (
+    <ScreenPanel
+      kicker="Proposal overlay"
+      title="Private application observability"
+      aside={<ScreenTag label="Opt-in" tone="info" />}
+    >
+      <div style={{ display: "grid", gap: 12 }}>
+        <ScreenProposal
+          title="Application leverage stays confidence-scoped"
+          body="Future-facing detail cues can compress private application momentum into broad bands, but they remain proposal-only and subordinate to the actual next step, status history, and artifacts."
+          provenance="Synthesized from route-local application state, artifact readiness, and current next-step pressure."
+          boundary="Private candidate workflow only. Coarse bands only, no exact counts, and no named contributors."
+        />
+
+        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+          {snapshot.bands.map((band) => (
+            <div key={band.label} style={{ padding: "12px 14px", background: T.base, border: `1px solid ${T.s1}`, borderRadius: T.r2, display: "grid", gap: 8 }}>
+              <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>{band.label}</p>
+              <div>
+                <ScreenTag label={band.value} tone={band.tone === "accent" ? "info" : band.tone} />
+              </div>
+              <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{band.note}</p>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "minmax(220px, 0.7fr) minmax(0, 1fr)", gap: 10 }}>
+          <div style={{ padding: "12px 14px", background: T.base, border: `1px solid ${T.s1}`, borderRadius: T.r2, display: "grid", gap: 8 }}>
+            <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Signal quality</p>
+            <div>
+              <ScreenTag label={snapshot.signalQuality} tone={snapshot.signalTone} />
+            </div>
+            <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{snapshot.signalNote}</p>
+          </div>
+          <div style={{ padding: "12px 14px", background: T.base, border: `1px solid ${T.s1}`, borderRadius: T.r2, display: "grid", gap: 8 }}>
+            <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Time decay</p>
+            <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{snapshot.decayNote}</p>
+          </div>
+        </div>
+      </div>
+    </ScreenPanel>
+  );
 }
 
 function MobileShell({
@@ -235,7 +332,13 @@ function WarningCallout({ state }: { state: DetailScreenState }) {
   );
 }
 
-function DetailDesktopContent({ state }: { state: DetailScreenState }) {
+function DetailDesktopContent({
+  state,
+  observabilityMode,
+}: {
+  state: DetailScreenState;
+  observabilityMode: DetailScreenObservabilityMode;
+}) {
   const { T } = useTheme();
   const stagePalette = resolveTone(APPLICATION.tone, T);
   const missingArtifact = state === "missing_artifact_warning";
@@ -262,6 +365,7 @@ function DetailDesktopContent({ state }: { state: DetailScreenState }) {
         </div>
 
         <WarningCallout state={state} />
+        {observabilityMode === "proposal" && <DetailObservabilityModule state={state} />}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
           <ScreenMetric label="Documents" value={String(documents.length)} tone="accent" note="Attached across resume, cover letter, and workspace docs" />
@@ -439,7 +543,13 @@ function DetailDesktopContent({ state }: { state: DetailScreenState }) {
   );
 }
 
-function DetailMobileContent({ state }: { state: DetailScreenState }) {
+function DetailMobileContent({
+  state,
+  observabilityMode,
+}: {
+  state: DetailScreenState;
+  observabilityMode: DetailScreenObservabilityMode;
+}) {
   const { T } = useTheme();
   const missingArtifact = state === "missing_artifact_warning";
   const documents = missingArtifact ? DOCUMENTS.filter((document) => document.kind !== "Resume") : DOCUMENTS;
@@ -453,6 +563,8 @@ function DetailMobileContent({ state }: { state: DetailScreenState }) {
         <ScreenMetric label="Docs" value={String(documents.length)} tone="accent" />
         <ScreenMetric label="History" value={String(TIMELINE.length)} tone="info" />
       </div>
+
+      {observabilityMode === "proposal" && <DetailObservabilityModule state={state} mobile />}
 
       <ScreenPanel kicker="Next step" title="Current follow-up">
         <div style={{ display: "grid", gap: 10 }}>
@@ -508,13 +620,15 @@ function DetailMobileContent({ state }: { state: DetailScreenState }) {
 export function DetailScreen({
   state = "populated",
   mobile = false,
+  observabilityMode = "current",
 }: {
   state?: DetailScreenState;
   mobile?: boolean;
+  observabilityMode?: DetailScreenObservabilityMode;
 }) {
   if (mobile) {
-    return <DetailMobileContent state={state} />;
+    return <DetailMobileContent state={state} observabilityMode={observabilityMode} />;
   }
 
-  return <DetailDesktopContent state={state} />;
+  return <DetailDesktopContent state={state} observabilityMode={observabilityMode} />;
 }

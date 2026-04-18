@@ -78,6 +78,53 @@ export function ScreenTag({
   );
 }
 
+export type ObservabilityLayerMode = "current" | "proposal";
+
+export function ScreenModeToggle<Value extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: Value;
+  onChange: (value: Value) => void;
+  options: { id: Value; label: string }[];
+}) {
+  const { T } = useTheme();
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, textTransform: "uppercase", letterSpacing: "0.09em" }}>{label}</span>
+      <div style={{ display: "inline-flex", gap: 6, padding: 4, background: T.base, border: `1px solid ${T.s1}`, borderRadius: T.rFull }}>
+        {options.map((option) => {
+          const isActive = option.id === value;
+          return (
+            <button
+              key={option.id}
+              onClick={() => onChange(option.id)}
+              style={{
+                height: 30,
+                padding: "0 12px",
+                borderRadius: T.rFull,
+                border: `1px solid ${isActive ? T.aStroke : "transparent"}`,
+                background: isActive ? T.accentDim : "transparent",
+                color: isActive ? T.accent : T.t1,
+                fontFamily: T.fontMono,
+                fontSize: 10.5,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function ScreenButton({
   label,
   kind = "primary",
@@ -414,6 +461,92 @@ export function ScreenProposal({
             Privacy boundary
           </p>
           <p style={{ fontFamily: T.fontBody, fontSize: 12, color: T.t1, lineHeight: 1.55, margin: 0 }}>{boundary}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ObservabilityLayerCard({
+  mode,
+  current,
+  proposal,
+}: {
+  mode: ObservabilityLayerMode;
+  current: {
+    title: string;
+    body: string;
+    contract: string;
+    boundary: string;
+  };
+  proposal: {
+    title: string;
+    body: string;
+    provenance: string;
+    boundary: string;
+    signalQuality: string;
+    decay: string;
+  };
+}) {
+  const { T } = useTheme();
+  const isProposal = mode === "proposal";
+  const color = isProposal ? T.warning : T.info;
+  const background = isProposal ? T.warnDim : T.infoDim;
+  const border = isProposal ? `${T.warning}44` : `${T.info}44`;
+  const title = isProposal ? proposal.title : current.title;
+  const body = isProposal ? proposal.body : current.body;
+  const detailLabel = isProposal ? "Provenance" : "Current contract";
+  const detailBody = isProposal ? proposal.provenance : current.contract;
+  const tagLabel = isProposal ? "Observability Proposal" : "Current Product";
+
+  return (
+    <div
+      style={{
+        padding: "12px 14px",
+        background,
+        border: `1px solid ${border}`,
+        borderLeft: `2px solid ${color}`,
+        borderRadius: T.r2,
+        display: "grid",
+        gap: 8,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <ScreenTag label={tagLabel} tone={isProposal ? "warning" : "info"} />
+        <p
+          style={{
+            fontFamily: T.fontHead,
+            fontWeight: 600,
+            fontSize: 15,
+            color: T.t0,
+            margin: 0,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {title}
+        </p>
+      </div>
+      <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{body}</p>
+      {isProposal && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <ScreenTag label={proposal.signalQuality} tone="warning" />
+          <ScreenTag label={proposal.decay} tone="neutral" />
+        </div>
+      )}
+      <div style={{ display: "grid", gap: 6 }}>
+        <div>
+          <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 2px" }}>
+            {detailLabel}
+          </p>
+          <p style={{ fontFamily: T.fontBody, fontSize: 12, color: T.t1, lineHeight: 1.55, margin: 0 }}>{detailBody}</p>
+        </div>
+        <div>
+          <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 2px" }}>
+            Privacy boundary
+          </p>
+          <p style={{ fontFamily: T.fontBody, fontSize: 12, color: T.t1, lineHeight: 1.55, margin: 0 }}>
+            {isProposal ? proposal.boundary : current.boundary}
+          </p>
         </div>
       </div>
     </div>

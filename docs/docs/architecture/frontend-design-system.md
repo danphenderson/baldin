@@ -9,9 +9,9 @@ description: Shipped frontend design-system architecture, theme contract, owners
 
 # Frontend Design System
 
-Baldin's frontend design system is now code-first. In the repo, `frontend/src/design-system/*` owns the implemented tokens, theme contracts, domain-neutral primitives, and slot-based patterns, while feature folders keep workflow logic, service calls, route copy, and entity rendering. `operator-design/` and archived Figma assets are optional reference surfaces, not the implementation source of truth.
+Baldin's frontend design system is now code-first. In the repo, `frontend/src/design-system/*` owns the implemented tokens, theme contracts, domain-neutral primitives, and slot-based patterns, while feature folders keep workflow logic, service calls, route copy, and entity rendering. `operator-design/` is the active reference bundle for forward direction, while archived Figma assets are historical reference only.
 
-Use this page for structure and ownership. Use [Design System Catalog](../reference/design-system-catalog.md) for the current inventory, [Design System Governance](../engineering/design-system-governance.md) for operating rules, [Design System Workflow](../engineering/design-system-workflow.md) for day-to-day contribution flow, and [Design System Migration Guide](../engineering/design-system-migration-guide.md) for the current rollout ledger.
+Use this page for structure and ownership. Use [Operator Design Forward Path](../reference/operator-design-forward-path.md) for the active source bundle, planning entry points, and archived-reference rules.
 
 ## Current Source Layout
 
@@ -160,7 +160,7 @@ The current shared APIs are now used across the route families that own shared-e
 - Conversations and agent chat: collection chrome, section framing, chips, and supporting dialogs use canonical shared surfaces.
 - Dashboard, documents/editor, product-app workflows, the dedicated Admin SPA, settings, network/discovery, and company surfaces now import overlapping shell UI through `frontend/src/design-system/*` instead of local wrappers or theme shims.
 
-See the [Route-Family Adoption Table](../reference/design-system-catalog.md#route-family-adoption-table) for the current status table.
+Use [Operator Design Forward Path](../reference/operator-design-forward-path.md) plus the relevant `plans/v2.1/*` packet for current route-family sequencing. The shipped code remains the source of truth for actual adoption.
 
 ## Deferred Architecture Decisions
 

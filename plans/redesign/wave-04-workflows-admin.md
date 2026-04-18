@@ -1,14 +1,15 @@
 # Wave 04: Workflow And Admin Surfaces
 
-> Status: `blocked pending approved redesign nodes`
+> Status: `archived historical redesign reference`
 > Default implementation owner: `baldin_frontend`
 > Program owner: `baldin_full_stack_architect`
 
 ## Canonical Inputs
 
-- Read `docs/docs/reference/baldin-redesign-handoff.md` first.
-- Use `docs/docs/engineering/redesign-implementation-program.md` for phase gates, PR slicing, and validation defaults.
-- Do not start implementation until the completed brief cites the exact approved Figma node IDs for this wave.
+- Start from `docs/docs/reference/operator-design-forward-path.md` for the active delivery contract.
+- Treat this packet as archived redesign context only.
+- Use `plans/v2.1/*`, `operator-design/`, and shipped route code for active implementation work.
+- If you need historical comparison, cite the exact archived Figma nodes or notes from this packet in the active brief.
 
 ## Routes In Scope
 

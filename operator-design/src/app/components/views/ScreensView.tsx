@@ -10,8 +10,18 @@ import {
   type LeadsScreenModalMode,
   type LeadsScreenState,
 } from "../screens/LeadsScreen";
-import { DetailScreen, type DetailScreenState } from "../screens/DetailScreen";
-import { MessagesScreen } from "../screens/MessagesScreen";
+import {
+  DetailScreen,
+  type DetailScreenState,
+} from "../screens/DetailScreen";
+import {
+  MessagesInboxScreen,
+  type MessagesInboxScreenState,
+} from "../screens/MessagesInboxScreen";
+import {
+  MessageThreadScreen,
+  type MessageThreadScreenState,
+} from "../screens/MessageThreadScreen";
 import { AuthScreen } from "../screens/AuthScreen";
 import { ProfileScreen, type ProfileScreenState } from "../screens/ProfileScreen";
 import {
@@ -81,7 +91,12 @@ import {
   DiscoverabilityScreen,
   type DiscoverabilityScreenState,
 } from "../screens/DiscoverabilityScreen";
-import { ScreenProposal } from "../screens/flagship-primitives";
+import {
+  ObservabilityLayerCard,
+  ScreenModeToggle,
+  ScreenProposal,
+  type ObservabilityLayerMode,
+} from "../screens/flagship-primitives";
 
 type ScreenId =
   | "profile"
@@ -104,9 +119,12 @@ type ScreenId =
   | "discover"
   | "network-profile"
   | "connections"
+  | "messages-inbox"
+  | "message-thread"
   | "discoverability"
-  | "messages"
   | "auth";
+
+type ObservabilityScreenId = "dashboard" | "leads" | "detail" | "discoverability";
 
 type ScreenStateMap = {
   profile: ProfileScreenState;
@@ -129,6 +147,8 @@ type ScreenStateMap = {
   discover: DiscoverScreenState;
   "network-profile": NetworkProfileScreenState;
   connections: ConnectionsScreenState;
+  "messages-inbox": MessagesInboxScreenState;
+  "message-thread": MessageThreadScreenState;
   discoverability: DiscoverabilityScreenState;
 };
 
@@ -141,11 +161,31 @@ type PageMeta = {
   mobileMode: string;
   mobileNote: string;
   note: string;
+  observability?: {
+    current: {
+      title: string;
+      body: string;
+      contract: string;
+      boundary: string;
+    };
+    proposal: {
+      title: string;
+      body: string;
+      provenance: string;
+      boundary: string;
+      signalQuality: string;
+      decay: string;
+    };
+  };
   proposal?: {
     title: string;
     body: string;
     provenance: string;
     boundary: string;
+  };
+  legacy?: {
+    title: string;
+    body: string;
   };
 };
 
@@ -170,6 +210,15 @@ const STATEFUL_SCREENS: StatefulScreenId[] = [
   "discover",
   "network-profile",
   "connections",
+  "messages-inbox",
+  "message-thread",
+  "discoverability",
+];
+
+const OBSERVABILITY_SCREENS: ObservabilityScreenId[] = [
+  "dashboard",
+  "leads",
+  "detail",
   "discoverability",
 ];
 
@@ -192,8 +241,9 @@ const SCREENS: { id: ScreenId; label: string; sub: string }[] = [
   { id: "discover", label: "Discover", sub: "Network trust · curated reachability" },
   { id: "network-profile", label: "Network Profile", sub: "Network trust · private connection gate" },
   { id: "connections", label: "Connections", sub: "Network trust · pending + accepted" },
+  { id: "messages-inbox", label: "Messages Inbox", sub: "Human loop · private inbox triage" },
+  { id: "message-thread", label: "Message Thread", sub: "Human loop · private conversation route" },
   { id: "discoverability", label: "Discoverability", sub: "Network trust · visibility control" },
-  { id: "messages", label: "Messages", sub: "Opt-in inbox · private threads" },
   { id: "workspace-list", label: "Workspace List", sub: "Evidence · owned and shared docs" },
   { id: "workspace-detail", label: "Workspace Detail", sub: "Evidence · provenance and history" },
   { id: "workspace-editor", label: "Workspace Editor", sub: "Evidence · create and save versions" },
@@ -238,11 +288,21 @@ const PAGE_META: Record<ScreenId, PageMeta> = {
     mobileMode: "Paired 390px mobile",
     mobileNote: "Dashboard is the only Slice 3 decision surface that must ship with an explicit mobile companion.",
     note: "Populated momentum, no-leads empty, overdue warning, and mutation states stay grounded in shipped action, analytics, and activity behavior.",
-    proposal: {
-      title: "Network leverage stays proposal-labeled",
-      body: "Warm-intro and candidate-side context cues can appear here as operator help, but they remain explicitly proposal-labeled and secondary to concrete next actions.",
-      provenance: "Derived from private connection context and current search direction.",
-      boundary: "Private candidate workflow only. No public counts or market-wide observability claims.",
+    observability: {
+      current: {
+        title: "Private workflow stays primary",
+        body: "The shipped dashboard summarizes direction, action pressure, ranked leads, and recent private activity before it says anything about a broader market read.",
+        contract: "Current product keeps the operator anchored in concrete next steps, personal activity, and route-local evidence.",
+        boundary: "No public counts, market-wide truth claims, or message access inferences.",
+      },
+      proposal: {
+        title: "Observability stays proposal-labeled",
+        body: "A guarded layer can surface coarse candidate-side conditions here, but only as confidence-scoped operator help secondary to the shipped decision loop.",
+        provenance: "Derived from private route activity, saved relationship context, and current search direction.",
+        boundary: "Private candidate workflow only. No public counts or market-wide observability claims.",
+        signalQuality: "Corroborated",
+        decay: "Aggressive decay",
+      },
     },
   },
   leads: {
@@ -252,11 +312,21 @@ const PAGE_META: Record<ScreenId, PageMeta> = {
     mobileMode: "Desktop primary",
     mobileNote: "This sweep keeps the registry desktop-primary even though the specimen component supports a mobile companion.",
     note: "Leads now center on extracted opportunities, ranking posture, and apply handoff instead of the old dense table.",
-    proposal: {
-      title: "Leverage hints stay qualitative",
-      body: "Warm-intro or trusted-contact cues should read as private operator help attached to a lead, not as social proof or public market data.",
-      provenance: "Private network context or saved relationship notes.",
-      boundary: "One-to-one workflow context only. No public visibility bands.",
+    observability: {
+      current: {
+        title: "Ranking stays grounded in private fit work",
+        body: "The shipped leads route ranks opportunities, preserves notes, and supports apply handoff without pretending it knows a shared market truth.",
+        contract: "Current product keeps extracted fit, private intro notes, and handoff readiness attached to the lead itself.",
+        boundary: "One-to-one workflow context only. No public visibility bands, popularity reads, or message entitlement.",
+      },
+      proposal: {
+        title: "Leverage hints stay confidence-scoped",
+        body: "A future layer can add coarse readiness or response-climate cues, but they must remain proposal-badged and subordinate to private lead review.",
+        provenance: "Private relationship notes, route-local activity, and candidate-owned evidence.",
+        boundary: "No public market truth claims and no exact relationship scoring.",
+        signalQuality: "Corroborated",
+        decay: "Aggressive decay",
+      },
     },
   },
   "applications-queue": {
@@ -282,6 +352,22 @@ const PAGE_META: Record<ScreenId, PageMeta> = {
     mobileMode: "Desktop primary",
     mobileNote: "Detail condenses to a single-column reading flow in product, but the specimen registry stays desktop-primary here.",
     note: "Application detail covers next-step pressure, missing-artifact warnings, and action or delete dialogs.",
+    observability: {
+      current: {
+        title: "Application detail remains an action surface",
+        body: "The shipped detail route keeps next step, history, documents, and private follow-up together instead of promoting any shared-signal narrative.",
+        contract: "Current product reads as private application management with explicit artifacts and human follow-through.",
+        boundary: "No public market truth, no listing-health claims, and no inference that visibility guarantees response.",
+      },
+      proposal: {
+        title: "Detail-level signals stay bounded",
+        body: "A guarded layer could summarize coarse momentum or response conditions here, but only with confidence bands tied to inspectable private evidence.",
+        provenance: "Application history, follow-up freshness, attached evidence, and private message activity.",
+        boundary: "Proposal cues stay qualitative, privacy-bounded, and reversible when evidence weakens.",
+        signalQuality: "Privacy-preserved local evidence",
+        decay: "Aggressive decay",
+      },
+    },
   },
   "workspace-list": {
     route: "/workspace",
@@ -398,14 +484,46 @@ const PAGE_META: Record<ScreenId, PageMeta> = {
     mobileMode: "Desktop primary",
     mobileNote: "Visibility settings keep condensed behavior notes here instead of a paired mobile specimen.",
     note: "Discoverability covers visible, hidden, saving-toggle, and inline error states.",
+    observability: {
+      current: {
+        title: "Visibility stays opt-in and private",
+        body: "The shipped discoverability route is a trust control. It explains whether someone can be surfaced without turning that setting into a public observability layer.",
+        contract: "Current product keeps discoverability, reachability, and messaging gates separate and explicit.",
+        boundary: "Being visible never implies public access, direct-message rights, or shared market status.",
+      },
+      proposal: {
+        title: "Shared-signal posture stays guarded",
+        body: "A future layer can describe how visible the operator may be to others, but only as proposal-only guidance with confidence-scoped language and privacy bounds.",
+        provenance: "Opt-in discoverability settings, trust posture, and route-local engagement quality.",
+        boundary: "No public leaderboard, exact impression counts, or broad discover guarantees.",
+        signalQuality: "Self-reported",
+        decay: "Aggressive decay",
+      },
+    },
   },
-  messages: {
+  "messages-inbox": {
     route: "/network/messages",
-    type: "Opt-in network route",
-    density: "Comfortable · full-height thread",
+    type: "Private messaging inbox",
+    density: "Comfortable · inbox triage + state-complete list",
     mobileMode: "Desktop primary",
-    mobileNote: "Existing message specimens stay desktop-primary and remain reference-only in this slice.",
-    note: "Private-by-default network messaging remains in the bundle, but the state-complete sweep moves to workspace evidence and automation execution.",
+    mobileNote: "Private messaging is the shipped human loop, but operator-design keeps the route family desktop-primary while list triage and thread reading stay separated.",
+    note: "Canonical coverage for `/network/messages` now lives in the dedicated inbox specimen with populated, no-conversations, search-empty, and new-conversation states.",
+    legacy: {
+      title: "Legacy combined specimen is retired from the registry",
+      body: "The old single-frame `MessagesScreen` remains on disk only as historical reference. Route coverage now treats inbox and thread as first-class specimens.",
+    },
+  },
+  "message-thread": {
+    route: "/network/messages/:conversationId",
+    type: "Private messaging thread",
+    density: "Comfortable · inline thread + compose",
+    mobileMode: "Desktop primary",
+    mobileNote: "Thread reading and compose remain desktop-primary here because participant context, inline edits, and delete gates read best on the wider frame.",
+    note: "Canonical coverage for `/network/messages/:conversationId` now lives in the dedicated thread specimen with populated, quiet empty, error, and mutation states.",
+    legacy: {
+      title: "Legacy combined specimen no longer defines the route",
+      body: "The split message thread is now the contract surface. The previous combined frame should not be treated as canonical route behavior.",
+    },
   },
   auth: {
     route: "/login",
@@ -540,6 +658,18 @@ const STATE_OPTIONS: Record<StatefulScreenId, { id: string; label: string }[]> =
     { id: "filter_empty", label: "Filter Empty" },
     { id: "mutation", label: "Mutation" },
   ],
+  "messages-inbox": [
+    { id: "populated", label: "Populated" },
+    { id: "no_conversations", label: "No Conversations" },
+    { id: "search_empty", label: "Search Empty" },
+    { id: "new_conversation", label: "New Conversation" },
+  ],
+  "message-thread": [
+    { id: "populated", label: "Populated" },
+    { id: "no_messages_yet", label: "No Messages Yet" },
+    { id: "load_error", label: "Load Error" },
+    { id: "mutation", label: "Mutation" },
+  ],
   discoverability: [
     { id: "visible", label: "Visible" },
     { id: "hidden", label: "Hidden" },
@@ -563,6 +693,10 @@ const ICONS: Record<string, string> = {
 
 function isStatefulScreen(id: ScreenId): id is StatefulScreenId {
   return STATEFUL_SCREENS.includes(id as StatefulScreenId);
+}
+
+function isObservabilityScreen(id: ScreenId): id is ObservabilityScreenId {
+  return OBSERVABILITY_SCREENS.includes(id as ObservabilityScreenId);
 }
 
 function AppChrome({ screen, children }: { screen: ScreenId; children: React.ReactNode }) {
@@ -590,7 +724,8 @@ function AppChrome({ screen, children }: { screen: ScreenId; children: React.Rea
     discover: "Messages",
     "network-profile": "Messages",
     connections: "Messages",
-    messages: "Messages",
+    "messages-inbox": "Messages",
+    "message-thread": "Messages",
   };
 
   const activeUserRoute: Partial<Record<ScreenId, string>> = {
@@ -621,8 +756,9 @@ function AppChrome({ screen, children }: { screen: ScreenId; children: React.Rea
     discover: ["Network", "Discover"],
     "network-profile": ["Network", "Profile"],
     connections: ["Network", "Connections"],
+    "messages-inbox": ["Network", "Messages"],
+    "message-thread": ["Network", "Messages", "Conversation"],
     discoverability: ["Settings", "Discoverability"],
-    messages: ["Network", "Messages"],
   };
 
   const navItems = ["Dashboard", "Leads", "Applications", "Messages", "Workflows", "Agents", "Workspace"] as const;
@@ -755,21 +891,34 @@ export function ScreensView() {
     discover: "populated",
     "network-profile": "connectable",
     connections: "populated",
+    "messages-inbox": "populated",
+    "message-thread": "populated",
     discoverability: "hidden",
   });
   const [dashboardMutationMode, setDashboardMutationMode] = useState<DashboardScreenMutationMode>("action-triage");
   const [leadsModalMode, setLeadsModalMode] = useState<LeadsScreenModalMode>("lead-review");
   const [workflowsMutationFocus, setWorkflowsMutationFocus] = useState<WorkflowsScreenMutationFocus>("trigger");
   const [agentsMutationMode, setAgentsMutationMode] = useState<AgentsScreenMutationMode>("edit");
+  const [observabilityModes, setObservabilityModes] = useState<Record<ObservabilityScreenId, ObservabilityLayerMode>>({
+    dashboard: "current",
+    leads: "current",
+    detail: "current",
+    discoverability: "current",
+  });
 
   const meta = PAGE_META[active];
   const pairedMobile = PAIRED_MOBILE_SCREENS.has(active);
   const currentState = isStatefulScreen(active) ? screenStates[active] : null;
   const stateOptions = isStatefulScreen(active) ? STATE_OPTIONS[active] : [];
   const activeStateLabel = currentState === null ? null : stateOptions.find((option) => option.id === currentState)?.label ?? null;
+  const activeObservabilityMode = isObservabilityScreen(active) ? observabilityModes[active] : null;
 
   const setActiveScreenState = (screen: StatefulScreenId, state: string) => {
     setScreenStates((prev) => ({ ...prev, [screen]: state } as ScreenStateMap));
+  };
+
+  const setObservabilityMode = (screen: ObservabilityScreenId, mode: ObservabilityLayerMode) => {
+    setObservabilityModes((prev) => ({ ...prev, [screen]: mode }));
   };
 
   const renderScreen = (mobile = false) => {
@@ -781,15 +930,35 @@ export function ScreensView() {
       case "aspiration-companies":
         return <AspirationCompaniesScreen state={screenStates["aspiration-companies"]} mobile={mobile} />;
       case "dashboard":
-        return <DashboardScreen state={screenStates.dashboard} mutationMode={dashboardMutationMode} mobile={mobile} />;
+        return (
+          <DashboardScreen
+            state={screenStates.dashboard}
+            mutationMode={dashboardMutationMode}
+            mobile={mobile}
+            observabilityMode={observabilityModes.dashboard}
+          />
+        );
       case "leads":
-        return <LeadsScreen state={screenStates.leads} modalMode={leadsModalMode} mobile={mobile} />;
+        return (
+          <LeadsScreen
+            state={screenStates.leads}
+            modalMode={leadsModalMode}
+            mobile={mobile}
+            observabilityMode={observabilityModes.leads}
+          />
+        );
       case "applications-queue":
         return <ApplicationsQueueScreen state={screenStates["applications-queue"]} mobile={mobile} />;
       case "applications-board":
         return <ApplicationsBoardScreen state={screenStates["applications-board"]} mobile={mobile} />;
       case "detail":
-        return <DetailScreen state={screenStates.detail} mobile={mobile} />;
+        return (
+          <DetailScreen
+            state={screenStates.detail}
+            mobile={mobile}
+            observabilityMode={observabilityModes.detail}
+          />
+        );
       case "workspace-list":
         return <WorkspaceListScreen state={screenStates["workspace-list"]} mobile={mobile} />;
       case "workspace-detail":
@@ -814,10 +983,18 @@ export function ScreensView() {
         return <NetworkProfileScreen state={screenStates["network-profile"]} mobile={mobile} />;
       case "connections":
         return <ConnectionsScreen state={screenStates.connections} mobile={mobile} />;
+      case "messages-inbox":
+        return <MessagesInboxScreen state={screenStates["messages-inbox"]} />;
+      case "message-thread":
+        return <MessageThreadScreen state={screenStates["message-thread"]} />;
       case "discoverability":
-        return <DiscoverabilityScreen state={screenStates.discoverability} mobile={mobile} />;
-      case "messages":
-        return <MessagesScreen />;
+        return (
+          <DiscoverabilityScreen
+            state={screenStates.discoverability}
+            mobile={mobile}
+            observabilityMode={observabilityModes.discoverability}
+          />
+        );
       case "auth":
         return <AuthScreen />;
       default:
@@ -976,11 +1153,60 @@ export function ScreensView() {
     return null;
   };
 
+  const renderObservabilityToggle = () => {
+    if (!isObservabilityScreen(active) || activeObservabilityMode === null) {
+      return null;
+    }
+
+    return (
+      <ScreenModeToggle
+        label="Observability layer"
+        value={activeObservabilityMode}
+        onChange={(mode) => setObservabilityMode(active, mode)}
+        options={[
+          { id: "current", label: "Current Product" },
+          { id: "proposal", label: "Observability Proposal" },
+        ]}
+      />
+    );
+  };
+
+  const supportingPanel = meta.observability && activeObservabilityMode
+    ? (
+        <ObservabilityLayerCard
+          mode={activeObservabilityMode}
+          current={meta.observability.current}
+          proposal={meta.observability.proposal}
+        />
+      )
+    : meta.proposal
+      ? (
+          <ScreenProposal
+            title={meta.proposal.title}
+            body={meta.proposal.body}
+            provenance={meta.proposal.provenance}
+            boundary={meta.proposal.boundary}
+          />
+        )
+      : null;
+
+  const legacyPanel = meta.legacy
+    ? (
+        <div style={{ padding: "12px 14px", background: T.base, border: `1px solid ${T.s1}`, borderLeft: `2px solid ${T.t2}`, borderRadius: T.r2, display: "grid", gap: 6 }}>
+          <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, margin: 0, textTransform: "uppercase", letterSpacing: "0.09em" }}>Legacy specimen</p>
+          <p style={{ fontFamily: T.fontHead, fontWeight: 600, fontSize: 15, color: T.t0, margin: 0, letterSpacing: "-0.01em" }}>{meta.legacy.title}</p>
+          <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{meta.legacy.body}</p>
+        </div>
+      )
+    : null;
+  const observabilityToggle = renderObservabilityToggle();
+
   const desktopFrame = (
     <div style={{ border: `1px solid ${T.s2}`, borderRadius: T.r3, overflow: "hidden", background: T.bg, minHeight: 720, height: active === "auth" ? 640 : 760 }}>
       <AppChrome screen={active}>{renderScreen(false)}</AppChrome>
     </div>
   );
+  const hasSupportPanels = isStatefulScreen(active) || supportingPanel || legacyPanel;
 
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
@@ -988,7 +1214,7 @@ export function ScreensView() {
         <p style={{ fontFamily: T.fontMono, fontSize: 11, color: T.accent, margin: "0 0 6px", letterSpacing: "0.1em" }}>ROUTE SPECIMENS · OPERATOR</p>
         <h1 style={{ fontFamily: T.fontHead, fontWeight: 800, fontSize: 36, color: T.t0, margin: "0 0 8px", letterSpacing: "-0.03em" }}>Route Specimens</h1>
         <p style={{ fontFamily: T.fontBody, fontSize: 14, color: T.t1, maxWidth: 760, lineHeight: 1.65, margin: 0 }}>
-          Reference-only compositions for Baldin&apos;s flagship route families. The bundle now reads as direction before tracking, then private network leverage, then user-owned evidence and operator-commanded execution. Mobile pairing is required only where the flagship contract calls for it.
+          Reference-only compositions for Baldin&apos;s flagship route families. The bundle reads as direction before tracking, then deliberate network reachability and private messaging as the shipped human loop, then user-owned evidence and operator-commanded execution. Any observability layer stays guarded, confidence-scoped, and secondary to private workflow. Mobile pairing is required only where the flagship contract calls for it.
         </p>
       </div>
 
@@ -1048,6 +1274,7 @@ export function ScreensView() {
       )}
 
       {renderSecondaryToggle()}
+      {observabilityToggle && <div style={{ marginBottom: 16 }}>{observabilityToggle}</div>}
 
       {pairedMobile ? (
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 414px", gap: 14, alignItems: "start" }}>
@@ -1058,34 +1285,22 @@ export function ScreensView() {
               <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.accent, margin: "0 0 4px", letterSpacing: "0.09em" }}>390PX MOBILE PAIR</p>
               <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{meta.mobileNote}</p>
             </div>
-            {meta.proposal && (
-              <ScreenProposal
-                title={meta.proposal.title}
-                body={meta.proposal.body}
-                provenance={meta.proposal.provenance}
-                boundary={meta.proposal.boundary}
-              />
-            )}
+            {supportingPanel}
+            {legacyPanel}
             {renderScreen(true)}
           </div>
         </div>
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           {desktopFrame}
-          {(isStatefulScreen(active) || meta.proposal) && (
-            <div style={{ display: "grid", gridTemplateColumns: meta.proposal ? "minmax(280px, 0.8fr) minmax(320px, 1fr)" : "1fr", gap: 12 }}>
+          {hasSupportPanels && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
               <div style={{ padding: "12px 14px", background: T.raised, border: `1px solid ${T.s1}`, borderRadius: T.r2 }}>
                 <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.accent, margin: "0 0 4px", letterSpacing: "0.09em" }}>DESKTOP-PRIMARY NOTE</p>
                 <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{meta.mobileNote}</p>
               </div>
-              {meta.proposal && (
-                <ScreenProposal
-                  title={meta.proposal.title}
-                  body={meta.proposal.body}
-                  provenance={meta.proposal.provenance}
-                  boundary={meta.proposal.boundary}
-                />
-              )}
+              {supportingPanel}
+              {legacyPanel}
             </div>
           )}
         </div>

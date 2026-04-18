@@ -347,7 +347,7 @@ Best for:
 
 ## Baldin Design Lead Agent
 
-Use when the task is archived-design reference work, browser-harness review, repo-backed `.figma.ts` mapping maintenance, design-system catalog alignment, or historical design-to-code comparison.
+Use when the task is operator-design reference work, browser-harness review, repo-backed `.figma.ts` mapping maintenance, or historical design-to-code comparison.
 
 ```text
 Lead this as archived-design reference work.
@@ -358,17 +358,19 @@ Objective:
 Context:
 [route family, shared surface, historical evidence need, or mapping goal]
 
-Start from `docs/docs/reference/v2-1-hard-fork.md` and use archived redesign material only if it adds necessary context.
+Start from `docs/docs/reference/operator-design-forward-path.md` and use archived redesign material only if it adds necessary context.
 
 Allowed paths:
+- ./operator-design/**
 - ./frontend/figma.config.json
 - ./frontend/browser-harness/**
 - ./frontend/src/browser-harness/**
 - ./frontend/src/design-system/**/*.figma.ts
 - ./frontend/src/design-system/**/*stories.tsx
-- ./docs/docs/reference/v2-1-hard-fork.md
-- ./docs/docs/reference/design-system-catalog.md
-- ./docs/docs/engineering/v2-1-implementation-program.md
+- ./docs/docs/reference/operator-design-forward-path.md
+- ./docs/docs/architecture/frontend-design-system.md
+- ./docs/docs/engineering/local-development.md
+- ./plans/v2.1/**
 
 Out of scope:
 - backend API design
@@ -391,7 +393,7 @@ Best for:
 
 - `operator-design` maintenance
 - browser-harness capture and historical design inspection
-- `.figma.ts` mapping maintenance and design-system catalog alignment
+- `.figma.ts` mapping maintenance and operator-design contract alignment
 - shared-surface promotion review before code implementation
 - archived Figma comparison when it adds useful context
 
@@ -522,14 +524,16 @@ Objective:
 Compare the current route or shared surface against archived design evidence and update any optional mapping metadata the team still wants to keep.
 
 Context:
-Use `docs/docs/reference/v2-1-hard-fork.md` as the active source of truth. Archived redesign material is reference-only and must not block implementation.
+Use `docs/docs/reference/operator-design-forward-path.md` as the active source of truth. Archived redesign material is reference-only and must not block implementation.
 
 Allowed paths:
-- ./docs/docs/reference/v2-1-hard-fork.md
-- ./docs/docs/engineering/v2-1-implementation-program.md
+- ./operator-design/**
+- ./docs/docs/reference/operator-design-forward-path.md
+- ./docs/docs/architecture/frontend-design-system.md
+- ./docs/docs/engineering/local-development.md
 - ./frontend/src/design-system/**/*.figma.ts
 - ./frontend/src/design-system/**/*stories.tsx
-- ./docs/docs/reference/design-system-catalog.md
+- ./plans/v2.1/**
 
 Validation:
 - inspect the relevant archived design evidence

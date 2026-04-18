@@ -1,8 +1,8 @@
 # Baldin v2.1 Implementation Brief Template
 
-> Required entry artifact for every active `v2.1` implementation slice.
-> Active direction: `docs/docs/reference/v2-1-hard-fork.md`
-> Program rules: `docs/docs/engineering/v2-1-implementation-program.md`
+> Required entry artifact for every active `v2.1` implementation slice in the operator-design-forward path.
+> Active direction: `docs/docs/reference/operator-design-forward-path.md`
+> Working rules: `docs/docs/architecture/frontend-design-system.md` + `docs/docs/engineering/local-development.md`
 
 Do not start implementation until this brief states the code-backed sources, boundaries, and validation plan explicitly.
 

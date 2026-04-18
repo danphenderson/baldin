@@ -46,6 +46,7 @@ Once you are oriented, the next layer usually is:
 - **After setup:** [Work Locally](engineering/local-development) → [Run The Right Checks](engineering/testing)
 - **After backend schema or route changes:** [Regenerate API Contracts](engineering/contract-management) → [Run The Right Checks](engineering/testing) → [See Merge Gates](engineering/ci-pipeline)
 - **After frontend changes:** [See Frontend Boundaries](architecture/frontend-architecture) → [Run The Right Checks](engineering/testing)
+- **Operator-design or shared UI work:** [Frontend Design System](architecture/frontend-design-system) → [Operator Design Forward Path](reference/operator-design-forward-path) → [Work Locally](engineering/local-development)
 - **After docs changes:** [Contribute Safely](getting-started/contributing) → [Run The Right Checks](engineering/testing)
 - **After runtime or deployment questions:** [Planned Deployment](getting-started/deployment-guide) → [Track Release Readiness](engineering/release-roadmap) → [Look Up Settings](reference/environment-variables)
 
@@ -68,6 +69,7 @@ Once you are oriented, the next layer usually is:
 - **[Understand Document Collaboration](architecture/document-collaboration)** — Follow versioned documents, sharing, and the Yjs bootstrap protocol
 - **[Follow Network Flows](architecture/networking-and-messaging)** — Follow opt-in connections, conversations, personal activity, and action items
 - **[See Frontend Boundaries](architecture/frontend-architecture)** — See route groups, page modules, and service boundaries
+- **[Operator Design Forward Path](reference/operator-design-forward-path)** — Active operator-design-first contract for source bundles, planning packets, and archived-reference rules
 - **[Work Locally](engineering/local-development)** — Run the stack locally and move through day-to-day workflow
 - **[See Merge Gates](engineering/ci-pipeline)** — Understand CI jobs, required checks, and candidate artifact builds
 - **[Track Release Readiness](engineering/release-roadmap)** — See current release posture and remaining launch phases

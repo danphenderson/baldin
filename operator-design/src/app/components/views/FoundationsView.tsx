@@ -55,7 +55,7 @@ function Character() {
       <SectionHead n="00" title="Character" />
       <Block accent>
         <p style={{ fontFamily: T.fontBody, fontSize: 13, color: T.t1, margin: "0 0 24px", lineHeight: 1.75, maxWidth: 560 }}>
-          OPERATOR is a command-center design language for Baldin&apos;s local-first job-search OS. Not enterprise SaaS. Not a dashboard template. A precision instrument for one operator today, with room for later observability cues that stay proposal-labeled, provenance-aware, and privacy-bounded.
+          OPERATOR is a command-center design language for Baldin&apos;s local-first job-search OS. Not enterprise SaaS. Not a dashboard template. A precision instrument for one operator today, with private messaging already shipping as the human loop and any later observability cues staying proposal-labeled, confidence-scoped, provenance-aware, and privacy-bounded.
         </p>
         <div style={{ display: "flex", flexDirection: "column" }}>
           {tenets.map(([glyph, title, body], i, arr) => (
@@ -720,7 +720,7 @@ function Responsive() {
     ["Page toolbar",        "40px · between command bar and content · per-route, not global."],
     ["Content area",        "Fluid between rail and right edge. Max-width 1440px total canvas."],
     ["Collection collapse", "At tablet and mobile, collection routes stack cards vertically and keep the highest-signal summary first."],
-    ["Required mobile",     "Dashboard, Auth, Profile, and Aspirations need explicit 390px compositions. Leads, applications, network-trust, workspace-evidence, and automation routes may stay desktop-primary here, but they still need condensed-behavior notes."],
+    ["Required mobile",     "Dashboard, Auth, Profile, and Aspirations need explicit 390px compositions. Leads, applications, network-trust, private messaging, workspace-evidence, and automation routes may stay desktop-primary here, but they still need condensed-behavior notes."],
   ];
 
   return (

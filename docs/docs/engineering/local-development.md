@@ -37,7 +37,7 @@ Backend tests should use `./scripts/run_backend_pytest.sh`, which keeps DB-backe
 | `crawler-worker` | Python background worker | none | image contents from `./backend` build context |
 | `backend-test` | On-demand pytest runner (`test` profile) | none | image contents from `./backend` build context |
 | `frontend` | Vite dev server | 5173 | image contents from `./frontend` build context + Compose Watch sync |
-| `operator-design` | Reference-only Vite `v2.1` design surface | 5174 | image contents from `./operator-design` build context + Compose Watch sync |
+| `operator-design` | Reference-only operator-design surface | 5174 | image contents from `./operator-design` build context + Compose Watch sync |
 | `docs` | Docusaurus dev server | 3001→3000 | image contents from `./docs` build context + Compose Watch sync |
 
 ## Starting the Stack
@@ -65,7 +65,7 @@ For Figma capture and browser-driven design review, Baldin's repo-owned MCP cont
 - Codex does not consume `.vscode/mcp.json` directly in this patch. `.codex/config.toml` contains Codex custom-agent defaults only and no repo-owned MCP server mirrors.
 - This repo patch does not manage a Codex-side `figma` entry. User-scoped or globally configured Codex MCP servers can still appear separately on a developer machine.
 
-The active implementation contract is code-first: use `frontend/src/design-system/*`, `operator-design/`, [v2.1 Hard Fork](../reference/v2-1-hard-fork.md), and [v2.1 Implementation Program](./v2-1-implementation-program.md). `Baldin-Library`, `Baldin Product Redesign — Command Center`, `Baldin-App-Screens`, and the reviewed Figma Make file are archived reference surfaces only.
+The active UI contract is operator-design-first: use `operator-design/`, `frontend/src/design-system/*`, and [Operator Design Forward Path](../reference/operator-design-forward-path.md). [Frontend Design System](../architecture/frontend-design-system.md) captures the shared-layer boundaries. `Baldin-Library`, `Baldin Product Redesign — Command Center`, `Baldin-App-Screens`, and the reviewed Figma Make file are archived reference surfaces only.
 
 1. Start or keep the local stack running with `docker-compose up --build --watch`.
 2. Use the frontend dev server at `http://127.0.0.1:5173`.
@@ -104,7 +104,7 @@ http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=leads&state=ranked
 http://127.0.0.1:5173/browser-harness/figma-wave1.html?screen=apply&state=already-applied&mode=light
 ```
 
-The harness is the supported local capture surface for the Wave 1 screens it already backs. Keep the frontend stack warm and switch harness states instead of wiring a live backend for Wave 1 review. For broader `v2.1` work, start from the shipped route code, the shared design-system layer, and `operator-design/` rather than expanding the harness.
+The harness is the supported local capture surface for the Wave 1 screens it already backs. Keep the frontend stack warm and switch harness states instead of wiring a live backend for Wave 1 review. For broader operator-design work, start from the shipped route code, the shared design-system layer, and `operator-design/` rather than expanding the harness.
 
 For privileged admin routes, the supported preflight is the repo-owned admin session bootstrap page rather than a manual login step:
 
@@ -119,7 +119,7 @@ The bootstrap page calls the DEV-only backend route `POST /api/v1/auth/jwt/dev-b
 Baldin's supported Figma workflow assumes a Professional-plan workspace and does not require a Dev seat.
 
 - Use the local harness plus the repo-local frontend Playwright runtime or configured host browser tooling to put Wave 1 screens into the exact state you need.
-- For product work beyond the Wave 1 harness, treat `v2.1` docs and plans as active and use archived Figma only when historical comparison is genuinely helpful.
+- For product work beyond the Wave 1 harness, treat [Operator Design Forward Path](../reference/operator-design-forward-path.md), `plans/v2.1/*`, and `operator-design/` as active. Use archived Figma only when historical comparison is genuinely helpful.
 - Use Figma MCP read or write tools when your seat and auth allow it.
 - If your seat only allows basic inspection, keep the same evidence order and use screenshots or inspection instead of blocking on Dev Mode-specific UX.
 - Use MCP for structure, component, and screenshot inspection even when Dev Mode is unavailable. Full version-history review still requires browser or web access to the Figma UI.
@@ -229,8 +229,8 @@ npm --prefix docs run start
 ## Related Docs
 
 - [Boot The Stack](../getting-started/quickstart.md)
-- [v2.1 Hard Fork](../reference/v2-1-hard-fork.md)
-- [v2.1 Implementation Program](./v2-1-implementation-program.md)
+- [Operator Design Forward Path](../reference/operator-design-forward-path.md)
+- [Frontend Design System](../architecture/frontend-design-system.md)
 - [Run The Right Checks](./testing.md)
 - [Regenerate API Contracts](./contract-management.md)
 - [Look Up Settings](../reference/environment-variables.md)

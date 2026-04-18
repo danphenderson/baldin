@@ -1,10 +1,10 @@
 # Baldin Redesign Implementation Brief Template
 
-> Required entry artifact for every post-closeout redesign implementation slice.
-> Active redesign source: `docs/docs/reference/baldin-redesign-handoff.md`
-> Program rules: `docs/docs/engineering/redesign-implementation-program.md`
+> Historical reference template for archived redesign comparison only.
+> Active delivery contract: `docs/docs/reference/operator-design-forward-path.md`
+> Active implementation packets: `plans/v2.1/*`
 
-Do not start implementation until this brief is filled with exact approved redesign nodes and the boundary decisions below are explicit.
+Do not start new implementation from this template unless the task explicitly calls for historical redesign comparison. Capture the exact archived evidence here, then move active planning back into `plans/v2.1/*`.
 
 ## Brief Header
 

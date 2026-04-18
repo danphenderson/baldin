@@ -23,8 +23,8 @@ const SECTIONS = [
     n:    "03",
     id:   "screens",
     name: "Route Specimens",
-    desc: "State-complete identity, decision-loop, network-trust, workspace-evidence, and automation specimens. Mobile pairing is explicit only where the flagship contract requires it.",
-    tags: ["Identity", "Ranking", "Network", "Evidence", "Automation"],
+    desc: "State-complete identity, decision-loop, private-messaging, network-trust, workspace-evidence, and automation specimens. Mobile pairing is explicit only where the flagship contract requires it.",
+    tags: ["Identity", "Ranking", "Messaging", "Network", "Automation"],
   },
   {
     n:    "04",
@@ -52,8 +52,8 @@ const READING_GUIDE = [
   {
     color: "#e8a020",
     dim:   "rgba(232,160,32,0.10)",
-    label: "Redesign proposal",
-    desc:  "Amber marks a pattern under active design review. Not approved for engineering yet — treat as directional intent.",
+    label: "Proposal cue",
+    desc:  "Amber marks unshipped, confidence-scoped, privacy-bounded proposal treatment. Do not read it as live product behavior.",
   },
   {
     color: "#ad7bf9",
@@ -88,7 +88,7 @@ export function CoverView({ onNavigate }: CoverViewProps) {
           </div>
           <div style={{ marginLeft: "auto", textAlign: "right" }}>
             <p style={{ fontFamily: T.fontMono, fontSize: 11, color: T.t2, margin: "0 0 2px", letterSpacing: "0.04em" }}>// OPERATOR v2.1 contract · dark + light</p>
-            <p style={{ fontFamily: T.fontMono, fontSize: 11, color: T.t2, margin: 0, letterSpacing: "0.04em" }}>v2.1 · April 2026 · figma-first</p>
+            <p style={{ fontFamily: T.fontMono, fontSize: 11, color: T.t2, margin: 0, letterSpacing: "0.04em" }}>v2.1 · April 2026 · code-first handoff</p>
           </div>
         </div>
 
@@ -99,14 +99,14 @@ export function CoverView({ onNavigate }: CoverViewProps) {
         </h1>
 
         <p style={{ fontFamily: T.fontBody, fontSize: 16, color: T.t1, maxWidth: 520, lineHeight: 1.7, margin: "0 0 28px" }}>
-          A command-center design language for Baldin&apos;s local-first job-search OS. Today it serves a private career control plane for direction, ranked leads, applications, opt-in network context, user-owned workspace evidence, and operator-commanded automation. The target direction remains applicant-side observability, but this contract stays grounded in the shipped workspace and the operator&apos;s private loop. This document is a handoff artifact, not a marketing brochure. It is written for builders, not buyers.
+          A command-center design language for Baldin&apos;s local-first job-search OS. Today it serves a private career control plane for direction, ranked leads, applications, deliberate network reachability, private messaging as the shipped human loop, user-owned workspace evidence, and operator-commanded automation. The target direction remains applicant-side observability, but that layer stays guarded, confidence-scoped, and secondary to the shipped private workflow. This document is a handoff artifact, not a marketing brochure. It is written for builders, not buyers.
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 10, marginBottom: 28 }}>
           {[
-            ["Today", "Private local-first workspace where direction comes before tracking: profile, aspirations, ranked leads, applications, private network context, workspace evidence, and deliberate automation."],
-            ["Target", "Applicant-side observability later, but only after trust rules, provenance, and evidence quality are ready."],
-            ["Trust model", "Opt-in discovery, request-based reachability, and proposal-labeled leverage hints instead of public counts or feed mechanics."],
+            ["Today", "Private local-first workspace where direction comes before tracking and private messaging carries the shipped human loop: profile, aspirations, ranked leads, applications, network trust, workspace evidence, and deliberate automation."],
+            ["Target", "Applicant-side observability later, but only as a guarded layer after trust rules, provenance, and evidence quality are ready."],
+            ["Trust model", "Opt-in discovery, request-based reachability, and confidence-scoped proposal cues instead of public counts, shared market truth, or feed mechanics."],
           ].map(([label, body]) => (
             <div key={label} style={{ padding: "14px 16px", background: T.raised, border: `1px solid ${T.s1}`, borderRadius: T.r3 }}>
               <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.accent, letterSpacing: "0.08em", margin: "0 0 6px", textTransform: "uppercase" }}>{label}</p>

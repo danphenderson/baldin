@@ -152,7 +152,7 @@ function S3() {
     <div>
       <SecNum n="03" title="Collection Views" />
       <P>
-        A <Term>collection view</Term> presents a set of records — leads, applications, messages, workspace documents, workflows, or reusable agents.
+        A <Term>collection view</Term> presents a set of records — leads, applications, message inbox conversations, workspace documents, workflows, or reusable agents.
         Every collection view opens with a <Term>summary band</Term>: a row of numeric status cells that gives
         the user the state of the collection before they read a single row.
       </P>
@@ -382,7 +382,7 @@ function S10() {
       <SecNum n="10" title="Baldin Identity" />
       <P>
         OPERATOR is a design direction, not the product identity. Baldin is a <Bold>local-first job-search OS</Bold> today —
-        a private career control plane for a single operator managing direction, ranking, applications, and next actions across the search.
+        a private career control plane for a single operator managing direction, ranking, applications, private messaging, and next actions across the search.
         The target direction is applicant-side labor market observability later, but the command-center metaphor must stay grounded
         in the shipped workspace, not in a public market surface or speculative shared-signal product.
       </P>
@@ -392,7 +392,7 @@ function S10() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
         {[
           { glyph: "◉", title: "Self-directed control", body: "Every table row, detail view, and metric is organized around the user's private search loop: profile, aspirations, ranked leads, applications, outreach, documents, and opt-in network context. Baldin keeps the operator oriented without drowning them in platform chrome." },
-          { glyph: "◈", title: "Visible leverage", body: "Fit signals, extracted job data, ranked opportunities, and private network context can help the operator move faster. These cues should read as operational help with clear provenance, not as public observability or mysterious magic." },
+          { glyph: "◈", title: "Visible leverage", body: "Fit signals, extracted job data, ranked opportunities, private network context, and direct messages can help the operator move faster. These cues should read as operational help with clear provenance, not as public observability, shared market truth, or mysterious magic." },
           { glyph: "◇", title: "Trustworthy momentum", body: "The product tracks what is moving, what is stale, and what is next. Personal activity, follow-up pressure, and confidence cues matter more than vanity metrics, decorative dashboards, or social-feed theater." },
         ].map(({ glyph, title, body }) => (
           <div key={title} style={{ padding: "16px", background: T.raised, border: `1px solid ${T.s1}`, borderRadius: T.r3 }}>
@@ -406,9 +406,11 @@ function S10() {
         <>The user's profile and aspirations are first-class surfaces. The product never frames them as just another record.</>,
         <>AI-assisted insights (fit score, extraction confidence, ranking) carry a subtle confidence indicator and provenance hint — not just a number.</>,
         <>Momentum cues (last touched, follow-up due, workspace readiness, workflow state, agent freshness) stay visible on collection rows, not hidden in detail.</>,
+        <>Private messaging is the shipped human loop. The inbox and the active thread stay route-level surfaces, never a feed widget or ambient sidebar toy.</>,
         <>Opt-in network context and personal activity surfaces must read as private workflow, not a social feed or public listing-health board.</>,
         <>Forward-looking leverage hints use a proposal badge plus provenance or confidence note and an explicit privacy boundary.</>,
         <>Future observability concepts stay explicitly marked as proposals, previews, or confidence-scoped signals until they ship.</>,
+        <>Any shared market truth remains secondary to private workflow and should never outrank concrete operator evidence.</>,
         <>The language is "profile," "aspirations," "leads," "applications," "workspace," and "follow-up" — not hiring-side jargon or generic "records."</>,
       ]} />
       <Proposal>
@@ -440,10 +442,10 @@ function S11() {
 
       <div style={{ fontFamily: T.fontMono, fontWeight: 700, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: T.t2, margin: "0 0 10px" }}>Outreach & messaging</div>
       <P>
-        Message threads are conversational surfaces. Thread bubbles use Source Sans 3 at 14px with 1.7 line height.
+        Private messaging is the shipped human loop in Baldin. The inbox remains a collection route for triage, while the active thread is a dedicated conversational route. Thread bubbles use Source Sans 3 at 14px with 1.7 line height.
         The sender's messages are tinted with <Term>accentDim</Term>; received messages sit on <Term>raised</Term>.
         Timestamps are mono overline. Compose uses Source Sans 3 — the user is writing prose, not filling a form.
-        Messaging should feel human and immediate, whether the user is following up with a connection, a trusted peer, or a company contact they chose to engage.
+        Messaging should feel human and immediate, whether the user is following up with a connection, a trusted peer, or a company contact they chose to engage. It should never imply public reach, shared market truth, or automatic message rights.
       </P>
 
       <div style={{ fontFamily: T.fontMono, fontWeight: 700, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: T.t2, margin: "0 0 10px" }}>Empty states</div>

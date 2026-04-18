@@ -9,11 +9,13 @@ import {
   ScreenField,
   ScreenMetric,
   ScreenPanel,
+  ScreenProposal,
   ScreenTag,
 } from "./flagship-primitives";
 
 export type DashboardScreenState = "momentum" | "no_leads" | "overdue" | "mutation";
 export type DashboardScreenMutationMode = "action-triage" | "create-action";
+export type DashboardScreenObservabilityMode = "current" | "proposal";
 
 type Tone = "accent" | "success" | "warning" | "info" | "neutral" | "skill";
 
@@ -48,6 +50,13 @@ type DashboardActivity = {
   action: string;
   detail: string;
   tone: Tone;
+};
+
+type DashboardObservabilityBand = {
+  label: string;
+  value: string;
+  tone: Tone;
+  note: string;
 };
 
 const MOMENTUM_DATA = [
@@ -167,6 +176,95 @@ function resolveTone(tone: Tone, T: ReturnType<typeof useTheme>["T"]) {
     default:
       return { color: T.t1, dim: T.s0, border: T.s1 };
   }
+}
+
+function DashboardObservabilityModule({
+  state,
+  mobile = false,
+}: {
+  state: DashboardScreenState;
+  mobile?: boolean;
+}) {
+  const { T } = useTheme();
+  const contentState = state === "mutation" ? "momentum" : state;
+  const snapshot = contentState === "no_leads"
+    ? {
+        bands: [
+          { label: "Readiness read", value: "Unclear", tone: "neutral" as const, note: "The route can acknowledge early direction without implying durable momentum yet." },
+          { label: "Recency band", value: "Fresh", tone: "info" as const, note: "Nothing has gone stale, but the overlay stays provisional until real workflow state accumulates." },
+          { label: "Response climate", value: "Quiet", tone: "neutral" as const, note: "No private response pattern is surfaced until the dashboard has actual loop activity to corroborate." },
+        ] satisfies DashboardObservabilityBand[],
+        signalQuality: "Low confidence",
+        signalTone: "warning" as const,
+        signalNote: "Proposal-only bands stay tentative when they rely mostly on setup posture instead of reinforced route activity.",
+        decayNote: "Without fresh lead, action, or application movement, the read quickly falls back toward Quiet and Unclear.",
+      }
+    : contentState === "overdue"
+      ? {
+          bands: [
+            { label: "Readiness read", value: "Steady", tone: "info" as const, note: "The route still shows durable fit, but the operator should not read it as strengthening while follow-ups age." },
+            { label: "Recency band", value: "Stale-risk", tone: "warning" as const, note: "Delayed next steps compress the future-facing read into a coarse risk band instead of exposing exact timing." },
+            { label: "Response climate", value: "Mixed", tone: "info" as const, note: "Signals remain present, but the overlay avoids claiming clear responsiveness while overdue work is unresolved." },
+          ] satisfies DashboardObservabilityBand[],
+          signalQuality: "Corroborated",
+          signalTone: "success" as const,
+          signalNote: "The proposal read can lean on multiple private route cues, but it still stays bounded to qualitative bands.",
+          decayNote: "Fresh bands step down to Aging and then Stale-risk when follow-ups slip or reinforcing context is not refreshed.",
+        }
+      : {
+          bands: [
+            { label: "Readiness read", value: "Stronger", tone: "success" as const, note: "Private route-local evidence can suggest durable momentum without turning it into a market-wide claim." },
+            { label: "Recency band", value: "Fresh", tone: "accent" as const, note: "Recent movement keeps the overlay current while still hiding any exact volume or named participants." },
+            { label: "Response climate", value: "Mixed", tone: "info" as const, note: "The route can reflect active private movement without implying a guaranteed reply path." },
+          ] satisfies DashboardObservabilityBand[],
+          signalQuality: "Corroborated",
+          signalTone: "success" as const,
+          signalNote: "Bands can appear only after multiple private cues agree on the same coarse direction of travel.",
+          decayNote: "If route-local evidence stops refreshing, Fresh softens to Aging before the module ever implies a harder conclusion.",
+        };
+
+  return (
+    <ScreenPanel
+      kicker="Proposal overlay"
+      title="Private observability read"
+      aside={<ScreenTag label="Opt-in" tone="info" />}
+    >
+      <div style={{ display: "grid", gap: 12 }}>
+        <ScreenProposal
+          title="Candidate-side observability stays coarse"
+          body="Future-facing dashboard cues can summarize private momentum in broad bands, but they stay secondary to concrete actions and never claim public-market visibility."
+          provenance="Synthesized from route-local activity, saved private context, and recent workflow movement."
+          boundary="Private candidate workflow only. Coarse bands only, no exact counts, and no named contributors."
+        />
+
+        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+          {snapshot.bands.map((band) => (
+            <div key={band.label} style={{ padding: "12px 14px", background: T.base, border: `1px solid ${T.s1}`, borderRadius: T.r2, display: "grid", gap: 8 }}>
+              <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>{band.label}</p>
+              <div>
+                <ScreenTag label={band.value} tone={band.tone === "accent" ? "info" : band.tone} />
+              </div>
+              <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{band.note}</p>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "minmax(220px, 0.7fr) minmax(0, 1fr)", gap: 10 }}>
+          <div style={{ padding: "12px 14px", background: T.base, border: `1px solid ${T.s1}`, borderRadius: T.r2, display: "grid", gap: 8 }}>
+            <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Signal quality</p>
+            <div>
+              <ScreenTag label={snapshot.signalQuality} tone={snapshot.signalTone} />
+            </div>
+            <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{snapshot.signalNote}</p>
+          </div>
+          <div style={{ padding: "12px 14px", background: T.base, border: `1px solid ${T.s1}`, borderRadius: T.r2, display: "grid", gap: 8 }}>
+            <p style={{ fontFamily: T.fontMono, fontSize: 10, color: T.t2, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Time decay</p>
+            <p style={{ fontFamily: T.fontBody, fontSize: 12.5, color: T.t1, lineHeight: 1.6, margin: 0 }}>{snapshot.decayNote}</p>
+          </div>
+        </div>
+      </div>
+    </ScreenPanel>
+  );
 }
 
 function DashboardPhoneFrame({
@@ -667,9 +765,11 @@ function MutationOverlay({
 function DashboardDesktopContent({
   state,
   mutationMode,
+  observabilityMode,
 }: {
   state: DashboardScreenState;
   mutationMode: DashboardScreenMutationMode;
+  observabilityMode: DashboardScreenObservabilityMode;
 }) {
   const { T } = useTheme();
   const isMutation = state === "mutation";
@@ -695,6 +795,7 @@ function DashboardDesktopContent({
             action={<ScreenButton label="Open leads" kind="secondary" compact />}
           />
         )}
+        {observabilityMode === "proposal" && <DashboardObservabilityModule state={state} />}
         <OverviewMetrics state={state} />
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.2fr) minmax(280px, 0.8fr)", gap: 16, alignItems: "start" }}>
           <div style={{ display: "grid", gap: 16 }}>
@@ -721,9 +822,11 @@ function DashboardDesktopContent({
 function DashboardMobileContent({
   state,
   mutationMode,
+  observabilityMode,
 }: {
   state: DashboardScreenState;
   mutationMode: DashboardScreenMutationMode;
+  observabilityMode: DashboardScreenObservabilityMode;
 }) {
   const { T } = useTheme();
   const isMutation = state === "mutation";
@@ -748,6 +851,7 @@ function DashboardMobileContent({
               tone="info"
             />
           )}
+          {observabilityMode === "proposal" && <DashboardObservabilityModule state={state} mobile />}
           <OverviewMetrics state={state} mobile />
           <MomentumPanel state={state} />
           <ActionItemsPanel state={state} mobile />
@@ -770,10 +874,14 @@ export function DashboardScreen({
   state = "momentum",
   mutationMode = "action-triage",
   mobile = false,
+  observabilityMode = "current",
 }: {
   state?: DashboardScreenState;
   mutationMode?: DashboardScreenMutationMode;
   mobile?: boolean;
+  observabilityMode?: DashboardScreenObservabilityMode;
 }) {
-  return mobile ? <DashboardMobileContent state={state} mutationMode={mutationMode} /> : <DashboardDesktopContent state={state} mutationMode={mutationMode} />;
+  return mobile
+    ? <DashboardMobileContent state={state} mutationMode={mutationMode} observabilityMode={observabilityMode} />
+    : <DashboardDesktopContent state={state} mutationMode={mutationMode} observabilityMode={observabilityMode} />;
 }

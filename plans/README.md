@@ -14,6 +14,6 @@ Use this directory for tracked plan, spike, and epic documents that feed Baldin'
 ## Usage Notes
 
 - Prefer plan files in this directory for repo-scoped planning work that needs a durable markdown source.
-- When prompts ask for the active implementation plan sources, start from `docs/docs/reference/v2-1-hard-fork.md`, then use the relevant `plans/v2.1/*` packet or brief.
+- When prompts ask for the active implementation plan sources, start from `docs/docs/reference/operator-design-forward-path.md`, then use the relevant `plans/v2.1/*` packet or brief and `operator-design/` when the task needs forward reference layouts or states.
 - Treat `plans/redesign/*` as archival reference only unless a task explicitly asks for historical redesign context.
 - Keep plan documents focused on phased execution, explicit dependencies, and observable acceptance criteria.

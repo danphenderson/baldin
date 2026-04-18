@@ -20,7 +20,7 @@ Use this file as the shared repo baseline for Baldin's agentic coding surfaces. 
 ## Design References
 
 - Active product delivery is code-first. Treat `frontend/src/design-system/*`, `operator-design/`, `plans/v2.1/*`, and the matching `docs/docs/**` pages as the current implementation contract.
-- Treat `Baldin-Library`, `Baldin Product Redesign — Command Center`, and `docs/docs/reference/baldin-redesign-handoff.md` as archived reference material rather than active delivery gates.
+- Treat `Baldin-Library`, `Baldin Product Redesign — Command Center`, and archived Figma or redesign docs as reference material rather than active delivery gates.
 - Treat the current Figma Make file as a reviewed archived sandbox. The 2026-04-13 salvage review found an empty app shell, stock guidelines, and generic Tailwind or shadcn scaffolding rather than a canonical Baldin buildout.
 - For optional historical Figma review, prefer the local browser harness plus Figma MCP read tools when available. Structure and component inspection can proceed through MCP without a Developer seat, but no repo task should block on new Figma design work.
 - For privileged admin capture, start from `/browser-harness/admin-session.html?next=/admin/...` so the browser session receives the configured local superuser token before opening `/admin/*`.

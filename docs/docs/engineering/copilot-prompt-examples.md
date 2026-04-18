@@ -156,7 +156,7 @@ Why it works:
 - It keeps the Baldin Frontend Agent focused on UI and typed contract consumption.
 - It avoids hiding backend dependency problems behind frontend workarounds.
 
-## Example 3B: Figma-First Design Work
+## Example 3B: Operator-Design Reference Work
 
 Bad prompt:
 
@@ -179,13 +179,15 @@ Objective:
 Inspect the archived design evidence for the next route-family slice and prepare a concise comparison against the current code-backed implementation contract.
 
 Context:
-Use `docs/docs/reference/v2-1-hard-fork.md` as the active source of truth. Archived redesign material is reference-only and must not become a delivery gate.
+Use `docs/docs/reference/operator-design-forward-path.md` as the active source of truth. Archived redesign material is reference-only and must not become a delivery gate.
 
 Allowed paths:
-- ./docs/docs/reference/v2-1-hard-fork.md
-- ./docs/docs/engineering/v2-1-implementation-program.md
+- ./operator-design/**
+- ./docs/docs/reference/operator-design-forward-path.md
+- ./docs/docs/architecture/frontend-design-system.md
+- ./docs/docs/engineering/local-development.md
 - ./frontend/src/design-system/**/*.figma.ts
-- ./docs/docs/reference/design-system-catalog.md
+- ./plans/v2.1/**
 
 Validation:
 - capture or inspect the relevant Figma node

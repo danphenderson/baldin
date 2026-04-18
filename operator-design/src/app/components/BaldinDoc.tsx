@@ -14,7 +14,7 @@ const SECTIONS = [
   { id: "cover",       label: "Cover",             sub: "Overview · principles · how to read", lib: "Intro"            },
   { id: "foundations", label: "Foundations",       sub: "Color · Type · Space · Motion",      lib: "Baldin-Library"   },
   { id: "library",     label: "Component Library", sub: "Rail · Table · Dialogs · Forms",     lib: "Baldin-Library"   },
-  { id: "screens",     label: "Route Specimens",   sub: "Identity · Network · Evidence · Automation",  lib: "Route Specimens"  },
+  { id: "screens",     label: "Route Specimens",   sub: "Identity · Network · Messaging · Evidence · Automation",  lib: "Route Specimens"  },
   { id: "guide",       label: "Style Guide",       sub: "Design language · Rules",             lib: "Documentation"    },
   { id: "appendix",    label: "Appendix",          sub: "Engineering handoff · Token map",     lib: "Documentation"    },
 ];
@@ -81,7 +81,7 @@ function BaldinDocInner() {
         <div style={{ padding: "12px 16px", borderTop: `1px solid ${T.s1}` }}>
           {[
             { color: T.accent,  label: "Design rule"       },
-            { color: T.warning, label: "Redesign proposal"  },
+            { color: T.warning, label: "Proposal cue"       },
           ].map(({ color, label }) => (
             <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
               <div style={{ width: 7, height: 7, borderRadius: 2, background: color, flexShrink: 0 }} />
